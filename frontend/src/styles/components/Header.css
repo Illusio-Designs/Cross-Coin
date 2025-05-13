@@ -1,0 +1,140 @@
+.header {
+  width: 100%;
+  background: #f7f8fa;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.header__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 10%;
+}
+
+.header__logo {
+  width: 15%;
+}
+
+.header__logo img {
+  width: 100%;
+}
+
+.header__search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  margin: 0 20px;
+  position: relative;
+}
+
+.header__search input {
+  width: 100%;
+  padding: 10px 16px;
+  padding-right: 45px;
+  border: none;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 1rem;
+  outline: none;
+}
+
+.header__search-btn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 25px;
+  color: #000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header__search-btn:hover {
+  color: #d32f2f;
+}
+
+.header__actions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.header__account {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: #030712;
+  cursor: pointer;
+}
+
+.header__account svg {
+  font-size: 30px;
+}
+
+.header__wishlist, .header__cart {
+  position: relative;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.header__wishlist svg, .header__cart svg {
+  color: #030712;
+  font-size: 25px;
+}
+
+.header__badge {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  background: #d32f2f;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  font-weight: bold;
+}
+
+.header__nav {
+  background: #fff;
+  border-bottom: 1px solid #E6E6E6;
+  padding: 0 10%;
+}
+
+.header__nav ul {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  height: 44px;
+  justify-content: space-between;
+}
+
+.header__nav li {
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  transition: color 0.2s;
+  font-weight: 500;
+}
+
+.header__nav li:hover {
+  color: #d32f2f;
+}
+
+.header__tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #fff;
+  background: #CE1E36;
+}
