@@ -72,7 +72,6 @@ const Home = () => {
         <div className="product-showcase">
           <h3 className="product-showcase__title">EXPLORE OUR PRODUCTS</h3>
           <div className="product-grid">
-            {/* Row 1 */}
             <div className="product-card product-card--horizontal">
               <div className="product-card__image">
                 <img src="https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80" alt="Exclusive Shocks" />
@@ -88,7 +87,6 @@ const Home = () => {
                 </div>
               </div>
             </div>
-            {/* Row 2 */}
             <div className="product-card product-card--split">
               <div className="product-card__content">
                 <div className="product-card__content-text">
@@ -121,8 +119,9 @@ const Home = () => {
             </div>
           </div>
         </div>
-      </div>
+      
       <Testimonials />
+      </div>
       <Footer />
     </>
   );
