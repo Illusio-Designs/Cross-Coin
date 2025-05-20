@@ -1,19 +1,25 @@
-import React from 'react';
-import Header from '../components/dashboard/Header';
+import React, { useState } from 'react';
 import Sidebar from '../components/dashboard/Sidebar';
+import Header from '../components/dashboard/Header';
 import Footer from '../components/dashboard/Footer';
 
 const DashboardLayout = ({ children }) => {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
+
   return (
     <div className="dashboard-layout">
-      <Header />
-      <div className="dashboard-main">
-        <Sidebar />
-        <main className="dashboard-content">
+      <Sidebar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
+      <div className={`dashboard-content ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <Header />
+        <main className="dashboard-main">
           {children}
         </main>
+        <Footer />
       </div>
-      <Footer />
     </div>
   );
 };
