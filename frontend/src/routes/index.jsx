@@ -1,14 +1,15 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Dashboard from '../pages/dashboard/Dashboard';
+import Home from '../pages/Home';
+import NotFound from '../pages/404';
 
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/" element={<Home />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };
 
-export default AppRoutes; 
+export default AppRoutes;

@@ -108,7 +108,7 @@
 }
 
 .product-showcase {
-  padding: 80px 10%;
+  padding: 40px 10% 0;
 }
 .product-showcase__title {
   text-align: center;
@@ -126,23 +126,29 @@
   display: flex;
   overflow: hidden;
   box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+  height: 90vh;
+}
+
+.product-card__image{
+  width: 50%;
 }
 .product-card__content {
   flex: 1;
-  background: #9A7D63;
   color: #fff;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  height: 100vh;
+  height: 100%;
 }
 .product-card__content-text {
-  padding: 60px 28px;
+  padding: 0px 28px;
+  background: #9A7D63;
   height: 50vh;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
+  height: 50%;
 }
 .product-card__content-text h4 {
   font-size: 40px;
@@ -169,19 +175,89 @@
 .product-btn:hover {
   background: transparent;
   border: 1px solid #fff;
+  color: #fff;
 }
 .product-card__content-image {
-  height: 50vh;
+  height: 50%;
   width: 100%;
 }
 .product-card__content-image img{
   width: 100%;
+  height: 100%;
 }
 .product-card__image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-.product-card--split .product-card__content {
+.product-card--split .product-card__content-text {
 background: #77777E;
+}
+
+/* Summer Collections Section */
+.summer-collections-section {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  background-image: url('../../assets/summer.jpg');
+  background-size: cover;
+  background-position: center;
+  margin: 0 10%;
+  overflow: hidden;
+  padding: 50px;
+}
+.summer-collections-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.summer-collections-content h2 {
+  font-weight: 700;
+  font-size: 2rem;
+  color: #333333;
+  padding-top: 80px;
+}
+.summer-highlight {
+  color: #ffffff;
+}
+.summer-shop-btn {
+  background: #CE1E36;
+  color: #fff;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 4px;
+  margin: 0.5rem 0 1.5rem 0;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.summer-shop-btn:hover {
+  background: #c0392b;
+}
+.summer-countdown {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 5rem;
+  font-family: monospace;
+  font-size: 1.2rem;
+  color: #333333;
+  align-items: center;
+}
+.summer-countdown-block {
+  text-align: center;
+}
+.summer-countdown-digit {
+  font-size: 2rem;
+  font-weight: 700;
+  min-width: 2ch;
+  letter-spacing: 1px;
+}
+.summer-countdown-label {
+  font-size: 0.8rem;
+  color: #33333399;
 }

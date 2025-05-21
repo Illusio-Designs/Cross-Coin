@@ -85,6 +85,15 @@
 
 .footer__brand {
   max-width: 260px;
+  margin-top: 20px;
+}
+
+.footer__logo{
+  width: 100%;
+}
+
+.footer__logo img{
+  width: 100%;
 }
 
 .footer__logo-text {

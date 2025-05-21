@@ -51,18 +51,3 @@
 .error-button:hover {
   background-color: #2563EB;
 }
-
-/* Responsive styles */
-@media (max-width: 640px) {
-  .error-code {
-    font-size: 4rem;
-  }
-
-  .error-title {
-    font-size: 1.25rem;
-  }
-
-  .error-content {
-    padding: 1.5rem;
-  }
-} 

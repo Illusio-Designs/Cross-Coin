@@ -4,18 +4,13 @@
   --bg-secondary: #f8fafc;
   --bg-hover: #f1f5f9;
   --bg-active: #e2e8f0;
-  
   --text-primary: #1e293b;
   --text-secondary: #64748b;
-  
   --border-color: #e2e8f0;
   
   /* Typography */
   --font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   
-  /* Spacing */
-  --header-height: 64px;
-  --footer-height: 48px;
   
   /* Transitions */
   --transition-base: all 0.3s ease;
@@ -40,6 +35,7 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  margin: 0;
 }
 
 /* Scrollbar styles */
