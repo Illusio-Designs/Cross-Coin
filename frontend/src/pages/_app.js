@@ -1,4 +1,4 @@
-
+import '../styles/root.css';
 import '../styles/error.css';
 import '../styles/components/Footer.css';
 import '../styles/components/Header.css';

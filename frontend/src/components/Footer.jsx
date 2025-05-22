@@ -19,7 +19,7 @@ const Footer = () => {
           </div>
           <button type="submit">SEND</button>
         </form>
-        <p className="footer__newsletter-policy">By subscribing you agree to our <a href="#">Terms & Conditions</a> and <a href="#">Privacy & Cookies Policy</a>.</p>
+        <p className="footer__newsletter-policy">By subscribing you agree to our <a href="#"> Terms & Conditions and Privacy & Cookies Policy</a>.</p>
         </div>
       </div>
       <div className="footer__main">
@@ -69,7 +69,7 @@ const Footer = () => {
           <h5>Do You Need Help ?</h5>
           <p>It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.</p>
           <div className="footer__contact">
-            <div><MdOutlinePhoneInTalk /> <span>Monday-Friday: 08am-9pm<br /><b>0800 300 353 </b></span></div> 
+            <div><MdOutlinePhoneInTalk /> <span>Monday-Friday: 08am-9pm<br /><b>0 800 300-353 </b></span></div> 
             <div><AiOutlineMail /> <span>Need help with your order?<br /><b>info@example.com</b></span></div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 .home-page{
   background-color: #ffffff;
+  padding: 0 0 60px;
 }
 .hero-slider {
   display: flex;
@@ -143,10 +144,10 @@
 .product-card__content-text {
   padding: 0px 28px;
   background: #9A7D63;
-  height: 50vh;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  justify-content: center;
   gap: 10px;
   height: 50%;
 }
@@ -156,7 +157,7 @@
   margin-bottom: 10px;
 }
 .product-card__content-text p {
-  font-size: 1rem;
+  font-size: 20px;
   color: #f3f3f3;
   margin-bottom: 18px;
 }
@@ -237,7 +238,8 @@ background: #77777E;
   transition: background 0.2s;
 }
 .summer-shop-btn:hover {
-  background: #c0392b;
+  background: transparent;
+  border: 1px solid #CE1E36;
 }
 .summer-countdown {
   display: flex;
