@@ -1,14 +1,17 @@
 import React from 'react';
+import '../styles/components/Header.css';
 import { FiUser, FiHeart } from "react-icons/fi";
 import { BsCart } from "react-icons/bs";
 import { HiOutlineSearch } from "react-icons/hi";
+import Image from "next/image";
+import logo from '../assets/crosscoin_logo.png';
 
 const Header = () => {
   return (
     <header className="header">
       <div className="header__top">
         <div className="header__logo">
-          <img src="/crosscoin_logo.png" alt="logo" />
+          <Image src={logo} alt="logo" />
         </div>
         <div className="header__search">
           <input type="text" placeholder="Search for products, categories or brands..." />

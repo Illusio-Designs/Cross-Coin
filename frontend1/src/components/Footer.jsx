@@ -1,7 +1,10 @@
 import React from "react";
+import "../styles/components/Footer.css";
 import { AiOutlineMail } from "react-icons/ai";
 import { FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn } from "react-icons/fa";
-import { MdOutlinePhoneInTalk } from "react-icons/md"; // Changed to MdOutlinePhoneInTalk for stroke call icon
+import { MdOutlinePhoneInTalk } from "react-icons/md"; 
+import Image from "next/image";
+import logo from '../assets/crosscoin_logo.png';
 
 const Footer = () => {
   return (
@@ -19,14 +22,14 @@ const Footer = () => {
           </div>
           <button type="submit">SEND</button>
         </form>
-        <p className="footer__newsletter-policy">By subscribing you agree to our <a href="#"> Terms & Conditions and Privacy & Cookies Policy</a>.</p>
+        <p className="footer__newsletter-policy">By subscribing you agree to our <a href="#">Terms & Conditions</a> and <a href="#">Privacy & Cookies Policy</a>.</p>
         </div>
       </div>
       <div className="footer__main">
         <div className="footer__col footer__brand">
           <div className="footer__logo">
             <span className="footer__logo">
-            <img src="/crosscoin_logo.png" alt="logo" />
+            <Image src={logo} alt="logo" />
             </span>
           </div>
           <p>Register now to get latest updates on promotions & coupons. Don't worry, we not spam!</p>
@@ -69,7 +72,7 @@ const Footer = () => {
           <h5>Do You Need Help ?</h5>
           <p>It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.</p>
           <div className="footer__contact">
-            <div><MdOutlinePhoneInTalk /> <span>Monday-Friday: 08am-9pm<br /><b>0 800 300-353 </b></span></div> 
+            <div><MdOutlinePhoneInTalk /> <span>Monday-Friday: 08am-9pm<br /><b>0800 300 353 </b></span></div> 
             <div><AiOutlineMail /> <span>Need help with your order?<br /><b>info@example.com</b></span></div>
           </div>
         </div>
