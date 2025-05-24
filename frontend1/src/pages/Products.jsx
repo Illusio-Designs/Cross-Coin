@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { FiFilter } from "react-icons/fi";
-import "../styles/pages/products.css";
 
 const Products = () => {
   const [showFilters, setShowFilters] = useState(false);

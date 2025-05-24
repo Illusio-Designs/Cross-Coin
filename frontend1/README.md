@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Cross-Coin Frontend
 
-## Getting Started
+This is the frontend application for the Cross-Coin project, built with Next.js and React.
 
-First, run the development server:
+## 🚀 Tech Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Framework**: Next.js 15.3.2
+- **UI Library**: React 19.0.0
+- **Styling**: Tailwind CSS 3.4.17
+- **Icons**: React Icons 5.5.0
+
+## 📦 Project Structure
+
+```
+frontend1/
+├── src/
+│   ├── app/          # Next.js app directory (routing and layouts)
+│   ├── components/   # Reusable React components
+│   ├── pages/        # Page components
+│   ├── styles/       # Global styles and Tailwind configurations
+│   └── assets/       # Static assets (images, fonts, etc.)
+├── public/           # Public static files
+└── ...
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠️ Getting Started
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### Prerequisites
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Node.js (Latest LTS version recommended)
+- npm or yarn package manager
 
-## Learn More
+### Installation
 
-To learn more about Next.js, take a look at the following resources:
+1. Clone the repository:
+   ```bash
+   git clone [repository-url]
+   cd frontend1
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. Install dependencies:
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. Start the development server:
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
 
-## Deploy on Vercel
+The application will be available at `http://localhost:3000`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📝 Available Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run dev` - Start development server
+- `npm run build` - Build production bundle
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint for code linting
+
+## 🎨 Styling
+
+This project uses Tailwind CSS for styling. The configuration can be found in `tailwind.config.mjs`.
+
+## 🔧 Configuration Files
+
+- `next.config.mjs` - Next.js configuration
+- `postcss.config.mjs` - PostCSS configuration
+- `tailwind.config.mjs` - Tailwind CSS configuration
+- `jsconfig.json` - JavaScript configuration
+
+## 📚 Development Guidelines
+
+1. **Component Structure**
+   - Place reusable components in `src/components`
+   - Keep components modular and focused on a single responsibility
+   - Use TypeScript for better type safety
+
+2. **Styling**
+   - Use Tailwind CSS utility classes
+   - Follow the project's design system
+   - Keep styles consistent across components
+
+3. **Code Quality**
+   - Run linter before committing changes
+   - Follow React best practices
+   - Write meaningful component and function names
+
+## 🤝 Contributing
+
+1. Create a new branch for your feature
+2. Make your changes
+3. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

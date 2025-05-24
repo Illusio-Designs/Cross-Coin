@@ -1,5 +1,4 @@
 import React from 'react';
-import '../styles/components/Header.css';
 import { FiUser, FiHeart } from "react-icons/fi";
 import { BsCart } from "react-icons/bs";
 import { HiOutlineSearch } from "react-icons/hi";

@@ -1,5 +1,4 @@
 import React from "react";
-import "../styles/components/Footer.css";
 import { AiOutlineMail } from "react-icons/ai";
 import { FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn } from "react-icons/fa";
 import { MdOutlinePhoneInTalk } from "react-icons/md"; 

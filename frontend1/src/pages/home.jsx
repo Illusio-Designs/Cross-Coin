@@ -10,7 +10,6 @@ import card2_left from "../assets/card2-left.png";
 import card2_right from "../assets/card2-right.png";
 import card3_left from "../assets/card3-left.png";
 import card3_right from "../assets/card3-right.png";
-import "../styles/pages/home.css";
 
 const slides = [
   {
