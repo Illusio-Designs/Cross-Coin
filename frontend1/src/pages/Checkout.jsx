@@ -1,6 +1,5 @@
 import Footer from "../components/Footer";
 import Header from "../components/Header";
-import '../styles/pages/Checkout.css';
 
 export default function Checkout() {
   return (

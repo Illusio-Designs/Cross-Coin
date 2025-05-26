@@ -4,12 +4,12 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import Testimonials from "../components/Testimonials";
 import Image from "next/image";
-import card1_left from "../assets/card1-left.png";
-import card1_right from "../assets/card1-right.png";
-import card2_left from "../assets/card2-left.png";
-import card2_right from "../assets/card2-right.png";
-import card3_left from "../assets/card3-left.png";
-import card3_right from "../assets/card3-right.png";
+import card1_left from "../assets/card1-left.webp";
+import card1_right from "../assets/card1-right.webp";
+import card2_left from "../assets/card2-left.webp";
+import card2_right from "../assets/card2-right.webp";
+import card3_left from "../assets/card3-left.webp";
+import card3_right from "../assets/card3-right.webp";
 
 const slides = [
   {

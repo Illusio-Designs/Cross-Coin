@@ -3,7 +3,7 @@ import { FiUser, FiHeart } from "react-icons/fi";
 import { BsCart } from "react-icons/bs";
 import { HiOutlineSearch } from "react-icons/hi";
 import Image from "next/image";
-import logo from '../assets/crosscoin_logo.png';
+import logo from '../assets/crosscoin_logo.webp';
 
 const Header = () => {
   return (

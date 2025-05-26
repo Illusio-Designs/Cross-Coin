@@ -17,7 +17,7 @@
 }
 
 .hero-slide__content {
-  background-image: url("../../assets/hero-bg.png");
+  background-image: url("../../assets/hero-bg.webp");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -118,22 +118,22 @@
   letter-spacing: 2px;
   margin-bottom: 32px;
 }
-.product-grid {
+.home-page .product-grid {
   display: flex;
   flex-direction: column;
   gap: 32px;
 }
-.product-card {
+.home-page .product-card {
   display: flex;
   overflow: hidden;
   box-shadow: 0 2px 16px rgba(0,0,0,0.07);
   height: 90vh;
 }
 
-.product-card__image{
+.home-page .product-card__image{
   width: 50%;
 }
-.product-card__content {
+.home-page .product-card__content {
   flex: 1;
   color: #fff;
   display: flex;
@@ -141,7 +141,7 @@
   justify-content: center;
   height: 100%;
 }
-.product-card__content-text {
+.home-page .product-card__content-text {
   padding: 0px 28px;
   background: #9A7D63;
   display: flex;
@@ -151,17 +151,17 @@
   gap: 10px;
   height: 50%;
 }
-.product-card__content-text h4 {
+.home-page .product-card__content-text h4 {
   font-size: 40px;
   font-weight: 700;
   margin-bottom: 10px;
 }
-.product-card__content-text p {
+.home-page .product-card__content-text p {
   font-size: 20px;
   color: #f3f3f3;
   margin-bottom: 18px;
 }
-.product-card__content-text .product-btn {
+.home-page .product-card__content-text .product-btn {
   background: #fff;
   color: #000000;
   border: none;
@@ -173,25 +173,25 @@
   transition: background 0.2s, color 0.2s;
   box-shadow: 0 2px 8px rgba(0,0,0,0.07);
 }
-.product-btn:hover {
+.home-page .product-btn:hover {
   background: transparent;
   border: 1px solid #fff;
   color: #fff;
 }
-.product-card__content-image {
+.home-page .product-card__content-image {
   height: 50%;
   width: 100%;
 }
-.product-card__content-image img{
+.home-page .product-card__content-image img{
   width: 100%;
   height: 100%;
 }
-.product-card__image img {
+.home-page .product-card__image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-.product-card--split .product-card__content-text {
+.home-page .product-card--split .product-card__content-text {
 background: #77777E;
 }
 
@@ -202,7 +202,7 @@ background: #77777E;
   flex-direction: column;
   align-items: flex-start;
   justify-content: flex-start;
-  background-image: url('../../assets/summer.jpg');
+  background-image: url('../../assets/summer.webp');
   background-size: cover;
   background-position: center;
   margin: 0 10%;

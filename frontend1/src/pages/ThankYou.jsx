@@ -1,6 +1,5 @@
 import Footer from "../components/Footer";
 import Header from "../components/Header";
-import '../styles/pages/ThankYou.css';
 
 export default function ThankYou() {
   return (

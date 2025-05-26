@@ -1,5 +1,6 @@
 .footer {
   padding: 30px 10%;
+  background: #F3F4F6;
 }
 
 .footer__newsletter {
@@ -10,7 +11,7 @@
 }
 
 .footer__newsletter-content{
-  width: 340px;
+  width: 400px;
 }
 
 .footer__newsletter-content h4 {
@@ -56,7 +57,7 @@
 }
 
 .footer__newsletter-policy {
-  font-size: 12px;
+  font-size: 13px;
   color: #888;
   margin-top: 4px;
   text-align: center;
@@ -86,10 +87,6 @@
   max-width: 260px;
 }
 
-.footer__logo {
-  padding-top: 30px;
-}
-
 .footer__logo img{
   width: 100%;
   height: 100%;
@@ -105,7 +102,7 @@
 .footer__brand p {
   font-size: 16px;
   color: #666;
-  margin: 12px 0 16px 0;
+  margin: 25px 0 70px;
 }
 
 .footer__social h2{
@@ -123,7 +120,7 @@
 .footer__social-icons a{
   font-size: 20px;
   background-color: #ffffff;
-  padding: 10px;
+  padding: 10px 10px 5px;
   border-radius: 10px;
 }
 
@@ -146,7 +143,7 @@
 .footer__col h5 {
   font-size: 20px;
   font-weight: 700;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
   color: #111827;
 }
 
@@ -159,7 +156,7 @@
 .footer__col ul li {
   font-size: 16px;
   color: #4B5563;
-  margin-bottom: 7px;
+  margin-bottom: 15px;
   cursor: pointer;
   transition: color 0.2s;
 }
@@ -169,25 +166,38 @@
 }
 
 .footer__help h5 {
-  margin-bottom: 8px;
+  margin-bottom: 15px;
 }
 
 .footer__help p {
   font-size: 16px;
   color: #666;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
 }
 
 .footer__contact div {
   font-size: 1rem;
-  margin-bottom: 6px;
   display: flex;
   align-items: center;
   gap: 8px;
+  color: #4B5563;
+  margin-bottom: 15px;
 }
 
 .footer__contact svg{
   font-size: 30px;
+}
+
+.contact-item .gap{
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+}
+
+.contact-item .bold{
+  color: #111827;
+  font-size: 20px;
 }
 
 .footer__bottom {
@@ -198,11 +208,13 @@
   padding-top: 3%;
   border-top: 1px solid #ececec;
   font-size: 0.95rem;
-  gap: 16px;
 }
 
 .footer__copyright {
-  color: #888;
+  color: #6B7280;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .footer__payments{
@@ -218,9 +230,9 @@
 }
 
 .footer__links a {
-  color: #888;
+  color: #111827;
   margin-left: 18px;
-  text-decoration: none;
+  text-decoration: underline;
   font-size: 0.95rem;
   transition: color 0.2s;
 }
@@ -228,17 +240,3 @@
 .footer__links a:hover {
   color: #d32f2f;
 }
-
-@media (max-width: 900px) {
-  .footer__main {
-    flex-direction: column;
-    padding: 32px 5% 16px 5%;
-    gap: 0;
-  }
-  .footer__bottom {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 18px 5%;
-    gap: 8px;
-  }
-} 

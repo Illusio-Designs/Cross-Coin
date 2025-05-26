@@ -3,7 +3,7 @@ import { AiOutlineMail } from "react-icons/ai";
 import { FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn } from "react-icons/fa";
 import { MdOutlinePhoneInTalk } from "react-icons/md"; 
 import Image from "next/image";
-import logo from '../assets/crosscoin_logo.png';
+import logo from '../assets/crosscoin_logo.webp';
 
 const Footer = () => {
   return (
@@ -16,7 +16,7 @@ const Footer = () => {
         <div className="footer__newsletter-form-container">
         <form className="footer__newsletter-form">
           <div style={{ position: 'relative' }}>
-            <AiOutlineMail style={{ position: 'absolute', left: '5px', top: '15px' }} />
+            <AiOutlineMail style={{ position: 'absolute', left: '5px', top: '10px' }} />
             <input type="email" placeholder="Enter your email address" style={{ paddingLeft: '25px' }} />
           </div>
           <button type="submit">SEND</button>
@@ -71,8 +71,8 @@ const Footer = () => {
           <h5>Do You Need Help ?</h5>
           <p>It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.</p>
           <div className="footer__contact">
-            <div><MdOutlinePhoneInTalk /> <span>Monday-Friday: 08am-9pm<br /><b>0800 300 353 </b></span></div> 
-            <div><AiOutlineMail /> <span>Need help with your order?<br /><b>info@example.com</b></span></div>
+            <div className="contact-item"><MdOutlinePhoneInTalk /> <span className="gap">Monday-Friday: 08am-9pm<br /><b className="bold">0800 300 353 </b></span></div> 
+            <div className="contact-item"><AiOutlineMail /> <span className="gap">Need help with your order?<br /><b className="bold">info@example.com</b></span></div>
           </div>
         </div>
       </div>

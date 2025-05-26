@@ -3,7 +3,8 @@ import { SessionProvider } from "next-auth/react";
 import '../styles/components/Footer.css';
 import '../styles/components/Header.css';
 import '../styles/components/Testimonials.css';
-import '../styles/pages/home.css';
+import '../styles/pages/Home.css';
+import '../styles/pages/Products.css'
 import '../styles/pages/ProductDetails.css';
 import '../styles/pages/Cart.css';
 import '../styles/pages/Shipping.css';

@@ -1,3 +1,7 @@
-body {
-  @apply bg-gradient-to-br from-green-50 to-white min-h-screen;
-} 
+*{
+  margin: 0;
+  padding: 0;
+}
+body{
+  font-family: Poppins, sans-serif;
+}
