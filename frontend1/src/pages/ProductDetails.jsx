@@ -102,22 +102,30 @@ export default function ProductDetails() {
           </div>
           <div className="product-special-offer">
             <span className="special-offer-label">Special Offer :</span>
-            <span className="special-offer-timer">81<span>:</span>06<span>:</span>50<span>:</span>02</span>
+            <span className="special-offer-timer">
+              <span className="timer-box">81</span>
+              <span className="timer-box">06</span>
+              <span className="timer-box">50</span>
+              <span>:</span>
+              <span className="timer-box">02</span>
+            </span>
             <span className="special-offer-note">Remains until the end of the offer.</span>
           </div>
-          <div className="product-quantity">
-            <button onClick={() => setQuantity(q => Math.max(1, q - 1))}>-</button>
-            <span>{quantity}</span>
-            <button onClick={() => setQuantity(q => q + 1)}>+</button>
-          </div>
-          <div className="product-buttons">
-            <button className="add-to-cart">Add to cart</button>
-            <button className="buy-now">Buy Now</button>
+          <div className="product-action-box">
+            <div className="product-quantity">
+              <button onClick={() => setQuantity(q => Math.max(1, q - 1))}>-</button>
+              <span>{quantity}</span>
+              <button onClick={() => setQuantity(q => q + 1)}>+</button>
+            </div>
+            <div className="product-buttons">
+              <button className="add-to-cart">Add to cart</button>
+              <button className="buy-now">Buy Now</button>
+            </div>
           </div>
           <div className="product-info-extra">
             <div className="payment-info">
               <span className="info-icon">💳</span>
-              <span className="info-label">Payment.</span> Payment upon receipt of goods, Payment by card in the department, Google Pay, Online card,-5% discount in case of payment
+              <span className="info-label">Payment.</span> Payment upon receipt of goods, Payment by card in the department, Google Pay, Online card, -5% discount in case of payment
             </div>
             <div className="warranty-info">
               <span className="info-icon">🛡️</span>
