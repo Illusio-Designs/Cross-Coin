@@ -117,7 +117,7 @@ export default function ProductDetails() {
           <div className="product-info-extra">
             <div className="payment-info">
               <span className="info-icon">💳</span>
-              <span className="info-label">Payment.</span> Payment upon receipt of goods, Payment by card in the department, Google Pay, Online card, <b>-5% discount in case of payment</b>
+              <span className="info-label">Payment.</span> Payment upon receipt of goods, Payment by card in the department, Google Pay, Online card,-5% discount in case of payment
             </div>
             <div className="warranty-info">
               <span className="info-icon">🛡️</span>
