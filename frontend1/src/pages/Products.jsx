@@ -336,12 +336,15 @@ const Products = () => {
                   <div className="category-list">
                     {categories.map((category) => (
                       <label key={category} className="checkbox-label">
+                        <div className="checkbox-group">
                         <input
                           type="checkbox"
                           checked={selectedCategory === category}
                           onChange={() => handleFilterChange('category', category)}
                         />
-                        {category} <span>[20]</span>
+                        <p>{category}</p> 
+                        </div>
+                        <span>[20]</span>
                       </label>
                     ))}
                   </div>
@@ -355,12 +358,15 @@ const Products = () => {
                   <div className="material-list">
                     {materials.map((material) => (
                       <label key={material} className="checkbox-label">
+                        <div className="checkbox-group">
                         <input
                           type="checkbox"
                           checked={selectedMaterial.includes(material)}
                           onChange={() => handleFilterChange('material', material)}
                         />
-                        {material} <span>[20]</span>
+                        <p>{material}</p> 
+                         </div>
+                        <span>[20]</span>
                       </label>
                     ))}
                   </div>
@@ -417,12 +423,15 @@ const Products = () => {
                   <div className="size-options">
                     {sizes.map(size => (
                       <label key={size} className="checkbox-label">
+                        <div className="checkbox-group">
                         <input
                           type="checkbox"
                           checked={selectedSizes.includes(size)}
                           onChange={() => handleFilterChange('size', size)}
                         />
-                        {size} <span>[20]</span>
+                        <p>{size} </p>
+                        </div>
+                        <span>[20]</span>
                       </label>
                     ))}
                   </div>
@@ -436,12 +445,15 @@ const Products = () => {
                   <div className="gender-options">
                     {genders.map(gender => (
                       <label key={gender} className="checkbox-label">
+                        <div className="checkbox-group">
                         <input
                           type="checkbox"
                           checked={selectedGender.includes(gender)}
                           onChange={() => handleFilterChange('gender', gender)}
                         />
-                        {gender} <span>[20]</span>
+                        <p>{gender} </p>
+                        </div>
+                        <span>[20]</span>
                       </label>
                     ))}
                   </div>

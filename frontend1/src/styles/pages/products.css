@@ -141,12 +141,18 @@
   cursor: pointer;
   margin-bottom: 0.5rem;
   color: #666;
+  justify-content: space-between;
 }
 
 .checkbox-label input[type="checkbox"] {
   accent-color: #2c3e50;
   width: 16px;
   height: 16px;
+}
+
+.checkbox-group{
+  display: flex;
+  gap: 10px;
 }
 
 .price-range input[type="range"] {
@@ -156,7 +162,7 @@
 
 .price-inputs {
   display: flex;
-  justify-content: space-between;
+  gap: 10px;
   color: #374151;
   font-size: 0.9rem;
 }
@@ -262,6 +268,8 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
+  min-width: 0;
+  margin-left: 0px;
 }
 
 .products-page .product-info h3 {

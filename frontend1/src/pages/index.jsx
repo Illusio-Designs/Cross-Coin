@@ -2,7 +2,6 @@ import Home from "./Home.jsx";
 import Products from "./Products.jsx";
 import ProductDetails from "./ProductDetails.jsx";
 import Cart from "./Cart.jsx";
-import Link from "next/link";
 import Checkout from "./Checkout.jsx";
 import Shipping from "./Shipping.jsx";
 import Login from "./login.jsx";
