@@ -4,6 +4,11 @@ import { FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn } from "react-icons/f
 import { MdOutlinePhoneInTalk } from "react-icons/md"; 
 import Image from "next/image";
 import logo from '../assets/crosscoin_logo.webp';
+import visa from '../assets/visa.webp';
+import mastercard from '../assets/mastercard.webp';
+import paypal from '../assets/paypal.webp';
+import skrill from '../assets/skrill.webp';
+import klarna from '../assets/klarna.webp';
 
 const Footer = () => {
   return (
@@ -80,10 +85,11 @@ const Footer = () => {
         <div className="footer__copyright">
           Copyright 2025 &copy; crosscoin PVT LTD. All right reserved
           <div className="footer__payments">
-          <img src="/visa.png" alt="Visa" />
-          <img src="/paypal.png" alt="PayPal" />
-          <img src="/skrill.png" alt="Skrill" />
-          <img src="/klarna.png" alt="Klarna" />
+          <Image src={visa} alt="Visa" />
+          <Image src={mastercard} alt="Mastercard" />
+          <Image src={paypal} alt="PayPal" />
+          <Image src={skrill} alt="Skrill" />
+          <Image src={klarna} alt="Klarna" />
         </div>
         </div>
        

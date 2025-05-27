@@ -204,7 +204,7 @@ background: #77777E;
   justify-content: flex-start;
   background-image: url('../../assets/summer.webp');
   background-size: cover;
-  background-position: center;
+  background-position: bottom;
   margin: 0 10%;
   overflow: hidden;
   padding: 50px;

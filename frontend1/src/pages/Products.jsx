@@ -3,10 +3,14 @@ import React, { useState, useEffect } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { FiFilter, FiChevronDown } from "react-icons/fi";
+import Image from "next/image";
+import card1 from "../assets/card1-right.webp";
+import card2 from "../assets/card2-left.webp";
+import card3 from "../assets/card3-right.webp";
 
 const Products = () => {
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategory, setSelectedCategory] = useState([]);
   const [sortBy, setSortBy] = useState("featured");
   const [priceRange, setPriceRange] = useState([20, 250]);
   const [selectedColors, setSelectedColors] = useState([]);
@@ -49,7 +53,7 @@ const Products = () => {
       originalPrice: 39.99,
       price: 29.99,
       category: "Woollen Shocks",
-      image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80",
+      image: card1,
       rating: 4.5,
       reviews: 128
     },
@@ -59,7 +63,7 @@ const Products = () => {
       originalPrice: 29.99,
       price: 19.99,
       category: "Cotton Shocks",
-      image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80",
+      image: card2,
       rating: 4.2,
       reviews: 95
     },
@@ -69,7 +73,7 @@ const Products = () => {
       originalPrice: 39.99,
       price: 39.99,
       category: "Silk Shocks",
-      image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80",
+      image: card3,
       rating: 4.8,
       reviews: 64
     },
@@ -79,7 +83,7 @@ const Products = () => {
       originalPrice: 34.99,
       price: 34.99,
       category: "Winter Special",
-      image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80",
+      image: card1,
       rating: 4.6,
       reviews: 112
     },
@@ -89,7 +93,7 @@ const Products = () => {
       originalPrice: 24.99,
       price: 24.99,
       category: "Summer Special",
-      image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80",
+      image: card2,
       rating: 4.3,
       reviews: 87
     },
@@ -99,7 +103,7 @@ const Products = () => {
       originalPrice: 22.99,
       price: 22.99,
       category: "Net Shocks",
-      image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80",
+      image: card3,
       rating: 4.4,
       reviews: 73
     },
@@ -109,7 +113,7 @@ const Products = () => {
       originalPrice: 24.99,
       price: 24.99,
       category: "Summer Special",
-      image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80",
+      image: card1,
       rating: 4.3,
       reviews: 87
     },
@@ -119,7 +123,7 @@ const Products = () => {
       originalPrice: 22.99,
       price: 22.99,
       category: "Net Shocks",
-      image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80",
+      image: card2,
       rating: 4.4,
       reviews: 73
     },
@@ -129,7 +133,7 @@ const Products = () => {
       originalPrice: 24.99,
       price: 24.99,
       category: "Summer Special",
-      image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80",
+      image: card3,
       rating: 4.3,
       reviews: 87
     },
@@ -139,7 +143,7 @@ const Products = () => {
       originalPrice: 22.99,
       price: 22.99,
       category: "Net Shocks",
-      image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80",
+      image: card1,
       rating: 4.4,
       reviews: 73
     },
@@ -149,7 +153,7 @@ const Products = () => {
       originalPrice: 24.99,
       price: 24.99,
       category: "Summer Special",
-      image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80",
+      image: card2,
       rating: 4.3,
       reviews: 87
     },
@@ -159,7 +163,7 @@ const Products = () => {
       originalPrice: 22.99,
       price: 22.99,
       category: "Net Shocks",
-      image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80",
+      image: card3,
       rating: 4.4,
       reviews: 73
     },
@@ -169,7 +173,7 @@ const Products = () => {
       originalPrice: 24.99,
       price: 24.99,
       category: "Summer Special",
-      image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80",
+      image: card1,
       rating: 4.3,
       reviews: 87
     },
@@ -179,7 +183,7 @@ const Products = () => {
       originalPrice: 22.99,
       price: 22.99,
       category: "Net Shocks",
-      image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80",
+      image: card2,
       rating: 4.4,
       reviews: 73
     },
@@ -189,7 +193,7 @@ const Products = () => {
       originalPrice: 24.99,
       price: 24.99,
       category: "Summer Special",
-      image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80",
+      image: card3,
       rating: 4.3,
       reviews: 87
     },
@@ -199,7 +203,7 @@ const Products = () => {
       originalPrice: 22.99,
       price: 22.99,
       category: "Net Shocks",
-      image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80",
+      image: card1,
       rating: 4.4,
       reviews: 73
     }
@@ -253,7 +257,7 @@ const Products = () => {
         setSelectedMaterial(prev => prev.includes(value) ? prev.filter(m => m !== value) : [...prev, value]);
         break;
       case 'category':
-        setSelectedCategory(value);
+        setSelectedCategory(prev => prev.includes(value) ? prev.filter(c => c !== value) : [...prev, value]);
         break;
       default:
         break;
@@ -266,7 +270,7 @@ const Products = () => {
     const matchesSize = selectedSizes.length === 0 || selectedSizes.includes(product.size);
     const matchesGender = selectedGender.length === 0 || selectedGender.includes(product.gender);
     const matchesMaterial = selectedMaterial.length === 0 || selectedMaterial.includes(product.material);
-    const matchesCategory = selectedCategory === 'All' || selectedCategory === product.category;
+    const matchesCategory = selectedCategory.length === 0 || selectedCategory.includes(product.category);
     return inPriceRange && matchesColor && matchesSize && matchesGender && matchesMaterial && matchesCategory;
   });
 
@@ -339,7 +343,7 @@ const Products = () => {
                         <div className="checkbox-group">
                         <input
                           type="checkbox"
-                          checked={selectedCategory === category}
+                          checked={selectedCategory.includes(category)}
                           onChange={() => handleFilterChange('category', category)}
                         />
                         <p>{category}</p> 
@@ -466,7 +470,13 @@ const Products = () => {
             {filteredProducts.map((product) => (
               <div key={product.id} className="product-card">
                 <div className="product-image">
-                  <img src={product.image} alt={product.name} />
+                  <Image 
+                    src={product.image} 
+                    alt={product.name} 
+                    width={300}
+                    height={300}
+                    style={{ objectFit: 'cover' }}
+                  />
                 </div>
                 <div className="product-info">
                   <h3>{product.name}</h3>
