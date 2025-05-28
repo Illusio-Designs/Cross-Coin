@@ -4,6 +4,26 @@ import Card from "@/components/Dashboard/Card.jsx";
 import { useState } from "react";
 import { FaEye, FaChartBar, FaRocket } from "react-icons/fa";
 
+function DashboardHeader() {
+  return (
+    <header className="dashboard-header">
+      <div className="header-title">Dashboard</div>
+      <div className="header-actions">
+        {/* Add user avatar, settings, etc. here */}
+        <span style={{fontWeight:600, color:'#CE1E36'}}>Admin</span>
+      </div>
+    </header>
+  );
+}
+
+function DashboardFooter() {
+  return (
+    <footer className="dashboard-footer">
+      &copy; {new Date().getFullYear()} CrossCoin. All rights reserved.
+    </footer>
+  );
+}
+
 export default function Dashboard() {
   const [selected, setSelected] = useState(0);
   const cards = [
@@ -31,30 +51,34 @@ export default function Dashboard() {
   ];
 
   return (
-    <ProtectedRoute>
-      <div className="flex min-h-screen">
+    <ProtectedRoute requireAdmin={true}>
+      <div className="dashboard-layout">
         <Sidebar />
-        <main className="flex-1 p-8 bg-gradient-to-br from-green-50 to-white min-h-screen">
-          <h1 className="text-2xl font-bold mb-8">My Sites Details</h1>
-          <section className="mb-12">
-            <h2 className="text-xl font-semibold mb-6">Content Quality</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {cards.map((card, idx) => (
-                <Card
-                  key={card.title}
-                  title={card.title}
-                  price={card.price}
-                  description={card.description}
-                  features={card.features}
-                  selected={selected === idx}
-                  onSelect={() => setSelected(idx)}
-                >
-                  {card.icon}
-                </Card>
-              ))}
-            </div>
-          </section>
-        </main>
+        <div className="dashboard-main">
+          <DashboardHeader />
+          <main className="dashboard-content">
+            <h1 className="text-2xl font-bold mb-8">My Sites Details</h1>
+            <section className="mb-12">
+              <h2 className="text-xl font-semibold mb-6">Content Quality</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {cards.map((card, idx) => (
+                  <Card
+                    key={card.title}
+                    title={card.title}
+                    price={card.price}
+                    description={card.description}
+                    features={card.features}
+                    selected={selected === idx}
+                    onSelect={() => setSelected(idx)}
+                  >
+                    {card.icon}
+                  </Card>
+                ))}
+              </div>
+            </section>
+          </main>
+          <DashboardFooter />
+        </div>
       </div>
     </ProtectedRoute>
   );

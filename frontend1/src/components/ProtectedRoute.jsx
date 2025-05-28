@@ -2,20 +2,33 @@ import { useSession, signIn } from "next-auth/react";
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 
-export default function ProtectedRoute({ children }) {
+export default function ProtectedRoute({ children, requireAdmin = false }) {
   const { data: session, status } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "unauthenticated") signIn();
-    // Example: check for admin role
-    if (status === "authenticated" && session?.user?.role !== "admin") {
-      router.replace("/"); // or show an unauthorized page
+    const isStaticAdmin = typeof window !== "undefined" && localStorage.getItem("isStaticAdmin") === "true";
+    if (status === "unauthenticated" && !isStaticAdmin) {
+      router.replace("/auth/login");
     }
-  }, [status, session, router]);
+    if (requireAdmin && status === "authenticated" && session?.user?.role !== "admin" && !isStaticAdmin) {
+      router.replace("/");
+    }
+  }, [status, session, router, requireAdmin]);
 
-  if (status === "loading") return <div>Loading...</div>;
-  if (!session || session?.user?.role !== "admin") return null;
+  const isStaticAdmin = typeof window !== "undefined" && localStorage.getItem("isStaticAdmin") === "true";
+
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if ((!session && !isStaticAdmin) || (requireAdmin && session && session?.user?.role !== "admin" && !isStaticAdmin)) {
+    return null;
+  }
 
   return children;
 } 

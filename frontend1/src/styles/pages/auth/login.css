@@ -1,0 +1,129 @@
+/* Login Page Styles */
+.login-bg {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.login-card {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.login-title {
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.25rem;
+  color: #180D3E;
+}
+.login-subtitle {
+  color: #64748b;
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 1.05rem;
+}
+.login-input {
+  border: none;
+  background: #F3F4F6;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  font-size: 1.05rem;
+  outline: none;
+  width: 100%;
+  transition: box-shadow 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  color: #180D3E;
+}
+.login-input:focus {
+  box-shadow: 0 0 0 2px #CE1E3633;
+}
+.login-password-wrapper {
+  position: relative;
+}
+.login-eye {
+  position: absolute;
+  right: 1.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #CE1E36;
+  font-size: 1.25rem;
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 1;
+}
+.login-btn {
+  background: #CE1E36;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.9rem;
+  font-size: 1.08rem;
+  font-weight: 600;
+  margin-bottom: 1.2rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 100%;
+  letter-spacing: 0.5px;
+}
+.login-btn:hover {
+  background: #a8182b;
+}
+.login-oauth {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin-bottom: 1.2rem;
+}
+.login-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.7rem 0.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+  transition: border 0.2s;
+  width: 100%;
+  font-weight: 500;
+  gap: 0.5rem;
+}
+.login-google-btn:hover {
+  border-color: #CE1E36;
+}
+.login-google-icon {
+  width: 20px;
+  height: 20px;
+}
+.login-links {
+  text-align: right;
+  margin-bottom: 0.5rem;
+}
+.login-link {
+  color: #CE1E36;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.98rem;
+}
+.login-link:hover {
+  text-decoration: underline;
+}
+.login-signup {
+  text-align: center;
+  color: #64748b;
+  font-size: 0.98rem;
+  margin-top: 0.5rem;
+} 

@@ -13,6 +13,8 @@ import '../styles/pages/ThankYou.css';
 import '../styles/pages/Login.css';
 import '../styles/pages/Register.css';
 import '../styles/pages/Policy.css';
+import '../styles/pages/auth/Login.css';
+import '../styles/dashboard/layout.css';
 
 export default function App({ Component, pageProps: { session, ...pageProps } }) {
   return (
