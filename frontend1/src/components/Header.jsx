@@ -3,6 +3,7 @@ import { FiUser, FiHeart } from "react-icons/fi";
 import { BsCart } from "react-icons/bs";
 import { HiOutlineSearch } from "react-icons/hi";
 import Image from "next/image";
+import Link from 'next/link';
 import logo from '../assets/crosscoin_logo.webp';
 
 const Header = () => {
@@ -10,7 +11,9 @@ const Header = () => {
     <header className="header">
       <div className="header__top">
         <div className="header__logo">
-          <Image src={logo} alt="logo" />
+          <Link href="/">
+            <Image src={logo} alt="logo" />
+          </Link>
         </div>
         <div className="header__search">
           <input type="text" placeholder="Search for products, categories or brands..." />
@@ -19,32 +22,31 @@ const Header = () => {
           </button>
         </div>
         <div className="header__actions"> 
-          <div className="header__account">
+          <Link href="/login" className="header__account">
             <FiUser />
             <span>Sign In<br /><b>Account</b></span>
-          </div>
+          </Link>
           <div className="header__wishlist">
             <FiHeart />
             <span className="header__badge">0</span>
           </div>
-          <div className="header__cart">
+          <Link href="/Cart" className="header__cart">
             <BsCart />
             <span className="header__badge">0</span>
-          </div>
+          </Link>
         </div>
       </div>
       <nav className="header__nav">
         <ul>
-          <li>New Arrivals <span className="header__tag header__tag--fresh">#Fresh</span></li>
-          <li>Discounted <span className="header__tag header__tag--off">%50 OFF</span></li>
-          <li>Winter wear</li>
-          <li>Summer Wear</li>
-          <li>Cotton</li>
-          <li>Wools</li>
-          <li>Silks</li>
-          <li>Net</li>
-          <li>Rubber</li>
-          <li>Velvet</li>
+          <li><Link href="/Products">Products</Link></li>
+          <li><Link href="/ProductDetails">Product Details</Link></li>
+          <li><Link href="/Cart">Cart</Link></li>
+          <li><Link href="/Checkout">Checkout</Link></li>
+          <li><Link href="/Shipping">Shipping</Link></li>
+          <li><Link href="/login">Login</Link></li>
+          <li><Link href="/register">Register</Link></li>
+          <li><Link href="/ThankYou">Thank You</Link></li>
+          <li><Link href="/policy">Policy</Link></li>
         </ul>
       </nav>
     </header>
