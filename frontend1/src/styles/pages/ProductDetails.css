@@ -114,13 +114,13 @@
 .current-price {
   color: #e60000;
   font-weight: bold;
-  font-size: 2rem;
+  font-size: 1.5rem;
 }
 
 .original-price {
   text-decoration: line-through;
   color: #222;
-  font-size: 1.4rem;
+  font-size: 1rem;
   font-weight: 500;
 }
 
@@ -192,10 +192,9 @@
 }
 
 .product-special-offer {
-  background: #fff7e6;
-  border: 1.5px solid #ffe0b2;
+  background: #FFF7ED;
+  border: 1px solid #FFEDD5;
   padding: 1.2rem;
-  margin: 0 0 1rem 0;
   display: flex;
   align-items: center;
   gap: 0.7rem;
@@ -203,17 +202,13 @@
 }
 
 .special-offer-label {
-  color: #e67c00;
+  color: #EA580C;
   font-weight: bold;
-  margin-right: 0.5em;
 }
 
-
-
 .special-offer-note {
-  color: #888;
-  font-size: 0.98rem;
-  margin-left: auto;
+  color: #6B7280;
+  font-size: 14px;
 }
 
 .product-quantity {
@@ -240,54 +235,10 @@
   font-size: 1.15rem;
 }
 
-.product-buttons {
-  margin: 1.2rem 0 1rem 0;
-  display: flex;
-  gap: 1.2rem;
-}
-
-.product-buttons .add-to-cart {
-  background: #e60000;
-  color: #fff;
-  border: none;
-  padding: 0.85rem 2.2rem;
-  font-size: 1.08rem;
-  border-radius: 5px;
-  font-weight: 600;
-  margin-right: 0.5rem;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.product-buttons .add-to-cart:hover {
-  background: #b30000;
-}
-
-.buy-now {
-  background: #222;
-  color: #fff;
-  border: none;
-  padding: 0.85rem 2.2rem;
-  font-size: 1.08rem;
-  border-radius: 5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.buy-now:hover {
-  background: #444;
-}
-
-.product-info-extra {
-  margin: 1.2rem 0 0 0;
-}
-
 .payment-info,
 .warranty-info {
   background: #f9f9f9;
   border: 1.5px solid #eee;
-  border-radius: 6px;
   padding: 0.85rem 1.2rem;
   margin-bottom: 0.7rem;
   font-size: 1.01rem;
@@ -307,7 +258,6 @@
 }
 
 .product-options {
-  margin: 1rem 0;
   display: flex;
   flex-direction: column;
 }
@@ -317,7 +267,6 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  margin-bottom: 0.5rem;
 }
 
 .color-option {
@@ -351,6 +300,15 @@
   color: orange;
 }
 
+.product-tabs-section{
+  padding: 0 10% 50px;
+}
+
+.product-tabs-container {
+  border: 1px solid #E9E9E9;
+  padding: 10px;
+}
+
 .product-description,
 .product-reviews {
   border: 1px solid #ccc;
@@ -370,6 +328,7 @@
   background: #fafafa;
   border-radius: 6px 6px 0 0;
   overflow: hidden;
+  padding-left: 24px;
 }
 
 .tab {
@@ -383,21 +342,18 @@
   border-radius: 6px 6px 0 0;
   border-bottom: 2px solid transparent;
   transition: background 0.2s, color 0.2s;
+  outline: none;
 }
 
 .tab.active {
   background: #fff;
   color: #e60000;
-  border-bottom: 2px solid #fff;
+  border-bottom: 2px solid #e60000;
   font-weight: bold;
 }
 
 .product-action-box {
-  background: #fff;
-  border: 1px solid #E5E7EB;
-  border-radius: 6px;
-  padding: 18px 20px 18px 20px;
-  margin-bottom: 18px;
+  padding: 18px 0px;
   display: flex;
   align-items: center;
   gap: 18px;
@@ -419,37 +375,192 @@
 
 .timer-box {
   display: inline-block;
-  min-width: 32px;
-  padding: 2px 0;
-  border: 1.5px solid #FFA726;
-  color: #E67C00;
+  padding: 3px 7px;
+  background: #FFEDD5;
+  border: 1px solid #FED7AA;
+  color: #C2410C;
   font-weight: 600;
   font-size: 1.1rem;
-  border-radius: 4px;
   text-align: center;
-  margin-right: 0.1em;
 }
 
-.special-offer-label {
-  color: #E67C00;
-  font-weight: bold;
-}
-
-.special-offer-note {
-  color: #888;
-  font-size: 0.98rem;
-  margin-left: auto;
-}
-
-.payment-info,
-.warranty-info {
-  background: #F9FAFB;
-  border: 1px solid #E5E7EB;
-  border-radius: 6px;
-  padding: 14px 18px;
-  margin-bottom: 10px;
-  font-size: 1.01rem;
+/* --- Quantity and Buttons Row --- */
+.quantity-and-buttons {
   display: flex;
   align-items: center;
-  gap: 0.7em;
+  gap: 18px;
+}
+
+.quantity-box {
+  display: flex;
+  align-items: center;
+  border: 1px solid #E5E7EB;
+  background: #fff;
+  min-width: 140px;
+  box-sizing: border-box;
+}
+
+.quantity-btn {
+  background: none;
+  border: none;
+  color: #222;
+  font-size: 2rem;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  font-weight: 400;
+  transition: background 0.2s;
+}
+
+.quantity-btn:hover {
+  background: #f3f3f3;
+}
+
+.quantity-value {
+  flex: 1;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #222;
+}
+
+.product-info .add-to-cart {
+  background: #d32c3b;
+  color: #fff;
+  border: none;
+  border-radius: 0px;
+  padding: 10px 36px;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.product-info .add-to-cart:hover {
+  background: #b71c2b;
+}
+
+.product-info .buy-now {
+  background: #222;
+  color: #fff;
+  border: none;
+  padding: 10px 36px;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.product-info .buy-now:hover {
+  background: #444;
+}
+
+.cart-icon {
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+}
+
+/* Remove old .product-quantity and .product-buttons margin for new layout */
+.product-action-box .product-quantity,
+.product-action-box .product-buttons {
+  margin: 0;
+}
+
+/* --- Review Cards --- */
+.product-reviews {
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 0 0 8px 8px;
+  margin-bottom: 32px;
+}
+.review-card {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 18px 24px 12px 24px;
+  margin-bottom: 18px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.review-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.review-stars {
+  color: #FFD600;
+  font-size: 1.2rem;
+  letter-spacing: 1px;
+}
+.review-user {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #222;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.review-user-initial {
+  font-weight: bold;
+  color: #222;
+}
+.review-verified {
+  color: #22c55e;
+  font-size: 1.1rem;
+  margin-left: 4px;
+}
+.review-body {
+  color: #444;
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+.review-date {
+  color: #888;
+  font-size: 0.95rem;
+}
+.load-more-reviews {
+  display: block;
+  margin: 24px auto 0 auto;
+  padding: 8px 28px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: #222;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s, border 0.2s;
+}
+.load-more-reviews:hover {
+  background: #f7f7f7;
+  border-color: #bbb;
+}
+
+/* --- Product Description --- */
+.product-description {
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 0 0 8px 8px;
+  margin-bottom: 32px;
+}
+.product-description h3 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  color: #222;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* --- Payment & Warranty SVG Icon --- */
+.info-icon svg {
+  display: inline-block;
+  stroke: #222;
 }
