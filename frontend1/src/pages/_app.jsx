@@ -15,6 +15,7 @@ import '../styles/pages/Register.css';
 import '../styles/pages/Policy.css';
 import '../styles/pages/auth/Login.css';
 import '../styles/dashboard/layout.css';
+import '../styles/dashboard/sidebar.css';
 
 export default function App({ Component, pageProps: { session, ...pageProps } }) {
   return (
