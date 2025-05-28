@@ -14,6 +14,15 @@ import {
   HelpCircle,
 } from "lucide-react";
 
+// SVG Bull/Taurus Icon (purple)
+const TaurusIcon = () => (
+  <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M7 7L14.5 14.5" stroke="#7C3AED" strokeWidth="3" strokeLinecap="round"/>
+    <path d="M31 7L23.5 14.5" stroke="#7C3AED" strokeWidth="3" strokeLinecap="round"/>
+    <circle cx="19" cy="22" r="9" stroke="#7C3AED" strokeWidth="3"/>
+  </svg>
+);
+
 const sidebarData = [
   {
     label: "Dashboard",
@@ -81,6 +90,7 @@ export default function Sidebar() {
   const [hovered, setHovered] = useState(null); // for tooltips
   const [dropdown, setDropdown] = useState(null); // for floating dropdowns
   const dropdownTimeout = useRef();
+  const dropdownRef = useRef();
 
   const handleToggleSection = (label) => {
     setOpenSections((prev) => ({ ...prev, [label]: !prev[label] }));
@@ -112,40 +122,95 @@ export default function Sidebar() {
     <>
       <aside className={`dashboard-sidebar${collapsed ? ' collapsed' : ''}`}
         style={{ width: collapsed ? 70 : 250 }}>
-        <div className="sidebar-header" style={{ justifyContent: collapsed ? 'center' : 'flex-start', position: 'relative' }}>
-          <span style={{ fontSize: '2rem', color: '#CE1E36' }}>🦊</span>
-          {!collapsed && <span style={{ marginLeft: 8 }}>Taurus</span>}
-          <button
-            onClick={() => setCollapsed((c) => !c)}
+        {/* Sidebar Header */}
+        {!collapsed ? (
+          <div
+            className="sidebar-header"
             style={{
-              marginLeft: 'auto',
-              background: '#fff',
-              border: 'none',
-              cursor: 'pointer',
-              color: '#7C3AED',
-              fontSize: '1.1rem',
-              padding: 0,
-              width: 36,
-              height: 36,
-              borderRadius: '50%',
-              boxShadow: '0 2px 8px rgba(44,62,80,0.10)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              position: 'absolute',
-              right: collapsed ? 10 : 16,
-              top: 18,
-              zIndex: 2,
-              transition: 'right 0.2s',
+              justifyContent: 'space-between',
+              background: '#181D2A',
+              borderRadius: '18px 18px 0 0',
+              padding: '1.2rem 1.2rem 1.2rem 1.2rem',
+              minHeight: 80,
+              position: 'relative',
             }}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-          </button>
-        </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <TaurusIcon />
+              <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 8 }}>
+                <span style={{ fontWeight: 700, fontSize: '1.18rem', color: '#fff', letterSpacing: 1 }}>Taurus</span>
+                <span style={{ fontWeight: 500, fontSize: '0.85rem', color: '#A78BFA', letterSpacing: 1, marginTop: 2 }}>SMART SYSTEM</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setCollapsed(true)}
+              style={{
+                background: '#23263A',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#A78BFA',
+                fontSize: '1.1rem',
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                boxShadow: '0 2px 8px rgba(44,62,80,0.10)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginLeft: 0,
+                marginRight: 0,
+                transition: 'margin 0.2s',
+              }}
+              title="Collapse sidebar"
+            >
+              <ChevronLeft size={20} />
+            </button>
+          </div>
+        ) : (
+          <div
+            className="sidebar-header"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#181D2A',
+              borderRadius: '18px 18px 0 0',
+              padding: '1.5rem 0 1.2rem 0',
+              minHeight: 80,
+              position: 'relative',
+            }}
+          >
+            <TaurusIcon />
+            <button
+              onClick={() => setCollapsed(false)}
+              style={{
+                background: '#23263A',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#A78BFA',
+                fontSize: '1.1rem',
+                marginTop: 18,
+                width: 38,
+                height: 38,
+                borderRadius: '50%',
+                boxShadow: '0 2px 8px rgba(44,62,80,0.10)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'margin 0.2s',
+              }}
+              title="Expand sidebar"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        )}
         <nav style={{ flex: 1 }}>
           {sidebarData.map((item) => (
-            <div key={item.label} className="sidebar-section">
+            <div key={item.label} className="sidebar-section" style={{ position: 'relative' }}>
               {item.children ? (
                 <>
                   <div
@@ -177,10 +242,10 @@ export default function Sidebar() {
                     {!collapsed && openSections[item.label] && (
                       <span style={{
                         position: 'absolute',
-                        left: 24,
-                        top: 38,
+                        left: 32,
+                        top: 44,
                         width: 2,
-                        height: 32 * (item.children.length),
+                        height: 40 * (item.children.length),
                         background: '#E5E7EB',
                         borderRadius: 1,
                         zIndex: 0,
@@ -190,13 +255,13 @@ export default function Sidebar() {
                   </div>
                   {/* Inline dropdown for expanded sidebar */}
                   {openSections[item.label] && !collapsed && (
-                    <div className="sidebar-items">
+                    <div className="sidebar-items" style={{ position: 'relative' }}>
                       {item.children.map((child, idx) => (
                         <Link
                           key={child.label}
                           href={child.href}
                           className={`sidebar-link${isActive(child.href) ? ' active' : ''}`}
-                          style={{ paddingLeft: 48, position: 'relative' }}
+                          style={{ paddingLeft: 56, position: 'relative' }}
                           onMouseEnter={collapsed ? (e) => showTooltip(child.label, e) : undefined}
                           onMouseLeave={collapsed ? hideTooltip : undefined}
                         >
@@ -204,10 +269,10 @@ export default function Sidebar() {
                           {idx !== item.children.length - 1 && (
                             <span style={{
                               position: 'absolute',
-                              left: 16,
+                              left: 24,
                               top: 32,
                               width: 2,
-                              height: 32,
+                              height: 40,
                               background: '#E5E7EB',
                               borderRadius: 1,
                               zIndex: 0,
@@ -247,6 +312,7 @@ export default function Sidebar() {
       {/* Floating dropdown for collapsed sidebar */}
       {collapsed && dropdown && (
         <div
+          ref={dropdownRef}
           className="sidebar-tooltip visible"
           style={{
             top: dropdown.y + 8,
@@ -259,6 +325,7 @@ export default function Sidebar() {
             padding: '0.5rem 0',
             zIndex: 9999,
             position: 'fixed',
+            cursor: 'default',
           }}
           onMouseEnter={keepDropdown}
           onMouseLeave={hideDropdown}
@@ -266,10 +333,10 @@ export default function Sidebar() {
           {/* Vertical line for floating dropdown */}
           <span style={{
             position: 'absolute',
-            left: 24,
-            top: 16,
+            left: 32,
+            top: 20,
             width: 2,
-            height: 32 * (sidebarData.find((i) => i.label === dropdown.label)?.children.length || 1),
+            height: 40 * (sidebarData.find((i) => i.label === dropdown.label)?.children.length || 1),
             background: '#E5E7EB',
             borderRadius: 1,
             zIndex: 0,
@@ -280,7 +347,7 @@ export default function Sidebar() {
               key={child.label}
               href={child.href}
               className="sidebar-link"
-              style={{ padding: '0.6rem 1.2rem', borderRadius: 8, color: '#180D3E', background: 'none', fontWeight: 500, position: 'relative' }}
+              style={{ padding: '0.6rem 1.2rem 0.6rem 2.5rem', borderRadius: 8, color: '#180D3E', background: 'none', fontWeight: 500, position: 'relative', minWidth: 160 }}
               onMouseEnter={collapsed ? (e) => showTooltip(child.label, e) : undefined}
               onMouseLeave={collapsed ? hideTooltip : undefined}
             >
@@ -288,10 +355,10 @@ export default function Sidebar() {
               {idx !== sidebarData.find((i) => i.label === dropdown.label)?.children.length - 1 && (
                 <span style={{
                   position: 'absolute',
-                  left: 16,
+                  left: 24,
                   top: 32,
                   width: 2,
-                  height: 32,
+                  height: 40,
                   background: '#E5E7EB',
                   borderRadius: 1,
                   zIndex: 0,
