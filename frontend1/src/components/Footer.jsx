@@ -85,11 +85,11 @@ const Footer = () => {
         <div className="footer__copyright">
           Copyright 2025 &copy; crosscoin PVT LTD. All right reserved
           <div className="footer__payments">
-          <Image src={visa} alt="Visa" />
-          <Image src={mastercard} alt="Mastercard" />
-          <Image src={paypal} alt="PayPal" />
-          <Image src={skrill} alt="Skrill" />
-          <Image src={klarna} alt="Klarna" />
+          <Image src={visa} alt="Visa" className="visa" />
+          <Image src={mastercard} alt="Mastercard" className="mastercard" />
+          <Image src={paypal} alt="PayPal" className="paypal" />
+          <Image src={skrill} alt="Skrill" className="skrill" />
+          <Image src={klarna} alt="Klarna" className="klarna" />
         </div>
         </div>
        
