@@ -238,49 +238,40 @@ export default function Sidebar() {
                         strokeWidth={1.7}
                       />
                     )}
-                    {/* Vertical line for open dropdown */}
-                    {!collapsed && openSections[item.label] && (
-                      <span style={{
-                        position: 'absolute',
-                        left: 32,
-                        top: 44,
-                        width: 2,
-                        height: 40 * (item.children.length),
-                        background: '#E5E7EB',
-                        borderRadius: 1,
-                        zIndex: 0,
-                        transition: 'height 0.2s',
-                      }} />
-                    )}
                   </div>
                   {/* Inline dropdown for expanded sidebar */}
                   {openSections[item.label] && !collapsed && (
-                    <div className="sidebar-items" style={{ position: 'relative' }}>
+                    <div className="sidebar-items" style={{ position: 'relative', paddingLeft: 24 }}>
+                      {/* SVG for vertical and horizontal lines */}
+                      <svg width="24" height={40 * item.children.length} style={{ position: 'absolute', left: 0, top: 18, zIndex: 0 }}>
+                        {/* Vertical line: from below parent to last child */}
+                        <rect x="11" y="8" width="2" height={40 * item.children.length - 20} rx="1" fill="#E5E7EB" />
+                        {/* Curve to first child */}
+                        <path d="M12 8 Q12 20 24 20" stroke="#E5E7EB" strokeWidth="2" fill="none" />
+                        {/* T-junctions for middle children */}
+                        {item.children.length > 1 && item.children.map((_, idx) => (
+                          idx > 0 && idx < item.children.length - 1 ? (
+                            <rect key={idx} x="12" y={40 * idx + 20} width="12" height="2" rx="1" fill="#E5E7EB" />
+                          ) : null
+                        ))}
+                        {/* Horizontal for last child */}
+                        {item.children.length > 1 && (
+                          <rect x="12" y={40 * (item.children.length - 1) + 20} width="12" height="2" rx="1" fill="#E5E7EB" />
+                        )}
+                      </svg>
                       {item.children.map((child, idx) => (
-                        <Link
-                          key={child.label}
-                          href={child.href}
-                          className={`sidebar-link${isActive(child.href) ? ' active' : ''}`}
-                          style={{ paddingLeft: 56, position: 'relative' }}
-                          onMouseEnter={collapsed ? (e) => showTooltip(child.label, e) : undefined}
-                          onMouseLeave={collapsed ? hideTooltip : undefined}
-                        >
-                          {/* Vertical line for dropdown children */}
-                          {idx !== item.children.length - 1 && (
-                            <span style={{
-                              position: 'absolute',
-                              left: 24,
-                              top: 32,
-                              width: 2,
-                              height: 40,
-                              background: '#E5E7EB',
-                              borderRadius: 1,
-                              zIndex: 0,
-                            }} />
-                          )}
-                          <span className="icon">{child.icon}</span>
-                          {child.label}
-                        </Link>
+                        <div key={child.label} style={{ position: 'relative', display: 'flex', alignItems: 'center', zIndex: 1, minHeight: 40 }}>
+                          <Link
+                            href={child.href}
+                            className={`sidebar-link${isActive(child.href) ? ' active' : ''}`}
+                            style={{ paddingLeft: 16, position: 'relative', background: 'none', zIndex: 2 }}
+                            onMouseEnter={collapsed ? (e) => showTooltip(child.label, e) : undefined}
+                            onMouseLeave={collapsed ? hideTooltip : undefined}
+                          >
+                            <span className="icon">{child.icon}</span>
+                            {child.label}
+                          </Link>
+                        </div>
                       ))}
                     </div>
                   )}
