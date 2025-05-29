@@ -5,15 +5,32 @@ import { FiTrash2 } from "react-icons/fi";
 import { FaBoxOpen, FaTruck, FaLock, FaUndo } from "react-icons/fa";
 import product1 from "../assets/card1-left.webp";
 import product2 from "../assets/card2-left.webp";
-import "../styles/pages/Cart.css";
+import { useState } from "react";
+import { useRouter } from "next/router";
 
 export default function Cart() {
+  const router = useRouter();
+  const [quantities, setQuantities] = useState({
+    item1: 1,
+    item2: 1
+  });
+
+  const handleQuantityChange = (itemId, change) => {
+    setQuantities(prev => ({
+      ...prev,
+      [itemId]: Math.max(1, prev[itemId] + change)
+    }));
+  };
+
+  const handleCheckout = () => {
+    router.push('/checkout');
+  };
+
   return (
     <>
       <Header />
       <div className="cart-main">
         <div className="cart-section">
-          <h1 className="cart-title">Your Cart</h1>
           <div className="cart-items-list">
             {/* Cart Item 1 */}
             <div className="cart-item">
@@ -25,9 +42,15 @@ export default function Cart() {
                 <div className="cart-item-price">$120</div>
               </div>
               <div className="cart-item-qty">
-                <button className="qty-btn">-</button>
-                <span>1</span>
-                <button className="qty-btn">+</button>
+                <button 
+                  className={`qty-btn ${quantities.item1 === 1 ? 'qty-btn-disabled' : ''}`}
+                  onClick={() => handleQuantityChange('item1', -1)}
+                >-</button>
+                <span>{quantities.item1}</span>
+                <button 
+                  className="qty-btn"
+                  onClick={() => handleQuantityChange('item1', 1)}
+                >+</button>
               </div>
               <button className="cart-item-remove"><FiTrash2 /></button>
             </div>
@@ -41,9 +64,15 @@ export default function Cart() {
                 <div className="cart-item-price">$130</div>
               </div>
               <div className="cart-item-qty">
-                <button className="qty-btn">-</button>
-                <span>1</span>
-                <button className="qty-btn">+</button>
+                <button 
+                  className={`qty-btn ${quantities.item2 === 1 ? 'qty-btn-disabled' : ''}`}
+                  onClick={() => handleQuantityChange('item2', -1)}
+                >-</button>
+                <span>{quantities.item2}</span>
+                <button 
+                  className="qty-btn"
+                  onClick={() => handleQuantityChange('item2', 1)}
+                >+</button>
               </div>
               <button className="cart-item-remove"><FiTrash2 /></button>
             </div>
@@ -72,7 +101,7 @@ export default function Cart() {
               <input className="promo-input" placeholder="Add promo code" />
               <button className="promo-apply">Apply</button>
             </div>
-            <button className="checkout-btn">Proceed to Checkout</button>
+            <button className="checkout-btn" onClick={handleCheckout}>Proceed to Checkout</button>
           </div>
         </div>
       </div>
