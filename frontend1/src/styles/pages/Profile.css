@@ -1,0 +1,218 @@
+.profile-layout {
+  display: flex;
+  min-height: 80vh;
+  background: #f5f6fa;
+  max-width: 1200px;
+  margin: 40px auto 0 auto;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+}
+.profile-sidebar {
+  width: 240px;
+  background: #fff;
+  border-right: 1px solid #ececec;
+  border-radius: 16px 0 0 16px;
+  padding: 2rem 0 2rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 80vh;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.profile-welcome {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 2rem 2rem 2rem;
+  border-bottom: 1px solid #ececec;
+  margin-bottom: 1.5rem;
+}
+.profile-avatar {
+  font-size: 2.5rem;
+  background: #f3f4f6;
+  border-radius: 50%;
+  padding: 0.5rem 0.7rem;
+  color: #7C3AED;
+}
+.profile-hello {
+  font-size: 0.95rem;
+  color: #888;
+}
+.profile-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #180D3E;
+}
+.profile-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 1.5rem;
+}
+.profile-tab {
+  padding: 1rem 2rem;
+  font-size: 1.08rem;
+  color: #180D3E;
+  cursor: pointer;
+  border-left: 4px solid transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  background: none;
+}
+.profile-tab.active, .profile-tab:hover {
+  background: #030712;
+  color: #fff;
+}
+.profile-content {
+  flex: 1;
+  padding: 3rem 2.5rem;
+  background: #fff;
+  border-radius: 0 16px 16px 0;
+  min-height: 80vh;
+  box-sizing: border-box;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.profile-content h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #180D3E;
+}
+.profile-placeholder {
+  color: #888;
+  font-size: 1.08rem;
+  background: #f5f6fa;
+  border-radius: 8px;
+  padding: 2rem;
+  margin-top: 1rem;
+  text-align: center;
+}
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+.order-card {
+  background: #f9f9fb;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #ececec;
+}
+.order-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: #f3f4f6;
+  padding: 1.2rem 2rem 1.2rem 2rem;
+  border-bottom: 1px solid #ececec;
+}
+.order-meta {
+  display: flex;
+  gap: 2.5rem;
+  font-size: 0.98rem;
+  color: #888;
+  margin-bottom: 0.5rem;
+}
+.order-meta span {
+  display: inline-block;
+  min-width: 90px;
+}
+.order-status {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
+.order-status.delivered {
+  color: #059669;
+}
+.order-status.out-for-delivery {
+  color: #f59e42;
+}
+.order-status.cancelled {
+  color: #e11d48;
+}
+.order-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+.order-id {
+  font-size: 0.98rem;
+  color: #180D3E;
+  font-weight: 500;
+}
+.order-link {
+  color: #e11d48;
+  font-size: 0.95rem;
+  text-decoration: none;
+  margin-left: 0.5rem;
+}
+.order-link:hover {
+  text-decoration: underline;
+}
+.order-card-body {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 2rem;
+}
+.order-product-img {
+  width: 90px;
+  height: 70px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #ececec;
+}
+.order-product-info {
+  flex: 1;
+}
+.order-product-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #180D3E;
+  margin-bottom: 0.2rem;
+}
+.order-product-desc {
+  font-size: 0.97rem;
+  color: #888;
+  margin-bottom: 1.1rem;
+}
+.order-card-buttons {
+  display: flex;
+  gap: 1rem;
+}
+.order-btn {
+  padding: 0.7rem 1.3rem;
+  border-radius: 6px;
+  border: none;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.order-btn.buy-again {
+  background: #e11d48;
+  color: #fff;
+}
+.order-btn.buy-again:hover {
+  background: #be123c;
+}
+.order-btn.track-order {
+  background: #f59e42;
+  color: #fff;
+}
+.order-btn.track-order:hover {
+  background: #d97706;
+}
+.order-btn.view-product {
+  background: #fff;
+  color: #180D3E;
+  border: 1px solid #ececec;
+}
+.order-btn.view-product:hover {
+  background: #f3f4f6;
+} 
