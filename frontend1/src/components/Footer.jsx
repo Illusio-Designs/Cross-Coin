@@ -6,9 +6,9 @@ import Image from "next/image";
 import logo from '../assets/crosscoin_logo.webp';
 import visa from '../assets/visa.webp';
 import mastercard from '../assets/mastercard.webp';
-import paypal from '../assets/paypal.webp';
-import skrill from '../assets/skrill.webp';
-import klarna from '../assets/klarna.webp';
+import paypal from '../assets/Paypal.webp';
+import skrill from '../assets/Skrill.webp';
+import klarna from '../assets/Klarna.webp';
 
 const Footer = () => {
   return (

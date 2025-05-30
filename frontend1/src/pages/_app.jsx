@@ -13,9 +13,9 @@ import '../styles/pages/CheckoutUPI.css';
 import '../styles/pages/ThankYou.css';
 import '../styles/pages/Login.css';
 import '../styles/pages/Policy.css';
-import '../styles/pages/auth/Login.css';
 import '../styles/dashboard/layout.css';
 import '../styles/dashboard/sidebar.css';
+import '../styles/pages/auth/adminlogin.css';
 
 export default function App({ Component, pageProps: { session, ...pageProps } }) {
   return (

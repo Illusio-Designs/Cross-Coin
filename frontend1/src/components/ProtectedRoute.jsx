@@ -9,7 +9,7 @@ export default function ProtectedRoute({ children, requireAdmin = false }) {
   useEffect(() => {
     const isStaticAdmin = typeof window !== "undefined" && localStorage.getItem("isStaticAdmin") === "true";
     if (status === "unauthenticated" && !isStaticAdmin) {
-      router.replace("/auth/login");
+      router.replace("/auth/adminlogin");
     }
     if (requireAdmin && status === "authenticated" && session?.user?.role !== "admin" && !isStaticAdmin) {
       router.replace("/");

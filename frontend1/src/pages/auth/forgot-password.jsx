@@ -11,7 +11,7 @@ export default function ForgotPassword() {
         />
         <button className="login-btn">Send Reset Link</button>
         <div style={{ textAlign: "center", marginTop: "1rem" }}>
-          <a href="/auth/login" className="login-link">Back to Login</a>
+          <a href="/auth/adminlogin" className="login-link">Back to Login</a>
         </div>
       </div>
     </div>
