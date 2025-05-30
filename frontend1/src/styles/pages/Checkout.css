@@ -1,18 +1,26 @@
-.checkout-container {
-  padding: 2rem;
+.checkout-container .cart-section {
+  flex: 2;
+  display: flex;
+  width: 100%;
+  flex-direction: row-reverse;
+  gap: 21px;
+}
+
+.checkout-container .cart-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  border: 1px solid #0000001A;
+  padding: 1rem;
+  width: 50%;
+  height: 100%;
 }
 
 .checkout-info {
-  margin-top: 2rem;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-}
-
-.contact-info, .shipping-addresses {
-  background: #f8fafc;
-  padding: 1.5rem;
-  border-radius: 8px;
+  gap: 1rem;
+  width: 50%;
 }
 
 .contact-info h2, .shipping-addresses h2 {
@@ -33,10 +41,8 @@
 }
 
 .address-card {
-  background: white;
   padding: 1rem;
-  border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #0000001A;
 }
 
 .address-card h3 {
@@ -56,8 +62,7 @@
   gap: 0.5rem;
   padding: 0.75rem;
   background: #f7fafc;
-  border: 2px dashed #cbd5e0;
-  border-radius: 6px;
+  border: 2px dashed #0000001A;
   color: #4a5568;
   cursor: pointer;
   transition: all 0.2s ease;

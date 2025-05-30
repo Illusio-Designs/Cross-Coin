@@ -1,3 +1,114 @@
-.login-container {
-  padding: 2rem;
+.auth-container {
+  max-width: 450px;
+  margin: 50px auto;
+  background: #fff;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+  padding: 2.5rem;
+  text-align: center;
+}
+.auth-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 30px;
+  font-weight: 600;
+}
+.auth-tabs .active {
+  color: #111827;
+  padding-bottom: 2px;
+  cursor: default;
+}
+.auth-tabs .inactive {
+  color: #9CA3AF;
+  text-decoration: none;
+  cursor: pointer;
+}
+.auth-info {
+  color: #444;
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+}
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  text-align: left;
+}
+.auth-form label {
+  font-size: 15px;
+  color: #22223b;
+}
+.auth-form input[type="email"],
+.auth-form input[type="password"],
+.auth-form input[type="text"] {
+  padding: 0.7rem 0.9rem;
+  border: 1px solid #d1d1d1;
+  font-size: 1rem;
+  outline: none;
+}
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-wrapper input {
+  flex: 1;
+}
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #888;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.toggle-password:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+.toggle-password svg {
+  transition: transform 0.2s;
+}
+.toggle-password:hover svg {
+  transform: scale(1.1);
+}
+.auth-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.remember-me {
+  font-size: 0.95rem;
+  color: #444;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.forgot-password {
+  color: #e63946;
+  font-size: 0.95rem;
+  text-decoration: none;
+  margin-left: auto;
+}
+.auth-btn {
+  width: 100%;
+  background: #180D3E;
+  color: #fff;
+  border: none;
+  padding: 0.9rem 0;
+  font-size: 1.08rem;
+  font-weight: 500;
+  margin-top: 0.7rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.auth-btn:hover {
+  background: #39396a;
 } 

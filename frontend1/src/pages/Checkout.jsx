@@ -12,7 +12,7 @@ export default function Checkout() {
   return (
     <>
       <Header />
-      <div className="cart-main">
+      <div className="cart-main checkout-container">
         <div className="cart-section">
           {/* Cart Products Display */}
           <div className="cart-items-list">
