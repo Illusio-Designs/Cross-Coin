@@ -14,7 +14,7 @@ import card3_right from "../assets/card3-right.webp";
 const slides = [
   {
     title: "Get up to 30% off",
-    highlight: "New Arrivals",
+    highlight: "New Arrivals test",
     description: "Introducing our latest collection of woollen Socks",
     button: "ORDER NOW",
     image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80"
