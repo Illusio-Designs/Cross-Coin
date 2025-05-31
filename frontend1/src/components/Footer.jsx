@@ -94,7 +94,7 @@ const Footer = () => {
         </div>
        
         <div className="footer__links">
-          <a href="#">Terms and Conditions</a>
+          <a href="/tc">Terms and Conditions</a>
           <a href="#">Privacy Policy</a>
           <a href="#">Order Tracking</a>
         </div>

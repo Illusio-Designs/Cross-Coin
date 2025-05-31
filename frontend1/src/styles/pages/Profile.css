@@ -1,38 +1,24 @@
 .profile-layout {
   display: flex;
-  min-height: 80vh;
-  background: #f5f6fa;
-  max-width: 1200px;
-  margin: 40px auto 0 auto;
-  border-radius: 16px;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+  padding: 50px 10%;
 }
 .profile-sidebar {
-  width: 240px;
-  background: #fff;
-  border-right: 1px solid #ececec;
-  border-radius: 16px 0 0 16px;
-  padding: 2rem 0 2rem 0;
+  width: 280px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  min-height: 80vh;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 .profile-welcome {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 0 2rem 2rem 2rem;
-  border-bottom: 1px solid #ececec;
-  margin-bottom: 1.5rem;
+  padding: 0 02rem 0rem 0;
 }
 .profile-avatar {
-  font-size: 2.5rem;
+  font-size: 30px;
   background: #f3f4f6;
   border-radius: 50%;
-  padding: 0.5rem 0.7rem;
-  color: #7C3AED;
+  padding: 15px;
 }
 .profile-hello {
   font-size: 0.95rem;
@@ -46,17 +32,20 @@
 .profile-tabs {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
   margin-top: 1.5rem;
+  border: 1px solid #ececec;
 }
 .profile-tab {
-  padding: 1rem 2rem;
-  font-size: 1.08rem;
+  padding: 15px 10px;
+  font-size: 16px;
   color: #180D3E;
   cursor: pointer;
-  border-left: 4px solid transparent;
+  border-bottom: 1px solid #ececec;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
   background: none;
+}
+.profile-tab:last-child{
+  border-bottom: none;
 }
 .profile-tab.active, .profile-tab:hover {
   background: #030712;
@@ -64,7 +53,7 @@
 }
 .profile-content {
   flex: 1;
-  padding: 3rem 2.5rem;
+  padding: 0 1.5rem;
   background: #fff;
   border-radius: 0 16px 16px 0;
   min-height: 80vh;
@@ -93,9 +82,6 @@
   margin-top: 1.5rem;
 }
 .order-card {
-  background: #f9f9fb;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   padding: 0;
   overflow: hidden;
   border: 1px solid #ececec;
@@ -116,22 +102,15 @@
   margin-bottom: 0.5rem;
 }
 .order-meta span {
-  display: inline-block;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   min-width: 90px;
 }
 .order-status {
-  font-size: 1.1rem;
+  font-size: 25px;
   font-weight: 600;
-  margin-top: 0.2rem;
-}
-.order-status.delivered {
-  color: #059669;
-}
-.order-status.out-for-delivery {
-  color: #f59e42;
-}
-.order-status.cancelled {
-  color: #e11d48;
+  padding: 1.2rem 2rem 0;
 }
 .order-actions {
   display: flex;
@@ -140,7 +119,7 @@
   gap: 0.2rem;
 }
 .order-id {
-  font-size: 0.98rem;
+  font-size: 18px;
   color: #180D3E;
   font-weight: 500;
 }
@@ -148,10 +127,13 @@
   color: #e11d48;
   font-size: 0.95rem;
   text-decoration: none;
-  margin-left: 0.5rem;
 }
 .order-link:hover {
   text-decoration: underline;
+}
+.part{
+  margin: 0 10px;
+  color: #D1D5DB;
 }
 .order-card-body {
   display: flex;
@@ -160,24 +142,21 @@
   padding: 2rem;
 }
 .order-product-img {
-  width: 90px;
-  height: 70px;
-  object-fit: contain;
-  border-radius: 8px;
-  background: #fff;
-  border: 1px solid #ececec;
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
 }
 .order-product-info {
   flex: 1;
 }
 .order-product-title {
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 500;
   color: #180D3E;
   margin-bottom: 0.2rem;
 }
 .order-product-desc {
-  font-size: 0.97rem;
+  font-size: 15px;
   color: #888;
   margin-bottom: 1.1rem;
 }
@@ -187,15 +166,14 @@
 }
 .order-btn {
   padding: 0.7rem 1.3rem;
-  border-radius: 6px;
   border: none;
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
 .order-btn.buy-again {
-  background: #e11d48;
+  background: #CE1E36;
   color: #fff;
 }
 .order-btn.buy-again:hover {
@@ -215,4 +193,127 @@
 }
 .order-btn.view-product:hover {
   background: #f3f4f6;
+}
+.address-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 10px;
+}
+.address-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid #ececec;
+  border-radius: 2px;
+  padding: 18px 24px;
+  min-height: 80px;
+}
+.address-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.address-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #180D3E;
+  margin-bottom: 2px;
+}
+.address-details {
+  font-size: 1rem;
+  color: #888;
+  line-height: 1.4;
+}
+.address-menu {
+  font-size: 1.5rem;
+  color: #180D3E;
+  cursor: pointer;
+  padding: 0 8px;
+  user-select: none;
+  line-height: 1;
+}
+.account-details-form {
+  max-width: 700px;
+}
+.account-details-form form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.form-group label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #180D3E;
+  margin-bottom: 2px;
+}
+.form-group input {
+  font-size: 1.15rem;
+  padding: 13px 12px;
+  border: 1px solid #ececec;
+  border-radius: 2px;
+  background: #fff;
+  color: #180D3E;
+  font-weight: 400;
+}
+.update-profile-btn {
+  margin-top: 10px;
+  width: 100%;
+  background: #180D3E;
+  color: #fff;
+  font-size: 1.08rem;
+  font-weight: 600;
+  padding: 15px 0;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.update-profile-btn:hover {
+  background: #2a1a4d;
+}
+.reset-password-form {
+  max-width: 700px;
+}
+.reset-password-form form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.password-input-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+.password-input-wrapper input {
+  flex: 1;
+}
+.password-eye {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #180D3E;
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  outline: none;
+  transition: color 0.15s, background 0.15s;
+  height: 32px;
+  width: 32px;
+  justify-content: center;
+}
+.password-eye:hover, .password-eye:focus {
+  color: #1A1133;
+  background: #f3f4f6;
+  border-radius: 50%;
 } 
