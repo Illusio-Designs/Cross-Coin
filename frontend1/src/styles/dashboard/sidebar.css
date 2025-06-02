@@ -1,8 +1,10 @@
 /* Modern Dashboard Sidebar Styles */
 .dashboard-sidebar {
-  background: #fff;
+  background: #F3F4F6;
+  color: #180D3E;
+  border-color: #E6E6E6;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   border-radius: 18px;
-  box-shadow: 0 4px 32px rgba(44, 62, 80, 0.08);
   margin: 18px 0 18px 18px;
   min-height: calc(100vh - 36px);
   display: flex;
