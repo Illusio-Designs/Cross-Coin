@@ -39,7 +39,7 @@ export default function Shipping() {
 
     // Save address to session storage
     sessionStorage.setItem('shippingAddress', JSON.stringify(formData));
-    router.push('/checkout');
+    router.push('/Checkout');
   };
 
   // Calculate order summary

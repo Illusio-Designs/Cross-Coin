@@ -42,9 +42,6 @@ const Header = () => {
       <nav className="header__nav">
         <ul>
           <li><Link href="/Products">Products</Link></li>
-          <li><Link href="/CheckoutUPI">Checkout UPI</Link></li>
-          <li><Link href="/Shipping">Shipping</Link></li>
-          <li><Link href="/ThankYou">Thank You</Link></li>
         </ul>
       </nav>
     </header>
