@@ -239,8 +239,7 @@ background: #77777E;
   transition: background 0.2s;
 }
 .summer-shop-btn:hover {
-  background: transparent;
-  border: 1px solid #CE1E36;
+  background: #e10926;
 }
 .summer-countdown {
   display: flex;
