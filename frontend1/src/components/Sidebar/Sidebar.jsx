@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useState, useRef } from "react";
+import Image from "next/image";
 import {
   Home,
   User,
@@ -12,15 +13,24 @@ import {
   ChevronLeft,
   ChevronRight,
   HelpCircle,
+  ShoppingCart,
+  CreditCard,
+  Star,
+  Settings,
+  Tag,
+  Truck,
+  FileText,
 } from "lucide-react";
 
-// SVG Bull/Taurus Icon (purple)
-const TaurusIcon = () => (
-  <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M7 7L14.5 14.5" stroke="#7C3AED" strokeWidth="3" strokeLinecap="round"/>
-    <path d="M31 7L23.5 14.5" stroke="#7C3AED" strokeWidth="3" strokeLinecap="round"/>
-    <circle cx="19" cy="22" r="9" stroke="#7C3AED" strokeWidth="3"/>
-  </svg>
+// Remove TaurusIcon and replace with CrossCoin logo
+const CrossCoinLogo = () => (
+  <Image
+    src="/crosscoin icon.png"
+    alt="CrossCoin Logo"
+    width={38}
+    height={38}
+    style={{ objectFit: "contain" }}
+  />
 );
 
 const sidebarData = [
@@ -30,56 +40,60 @@ const sidebarData = [
     href: "/dashboard",
   },
   {
-    label: "Bank Profile",
-    icon: <User size={20} strokeWidth={1.7} className="icon" />,
+    label: "Products",
+    icon: <Box size={20} strokeWidth={1.7} className="icon" />,
     children: [
-      { label: "Bank Information", icon: <User size={18} strokeWidth={1.7} className="icon" />, href: "#" },
-      { label: "Bank Products", icon: <Box size={18} strokeWidth={1.7} className="icon" />, href: "#" },
+      { label: "All Products", icon: <Box size={18} strokeWidth={1.7} className="icon" />, href: "/products" },
+      { label: "Categories", icon: <Tag size={18} strokeWidth={1.7} className="icon" />, href: "/categories" },
+      { label: "Attributes", icon: <Settings size={18} strokeWidth={1.7} className="icon" />, href: "/attributes" },
     ],
   },
   {
     label: "Orders",
     icon: <ClipboardList size={20} strokeWidth={1.7} className="icon" />,
     children: [
-      { label: "Order Management", icon: <ClipboardList size={18} strokeWidth={1.7} className="icon" />, href: "#" },
-      { label: "Order Setting", icon: <ClipboardList size={18} strokeWidth={1.7} className="icon" />, href: "#" },
+      { label: "Order Management", icon: <ClipboardList size={18} strokeWidth={1.7} className="icon" />, href: "/orders" },
+      { label: "Order Status", icon: <FileText size={18} strokeWidth={1.7} className="icon" />, href: "/order-status" },
     ],
   },
   {
-    label: "Inventory Management",
-    icon: <Box size={20} strokeWidth={1.7} className="icon" />,
+    label: "Payments",
+    icon: <CreditCard size={20} strokeWidth={1.7} className="icon" />,
     children: [
-      { label: "Credit Cards", icon: <Box size={18} strokeWidth={1.7} className="icon" />, href: "#" },
-      { label: "Cars Inventory", icon: <Box size={18} strokeWidth={1.7} className="icon" />, href: "#" },
-      { label: "Property Inventory", icon: <Box size={18} strokeWidth={1.7} className="icon" />, href: "#" },
+      { label: "Payment Methods", icon: <CreditCard size={18} strokeWidth={1.7} className="icon" />, href: "/payments" },
+      { label: "Coupons", icon: <Tag size={18} strokeWidth={1.7} className="icon" />, href: "/coupons" },
     ],
   },
   {
-    label: "Rule Management",
-    icon: <Lock size={20} strokeWidth={1.7} className="icon" />,
+    label: "Shipping",
+    icon: <Truck size={20} strokeWidth={1.7} className="icon" />,
     children: [
-      { label: "Decision Rule", icon: <Lock size={18} strokeWidth={1.7} className="icon" />, href: "#" },
-      { label: "Risk Grading", icon: <Lock size={18} strokeWidth={1.7} className="icon" />, href: "#" },
-      { label: "Scoring", icon: <Lock size={18} strokeWidth={1.7} className="icon" />, href: "#" },
-      { label: "Decision Flow", icon: <Lock size={18} strokeWidth={1.7} className="icon" />, href: "#" },
+      { label: "Shipping Addresses", icon: <Truck size={18} strokeWidth={1.7} className="icon" />, href: "/shipping-addresses" },
+      { label: "Shipping Fees", icon: <CreditCard size={18} strokeWidth={1.7} className="icon" />, href: "/shipping-fees" },
     ],
   },
   {
-    label: "Admin",
+    label: "Reviews",
+    icon: <Star size={20} strokeWidth={1.7} className="icon" />,
+    href: "/reviews",
+  },
+  {
+    label: "Cart & Wishlist",
+    icon: <ShoppingCart size={20} strokeWidth={1.7} className="icon" />,
+    children: [
+      { label: "Shopping Cart", icon: <ShoppingCart size={18} strokeWidth={1.7} className="icon" />, href: "/cart" },
+      { label: "Wishlist", icon: <Star size={18} strokeWidth={1.7} className="icon" />, href: "/wishlist" },
+    ],
+  },
+  {
+    label: "SEO",
+    icon: <Settings size={20} strokeWidth={1.7} className="icon" />,
+    href: "/seo",
+  },
+  {
+    label: "Users",
     icon: <User size={20} strokeWidth={1.7} className="icon" />,
-    children: [
-      { label: "Role and Permission", icon: <User size={18} strokeWidth={1.7} className="icon" />, href: "#" },
-      { label: "Security Settings", icon: <User size={18} strokeWidth={1.7} className="icon" />, href: "#" },
-    ],
-  },
-  {
-    label: "Reports",
-    icon: <BarChart2 size={20} strokeWidth={1.7} className="icon" />,
-    children: [
-      { label: "Credit Cards Reports", icon: <BarChart2 size={18} strokeWidth={1.7} className="icon" />, href: "#" },
-      { label: "Cars Reports", icon: <BarChart2 size={18} strokeWidth={1.7} className="icon" />, href: "#" },
-      { label: "Property Reports", icon: <BarChart2 size={18} strokeWidth={1.7} className="icon" />, href: "#" },
-    ],
+    href: "/users",
   },
 ];
 
@@ -138,10 +152,10 @@ export default function Sidebar() {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <TaurusIcon />
+              <CrossCoinLogo />
               <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 8 }}>
-                <span style={{ fontWeight: 700, fontSize: '1.18rem', color: '#fff', letterSpacing: 1 }}>Taurus</span>
-                <span style={{ fontWeight: 500, fontSize: '0.85rem', color: '#A78BFA', letterSpacing: 1, marginTop: 2 }}>SMART SYSTEM</span>
+                <span style={{ fontWeight: 700, fontSize: '1.18rem', color: '#fff', letterSpacing: 1 }}>CrossCoin</span>
+                <span style={{ fontWeight: 500, fontSize: '0.85rem', color: '#A78BFA', letterSpacing: 1, marginTop: 2 }}>ADMIN PANEL</span>
               </div>
             </div>
             <button
@@ -183,7 +197,7 @@ export default function Sidebar() {
               position: 'relative',
             }}
           >
-            <TaurusIcon />
+            <CrossCoinLogo />
             <button
               onClick={() => setCollapsed(false)}
               style={{
