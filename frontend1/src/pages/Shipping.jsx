@@ -1,15 +1,51 @@
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { useRouter } from "next/router";
+import { useState } from "react";
+import { useCart } from "../context/CartContext";
 
 export default function Shipping() {
   const router = useRouter();
+  const { cartItems } = useCart();
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    building: '',
+    society: '',
+    street: '',
+    landmark: '',
+    city: '',
+    pincode: '',
+    addressType: 'Home'
+  });
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Handle form submission
+    
+    // Validate required fields
+    if (!formData.firstName || !formData.lastName || !formData.building || 
+        !formData.street || !formData.city || !formData.pincode) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    // Save address to session storage
+    sessionStorage.setItem('shippingAddress', JSON.stringify(formData));
     router.push('/checkout');
   };
+
+  // Calculate order summary
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const discount = Math.round(subtotal * 0.2);
+  const total = subtotal - discount;
 
   return (
     <>
@@ -29,42 +65,87 @@ export default function Shipping() {
               <form onSubmit={handleSubmit} className="shipping-form">
                 <div className="form-row-2col">
                   <div className="form-group">
-                    <label>First Name</label>
-                    <input type="text" required />
+                    <label>First Name *</label>
+                    <input 
+                      type="text" 
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      required 
+                    />
                   </div>
                   <div className="form-group">
-                    <label>Last Name</label>
-                    <input type="text" required />
+                    <label>Last Name *</label>
+                    <input 
+                      type="text" 
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      required 
+                    />
                   </div>
                 </div>
                 <div className="form-row-2col">
                   <div className="form-group">
                     <label>Building Name</label>
-                    <input type="text" />
+                    <input 
+                      type="text" 
+                      name="building"
+                      value={formData.building}
+                      onChange={handleInputChange}
+                    />
                   </div>
                   <div className="form-group">
                     <label>Society Name</label>
-                    <input type="text" />
+                    <input 
+                      type="text" 
+                      name="society"
+                      value={formData.society}
+                      onChange={handleInputChange}
+                    />
                   </div>
                 </div>
                 <div className="form-row-2col">
                   <div className="form-group">
-                    <label>Street, Area</label>
-                    <input type="text" required />
+                    <label>Street, Area *</label>
+                    <input 
+                      type="text" 
+                      name="street"
+                      value={formData.street}
+                      onChange={handleInputChange}
+                      required 
+                    />
                   </div>
                   <div className="form-group">
                     <label>Landmark</label>
-                    <input type="text" />
+                    <input 
+                      type="text" 
+                      name="landmark"
+                      value={formData.landmark}
+                      onChange={handleInputChange}
+                    />
                   </div>
                 </div>
                 <div className="form-row-2col">
                   <div className="form-group">
-                    <label>Town/City</label>
-                    <input type="text" required />
+                    <label>Town/City *</label>
+                    <input 
+                      type="text" 
+                      name="city"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      required 
+                    />
                   </div>
                   <div className="form-group">
-                    <label>Pincode</label>
-                    <input type="text" required />
+                    <label>Pincode *</label>
+                    <input 
+                      type="text" 
+                      name="pincode"
+                      value={formData.pincode}
+                      onChange={handleInputChange}
+                      required 
+                    />
                   </div>
                 </div>
                 <button type="submit" className="save-address-btn">Save Address</button>
@@ -97,11 +178,11 @@ export default function Shipping() {
               <div className="order-summary-title">Order Summary</div>
               <div className="order-summary-row">
                 <span>Subtotal</span>
-                <span>$250</span>
+                <span>${subtotal}</span>
               </div>
               <div className="order-summary-row">
                 <span>Discount (-20%)</span>
-                <span className="discount">-$113</span>
+                <span className="discount">-${discount}</span>
               </div>
               <div className="order-summary-row">
                 <span>Delivery Fee</span>
@@ -109,13 +190,18 @@ export default function Shipping() {
               </div>
               <div className="order-summary-total">
                 <span>Total</span>
-                <span>$250</span>
+                <span>${total}</span>
               </div>
               <div className="promo-row">
                 <input className="promo-input" placeholder="Add promo code" />
                 <button className="promo-apply">Apply</button>
               </div>
-              <button className="checkout-btn">Proceed to Checkout</button>
+              <button 
+                className="checkout-btn"
+                onClick={handleSubmit}
+              >
+                Proceed to Checkout
+              </button>
             </div>
           </div>
         </div>

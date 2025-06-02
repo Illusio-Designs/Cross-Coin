@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import Image from "next/image";
@@ -7,25 +8,131 @@ import card2 from "../assets/card3-right.webp";
 import card3 from "../assets/card2-left.webp";
 import card4 from "../assets/card3-right.webp";
 import card5 from "../assets/card1-right.webp";
+import { useCart } from '../context/CartContext';
+import { useRouter } from "next/navigation";
 
 export default function ProductDetails() {
+  const searchParams = useSearchParams();
+  const productName = searchParams.get('name');
+  const { addToCart } = useCart();
+  const router = useRouter();
+  
   const [selectedThumbnail, setSelectedThumbnail] = useState(0);
-  const [selectedColor, setSelectedColor] = useState("brown");
-  const [selectedSize, setSelectedSize] = useState("Large");
+  const [selectedColor, setSelectedColor] = useState("");
+  const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState("description");
-  const thumbnails = [card1, card2, card3, card4, card5];
-  const colors = [
-    { name: "brown", hex: "#5a4a2f" },
-    { name: "green", hex: "#3b5d53" },
-    { name: "navy", hex: "#2d2e4a" },
+  const [product, setProduct] = useState(null);
+  const [showAddedToCart, setShowAddedToCart] = useState(false);
+
+  // Mock product data - in a real app, this would come from an API
+  const products = [
+    {
+      name: "Premium Wool Socks",
+      originalPrice: 39.99,
+      price: 29.99,
+      category: "Woollen Shocks",
+      images: [card1, card2, card3, card1, card2],
+      rating: 4.5,
+      reviews: 128,
+      description: "Premium quality wool socks for ultimate comfort and warmth. Perfect for cold weather.",
+      colors: ["brown", "navy", "black"],
+      sizes: ["S", "M", "L", "XL"],
+      material: "Wool",
+      gender: "Unisex"
+    },
+    {
+      name: "Cotton Comfort Socks",
+      originalPrice: 29.99,
+      price: 19.99,
+      category: "Cotton Shocks",
+      images: [card2, card3, card1, card2, card3],
+      rating: 4.2,
+      reviews: 95,
+      description: "Soft and breathable cotton socks for everyday comfort. Ideal for daily wear.",
+      colors: ["white", "gray", "black"],
+      sizes: ["S", "M", "L", "XL"],
+      material: "Cotton",
+      gender: "Unisex"
+    },
+    {
+      name: "Silk Luxury Socks",
+      originalPrice: 39.99,
+      price: 39.99,
+      category: "Silk Shocks",
+      images: [card3, card1, card2, card3, card1],
+      rating: 4.8,
+      reviews: 64,
+      description: "Luxurious silk socks for special occasions. Elegant and comfortable.",
+      colors: ["black", "navy", "burgundy"],
+      sizes: ["S", "M", "L", "XL"],
+      material: "Silk",
+      gender: "Unisex"
+    },
+    {
+      name: "Winter Thermal Socks",
+      originalPrice: 34.99,
+      price: 34.99,
+      category: "Winter Special",
+      images: [card1, card2, card3, card1, card2],
+      rating: 4.6,
+      reviews: 112,
+      description: "Extra warm thermal socks for extreme cold weather. Stay cozy all winter long.",
+      colors: ["gray", "black", "navy"],
+      sizes: ["S", "M", "L", "XL"],
+      material: "Thermal",
+      gender: "Unisex"
+    },
+    {
+      name: "Summer Breathable Socks",
+      originalPrice: 24.99,
+      price: 24.99,
+      category: "Summer Special",
+      images: [card2, card3, card1, card2, card3],
+      rating: 4.3,
+      reviews: 87,
+      description: "Lightweight and breathable socks perfect for summer. Stay cool and comfortable.",
+      colors: ["white", "light gray", "beige"],
+      sizes: ["S", "M", "L", "XL"],
+      material: "Cotton Blend",
+      gender: "Unisex"
+    },
+    {
+      name: "Net Pattern Socks",
+      originalPrice: 22.99,
+      price: 22.99,
+      category: "Net Shocks",
+      images: [card3, card1, card2, card3, card1],
+      rating: 4.4,
+      reviews: 73,
+      description: "Stylish net pattern socks for a unique look. Fashion meets comfort.",
+      colors: ["black", "white", "red"],
+      sizes: ["S", "M", "L", "XL"],
+      material: "Net",
+      gender: "Unisex"
+    }
   ];
-  const sizes = [
-    { name: "Small", disabled: false },
-    { name: "Medium", disabled: false },
-    { name: "Large", disabled: false },
-    { name: "X-Large", disabled: true },
-  ];
+
+  useEffect(() => {
+    if (productName) {
+      const foundProduct = products.find(p => p.name === decodeURIComponent(productName));
+      if (foundProduct) {
+        setProduct(foundProduct);
+        setSelectedColor(foundProduct.colors[0]);
+        setSelectedSize(foundProduct.sizes[0]);
+      }
+    }
+  }, [productName]);
+
+  if (!product) {
+    return (
+      <div className="loading-container">
+        <Header />
+        <div className="loading">Loading...</div>
+        <Footer />
+      </div>
+    );
+  }
 
   // Mock reviews
   const reviews = [
@@ -72,6 +179,25 @@ export default function ProductDetails() {
     );
   }
 
+  const handleAddToCart = () => {
+    if (!selectedColor || !selectedSize) {
+      alert('Please select both color and size');
+      return;
+    }
+    addToCart(product, selectedColor, selectedSize, quantity);
+    setShowAddedToCart(true);
+    setTimeout(() => setShowAddedToCart(false), 2000);
+  };
+
+  const handleBuyNow = () => {
+    if (!selectedColor || !selectedSize) {
+      alert('Please select both color and size');
+      return;
+    }
+    addToCart(product, selectedColor, selectedSize, quantity);
+    router.push('/checkout');
+  };
+
   return (
     <div className="product-details-container">
       <Header />
@@ -79,51 +205,55 @@ export default function ProductDetails() {
         <div className="product-images">
           <Image
             className="main-image"
-            src={thumbnails[selectedThumbnail]}
-            alt="Main Product Image"
+            src={product.images[selectedThumbnail]}
+            alt={product.name}
+            width={500}
+            height={500}
+            style={{ objectFit: 'cover' }}
           />
           <div className="thumbnail-images">
-            {thumbnails.map((src, idx) => (
+            {product.images.map((src, idx) => (
               <Image
                 key={idx}
                 src={src}
-                alt={`Thumbnail ${idx + 1}`}
+                alt={`${product.name} thumbnail ${idx + 1}`}
                 className={selectedThumbnail === idx ? "active" : ""}
                 onClick={() => setSelectedThumbnail(idx)}
+                width={100}
+                height={100}
+                style={{ objectFit: 'cover' }}
               />
             ))}
           </div>
         </div>
         <div className="product-info">
-          <h1>Unisex Cotton Men And Women Solid Ankle Length Socks</h1>
+          <h1>{product.name}</h1>
           <div className="product-rating-row">
             <span className="stars">★ ★ ★ ☆ ☆</span>
-            <span className="rating-value">3.00</span>
-            <span className="review-count">2</span>
+            <span className="rating-value">{product.rating}</span>
+            <span className="review-count">{product.reviews}</span>
             <span className="sku-label">| SKU: <span className="sku-value">E7F8G9H0</span></span>
           </div>
           <hr className="product-divider" />
           <div className="product-desc-short">
-            <span>
-              Vivamus adipiscing nisl ut dolor dignissim semper. Nulla luctus malesuada tincidunt. Class aptent taciti sociosqu ad litora torquent Vivamus adipiscing nisl ut dolor dignissim semper.
-            </span>
+            <span>{product.description}</span>
           </div>
           <div className="product-price-row">
-            <span className="current-price">$120</span>
-            <span className="original-price">$150</span>
+            <span className="current-price">${product.price}</span>
+            <span className="original-price">${product.originalPrice}</span>
           </div>
           <div className="product-options">
             <div className="colors">
               <span className="option-label">Select Colors</span>
               <div className="color-options">
-                {colors.map((color) => (
+                {product.colors.map((color) => (
                   <button
-                    key={color.name}
-                    className={`color-option${selectedColor === color.name ? " selected" : ""}`}
-                    style={{ backgroundColor: color.hex }}
-                    onClick={() => setSelectedColor(color.name)}
+                    key={color}
+                    className={`color-option${selectedColor === color ? " selected" : ""}`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setSelectedColor(color)}
                   >
-                    {selectedColor === color.name && (
+                    {selectedColor === color && (
                       <span className="color-check">✔</span>
                     )}
                   </button>
@@ -133,14 +263,13 @@ export default function ProductDetails() {
             <div className="sizes">
               <span className="option-label">Choose Size</span>
               <div className="size-options">
-                {sizes.map((size) => (
+                {product.sizes.map((size) => (
                   <button
-                    key={size.name}
-                    className={`size-option${selectedSize === size.name ? " selected" : ""}${size.disabled ? " disabled" : ""}`}
-                    onClick={() => !size.disabled && setSelectedSize(size.name)}
-                    disabled={size.disabled}
+                    key={size}
+                    className={`size-option${selectedSize === size ? " selected" : ""}`}
+                    onClick={() => setSelectedSize(size)}
                   >
-                    {size.name}
+                    {size}
                   </button>
                 ))}
               </div>
@@ -164,11 +293,11 @@ export default function ProductDetails() {
                 <span className="quantity-value">{quantity}</span>
                 <button onClick={() => setQuantity(q => q + 1)} className="quantity-btn">+</button>
               </div>
-              <button className="add-to-cart">
-                 Add to cart
+              <button className="add-to-cart" onClick={handleAddToCart}>
+                {showAddedToCart ? 'Added to Cart!' : 'Add to cart'}
               </button>
-              <button className="buy-now">
-                 Buy Now
+              <button className="buy-now" onClick={handleBuyNow}>
+                Buy Now
               </button>
             </div>
           </div>
@@ -225,7 +354,7 @@ export default function ProductDetails() {
               <div className="review-header">
                 {renderStars(review.rating)}
                 <span className="review-user">
-                  <span className="review-user-initial">{review.name.split(" ")[0]}</span> <b>{review.name}</b>
+                  <h3>{review.name}</h3>
                   {review.verified && <span className="review-verified">●</span>}
                 </span>
               </div>

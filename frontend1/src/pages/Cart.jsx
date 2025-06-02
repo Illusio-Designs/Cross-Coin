@@ -3,50 +3,12 @@ import Header from "../components/Header";
 import Image from "next/image";
 import { FiTrash2 } from "react-icons/fi";
 import { FaBoxOpen, FaTruck, FaLock, FaUndo } from "react-icons/fa";
-import product1 from "../assets/card1-left.webp";
-import product2 from "../assets/card2-left.webp";
-import { useState } from "react";
 import { useRouter } from "next/router";
+import { useCart } from "../context/CartContext";
 
 export default function Cart() {
   const router = useRouter();
-  // Dynamic cart items state
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: "Gradient Graphic T-shirt",
-      image: product1,
-      size: "Large",
-      color: "White",
-      price: 120,
-      quantity: 1,
-    },
-    {
-      id: 2,
-      name: "Checkered Shirt",
-      image: product2,
-      size: "Medium",
-      color: "Red",
-      price: 130,
-      quantity: 1,
-    },
-  ]);
-
-  // Handle quantity change
-  const handleQuantityChange = (itemId, change) => {
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId
-          ? { ...item, quantity: Math.max(1, item.quantity + change) }
-          : item
-      )
-    );
-  };
-
-  // Handle item delete
-  const handleDelete = (itemId) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== itemId));
-  };
+  const { cartItems, removeFromCart, updateQuantity } = useCart();
 
   // Calculate order summary
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -54,7 +16,11 @@ export default function Cart() {
   const total = subtotal - discount;
 
   const handleCheckout = () => {
-    router.push('/checkout');
+    if (cartItems.length === 0) {
+      alert('Your cart is empty');
+      return;
+    }
+    router.push('/Checkout');
   };
 
   return (
@@ -71,7 +37,7 @@ export default function Cart() {
                 <div className="empty-cart-text">
                   YOUR CART IS CURRENTLY EMPTY.
                 </div>
-                <button className="checkout-btn" onClick={() => router.push('/')}>Shop Now</button>
+                <button className="checkout-btn" onClick={() => router.push('/Products')}>Shop Now</button>
               </div>
             ) : (
               cartItems.map((item) => (
@@ -86,16 +52,16 @@ export default function Cart() {
                   <div className="cart-item-qty">
                     <button
                       className={`qty-btn ${item.quantity === 1 ? 'qty-btn-disabled' : ''}`}
-                      onClick={() => handleQuantityChange(item.id, -1)}
+                      onClick={() => updateQuantity(item.id, -1)}
                       disabled={item.quantity === 1}
                     >-</button>
                     <span>{item.quantity}</span>
                     <button
                       className="qty-btn"
-                      onClick={() => handleQuantityChange(item.id, 1)}
+                      onClick={() => updateQuantity(item.id, 1)}
                     >+</button>
                   </div>
-                  <button className="cart-item-remove" onClick={() => handleDelete(item.id)}><FiTrash2 /></button>
+                  <button className="cart-item-remove" onClick={() => removeFromCart(item.id)}><FiTrash2 /></button>
                 </div>
               ))
             )}
@@ -125,7 +91,13 @@ export default function Cart() {
                 <input className="promo-input" placeholder="Add promo code" />
                 <button className="promo-apply">Apply</button>
               </div>
-              <button className="checkout-btn" onClick={handleCheckout} disabled={cartItems.length === 0}>Proceed to Checkout</button>
+              <button 
+                className="checkout-btn" 
+                onClick={handleCheckout}
+                disabled={cartItems.length === 0}
+              >
+                Proceed to Checkout
+              </button>
             </div>
           </div>
         )}

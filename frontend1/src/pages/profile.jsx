@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import Image from "next/image";
@@ -29,6 +29,30 @@ export default function Profile() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // Check authentication on component mount
+  useEffect(() => {
+    const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+    if (!isLoggedIn) {
+      router.push('/login');
+    }
+  }, [router]);
+
+  // Handle Logout
+  const handleLogout = () => {
+    sessionStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('user');
+    router.push('/login');
+  };
+
+  // Handle tab click
+  const handleTabClick = (idx) => {
+    if (tabs[idx].label === "Logout") {
+      handleLogout();
+      return;
+    }
+    setSelectedTab(idx);
+  };
+
   // SVGs for eye and eye-off (stroke only, correct color)
   const EyeIcon = (
     <svg width="20" height="20" fill="none" stroke="#180D3E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
@@ -46,15 +70,6 @@ export default function Profile() {
     </svg>
   );
 
-  // Handle Logout tab click
-  const handleTabClick = (idx) => {
-    if (tabs[idx].label === "Logout") {
-      router.push("/");
-      return;
-    }
-    setSelectedTab(idx);
-  };
-
   return (
     <>
       <Header />
@@ -64,7 +79,7 @@ export default function Profile() {
             <span className="profile-avatar">👤</span>
             <div>
               <div className="profile-hello">Welcome back,</div>
-              <div className="profile-name">John Deo</div>
+              <div className="profile-name">{firstName} {lastName}</div>
             </div>
           </div>
           <nav className="profile-tabs">
