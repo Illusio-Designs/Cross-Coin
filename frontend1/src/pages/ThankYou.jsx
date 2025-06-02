@@ -1,7 +1,14 @@
 import Footer from "../components/Footer";
 import Header from "../components/Header";
+import { useRouter } from "next/router";
 
 export default function ThankYou() {
+  const router = useRouter();
+
+  const handleShopAgain = () => {
+    router.push('/Products');
+  };
+
   return (
     <>
       <Header />
@@ -20,7 +27,7 @@ export default function ThankYou() {
           Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry.
         </p>
         <div className="thankyou-buttons">
-          <button className="shop-again">Shop Again</button>
+          <button className="shop-again" onClick={handleShopAgain}>Shop Again</button>
           <button className="track-order">Track Order</button>
         </div>
       </div>

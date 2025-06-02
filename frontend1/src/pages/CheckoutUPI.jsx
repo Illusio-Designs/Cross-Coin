@@ -48,7 +48,7 @@ export default function CheckoutUPI() {
   }, []);
 
   const handlePayment = () => {
-    if (!upiId) {
+    if (selected === 'upi' && !upiId) {
       alert('Please enter UPI ID');
       return;
     }
@@ -57,8 +57,9 @@ export default function CheckoutUPI() {
     setIsProcessing(true);
     setTimeout(() => {
       // Clear cart and shipping address
+      clearCart();
       sessionStorage.removeItem('shippingAddress');
-      window.location.href = '/thankyou';
+      router.push('/ThankYou');
       setIsProcessing(false);
     }, 2000);
   };

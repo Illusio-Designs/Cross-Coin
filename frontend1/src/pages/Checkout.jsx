@@ -28,7 +28,7 @@ export default function Checkout() {
       alert('Please add a shipping address first');
       return;
     }
-    router.push('/checkoutupi');
+    router.push('/CheckoutUPI');
   };
 
   // Calculate order summary
