@@ -17,8 +17,20 @@ import '../styles/pages/TC.css';
 import '../styles/dashboard/layout.css';
 import '../styles/dashboard/sidebar.css';
 import '../styles/pages/auth/adminlogin.css';
+import { useEffect } from 'react';
 
 export default function App({ Component, pageProps: { session, ...pageProps } }) {
+  useEffect(() => {
+    document.title = 'Cross Coin';
+    const link = document.createElement('link');
+    link.rel = 'icon';
+    link.href = '/crosscoin icon.png';
+    document.head.appendChild(link);
+    return () => {
+      document.head.removeChild(link);
+    };
+  }, []);
+
   return (
     <CartProvider>
       <SessionProvider session={session}>
