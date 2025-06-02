@@ -339,7 +339,7 @@
   border: 1px solid #ddd;
 }
 
-.add-to-cart {
+.products-page .add-to-cart {
   cursor: pointer;
   border: 1px solid #E6E6E6;
   background: none;
@@ -349,8 +349,8 @@
   color: #180D3E;
 }
 
-.add-to-cart:hover {
-  background-color: #180D3E;
+.products-page .add-to-cart:hover {
+  background-color: #180D3E !important;
   color: #fff;
 }
 

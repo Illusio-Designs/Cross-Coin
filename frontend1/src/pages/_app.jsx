@@ -1,3 +1,4 @@
+import { CartProvider } from '../context/CartContext';
 import '../styles/globals.css';
 import { SessionProvider } from "next-auth/react";
 import '../styles/components/Footer.css';
@@ -19,8 +20,10 @@ import '../styles/pages/auth/adminlogin.css';
 
 export default function App({ Component, pageProps: { session, ...pageProps } }) {
   return (
-    <SessionProvider session={session}>
-      <Component {...pageProps} />
-    </SessionProvider>
+    <CartProvider>
+      <SessionProvider session={session}>
+        <Component {...pageProps} />
+      </SessionProvider>
+    </CartProvider>
   );
 }

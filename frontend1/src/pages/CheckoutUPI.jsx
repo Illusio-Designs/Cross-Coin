@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
+import { useRouter } from "next/router";
+import { useCart } from "../context/CartContext";
 
 const paymentMethods = [
   {
@@ -31,8 +33,40 @@ const paymentMethods = [
 ];
 
 export default function CheckoutUPI() {
+  const router = useRouter();
+  const { cartItems, clearCart } = useCart();
   const [selected, setSelected] = useState("upi");
   const [upiId, setUpiId] = useState("");
+  const [shippingAddress, setShippingAddress] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    const savedAddress = sessionStorage.getItem('shippingAddress');
+    if (!savedAddress) {
+      window.location.href = '/checkout';
+    }
+  }, []);
+
+  const handlePayment = () => {
+    if (!upiId) {
+      alert('Please enter UPI ID');
+      return;
+    }
+
+    // Simulate payment processing
+    setIsProcessing(true);
+    setTimeout(() => {
+      // Clear cart and shipping address
+      sessionStorage.removeItem('shippingAddress');
+      window.location.href = '/thankyou';
+      setIsProcessing(false);
+    }, 2000);
+  };
+
+  // Calculate order summary
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const discount = Math.round(subtotal * 0.2);
+  const total = subtotal - discount;
 
   return (
     <>
@@ -47,7 +81,6 @@ export default function CheckoutUPI() {
                 key={method.value}
                 onClick={() => setSelected(method.value)}
               >
-                
                 <input
                   type="radio"
                   checked={selected === method.value}
@@ -55,24 +88,23 @@ export default function CheckoutUPI() {
                   name="payment"
                 />
                 <div className="payment-method-content">
-                <span className="label">{method.label}</span>
-               
-                <span className="icons">
-                  {method.icons.map((icon, idx) => (
-                    <img src={icon} alt="" key={idx} />
-                  ))}
-                </span>
-                {method.value === "upi" && selected === "upi" && (
-                  <div className="upi-input-row">
-                    <input
-                      type="text"
-                      placeholder="UPI Id"
-                      value={upiId}
-                      onChange={(e) => setUpiId(e.target.value)}
-                    />
-                    <button>Check</button>
-                  </div>
-                )} 
+                  <span className="label">{method.label}</span>
+                  <span className="icons">
+                    {method.icons.map((icon, idx) => (
+                      <img src={icon} alt="" key={idx} />
+                    ))}
+                  </span>
+                  {method.value === "upi" && selected === "upi" && (
+                    <div className="upi-input-row">
+                      <input
+                        type="text"
+                        placeholder="UPI Id"
+                        value={upiId}
+                        onChange={(e) => setUpiId(e.target.value)}
+                      />
+                      <button>Check</button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -80,31 +112,37 @@ export default function CheckoutUPI() {
         </div>
 
         <div className="order-summary-section">
-            <div className="order-summary-box">
-              <div className="order-summary-title">Order Summary</div>
-              <div className="order-summary-row">
-                <span>Subtotal</span>
-                <span>$250</span>
-              </div>
-              <div className="order-summary-row">
-                <span>Discount (-20%)</span>
-                <span className="discount">-$113</span>
-              </div>
-              <div className="order-summary-row">
-                <span>Delivery Fee</span>
-                <span>$0</span>
-              </div>
-              <div className="order-summary-total">
-                <span>Total</span>
-                <span>$250</span>
-              </div>
-              <div className="promo-row">
-                <input className="promo-input" placeholder="Add promo code" />
-                <button className="promo-apply">Apply</button>
-              </div>
-              <button className="checkout-btn">Proceed to Checkout</button>
+          <div className="order-summary-box">
+            <div className="order-summary-title">Order Summary</div>
+            <div className="order-summary-row">
+              <span>Subtotal</span>
+              <span>${subtotal}</span>
             </div>
+            <div className="order-summary-row">
+              <span>Discount (-20%)</span>
+              <span className="discount">-${discount}</span>
+            </div>
+            <div className="order-summary-row">
+              <span>Delivery Fee</span>
+              <span>$0</span>
+            </div>
+            <div className="order-summary-total">
+              <span>Total</span>
+              <span>${total}</span>
+            </div>
+            <div className="promo-row">
+              <input className="promo-input" placeholder="Add promo code" />
+              <button className="promo-apply">Apply</button>
+            </div>
+            <button 
+              className="checkout-btn"
+              onClick={handlePayment}
+              disabled={isProcessing}
+            >
+              {isProcessing ? 'Processing...' : 'Pay Now'}
+            </button>
           </div>
+        </div>
       </div>
       <Footer />
     </>

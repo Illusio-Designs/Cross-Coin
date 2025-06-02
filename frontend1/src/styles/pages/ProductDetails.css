@@ -311,7 +311,6 @@
 
 .product-description,
 .product-reviews {
-  border: 1px solid #ccc;
   padding: 1rem;
   margin-top: -1px;
 }
@@ -424,7 +423,7 @@
   color: #222;
 }
 
-.product-info .add-to-cart {
+.product-action-box .add-to-cart {
   background: #d32c3b;
   color: #fff;
   border: none;
@@ -439,7 +438,7 @@
   transition: background 0.2s;
 }
 
-.product-info .add-to-cart:hover {
+.product-action-box.add-to-cart:hover {
   background: #b71c2b;
 }
 
@@ -547,13 +546,14 @@
 .product-description {
   padding: 24px;
   background: #fff;
-  border: 1px solid #eee;
   border-radius: 0 0 8px 8px;
   margin-bottom: 32px;
 }
 .product-description h3 {
   margin-top: 1.5em;
   margin-bottom: 0.5em;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 10px;
   color: #222;
   font-size: 1.1rem;
   font-weight: 600;

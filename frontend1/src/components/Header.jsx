@@ -5,8 +5,11 @@ import { HiOutlineSearch } from "react-icons/hi";
 import Image from "next/image";
 import Link from 'next/link';
 import logo from '../assets/crosscoin_logo.webp';
+import { useCart } from '../context/CartContext';
 
 const Header = () => {
+  const { cartCount } = useCart();
+
   return (
     <header className="header">
       <div className="header__top">
@@ -32,23 +35,16 @@ const Header = () => {
           </div>
           <Link href="/Cart" className="header__cart">
             <BsCart />
-            <span className="header__badge">0</span>
+            <span className="header__badge">{cartCount}</span>
           </Link>
         </div>
       </div>
       <nav className="header__nav">
         <ul>
           <li><Link href="/Products">Products</Link></li>
-          <li><Link href="/ProductDetails">Product Details</Link></li>
-          <li><Link href="/Cart">Cart</Link></li>
-          <li><Link href="/Checkout">Checkout</Link></li>
           <li><Link href="/CheckoutUPI">Checkout UPI</Link></li>
           <li><Link href="/Shipping">Shipping</Link></li>
-          <li><Link href="/login">Login</Link></li>
-          <li><Link href="/register">Register</Link></li>
-          <li><Link href="/profile">Profile</Link></li>
           <li><Link href="/ThankYou">Thank You</Link></li>
-          <li><Link href="/policy">Policy</Link></li>
         </ul>
       </nav>
     </header>

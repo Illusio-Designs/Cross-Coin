@@ -177,7 +177,7 @@
 
 .checkout-btn {
   width: 100%;
-  background: #111;
+  background: #000000;
   color: #fff;
   border: none;
   padding: 0.8rem 0;
@@ -189,7 +189,9 @@
 }
 
 .checkout-btn:hover {
-  background: #e74c3c;
+  background: transparent;
+  border: 1px solid #000000;
+  color: #000000;
 }
 
 .cart-features {

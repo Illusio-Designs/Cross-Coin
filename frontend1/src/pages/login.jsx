@@ -9,11 +9,44 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle login logic here
+    setError("");
+
+    // Basic validation
+    if (!email || !password) {
+      setError("Please fill in all fields");
+      return;
+    }
+
+    try {
+      // Here you would typically make an API call to your backend
+      // For demo purposes, we'll simulate a successful login
+      const mockLogin = {
+        email: "user@example.com",
+        password: "password123"
+      };
+
+      if (email === mockLogin.email && password === mockLogin.password) {
+        // Store user info in localStorage if remember me is checked
+        if (rememberMe) {
+          localStorage.setItem('user', JSON.stringify({ email }));
+        }
+
+        // Store session info
+        sessionStorage.setItem('isLoggedIn', 'true');
+        
+        // Redirect to profile page
+        router.push('/profile');
+      } else {
+        setError("Invalid email or password");
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+    }
   };
 
   return (
@@ -25,12 +58,25 @@ export default function Login() {
           <Link href="/register" className="inactive">Register</Link>
         </div>
         <p className="auth-info">If you have an account, login in with your user name or email address.</p>
+        {error && <div className="auth-error">{error}</div>}
         <form className="auth-form" onSubmit={handleSubmit}>
           <label>Email address</label>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+          <input 
+            type="email" 
+            value={email} 
+            onChange={e => setEmail(e.target.value)} 
+            required 
+            placeholder="Enter your email"
+          />
           <label>Password</label>
           <div className="password-wrapper">
-            <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required />
+            <input 
+              type={showPassword ? "text" : "password"} 
+              value={password} 
+              onChange={e => setPassword(e.target.value)} 
+              required 
+              placeholder="Enter your password"
+            />
             <span className="toggle-password" onClick={() => setShowPassword(!showPassword)}>
               {showPassword ? (
                 <svg width="20" height="20" fill="none" stroke="#180D3E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
@@ -50,7 +96,11 @@ export default function Login() {
           </div>
           <div className="auth-options">
             <label className="remember-me">
-              <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} /> Remember me
+              <input 
+                type="checkbox" 
+                checked={rememberMe} 
+                onChange={e => setRememberMe(e.target.checked)} 
+              /> Remember me
             </label>
             <Link href="/forgot-password" className="forgot-password">Forgot password?</Link>
           </div>

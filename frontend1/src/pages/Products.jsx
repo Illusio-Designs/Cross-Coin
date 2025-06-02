@@ -7,8 +7,12 @@ import Image from "next/image";
 import card1 from "../assets/card1-right.webp";
 import card2 from "../assets/card2-left.webp";
 import card3 from "../assets/card3-right.webp";
+import { useRouter } from "next/navigation";
+import { useCart } from '../context/CartContext';
 
 const Products = () => {
+  const router = useRouter();
+  const { addToCart } = useCart();
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState([]);
   const [sortBy, setSortBy] = useState("featured");
@@ -55,7 +59,13 @@ const Products = () => {
       category: "Woollen Shocks",
       image: card1,
       rating: 4.5,
-      reviews: 128
+      reviews: 128,
+      description: "Premium quality wool socks for ultimate comfort and warmth. Perfect for cold weather.",
+      images: [card1, card2, card3, card1, card2],
+      colors: ["brown", "navy", "black"],
+      sizes: ["S", "M", "L", "XL"],
+      material: "Wool",
+      gender: "Unisex"
     },
     {
       id: 2,
@@ -65,7 +75,13 @@ const Products = () => {
       category: "Cotton Shocks",
       image: card2,
       rating: 4.2,
-      reviews: 95
+      reviews: 95,
+      description: "Soft and breathable cotton socks for everyday comfort. Ideal for daily wear.",
+      images: [card2, card3, card1, card2, card3],
+      colors: ["white", "gray", "black"],
+      sizes: ["S", "M", "L", "XL"],
+      material: "Cotton",
+      gender: "Unisex"
     },
     {
       id: 3,
@@ -75,7 +91,13 @@ const Products = () => {
       category: "Silk Shocks",
       image: card3,
       rating: 4.8,
-      reviews: 64
+      reviews: 64,
+      description: "Luxurious silk socks for special occasions. Elegant and comfortable.",
+      images: [card3, card1, card2, card3, card1],
+      colors: ["black", "navy", "burgundy"],
+      sizes: ["S", "M", "L", "XL"],
+      material: "Silk",
+      gender: "Unisex"
     },
     {
       id: 4,
@@ -85,7 +107,13 @@ const Products = () => {
       category: "Winter Special",
       image: card1,
       rating: 4.6,
-      reviews: 112
+      reviews: 112,
+      description: "Extra warm thermal socks for extreme cold weather. Stay cozy all winter long.",
+      images: [card1, card2, card3, card1, card2],
+      colors: ["gray", "black", "navy"],
+      sizes: ["S", "M", "L", "XL"],
+      material: "Thermal",
+      gender: "Unisex"
     },
     {
       id: 5,
@@ -95,7 +123,13 @@ const Products = () => {
       category: "Summer Special",
       image: card2,
       rating: 4.3,
-      reviews: 87
+      reviews: 87,
+      description: "Lightweight and breathable socks perfect for summer. Stay cool and comfortable.",
+      images: [card2, card3, card1, card2, card3],
+      colors: ["white", "light gray", "beige"],
+      sizes: ["S", "M", "L", "XL"],
+      material: "Cotton Blend",
+      gender: "Unisex"
     },
     {
       id: 6,
@@ -105,7 +139,13 @@ const Products = () => {
       category: "Net Shocks",
       image: card3,
       rating: 4.4,
-      reviews: 73
+      reviews: 73,
+      description: "Stylish net pattern socks for a unique look. Fashion meets comfort.",
+      images: [card3, card1, card2, card3, card1],
+      colors: ["black", "white", "red"],
+      sizes: ["S", "M", "L", "XL"],
+      material: "Net",
+      gender: "Unisex"
     },
     {
       id: 7,
@@ -216,7 +256,8 @@ const Products = () => {
 
   useEffect(() => {
     // Set your target date here (e.g., 7 days from now)
-    const targetDate = new Date();
+    const startTime = new Date();
+    const targetDate = new Date(startTime);
     targetDate.setDate(targetDate.getDate() + 7);
 
     const updateTimer = () => {
@@ -273,6 +314,19 @@ const Products = () => {
     const matchesCategory = selectedCategory.length === 0 || selectedCategory.includes(product.category);
     return inPriceRange && matchesColor && matchesSize && matchesGender && matchesMaterial && matchesCategory;
   });
+
+  const handleProductClick = (product) => {
+    const productName = encodeURIComponent(product.name);
+    router.push(`/ProductDetails?name=${productName}`);
+  };
+
+  const handleAddToCart = (e, product) => {
+    e.stopPropagation();
+    // Add default color and size for quick add
+    const defaultColor = product.colors?.[0] || 'black';
+    const defaultSize = product.sizes?.[0] || 'M';
+    addToCart(product, defaultColor, defaultSize, 1);
+  };
 
   return (
     <>
@@ -413,7 +467,7 @@ const Products = () => {
                         key={color}
                         className={`color-btn ${selectedColors.includes(color) ? 'active' : ''}`}
                         style={{ backgroundColor: color }}
-                        onClick={() => handleFilterChange('color', color)}
+                        onClick={(e) => handleFilterChange('color', color)}
                       />
                     ))}
                   </div>
@@ -468,7 +522,12 @@ const Products = () => {
 
           <div className="products-grid">
             {filteredProducts.map((product) => (
-              <div key={product.id} className="product-card">
+              <div 
+                key={product.id} 
+                className="product-card"
+                onClick={() => handleProductClick(product)}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="product-image">
                   <Image 
                     src={product.image} 
@@ -484,7 +543,12 @@ const Products = () => {
                     <span className="product-price">
                       <span className="original-price">${product.originalPrice}</span> ${product.price}
                     </span>
-                    <button className="add-to-cart">Add</button>
+                    <button 
+                      className="add-to-cart"
+                      onClick={(e) => handleAddToCart(e, product)}
+                    >
+                      Add
+                    </button>
                   </div>
                 </div>
               </div>
