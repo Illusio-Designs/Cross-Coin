@@ -16,28 +16,28 @@ const slides = [
     title: "Get up to 30% off",
     highlight: "New Arrivals test",
     description: "Introducing our latest collection of woollen Socks",
-    button: "ORDER NOW",
+    button: "ORDER NOW →",
     image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80"
   },
   {
     title: "Winter Sale",
     highlight: "Hot Deals",
     description: "Stay warm with our exclusive offers on winter wear!",
-    button: "SHOP NOW",
+    button: "SHOP NOW →",
     image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80"
   },
   {
     title: "Get up to 30% off",
     highlight: "New Arrivals",
     description: "Introducing our latest collection of woollen Socks",
-    button: "ORDER NOW",
+    button: "ORDER NOW →",
     image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80"
   },
   {
     title: "Winter Sale",
     highlight: "Hot Deals",
     description: "Stay warm with our exclusive offers on winter wear!",
-    button: "SHOP NOW",
+    button: "SHOP NOW →",
     image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80"
   }
 ];
