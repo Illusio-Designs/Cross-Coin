@@ -22,6 +22,7 @@ import {
   FileText,
   LogOut,
 } from "lucide-react";
+import "./Sidebar.css";
 
 // Remove TaurusIcon and replace with CrossCoin logo
 const CrossCoinLogo = () => (
@@ -140,88 +141,31 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside className={`dashboard-sidebar${collapsed ? ' collapsed' : ''}`}
-        style={{ width: collapsed ? 70 : 250 }}>
+      <aside className={`dashboard-sidebar${collapsed ? ' collapsed' : ''}`}>
         {/* Sidebar Header */}
         {!collapsed ? (
-          <div
-            className="sidebar-header"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: '#181D2A',
-              borderRadius: '18px 18px 0 0',
-              padding: '1.2rem 1.2rem 1.2rem 1.2rem',
-              minHeight: 80,
-              position: 'relative',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div className="sidebar-header">
+            <div className="sidebar-header-logo">
               <CrossCoinLogo />
-              <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 8 }}>
-                <span style={{ fontWeight: 700, fontSize: '1.18rem', color: '#fff', letterSpacing: 1 }}>CrossCoin</span>
-                <span style={{ fontWeight: 500, fontSize: '0.85rem', color: '#A78BFA', letterSpacing: 1, marginTop: 2 }}>ADMIN PANEL</span>
+              <div className="sidebar-header-text">
+                <span className="sidebar-header-title">CrossCoin</span>
+                <span className="sidebar-header-subtitle">ADMIN PANEL</span>
               </div>
             </div>
             <button
               onClick={() => setCollapsed(true)}
-              style={{
-                background: '#23263A',
-                border: 'none',
-                cursor: 'pointer',
-                color: '#A78BFA',
-                fontSize: '1.1rem',
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                boxShadow: '0 2px 8px rgba(44,62,80,0.10)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginLeft: 0,
-                marginRight: 0,
-                transition: 'margin 0.2s',
-              }}
+              className="sidebar-toggle-button"
               title="Collapse sidebar"
             >
               <ChevronLeft size={20} />
             </button>
           </div>
         ) : (
-          <div
-            className="sidebar-header"
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: '#181D2A',
-              borderRadius: '18px 18px 0 0',
-              padding: '1.5rem 0 1.2rem 0',
-              minHeight: 80,
-              position: 'relative',
-            }}
-          >
+          <div className="sidebar-header collapsed">
             <CrossCoinLogo />
             <button
               onClick={() => setCollapsed(false)}
-              style={{
-                background: '#23263A',
-                border: 'none',
-                cursor: 'pointer',
-                color: '#A78BFA',
-                fontSize: '1.1rem',
-                marginTop: 18,
-                width: 38,
-                height: 38,
-                borderRadius: '50%',
-                boxShadow: '0 2px 8px rgba(44,62,80,0.10)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'margin 0.2s',
-              }}
+              className="sidebar-toggle-button collapsed"
               title="Expand sidebar"
             >
               <ChevronRight size={20} />
@@ -230,12 +174,11 @@ export default function Sidebar() {
         )}
         <nav style={{ flex: 1 }}>
           {sidebarData.map((item) => (
-            <div key={item.label} className="sidebar-section" style={{ position: 'relative' }}>
+            <div key={item.label} className="sidebar-section">
               {item.children ? (
                 <>
                   <div
-                    className="sidebar-link"
-                    style={{ justifyContent: collapsed ? 'center' : 'flex-start', fontWeight: 600, cursor: 'pointer', position: 'relative' }}
+                    className={`sidebar-link${collapsed ? ' collapsed' : ''}`}
                     onClick={() => !collapsed && handleToggleSection(item.label)}
                     onMouseEnter={collapsed ? (e) => showDropdown(item.label, e) : undefined}
                     onMouseLeave={collapsed ? hideDropdown : undefined}
@@ -259,22 +202,16 @@ export default function Sidebar() {
                       />
                     )}
                   </div>
-                  {/* Inline dropdown for expanded sidebar */}
                   {openSections[item.label] && !collapsed && (
-                    <div className="sidebar-items" style={{ position: 'relative', paddingLeft: 24 }}>
-                      {/* SVG for vertical and horizontal lines */}
+                    <div className="sidebar-items">
                       <svg width="24" height={40 * item.children.length} style={{ position: 'absolute', left: 0, top: 18, zIndex: 0 }}>
-                        {/* Vertical line: from below parent to last child */}
                         <rect x="11" y="8" width="2" height={40 * item.children.length - 20} rx="1" fill="#E5E7EB" />
-                        {/* Curve to first child */}
                         <path d="M12 8 Q12 20 24 20" stroke="#E5E7EB" strokeWidth="2" fill="none" />
-                        {/* T-junctions for middle children */}
                         {item.children.length > 1 && item.children.map((_, idx) => (
                           idx > 0 && idx < item.children.length - 1 ? (
                             <rect key={idx} x="12" y={40 * idx + 20} width="12" height="2" rx="1" fill="#E5E7EB" />
                           ) : null
                         ))}
-                        {/* Horizontal for last child */}
                         {item.children.length > 1 && (
                           <rect x="12" y={40 * (item.children.length - 1) + 20} width="12" height="2" rx="1" fill="#E5E7EB" />
                         )}
@@ -284,7 +221,6 @@ export default function Sidebar() {
                           <Link
                             href={child.href}
                             className={`sidebar-link${isActive(child.href) ? ' active' : ''}`}
-                            style={{ paddingLeft: 16, position: 'relative', background: 'none', zIndex: 2 }}
                             onMouseEnter={collapsed ? (e) => showTooltip(child.label, e) : undefined}
                             onMouseLeave={collapsed ? hideTooltip : undefined}
                           >
@@ -299,8 +235,7 @@ export default function Sidebar() {
               ) : (
                 <Link
                   href={item.href}
-                  className={`sidebar-link${isActive(item.href) ? ' active' : ''}`}
-                  style={{ justifyContent: collapsed ? 'center' : 'flex-start', fontWeight: 600 }}
+                  className={`sidebar-link${isActive(item.href) ? ' active' : ''}${collapsed ? ' collapsed' : ''}`}
                   onMouseEnter={collapsed ? (e) => showTooltip(item.label, e) : undefined}
                   onMouseLeave={collapsed ? hideTooltip : undefined}
                 >
@@ -318,56 +253,27 @@ export default function Sidebar() {
       {collapsed && dropdown && (
         <div
           ref={dropdownRef}
-          className="sidebar-tooltip visible"
+          className="sidebar-dropdown"
           style={{
             top: dropdown.y + 8,
             left: dropdown.x + 8,
-            minWidth: 180,
-            background: '#fff',
-            color: '#180D3E',
-            boxShadow: '0 4px 24px rgba(44,62,80,0.12)',
-            borderRadius: 12,
-            padding: '0.5rem 0',
-            zIndex: 9999,
-            position: 'fixed',
-            cursor: 'default',
           }}
           onMouseEnter={keepDropdown}
           onMouseLeave={hideDropdown}
         >
-          {/* Vertical line for floating dropdown */}
-          <span style={{
-            position: 'absolute',
-            left: 32,
-            top: 20,
-            width: 2,
-            height: 40 * (sidebarData.find((i) => i.label === dropdown.label)?.children.length || 1),
-            background: '#E5E7EB',
-            borderRadius: 1,
-            zIndex: 0,
-            transition: 'height 0.2s',
+          <span className="sidebar-dropdown-vertical-line" style={{
+            height: 40 * (sidebarData.find((i) => i.label === dropdown.label)?.children.length || 1)
           }} />
           {sidebarData.find((i) => i.label === dropdown.label)?.children?.map((child, idx) => (
             <Link
               key={child.label}
               href={child.href}
-              className="sidebar-link"
-              style={{ padding: '0.6rem 1.2rem 0.6rem 2.5rem', borderRadius: 8, color: '#180D3E', background: 'none', fontWeight: 500, position: 'relative', minWidth: 160 }}
+              className="sidebar-dropdown-link"
               onMouseEnter={collapsed ? (e) => showTooltip(child.label, e) : undefined}
               onMouseLeave={collapsed ? hideTooltip : undefined}
             >
-              {/* Vertical line for dropdown children */}
               {idx !== sidebarData.find((i) => i.label === dropdown.label)?.children.length - 1 && (
-                <span style={{
-                  position: 'absolute',
-                  left: 24,
-                  top: 32,
-                  width: 2,
-                  height: 40,
-                  background: '#E5E7EB',
-                  borderRadius: 1,
-                  zIndex: 0,
-                }} />
+                <span className="sidebar-dropdown-line" />
               )}
               <span className="icon">{child.icon}</span>
               {child.label}
@@ -382,16 +288,6 @@ export default function Sidebar() {
           style={{
             top: hovered.y + 8,
             left: hovered.x + 8,
-            zIndex: 99999,
-            position: 'fixed',
-            pointerEvents: 'none',
-            background: '#181D2A',
-            color: '#fff',
-            borderRadius: 6,
-            padding: '0.4rem 0.9rem',
-            fontSize: '0.98rem',
-            boxShadow: '0 2px 8px rgba(44,62,80,0.12)',
-            opacity: 1,
           }}
         >
           {hovered.label}
