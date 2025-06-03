@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { signIn } from "next-auth/react";
 import "../../styles/pages/auth/adminlogin.css";
 
 const EyeOpen = () => (
@@ -68,19 +67,6 @@ export default function Login() {
           {error && <div className="login-error">{error}</div>}
           <button className="login-btn" type="submit">Sign In</button>
         </form>
-        <div className="login-oauth">
-        <button
-            className="login-google-btn"
-            onClick={() => signIn("google")}
-        >
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/4/4a/Logo_2013_Google.png"
-              alt="Google"
-              className="login-google-icon"
-            />
-            Sign in with Google
-        </button>
-        </div>
         <div className="login-links">
           <a href="/auth/forgot-password" className="login-link">Forgot Password?</a>
         </div>

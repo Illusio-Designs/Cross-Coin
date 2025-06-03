@@ -1,0 +1,55 @@
+.attributes-container {
+  padding: 20px;
+}
+
+.attributes-header {
+  margin-bottom: 20px;
+}
+
+.attributes-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.attributes-table th,
+.attributes-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.attributes-table th {
+  background-color: #f8fafc;
+  font-weight: 600;
+}
+
+.attributes-table tr:hover {
+  background-color: #f8fafc;
+}
+
+.attribute-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.attribute-button {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.attribute-button.edit {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.attribute-button.delete {
+  background-color: #ef4444;
+  color: white;
+}
+
+.attribute-button:hover {
+  opacity: 0.9;
+} 
