@@ -2,9 +2,9 @@
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
-  background: #F3F4F6;
-  color: #180D3E;
-  border-color: #E6E6E6;
+  background: #f3f4f6;
+  color: #180d3e;
+  border-color: #e6e6e6;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -14,7 +14,7 @@
   border-right: 1px solid #ececec;
   display: flex;
   flex-direction: column;
-  box-shadow: 2px 0 8px rgba(0,0,0,0.03);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.03);
   z-index: 10;
 }
 .dashboard-sidebar.dark {
@@ -26,7 +26,7 @@
   font-size: 1.5rem;
   font-weight: bold;
   padding: 2rem 1.5rem 1rem 1.5rem;
-  color: #CE1E36;
+  color: #ce1e36;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -37,7 +37,7 @@
 .dashboard-sidebar .sidebar-section-title {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #180D3E;
+  color: #180d3e;
   margin: 1.5rem 0 0.5rem 1.5rem;
   letter-spacing: 0.5px;
 }
@@ -50,7 +50,7 @@
   display: flex;
   align-items: center;
   padding: 0.7rem 1.5rem;
-  color: #180D3E;
+  color: #180d3e;
   text-decoration: none;
   border-radius: 8px;
   font-size: 1.05rem;
@@ -59,7 +59,7 @@
 }
 .dashboard-sidebar .sidebar-link.active,
 .dashboard-sidebar .sidebar-link:hover {
-  color: #CE1E36;
+  color: #ce1e36;
 }
 .dashboard-sidebar .sidebar-link .icon {
   font-size: 1.2rem;
@@ -86,13 +86,13 @@
   align-items: center;
   justify-content: space-between;
   min-height: 64px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
   z-index: 5;
 }
 .dashboard-header .header-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #180D3E;
+  color: #180d3e;
 }
 .dashboard-header .header-actions {
   display: flex;
@@ -113,4 +113,4 @@
   text-align: center;
   color: #64748b;
   font-size: 0.98rem;
-} 
+}
