@@ -1,0 +1,18 @@
+.dashboard-page {
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(31,41,55,0.10);
+  padding: 2.5rem 2rem;
+  margin: 2rem auto;
+  max-width: 1100px;
+}
+.dashboard-title {
+  color: #180D3E;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+.dashboard-content {
+  color: #1F2937;
+  font-size: 1.1rem;
+} 
