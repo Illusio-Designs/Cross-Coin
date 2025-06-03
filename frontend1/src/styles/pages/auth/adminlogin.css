@@ -1,83 +1,101 @@
-/* Login Page Styles */
+/* Unique Admin Auth Page Styles - Only specified colors */
 .login-bg {
   min-height: 100vh;
-  background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
+  background-image: url("../../../assets/hero-bg.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #1C2333;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .login-card {
   background: #fff;
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-  padding: 2.5rem 2rem;
+  border-radius: 32px 32px 24px 24px;
+  box-shadow: 0 12px 40px rgba(31,41,55,0.18);
+  padding: 3.5rem 2.5rem 2.5rem 2.5rem;
   width: 100%;
-  max-width: 400px;
+  max-width: 440px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  border-top: 8px solid #CE1E36;
+  position: relative;
 }
 .login-title {
-  font-size: 2rem;
-  font-weight: 700;
+  font-size: 2.3rem;
+  font-weight: 800;
   text-align: center;
   margin-bottom: 0.25rem;
   color: #180D3E;
+  letter-spacing: 1px;
 }
 .login-subtitle {
-  color: #64748b;
+  color: #1F2937;
   text-align: center;
-  margin-bottom: 2rem;
-  font-size: 1.05rem;
+  margin-bottom: 2.2rem;
+  font-size: 1.13rem;
+  font-weight: 500;
 }
 .login-input {
-  border: none;
+  border: 2px solid #1F2937;
   background: #F3F4F6;
-  border-radius: 8px;
-  padding: 1rem 1.25rem;
-  margin-bottom: 1.25rem;
-  font-size: 1.05rem;
+  border-radius: 12px;
+  padding: 1.15rem 1.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 1.13rem;
   outline: none;
-  width: 100%;
-  transition: box-shadow 0.2s;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  width: 88%;
+  transition: box-shadow 0.2s, border 0.2s;
+  box-shadow: 0 2px 6px rgba(31,41,55,0.07);
   color: #180D3E;
+  font-weight: 500;
 }
 .login-input:focus {
-  box-shadow: 0 0 0 2px #CE1E3633;
+  box-shadow: 0 0 0 3px #CE1E36;
+  border: 2px solid #CE1E36;
+  background: #fff;
 }
 .login-password-wrapper {
   position: relative;
 }
 .login-eye {
   position: absolute;
-  right: 1.25rem;
-  top: 50%;
+  border: none;
+  background: none;
+  right: 1.1rem;
+  top: 35%;
   transform: translateY(-50%);
   cursor: pointer;
-  color: #CE1E36;
+  color: #fff;
   font-size: 1.25rem;
-  background: none;
-  border: none;
-  padding: 0;
-  line-height: 1;
+  width: 2.2rem;
+  height: 2.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s, border 0.2s;
+  z-index: 2;
 }
 .login-btn {
-  background: #CE1E36;
+  background: linear-gradient(90deg, #CE1E36 60%, #DC2626 100%);
   color: #fff;
   border: none;
-  border-radius: 8px;
-  padding: 0.9rem;
-  font-size: 1.08rem;
-  font-weight: 600;
-  margin-bottom: 1.2rem;
+  border-radius: 12px;
+  padding: 1.1rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, box-shadow 0.2s;
   width: 100%;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.7px;
+  box-shadow: 0 2px 8px rgba(220,38,38,0.10);
 }
 .login-btn:hover {
-  background: #a8182b;
+  background: linear-gradient(90deg, #951518 60%, #DC2626 100%);
+  box-shadow: 0 4px 16px rgba(220,38,38,0.18);
 }
 .login-oauth {
   display: flex;
@@ -90,40 +108,55 @@
   align-items: center;
   justify-content: center;
   background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 0.7rem 0.5rem;
-  font-size: 1rem;
+  border: 2px solid #1F2937;
+  border-radius: 12px;
+  padding: 0.9rem 0.5rem;
+  font-size: 1.05rem;
   cursor: pointer;
-  margin-bottom: 0.5rem;
-  transition: border 0.2s;
+  margin-bottom: 0.7rem;
+  transition: border 0.2s, box-shadow 0.2s;
   width: 100%;
-  font-weight: 500;
-  gap: 0.5rem;
+  font-weight: 600;
+  gap: 0.7rem;
+  box-shadow: 0 1px 4px rgba(31,41,55,0.07);
 }
 .login-google-btn:hover {
   border-color: #CE1E36;
+  box-shadow: 0 2px 8px rgba(206,30,54,0.10);
 }
 .login-google-icon {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 .login-links {
   text-align: right;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.7rem;
 }
 .login-link {
   color: #CE1E36;
   text-decoration: none;
-  font-weight: 500;
-  font-size: 0.98rem;
+  font-weight: 600;
+  font-size: 1.05rem;
+  transition: color 0.2s;
 }
 .login-link:hover {
+  color: #951518;
   text-decoration: underline;
 }
 .login-signup {
   text-align: center;
-  color: #64748b;
-  font-size: 0.98rem;
-  margin-top: 0.5rem;
+  color: #1F2937;
+  font-size: 1.05rem;
+  margin-top: 0.7rem;
+  font-weight: 500;
+}
+.login-error {
+  color: #DC2626;
+  margin-bottom: 1.2rem;
+  text-align: center;
+  font-weight: 600;
+}
+.login-back-link {
+  text-align: center;
+  margin-top: 1.2rem;
 } 

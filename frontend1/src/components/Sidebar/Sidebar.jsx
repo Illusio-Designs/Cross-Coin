@@ -20,6 +20,7 @@ import {
   Tag,
   Truck,
   FileText,
+  LogOut,
 } from "lucide-react";
 
 // Remove TaurusIcon and replace with CrossCoin logo
@@ -94,6 +95,11 @@ const sidebarData = [
     label: "Users",
     icon: <User size={20} strokeWidth={1.7} className="icon" />,
     href: "/users",
+  },
+  {
+    label: "Logout",
+    icon: <LogOut size={20} strokeWidth={1.7} className="icon" />,
+    href: "/auth/adminlogin",
   },
 ];
 
@@ -306,12 +312,6 @@ export default function Sidebar() {
           ))}
         </nav>
         <div className="sidebar-footer">
-          <div className="help-card">
-            <HelpCircle className="help-icon" size={32} strokeWidth={1.7} />
-            {!collapsed && <div style={{ marginTop: 4 }}>
-              Need help? <br /><a href="#" className="help-link">Go to Help Center →</a>
-            </div>}
-          </div>
         </div>
       </aside>
       {/* Floating dropdown for collapsed sidebar */}

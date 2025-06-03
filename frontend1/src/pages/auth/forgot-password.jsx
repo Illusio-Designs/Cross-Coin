@@ -10,7 +10,7 @@ export default function ForgotPassword() {
           placeholder="Enter your email"
         />
         <button className="login-btn">Send Reset Link</button>
-        <div style={{ textAlign: "center", marginTop: "1rem" }}>
+        <div className="login-back-link">
           <a href="/auth/adminlogin" className="login-link">Back to Login</a>
         </div>
       </div>
