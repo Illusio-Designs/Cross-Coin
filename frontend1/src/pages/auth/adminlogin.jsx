@@ -84,9 +84,6 @@ export default function Login() {
         <div className="login-links">
           <a href="/auth/forgot-password" className="login-link">Forgot Password?</a>
         </div>
-        <div className="login-signup">
-          Don't have an account? <a href="/auth/adminregister" className="login-link">Sign up</a>
-        </div>
       </div>
     </div>
   );
