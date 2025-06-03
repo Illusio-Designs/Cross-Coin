@@ -1,29 +1,43 @@
 import React from 'react';
+import '../../styles/common/Table.css';
 
-const Table = ({ headers, data }) => {
+const Table = ({ 
+  headers, 
+  data, 
+  striped = false,
+  hoverable = true,
+  className = '',
+  onRowClick
+}) => {
   return (
-    <table className="min-w-full bg-white">
-      <thead>
-        <tr>
-          {headers.map((header, index) => (
-            <th key={index} className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-sm font-semibold text-gray-700">
-              {header}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((row, rowIndex) => (
-          <tr key={rowIndex} className="hover:bg-gray-50">
-            {row.map((cell, cellIndex) => (
-              <td key={cellIndex} className="py-2 px-4 border-b border-gray-200 text-sm text-gray-700">
-                {cell}
-              </td>
+    <div className="table-container">
+      <table className={`table ${className}`}>
+        <thead>
+          <tr>
+            {headers.map((header, index) => (
+              <th key={index} className="table-header">
+                {header}
+              </th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {data.map((row, rowIndex) => (
+            <tr 
+              key={rowIndex} 
+              className={`table-row ${striped && rowIndex % 2 === 0 ? 'striped' : ''} ${hoverable ? 'hoverable' : ''}`}
+              onClick={() => onRowClick && onRowClick(row)}
+            >
+              {row.map((cell, cellIndex) => (
+                <td key={cellIndex} className="table-cell">
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 };
 
