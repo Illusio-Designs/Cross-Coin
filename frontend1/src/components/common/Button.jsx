@@ -1,10 +1,21 @@
 import React from 'react';
+import '../../styles/common/Button.css';
 
-const Button = ({ children, className, onClick }) => {
+const Button = ({ 
+  children, 
+  variant = 'primary', 
+  size = 'medium',
+  className = '',
+  onClick,
+  disabled = false,
+  type = 'button'
+}) => {
   return (
     <button
-      className={`py-2 px-4 rounded transition ${className}`}
+      type={type}
+      className={`button ${variant} ${size} ${className}`}
       onClick={onClick}
+      disabled={disabled}
     >
       {children}
     </button>
