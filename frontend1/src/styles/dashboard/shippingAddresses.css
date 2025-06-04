@@ -1,0 +1,150 @@
+.shipping-addresses-container {
+  padding: 2rem;
+}
+
+.shipping-addresses-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.shipping-addresses-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.shipping-addresses-filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.shipping-addresses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.shipping-address-card {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  transition: transform 0.2s ease;
+}
+
+.shipping-address-card:hover {
+  transform: translateY(-2px);
+}
+
+.shipping-address-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.shipping-address-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.shipping-address-type {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+.shipping-address-details {
+  margin-bottom: 1rem;
+  color: #666;
+  line-height: 1.5;
+}
+
+.shipping-address-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.shipping-address-search {
+  width: 300px;
+  margin-bottom: 1rem;
+}
+
+.shipping-address-pagination {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+.shipping-address-modal {
+  max-width: 600px;
+}
+
+.shipping-address-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.shipping-address-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.shipping-address-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.shipping-address-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.shipping-address-default {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+}
+
+@media (max-width: 768px) {
+  .shipping-addresses-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .shipping-addresses-filters {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .shipping-address-search {
+    width: 100%;
+  }
+
+  .shipping-addresses-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shipping-address-form-row {
+    grid-template-columns: 1fr;
+  }
+} 
