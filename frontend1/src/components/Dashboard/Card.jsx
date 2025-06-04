@@ -1,25 +1,70 @@
-export default function Card({ title, price, description, features, selected, onSelect, children }) {
+import React, { useState } from 'react';
+import '../../styles/dashboard/Card.css';
+import { FaEye, FaChartBar, FaRocket } from "react-icons/fa";
+
+export default function CardGrid() {
+  const [selected, setSelected] = useState(0);
+  const cards = [
+    {
+      title: "Total Companies",
+      value: 2,
+      description: "Total number of companies.",
+      icon: <FaEye className="dashboard-card-icon" />,
+    },
+    {
+      title: "Active Companies",
+      value: 2,
+      description: "100% of total",
+      icon: <FaChartBar className="dashboard-card-icon" />,
+    },
+    {
+      title: "Inactive Companies",
+      value: 0,
+      description: "0% of total",
+      icon: <FaRocket className="dashboard-card-icon" />,
+    },
+    {
+      title: "Recent Companies (30 days)",
+      value: 2,
+      description: "100% of total",
+      icon: <FaEye className="dashboard-card-icon" />,
+    },
+    {
+      title: "Total Consumers",
+      value: 2,
+      description: "Total number of consumers.",
+      icon: <FaChartBar className="dashboard-card-icon" />,
+    },
+    {
+      title: "Active Consumers",
+      value: 2,
+      description: "100% of total",
+      icon: <FaRocket className="dashboard-card-icon" />,
+    },
+    {
+      title: "Inactive Consumers",
+      value: 0,
+      description: "0% of total",
+      icon: <FaEye className="dashboard-card-icon" />,
+    },
+    {
+      title: "Recent Consumers (30 days)",
+      value: 2,
+      description: "100% of total",
+      icon: <FaChartBar className="dashboard-card-icon" />,
+    },
+  ];
+
   return (
-    <div className={`bg-white rounded-xl shadow-lg border p-6 flex flex-col items-center transition hover:shadow-xl ${selected ? 'ring-2 ring-green-400' : ''}`}>
-      <div className="mb-4">
-        {children}
-      </div>
-      <h3 className="text-lg font-bold mb-2">{title}</h3>
-      <div className="text-3xl font-extrabold text-green-600 mb-2">{price}</div>
-      <p className="text-gray-500 mb-4 text-center">{description}</p>
-      <ul className="mb-4">
-        {features.map((f, i) => (
-          <li key={i} className="flex items-center text-sm text-gray-700">
-            <span className="text-green-500 mr-2">✔</span> {f}
-          </li>
-        ))}
-      </ul>
-      <button
-        className={`w-full py-2 rounded ${selected ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-green-50'}`}
-        onClick={onSelect}
-      >
-        {selected ? 'Selected' : 'Select'}
-      </button>
+    <div className="dashboard-card-grid">
+      {cards.map((card, idx) => (
+        <div className="dashboard-card" key={card.title}>
+          <div className="dashboard-card-icon">{card.icon}</div>
+          <div className="dashboard-card-title">{card.title}</div>
+          <div className="dashboard-card-value">{card.value}</div>
+          <div className="dashboard-card-description">{card.description}</div>
+        </div>
+      ))}
     </div>
   );
 } 
