@@ -88,8 +88,8 @@
   padding: 12px;
   border-radius: 10px;
   cursor: pointer;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-weight: 400;
+  color: #180D3E;
   transition: background 0.18s, color 0.18s;
 }
 .sidebar-v2-menu-link:hover, .sidebar-v2-menu-link.active {
