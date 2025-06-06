@@ -1,62 +1,70 @@
 .button {
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s ease-in-out;
+  font-weight: 600;
+  font-family: inherit;
+  transition: all 0.2s cubic-bezier(.4,0,.2,1);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.07);
 }
 
 .button:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* Variants */
 .primary {
-  background-color: #2563eb;
-  color: white;
+  background: linear-gradient(90deg, #2563eb 0%, #1e40af 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.10);
 }
 
 .primary:hover:not(:disabled) {
-  background-color: #1d4ed8;
+  background: linear-gradient(90deg, #1d4ed8 0%, #1e3a8a 100%);
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 4px 16px rgba(37,99,235,0.15);
 }
 
 .secondary {
-  background-color: #e5e7eb;
-  color: #374151;
+  background: #f3f4f6;
+  color: #1e293b;
+  border: 1px solid #e5e7eb;
 }
 
 .secondary:hover:not(:disabled) {
-  background-color: #d1d5db;
+  background: #e0e7ef;
+  color: #1e40af;
 }
 
 .outline {
-  background-color: transparent;
-  border: 1px solid #2563eb;
+  background: transparent;
+  border: 2px solid #2563eb;
   color: #2563eb;
 }
 
 .outline:hover:not(:disabled) {
-  background-color: #2563eb;
-  color: white;
+  background: #2563eb;
+  color: #fff;
 }
 
 /* Sizes */
 .small {
-  padding: 6px 12px;
-  font-size: 0.875rem;
+  padding: 8px 18px;
+  font-size: 0.95rem;
 }
 
 .medium {
-  padding: 8px 16px;
-  font-size: 1rem;
+  padding: 12px 28px;
+  font-size: 1.05rem;
 }
 
 .large {
-  padding: 12px 24px;
-  font-size: 1.125rem;
+  padding: 16px 36px;
+  font-size: 1.15rem;
 } 

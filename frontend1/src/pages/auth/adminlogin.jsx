@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
+import { authService } from "../../services";
 import "../../styles/pages/auth/adminlogin.css";
 
 const EyeOpen = () => (
@@ -14,19 +15,37 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleStaticLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    // Static credentials
-    if (email === "Admin@admin.com" && password === "Admin@123") {
-      setError("");
-      if (typeof window !== 'undefined') {
-        localStorage.setItem("isStaticAdmin", "true");
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await authService.login({
+        email,
+        password,
+        role: 'admin' // Specify that this is an admin login
+      });
+
+      // Store the token in localStorage
+      if (response.token) {
+        localStorage.setItem('token', response.token);
+        // You might want to store additional user info if needed
+        if (response.user) {
+          localStorage.setItem('user', JSON.stringify(response.user));
+        }
+        router.push("/dashboard");
+      } else {
+        setError("Invalid response from server");
       }
-      router.push("/dashboard");
-    } else {
-      setError("Invalid email or password.");
+    } catch (err) {
+      console.error("Login error:", err);
+      setError(err.message || "Invalid email or password");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -34,24 +53,26 @@ export default function Login() {
     <div className="login-bg">
       <div className="login-card">
         <h2 className="login-title">Welcome Back</h2>
-        <p className="login-subtitle">Sign in to your account</p>
-        <form onSubmit={handleStaticLogin}>
+        <p className="login-subtitle">Sign in to your admin account</p>
+        <form onSubmit={handleLogin}>
           <input
             className="login-input"
             type="email"
-            placeholder="Admin@admin.com"
+            placeholder="Enter your email"
             value={email}
             onChange={e => setEmail(e.target.value)}
             autoComplete="username"
+            required
           />
           <div className="login-password-wrapper">
             <input
               className="login-input"
               type={showPassword ? "text" : "password"}
-              placeholder="Password"
+              placeholder="Enter your password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               autoComplete="current-password"
+              required
             />
             <button
               type="button"
@@ -65,7 +86,13 @@ export default function Login() {
             </button>
           </div>
           {error && <div className="login-error">{error}</div>}
-          <button className="login-btn" type="submit">Sign In</button>
+          <button 
+            className="login-btn" 
+            type="submit"
+            disabled={loading}
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
         </form>
         <div className="login-links">
           <a href="/auth/forgot-password" className="login-link">Forgot Password?</a>

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.NEXT_API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 // Create axios instance
 const api = axios.create({
@@ -696,7 +696,7 @@ export const seoService = {
 
     getSEOData: async (pageName) => {
         try {
-            const response = await api.get(`/api/seo/page/${pageName}`);
+            const response = await api.get(`/api/seo?page_name=${pageName}`);
             return response.data;
         } catch (error) {
             throw handleApiError(error);
