@@ -69,8 +69,8 @@ export const setupDatabase = async () => {
         }
         
         // Step 1a: Sync essential base tables FIRST (those not depending on others for FKs initially)
-        console.log('Step 1a: Syncing essential base tables (User, Product, Attribute, Category, etc.)...');
-        const baseTableNames = ['User', 'Product', 'Attribute', 'Category', 'Settings', 'ShippingFee', 'SeoMetadata', 'Coupon', 'AttributeValue'];
+        console.log('Step 1a: Syncing essential base tables (User, Category, Attribute, etc.)...');
+        const baseTableNames = ['User', 'Category', 'Attribute', 'Settings', 'ShippingFee', 'SeoMetadata', 'Coupon'];
         for (const modelName of baseTableNames) {
             if (models[modelName]) {
                 console.log(`Syncing ${modelName} table (alter:true)...`);
@@ -80,12 +80,38 @@ export const setupDatabase = async () => {
             }
         }
         
-        // Step 1b: Sync other tables that might have FKs 
-        // (Review, ReviewImage, ProductImage, ProductSEO, ProductVariation, Order, OrderItem, etc.)
-        console.log('Step 1b: Syncing dependent tables (Review, ProductVariation, Order, etc.)...');
+        // Step 1b: Sync Product table separately since it depends on Category
+        console.log('Step 1b: Syncing Product table...');
+        if (models['Product']) {
+            console.log('Syncing Product table (alter:true)...');
+            await models['Product'].sync({ alter: true, hooks: false });
+        } else {
+            console.warn('Product model not found for syncing.');
+        }
+        
+        // Step 1c: Sync ProductVariation table since it's needed by AttributeValue
+        console.log('Step 1c: Syncing ProductVariation table...');
+        if (models['ProductVariation']) {
+            console.log('Syncing ProductVariation table (alter:true)...');
+            await models['ProductVariation'].sync({ alter: true, hooks: false });
+        } else {
+            console.warn('ProductVariation model not found for syncing.');
+        }
+        
+        // Step 1d: Sync AttributeValue table after ProductVariation exists
+        console.log('Step 1d: Syncing AttributeValue table...');
+        if (models['AttributeValue']) {
+            console.log('Syncing AttributeValue table (alter:true)...');
+            await models['AttributeValue'].sync({ alter: true, hooks: false });
+        } else {
+            console.warn('AttributeValue model not found for syncing.');
+        }
+        
+        // Step 1e: Sync other tables that might have FKs 
+        console.log('Step 1e: Syncing dependent tables (Review, ProductVariation, Order, etc.)...');
         const dependentTableNames = [
             'Review', 'ReviewImage', 'ProductImage', 'ProductSEO', 
-            'ProductVariation', 'Order', 'OrderItem', 'OrderStatusHistory',
+            'Order', 'OrderItem', 'OrderStatusHistory',
             'Payment', 'ShippingAddress', 'Cart', 'CartItem', 'Wishlist', 'Slider'
         ];
         

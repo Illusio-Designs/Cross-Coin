@@ -23,6 +23,16 @@ export const Product = sequelize.define('Product', {
         type: DataTypes.ENUM('active', 'inactive', 'draft'),
         defaultValue: 'draft'
     },
+    categoryId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'categories',
+            key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
+    },
     // Review-related fields
     avg_rating: {
         type: DataTypes.DECIMAL(2, 1),
@@ -56,6 +66,9 @@ export const Product = sequelize.define('Product', {
         {
             unique: true,
             fields: ['slug']
+        },
+        {
+            fields: ['categoryId']
         }
     ]
 });

@@ -4,7 +4,7 @@ import Button from "@/components/common/Button";
 import Filter from "@/components/common/Filter";
 import SortBy from "@/components/common/SortBy";
 import InputField from "@/components/common/InputField";
-import Pagination from "@/components/common/Pagination";
+import Table from "@/components/common/Table";
 import "../../../styles/dashboard/orderStatus.css";
 
 export default function OrderStatus() {
@@ -72,6 +72,64 @@ export default function OrderStatus() {
     );
   };
 
+  const columns = [
+    { header: "Order ID", accessor: "id" },
+    { header: "Customer", accessor: "customer" },
+    { header: "Date", accessor: "date" },
+    { header: "Total", accessor: "total" },
+    { header: "Items", accessor: "items" },
+    { 
+      header: "Status", 
+      accessor: "status",
+      cell: (row) => getStatusBadge(row.status)
+    },
+  ];
+
+  const rowActions = [
+    {
+      type: "view",
+      icon: <FaEye />,
+      label: "View",
+      onClick: (row) => console.log("View", row),
+      className: "action-view"
+    },
+    {
+      type: "edit",
+      icon: <FaEdit />,
+      label: "Edit",
+      onClick: (row) => console.log("Edit", row),
+      className: "action-edit"
+    }
+  ];
+
+  const handleSearch = (data, searchTerm) => {
+    return data.filter(order => 
+      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customer.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  };
+
+  const handleSort = (key, direction) => {
+    setSortValue(key);
+    setSortDirection(direction);
+    const sortedOrders = [...orders].sort((a, b) => {
+      if (key === 'date') {
+        return direction === 'asc' 
+          ? new Date(a.date) - new Date(b.date)
+          : new Date(b.date) - new Date(a.date);
+      }
+      if (key === 'total') {
+        return direction === 'asc'
+          ? parseFloat(a.total.replace('$', '')) - parseFloat(b.total.replace('$', ''))
+          : parseFloat(b.total.replace('$', '')) - parseFloat(a.total.replace('$', ''));
+      }
+      return direction === 'asc'
+        ? a[key] - b[key]
+        : b[key] - a[key];
+    });
+    setOrders(sortedOrders);
+  };
+
   return (
     <div className="order-status-container">
       <div className="order-status-header">
@@ -102,48 +160,23 @@ export default function OrderStatus() {
       </div>
 
       <div className="order-status-table-container">
-        <table className="order-status-table">
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Customer</th>
-              <th>Date</th>
-              <th>Total</th>
-              <th>Items</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((order) => (
-              <tr key={order.id}>
-                <td>{order.id}</td>
-                <td>{order.customer}</td>
-                <td>{order.date}</td>
-                <td>{order.total}</td>
-                <td>{order.items}</td>
-                <td>{getStatusBadge(order.status)}</td>
-                <td>
-                  <div className="order-status-actions">
-                    <Button variant="primary" size="small">
-                      <FaEye /> View
-                    </Button>
-                    <Button variant="secondary" size="small">
-                      <FaEdit /> Edit
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="order-status-pagination">
-        <Pagination
-          currentPage={currentPage}
-          totalPages={5}
-          onPageChange={setCurrentPage}
+        <Table
+          columns={columns}
+          data={orders}
+          striped={true}
+          hoverable={true}
+          sortable={true}
+          onSort={handleSort}
+          currentSort={{ key: sortValue, direction: sortDirection }}
+          searchable={true}
+          onSearch={handleSearch}
+          rowActions={rowActions}
+          pagination={true}
+          itemsPerPage={10}
+          stickyHeader={true}
+          responsive={true}
+          className="order-status-table"
+          customClassName="order-status-table-wrapper"
         />
       </div>
     </div>
