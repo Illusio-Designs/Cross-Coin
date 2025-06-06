@@ -12,27 +12,75 @@ const InputField = ({
   required = false,
   className = '',
   name,
-  id
+  id,
+  accept // for file input
 }) => {
+  // Generate a unique id if not provided
+  const inputId = id || `input-${name || Math.random().toString(36).substr(2, 9)}`;
   return (
     <div className={`input-field-container ${className}`}>
-      {label && (
-        <label htmlFor={id} className="input-field-label">
-          {label}
-          {required && <span className="required-mark">*</span>}
-        </label>
+      {type === 'textarea' ? (
+        <>
+          <textarea
+            id={inputId}
+            name={name}
+            value={value}
+            onChange={onChange}
+            placeholder={" "}
+            disabled={disabled}
+            required={required}
+            className={`input-field textarea ${error ? 'error' : ''}`}
+            autoComplete="off"
+            rows={4}
+          />
+          {label && (
+            <label htmlFor={inputId} className="input-field-label">
+              {label}
+              {required && <span className="required-mark">*</span>}
+            </label>
+          )}
+        </>
+      ) : type === 'file' ? (
+        <>
+          <input
+            type="file"
+            id={inputId}
+            name={name}
+            onChange={onChange}
+            disabled={disabled}
+            required={required}
+            className={`input-field file ${error ? 'error' : ''}`}
+            accept={accept}
+          />
+          {label && (
+            <label htmlFor={inputId} className="input-field-label">
+              {label}
+              {required && <span className="required-mark">*</span>}
+            </label>
+          )}
+        </>
+      ) : (
+        <>
+          <input
+            type={type}
+            id={inputId}
+            name={name}
+            value={value}
+            onChange={onChange}
+            placeholder={" "}
+            disabled={disabled}
+            required={required}
+            className={`input-field ${error ? 'error' : ''}`}
+            autoComplete="off"
+          />
+          {label && (
+            <label htmlFor={inputId} className="input-field-label">
+              {label}
+              {required && <span className="required-mark">*</span>}
+            </label>
+          )}
+        </>
       )}
-      <input
-        type={type}
-        id={id}
-        name={name}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        disabled={disabled}
-        required={required}
-        className={`input-field ${error ? 'error' : ''}`}
-      />
       {error && <span className="input-field-error">{error}</span>}
     </div>
   );
