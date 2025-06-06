@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import Image from "next/image";
 import {
-  FaHome, FaUser, FaBox, FaClipboardList, FaChartBar, FaLock, FaChevronDown, FaChevronLeft, FaChevronRight, FaQuestionCircle, FaShoppingCart, FaCreditCard, FaStar, FaCog, FaTags, FaTruck, FaFileAlt, FaSignOutAlt
+  FaHome, FaUser, FaBox, FaClipboardList, FaChartBar, FaLock, FaChevronDown, FaChevronLeft, FaChevronRight, FaQuestionCircle, FaShoppingCart, FaCreditCard, FaStar, FaCog, FaTags, FaTruck, FaFileAlt, FaSignOutAlt, FaImages
 } from 'react-icons/fa';
 import "./Sidebar.css";
 
@@ -11,6 +11,10 @@ const menu = [
   {
     label: "Dashboard",
     icon: <FaHome />, view: "main"
+  },
+  {
+    label: "Slider",
+    icon: <FaImages />, view: "slider"
   },
   {
     label: "Products",

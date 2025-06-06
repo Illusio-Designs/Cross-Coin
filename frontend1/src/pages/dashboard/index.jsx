@@ -20,6 +20,7 @@ import Payments from "./payments/payments";
 import Coupons from "./payments/coupons";
 import Reviews from "./reviews/reviews";
 import SEO from "./seo/seo";
+import Slider from "./slider/slider";
 
 function DashboardHeader({ isCollapsed }) {
   const sidebarWidth = isCollapsed ? 72 : 260;
@@ -121,6 +122,8 @@ export default function Dashboard() {
         return <Reviews />;
       case 'seo':
         return <SEO />;
+      case 'slider':
+        return <Slider />;
       default:
         return (
           <div className="p-6">

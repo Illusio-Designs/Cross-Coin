@@ -80,8 +80,17 @@ Cart.belongsTo(User, {
 });
 
 // Category Associations
-Category.hasMany(Product, { foreignKey: 'categoryId', as: 'products' });
-Product.belongsTo(Category, { foreignKey: 'categoryId' });
+Category.hasMany(Product, { 
+    foreignKey: 'categoryId',
+    as: 'products',
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE'
+});
+Product.belongsTo(Category, { 
+    foreignKey: 'categoryId',
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE'
+});
 
 // Category self-referential association
 Category.hasMany(Category, { as: 'children', foreignKey: 'parentId' });
