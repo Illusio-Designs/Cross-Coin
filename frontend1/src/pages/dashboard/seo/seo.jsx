@@ -1,49 +1,63 @@
 import "../../../styles/dashboard/seo.css";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Button from "../../../components/common/Button";
 import InputField from "../../../components/common/InputField";
 import Modal from "../../../components/common/Modal";
 import Table from "../../../components/common/Table";
-import Filter from "../../../components/common/Filter";
-import SortBy from "../../../components/common/SortBy";
 import Pagination from "../../../components/common/Pagination";
+import { seoService } from "../../../services";
+import debounce from 'lodash/debounce';
 
 export default function SEO() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  const [sortBy, setSortBy] = useState("title");
   const [filterValue, setFilterValue] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [seoData, setSeoData] = useState([]);
   const [formData, setFormData] = useState({
-    title: "",
-    metaDescription: "",
-    keywords: ""
+    page_name: "",
+    slug: "",
+    meta_title: "",
+    meta_description: "",
+    meta_keywords: "",
+    canonical_url: "",
+    meta_image: ""
   });
 
-  // Sample data - replace with actual API data
-  const seoData = [
-    {
-      id: 1,
-      title: "Home Page",
-      metaDescription: "Welcome to Cross-Coin - Your trusted crypto platform",
-      keywords: "crypto, bitcoin, ethereum, trading",
-      status: "Pending"
-    },
-    {
-      id: 2,
-      title: "Products Page",
-      metaDescription: "Browse our wide range of crypto products and services",
-      keywords: "crypto products, trading services, digital assets",
-      status: "Processing"
-    },
-    {
-      id: 3,
-      title: "About Us",
-      metaDescription: "Learn more about Cross-Coin and our mission.",
-      keywords: "about, company, mission, team",
-      status: "Shipped"
+  // Debounced search function
+  const debouncedSearch = useCallback(
+    debounce((searchTerm) => {
+      setFilterValue(searchTerm);
+    }, 300),
+    []
+  );
+
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    debouncedSearch(value);
+  };
+
+  // Fetch SEO data
+  const fetchSEOData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await seoService.getAllSEOData();
+      setSeoData(data);
+    } catch (err) {
+      setError(err.message || "Failed to fetch SEO data");
+      console.error("Error fetching SEO data:", err);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchSEOData();
+  }, []);
 
   const statusBadge = (status) => {
     let badgeClass = "badge ";
@@ -54,7 +68,7 @@ export default function SEO() {
       case "Processing":
         badgeClass += "badge-processing";
         break;
-      case "Shipped":
+      case "Active":
         badgeClass += "badge-shipped";
         break;
       default:
@@ -63,32 +77,56 @@ export default function SEO() {
     return <span className={badgeClass}>{status}</span>;
   };
 
+  // Enhanced filter function
+  const filteredData = seoData.filter(item => {
+    if (!filterValue) return true;
+    
+    const searchTerm = filterValue.toLowerCase();
+    return (
+      (item.page_name?.toLowerCase().includes(searchTerm)) ||
+      (item.meta_title?.toLowerCase().includes(searchTerm)) ||
+      (item.meta_description?.toLowerCase().includes(searchTerm)) ||
+      (item.meta_keywords?.toLowerCase().includes(searchTerm)) ||
+      (item.slug?.toLowerCase().includes(searchTerm))
+    );
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Add serial number to each row
+  const currentItemsWithSN = currentItems.map((item, idx) => ({
+    ...item,
+    serial_number: indexOfFirstItem + idx + 1
+  }));
+
+  // Reset to first page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterValue]);
+
+  // Columns definition
   const columns = [
-    { header: "Page Title", accessor: "title" },
-    { header: "Meta Description", accessor: "metaDescription" },
-    { header: "Keywords", accessor: "keywords" },
     {
-      header: "Status",
-      accessor: "status",
-      cell: (row) => statusBadge(row.status)
+      header: "S/N",
+      accessor: "serial_number"
     },
+    { header: "Page Name", accessor: "page_name" },
+    { header: "Meta Title", accessor: "meta_title" },
+    { header: "Meta Description", accessor: "meta_description" },
+    { header: "Meta Keywords", accessor: "meta_keywords" },
     {
       header: "Actions",
       accessor: "actions",
       cell: (row) => (
         <div className="flex gap-2">
           <button
-            className="action-btn view"
-            title="View"
-            onClick={() => alert(`Viewing ${row.title}`)}
-          >
-            <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-            View
-          </button>
-          <button
             className="action-btn edit"
             title="Edit"
-            onClick={() => handleEdit(row.id)}
+            onClick={() => handleEdit(row.page_name)}
           >
             <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z"/></svg>
             Edit
@@ -98,34 +136,67 @@ export default function SEO() {
     },
   ];
 
-  const handleEdit = (id) => {
-    const item = seoData.find(item => item.id === id);
-    if (item) {
+  const handleEdit = async (pageName) => {
+    try {
+      setLoading(true);
+      const data = await seoService.getSEOData(pageName);
       setFormData({
-        title: item.title,
-        metaDescription: item.metaDescription,
-        keywords: item.keywords
+        page_name: data.page_name || "",
+        slug: data.slug || "",
+        meta_title: data.meta_title || "",
+        meta_description: data.meta_description || "",
+        meta_keywords: data.meta_keywords || "",
+        canonical_url: data.canonical_url || "",
+        meta_image: data.meta_image || ""
       });
       setIsModalOpen(true);
+    } catch (err) {
+      setError(err.message || "Failed to fetch SEO data");
+      console.error("Error fetching SEO data:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDelete = (id) => {
-    // Implement delete functionality
-    console.log("Delete SEO for ID:", id);
+  const handleDelete = async (pageName) => {
+    if (window.confirm("Are you sure you want to delete this SEO entry?")) {
+      try {
+        setLoading(true);
+        await seoService.deleteSEOData(pageName);
+        await fetchSEOData();
+      } catch (err) {
+        setError(err.message || "Failed to delete SEO data");
+        console.error("Error deleting SEO data:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   const handleAddNew = () => {
     setFormData({
-      title: "",
-      metaDescription: "",
-      keywords: ""
+      page_name: "",
+      slug: "",
+      meta_title: "",
+      meta_description: "",
+      meta_keywords: "",
+      canonical_url: "",
+      meta_image: ""
     });
     setIsModalOpen(true);
   };
 
   const handleModalClose = () => {
     setIsModalOpen(false);
+    setFormData({
+      page_name: "",
+      slug: "",
+      meta_title: "",
+      meta_description: "",
+      meta_keywords: "",
+      canonical_url: "",
+      meta_image: ""
+    });
   };
 
   const handleInputChange = (e) => {
@@ -136,101 +207,159 @@ export default function SEO() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Implement form submission
-    console.log("Form submitted:", formData);
-    setIsModalOpen(false);
+    try {
+      setLoading(true);
+      if (formData.page_name) {
+        await seoService.updateSEOData(formData.page_name, formData);
+      } else {
+        await seoService.createSEOData(formData);
+      }
+      await fetchSEOData();
+      setIsModalOpen(false);
+    } catch (err) {
+      setError(err.message || "Failed to save SEO data");
+      console.error("Error saving SEO data:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="dashboard-page p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="dashboard-title text-2xl font-bold">SEO Management</h1>
-        <Button 
-          variant="primary"
-          size="medium"
-          onClick={handleAddNew}
-        >
-          Add New SEO
-        </Button>
-      </div>
-
+    <>
       <div className="dashboard-content bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between mb-4">
-          <Filter
-            type="input"
-            value={filterValue}
-            onChange={(value) => setFilterValue(value)}
-            placeholder="Search SEO entries..."
-          />
-          <SortBy
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            options={[
-              { value: "title", label: "Sort by Title" },
-              { value: "status", label: "Sort by Status" },
-            ]}
-          />
+        <div className="flex justify-between items-center mb-6 gap-4">
+          <h1 className="dashboard-title text-2xl font-bold">SEO Management</h1>
+          <form className="modern-searchbar-form" style={{ minWidth: 0 }} onSubmit={e => e.preventDefault()}>
+            <div className="modern-searchbar-group">
+              <span className="modern-searchbar-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                </svg>
+              </span>
+              <input
+                type="text"
+                className="modern-searchbar-input"
+                placeholder="Search by page name, meta title, description or keywords..."
+                onChange={handleSearchChange}
+                defaultValue={filterValue}
+              />
+            </div>
+          </form>
         </div>
+        
 
-        <Table
-          columns={columns}
-          data={seoData}
-          className="w-full"
-          striped={true}
-          hoverable={true}
-        />
-
-        <div className="mt-4">
-          <Pagination
-            currentPage={currentPage}
-            totalItems={seoData.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-          />
+        {/* Table Section */}
+        <div className="table-container mt-2">
+          {loading ? (
+            <div className="text-center py-4">Loading...</div>
+          ) : (
+            <>
+              {filteredData.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  {filterValue ? "No results found for your search" : "No SEO entries found"}
+                </div>
+              ) : (
+                <>
+                  <Table
+                    columns={columns}
+                    data={currentItemsWithSN}
+                    className="w-full"
+                    striped={true}
+                    hoverable={true}
+                  />
+                  {filteredData.length > itemsPerPage && (
+                    <div className="mt-4">
+                      <Pagination
+                        currentPage={currentPage}
+                        totalItems={filteredData.length}
+                        itemsPerPage={itemsPerPage}
+                        onPageChange={setCurrentPage}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
 
       <Modal
         isOpen={isModalOpen}
         onClose={handleModalClose}
-        title="SEO Entry"
+        title={formData.page_name ? "Edit SEO Entry" : "Add New SEO Entry"}
         size="medium"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <InputField
-            label="Page Title"
+            label="Page Name"
             type="text"
-            name="title"
-            value={formData.title}
+            name="page_name"
+            value={formData.page_name}
             onChange={handleInputChange}
-            placeholder="Enter page title"
+            placeholder="Enter page name (e.g., home, about)"
+            required
+          />
+          <InputField
+            label="Slug"
+            type="text"
+            name="slug"
+            value={formData.slug}
+            onChange={handleInputChange}
+            placeholder="Enter slug (e.g., /about)"
+            required
+          />
+          <InputField
+            label="Meta Title"
+            type="text"
+            name="meta_title"
+            value={formData.meta_title}
+            onChange={handleInputChange}
+            placeholder="Enter meta title"
             required
           />
           <InputField
             label="Meta Description"
             type="textarea"
-            name="metaDescription"
-            value={formData.metaDescription}
+            name="meta_description"
+            value={formData.meta_description}
             onChange={handleInputChange}
             placeholder="Enter meta description"
             required
           />
           <InputField
-            label="Keywords"
+            label="Meta Keywords"
             type="text"
-            name="keywords"
-            value={formData.keywords}
+            name="meta_keywords"
+            value={formData.meta_keywords}
             onChange={handleInputChange}
             placeholder="Enter keywords (comma-separated)"
             required
+          />
+          <InputField
+            label="Canonical URL"
+            type="text"
+            name="canonical_url"
+            value={formData.canonical_url}
+            onChange={handleInputChange}
+            placeholder="Enter canonical URL"
+          />
+          <InputField
+            label="Meta Image URL"
+            type="text"
+            name="meta_image"
+            value={formData.meta_image}
+            onChange={handleInputChange}
+            placeholder="Enter meta image URL"
           />
           <div className="flex justify-end gap-2 mt-4">
             <Button 
               variant="secondary"
               size="medium"
               onClick={handleModalClose}
+              disabled={loading}
             >
               Cancel
             </Button>
@@ -238,12 +367,13 @@ export default function SEO() {
               type="submit"
               variant="primary"
               size="medium"
+              disabled={loading}
             >
-              Save
+              {loading ? "Saving..." : "Save"}
             </Button>
           </div>
         </form>
       </Modal>
-    </div>
+    </>
   );
 } 

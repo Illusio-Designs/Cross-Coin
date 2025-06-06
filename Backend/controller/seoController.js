@@ -113,7 +113,7 @@ export const uploadImage = async (req, res) => {
 // Get SEO data for a specific page
 export const getSEOData = async (req, res) => {
     try {
-        const { page_name } = req.params;
+        const { page_name } = req.query;
         
         if (!page_name) {
             return res.status(400).json({ message: 'Page name is required' });
