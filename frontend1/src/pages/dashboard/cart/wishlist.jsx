@@ -7,7 +7,7 @@ import "../../../styles/dashboard/wishlist.css";
 
 export default function Wishlist() {
   const [wishlistItems, setWishlistItems] = useState([
-    {
+    { 
       id: 1,
       title: "Product 1",
       price: "$99.99",
