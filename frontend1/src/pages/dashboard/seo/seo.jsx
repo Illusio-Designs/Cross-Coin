@@ -299,7 +299,6 @@ export default function SEO() {
             name="page_name"
             value={formData.page_name}
             onChange={handleInputChange}
-            placeholder="Enter page name (e.g., home, about)"
             required
           />
           <InputField
@@ -308,7 +307,6 @@ export default function SEO() {
             name="slug"
             value={formData.slug}
             onChange={handleInputChange}
-            placeholder="Enter slug (e.g., /about)"
             required
           />
           <InputField
@@ -317,7 +315,6 @@ export default function SEO() {
             name="meta_title"
             value={formData.meta_title}
             onChange={handleInputChange}
-            placeholder="Enter meta title"
             required
           />
           <InputField
@@ -326,7 +323,6 @@ export default function SEO() {
             name="meta_description"
             value={formData.meta_description}
             onChange={handleInputChange}
-            placeholder="Enter meta description"
             required
           />
           <InputField
@@ -335,7 +331,6 @@ export default function SEO() {
             name="meta_keywords"
             value={formData.meta_keywords}
             onChange={handleInputChange}
-            placeholder="Enter keywords (comma-separated)"
             required
           />
           <InputField
@@ -344,16 +339,28 @@ export default function SEO() {
             name="canonical_url"
             value={formData.canonical_url}
             onChange={handleInputChange}
-            placeholder="Enter canonical URL"
           />
-          <InputField
-            label="Meta Image URL"
-            type="text"
-            name="meta_image"
-            value={formData.meta_image}
-            onChange={handleInputChange}
-            placeholder="Enter meta image URL"
-          />
+          <div className="input-field-container">
+            <label className="input-field-label">Meta Image</label>
+            <input
+              type="file"
+              accept="image/*"
+              className="input-field"
+              onChange={e => {
+                const file = e.target.files[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onload = ev => {
+                    setFormData(prev => ({ ...prev, meta_image: ev.target.result }));
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+            />
+            {formData.meta_image && (
+              <img src={formData.meta_image} alt="Meta Preview" style={{ maxWidth: '100%', marginTop: 8, borderRadius: 8 }} />
+            )}
+          </div>
           <div className="flex justify-end gap-2 mt-4">
             <Button 
               variant="secondary"
