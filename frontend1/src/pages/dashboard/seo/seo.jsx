@@ -234,14 +234,14 @@ export default function SEO() {
           <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
             <div className="modern-searchbar-group">
               <span className="modern-searchbar-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </span>
               <input
                 type="text"
                 className="modern-searchbar-input"
-                placeholder="Search by page name, meta title, description or keywords..."
+                placeholder="Search"
                 onChange={handleSearchChange}
                 defaultValue={filterValue}
               />
@@ -285,101 +285,109 @@ export default function SEO() {
         </div>
       </div>
 
-      <Modal
-        isOpen={isModalOpen}
-        onClose={handleModalClose}
-        title={formData.page_name ? "Edit SEO Entry" : "Add New SEO Entry"}
-        size="medium"
-      >
-        <form onSubmit={handleSubmit} className="seo-form">
-          <InputField
-            label="Page Name"
-            type="text"
-            name="page_name"
-            value={formData.page_name}
-            onChange={handleInputChange}
-            required
-          />
-          <InputField
-            label="Slug"
-            type="text"
-            name="slug"
-            value={formData.slug}
-            onChange={handleInputChange}
-            required
-          />
-          <InputField
-            label="Meta Title"
-            type="text"
-            name="meta_title"
-            value={formData.meta_title}
-            onChange={handleInputChange}
-            required
-          />
-          <InputField
-            label="Meta Description"
-            type="textarea"
-            name="meta_description"
-            value={formData.meta_description}
-            onChange={handleInputChange}
-            required
-          />
-          <InputField
-            label="Meta Keywords"
-            type="text"
-            name="meta_keywords"
-            value={formData.meta_keywords}
-            onChange={handleInputChange}
-            required
-          />
-          <InputField
-            label="Canonical URL"
-            type="text"
-            name="canonical_url"
-            value={formData.canonical_url}
-            onChange={handleInputChange}
-          />
-          <div className="input-field-container">
-            <label className="input-field-label">Meta Image</label>
-            <input
-              type="file"
-              accept="image/*"
-              className="input-field"
-              onChange={e => {
-                const file = e.target.files[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onload = ev => {
-                    setFormData(prev => ({ ...prev, meta_image: ev.target.result }));
-                  };
-                  reader.readAsDataURL(file);
-                }
-              }}
-            />
-            {formData.meta_image && (
-              <img src={formData.meta_image} alt="Meta Preview" className="seo-image-preview" />
-            )}
+      {isModalOpen && (
+        <div className="custom-modal-overlay">
+          <div className="custom-modal-container">
+            <div className="custom-modal-header">
+              {formData.page_name ? "Edit SEO Entry" : "Add New SEO Entry"}
+              <button className="custom-modal-close" onClick={handleModalClose} aria-label="Close">
+                &times;
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="seo-form">
+              <div className="custom-modal-body">
+                <InputField
+                  label="Page Name"
+                  type="text"
+                  name="page_name"
+                  value={formData.page_name}
+                  onChange={handleInputChange}
+                  required
+                />
+                <InputField
+                  label="Slug"
+                  type="text"
+                  name="slug"
+                  value={formData.slug}
+                  onChange={handleInputChange}
+                  required
+                />
+                <InputField
+                  label="Meta Title"
+                  type="text"
+                  name="meta_title"
+                  value={formData.meta_title}
+                  onChange={handleInputChange}
+                  required
+                />
+                <InputField
+                  label="Meta Description"
+                  type="textarea"
+                  name="meta_description"
+                  value={formData.meta_description}
+                  onChange={handleInputChange}
+                  required
+                />
+                <InputField
+                  label="Meta Keywords"
+                  type="text"
+                  name="meta_keywords"
+                  value={formData.meta_keywords}
+                  onChange={handleInputChange}
+                  required
+                />
+                <InputField
+                  label="Canonical URL"
+                  type="text"
+                  name="canonical_url"
+                  value={formData.canonical_url}
+                  onChange={handleInputChange}
+                />
+                <div className="input-field-container">
+                  <label className="input-field-label">Meta Image</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="input-field"
+                    onChange={e => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = ev => {
+                          setFormData(prev => ({ ...prev, meta_image: ev.target.result }));
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  {formData.meta_image && (
+                    <img src={formData.meta_image} alt="Meta Preview" className="seo-image-preview" />
+                  )}
+                </div>
+              </div>
+              <div className="custom-modal-footer">
+                <Button
+                  variant="secondary"
+                  size="medium"
+                  onClick={handleModalClose}
+                  disabled={loading}
+                  type="button"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="medium"
+                  disabled={loading}
+                >
+                  {loading ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            </form>
           </div>
-          <div className="seo-form-actions">
-            <Button 
-              variant="secondary"
-              size="medium"
-              onClick={handleModalClose}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit"
-              variant="primary"
-              size="medium"
-              disabled={loading}
-            >
-              {loading ? "Saving..." : "Save"}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        </div>
+      )}
     </>
   );
 } 
