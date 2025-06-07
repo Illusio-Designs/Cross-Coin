@@ -435,67 +435,6 @@ tbody tr:hover {
 }
 
 /* --- Modern Search Bar Styles --- */
-.searchbar-form {
-  margin: 0;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  width: auto;
-  margin-left: 1rem;
-}
-.searchbar-group {
-  display: flex;
-  max-width: 340px;
-  width: auto;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  border-radius: 0.5rem;
-  background: #fff;
-  overflow: hidden;
-}
-.searchbar-input {
-  border: none;
-  outline: none;
-  background: #fff;
-  font-size: 1rem;
-  padding: 0.75rem 1rem;
-  transition: box-shadow 0.2s, border-color 0.2s;
-  border-radius: 0.5rem 0 0 0.5rem;
-  box-shadow: none;
-}
-.searchbar-input:focus {
-  box-shadow: 0 0 0 2px #3b82f6;
-}
-.searchbar-btn {
-  border: none;
-  background: #2563eb;
-  color: #fff;
-  min-width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
-  cursor: pointer;
-  border-radius: 0 0.5rem 0.5rem 0;
-  transition: background 0.2s;
-}
-.searchbar-btn:hover {
-  background: #1d4ed8;
-}
-@media (max-width: 768px) {
-  .searchbar-form {
-    margin-top: 0.75rem;
-    justify-content: flex-start;
-    margin-left: 0;
-  }
-  .searchbar-group {
-    max-width: 100%;
-    width: 100%;
-  }
-}
-/* --- End Modern Search Bar Styles --- */
-
-/* --- Modern Search Bar Gradient Styles --- */
 .modern-searchbar-form {
   margin: 0;
   display: flex;
@@ -504,52 +443,43 @@ tbody tr:hover {
   width: auto;
   min-width: 0;
 }
+
 .modern-searchbar-group {
   position: relative;
   display: flex;
   align-items: center;
-  max-width: 340px;
   width: 100%;
-  border-radius: 2rem;
+  border-radius: 10px;
   background: #fff;
-  border: 2px solid transparent;
-  background-clip: padding-box, border-box;
-  background-origin: padding-box, border-box;
-  background-image: linear-gradient(#fff, #fff), linear-gradient(90deg, #3b82f6, #ec4899);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  transition: box-shadow 0.2s;
+  border: 2px solid #180D3E;
+  transition: all 0.2s ease;
 }
+
 .modern-searchbar-input {
   border: none;
   outline: none;
   background: transparent;
   font-size: 1rem;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
   border-radius: 2rem;
   width: 100%;
 }
+
 .modern-searchbar-icon {
   position: absolute;
-  left: 1rem;
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
-  color: #888;
+  color: #180D3E;
   pointer-events: none;
-  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.modern-searchbar-group:focus-within {
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
-}
-@media (max-width: 768px) {
-  .modern-searchbar-form {
-    margin-top: 0.75rem;
-    justify-content: flex-start;
-    margin-left: 0;
-  }
-  .modern-searchbar-group {
-    max-width: 100%;
-    width: 100%;
-  }
+
+.modern-searchbar-icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 .seo-header-container {
@@ -589,7 +519,8 @@ tbody tr:hover {
 .seo-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  flex: 1 1 auto;
+  height: 100%;
 }
 
 .seo-form-actions {
@@ -620,5 +551,91 @@ tbody tr:hover {
   
   .seo-title {
     font-size: 1.25rem;
+  }
+}
+
+.custom-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.custom-modal-container {
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(30,41,59,0.18);
+  width: 600px;
+  max-width: 95vw;
+  height: 80vh;
+  max-height: 95vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.custom-modal-header {
+  padding: 32px 32px 0 32px;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #22223b;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.custom-modal-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #888;
+  cursor: pointer;
+  margin-left: 16px;
+}
+
+.custom-modal-body {
+  padding: 24px 32px 0 32px;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: #e5e7eb #fff;
+  overflow-x: hidden;
+}
+.custom-modal-body::-webkit-scrollbar {
+  display: none;
+}
+.custom-modal-body {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.custom-modal-footer {
+  padding: 24px 32px 32px 32px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+@media (max-width: 700px) {
+  .custom-modal-container {
+    width: 98vw;
+    height: 95vh;
+    border-radius: 12px;
+    padding: 0;
+  }
+  .custom-modal-header,
+  .custom-modal-body,
+  .custom-modal-footer {
+    padding-left: 12px;
+    padding-right: 12px;
   }
 } 
