@@ -6,7 +6,7 @@ import Modal from "../../../components/common/Modal";
 import Table from "../../../components/common/Table";
 import Pagination from "../../../components/common/Pagination";
 import { seoService } from "../../../services";
-import debounce from 'lodash/debounce';
+import { debounce } from 'lodash';
 
 export default function SEO() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -228,10 +228,10 @@ export default function SEO() {
 
   return (
     <>
-      <div className="dashboard-content bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-6 gap-4">
-          <h1 className="dashboard-title text-2xl font-bold">SEO Management</h1>
-          <form className="modern-searchbar-form" style={{ minWidth: 0 }} onSubmit={e => e.preventDefault()}>
+      <div className="dashboard-page">
+        <div className="seo-header-container">
+          <h1 className="seo-title">SEO Management</h1>
+          <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
             <div className="modern-searchbar-group">
               <span className="modern-searchbar-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -249,15 +249,14 @@ export default function SEO() {
           </form>
         </div>
         
-
         {/* Table Section */}
-        <div className="table-container mt-2">
+        <div className="seo-table-container">
           {loading ? (
-            <div className="text-center py-4">Loading...</div>
+            <div className="seo-loading">Loading...</div>
           ) : (
             <>
               {filteredData.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="seo-empty-state">
                   {filterValue ? "No results found for your search" : "No SEO entries found"}
                 </div>
               ) : (
@@ -270,7 +269,7 @@ export default function SEO() {
                     hoverable={true}
                   />
                   {filteredData.length > itemsPerPage && (
-                    <div className="mt-4">
+                    <div className="seo-pagination-container">
                       <Pagination
                         currentPage={currentPage}
                         totalItems={filteredData.length}
@@ -292,7 +291,7 @@ export default function SEO() {
         title={formData.page_name ? "Edit SEO Entry" : "Add New SEO Entry"}
         size="medium"
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="seo-form">
           <InputField
             label="Page Name"
             type="text"
@@ -358,10 +357,10 @@ export default function SEO() {
               }}
             />
             {formData.meta_image && (
-              <img src={formData.meta_image} alt="Meta Preview" style={{ maxWidth: '100%', marginTop: 8, borderRadius: 8 }} />
+              <img src={formData.meta_image} alt="Meta Preview" className="seo-image-preview" />
             )}
           </div>
-          <div className="flex justify-end gap-2 mt-4">
+          <div className="seo-form-actions">
             <Button 
               variant="secondary"
               size="medium"
