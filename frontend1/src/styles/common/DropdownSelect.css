@@ -1,0 +1,103 @@
+.dropdown-select {
+  margin-bottom: 1rem;
+}
+
+.dropdown-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #333;
+  font-size: 0.875rem;
+}
+
+.required-mark {
+  color: #dc3545;
+  margin-left: 4px;
+}
+
+/* React Select Custom Styles */
+.react-select__control {
+  border-radius: 4px !important;
+  font-size: 0.875rem !important;
+}
+
+.react-select__placeholder {
+  color: #6c757d !important;
+}
+
+.react-select__single-value {
+  color: #333 !important;
+}
+
+.react-select__menu {
+  margin-top: 4px !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.react-select__option {
+  font-size: 0.875rem !important;
+  padding: 8px 12px !important;
+}
+
+.react-select__multi-value {
+  background-color: #e9ecef !important;
+  border-radius: 4px !important;
+}
+
+.react-select__multi-value__label {
+  color: #333 !important;
+  font-size: 0.875rem !important;
+  padding: 2px 6px !important;
+}
+
+.react-select__multi-value__remove {
+  color: #666 !important;
+  padding: 0 4px !important;
+}
+
+.react-select__multi-value__remove:hover {
+  background-color: #dc3545 !important;
+  color: white !important;
+}
+
+.react-select__indicator-separator {
+  background-color: #ddd !important;
+}
+
+.react-select__clear-indicator,
+.react-select__dropdown-indicator {
+  color: #666 !important;
+}
+
+.react-select__clear-indicator:hover,
+.react-select__dropdown-indicator:hover {
+  color: #333 !important;
+}
+
+/* Disabled state */
+.react-select__control--is-disabled {
+  background-color: #e9ecef !important;
+  opacity: 0.7;
+}
+
+/* Error state */
+.dropdown-select.has-error .react-select__control {
+  border-color: #dc3545 !important;
+}
+
+.dropdown-select.has-error .react-select__control:hover {
+  border-color: #bd2130 !important;
+}
+
+/* Loading state */
+.react-select__loading-indicator {
+  color: #4a90e2 !important;
+}
+
+/* No options state */
+.react-select__menu-notice {
+  color: #666 !important;
+  text-align: center;
+  padding: 8px !important;
+} 

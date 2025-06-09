@@ -6,26 +6,13 @@
   flex-direction: column;
   align-items: flex-start;
   border: none;
-  background: #F3F4F5;
+  background: #E8EAF6;
   transition: box-shadow 0.2s;
-}
-
-.dashboard-card.blue {
-  background: #e7effc;
-}
-.dashboard-card.green {
-  background: #e8f6ef;
-}
-.dashboard-card.yellow {
-  background: #fdf6e3;
-}
-.dashboard-card.lightblue {
-  background: #eaf1fb;
 }
 
 .dashboard-card-icon {
   font-size: 2rem;
-  color: #180D3E;
+  color: #CE1E36;
   margin-bottom: 10px;
 }
 .dashboard-card-title {
@@ -58,7 +45,7 @@
 }
 
 .dashboard-section {
-  background: #fff;
+  background: #F3F4F5;
   border-radius: 18px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.06);
   padding: 24px;

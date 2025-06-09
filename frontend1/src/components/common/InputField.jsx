@@ -1,87 +1,109 @@
-import React from 'react';
-import '../../styles/common/InputField.css';
+import React, { useState } from "react";
+import "../../Styles/common/InputField.css";
 
-const InputField = ({
-  type = 'text',
-  label,
-  value,
-  onChange,
-  placeholder,
-  error,
-  disabled = false,
+const InputField = ({ 
+  label, 
+  value, 
+  onChange, 
+  placeholder, 
+  type = "text", 
+  multiline = false,
   required = false,
-  className = '',
-  name,
-  id,
-  accept // for file input
+  accept,
+  className = "",
+  options = []
 }) => {
-  // Generate a unique id if not provided
-  const inputId = id || `input-${name || Math.random().toString(36).substr(2, 9)}`;
+  const [preview, setPreview] = useState(null);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setPreview(null);
+    }
+    onChange(e);
+  };
+
+  if (type === "file") {
+    return (
+      <div className={`input-field ${className}`}>
+        <label>{label}</label>
+        <div className="file-input-container">
+          <div className="file-input-wrapper">
+            <input
+              type="file"
+              onChange={handleFileChange}
+              accept={accept}
+              required={required}
+              className="file-input"
+            />
+            <div className="file-input-placeholder">
+              {value ? value.name : placeholder || "Choose a file"}
+            </div>
+            <button className="file-input-button">Browse</button>
+          </div>
+          {preview && (
+            <div className="file-preview">
+              <img src={preview} alt="Preview" className="file-preview-image" />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "select") {
+    return (
+      <div className={`input-field ${className}`}>
+        <label>{label}</label>
+        <select
+          value={value}
+          onChange={onChange}
+          required={required}
+          className="select-input"
+        >
+          {options?.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+
+  if (multiline) {
+    return (
+      <div className={`input-field ${className}`}>
+        <label>{label}</label>
+        <textarea
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          required={required}
+          className="textarea-input"
+          rows={4}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className={`input-field-container ${className}`}>
-      {type === 'textarea' ? (
-        <>
-          <textarea
-            id={inputId}
-            name={name}
-            value={value}
-            onChange={onChange}
-            placeholder={" "}
-            disabled={disabled}
-            required={required}
-            className={`input-field textarea ${error ? 'error' : ''}`}
-            autoComplete="off"
-            rows={4}
-          />
-          {label && (
-            <label htmlFor={inputId} className="input-field-label">
-              {label}
-              {required && <span className="required-mark">*</span>}
-            </label>
-          )}
-        </>
-      ) : type === 'file' ? (
-        <>
-          <input
-            type="file"
-            id={inputId}
-            name={name}
-            onChange={onChange}
-            disabled={disabled}
-            required={required}
-            className={`input-field file ${error ? 'error' : ''}`}
-            accept={accept}
-          />
-          {label && (
-            <label htmlFor={inputId} className="input-field-label">
-              {label}
-              {required && <span className="required-mark">*</span>}
-            </label>
-          )}
-        </>
-      ) : (
-        <>
-          <input
-            type={type}
-            id={inputId}
-            name={name}
-            value={value}
-            onChange={onChange}
-            placeholder={" "}
-            disabled={disabled}
-            required={required}
-            className={`input-field ${error ? 'error' : ''}`}
-            autoComplete="off"
-          />
-          {label && (
-            <label htmlFor={inputId} className="input-field-label">
-              {label}
-              {required && <span className="required-mark">*</span>}
-            </label>
-          )}
-        </>
-      )}
-      {error && <span className="input-field-error">{error}</span>}
+    <div className={`input-field ${className}`}>
+      <label>{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        required={required}
+        className="text-input"
+      />
     </div>
   );
 };

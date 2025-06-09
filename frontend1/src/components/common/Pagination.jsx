@@ -1,5 +1,5 @@
 import React from 'react';
-import '../../styles/common/Pagination.css';
+import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 const Pagination = ({
   currentPage,
@@ -7,75 +7,76 @@ const Pagination = ({
   onPageChange,
   className = ''
 }) => {
-  const getPageNumbers = () => {
-    const pages = [];
-    const maxVisiblePages = 5;
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+
+  // Show limited page numbers with ellipsis
+  const getVisiblePages = () => {
+    if (totalPages <= 7) return pages;
     
-    if (totalPages <= maxVisiblePages) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) {
-          pages.push(i);
-        }
-        pages.push('...');
-        pages.push(totalPages);
-      } else if (currentPage >= totalPages - 2) {
-        pages.push(1);
-        pages.push('...');
-        for (let i = totalPages - 3; i <= totalPages; i++) {
-          pages.push(i);
-        }
-      } else {
-        pages.push(1);
-        pages.push('...');
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
-          pages.push(i);
-        }
-        pages.push('...');
-        pages.push(totalPages);
+    const delta = 2;
+    const range = [];
+    const rangeWithDots = [];
+    let l;
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (
+        i === 1 ||
+        i === totalPages ||
+        (i >= currentPage - delta && i <= currentPage + delta)
+      ) {
+        range.push(i);
       }
     }
-    
-    return pages;
+
+    range.forEach(i => {
+      if (l) {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (i - l !== 1) {
+          rangeWithDots.push('...');
+        }
+      }
+      rangeWithDots.push(i);
+      l = i;
+    });
+
+    return rangeWithDots;
   };
 
   return (
     <div className={`pagination ${className}`}>
       <button
-        className="pagination-button"
+        className="pagination-btn"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
+        aria-label="Previous page"
       >
-        Previous
+        <FaChevronLeft />
       </button>
       
-      <div className="pagination-numbers">
-        {getPageNumbers().map((page, index) => (
-          page === '...' ? (
-            <span key={`ellipsis-${index}`} className="pagination-ellipsis">
-              ...
-            </span>
-          ) : (
-            <button
-              key={page}
-              className={`pagination-number ${page === currentPage ? 'active' : ''}`}
-              onClick={() => onPageChange(page)}
-            >
-              {page}
-            </button>
-          )
-        ))}
-      </div>
+      {getVisiblePages().map((page, index) => (
+        page === '...' ? (
+          <span key={`ellipsis-${index}`} className="pagination-ellipsis">...</span>
+        ) : (
+          <button
+            key={page}
+            className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
+            onClick={() => onPageChange(page)}
+            aria-label={`Page ${page}`}
+            aria-current={currentPage === page ? 'page' : undefined}
+          >
+            {page}
+          </button>
+        )
+      ))}
 
       <button
-        className="pagination-button"
+        className="pagination-btn"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
+        aria-label="Next page"
       >
-        Next
+        <FaChevronRight />
       </button>
     </div>
   );
