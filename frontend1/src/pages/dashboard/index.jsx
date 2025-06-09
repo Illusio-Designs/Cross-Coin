@@ -1,9 +1,7 @@
 import ProtectedRoute from "@/components/ProtectedRoute.jsx";
-import Sidebar from "@/components/Sidebar/Sidebar.jsx";
-import { Card } from '@/components/Dashboard/Card';
+  import Sidebar from "@/components/Sidebar/Sidebar.jsx";
 import CardGrid from '@/components/Dashboard/Card';
 import { useState } from "react";
-import { FaEye, FaChartBar, FaRocket } from "react-icons/fa";
 
 // Import all dashboard pages
 import Products from "./products/products";
@@ -66,31 +64,6 @@ function DashboardFooter({ isCollapsed }) {
 export default function Dashboard() {
   const [currentView, setCurrentView] = useState('main');
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [selected, setSelected] = useState(0);
-
-  const cards = [
-    {
-      title: "Free",
-      price: "$0",
-      description: "Best for high research, medical, legal and B2B content.",
-      features: ["Feature 1", "Feature 2"],
-      icon: <FaEye className="text-4xl text-green-400" />,
-    },
-    {
-      title: "Standard",
-      price: "$40",
-      description: "Best for low research and/or consumer targeted content.",
-      features: ["Feature 1", "Feature 2"],
-      icon: <FaChartBar className="text-4xl text-green-400" />,
-    },
-    {
-      title: "Pro",
-      price: "$99",
-      description: "Best for low research and/or consumer targeted content.",
-      features: ["Feature 1", "Feature 2"],
-      icon: <FaRocket className="text-4xl text-green-400" />,
-    },
-  ];
 
   const renderContent = () => {
     switch (currentView) {
