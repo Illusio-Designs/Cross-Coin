@@ -1,44 +1,25 @@
 import React from 'react';
 import '../../styles/common/Filter.css';
 
-const Filter = ({
-  type = 'input',
-  options = [],
-  value,
-  onChange,
-  placeholder = 'Search...',
-  className = ''
-}) => {
-  if (type === 'select') {
-    return (
-      <div className={`filter-container ${className}`}>
-        <select
-          className="filter-select"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        >
-          <option value="" disabled>
-            {placeholder}
-          </option>
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-  }
-
+const Filter = ({ filters = [], selectedFilters = {}, onChange }) => {
   return (
-    <div className={`filter-container ${className}`}>
-      <input
-        type="text"
-        className="filter-input"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-      />
+    <div className="filter-container">
+      {filters.map(filter => (
+        <div key={filter.key} className="filter-item">
+          <select
+            value={selectedFilters[filter.key] || ''}
+            onChange={(e) => onChange(filter.key, e.target.value)}
+            className="filter-select"
+          >
+            <option value="">All {filter.label}</option>
+            {filter.options.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      ))}
     </div>
   );
 };

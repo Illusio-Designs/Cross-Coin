@@ -2,7 +2,7 @@ import "../../../styles/dashboard/products.css";
 import Table from "@/components/common/Table";
 import Button from "@/components/common/Button";
 import Filter from "@/components/common/Filter";
-import InputField from "@/components/common/InputField";
+import SearchBar from "@/components/common/SearchBar";
 import Pagination from "@/components/common/Pagination";
 import { useState } from "react";
 
@@ -43,11 +43,10 @@ export default function Products() {
 
       <div className="dashboard-content">
         <div className="flex gap-4 mb-6">
-          <InputField
-            type="text"
-            placeholder="Search products..."
+          <SearchBar
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={setSearchTerm}
+            placeholder="Search products..."
           />
           <Filter
             options={[

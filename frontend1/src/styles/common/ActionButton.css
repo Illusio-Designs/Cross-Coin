@@ -1,0 +1,91 @@
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  gap: 8px;
+}
+
+/* Size Variants */
+.action-button.small {
+  padding: 6px 12px;
+  font-size: 0.875rem;
+}
+
+.action-button.medium {
+  padding: 8px 16px;
+  font-size: 1rem;
+}
+
+.action-button.large {
+  padding: 10px 20px;
+  font-size: 1.125rem;
+}
+
+/* Button Variants */
+.action-button.primary {
+  background-color: #CE1E36;
+  color: white;
+}
+
+.action-button.secondary {
+  background-color: #180D3E;
+  color: white;
+}
+
+.action-button.outline {
+  background-color: transparent;
+  border: 1px solid #180D3E;
+  color: #180D3E;
+}
+
+.action-button.text {
+  background-color: transparent;
+  color: #180D3E;
+  padding: 4px 8px;
+}
+
+/* Hover Effects */
+.action-button.primary:hover {
+  background-color: #b91c1c;
+}
+
+.action-button.secondary:hover {
+  background-color: #1e1b4b;
+}
+
+.action-button.outline:hover {
+  background-color: #F3F4F5;
+}
+
+.action-button.text:hover {
+  background-color: #F3F4F5;
+}
+
+/* Disabled State */
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #F3F4F5;
+  color: #180D3E;
+}
+
+/* Icon Styles */
+.action-button .icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-button .icon-left {
+  margin-right: 8px;
+}
+
+.action-button .icon-right {
+  margin-left: 8px;
+} 

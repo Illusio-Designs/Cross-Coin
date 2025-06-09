@@ -8,29 +8,25 @@ export default function CardGrid() {
       title: "Total Companies",
       value: 25,
       description: "Total number of companies.",
-      icon: <FaEye className="dashboard-card-icon" />,
-      variant: "blue"
+      icon: <FaEye className="dashboard-card-icon" />
     },
     {
       title: "Active Companies",
       value: 25,
       description: "100% of total",
-      icon: <FaChartBar className="dashboard-card-icon" />,
-      variant: "green"
+      icon: <FaChartBar className="dashboard-card-icon" />
     },
     {
       title: "Inactive Companies",
       value: 0,
       description: "0% of total",
-      icon: <FaRocket className="dashboard-card-icon" />,
-      variant: "lightblue"
+      icon: <FaRocket className="dashboard-card-icon" />
     },
     {
       title: "Recent Companies (30 days)",
       value: 25,
       description: "100% of total",
-      icon: <FaEye className="dashboard-card-icon" />,
-      variant: "yellow"
+      icon: <FaEye className="dashboard-card-icon" />
     }
   ];
 
@@ -39,29 +35,25 @@ export default function CardGrid() {
       title: "Total Consumers",
       value: 2,
       description: "Total number of consumers.",
-      icon: <FaChartBar className="dashboard-card-icon" />,
-      variant: "blue"
+      icon: <FaChartBar className="dashboard-card-icon" />
     },
     {
       title: "Active Consumers",
       value: 2,
       description: "100% of total",
-      icon: <FaRocket className="dashboard-card-icon" />,
-      variant: "green"
+      icon: <FaRocket className="dashboard-card-icon" />
     },
     {
       title: "Inactive Consumers",
       value: 0,
       description: "0% of total",
-      icon: <FaEye className="dashboard-card-icon" />,
-      variant: "lightblue"
+      icon: <FaEye className="dashboard-card-icon" />
     },
     {
       title: "Recent Consumers (30 days)",
       value: 2,
       description: "100% of total",
-      icon: <FaChartBar className="dashboard-card-icon" />,
-      variant: "yellow"
+      icon: <FaChartBar className="dashboard-card-icon" />
     }
   ];
 
@@ -74,7 +66,7 @@ export default function CardGrid() {
         </div>
         <div className="dashboard-card-grid">
           {companyCards.map((card) => (
-            <div className={`dashboard-card ${card.variant}`} key={card.title}>
+            <div className="dashboard-card" key={card.title}>
               <div className="dashboard-card-icon">{card.icon}</div>
               <div className="dashboard-card-title">{card.title}</div>
               <div className="dashboard-card-value">{card.value}</div>
