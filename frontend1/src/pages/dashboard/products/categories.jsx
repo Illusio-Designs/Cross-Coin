@@ -99,7 +99,7 @@ export default function Categories() {
       header: "Actions",
       accessor: "actions",
       cell: ({ id }) => (
-        <div className="flex gap-2 justify-center">
+        <div className="adding-button">
           <button
             className="action-btn edit"
             title="Edit"
@@ -289,7 +289,7 @@ export default function Categories() {
       <div className="dashboard-page">
         <div className="seo-header-container">
           <h1 className="seo-title">Categories Management</h1>
-          <div className="flex items-center gap-4">
+          <div className="adding-button">
             <Button
               variant="primary"
               onClick={handleAddNew}
@@ -360,58 +360,57 @@ export default function Categories() {
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <div className="input-field-container">
-              <label className="input-field-label">Category Name</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name || ""}
-                onChange={handleInputChange}
-                className="input-field"
-                required
-              />
-            </div>
-            <div className="input-field-container">
-              <label className="input-field-label">Description</label>
-              <textarea
-                name="description"
-                value={formData.description || ""}
-                onChange={handleInputChange}
-                className="input-field"
-                required
-              />
-            </div>
-            <div className="input-field-container">
-              <label className="input-field-label">Status</label>
-              <select
-                name="status"
-                value={formData.status || "active"}
-                onChange={handleInputChange}
-                className="input-field"
-                required
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-            <div className="input-field-container">
-              <label className="input-field-label">Meta Keywords</label>
-              <input
-                type="text"
-                name="metaKeywords"
-                value={formData.metaKeywords || ""}
-                onChange={handleInputChange}
-                className="input-field"
-              />
-            </div>
-            <div className="input-field-container">
+            <InputField
+              label="Category Name"
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              required
+            />
+            <InputField
+              label="Description"
+              type="textarea"
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              required
+            />
+            <InputField
+              label="Status"
+              type="select"
+              name="status"
+              value={formData.status}
+              onChange={handleInputChange}
+              required
+              options={[
+                { value: "active", label: "Active" },
+                { value: "inactive", label: "Inactive" }
+              ]}
+            />
+            <InputField
+              label="Meta Keywords"
+              type="text"
+              name="metaKeywords"
+              value={formData.metaKeywords}
+              onChange={handleInputChange}
+            />
+            <div className="input-field">
               <label className="input-field-label">Category Image</label>
               <input
                 type="file"
                 accept="image/*"
-                name="image"
-                onChange={handleInputChange}
                 className="input-field"
+                onChange={e => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = ev => {
+                      setFormData(prev => ({ ...prev, image: ev.target.result }));
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
               />
               {formData.image && (
                 <img 
