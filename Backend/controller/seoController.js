@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import ImageHandler from '../utils/imageHandler.js';
+import slugify from 'slugify';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,6 +21,17 @@ if (!fs.existsSync(uploadsDir)) {
 if (!fs.existsSync(seoUploadsDir)) {
     fs.mkdirSync(seoUploadsDir, { recursive: true });
 }
+
+// Helper function to generate slug and canonical URL
+const generateSlugAndCanonical = (pageName) => {
+    const slug = slugify(pageName.toString(), {
+        lower: true,
+        strict: true,
+        trim: true
+    });
+    const canonicalUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/${slug}`;
+    return { slug, canonicalUrl };
+};
 
 // Initialize default SEO data for pages
 export const initializeSEOData = async () => {
@@ -53,9 +65,14 @@ export const initializeSEOData = async () => {
         ];
 
         for (const page of defaultPages) {
+            const { slug, canonicalUrl } = generateSlugAndCanonical(page.page_name);
             const [existingPage, created] = await SeoMetadata.findOrCreate({
                 where: { page_name: page.page_name },
-                defaults: page
+                defaults: {
+                    ...page,
+                    slug,
+                    canonical_url: canonicalUrl
+                }
             });
 
             if (created) {
@@ -170,6 +187,9 @@ export const updateSEOData = async (req, res) => {
             return res.status(404).json({ message: 'SEO data not found' });
         }
 
+        // Generate new slug and canonical URL if page name changed
+        const { slug, canonicalUrl } = generateSlugAndCanonical(page_name);
+
         // Handle image update
         let meta_image = seoData.meta_image;
         if (req.file) {
@@ -198,6 +218,8 @@ export const updateSEOData = async (req, res) => {
 
         // Update fields
         await seoData.update({
+            slug,
+            canonical_url: canonicalUrl,
             meta_title: meta_title || seoData.meta_title,
             meta_description: meta_description || seoData.meta_description,
             meta_keywords: meta_keywords || seoData.meta_keywords,
@@ -224,26 +246,27 @@ export const createSEOData = async (req, res) => {
     try {
         const { 
             page_name, 
-            slug, 
             meta_title, 
             meta_description, 
             meta_keywords, 
-            canonical_url, 
             meta_image 
         } = req.body;
 
-        if (!page_name || !slug) {
-            return res.status(400).json({ message: 'Page name and slug are required' });
+        if (!page_name) {
+            return res.status(400).json({ message: 'Page name is required' });
         }
+
+        // Generate slug and canonical URL
+        const { slug, canonicalUrl } = generateSlugAndCanonical(page_name);
 
         const [seoData, created] = await SeoMetadata.findOrCreate({
             where: { page_name },
             defaults: {
                 slug,
+                canonical_url: canonicalUrl,
                 meta_title,
                 meta_description,
                 meta_keywords,
-                canonical_url,
                 meta_image
             }
         });
