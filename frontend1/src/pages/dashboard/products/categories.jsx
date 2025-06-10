@@ -20,8 +20,6 @@ export default function Categories() {
     name: "",
     description: "",
     status: "active",
-    metaTitle: "",
-    metaDescription: "",
     metaKeywords: "",
     image: null
   });
@@ -136,8 +134,6 @@ export default function Categories() {
         name: data.name || "",
         description: data.description || "",
         status: data.status || "active",
-        metaTitle: data.metaTitle || "",
-        metaDescription: data.metaDescription || "",
         metaKeywords: data.metaKeywords || "",
         image: data.image || null
       });
@@ -170,8 +166,6 @@ export default function Categories() {
       name: "",
       description: "",
       status: "active",
-      metaTitle: "",
-      metaDescription: "",
       metaKeywords: "",
       image: null
     });
@@ -184,8 +178,6 @@ export default function Categories() {
       name: "",
       description: "",
       status: "active",
-      metaTitle: "",
-      metaDescription: "",
       metaKeywords: "",
       image: null
     });
@@ -206,11 +198,10 @@ export default function Categories() {
         [name]: type === 'file' ? e.target.files[0] : value
       };
 
-      // Automatically copy name to metaTitle
+      // Automatically generate meta title and description
       if (name === 'name') {
         newData.metaTitle = value;
       }
-      // Automatically copy description to metaDescription
       if (name === 'description') {
         newData.metaDescription = value;
       }
@@ -282,8 +273,6 @@ export default function Categories() {
         name: "",
         description: "",
         status: "active",
-        metaTitle: "",
-        metaDescription: "",
         metaKeywords: "",
         image: null
       });
@@ -404,25 +393,6 @@ export default function Categories() {
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
-            </div>
-            <div className="input-field-container">
-              <label className="input-field-label">Meta Title</label>
-              <input
-                type="text"
-                name="metaTitle"
-                value={formData.metaTitle || ""}
-                onChange={handleInputChange}
-                className="input-field"
-              />
-            </div>
-            <div className="input-field-container">
-              <label className="input-field-label">Meta Description</label>
-              <textarea
-                name="metaDescription"
-                value={formData.metaDescription || ""}
-                onChange={handleInputChange}
-                className="input-field"
-              />
             </div>
             <div className="input-field-container">
               <label className="input-field-label">Meta Keywords</label>
