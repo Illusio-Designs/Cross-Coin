@@ -18,11 +18,9 @@ export default function SEO() {
   const [seoData, setSeoData] = useState([]);
   const [formData, setFormData] = useState({
     page_name: "",
-    slug: "",
     meta_title: "",
     meta_description: "",
     meta_keywords: "",
-    canonical_url: "",
     meta_image: ""
   });
 
@@ -86,8 +84,7 @@ export default function SEO() {
       (item.page_name?.toLowerCase().includes(searchTerm)) ||
       (item.meta_title?.toLowerCase().includes(searchTerm)) ||
       (item.meta_description?.toLowerCase().includes(searchTerm)) ||
-      (item.meta_keywords?.toLowerCase().includes(searchTerm)) ||
-      (item.slug?.toLowerCase().includes(searchTerm))
+      (item.meta_keywords?.toLowerCase().includes(searchTerm))
     );
   });
 
@@ -144,11 +141,9 @@ export default function SEO() {
       const data = await seoService.getSEOData(pageName);
       setFormData({
         page_name: data.page_name || "",
-        slug: data.slug || "",
         meta_title: data.meta_title || "",
         meta_description: data.meta_description || "",
         meta_keywords: data.meta_keywords || "",
-        canonical_url: data.canonical_url || "",
         meta_image: data.meta_image || ""
       });
       setIsModalOpen(true);
@@ -178,11 +173,9 @@ export default function SEO() {
   const handleAddNew = () => {
     setFormData({
       page_name: "",
-      slug: "",
       meta_title: "",
       meta_description: "",
       meta_keywords: "",
-      canonical_url: "",
       meta_image: ""
     });
     setIsModalOpen(true);
@@ -192,21 +185,31 @@ export default function SEO() {
     setIsModalOpen(false);
     setFormData({
       page_name: "",
-      slug: "",
       meta_title: "",
       meta_description: "",
       meta_keywords: "",
-      canonical_url: "",
       meta_image: ""
     });
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        [name]: value
+      };
+
+      // Automatically generate slug and canonical URL when page name changes
+      if (name === 'page_name') {
+        const slug = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const canonicalUrl = `${window.location.origin}/${slug}`;
+        newData.slug = slug;
+        newData.canonical_url = canonicalUrl;
+      }
+
+      return newData;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -304,14 +307,6 @@ export default function SEO() {
               required
             />
             <InputField
-              label="Slug"
-              type="text"
-              name="slug"
-              value={formData.slug}
-              onChange={handleInputChange}
-              required
-            />
-            <InputField
               label="Meta Title"
               type="text"
               name="meta_title"
@@ -334,13 +329,6 @@ export default function SEO() {
               value={formData.meta_keywords}
               onChange={handleInputChange}
               required
-            />
-            <InputField
-              label="Canonical URL"
-              type="text"
-              name="canonical_url"
-              value={formData.canonical_url}
-              onChange={handleInputChange}
             />
             <div className="input-field">
               <label className="input-field-label">Meta Image</label>
