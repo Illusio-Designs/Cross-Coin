@@ -342,7 +342,7 @@ export default function SEO() {
               value={formData.canonical_url}
               onChange={handleInputChange}
             />
-            <div className="input-field-container">
+            <div className="input-field">
               <label className="input-field-label">Meta Image</label>
               <input
                 type="file"

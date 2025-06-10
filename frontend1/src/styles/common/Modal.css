@@ -75,9 +75,8 @@
 .modal-body {
   flex: 1;
   overflow-y: auto;
-  padding-right: 8px;
-  margin-right: -8px;
   color: #180D3E;
+  scrollbar-width: none;
 }
 
 .modal-body::-webkit-scrollbar {
@@ -220,12 +219,10 @@
   margin-bottom: 2rem;
 }
 .input-field-label {
-  position: absolute;
   top: 1.1rem;
   left: 1.1rem;
   color: #888;
   font-size: 1rem;
-  background: #fff;
   padding: 0 0.25rem;
   pointer-events: none;
   transition: 0.2s cubic-bezier(.4,0,.2,1);

@@ -1,17 +1,17 @@
 .common-button {
   padding: 10px 20px;
-  border: none;
+  border: 1px solid #180D3E;
   border-radius: 5px;
-  background-color: #CE1E36;
+  background-color: #180D3E;
   color: white;
   cursor: pointer;
   font-size: 16px;
-  margin-bottom: 20px;
   transition: all 0.3s ease;
 }
 
 .common-button:hover {
-  background-color: #180D3E;
+  color: #180D3E;
+  background-color: white;
   transform: translateY(-1px);
 }
 
