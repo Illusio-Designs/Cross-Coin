@@ -27,14 +27,14 @@ Object.values(UPLOAD_DIRS).forEach(dir => {
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         // Determine the upload directory based on the route
-        let uploadDir = path.join(__dirname, '../uploads');
+        let uploadDir = UPLOAD_DIRS.categories; // Default to categories
         
         if (req.originalUrl.includes('/reviews')) {
-            uploadDir = path.join(uploadDir, 'reviews');
+            uploadDir = UPLOAD_DIRS.reviews;
         } else if (req.originalUrl.includes('/products')) {
-            uploadDir = path.join(uploadDir, 'products');
+            uploadDir = UPLOAD_DIRS.products;
         } else if (req.originalUrl.includes('/users')) {
-            uploadDir = path.join(uploadDir, 'users');
+            uploadDir = UPLOAD_DIRS.users;
         } else if (req.originalUrl.includes('/seo')) {
             uploadDir = UPLOAD_DIRS.seo;
         } else if (req.originalUrl.includes('/slider')) {
@@ -53,11 +53,11 @@ const storage = multer.diskStorage({
 
 // File filter function
 const fileFilter = (req, file, cb) => {
-    // Accept images and videos
-    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+    // Accept images only
+    if (file.mimetype.startsWith('image/')) {
         cb(null, true);
     } else {
-        cb(new Error('Invalid file type. Only images and videos are allowed.'), false);
+        cb(new Error('Invalid file type. Only images are allowed.'), false);
     }
 };
 
@@ -67,7 +67,7 @@ const upload = multer({
     fileFilter: fileFilter,
     limits: {
         fileSize: 5 * 1024 * 1024, // 5MB limit
-        files: 5 // Maximum 5 files per upload
+        files: 1 // Maximum 1 file per upload
     }
 });
 
