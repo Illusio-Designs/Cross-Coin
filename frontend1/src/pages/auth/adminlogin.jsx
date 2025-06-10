@@ -27,17 +27,16 @@ export default function Login() {
       const response = await authService.login({
         email,
         password,
-        role: 'admin' // Specify that this is an admin login
+        role: 'admin'
       });
 
-      // Store the token in localStorage
       if (response.token) {
         localStorage.setItem('token', response.token);
-        // You might want to store additional user info if needed
         if (response.user) {
           localStorage.setItem('user', JSON.stringify(response.user));
         }
-        router.push("/dashboard");
+        // Use replace instead of push to prevent back navigation to login
+        router.replace("/dashboard");
       } else {
         setError("Invalid response from server");
       }
