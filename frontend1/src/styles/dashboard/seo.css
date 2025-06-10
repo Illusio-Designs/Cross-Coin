@@ -220,11 +220,7 @@
 }
 
 .action-btn.edit {
-  background-color: #CE1E36;
-}
-
-.action-btn.edit:hover {
-  background-color: #b0182d;
+  background-color: #180D3E;
 }
 
 .action-btn svg {
@@ -233,11 +229,6 @@
 }
 
 /* Table Styles */
-.common-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-}
 
 .common-table th,
 .common-table td {
@@ -264,25 +255,6 @@
 }
 
 /* Add some spacing between action buttons */
-.common-table .flex.gap-2 {
-  justify-content: center;
-  gap: 8px;
-}
-
-/* Modal Styles */
-.modal-body {
-  padding: 20px;
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-.modal-footer {
-  padding: 15px 20px;
-  border-top: 1px solid #e5e7eb;
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
 
 .seo-form {
   display: flex;
@@ -301,7 +273,6 @@
 }
 
 .seo-form .input-field {
-  width: 100%;
   padding: 8px 12px;
   border: 1px solid #d1d5db;
   border-radius: 4px;
