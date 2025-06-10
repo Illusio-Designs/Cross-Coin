@@ -121,19 +121,21 @@ export default function SEO() {
     {
       header: "Actions",
       accessor: "actions",
-      cell: (row) => (
-        <div className="flex gap-2">
+      cell: ({ page_name }) => (
+        <div className="flex gap-2 justify-center">
           <button
             className="action-btn edit"
             title="Edit"
-            onClick={() => handleEdit(row.page_name)}
+            onClick={() => handleEdit(page_name)}
           >
-            <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z"/></svg>
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z"/>
+            </svg>
             Edit
           </button>
         </div>
-      ),
-    },
+      )
+    }
   ];
 
   const handleEdit = async (pageName) => {
@@ -285,109 +287,104 @@ export default function SEO() {
         </div>
       </div>
 
-      {isModalOpen && (
-        <div className="custom-modal-overlay">
-          <div className="custom-modal-container">
-            <div className="custom-modal-header">
-              {formData.page_name ? "Edit SEO Entry" : "Add New SEO Entry"}
-              <button className="custom-modal-close" onClick={handleModalClose} aria-label="Close">
-                &times;
-              </button>
+      {/* Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        title={formData.page_name ? "Edit SEO Entry" : "Add New SEO Entry"}
+      >
+        <form onSubmit={handleSubmit} className="seo-form">
+          <div className="modal-body">
+            <InputField
+              label="Page Name"
+              type="text"
+              name="page_name"
+              value={formData.page_name}
+              onChange={handleInputChange}
+              required
+            />
+            <InputField
+              label="Slug"
+              type="text"
+              name="slug"
+              value={formData.slug}
+              onChange={handleInputChange}
+              required
+            />
+            <InputField
+              label="Meta Title"
+              type="text"
+              name="meta_title"
+              value={formData.meta_title}
+              onChange={handleInputChange}
+              required
+            />
+            <InputField
+              label="Meta Description"
+              type="textarea"
+              name="meta_description"
+              value={formData.meta_description}
+              onChange={handleInputChange}
+              required
+            />
+            <InputField
+              label="Meta Keywords"
+              type="text"
+              name="meta_keywords"
+              value={formData.meta_keywords}
+              onChange={handleInputChange}
+              required
+            />
+            <InputField
+              label="Canonical URL"
+              type="text"
+              name="canonical_url"
+              value={formData.canonical_url}
+              onChange={handleInputChange}
+            />
+            <div className="input-field-container">
+              <label className="input-field-label">Meta Image</label>
+              <input
+                type="file"
+                accept="image/*"
+                className="input-field"
+                onChange={e => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = ev => {
+                      setFormData(prev => ({ ...prev, meta_image: ev.target.result }));
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              />
+              {formData.meta_image && (
+                <img src={formData.meta_image} alt="Meta Preview" className="seo-image-preview" />
+              )}
             </div>
-            <form onSubmit={handleSubmit} className="seo-form">
-              <div className="custom-modal-body">
-                <InputField
-                  label="Page Name"
-                  type="text"
-                  name="page_name"
-                  value={formData.page_name}
-                  onChange={handleInputChange}
-                  required
-                />
-                <InputField
-                  label="Slug"
-                  type="text"
-                  name="slug"
-                  value={formData.slug}
-                  onChange={handleInputChange}
-                  required
-                />
-                <InputField
-                  label="Meta Title"
-                  type="text"
-                  name="meta_title"
-                  value={formData.meta_title}
-                  onChange={handleInputChange}
-                  required
-                />
-                <InputField
-                  label="Meta Description"
-                  type="textarea"
-                  name="meta_description"
-                  value={formData.meta_description}
-                  onChange={handleInputChange}
-                  required
-                />
-                <InputField
-                  label="Meta Keywords"
-                  type="text"
-                  name="meta_keywords"
-                  value={formData.meta_keywords}
-                  onChange={handleInputChange}
-                  required
-                />
-                <InputField
-                  label="Canonical URL"
-                  type="text"
-                  name="canonical_url"
-                  value={formData.canonical_url}
-                  onChange={handleInputChange}
-                />
-                <div className="input-field-container">
-                  <label className="input-field-label">Meta Image</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="input-field"
-                    onChange={e => {
-                      const file = e.target.files[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = ev => {
-                          setFormData(prev => ({ ...prev, meta_image: ev.target.result }));
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                  />
-                  {formData.meta_image && (
-                    <img src={formData.meta_image} alt="Meta Preview" className="seo-image-preview" />
-                  )}
-                </div>
-              </div>
-              <div className="custom-modal-footer">
-                <Button
-                  variant="secondary"
-                  size="medium"
-                  onClick={handleModalClose}
-                  disabled={loading}
-                  type="button"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="medium"
-                  disabled={loading}
-                >
-                  {loading ? "Saving..." : "Save"}
-                </Button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+          <div className="modal-footer">
+            <Button
+              variant="secondary"
+              size="medium"
+              onClick={handleModalClose}
+              disabled={loading}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="medium"
+              disabled={loading}
+            >
+              {loading ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 } 
