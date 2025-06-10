@@ -20,7 +20,7 @@ const menu = [
     label: "Products",
     icon: <FaBox />,
     submenu: [
-      { label: "All Products", view: "products" },
+      { label: "Products", view: "products" },
       { label: "Categories", view: "categories" },
       { label: "Attributes", view: "attributes" },
     ]
