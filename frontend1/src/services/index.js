@@ -365,46 +365,47 @@ export const userService = {
 export const categoryService = {
     getAllCategories: async () => {
         try {
-            const response = await api.get('/api/categories/admin/all');
-            console.log('Category API Response:', response);
-            // Return the data array directly
+            const response = await api.get('/api/categories/admin');
             return response.data;
         } catch (error) {
-            console.error('Category API Error:', error);
             throw error.response?.data || error.message;
         }
     },
 
     getCategoryById: async (id) => {
         try {
-            const response = await api.get(`/api/categories/${id}`);
-            return response.data.category;
-        } catch (error) {
-            throw error.response?.data || error.message;
-        }
-    },
-
-    createCategory: async (categoryData) => {
-        try {
-            const response = await api.post('/api/categories', categoryData);
+            const response = await api.get(`/api/categories/admin/${id}`);
             return response.data;
         } catch (error) {
             throw error.response?.data || error.message;
         }
     },
 
-    updateCategory: async (id, categoryData) => {
+    createCategory: async (formData) => {
         try {
-            const response = await api.put(`/api/categories/${id}`, categoryData);
+            console.log('Creating category with data:', Object.fromEntries(formData.entries()));
+            const response = await api.post('/api/categories/admin', formData);
             return response.data;
         } catch (error) {
+            console.error('Create category error:', error);
+            throw error.response?.data || error.message;
+        }
+    },
+
+    updateCategory: async (id, formData) => {
+        try {
+            console.log('Updating category with data:', Object.fromEntries(formData.entries()));
+            const response = await api.put(`/api/categories/admin/${id}`, formData);
+            return response.data;
+        } catch (error) {
+            console.error('Update category error:', error);
             throw error.response?.data || error.message;
         }
     },
 
     deleteCategory: async (id) => {
         try {
-            const response = await api.delete(`/api/categories/${id}`);
+            const response = await api.delete(`/api/categories/admin/${id}`);
             return response.data;
         } catch (error) {
             throw error.response?.data || error.message;
