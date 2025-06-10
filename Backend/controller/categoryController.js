@@ -26,9 +26,11 @@ const formatCategoryResponse = (category) => {
 };
 
 // Create Category
-// Update createCategory function
 const createCategory = async (req, res) => {
     try {
+        console.log('Request body:', req.body);
+        console.log('Request file:', req.file);
+
         const { 
             name, 
             description, 
@@ -38,9 +40,21 @@ const createCategory = async (req, res) => {
             metaDescription, 
             metaKeywords
         } = req.body;
+
+        // Validate required fields
+        if (!name) {
+            return res.status(400).json({
+                message: 'Category name is required',
+                error: 'MISSING_REQUIRED_FIELD'
+            });
+        }
         
         // Generate slug from name
-        const slug = slugify(name, { lower: true });
+        const slug = slugify(name.toString(), { 
+            lower: true,
+            strict: true,
+            trim: true
+        });
 
         // Check for duplicate category name
         const existingCategory = await Category.findOne({
@@ -92,8 +106,8 @@ const createCategory = async (req, res) => {
             status,
             parentId,
             image,
-            metaTitle,
-            metaDescription,
+            metaTitle: metaTitle || name,
+            metaDescription: metaDescription || description,
             metaKeywords,
             slug
         });
@@ -116,7 +130,10 @@ const createCategory = async (req, res) => {
         });
     } catch (error) {
         console.error('Create category error:', error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ 
+            message: 'Failed to create category',
+            error: error.message 
+        });
     }
 };
 
