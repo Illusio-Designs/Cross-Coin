@@ -149,6 +149,25 @@ export const setupDatabase = async () => {
         } else {
             console.warn('Slider model not found for syncing.');
         }
+
+        // Step 1g: Sync Category table separately to handle parentId removal
+        console.log('Step 1g: Syncing Category table with parentId removal...');
+        if (models['Category']) {
+            console.log('Syncing Category table (alter:true)...');
+            // First, remove the parentId column if it exists
+            await sequelize.query(`
+                ALTER TABLE categories 
+                DROP COLUMN IF EXISTS parentId
+            `).catch(err => console.warn('Warning: Could not remove parentId column from categories table:', err.message));
+            
+            // Then sync the table structure
+            await models['Category'].sync({ 
+                alter: true, 
+                hooks: false,
+            });
+        } else {
+            console.warn('Category model not found for syncing.');
+        }
         
         // Step 2: Apply associations explicitly defined in associations.js
         // This step is crucial for ensuring all relationships and foreign keys are correctly established.
