@@ -6,6 +6,7 @@ import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
 import { productService } from "@/services";
 import { categoryService } from "@/services";
+import { attributeService } from "@/services";
 import { debounce } from 'lodash';
 import "../../../styles/dashboard/products.css";
 
@@ -53,6 +54,7 @@ export default function Products() {
       metaKeywords: ""
     }
   });
+  const [attributes, setAttributes] = useState([]);
 
   // Debounced search function
   const debouncedSearch = useCallback(
@@ -80,6 +82,20 @@ export default function Products() {
 
   useEffect(() => {
     fetchCategories();
+  }, []);
+
+  // Fetch attributes
+  const fetchAttributes = async () => {
+    try {
+      const response = await attributeService.getAllAttributes();
+      setAttributes(response);
+    } catch (err) {
+      console.error("Error fetching attributes:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchAttributes();
   }, []);
 
   // Fetch products data
@@ -678,30 +694,7 @@ export default function Products() {
                     onChange={handleInputChange}
                     required
                   />
-                  <div className="attributes-section">
-                    <h5>Attributes</h5>
-                    <InputField
-                      label="Size"
-                      type="text"
-                      name={`attributes.${index}.size`}
-                      value={variation.attributes.size}
-                      onChange={handleInputChange}
-                    />
-                    <InputField
-                      label="Color"
-                      type="text"
-                      name={`attributes.${index}.color`}
-                      value={variation.attributes.color}
-                      onChange={handleInputChange}
-                    />
-                    <InputField
-                      label="Material"
-                      type="text"
-                      name={`attributes.${index}.material`}
-                      value={variation.attributes.material}
-                      onChange={handleInputChange}
-                    />
-                  </div>
+                  {renderAttributesSection(index)}
                 </div>
               ))}
             </div>
@@ -762,6 +755,31 @@ export default function Products() {
       default:
         return null;
     }
+  };
+
+  const renderAttributesSection = (variationIndex) => {
+    return (
+      <div className="attributes-section">
+        <h5>Attributes</h5>
+        {attributes.map((attribute) => (
+          <InputField
+            key={attribute.id}
+            label={attribute.name}
+            type="select"
+            name={`attributes.${variationIndex}.${attribute.name}`}
+            value={formData.variations[variationIndex].attributes[attribute.name] || ''}
+            onChange={handleInputChange}
+            options={[
+              { value: '', label: `Select ${attribute.name}` },
+              ...attribute.AttributeValues.map(value => ({
+                value: value.value,
+                label: value.value
+              }))
+            ]}
+          />
+        ))}
+      </div>
+    );
   };
 
   return (
