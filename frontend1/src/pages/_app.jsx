@@ -1,7 +1,11 @@
+import { Provider } from 'react-redux';
+import { store } from '../store';
+import { ThemeProvider } from 'next-themes';
+import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from '../context/AuthContext';
 import { CartProvider } from '../context/CartContext';
 import { WishlistProvider } from '../context/WishlistContext';
 import '../styles/globals.css';
-import { SessionProvider } from "next-auth/react";
 import '../styles/components/Footer.css';
 import '../styles/components/Header.css';
 import '../styles/components/Testimonials.css';
@@ -21,7 +25,7 @@ import '../styles/dashboard/sidebar.css';
 import '../styles/pages/auth/adminlogin.css';
 import { useEffect } from 'react';
 
-export default function App({ Component, pageProps: { session, ...pageProps } }) {
+export default function App({ Component, pageProps }) {
   useEffect(() => {
     document.title = 'Cross Coin';
     const link = document.createElement('link');
@@ -34,12 +38,17 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
   }, []);
 
   return (
-    <CartProvider>
-      <WishlistProvider>
-        <SessionProvider session={session}>
-          <Component {...pageProps} />
-        </SessionProvider>
-      </WishlistProvider>
-    </CartProvider>
+    <Provider store={store}>
+      <ThemeProvider attribute="class">
+        <AuthProvider>
+          <CartProvider>
+            <WishlistProvider>
+              <Component {...pageProps} />
+              <Toaster position="top-right" />
+            </WishlistProvider>
+          </CartProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </Provider>
   );
 }

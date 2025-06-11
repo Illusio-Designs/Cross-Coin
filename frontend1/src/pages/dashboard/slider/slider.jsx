@@ -1,13 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
 import Button from "@/components/common/Button";
+import InputField from "@/components/common/InputField";
 import Modal from "@/components/common/Modal";
 import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
 import { sliderService, categoryService } from "@/services";
 import { debounce } from 'lodash';
-import "../../../styles/dashboard/slider.css";
+import { useRouter } from 'next/router';
+import { useAuth } from '../../../context/AuthContext';
+import "../../../styles/dashboard/seo.css";
+import { toast } from 'react-hot-toast';
 
 export default function Slider() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -21,8 +27,16 @@ export default function Slider() {
     description: "",
     status: "active",
     image: null,
-    categoryId: ""
+    categoryId: "",
+    buttonText: "",
   });
+
+  // Check admin access
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== 'admin')) {
+      router.push('/dashboard');
+    }
+  }, [user, authLoading, router]);
 
   // Fetch categories
   const fetchCategories = async () => {
@@ -57,16 +71,25 @@ export default function Slider() {
     try {
       setLoading(true);
       setError(null);
+      console.log('=== Fetching Sliders ===');
       const response = await sliderService.getAllSliders();
-      console.log('Fetched sliders:', response); // Debug log
-      if (response && response.sliders) {
+      console.log('=== API Response ===');
+      console.log('Response:', response);
+      
+      if (Array.isArray(response)) {
+        console.log('Setting sliders state with response array:', response);
+        setSliders(response);
+      } else if (response && response.sliders && Array.isArray(response.sliders)) {
+        console.log('Setting sliders state with response.sliders:', response.sliders);
         setSliders(response.sliders);
       } else {
+        console.log('No valid sliders data found, setting empty array');
         setSliders([]);
       }
     } catch (err) {
+      console.error('=== Error fetching sliders ===');
+      console.error('Error details:', err);
       setError(err.message || "Failed to fetch sliders");
-      console.error("Error fetching sliders:", err);
       setSliders([]);
     } finally {
       setLoading(false);
@@ -77,16 +100,17 @@ export default function Slider() {
     fetchSliders();
   }, []);
 
-  // Enhanced filter function with array check
-  const filteredData = Array.isArray(sliders) ? sliders.filter(item => {
+  // Enhanced filter function
+  const filteredData = sliders.filter(item => {
     if (!filterValue) return true;
     
     const searchTerm = filterValue.toLowerCase();
     return (
       (item.title?.toLowerCase().includes(searchTerm)) ||
-      (item.description?.toLowerCase().includes(searchTerm))
+      (item.description?.toLowerCase().includes(searchTerm)) ||
+      (item.categoryName?.toLowerCase().includes(searchTerm))
     );
-  }) : [];
+  });
 
   // Pagination
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -111,10 +135,30 @@ export default function Slider() {
       header: "S/N",
       accessor: "serial_number"
     },
+    { 
+      header: "Image", 
+      accessor: "image",
+      cell: ({ image }) => (
+        <img 
+          src={`${process.env.NEXT_PUBLIC_IMAGE_URL}${image}`} 
+          alt="Slider" 
+          className="slider-table-image" 
+          style={{ width: '100px', height: '60px', objectFit: 'cover' }}
+        />
+      )
+    },
     { header: "Title", accessor: "title" },
     { header: "Description", accessor: "description" },
     { header: "Category", accessor: "categoryName" },
-    { header: "Status", accessor: "status" },
+    { 
+      header: "Status", 
+      accessor: "status",
+      cell: ({ status }) => (
+        <span className={`status-badge ${status}`}>
+          {status}
+        </span>
+      )
+    },
     {
       header: "Actions",
       accessor: "actions",
@@ -148,14 +192,16 @@ export default function Slider() {
   const handleEdit = async (id) => {
     try {
       setLoading(true);
-      const data = await sliderService.getSliderById(id);
+      const response = await sliderService.getSliderById(id);
+      const data = response.slider || response; // Handle both response formats
       setFormData({
         id: data.id,
         title: data.title || "",
         description: data.description || "",
         status: data.status || "active",
         categoryId: data.categoryId || "",
-        image: data.image || null
+        image: data.image || null,
+        buttonText: data.buttonText || ""
       });
       setIsModalOpen(true);
     } catch (err) {
@@ -187,7 +233,8 @@ export default function Slider() {
       description: "",
       status: "active",
       categoryId: "",
-      image: null
+      image: null,
+      buttonText: ""
     });
     setIsModalOpen(true);
   };
@@ -199,67 +246,82 @@ export default function Slider() {
       description: "",
       status: "active",
       categoryId: "",
-      image: null
+      image: null,
+      buttonText: ""
     });
   };
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'file' ? e.target.files[0] : value
-    }));
+    console.log('Input Change:', {
+      name,
+      value,
+      type,
+      currentFormData: formData
+    });
+    
+    if (type === 'file') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: e.target.files[0]
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
       const formDataToSend = new FormData();
+      formDataToSend.append("title", formData.title);
+      formDataToSend.append("description", formData.description);
+      formDataToSend.append("categoryId", formData.categoryId);
+      formDataToSend.append("status", formData.status);
+      formDataToSend.append("buttonText", formData.buttonText);
       
-      Object.keys(formData).forEach(key => {
-        if (key === 'image' && formData[key] instanceof File) {
-          formDataToSend.append('image', formData[key]);
-        } else if (key !== 'id' && formData[key] !== null && formData[key] !== undefined) {
-          formDataToSend.append(key, formData[key]);
-        }
-      });
+      if (formData.image instanceof File) {
+        formDataToSend.append("image", formData.image);
+      }
 
       if (formData.id) {
         await sliderService.updateSlider(formData.id, formDataToSend);
+        toast.success("Slider updated successfully");
       } else {
         await sliderService.createSlider(formDataToSend);
+        toast.success("Slider created successfully");
       }
-      await fetchSliders(); // Refresh the table after creating/updating
-      setIsModalOpen(false);
-      setFormData({
-        title: "",
-        description: "",
-        status: "active",
-        categoryId: "",
-        image: null
-      });
+
+      handleModalClose();
+      fetchSliders();
     } catch (err) {
-      console.error('Submit Error:', err);
       setError(err.message || "Failed to save slider");
+      toast.error(err.message || "Failed to save slider");
     } finally {
       setLoading(false);
     }
   };
 
+  if (authLoading) {
+    return <div className="seo-loading">Loading...</div>;
+  }
+
+  if (!user || user.role !== 'admin') {
+    return null;
+  }
+
   return (
     <>
-      <div className="dashboard-page">
+    <div className="dashboard-page">
         <div className="seo-header-container">
           <h1 className="seo-title">Slider Management</h1>
           <div className="adding-button">
-            <Button 
-              variant="primary"
-              onClick={handleAddNew}
-              className="add-new-btn"
-            >
-              Add New Slider
-            </Button>
             <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
               <div className="modern-searchbar-group">
                 <span className="modern-searchbar-icon">
@@ -276,6 +338,13 @@ export default function Slider() {
                 />
               </div>
             </form>
+            <Button 
+              variant="primary"
+              onClick={handleAddNew}
+              className="add-new-btn"
+            >
+              Add New Slider
+            </Button>
           </div>
         </div>
 
@@ -283,6 +352,8 @@ export default function Slider() {
         <div className="seo-table-container">
           {loading ? (
             <div className="seo-loading">Loading...</div>
+          ) : error ? (
+            <div className="seo-error">{error}</div>
           ) : (
             <>
               {filteredData.length === 0 ? (
@@ -323,39 +394,34 @@ export default function Slider() {
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <div className="form-group">
-              <label htmlFor="title">Title</label>
+            <div className="input-field">
+              <label className="input-field-label">Title</label>
               <input
                 type="text"
-                id="title"
                 name="title"
                 value={formData.title}
                 onChange={handleInputChange}
+                className="input-field"
                 required
-                className="form-control"
               />
             </div>
-
-            <div className="form-group">
-              <label htmlFor="description">Description</label>
+            <div className="input-field">
+              <label className="input-field-label">Description</label>
               <textarea
-                id="description"
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
+                className="input-field"
                 required
-                className="form-control"
               />
             </div>
-
-            <div className="form-group">
-              <label htmlFor="categoryId">Category</label>
+            <div className="input-field">
+              <label className="input-field-label">Category</label>
               <select
-                id="categoryId"
                 name="categoryId"
                 value={formData.categoryId}
                 onChange={handleInputChange}
-                className="form-control"
+                className="input-field"
               >
                 <option value="">Select Category</option>
                 {categories.map(category => (
@@ -365,35 +431,44 @@ export default function Slider() {
                 ))}
               </select>
             </div>
-
-            <div className="form-group">
-              <label htmlFor="status">Status</label>
+            <div className="input-field">
+              <label className="input-field-label">Status</label>
               <select
-                id="status"
                 name="status"
                 value={formData.status}
                 onChange={handleInputChange}
+                className="input-field"
                 required
-                className="form-control"
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
             </div>
-
-            <div className="form-group">
-              <label htmlFor="image">Slider Image</label>
+            <div className="input-field">
+              <label className="input-field-label">Button Text</label>
+              <input
+                type="text"
+                name="buttonText"
+                value={formData.buttonText}
+                onChange={handleInputChange}
+                className="input-field"
+              />
+            </div>
+            <div className="input-field">
+              <label className="input-field-label">Slider Image</label>
               <input
                 type="file"
-                id="image"
-                name="image"
                 accept="image/*"
+                className="input-field"
                 onChange={handleInputChange}
-                className="form-control"
+                name="image"
+                required={!formData.id}
               />
               {formData.image && (
                 <img 
-                  src={typeof formData.image === 'string' ? formData.image : URL.createObjectURL(formData.image)} 
+                  src={typeof formData.image === 'string' 
+                    ? `${process.env.NEXT_PUBLIC_IMAGE_URL}${formData.image}` 
+                    : URL.createObjectURL(formData.image)} 
                   alt="Slider Preview" 
                   className="seo-image-preview" 
                 />

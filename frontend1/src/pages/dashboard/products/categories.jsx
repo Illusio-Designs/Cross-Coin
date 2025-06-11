@@ -286,7 +286,7 @@ export default function Categories() {
 
   return (
     <>
-      <div className="dashboard-page">
+    <div className="dashboard-page">
         <div className="seo-header-container">
           <h1 className="seo-title">Categories Management</h1>
           <div className="adding-button">
@@ -306,16 +306,16 @@ export default function Categories() {
                 />
               </div>
             </form>
-            <Button
-              variant="primary"
+        <Button 
+          variant="primary"
               onClick={handleAddNew}
               className="add-new-btn"
-            >
-              Add New Category
-            </Button>
+        >
+          Add New Category
+        </Button>
           </div>
-        </div>
-        
+      </div>
+
         {/* Table Section */}
         <div className="seo-table-container">
           {loading ? (
@@ -329,7 +329,7 @@ export default function Categories() {
               ) : (
                 <>
                   <Table
-                    columns={columns}
+        columns={columns}
                     data={currentItemsWithSN}
                     className="w-full"
                     striped={true}
@@ -422,25 +422,25 @@ export default function Categories() {
             </div>
           </div>
           <div className="modal-footer">
-            <Button
-              variant="secondary"
+                <Button
+                  variant="secondary"
               size="medium"
               onClick={handleModalClose}
               disabled={loading}
               type="button"
-            >
-              Cancel
-            </Button>
-            <Button
+                >
+                  Cancel
+                </Button>
+                <Button
               type="submit"
-              variant="primary"
+                  variant="primary"
               size="medium"
               disabled={loading}
-            >
+                >
               {loading ? "Saving..." : "Save"}
-            </Button>
-          </div>
-        </form>
+                </Button>
+            </div>
+          </form>
       </Modal>
     </>
   );

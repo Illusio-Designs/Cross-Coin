@@ -426,8 +426,8 @@ export const sliderService = {
     getAllSliders: async () => {
         try {
             const response = await api.get('/api/sliders/admin/all');
-            // Ensure we return an array
-            return Array.isArray(response.data) ? response.data : [];
+            // Return the response data directly since it already contains the sliders array
+            return response.data;
         } catch (error) {
             console.error('Error in getAllSliders:', error);
             throw handleApiError(error);
