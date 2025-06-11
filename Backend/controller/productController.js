@@ -7,6 +7,7 @@ import { productUpload } from '../middleware/uploadMiddleware.js';
 import slugify from 'slugify';
 import { sequelize } from '../config/db.js';
 import { Op } from 'sequelize';
+import fs from 'fs/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -351,33 +352,65 @@ export const updateProduct = async (req, res) => {
 
 // Delete product
 export const deleteProduct = async (req, res) => {
+    const transaction = await sequelize.transaction();
+    
     try {
         const { id } = req.params;
 
-        const product = await Product.findByPk(id);
+        const product = await Product.findByPk(id, {
+            include: [
+                { model: ProductImage, as: 'ProductImages' },
+                { model: ProductVariation, as: 'ProductVariations' }
+            ],
+            transaction
+        });
+
         if (!product) {
+            await transaction.rollback();
             return res.status(404).json({ message: 'Product not found' });
         }
 
-        // Delete main image
-        if (product.image) {
-            await imageHandler.deleteImage(product.image);
+        // Delete all product images from storage and database
+        if (product.ProductImages && product.ProductImages.length > 0) {
+            for (const image of product.ProductImages) {
+                const imagePath = path.join(__dirname, '../uploads/products', image.image_url.split('/').pop());
+                try {
+                    await fs.unlink(imagePath);
+                } catch (error) {
+                    console.error('Error deleting image file:', error);
+                }
+            }
+            await ProductImage.destroy({
+                where: { product_id: id },
+                transaction
+            });
         }
 
-        // Delete gallery images
-        if (product.gallery && product.gallery.length > 0) {
-            await Promise.all(
-                product.gallery.map(image => imageHandler.deleteImage(image))
-            );
+        // Delete all product variations
+        if (product.ProductVariations && product.ProductVariations.length > 0) {
+            await ProductVariation.destroy({
+                where: { productId: id },
+                transaction
+            });
         }
 
-        await product.destroy();
+        // Delete SEO data
+        await ProductSEO.destroy({
+            where: { product_id: id },
+            transaction
+        });
+
+        // Finally delete the product
+        await product.destroy({ transaction });
+
+        await transaction.commit();
 
         res.json({ 
             success: true, 
-            message: 'Product deleted successfully' 
+            message: 'Product and all associated data deleted successfully' 
         });
     } catch (error) {
+        await transaction.rollback();
         console.error('Error deleting product:', error);
         res.status(500).json({ 
             success: false,
