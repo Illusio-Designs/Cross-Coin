@@ -426,8 +426,10 @@ export const sliderService = {
     getAllSliders: async () => {
         try {
             const response = await api.get('/api/sliders/admin/all');
-            return response.data;
+            // Ensure we return an array
+            return Array.isArray(response.data) ? response.data : [];
         } catch (error) {
+            console.error('Error in getAllSliders:', error);
             throw handleApiError(error);
         }
     },
@@ -459,6 +461,7 @@ export const sliderService = {
         }
     }
 };
+
 // Product Services
 export const productService = {
     createProduct: async (productData) => {
@@ -605,15 +608,6 @@ export const couponService = {
         }
     },
 
-    updateCoupon: async (id, couponData) => {
-        try {
-            const response = await api.put(`/api/coupons/${id}`, couponData);
-            return response.data;
-        } catch (error) {
-            throw handleApiError(error);
-        }
-    },
-
     deleteCoupon: async (id) => {
         try {
             const response = await api.delete(`/api/coupons/${id}`);
@@ -704,18 +698,18 @@ export const seoService = {
         }
     },
 
-    createSEOData: async (seoData) => {
+    createSEOData: async (formData) => {
         try {
-            const response = await api.post('/api/seo/create', seoData);
+            const response = await api.post('/api/seo/create', formData);
             return response.data;
         } catch (error) {
             throw handleApiError(error);
         }
     },
 
-    updateSEOData: async (pageName, seoData) => {
+    updateSEOData: async (pageName, formData) => {
         try {
-            const response = await api.put('/api/seo/update', { page_name: pageName, ...seoData });
+            const response = await api.put('/api/seo/update', formData);
             return response.data;
         } catch (error) {
             throw handleApiError(error);
@@ -728,63 +722,6 @@ export const seoService = {
             return response.data;
         } catch (error) {
             throw handleApiError(error);
-        }
-    }
-};
-
-// Attribute Services
-export const attributeService = {
-    getAllAttributes: async () => {
-        try {
-            const response = await api.get('/api/attributes');
-            return response.data;
-        } catch (error) {
-            throw error.response?.data || error.message;
-        }
-    },
-
-    createAttribute: async (attributeData) => {
-        try {
-            const response = await api.post('/api/attributes', attributeData);
-            return response.data;
-        } catch (error) {
-            throw error.response?.data || error.message;
-        }
-    },
-
-    updateAttribute: async (id, attributeData) => {
-        try {
-            const response = await api.put(`/api/attributes/${id}`, attributeData);
-            return response.data;
-        } catch (error) {
-            throw error.response?.data || error.message;
-        }
-    },
-
-    deleteAttribute: async (id) => {
-        try {
-            const response = await api.delete(`/api/attributes/${id}`);
-            return response.data;
-        } catch (error) {
-            throw error.response?.data || error.message;
-        }
-    },
-
-    addAttributeValues: async (id, values) => {
-        try {
-            const response = await api.post(`/api/attributes/${id}/values`, { values });
-            return response.data;
-        } catch (error) {
-            throw error.response?.data || error.message;
-        }
-    },
-
-    removeAttributeValues: async (id, valueIds) => {
-        try {
-            const response = await api.delete(`/api/attributes/${id}/values`, { data: { valueIds } });
-            return response.data;
-        } catch (error) {
-            throw error.response?.data || error.message;
         }
     }
 };
