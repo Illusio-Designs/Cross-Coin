@@ -274,7 +274,7 @@ export default function SEO() {
       <div className="dashboard-page">
         <div className="seo-header-container">
           <h1 className="seo-title">SEO Management</h1>
-          <div className="seo-actions">
+          <div className="adding-button">
             <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
               <div className="modern-searchbar-group">
                 <span className="modern-searchbar-icon">
