@@ -107,7 +107,7 @@ export const createProduct = async (req, res) => {
         console.log('Product created with ID:', product.id);
 
         console.log('\n=== CREATING SEO ===');
-        // Create SEO record
+        // Create SEO record with proper data
         const seoRecord = await ProductSEO.create({
             product_id: product.id,
             meta_title: seo.metaTitle || name,
@@ -115,7 +115,21 @@ export const createProduct = async (req, res) => {
             meta_keywords: seo.metaKeywords || '',
             og_title: seo.ogTitle || name,
             og_description: seo.ogDescription || description,
-            og_image: seo.ogImage
+            og_image: seo.ogImage || null,
+            canonical_url: seo.canonicalUrl || `${process.env.FRONTEND_URL}/products/${product.slug}`,
+            structured_data: seo.structuredData || JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "Product",
+                "name": name,
+                "description": description,
+                "image": images?.[0] ? `/uploads/products/${images[0].filename}` : null,
+                "offers": {
+                    "@type": "Offer",
+                    "price": variations[0]?.price || 0,
+                    "priceCurrency": "USD",
+                    "availability": variations[0]?.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+                }
+            })
         }, { transaction });
         console.log('SEO record created with ID:', seoRecord.id);
 

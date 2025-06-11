@@ -201,27 +201,68 @@ export default function Products() {
   const handleEdit = async (id) => {
     try {
       setLoading(true);
-      const data = await productService.getProduct(id);
-      setFormData({
-        id: data.id,
-        name: data.name || "",
-        description: data.description || "",
-        categoryId: data.categoryId || "",
-        status: data.status || "active",
-        price: data.price || "",
-        stock: data.stock || "",
-        images: data.images || [],
-        variations: data.variations || [],
-        seo: data.seo || {
-          metaTitle: "",
-          metaDescription: "",
-          metaKeywords: ""
+      const response = await productService.getProductById(id);
+      const product = response.data;
+      
+      // Format the data for the form
+      const formData = {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        categoryId: product.category_id,
+        status: product.status,
+        images: product.ProductImages?.map(img => ({
+          name: img.filename,
+          url: img.url,
+          type: 'image/jpeg'
+        })) || [],
+        variations: product.ProductVariations?.map(variation => ({
+          id: variation.id,
+          price: variation.price,
+          comparePrice: variation.compare_price,
+          stock: variation.stock,
+          sku: variation.sku,
+          weight: variation.weight,
+          dimensions: variation.dimensions,
+          attributes: variation.attributes || {}
+        })) || [],
+        seo: product.ProductSEO ? {
+          metaTitle: product.ProductSEO.meta_title,
+          metaDescription: product.ProductSEO.meta_description,
+          metaKeywords: product.ProductSEO.meta_keywords,
+          ogTitle: product.ProductSEO.og_title,
+          ogDescription: product.ProductSEO.og_description,
+          ogImage: product.ProductSEO.og_image,
+          canonicalUrl: product.ProductSEO.canonical_url,
+          structuredData: product.ProductSEO.structured_data
+        } : {
+          metaTitle: product.name,
+          metaDescription: product.description,
+          metaKeywords: '',
+          ogTitle: product.name,
+          ogDescription: product.description,
+          ogImage: null,
+          canonicalUrl: `${window.location.origin}/products/${product.slug}`,
+          structuredData: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": product.name,
+            "description": product.description,
+            "image": product.ProductImages?.[0]?.url || null,
+            "offers": {
+              "@type": "Offer",
+              "price": product.ProductVariations?.[0]?.price || 0,
+              "priceCurrency": "USD",
+              "availability": product.ProductVariations?.[0]?.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+            }
+          })
         }
-      });
+      };
+
+      setFormData(formData);
       setIsModalOpen(true);
     } catch (err) {
-      setError(err.message || "Failed to fetch product data");
-      console.error("Error fetching product data:", err);
+      setError(err.response?.data?.message || "Error fetching product details");
     } finally {
       setLoading(false);
     }
@@ -444,144 +485,81 @@ export default function Products() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form Submit:', {
-      formData,
-      isEdit: !!formData.id
-    });
-    
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      const formDataToSend = new FormData();
-      
-      // Basic product information
-      formDataToSend.append('name', formData.name);
-      formDataToSend.append('description', formData.description);
-      formDataToSend.append('categoryId', formData.categoryId);
-      formDataToSend.append('status', formData.status);
+        const formDataToSend = new FormData();
+        formDataToSend.append('name', formData.name);
+        formDataToSend.append('description', formData.description);
+        formDataToSend.append('categoryId', formData.categoryId);
+        formDataToSend.append('status', formData.status);
 
-      // Handle images
-      if (formData.images && Array.isArray(formData.images)) {
-        formData.images.forEach((image, index) => {
-          formDataToSend.append('images', image);
-        });
-      }
-
-      // Handle variations with attributes
-      const variationsWithAttributes = formData.variations.map(variation => {
-        // Parse attributes if they're strings
-        let attributes = variation.attributes;
-        if (typeof attributes === 'string') {
-          try {
-            attributes = JSON.parse(attributes);
-          } catch (e) {
-            console.error('Error parsing attributes:', e);
-            attributes = {};
-          }
+        // Handle images
+        if (formData.images && formData.images.length > 0) {
+            formData.images.forEach((image, index) => {
+                if (image instanceof File) {
+                    formDataToSend.append(`images`, image);
+                }
+            });
         }
 
-        return {
-          price: Number(variation.price),
-          comparePrice: variation.comparePrice ? Number(variation.comparePrice) : null,
-          stock: Number(variation.stock),
-          sku: variation.sku,
-          attributes: attributes,
-          weight: variation.weight ? Number(variation.weight) : null,
-          weightUnit: variation.weightUnit || 'g',
-          dimensions: variation.dimensions || null,
-          dimensionUnit: variation.dimensionUnit || 'cm'
+        // Handle variations with attributes
+        const variationsWithAttributes = formData.variations.map(variation => ({
+            price: variation.price,
+            compare_price: variation.comparePrice,
+            stock: variation.stock,
+            sku: variation.sku,
+            weight: variation.weight,
+            dimensions: variation.dimensions,
+            attributes: variation.attributes
+        }));
+
+        formDataToSend.append('variations', JSON.stringify(variationsWithAttributes));
+
+        // Handle SEO data
+        const seoData = {
+            metaTitle: formData.seo.metaTitle || formData.name,
+            metaDescription: formData.seo.metaDescription || formData.description,
+            metaKeywords: formData.seo.metaKeywords || '',
+            ogTitle: formData.seo.metaTitle || formData.name,
+            ogDescription: formData.seo.metaDescription || formData.description,
+            ogImage: formData.images?.[0] ? URL.createObjectURL(formData.images[0]) : null,
+            canonicalUrl: formData.seo.canonicalUrl || `${window.location.origin}/products/${formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-')}`,
+            structuredData: formData.seo.structuredData || JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "Product",
+                "name": formData.name,
+                "description": formData.description,
+                "image": formData.images?.[0] ? URL.createObjectURL(formData.images[0]) : null,
+                "offers": {
+                    "@type": "Offer",
+                    "price": variationsWithAttributes[0]?.price || 0,
+                    "priceCurrency": "USD",
+                    "availability": variationsWithAttributes[0]?.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+                }
+            })
         };
-      });
 
-      formDataToSend.append('variations', JSON.stringify(variationsWithAttributes));
+        formDataToSend.append('seo', JSON.stringify(seoData));
 
-      // Handle SEO data
-      const seoData = {
-        metaTitle: formData.seo.metaTitle || formData.name,
-        metaDescription: formData.seo.metaDescription || formData.description,
-        metaKeywords: formData.seo.metaKeywords || '',
-        ogTitle: formData.seo.metaTitle || formData.name,
-        ogDescription: formData.seo.metaDescription || formData.description,
-        ogImage: formData.images?.[0] ? URL.createObjectURL(formData.images[0]) : null,
-        canonicalUrl: `${window.location.origin}/products/${formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-')}`,
-        structuredData: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "Product",
-          "name": formData.name,
-          "description": formData.description,
-          "image": formData.images?.[0] ? URL.createObjectURL(formData.images[0]) : null,
-          "offers": {
-            "@type": "Offer",
-            "price": variationsWithAttributes[0]?.price || 0,
-            "priceCurrency": "USD",
-            "availability": variationsWithAttributes[0]?.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
-          }
-        })
-      };
-
-      formDataToSend.append('seo', JSON.stringify(seoData));
-
-      // Log the complete FormData for debugging
-      console.log('FormData being sent:', {
-        name: formData.name,
-        description: formData.description,
-        categoryId: formData.categoryId,
-        status: formData.status,
-        variations: variationsWithAttributes,
-        seo: seoData,
-        imagesCount: formData.images?.length || 0
-      });
-
-      // Log each FormData entry for verification
-      for (let pair of formDataToSend.entries()) {
-        console.log(pair[0] + ': ' + pair[1]);
-      }
-
-      if (formData.id) {
-        await productService.updateProduct(formData.id, formDataToSend);
-      } else {
-        await productService.createProduct(formDataToSend);
-      }
-      await fetchProducts();
-      setIsModalOpen(false);
-      setCurrentStep(1);
-      setFormData({
-        name: "",
-        description: "",
-        categoryId: "",
-        status: "active",
-        price: "",
-        stock: "",
-        images: [],
-        variations: [{
-          price: "",
-          comparePrice: "",
-          stock: "",
-          sku: "",
-          attributes: {
-            size: "",
-            color: "",
-            material: ""
-          },
-          weight: "",
-          weightUnit: "g",
-          dimensions: {
-            length: "",
-            width: "",
-            height: ""
-          },
-          dimensionUnit: "cm"
-        }],
-        seo: {
-          metaTitle: "",
-          metaDescription: "",
-          metaKeywords: ""
+        // Log the complete FormData for debugging
+        for (let pair of formDataToSend.entries()) {
+            console.log(pair[0] + ': ' + pair[1]);
         }
-      });
+
+        if (formData.id) {
+            await productService.updateProduct(formData.id, formDataToSend);
+        } else {
+            await productService.createProduct(formDataToSend);
+        }
+
+        setIsModalOpen(false);
+        fetchProducts();
     } catch (err) {
-      console.error('Submit Error:', err);
-      setError(err.message || "Failed to save product");
+        setError(err.response?.data?.message || "Error saving product");
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   };
 
