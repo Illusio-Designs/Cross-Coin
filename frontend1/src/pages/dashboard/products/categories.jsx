@@ -290,13 +290,6 @@ export default function Categories() {
         <div className="seo-header-container">
           <h1 className="seo-title">Categories Management</h1>
           <div className="adding-button">
-            <Button
-              variant="primary"
-              onClick={handleAddNew}
-              className="add-new-btn"
-            >
-              Add New Category
-            </Button>
             <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
               <div className="modern-searchbar-group">
                 <span className="modern-searchbar-icon">
@@ -313,6 +306,13 @@ export default function Categories() {
                 />
               </div>
             </form>
+            <Button
+              variant="primary"
+              onClick={handleAddNew}
+              className="add-new-btn"
+            >
+              Add New Category
+            </Button>
           </div>
         </div>
         
