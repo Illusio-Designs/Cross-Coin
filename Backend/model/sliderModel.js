@@ -24,10 +24,6 @@ export const Slider = sequelize.define('Slider', {
         type: DataTypes.STRING,
         allowNull: false
     },
-    link: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
     categoryId: {
         type: DataTypes.INTEGER,
         allowNull: true,
@@ -36,29 +32,14 @@ export const Slider = sequelize.define('Slider', {
             key: 'id'
         }
     },
-    position: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0
-    },
     status: {
         type: DataTypes.ENUM('active', 'inactive'),
         defaultValue: 'active'
-    },
-    startDate: {
-        type: DataTypes.DATE,
-        allowNull: true
-    },
-    endDate: {
-        type: DataTypes.DATE,
-        allowNull: true
     }
 }, {
     timestamps: true,
     tableName: 'sliders',
     indexes: [
-        {
-            fields: ['position']
-        },
         {
             fields: ['status']
         }

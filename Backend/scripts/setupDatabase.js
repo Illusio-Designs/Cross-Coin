@@ -112,16 +112,12 @@ export const setupDatabase = async () => {
         const dependentTableNames = [
             'Review', 'ReviewImage', 'ProductImage', 'ProductSEO', 
             'Order', 'OrderItem', 'OrderStatusHistory',
-            'Payment', 'ShippingAddress', 'Cart', 'CartItem', 'Wishlist', 'Slider'
+            'Payment', 'ShippingAddress', 'Cart', 'CartItem', 'Wishlist'
         ];
         
         for (const modelName of dependentTableNames) {
             if (models[modelName]) {
                 console.log(`Syncing ${modelName} table structure (alter:true)...`);
-                // The foreign key definitions within the model attributes should be handled by alter:true.
-                // If ER_CANT_CREATE_TABLE (errno: 150) persists for specific tables,
-                // it implies an issue with the referenced table/column not existing or a mismatch
-                // that `alter:true` cannot resolve automatically for the FK part.
                 await models[modelName].sync({ 
                     alter: true, 
                     hooks: false,
@@ -129,6 +125,29 @@ export const setupDatabase = async () => {
             } else {
                 console.warn(`Model ${modelName} not found for syncing in dependent tables.`);
             }
+        }
+
+        // Step 1f: Sync Slider table separately to handle field removals
+        console.log('Step 1f: Syncing Slider table with field removals...');
+        if (models['Slider']) {
+            console.log('Syncing Slider table (alter:true)...');
+            // First, remove the columns if they exist
+            await sequelize.query(`
+                ALTER TABLE sliders 
+                DROP COLUMN IF EXISTS position,
+                DROP COLUMN IF EXISTS buttonLink,
+                DROP COLUMN IF EXISTS link,
+                DROP COLUMN IF EXISTS startDate,
+                DROP COLUMN IF EXISTS endDate
+            `).catch(err => console.warn('Warning: Could not remove columns from sliders table:', err.message));
+            
+            // Then sync the table structure
+            await models['Slider'].sync({ 
+                alter: true, 
+                hooks: false,
+            });
+        } else {
+            console.warn('Slider model not found for syncing.');
         }
         
         // Step 2: Apply associations explicitly defined in associations.js

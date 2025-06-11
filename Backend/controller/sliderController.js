@@ -39,10 +39,9 @@ const formatSliderResponse = (slider) => {
 };
 
 // Create Slider
-// In createSlider function
 export const createSlider = async (req, res) => {
     try {
-        const { title, description, link, order } = req.body;
+        const { title, description } = req.body;
 
         if (!req.file) {
             return res.status(400).json({ message: 'Image is required' });
@@ -71,9 +70,7 @@ export const createSlider = async (req, res) => {
         const slider = await Slider.create({
             title,
             description,
-            image,
-            link,
-            order: order || 0
+            image
         });
 
         res.status(201).json({ 
@@ -92,7 +89,6 @@ export const createSlider = async (req, res) => {
 };
 
 // Get All Sliders
-// In sliderController.js, modify the getAllSliders function:
 export const getAllSliders = async (req, res) => {
     try {
         const sliders = await Slider.findAll({
@@ -100,8 +96,7 @@ export const getAllSliders = async (req, res) => {
                 model: Category,
                 as: 'category',
                 attributes: ['id', 'name']
-            }],
-            order: [['position', 'ASC']]
+            }]
         });
 
         const slidersResponse = sliders.map(formatSliderResponse);
@@ -142,7 +137,7 @@ export const getSliderById = async (req, res) => {
 export const updateSlider = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, description, buttonText, buttonType, buttonStyle, categoryId, status, position } = req.body;
+        const { title, description, buttonText, categoryId, status } = req.body;
 
         const slider = await Slider.findByPk(id);
         if (!slider) {
@@ -193,11 +188,8 @@ export const updateSlider = async (req, res) => {
             title,
             description,
             buttonText,
-            buttonType,
-            buttonStyle,
             categoryId: categoryIdToUse,
             status,
-            position,
             image
         });
 
