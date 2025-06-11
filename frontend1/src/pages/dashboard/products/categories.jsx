@@ -401,20 +401,15 @@ export default function Categories() {
                 type="file"
                 accept="image/*"
                 className="input-field"
-                onChange={e => {
-                  const file = e.target.files[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onload = ev => {
-                      setFormData(prev => ({ ...prev, image: ev.target.result }));
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                }}
+                onChange={handleInputChange}
+                name="image"
+                required={!formData.id}
               />
               {formData.image && (
                 <img 
-                  src={typeof formData.image === 'string' ? formData.image : URL.createObjectURL(formData.image)} 
+                  src={typeof formData.image === 'string' 
+                    ? `${process.env.NEXT_PUBLIC_API_URL}${formData.image}` 
+                    : URL.createObjectURL(formData.image)} 
                   alt="Category Preview" 
                   className="seo-image-preview" 
                 />
