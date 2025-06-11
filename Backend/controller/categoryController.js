@@ -7,7 +7,7 @@ import fs from 'fs/promises';
 import fsSync from 'fs';
 import { Op } from 'sequelize';
 import ImageHandler from '../utils/imageHandler.js';
-import upload from '../middleware/uploadMiddleware.js';
+import { categoryUpload } from '../middleware/uploadMiddleware.js';
 import slugify from 'slugify';
 
 // Get directory name for ES modules
@@ -202,7 +202,7 @@ const deleteCategory = async (req, res) => {
 };
 
 // Get Category by ID
-const getCategory = async (req, res) => {
+const getCategoryById = async (req, res) => {
     try {
         const { id } = req.params;
         
@@ -398,10 +398,10 @@ const getPublicCategoryById = async (req, res) => {
 export {
     createCategory,
     getAllCategories,
-    getCategory,
+    getCategoryById,
     updateCategory,
     deleteCategory,
     getPublicCategories,
     getPublicCategoryById,
-    upload
+    categoryUpload
 };

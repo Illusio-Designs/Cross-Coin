@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import ImageHandler from '../utils/imageHandler.js';
-import upload from '../middleware/uploadMiddleware.js';
+import { productUpload } from '../middleware/uploadMiddleware.js';
 import slugify from 'slugify';
 import { sequelize } from '../config/db.js';
 import { Op } from 'sequelize';

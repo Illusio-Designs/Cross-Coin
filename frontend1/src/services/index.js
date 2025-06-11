@@ -365,7 +365,7 @@ export const userService = {
 export const categoryService = {
     getAllCategories: async () => {
         try {
-            const response = await api.get('/api/categories/admin');
+            const response = await api.get('/api/categories');
             return response.data;
         } catch (error) {
             throw error.response?.data || error.message;
@@ -374,7 +374,7 @@ export const categoryService = {
 
     getCategoryById: async (id) => {
         try {
-            const response = await api.get(`/api/categories/admin/${id}`);
+            const response = await api.get(`/api/categories/${id}`);
             return response.data;
         } catch (error) {
             throw error.response?.data || error.message;
@@ -384,7 +384,7 @@ export const categoryService = {
     createCategory: async (formData) => {
         try {
             console.log('Creating category with data:', Object.fromEntries(formData.entries()));
-            const response = await api.post('/api/categories/admin', formData);
+            const response = await api.post('/api/categories', formData);
             return response.data;
         } catch (error) {
             console.error('Create category error:', error);
@@ -395,7 +395,7 @@ export const categoryService = {
     updateCategory: async (id, formData) => {
         try {
             console.log('Updating category with data:', Object.fromEntries(formData.entries()));
-            const response = await api.put(`/api/categories/admin/${id}`, formData);
+            const response = await api.put(`/api/categories/${id}`, formData);
             return response.data;
         } catch (error) {
             console.error('Update category error:', error);
@@ -405,7 +405,7 @@ export const categoryService = {
 
     deleteCategory: async (id) => {
         try {
-            const response = await api.delete(`/api/categories/admin/${id}`);
+            const response = await api.delete(`/api/categories/${id}`);
             return response.data;
         } catch (error) {
             throw error.response?.data || error.message;
@@ -466,6 +466,7 @@ export const sliderService = {
 export const productService = {
     createProduct: async (productData) => {
         try {
+            console.log('Creating product with data:', Object.fromEntries(productData.entries()));
             const response = await api.post('/api/products', productData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
@@ -473,6 +474,7 @@ export const productService = {
             });
             return response.data;
         } catch (error) {
+            console.error('Create product error:', error);
             throw error.response?.data || error.message;
         }
     },
@@ -497,6 +499,7 @@ export const productService = {
 
     updateProduct: async (id, productData) => {
         try {
+            console.log('Updating product with data:', Object.fromEntries(productData.entries()));
             const response = await api.put(`/api/products/${id}`, productData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
@@ -504,6 +507,7 @@ export const productService = {
             });
             return response.data;
         } catch (error) {
+            console.error('Update product error:', error);
             throw error.response?.data || error.message;
         }
     },

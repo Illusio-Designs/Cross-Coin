@@ -11,7 +11,8 @@ const InputField = ({
   required = false,
   accept,
   className = "",
-  options = []
+  options = [],
+  name
 }) => {
   const [preview, setPreview] = useState(null);
 
@@ -41,6 +42,7 @@ const InputField = ({
               accept={accept}
               required={required}
               className="file-input"
+              name={name}
             />
             <div className="file-input-placeholder">
               {value ? value.name : placeholder || "Choose a file"}
@@ -66,6 +68,7 @@ const InputField = ({
           onChange={onChange}
           required={required}
           className="select-input"
+          name={name}
         >
           {options?.map((option) => (
             <option key={option.value} value={option.value}>
@@ -88,6 +91,7 @@ const InputField = ({
           required={required}
           className="textarea-input"
           rows={4}
+          name={name}
         />
       </div>
     );
@@ -103,6 +107,7 @@ const InputField = ({
         placeholder={placeholder}
         required={required}
         className="text-input"
+        name={name}
       />
     </div>
   );

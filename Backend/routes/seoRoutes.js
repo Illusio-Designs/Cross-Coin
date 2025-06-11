@@ -6,7 +6,7 @@ import {
     createSEOData
 } from '../controller/seoController.js';
 import { isAuthenticated, authorize } from '../middleware/authMiddleware.js';
-import upload from '../middleware/uploadMiddleware.js';
+import { upload } from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
