@@ -32,8 +32,9 @@ export const upload = multer({ storage });
 const formatSliderResponse = (slider) => {
     const sliderData = slider.toJSON();
     sliderData.categoryName = slider.category ? slider.category.name : null;
-    // Generate buttonLink dynamically
-    sliderData.buttonLink = slider.categoryId ? `/category/${slider.categoryId}` : null;
+    // Add full image path
+    sliderData.image = `/uploads/slider/${sliderData.image}`;
+    console.log('Formatted slider image path:', sliderData.image);
     delete sliderData.category;
     return sliderData;
 };
@@ -65,7 +66,8 @@ export const createSlider = async (req, res) => {
             });
         }
 
-        const image = `/uploads/slider/${result.filename}`;
+        const image = result.filename; // Store only filename
+        console.log('Created slider image filename:', image);
 
         const slider = await Slider.create({
             title,
@@ -100,6 +102,7 @@ export const getAllSliders = async (req, res) => {
         });
 
         const slidersResponse = sliders.map(formatSliderResponse);
+        console.log('All sliders image paths:', slidersResponse.map(s => s.image));
 
         res.status(200).json({ sliders: slidersResponse });
     } catch (error) {
@@ -161,7 +164,7 @@ export const updateSlider = async (req, res) => {
         let image = slider.image;
         if (req.file) {
             try {
-                image = await imageHandler.handleImageUpdate(
+                const result = await imageHandler.handleImageUpdate(
                     slider.image,
                     req.file.path,
                     {
@@ -173,6 +176,7 @@ export const updateSlider = async (req, res) => {
                         type: 'slider'
                     }
                 );
+                image = result.filename; // Store only filename
             } catch (error) {
                 console.error('Error handling image update:', error);
                 return res.status(500).json({ 

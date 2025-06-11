@@ -21,6 +21,9 @@ const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/categorie
 const formatCategoryResponse = (category) => {
     const categoryData = category.toJSON();
     categoryData.parentName = category.parent ? category.parent.name : null;
+    // Add full image path
+    categoryData.image = `/uploads/categories/${categoryData.image}`;
+    console.log('Formatted category image path:', categoryData.image);
     delete categoryData.parent;
     return categoryData;
 };
@@ -82,14 +85,15 @@ const createCategory = async (req, res) => {
                     height: 600,
                     quality: 80,
                     format: 'webp',
-                    filename: `category-${uuidv4()}`
+                    filename: `category-${Date.now()}`
                 });
 
                 if (!result.success) {
                     throw new Error(result.error);
                 }
 
-                image = result.filename;
+                image = result.filename; // Store only filename
+                console.log('Created category image filename:', image);
             } catch (imageError) {
                 console.error('Error processing image:', imageError);
                 return res.status(500).json({ 
@@ -150,22 +154,15 @@ const getAllCategories = async (req, res) => {
         });
 
         // Format the response
-        const formattedCategories = categories.map(category => ({
-            id: category.id,
-            name: category.name,
-            description: category.description,
-            status: category.status,
-            parentId: category.parentId,
-            parentName: category.parent ? category.parent.name : null,
-            image: category.image,
-            metaTitle: category.metaTitle,
-            metaDescription: category.metaDescription,
-            metaKeywords: category.metaKeywords,
-            slug: category.slug,
-            createdAt: category.createdAt,
-            updatedAt: category.updatedAt
-        }));
+        const formattedCategories = categories.map(category => {
+            const categoryData = category.toJSON();
+            categoryData.parentName = category.parent ? category.parent.name : null;
+            categoryData.image = `/uploads/categories/${categoryData.image}`;
+            delete categoryData.parent;
+            return categoryData;
+        });
 
+        console.log('All categories image paths:', formattedCategories.map(c => c.image));
         res.status(200).json(formattedCategories);
     } catch (error) {
         console.error('Get all categories error:', error);
@@ -245,11 +242,20 @@ const updateCategory = async (req, res) => {
         // Handle image update
         if (req.file) {
             try {
-                updateData.image = await imageHandler.handleCategoryImage(
-                    category.image,
-                    req.file.path,
-                    category.id
-                );
+                const result = await imageHandler.processImage(req.file.path, {
+                    width: 800,
+                    height: 600,
+                    quality: 80,
+                    format: 'webp',
+                    filename: `category-${Date.now()}`
+                });
+
+                if (!result.success) {
+                    throw new Error(result.error);
+                }
+
+                updateData.image = result.filename; // Store only filename
+                console.log('Updated category image filename:', updateData.image);
             } catch (error) {
                 console.error('Error handling category image update:', error);
                 return res.status(500).json({ 

@@ -67,38 +67,37 @@ export default function Slider() {
   };
 
   // Fetch sliders data
-  const fetchSliders = async () => {
+  const fetchSliders = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-      console.log('=== Fetching Sliders ===');
       const response = await sliderService.getAllSliders();
-      console.log('=== API Response ===');
-      console.log('Response:', response);
+      console.log('API Response:', response);
       
       if (Array.isArray(response)) {
-        console.log('Setting sliders state with response array:', response);
         setSliders(response);
-      } else if (response && response.sliders && Array.isArray(response.sliders)) {
-        console.log('Setting sliders state with response.sliders:', response.sliders);
+        console.log('Sliders data:', response);
+        console.log('Image URLs:', response.map(slider => `${process.env.NEXT_PUBLIC_API_URL}${slider.image}`));
+      } else if (response.sliders && Array.isArray(response.sliders)) {
         setSliders(response.sliders);
+        console.log('Sliders data:', response.sliders);
+        console.log('Image URLs:', response.sliders.map(slider => `${process.env.NEXT_PUBLIC_API_URL}${slider.image}`));
       } else {
-        console.log('No valid sliders data found, setting empty array');
+        console.warn('Unexpected response format:', response);
         setSliders([]);
       }
     } catch (err) {
-      console.error('=== Error fetching sliders ===');
-      console.error('Error details:', err);
+      console.error('Error fetching sliders:', err);
       setError(err.message || "Failed to fetch sliders");
-      setSliders([]);
+      toast.error(err.message || "Failed to fetch sliders");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchSliders();
-  }, []);
+  }, [fetchSliders]);
 
   // Enhanced filter function
   const filteredData = sliders.filter(item => {
@@ -140,7 +139,7 @@ export default function Slider() {
       accessor: "image",
       cell: ({ image }) => (
         <img 
-          src={`${process.env.NEXT_PUBLIC_IMAGE_URL}${image}`} 
+          src={`${process.env.NEXT_PUBLIC_API_URL}${image}`} 
           alt="Slider" 
           className="slider-table-image" 
           style={{ width: '100px', height: '60px', objectFit: 'cover' }}
@@ -194,6 +193,7 @@ export default function Slider() {
       setLoading(true);
       const response = await sliderService.getSliderById(id);
       const data = response.slider || response; // Handle both response formats
+      console.log('Edit slider data:', data);
       setFormData({
         id: data.id,
         title: data.title || "",
@@ -368,7 +368,23 @@ export default function Slider() {
                     className="w-full"
                     striped={true}
                     hoverable={true}
-                  />
+                  >
+                    {currentItems.map((slider) => {
+                      const imageUrl = `${process.env.NEXT_PUBLIC_API_URL}${slider.image}`;
+                      console.log('Rendering slider image URL:', imageUrl);
+                      return (
+                        <tr key={slider.id}>
+                          <td>
+                            <img 
+                              src={imageUrl}
+                              alt={slider.title} 
+                              className="seo-image-preview" 
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </Table>
                   {filteredData.length > itemsPerPage && (
                     <div className="seo-pagination-container">
                       <Pagination
@@ -394,66 +410,55 @@ export default function Slider() {
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <div className="input-field">
-              <label className="input-field-label">Title</label>
-              <input
-                type="text"
-                name="title"
-                value={formData.title}
-                onChange={handleInputChange}
-                className="input-field"
-                required
-              />
-            </div>
-            <div className="input-field">
-              <label className="input-field-label">Description</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                className="input-field"
-                required
-              />
-            </div>
-            <div className="input-field">
-              <label className="input-field-label">Category</label>
-              <select
-                name="categoryId"
-                value={formData.categoryId}
-                onChange={handleInputChange}
-                className="input-field"
-              >
-                <option value="">Select Category</option>
-                {categories.map(category => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="input-field">
-              <label className="input-field-label">Status</label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleInputChange}
-                className="input-field"
-                required
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-            <div className="input-field">
-              <label className="input-field-label">Button Text</label>
-              <input
-                type="text"
-                name="buttonText"
-                value={formData.buttonText}
-                onChange={handleInputChange}
-                className="input-field"
-              />
-            </div>
+            <InputField
+              label="Title"
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleInputChange}
+              required
+            />
+            <InputField
+              label="Description"
+              type="textarea"
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              required
+            />
+            <InputField
+              label="Category"
+              type="select"
+              name="categoryId"
+              value={formData.categoryId}
+              onChange={handleInputChange}
+              options={[
+                { value: "", label: "Select Category" },
+                ...categories.map(category => ({
+                  value: category.id,
+                  label: category.name
+                }))
+              ]}
+            />
+            <InputField
+              label="Status"
+              type="select"
+              name="status"
+              value={formData.status}
+              onChange={handleInputChange}
+              required
+              options={[
+                { value: "active", label: "Active" },
+                { value: "inactive", label: "Inactive" }
+              ]}
+            />
+            <InputField
+              label="Button Text"
+              type="text"
+              name="buttonText"
+              value={formData.buttonText}
+              onChange={handleInputChange}
+            />
             <div className="input-field">
               <label className="input-field-label">Slider Image</label>
               <input
@@ -467,7 +472,7 @@ export default function Slider() {
               {formData.image && (
                 <img 
                   src={typeof formData.image === 'string' 
-                    ? `${process.env.NEXT_PUBLIC_IMAGE_URL}${formData.image}` 
+                    ? `${process.env.NEXT_PUBLIC_API_URL}${formData.image}` 
                     : URL.createObjectURL(formData.image)} 
                   alt="Slider Preview" 
                   className="seo-image-preview" 
