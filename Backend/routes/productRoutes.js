@@ -14,7 +14,7 @@ import {
     getAllPublicProducts
 } from '../controller/productController.js';
 import { isAuthenticated, authorize } from '../middleware/authMiddleware.js';
-import upload from '../middleware/uploadMiddleware.js';
+import { productUpload } from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
@@ -29,8 +29,9 @@ router.get('/category/:categoryId', getProductsByCategory);
 router.get('/:id', getProduct);
 
 // Admin routes
-router.post('/', isAuthenticated, authorize(['admin']), upload.array('images', 5), createProduct);
-router.put('/:id', isAuthenticated, authorize(['admin']), upload.array('images', 5), updateProduct);
+router.get('/', isAuthenticated, authorize(['admin']), getAllProducts);
+router.post('/', isAuthenticated, authorize(['admin']), productUpload.array('images', 5), createProduct);
+router.put('/:id', isAuthenticated, authorize(['admin']), productUpload.array('images', 5), updateProduct);
 router.delete('/:id', isAuthenticated, authorize(['admin']), deleteProduct);
 
 export default router; 

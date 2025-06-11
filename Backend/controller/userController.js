@@ -7,7 +7,7 @@ import fs from 'fs';
 import { User } from '../model/userModel.js';
 import nodemailer from 'nodemailer';
 import ImageHandler from '../utils/imageHandler.js';
-import upload from '../middleware/uploadMiddleware.js';
+import { upload } from '../middleware/uploadMiddleware.js';
 import dotenv from 'dotenv';
 
 dotenv.config();

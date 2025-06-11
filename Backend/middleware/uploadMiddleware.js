@@ -67,8 +67,27 @@ const upload = multer({
     fileFilter: fileFilter,
     limits: {
         fileSize: 5 * 1024 * 1024, // 5MB limit
-        files: 1 // Maximum 1 file per upload
+        files: 5 // Maximum 5 files per upload for products
     }
 });
 
-export default upload; 
+// Create specific upload instances for different routes
+const productUpload = multer({
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit
+        files: 5 // Maximum 5 files for products
+    }
+});
+
+const categoryUpload = multer({
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024,
+        files: 1 // Single file for categories
+    }
+});
+
+export { upload, productUpload, categoryUpload }; 

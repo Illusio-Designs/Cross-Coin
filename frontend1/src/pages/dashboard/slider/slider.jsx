@@ -498,7 +498,7 @@ export default function Slider() {
             >
               {loading ? "Saving..." : "Save"}
             </Button>
-          </div>
+    </div>
         </form>
       </Modal>
     </>
