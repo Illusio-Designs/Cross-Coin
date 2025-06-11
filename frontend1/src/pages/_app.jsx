@@ -1,4 +1,5 @@
 import { CartProvider } from '../context/CartContext';
+import { WishlistProvider } from '../context/WishlistContext';
 import '../styles/globals.css';
 import { SessionProvider } from "next-auth/react";
 import '../styles/components/Footer.css';
@@ -12,6 +13,7 @@ import '../styles/pages/Shipping.css';
 import '../styles/pages/Checkout.css';
 import '../styles/pages/CheckoutUPI.css';
 import '../styles/pages/ThankYou.css';
+import '../styles/pages/Wishlist.css';
 import '../styles/pages/Login.css';
 import '../styles/pages/TC.css';
 import '../styles/dashboard/layout.css';
@@ -33,9 +35,11 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
 
   return (
     <CartProvider>
-      <SessionProvider session={session}>
-        <Component {...pageProps} />
-      </SessionProvider>
+      <WishlistProvider>
+        <SessionProvider session={session}>
+          <Component {...pageProps} />
+        </SessionProvider>
+      </WishlistProvider>
     </CartProvider>
   );
 }

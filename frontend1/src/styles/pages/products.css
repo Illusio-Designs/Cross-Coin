@@ -11,7 +11,7 @@
 
 .products-header h1 {
   font-size: 2.5rem;
-  color: #2c3e50;
+  color: #180D3E;
 }
 
 .products-controls {
@@ -411,4 +411,44 @@
 .material-btn.active {
   background-color: #2c3e50;
   color: white;
+}
+
+.wishlist-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: white;
+  border: none;
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 2;
+}
+
+.wishlist-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: #666;
+  transition: all 0.3s ease;
+}
+
+.wishlist-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+.wishlist-btn:hover svg {
+  fill: #CE1E36;
+  stroke: #CE1E36;
+}
+
+.wishlist-btn.active svg {
+  fill: #CE1E36;
+  stroke: #CE1E36;
 }
