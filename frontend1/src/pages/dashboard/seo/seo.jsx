@@ -291,14 +291,6 @@ export default function SEO() {
                 />
               </div>
             </form>
-            <Button
-              variant="primary"
-              size="medium"
-              onClick={handleAddNew}
-              disabled={loading}
-            >
-              Add New SEO
-            </Button>
           </div>
         </div>
         
