@@ -22,7 +22,8 @@ export const products = [
     colors: ["brown", "navy", "black"],
     sizes: ["S", "M", "L", "XL"],
     material: "Wool",
-    gender: "Unisex"
+    gender: "Unisex",
+    badge: "New Arrival"
   },
   {
     id: 2,
@@ -38,7 +39,8 @@ export const products = [
     colors: ["white", "gray", "black"],
     sizes: ["S", "M", "L", "XL"],
     material: "Cotton",
-    gender: "Unisex"
+    gender: "Unisex",
+    badge: "New Arrival"
   },
   {
     id: 3,
@@ -54,7 +56,8 @@ export const products = [
     colors: ["black", "navy", "burgundy"],
     sizes: ["S", "M", "L", "XL"],
     material: "Silk",
-    gender: "Unisex"
+    gender: "Unisex",
+    badge: "Best Seller"
   },
   {
     id: 4,
@@ -102,7 +105,8 @@ export const products = [
     colors: ["black", "white", "red"],
     sizes: ["S", "M", "L", "XL"],
     material: "Net",
-    gender: "Unisex"
+    gender: "Unisex",
+    badge: "New Arrival"
   },
   {
     id: 7,
@@ -132,7 +136,8 @@ export const products = [
     category: "Summer Special",
     image: card3,
     rating: 4.3,
-    reviews: 87
+    reviews: 87,
+    badge: "Best Seller"
   },
   {
     id: 10,
@@ -172,7 +177,8 @@ export const products = [
     category: "Summer Special",
     image: card1,
     rating: 4.3,
-    reviews: 87
+    reviews: 87,
+    badge: "New Arrival"
   },
   {
     id: 14,
@@ -182,7 +188,8 @@ export const products = [
     category: "Net Shocks",
     image: card2,
     rating: 4.4,
-    reviews: 73
+    reviews: 73,
+    badge: "New Arrival"
   },
   {
     id: 15,
@@ -234,6 +241,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
       style={{ cursor: 'pointer' }}
     >
       <div className="product-image">
+        {product.badge && <span className="product-badge">{product.badge}</span>}
         <Image 
           src={product.image} 
           alt={product.name} 
