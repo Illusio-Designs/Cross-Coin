@@ -24,12 +24,22 @@ if (!fs.existsSync(seoUploadsDir)) {
 
 // Helper function to generate slug and canonical URL
 const generateSlugAndCanonical = (pageName) => {
-    const slug = slugify(pageName.toString(), {
-        lower: true,
-        strict: true,
-        trim: true
-    });
-    const canonicalUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/${slug}`;
+    // First, replace spaces with hyphens and convert to lowercase
+    let slug = pageName.toString()
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')  // Replace spaces with hyphens
+        .replace(/[^a-z0-9-]/g, '') // Remove special characters
+        .replace(/-+/g, '-'); // Replace multiple hyphens with single hyphen
+
+    // Ensure the slug starts with a forward slash
+    if (!slug.startsWith('/')) {
+        slug = '/' + slug;
+    }
+
+    // Generate canonical URL
+    const canonicalUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}${slug}`;
+    
     return { slug, canonicalUrl };
 };
 
@@ -262,45 +272,103 @@ export const updateSEOData = async (req, res) => {
 // Create new SEO entry for a page
 export const createSEOData = async (req, res) => {
     try {
+        console.log('Received create request body:', req.body);
+        console.log('Received create request file:', req.file);
+
         const { 
             page_name, 
             meta_title, 
             meta_description, 
-            meta_keywords, 
-            meta_image 
+            meta_keywords
         } = req.body;
 
         if (!page_name) {
-            return res.status(400).json({ message: 'Page name is required' });
+            console.log('Page name missing in request');
+            return res.status(400).json({ 
+                success: false,
+                message: 'Page name is required' 
+            });
+        }
+
+        // Check if page already exists
+        const existingPage = await SeoMetadata.findOne({
+            where: { page_name: page_name.toLowerCase().trim() }
+        });
+
+        if (existingPage) {
+            console.log('Page already exists:', page_name);
+            return res.status(400).json({
+                success: false,
+                message: 'Page already exists'
+            });
         }
 
         // Generate slug and canonical URL
         const { slug, canonicalUrl } = generateSlugAndCanonical(page_name);
 
-        const [seoData, created] = await SeoMetadata.findOrCreate({
-            where: { page_name },
-            defaults: {
-                slug,
-                canonical_url: canonicalUrl,
-                meta_title,
-                meta_description,
-                meta_keywords,
-                meta_image
-            }
+        // Create new SEO data
+        const seoData = await SeoMetadata.create({
+            page_name: page_name.toLowerCase().trim(),
+            meta_title: meta_title || `${page_name} - Your Trusted Shopping Partner`,
+            meta_description: meta_description || `Learn about ${page_name} and our commitment to providing the best shopping experience.`,
+            meta_keywords: meta_keywords || `${page_name}, shopping, online store`,
+            slug,
+            canonical_url: canonicalUrl,
+            meta_image: req.file ? `/uploads/seo/${req.file.filename}` : null
         });
 
-        if (!created) {
-            return res.status(400).json({ message: 'SEO data for this page already exists' });
-        }
+        console.log('Created SEO data:', seoData.toJSON());
 
-        res.status(201).json({ 
-            success: true, 
-            message: 'SEO data created successfully', 
-            data: seoData 
+        res.status(201).json({
+            success: true,
+            message: 'SEO data created successfully',
+            data: seoData
         });
     } catch (error) {
         console.error('Error creating SEO data:', error);
-        res.status(500).json({ message: 'Failed to create SEO data', error: error.message });
+        res.status(500).json({
+            success: false,
+            message: 'Error creating SEO data',
+            error: error.message
+        });
+    }
+};
+
+export const deleteSEOData = async (req, res) => {
+    try {
+        const { pageName } = req.params;
+        
+        if (!pageName) {
+            return res.status(400).json({
+                success: false,
+                message: 'Page name is required'
+            });
+        }
+
+        const deleted = await SeoMetadata.destroy({
+            where: {
+                page_name: pageName.toLowerCase().trim()
+            }
+        });
+        
+        if (!deleted) {
+            return res.status(404).json({
+                success: false,
+                message: 'SEO data not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'SEO data deleted successfully'
+        });
+    } catch (error) {
+        console.error('Error in deleteSEOData:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error deleting SEO data',
+            error: error.message
+        });
     }
 };
 
