@@ -265,4 +265,29 @@ export const removeAttributeValues = async (req, res) => {
         console.error('Error removing attribute values:', error);
         res.status(500).json({ message: 'Failed to remove attribute values', error: error.message });
     }
+};
+
+// Get attribute by ID
+export const getAttributeById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const attribute = await Attribute.findByPk(id, {
+            include: [{
+                model: AttributeValue,
+                where: { status: 'active' },
+                required: false
+            }],
+            where: { status: 'active' }
+        });
+
+        if (!attribute) {
+            return res.status(404).json({ message: 'Attribute not found' });
+        }
+
+        res.json(attribute);
+    } catch (error) {
+        console.error('Error fetching attribute:', error);
+        res.status(500).json({ message: 'Failed to fetch attribute', error: error.message });
+    }
 }; 

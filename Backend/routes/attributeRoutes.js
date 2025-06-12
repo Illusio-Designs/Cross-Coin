@@ -5,7 +5,8 @@ import {
     updateAttribute,
     deleteAttribute,
     addAttributeValues,
-    removeAttributeValues
+    removeAttributeValues,
+    getAttributeById
 } from '../controller/attributeController.js';
 import { isAuthenticated, authorize } from '../middleware/authMiddleware.js';
 
@@ -13,6 +14,9 @@ const router = express.Router();
 
 // Get all attributes
 router.get('/', getAllAttributes);
+
+// Get attribute by ID
+router.get('/:id', getAttributeById);
 
 // Create a new attribute
 router.post('/', isAuthenticated, createAttribute);
