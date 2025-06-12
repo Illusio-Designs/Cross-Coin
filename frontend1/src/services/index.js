@@ -775,8 +775,14 @@ export const attributeService = {
     getAttributeById: async (id) => {
         try {
             const response = await api.get(`/api/attributes/${id}`);
+            if (!response.data) {
+                throw new Error('Attribute not found');
+            }
             return response.data;
         } catch (error) {
+            if (error.response?.status === 404) {
+                throw new Error('Attribute not found');
+            }
             throw error.response?.data || error.message;
         }
     },
@@ -784,7 +790,10 @@ export const attributeService = {
     createAttribute: async (attributeData) => {
         try {
             const response = await api.post('/api/attributes', attributeData);
-            return response.data;
+            if (!response.data?.attribute) {
+                throw new Error('Invalid response from server');
+            }
+            return response.data.attribute;
         } catch (error) {
             throw error.response?.data || error.message;
         }
@@ -793,8 +802,14 @@ export const attributeService = {
     updateAttribute: async (id, attributeData) => {
         try {
             const response = await api.put(`/api/attributes/${id}`, attributeData);
-            return response.data;
+            if (!response.data?.attribute) {
+                throw new Error('Invalid response from server');
+            }
+            return response.data.attribute;
         } catch (error) {
+            if (error.response?.status === 404) {
+                throw new Error('Attribute not found');
+            }
             throw error.response?.data || error.message;
         }
     },
@@ -804,6 +819,9 @@ export const attributeService = {
             const response = await api.delete(`/api/attributes/${id}`);
             return response.data;
         } catch (error) {
+            if (error.response?.status === 404) {
+                throw new Error('Attribute not found');
+            }
             throw error.response?.data || error.message;
         }
     },
@@ -811,8 +829,14 @@ export const attributeService = {
     addAttributeValues: async (id, values) => {
         try {
             const response = await api.post(`/api/attributes/${id}/values`, { values });
-            return response.data;
+            if (!response.data?.attribute) {
+                throw new Error('Invalid response from server');
+            }
+            return response.data.attribute;
         } catch (error) {
+            if (error.response?.status === 404) {
+                throw new Error('Attribute not found');
+            }
             throw error.response?.data || error.message;
         }
     },
@@ -820,8 +844,14 @@ export const attributeService = {
     removeAttributeValues: async (id, valueIds) => {
         try {
             const response = await api.delete(`/api/attributes/${id}/values`, { data: { valueIds } });
-            return response.data;
+            if (!response.data?.attribute) {
+                throw new Error('Invalid response from server');
+            }
+            return response.data.attribute;
         } catch (error) {
+            if (error.response?.status === 404) {
+                throw new Error('Attribute not found');
+            }
             throw error.response?.data || error.message;
         }
     }
