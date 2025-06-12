@@ -704,26 +704,42 @@ export const seoService = {
 
     createSEOData: async (formData) => {
         try {
-            const response = await api.post('/api/seo/create', formData);
+            // Create a new FormData instance to ensure proper data handling
+            const data = new FormData();
+            
+            // Add all form fields
+            data.append('page_name', formData.get('page_name'));
+            data.append('meta_title', formData.get('meta_title'));
+            data.append('meta_description', formData.get('meta_description'));
+            data.append('meta_keywords', formData.get('meta_keywords'));
+            
+            // Handle image if it exists
+            const image = formData.get('meta_image');
+            if (image && image instanceof File) {
+                data.append('meta_image', image);
+            } else if (image) {
+                data.append('meta_image', image);
+            }
+
+            console.log('Creating SEO data:', Object.fromEntries(data.entries()));
+            
+            const response = await api.post('/api/seo/create', data, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
             return response.data;
         } catch (error) {
+            console.error('Error in createSEOData:', error);
             throw handleApiError(error);
         }
     },
 
-    updateSEOData: async (pageName, formData) => {
+    updateSEOData: async (formData) => {
         try {
-            // Create a new FormData instance
-            const data = new FormData();
-            
-            // Add all form fields
-            data.append('page_name', pageName);
-            if (formData.meta_title) data.append('meta_title', formData.meta_title);
-            if (formData.meta_description) data.append('meta_description', formData.meta_description);
-            if (formData.meta_keywords) data.append('meta_keywords', formData.meta_keywords);
-            if (formData.meta_image) data.append('meta_image', formData.meta_image);
+            console.log('Sending SEO update data:', Object.fromEntries(formData.entries()));
 
-            const response = await api.put('/api/seo/update', data, {
+            const response = await api.put('/api/seo/update', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
