@@ -1,7 +1,8 @@
 import ProtectedRoute from "@/components/ProtectedRoute.jsx";
-  import Sidebar from "@/components/Sidebar/Sidebar.jsx";
+import Sidebar from "@/components/Sidebar/Sidebar.jsx";
 import CardGrid from '@/components/Dashboard/Card';
 import { useState } from "react";
+import { useRouter } from "next/router";
 
 // Import all dashboard pages
 import Products from "./products/products";
@@ -62,11 +63,12 @@ function DashboardFooter({ isCollapsed }) {
 }
 
 export default function Dashboard() {
-  const [currentView, setCurrentView] = useState('main');
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const router = useRouter();
+  const { view } = router.query;
 
   const renderContent = () => {
-    switch (currentView) {
+    switch (view) {
       case 'products':
         return <Products />;
       case 'categories':
@@ -116,10 +118,10 @@ export default function Dashboard() {
             if (view === 'logout') {
               window.location.href = '/auth/adminlogin';
             } else {
-              setCurrentView(view);
+              router.push(`/dashboard?view=${view}`);
             }
           }}
-          currentView={currentView}
+          currentView={view || 'main'}
         />
         <DashboardHeader isCollapsed={isCollapsed} />
         <DashboardFooter isCollapsed={isCollapsed} />
