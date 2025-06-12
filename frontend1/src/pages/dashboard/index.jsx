@@ -1,8 +1,9 @@
 import ProtectedRoute from "@/components/ProtectedRoute.jsx";
 import Sidebar from "@/components/Sidebar/Sidebar.jsx";
 import CardGrid from '@/components/Dashboard/Card';
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import Loader from "@/components/Loader";
 
 // Import all dashboard pages
 import Products from "./products/products";
@@ -63,12 +64,35 @@ function DashboardFooter({ isCollapsed }) {
 }
 
 export default function Dashboard() {
+  const [currentView, setCurrentView] = useState('main');
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { view } = router.query;
+
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading]);
+
+  const handleViewChange = (view) => {
+    if (view === 'logout') {
+      window.location.href = '/auth/adminlogin';
+    } else {
+      setIsLoading(true);
+      setCurrentView(view);
+    }
+  };
 
   const renderContent = () => {
-    switch (view) {
+    if (isLoading) {
+      return <Loader />;
+    }
+
+    switch (currentView) {
       case 'products':
         return <Products />;
       case 'categories':
@@ -114,14 +138,8 @@ export default function Dashboard() {
         <Sidebar
           isCollapsed={isCollapsed}
           onToggleCollapse={() => setIsCollapsed((prev) => !prev)}
-          onViewChange={(view) => {
-            if (view === 'logout') {
-              window.location.href = '/auth/adminlogin';
-            } else {
-              router.push(`/dashboard?view=${view}`);
-            }
-          }}
-          currentView={view || 'main'}
+          onViewChange={handleViewChange}
+          currentView={currentView}
         />
         <DashboardHeader isCollapsed={isCollapsed} />
         <DashboardFooter isCollapsed={isCollapsed} />
@@ -142,6 +160,7 @@ export default function Dashboard() {
               marginBottom: 56, // footer height
               minHeight: 'calc(100vh - 136px)',
               transition: 'margin 0.3s cubic-bezier(.4,0,.2,1)',
+              position: 'relative', // Added for loader positioning
             }}
           >
             {renderContent()}
@@ -151,3 +170,7 @@ export default function Dashboard() {
     </ProtectedRoute>
   );
 } 
+
+
+
+
