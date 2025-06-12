@@ -1,10 +1,6 @@
-import { Provider } from 'react-redux';
-import { store } from '../store';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '../context/AuthContext';
-import { CartProvider } from '../context/CartContext';
-import { WishlistProvider } from '../context/WishlistContext';
 import '../styles/globals.css';
 import '../styles/components/Footer.css';
 import '../styles/components/Header.css';
@@ -38,17 +34,11 @@ export default function App({ Component, pageProps }) {
   }, []);
 
   return (
-    <Provider store={store}>
-      <ThemeProvider attribute="class">
-        <AuthProvider>
-          <CartProvider>
-            <WishlistProvider>
-              <Component {...pageProps} />
-              <Toaster position="top-right" />
-            </WishlistProvider>
-          </CartProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </Provider>
+    <ThemeProvider attribute="class">
+      <AuthProvider>
+            <Component {...pageProps} />
+            <Toaster position="top-right" />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

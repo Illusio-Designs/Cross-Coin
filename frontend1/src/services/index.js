@@ -713,9 +713,24 @@ export const seoService = {
 
     updateSEOData: async (pageName, formData) => {
         try {
-            const response = await api.put('/api/seo/update', formData);
+            // Create a new FormData instance
+            const data = new FormData();
+            
+            // Add all form fields
+            data.append('page_name', pageName);
+            if (formData.meta_title) data.append('meta_title', formData.meta_title);
+            if (formData.meta_description) data.append('meta_description', formData.meta_description);
+            if (formData.meta_keywords) data.append('meta_keywords', formData.meta_keywords);
+            if (formData.meta_image) data.append('meta_image', formData.meta_image);
+
+            const response = await api.put('/api/seo/update', data, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
             return response.data;
         } catch (error) {
+            console.error('Error in updateSEOData:', error);
             throw handleApiError(error);
         }
     },

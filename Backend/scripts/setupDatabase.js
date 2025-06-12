@@ -47,8 +47,8 @@ export const setupDatabase = async () => {
         await sequelize.authenticate();
         console.log('Database connection established successfully.');
         
-        // Step 1: Load models and create/alter tables
-        console.log('Step 1: Loading models and creating/altering tables...');
+        // Load models and create/alter tables
+        console.log('Loading models and creating/altering tables...');
         
         const modelDir = path.join(__dirname, '..', 'model');
         const modelFiles = fs.readdirSync(modelDir)
@@ -64,195 +64,160 @@ export const setupDatabase = async () => {
                 console.log(`Loaded model: ${modelName}`);
                 models[modelName] = model;
             } else {
-                console.warn(`Skipping non-model file or model without sync method: ${file} (loaded as ${modelName})`);
+                console.warn(`Skipping non-model file or model without sync method: ${file}`);
             }
         }
         
-        // Step 1a: Sync essential base tables FIRST (those not depending on others for FKs initially)
-        console.log('Step 1a: Syncing essential base tables (User, Category, Attribute, etc.)...');
-        const baseTableNames = ['User', 'Category', 'Attribute', 'Settings', 'ShippingFee', 'SeoMetadata', 'Coupon'];
-        for (const modelName of baseTableNames) {
+        // Sync tables in correct order based on dependencies
+        const syncOrder = {
+            base: ['User', 'Category', 'Attribute', 'Settings', 'ShippingFee', 'SeoMetadata', 'Coupon'],
+            product: ['Product'],
+            variation: ['ProductVariation'],
+            attribute: ['AttributeValue'],
+            dependent: [
+                'Review', 'ReviewImage', 'ProductImage', 'ProductSEO', 
+                'Order', 'OrderItem', 'OrderStatusHistory',
+                'Payment', 'ShippingAddress', 'Cart', 'CartItem', 'Wishlist'
+            ]
+        };
+
+        // Sync base tables first
+        console.log('Syncing base tables...');
+        for (const modelName of syncOrder.base) {
             if (models[modelName]) {
-                console.log(`Syncing ${modelName} table (alter:true)...`);
                 await models[modelName].sync({ alter: true, hooks: false });
-            } else {
-                console.warn(`Model ${modelName} not found for syncing in base tables.`);
+                console.log(`✓ ${modelName} table synced`);
             }
         }
-        
-        // Step 1b: Sync Product table separately since it depends on Category
-        console.log('Step 1b: Syncing Product table...');
-        if (models['Product']) {
-            console.log('Syncing Product table (alter:true)...');
-            await models['Product'].sync({ alter: true, hooks: false });
-        } else {
-            console.warn('Product model not found for syncing.');
-        }
-        
-        // Step 1c: Sync ProductVariation table since it's needed by AttributeValue
-        console.log('Step 1c: Syncing ProductVariation table...');
-        if (models['ProductVariation']) {
-            console.log('Syncing ProductVariation table (alter:true)...');
-            await models['ProductVariation'].sync({ alter: true, hooks: false });
-        } else {
-            console.warn('ProductVariation model not found for syncing.');
-        }
-        
-        // Step 1d: Sync AttributeValue table after ProductVariation exists
-        console.log('Step 1d: Syncing AttributeValue table...');
-        if (models['AttributeValue']) {
-            console.log('Syncing AttributeValue table (alter:true)...');
-            await models['AttributeValue'].sync({ alter: true, hooks: false });
-        } else {
-            console.warn('AttributeValue model not found for syncing.');
-        }
-        
-        // Step 1e: Sync other tables that might have FKs 
-        console.log('Step 1e: Syncing dependent tables (Review, ProductVariation, Order, etc.)...');
-        const dependentTableNames = [
-            'Review', 'ReviewImage', 'ProductImage', 'ProductSEO', 
-            'Order', 'OrderItem', 'OrderStatusHistory',
-            'Payment', 'ShippingAddress', 'Cart', 'CartItem', 'Wishlist'
-        ];
-        
-        for (const modelName of dependentTableNames) {
+
+        // Sync product-related tables
+        console.log('Syncing product-related tables...');
+        for (const modelName of syncOrder.product) {
             if (models[modelName]) {
-                console.log(`Syncing ${modelName} table structure (alter:true)...`);
-                await models[modelName].sync({ 
-                    alter: true, 
-                    hooks: false,
-                });
-            } else {
-                console.warn(`Model ${modelName} not found for syncing in dependent tables.`);
+                await models[modelName].sync({ alter: true, hooks: false });
+                console.log(`✓ ${modelName} table synced`);
             }
         }
 
-        // Step 1f: Sync Slider table separately to handle field removals
-        console.log('Step 1f: Syncing Slider table with field removals...');
-        if (models['Slider']) {
-            console.log('Syncing Slider table (alter:true)...');
-            // First, remove the columns if they exist
-            await sequelize.query(`
-                ALTER TABLE sliders 
-                DROP COLUMN IF EXISTS position,
-                DROP COLUMN IF EXISTS buttonLink,
-                DROP COLUMN IF EXISTS link,
-                DROP COLUMN IF EXISTS startDate,
-                DROP COLUMN IF EXISTS endDate
-            `).catch(err => console.warn('Warning: Could not remove columns from sliders table:', err.message));
-            
-            // Then sync the table structure
-            await models['Slider'].sync({ 
-                alter: true, 
-                hooks: false,
-            });
-        } else {
-            console.warn('Slider model not found for syncing.');
+        // Sync variation and attribute tables
+        console.log('Syncing variation and attribute tables...');
+        for (const modelName of [...syncOrder.variation, ...syncOrder.attribute]) {
+            if (models[modelName]) {
+                await models[modelName].sync({ alter: true, hooks: false });
+                console.log(`✓ ${modelName} table synced`);
+            }
         }
 
-        // Step 1g: Sync Category table separately to handle parentId removal
-        console.log('Step 1g: Syncing Category table with parentId removal...');
-        if (models['Category']) {
-            console.log('Syncing Category table (alter:true)...');
-            // First, remove the parentId column if it exists
-            await sequelize.query(`
-                ALTER TABLE categories 
-                DROP COLUMN IF EXISTS parentId
-            `).catch(err => console.warn('Warning: Could not remove parentId column from categories table:', err.message));
-            
-            // Then sync the table structure
-            await models['Category'].sync({ 
-                alter: true, 
-                hooks: false,
-            });
-        } else {
-            console.warn('Category model not found for syncing.');
+        // Sync dependent tables
+        console.log('Syncing dependent tables...');
+        for (const modelName of syncOrder.dependent) {
+            if (models[modelName]) {
+                await models[modelName].sync({ alter: true, hooks: false });
+                console.log(`✓ ${modelName} table synced`);
+            }
         }
+
+        // Handle special cases for Slider and Category tables
+        console.log('Handling special table modifications...');
         
-        // Step 2: Apply associations explicitly defined in associations.js
-        // This step is crucial for ensuring all relationships and foreign keys are correctly established.
-        console.log('Step 2: Applying associations from associations.js...');       
+        // Slider table modifications
+        if (models['Slider']) {
+            await models['Slider'].sync({ alter: true, hooks: false });
+            console.log('✓ Slider table synced');
+        }
+
+        // Category table modifications
+        if (models['Category']) {
+            await models['Category'].sync({ alter: true, hooks: false });
+            console.log('✓ Category table synced');
+        }
+
+        // Create admin user if not exists
+        if (models['User']) {
+            const bcrypt = await import('bcryptjs');
+            const adminEmail = 'admin@admin.com';
+            const adminPassword = 'Admin@123';
+            const adminUsername = 'admin';
+            const adminRole = 'admin';
+            const existingAdmin = await models['User'].findOne({ where: { email: adminEmail } });
+            if (!existingAdmin) {
+                const hashedPassword = await bcrypt.default.hash(adminPassword, 10);
+                await models['User'].create({
+                    username: adminUsername,
+                    email: adminEmail,
+                    password: hashedPassword,
+                    role: adminRole
+                });
+                console.log('✓ Admin user created: admin@admin.com / Admin@123');
+            } else {
+                console.log('✓ Admin user already exists');
+            }
+        }
+
+        // Apply associations
+        console.log('Applying model associations...');
         try {
             const associationsPath = path.join(__dirname, '..', 'model', 'associations.js');
             if (fs.existsSync(associationsPath)) {
                  await import(`file://${associationsPath}`);
-                 console.log('Successfully applied associations from associations.js');
+                console.log('✓ Associations applied successfully');
             } else {
-                console.warn('associations.js not found, skipping explicit association application. Ensure models define associations correctly.');
+                console.warn('⚠️ associations.js not found. Models should define their own associations.');
             }
         } catch (assocError) {
-            console.error('Error applying associations from associations.js:', assocError);
-            // Continue if associations fail, as models might have self-defined them, but log error.
+            console.error('❌ Error applying associations:', assocError.message);
         }
-        
-        // Step 2.5: Sync all models again after associations to establish FKs...
-        console.log('Step 2.5: Syncing all models again after associations to establish FKs...');
-        for (const modelName in models) {
-            if (models[modelName]) {
-                console.log(`Post-association sync for ${modelName}...`);
-                await models[modelName].sync({ alter: true, hooks: false });
-            }
-        }
-        
-        // Step 3: Add specific essential indexes (those not handled by Sequelize's default unique constraints or model indexes)
-        console.log('Step 3: Adding specific essential database indexes...');
-            const executeQuery = async (query) => {
+
+        // Add essential indexes and foreign keys
+        console.log('Setting up indexes and foreign keys...');
                 const dbName = process.env.DB_NAME || process.env.DB_DATABASE;
                 await sequelize.query(`USE ${dbName}`);
-                return await sequelize.query(query);
-            };
 
-        // Manually ensure Foreign Keys for 'reviews' table
-        console.log('Ensuring Foreign Key for reviews.productId to products.id...');
-        await executeQuery(
-            `ALTER TABLE reviews ADD CONSTRAINT IF NOT EXISTS fk_reviews_product FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE ON UPDATE CASCADE`
-        ).catch(err => console.warn('Warning: Could not create fk_reviews_product:', err.original ? err.original.sqlMessage : err.message));
-
-        console.log('Ensuring Foreign Key for reviews.userId to users.id...');
-        await executeQuery(
-            `ALTER TABLE reviews ADD CONSTRAINT IF NOT EXISTS fk_reviews_user FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE`
-        ).catch(err => console.warn('Warning: Could not create fk_reviews_user:', err.original ? err.original.sqlMessage : err.message));
-
-        // Add other critical FKs manually if needed, e.g., for ReviewImage
-        console.log('Ensuring Foreign Key for review_images.reviewId to reviews.id...');
-        await executeQuery(
+        // Foreign Keys
+        const foreignKeys = [
+            `ALTER TABLE reviews ADD CONSTRAINT IF NOT EXISTS fk_reviews_product FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE ON UPDATE CASCADE`,
+            `ALTER TABLE reviews ADD CONSTRAINT IF NOT EXISTS fk_reviews_user FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE`,
             `ALTER TABLE review_images ADD CONSTRAINT IF NOT EXISTS fk_review_images_review FOREIGN KEY (reviewId) REFERENCES reviews(id) ON DELETE CASCADE ON UPDATE CASCADE`
-        ).catch(err => console.warn('Warning: Could not create fk_review_images_review:', err.original ? err.original.sqlMessage : err.message));
-        
-        // Add essential indexes using IF NOT EXISTS
-        await executeQuery(`ALTER TABLE users ADD UNIQUE INDEX IF NOT EXISTS idx_users_email (email)`).catch(err => console.warn('Idx users.email:', err.original ? err.original.sqlMessage : err.message));
-        await executeQuery(`ALTER TABLE categories ADD INDEX IF NOT EXISTS idx_categories_parentId (parentId)`).catch(err => console.warn('Idx categories.parentId:', err.original ? err.original.sqlMessage : err.message));
-        await executeQuery(`ALTER TABLE orders ADD UNIQUE INDEX IF NOT EXISTS idx_orders_order_number (order_number)`).catch(err => console.warn('Idx orders.order_number:', err.original ? err.original.sqlMessage : err.message));
-        await executeQuery(`ALTER TABLE orders ADD INDEX IF NOT EXISTS idx_orders_status (status)`).catch(err => console.warn('Idx orders.status:', err.original ? err.original.sqlMessage : err.message));
-        // The unique index on product_variations.sku should be handled by the model definition (sku: { unique: true })
-        // await executeQuery(`ALTER TABLE product_variations ADD UNIQUE INDEX IF NOT EXISTS idx_product_variations_sku (sku)`).catch(err => console.warn('Idx product_variations.sku:', err.original ? err.original.sqlMessage : err.message));
-        await executeQuery(`ALTER TABLE product_variations ADD INDEX IF NOT EXISTS idx_product_variations_productId (productId)`).catch(err => console.warn('Idx product_variations.productId:', err.original ? err.original.sqlMessage : err.message));
-        await executeQuery(`ALTER TABLE coupons ADD UNIQUE INDEX IF NOT EXISTS idx_coupons_code (code)`).catch(err => console.warn('Idx coupons.code:', err.original ? err.original.sqlMessage : err.message));
-        
-        // Ensure Review table FKs are considered (they are defined in the model, sync should handle)
-        // If Review table still causes issues, an explicit ALTER TABLE for its FKs might be needed here AFTER associations.js
-        // For example, for Review to User FK:
-        // await executeQuery(`
-        //     ALTER TABLE reviews ADD CONSTRAINT IF NOT EXISTS fk_reviews_user FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE`
-        // ).catch(err => console.warn('Warning: Could not create fk_reviews_user:', err.message));
+        ];
 
-            console.log('Database setup completed successfully!');
+        // Indexes
+        const indexes = [
+            `ALTER TABLE users ADD UNIQUE INDEX IF NOT EXISTS idx_users_email (email)`,
+            `ALTER TABLE categories ADD INDEX IF NOT EXISTS idx_categories_parentId (parentId)`,
+            `ALTER TABLE orders ADD UNIQUE INDEX IF NOT EXISTS idx_orders_order_number (order_number)`,
+            `ALTER TABLE orders ADD INDEX IF NOT EXISTS idx_orders_status (status)`,
+            `ALTER TABLE product_variations ADD INDEX IF NOT EXISTS idx_product_variations_productId (productId)`,
+            `ALTER TABLE coupons ADD UNIQUE INDEX IF NOT EXISTS idx_coupons_code (code)`
+        ];
+
+        // Apply foreign keys
+        for (const fk of foreignKeys) {
+            await sequelize.query(fk).catch(err => 
+                console.warn(`⚠️ Could not create foreign key: ${err.message}`)
+            );
+        }
+
+        // Apply indexes
+        for (const idx of indexes) {
+            await sequelize.query(idx).catch(err => 
+                console.warn(`⚠️ Could not create index: ${err.message}`)
+            );
+        }
+
+        console.log('✓ Database setup completed successfully!');
             return true;
     } catch (error) {
-        console.error('Database setup failed:', error);
-        if (error.parent && error.parent.sqlMessage) { // More generic check for parent error
-            console.error('Detailed SQL Error:', error.parent.sqlMessage);
+        console.error('❌ Database setup failed:', error.message);
+        if (error.parent?.sqlMessage) {
+            console.error('SQL Error:', error.parent.sqlMessage);
             if (error.sql) {
-                console.error('Faulty SQL (from Sequelize error object):', error.sql);
+                console.error('Faulty SQL:', error.sql);
             }
-        } else if (error.original && error.original.sqlMessage) { // For errors from direct executeQuery
-             console.error('Detailed SQL Error (executeQuery):', error.original.sqlMessage);
         }
         throw error;
     }
 };
 
-// Add port handling function
 export const findAvailablePort = async (startPort) => {
     const net = await import('net');
     return new Promise((resolve, reject) => {

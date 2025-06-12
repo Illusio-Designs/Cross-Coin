@@ -176,66 +176,84 @@ export const updateSEOData = async (req, res) => {
         } = req.body;
 
         if (!page_name) {
-            return res.status(400).json({ message: 'Page name is required' });
+            return res.status(400).json({ 
+                success: false,
+                message: 'Page name is required' 
+            });
         }
 
-        const seoData = await SeoMetadata.findOne({
+        // First try to find existing SEO data using exact page_name
+        let seoData = await SeoMetadata.findOne({
             where: { page_name }
         });
 
+        // If no existing data, create new
         if (!seoData) {
-            return res.status(404).json({ message: 'SEO data not found' });
-        }
+            // Generate slug and canonical URL for new entry
+            const { slug, canonicalUrl } = generateSlugAndCanonical(page_name);
+            
+            seoData = await SeoMetadata.create({
+                page_name,
+                meta_title: meta_title || `${page_name} - Your Trusted Shopping Partner`,
+                meta_description: meta_description || `Learn about ${page_name} and our commitment to providing the best shopping experience.`,
+                meta_keywords: meta_keywords || `${page_name}, shopping, online store`,
+                slug,
+                canonical_url: canonicalUrl
+            });
+        } else {
+            // Generate new slug and canonical URL for existing entry
+            const { slug, canonicalUrl } = generateSlugAndCanonical(page_name);
 
-        // Generate new slug and canonical URL if page name changed
-        const { slug, canonicalUrl } = generateSlugAndCanonical(page_name);
-
-        // Handle image update
-        let meta_image = seoData.meta_image;
-        if (req.file) {
-            try {
-                meta_image = await imageHandler.handleImageUpdate(
-                    seoData.meta_image,
-                    req.file.path,
-                    {
-                        width: 1200,
-                        height: 630,
-                        quality: 80,
-                        format: 'webp',
-                        filename: `seo-${Date.now()}`,
-                        type: 'seo'
-                    }
-                );
-            } catch (error) {
-                console.error('Error handling image update:', error);
-                return res.status(500).json({ 
-                    success: false,
-                    message: 'Failed to process image',
-                    error: error.message 
-                });
+            // Handle image update
+            let meta_image = seoData.meta_image;
+            if (req.file) {
+                try {
+                    meta_image = await imageHandler.handleImageUpdate(
+                        seoData.meta_image,
+                        req.file.path,
+                        {
+                            width: 1200,
+                            height: 630,
+                            quality: 80,
+                            format: 'webp',
+                            filename: `seo-${Date.now()}`
+                        }
+                    );
+                } catch (error) {
+                    console.error('Error updating image:', error);
+                    return res.status(500).json({ 
+                        success: false,
+                        message: 'Failed to update image' 
+                    });
+                }
             }
+
+            // Update the existing SEO data
+            await seoData.update({
+                meta_title: meta_title || seoData.meta_title,
+                meta_description: meta_description || seoData.meta_description,
+                meta_keywords: meta_keywords || seoData.meta_keywords,
+                meta_image: meta_image,
+                slug,
+                canonical_url: canonicalUrl
+            });
         }
 
-        // Update fields
-        await seoData.update({
-            slug,
-            canonical_url: canonicalUrl,
-            meta_title: meta_title || seoData.meta_title,
-            meta_description: meta_description || seoData.meta_description,
-            meta_keywords: meta_keywords || seoData.meta_keywords,
-            meta_image: meta_image
+        // Fetch the updated data
+        const updatedData = await SeoMetadata.findOne({
+            where: { page_name }
         });
 
         res.json({ 
-            success: true, 
-            message: 'SEO data updated successfully', 
-            data: seoData 
+            success: true,
+            message: seoData.isNewRecord ? 'SEO data created successfully' : 'SEO data updated successfully',
+            data: updatedData
         });
     } catch (error) {
         console.error('Error updating SEO data:', error);
         res.status(500).json({ 
             success: false,
-            message: 'Failed to update SEO data', 
+            message: 'Failed to update SEO data',
             error: error.message 
         });
     }
