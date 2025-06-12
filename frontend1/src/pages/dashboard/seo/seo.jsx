@@ -19,6 +19,7 @@ export default function SEO() {
   const [error, setError] = useState(null);
   const [seoData, setSeoData] = useState([]);
   const [formData, setFormData] = useState({
+    original_page_name: "",
     page_name: "",
     meta_title: "",
     meta_description: "",
@@ -166,6 +167,7 @@ export default function SEO() {
       console.log('Edit SEO Data:', response);
       
       setFormData({
+        original_page_name: pageName,
         page_name: response.page_name || "",
         meta_title: response.meta_title || "",
         meta_description: response.meta_description || "",
@@ -198,6 +200,7 @@ export default function SEO() {
 
   const handleAddNew = () => {
     setFormData({
+      original_page_name: "",
       page_name: "",
       meta_title: "",
       meta_description: "",
@@ -210,6 +213,7 @@ export default function SEO() {
   const handleModalClose = () => {
     setIsModalOpen(false);
     setFormData({
+      original_page_name: "",
       page_name: "",
       meta_title: "",
       meta_description: "",
@@ -244,19 +248,31 @@ export default function SEO() {
       
       const formDataToSend = new FormData();
       
+      // Ensure page_name is included first
+      if (!formData.page_name) {
+        setError('Page name is required');
+        setLoading(false);
+        return;
+      }
+      
       // Append all form fields
       Object.keys(formData).forEach(key => {
-        if (formData[key] !== null) {
+        if (formData[key] !== null && key !== 'original_page_name') { // Skip original_page_name
           formDataToSend.append(key, formData[key]);
         }
       });
 
       console.log('Submitting form data:', Object.fromEntries(formDataToSend.entries()));
 
-      if (formData.page_name) {
-        await seoService.updateSEOData(formData.page_name, formDataToSend);
-      } else {
+      // If we're editing an existing entry and the page name has changed
+      if (formData.original_page_name && formData.original_page_name !== formData.page_name) {
+        // First delete the old entry
+        await seoService.deleteSEOData(formData.original_page_name);
+        // Then create a new entry with the new page name
         await seoService.createSEOData(formDataToSend);
+      } else {
+        // Normal update
+        await seoService.updateSEOData(formDataToSend);
       }
       
       await fetchSEOData();
@@ -336,7 +352,7 @@ export default function SEO() {
       <Modal
         isOpen={isModalOpen}
         onClose={handleModalClose}
-        title={formData.page_name ? "Edit SEO Entry" : "Add New SEO Entry"}
+        title={formData.original_page_name ? "Edit SEO Entry" : "Add New SEO Entry"}
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
@@ -347,7 +363,6 @@ export default function SEO() {
               value={formData.page_name}
               onChange={handleInputChange}
               required
-              disabled={!!formData.page_name}
             />
             <InputField
               label="Meta Title"
