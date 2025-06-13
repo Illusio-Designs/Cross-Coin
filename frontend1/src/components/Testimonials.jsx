@@ -41,7 +41,7 @@ const testimonials = [
 
 const Testimonials = () => (
   <section className="testimonials-section">
-    <h3 className="testimonials-title">CUSTOMER SATISFACTION</h3>
+    <h3 className="section-title">CUSTOMER SATISFACTION</h3>
     <div className="testimonials-grid">
       {testimonials.map((t, idx) => (
         <div className="testimonial-card" key={idx}>
