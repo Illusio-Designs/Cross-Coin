@@ -86,15 +86,10 @@ export default function App({ Component, pageProps }) {
                 zIndex: 9999,
                 backdropFilter: 'blur(5px)'
               }}>
-                <div style={{
-                  background: 'white',
-                  padding: '2rem',
-                  borderRadius: '1rem',
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-                }}>
+                
                   <Loader />
                 </div>
-              </div>
+             
             )}
             <Component {...pageProps} />
             <Toaster position="top-right" />
