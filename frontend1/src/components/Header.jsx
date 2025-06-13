@@ -55,11 +55,6 @@ const Header = () => {
               </Link>
             </li>
             <li>
-              <Link href="/Collections" className={activePage === '/Collections' ? 'active' : ''}>
-                Collections
-              </Link>
-            </li>
-            <li>
               <Link href="/About" className={activePage === '/About' ? 'active' : ''}>
                 About Us
               </Link>

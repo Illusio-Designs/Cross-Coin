@@ -1,6 +1,6 @@
 .header {
   width: 100%;
-  background: #fff;
+  background: #F3F4F6;
   transition: all 0.3s ease;
   z-index: 1000;
   box-shadow: 0 2px 8px rgba(0,0,0,0.03);
@@ -30,7 +30,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 15px 10%;
-  background: #fff;
+  background: #F3F4F6;
 }
 
 .header__logo {

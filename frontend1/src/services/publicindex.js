@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/';
 
 // Authentication APIs
 export const registerUser = async (userData) => {
@@ -9,7 +9,7 @@ export const registerUser = async (userData) => {
         return response.data;
     } catch (error) {
         throw error.response?.data || error.message;
-    }
+    } 
 };
 
 export const loginUser = async (credentials) => {
