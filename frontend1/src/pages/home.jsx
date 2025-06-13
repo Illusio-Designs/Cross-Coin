@@ -243,9 +243,6 @@ const Home = () => {
               <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('right')}>
                 <IoIosArrowForward />
               </button>
-              <button className="view-all-btn" onClick={() => window.location.href = '/products'}>
-                View All Products
-              </button>
             </div>
           </div>
         </div>
