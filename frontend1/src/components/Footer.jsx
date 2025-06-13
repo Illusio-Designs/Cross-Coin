@@ -76,8 +76,8 @@ const Footer = () => {
           <h5>Do You Need Help ?</h5>
           <p>It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.</p>
           <div className="footer__contact">
-            <div className="contact-item"><MdOutlinePhoneInTalk /> <span className="gap">Monday-Friday: 08am-9pm<br /><b className="bold">0800 300 353 </b></span></div> 
-            <div className="contact-item"><AiOutlineMail /> <span className="gap">Need help with your order?<br /><b className="bold">info@example.com</b></span></div>
+            <div className="contact-item"><MdOutlinePhoneInTalk /> <span className="gap">Monday-Friday: 08am-9pm<br /><b className="bold">+91 9712891700 </b></span></div> 
+            <div className="contact-item"><AiOutlineMail /> <span className="gap">Need help with your order?<br /><b className="bold">Crosscoinindia@gmail.com</b></span></div>
           </div>
         </div>
       </div>
