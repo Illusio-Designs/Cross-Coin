@@ -14,8 +14,7 @@ const Loader = ({ className = '' }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 9999,
-        borderRadius: '8px'
+        zIndex: 9999
       }}
     >
       <DotLottieReact

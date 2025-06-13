@@ -132,7 +132,7 @@ const Home = () => {
                 </div>
               </div>
             </div>
-            <div className="product-card product-card--split">
+            <div className="product-card product-card--split product-card--split-reverse">
               <div className="product-card__content">
                 <div className="product-card__content-text">
                   <h4>Exquisite Styles & Collections</h4>
