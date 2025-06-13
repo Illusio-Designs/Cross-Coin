@@ -464,7 +464,6 @@
   text-align: center;
   font-size: 2rem;
   font-weight: 700;
-  margin-bottom: 3rem;
   color: #180D3E;
   position: relative;
 }
@@ -748,7 +747,7 @@
   display: flex;
   gap: 2rem;
   overflow-x: auto;
-  padding: 1rem 0;
+  padding: 3rem 0 0 0;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;

@@ -215,7 +215,12 @@ const Home = () => {
           </div>
         </div>
         <div className="shop-by-category">
-          <h2 className="section-title">Curate Your Collection</h2>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="section-title">Curate Your Collection</h2>
+            <button className="hero-btn" onClick={() => window.location.href = '/Products'}>
+              View All Products
+            </button>
+          </div>
           <div className="category-section">
             <div className="category-sidebar">
               <div className="category-item">
