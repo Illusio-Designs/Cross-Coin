@@ -71,7 +71,6 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 30px;
   padding: 3% 0;
   border-top: 1px solid #D1D5DB;
   border-bottom: 1px solid #D1D5DB;
@@ -162,6 +161,10 @@
 
 .footer__col ul li:hover {
   color: #d32f2f;
+}
+
+.footer__help{
+  margin-left: -5%;
 }
 
 .footer__help h5 {
@@ -285,5 +288,8 @@
   .footer__newsletter-form button {
     padding: 8px;
   } 
+  .footer__help{
+    margin-left: 0;
+  }
 
 }

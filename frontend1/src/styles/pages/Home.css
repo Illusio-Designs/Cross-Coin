@@ -3,109 +3,224 @@
   padding: 0 0 60px;
 }
 .hero-slider {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #ffffff;
   position: relative;
-  margin: 0 10%;
-}
-
-.hero-slide {
-  display: flex;
   width: 100%;
-}
-
-.hero-slide__content {
+  height: 90vh;
+  overflow: hidden;
   background-image: url("../../assets/hero-bg.webp");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   background-color: #1C2333;
-  color: #fff;
-  flex: 1;
+}
+
+.hero-slide {
+  position: relative;
+  width: 100%;
+  height: 100%;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  width: 65%;
-  padding: 0 15% 0 10%;
-}
-
-.hero-slide__content-text {
-  background: #1F2937;
-  padding: 40px 32px;
-}
-
-.hero-slide__content-text h1 {
-  font-size: 2.5rem;
-  font-weight: 400;
-  margin-bottom: 10px;
-}
-
-.hero-slide__content-text .highlight {
-  color: #ff5c70;
-  font-weight: 700;
-  display: block;
-  font-size: 2.2rem;
-  margin-top: 10px;
-}
-
-.hero-slide__content-text p {
-  font-size: 1rem;
-  color: #d1d1d1;
-  margin-bottom: 30px;
-}
-
-.hero-slide__content-text .hero-btn {
-  background: none;
-  border: 1px solid #fff;
-  color: #fff;
-  padding: 10px 28px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-}
-.hero-btn:hover {
-  background: #ff5c70;
-  color: #fff;
-  border-color: #ff5c70;
+  align-items: center;
 }
 
 .hero-slide__image {
-  width: 35%;
-  height: 622px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 60%;
+  height: 100%;
+  clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%);
+  animation: slideInRight 1s ease-out;
 }
 
 .hero-slide__image img {
-  max-width: 100%;
-  height: 622px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  animation: fadeInUp 1.2s ease-out;
+}
+
+.hero-slide__content {
+  position: relative;
+  width: 50%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding-left: 8%;
+  z-index: 2;
+}
+
+
+.hero-slide__content-text {
+  color: white;
+  max-width: 600px;
+  position: relative;
+  animation: slideInLeft 1s ease-out;
+}
+
+.hero-slide__content-text h1 {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.2;
+  position: relative;
+  display: inline-block;
+  animation: fadeInUp 1s ease-out 0.3s both;
+}
+
+.hero-slide__content-text h1::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  width: 80px;
+  height: 4px;
+  background: #CE1E36;
+}
+
+.hero-slide__content-text .highlight {
+  color: #CE1E36;
+  display: block;
+  font-size: 3.5rem;
+  margin-top: 0.5rem;
+}
+
+.hero-slide__content-text p {
+  font-size: 1.2rem;
+  margin-bottom: 2.5rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+  animation: fadeInUp 1s ease-out 0.6s both;
+}
+
+.hero-btn {
+  padding: 15px 40px;
+  font-size: 1.1rem;
+  background-color: #CE1E36;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  animation: fadeInUp 1s ease-out 0.9s both;
+}
+
+.hero-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: #180D3E;
+  transition: all 0.3s ease;
+  z-index: -1;
+}
+
+.hero-btn:hover::before {
+  left: 0;
+}
+
+.hero-btn:hover {
+  transform: translateY(-2px);
+  background: none;
 }
 
 .hero-slider__nav {
   position: absolute;
-  bottom: 18px;
-  left: 85%;
-  transform: translateX(-50%);
+  bottom: 40px;
+  right: 40px;
   display: flex;
-  gap: 8px;
+  gap: 15px;
+  z-index: 2;
 }
 
-.dot {
-  width: 8px;
-  height: 8px;
+.hero-slider__nav .dot {
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: #ffffff;
-  border: 1px solid #CE1E36;
-  opacity: 1;
+  background: rgba(255, 255, 255, 0.3);
   cursor: pointer;
-  transition: opacity 0.2s, background 0.2s;
+  transition: all 0.3s ease;
+  position: relative;
 }
-.dot.active {
+
+.hero-slider__nav .dot::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.hero-slider__nav .dot.active {
   background: #CE1E36;
-  opacity: 1;
-  width: 20px;
-  border-radius: 10px;
+  transform: scale(1.2);
+}
+
+.hero-slider__nav .dot.active::before {
+  border-color: #CE1E36;
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-slide__content-text {
+  animation: slideInLeft 1s ease-out;
+}
+
+.hero-slide__content-text h1 {
+  animation: fadeInUp 1s ease-out 0.3s both;
+}
+
+.hero-slide__content-text p {
+  animation: fadeInUp 1s ease-out 0.6s both;
+}
+
+.hero-slide__content-text .hero-btn {
+  animation: fadeInUp 1s ease-out 0.9s both;
+}
+
+.hero-slide__image {
+  animation: slideInRight 1s ease-out;
+}
+
+.hero-slide__image img {
+  animation: fadeInUp 1.2s ease-out;
 }
 
 .product-showcase {
@@ -262,4 +377,64 @@ background: #77777E;
 .summer-countdown-label {
   font-size: 0.8rem;
   color: #33333399;
+}
+
+@keyframes slideContent {
+  0% {
+    opacity: 0;
+    transform: translateY(50px) skewX(-10deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) skewX(0deg);
+  }
+}
+
+@keyframes slideImage {
+  0% {
+    opacity: 0;
+    transform: scale(1.2) translateY(50px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.hero-slide .hero-slide__content-text {
+  animation: slideContent 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-slide .hero-slide__image {
+  animation: slideImage 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-slide__content-text h1,
+.hero-slide__content-text p,
+.hero-slide__content-text .hero-btn {
+  opacity: 0;
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.hero-slide__content-text h1 {
+  animation-delay: 0.3s;
+}
+
+.hero-slide__content-text p {
+  animation-delay: 0.6s;
+}
+
+.hero-slide__content-text .hero-btn {
+  animation-delay: 0.9s;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

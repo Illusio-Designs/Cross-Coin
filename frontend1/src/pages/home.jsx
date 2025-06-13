@@ -96,16 +96,16 @@ const Home = () => {
       <Header />
       <div className="home-page">
         <div className="hero-slider">
-          <div className="hero-slide">
+          <div className="hero-slide" key={current}>
+            <div className="hero-slide__image">
+              <img src={slides[current].image} alt="slide visual" />
+            </div>
             <div className="hero-slide__content">
               <div className="hero-slide__content-text">
                 <h1>{slides[current].title} <span className="highlight">{slides[current].highlight}</span></h1>
                 <p>{slides[current].description}</p>
                 <button className="hero-btn">{slides[current].button}</button>
               </div>
-            </div>
-            <div className="hero-slide__image">
-              <img src={slides[current].image} alt="slide visual" />
             </div>
           </div>
           <div className="hero-slider__nav">
