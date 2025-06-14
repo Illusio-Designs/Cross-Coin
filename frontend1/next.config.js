@@ -101,6 +101,14 @@ const nextConfig = {
     }
     return config;
   },
+  async rewrites() {
+    return [
+      {
+        source: '/dashboard/products',
+        destination: '/dashboard/products/products',
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig; 
