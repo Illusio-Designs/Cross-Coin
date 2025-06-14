@@ -1,5 +1,5 @@
 .testimonials-section {
-  padding: 60px 10%;
+  padding: 50px 10%;
   background: #ffffff;
 }
 
@@ -12,10 +12,24 @@
   color: #222;
 }
 
-.testimonials-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 32px;
+.testimonials-container {
+  position: relative;
+  padding: 40px;
+}
+
+.testimonials-slider {
+  display: flex;
+  gap: 24px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 20px 0;
+}
+
+.testimonials-slider::-webkit-scrollbar {
+  display: none;
 }
 
 .testimonial-card {
@@ -27,9 +41,12 @@
   flex-direction: column;
   justify-content: space-between;
   min-height: 220px;
+  min-width: 350px;
+  max-width: 350px;
   transition: box-shadow 0.2s;
   cursor: pointer;
 }
+
 .testimonial-card:hover {
   box-shadow: 0 4px 24px rgba(206,30,54,0.10);
 }
@@ -70,13 +87,63 @@
   margin-right: 2px;
 }
 
-@media (max-width: 900px) {
-  .testimonials-grid {
-    grid-template-columns: 1fr;
-    gap: 18px;
+.testimonials-container .slider-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #180D3E;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  transition: all 0.3s ease;
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.testimonials-container .slider-arrow:hover {
+  background: #CE1E36;
+}
+
+.testimonials-container .slider-arrow-left {
+  left: 0;
+}
+
+.testimonials-container .slider-arrow-right {
+  right: 0;
+}
+
+.testimonials-container .slider-arrow svg {
+  width: 24px;
+  height: 24px;
+}
+
+@media (max-width: 768px) {
+  .testimonials-container {
+    padding: 0 30px;
   }
+
+  .testimonials-container .slider-arrow {
+    width: 32px;
+    height: 32px;
+  }
+
+  .testimonials-container .slider-arrow svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .testimonial-card {
+    min-width: 280px;
+    max-width: 280px;
+  }
+
   .testimonials-section {
-    margin: 40px 4% 0 4%;
-    padding-bottom: 40px;
+    padding: 40px 5%;
   }
 } 
