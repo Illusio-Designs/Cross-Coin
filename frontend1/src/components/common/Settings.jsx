@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import InputField from './InputField';
 import Button from './Button';
 import { toast } from 'react-toastify';
-import '../../Styles/common/Settings.css';
+import '../../styles/common/Settings.css';
 
 const Settings = ({ type = 'profile' }) => {
     const { user, updateProfile, updatePassword } = useAuth();

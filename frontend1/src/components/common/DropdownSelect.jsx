@@ -1,6 +1,6 @@
 import React from "react";
 import Select from "react-select";
-import "../../Styles/common/DropdownSelect.css";
+import "../../styles/common/DropdownSelect.css";
 
 const DropdownSelect = ({
   label,
