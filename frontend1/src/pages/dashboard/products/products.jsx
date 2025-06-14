@@ -10,7 +10,7 @@ import { attributeService } from "@/services";
 import { debounce } from 'lodash';
 import "../../../styles/dashboard/products.css";
 
-export default function Products() {
+const ProductsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -886,4 +886,6 @@ export default function Products() {
       </Modal>
     </>
   );
-} 
+};
+
+export default ProductsPage; 
