@@ -1,5 +1,5 @@
 import React from 'react';
-import '../../Styles/common/Table.css';
+import '../../styles/common/Table.css';
 
 const Table = ({ columns, data, onRowClick }) => {
   return (

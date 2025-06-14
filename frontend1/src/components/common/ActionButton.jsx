@@ -2,7 +2,7 @@ import React from "react";
 import { HiOutlineEye, HiOutlinePencil, HiOutlineTrash, HiOutlineCheck } from "react-icons/hi2";
 import { IoToggle, IoToggleOutline, IoClose } from "react-icons/io5";
 
-import "../../Styles/common/ActionButton.css";
+import "../../styles/common/ActionButton.css";
 
 const ActionButton = ({ 
   icon, 
