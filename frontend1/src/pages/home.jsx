@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import Testimonials from "../components/Testimonials";
@@ -51,6 +51,9 @@ const Home = () => {
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
+  
+  const categorySliderRef = useRef(null);
+  const latestSliderRef = useRef(null);
 
   // This would come from backend in real implementation
   const currentCategory = {
@@ -111,13 +114,23 @@ const Home = () => {
   const { days, hours, minutes, seconds } = timeLeft;
 
   const scrollSlider = (direction) => {
-    const slider = document.querySelector('.products-slider');
-    const scrollAmount = 300; // Adjust this value based on your needs
-    if (slider) {
+    const scrollAmount = 300;
+    if (categorySliderRef.current) {
       if (direction === 'left') {
-        slider.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+        categorySliderRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
       } else {
-        slider.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        categorySliderRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      }
+    }
+  };
+
+  const scrollLatestSlider = (direction) => {
+    const scrollAmount = 300;
+    if (latestSliderRef.current) {
+      if (direction === 'left') {
+        latestSliderRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+      } else {
+        latestSliderRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
       }
     }
   };
@@ -215,7 +228,7 @@ const Home = () => {
           </div>
         </div>
         <div className="shop-by-category">
-          <div style={{ display: 'flex', justifyContent: 'end', alignItems: 'center', marginBottom: '3rem' , gap: '16rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'end', alignItems: 'center', marginBottom: '3rem' , gap: '17rem' }}>
             <h2 className="section-title">Curate Your Collection</h2>
             <button className="hero-btn" onClick={() => window.location.href = '/Products'}>
               View All Products
@@ -232,7 +245,7 @@ const Home = () => {
               <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('left')}>
                 <IoIosArrowBack />
               </button>
-              <div className="products-slider">
+              <div className="products-slider" ref={categorySliderRef}>
                 {currentCategory.products.map((product) => (
                   <ProductCard
                     key={product.id}
@@ -348,6 +361,35 @@ const Home = () => {
               ))}
             </div>
             <button className="slider-arrow slider-arrow-right" onClick={() => scrollFeaturedSlider('right')}>
+              <IoIosArrowForward />
+            </button>
+          </div>
+        </div>
+        <div className="shop-by-category">
+          <div style={{ display: 'flex', justifyContent: 'end', alignItems: 'center', marginBottom: '3rem', gap: '20rem' }}>
+            <h2 className="section-title">Latest Products</h2>
+            <button className="hero-btn" onClick={() => window.location.href = '/Products'}>
+              View All Products
+            </button>
+          </div>
+          <div className="category-products">
+            <button className="slider-arrow slider-arrow-left" onClick={() => scrollLatestSlider('left')}>
+              <IoIosArrowBack />
+            </button>
+            <div className="products-slider" ref={latestSliderRef}>
+              {products.slice(6, 12).map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onProductClick={(product) => console.log('Product clicked:', product)}
+                  onAddToCart={(e, product) => {
+                    e.stopPropagation();
+                    console.log('Add to cart:', product);
+                  }}
+                />
+              ))}
+            </div>
+            <button className="slider-arrow slider-arrow-right" onClick={() => scrollLatestSlider('right')}>
               <IoIosArrowForward />
             </button>
           </div>
