@@ -491,8 +491,11 @@ export const productService = {
     getProduct: async (id) => {
         try {
             const response = await api.get(`/api/products/${id}`);
+            console.log('Product Service Response:', response);
+            // Return the data directly since the API response is already in the correct format
             return response.data;
         } catch (error) {
+            console.error('Error fetching product:', error);
             throw error.response?.data || error.message;
         }
     },

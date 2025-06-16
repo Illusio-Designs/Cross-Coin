@@ -51,7 +51,12 @@ const ProductsPage = () => {
     seo: {
       metaTitle: "",
       metaDescription: "",
-      metaKeywords: ""
+      metaKeywords: "",
+      ogTitle: "",
+      ogDescription: "",
+      ogImage: "",
+      canonicalUrl: "",
+      structuredData: ""
     }
   });
   const [attributes, setAttributes] = useState([]);
@@ -151,32 +156,157 @@ const ProductsPage = () => {
     setCurrentPage(1);
   }, [filterValue]);
 
-  // Columns definition
+  // Add badge display component
+  const BadgeDisplay = ({ badge }) => {
+    if (!badge || badge === 'none') return null;
+
+    const badgeStyles = {
+      new_arrival: { color: '#10B981', bgColor: '#D1FAE5' },
+      hot_selling: { color: '#EF4444', bgColor: '#FEE2E2' },
+      low_stock: { color: '#F59E0B', bgColor: '#FEF3C7' }
+    };
+
+    const badgeLabels = {
+      new_arrival: 'New Arrival',
+      hot_selling: 'Hot Selling',
+      low_stock: 'Low Stock'
+    };
+
+    const style = badgeStyles[badge] || { color: '#6B7280', bgColor: '#F3F4F6' };
+
+    return (
+      <span
+        style={{
+          padding: '4px 8px',
+          borderRadius: '4px',
+          fontSize: '12px',
+          fontWeight: '500',
+          color: style.color,
+          backgroundColor: style.bgColor,
+          display: 'inline-block',
+          marginLeft: '8px'
+        }}
+      >
+        {badgeLabels[badge] || badge}
+      </span>
+    );
+  };
+
+  // Update columns definition to include badge
   const columns = [
     {
       header: "S/N",
       accessor: "serial_number"
     },
-    { header: "Name", accessor: "name" },
-    { header: "Category", accessor: "category.name" },
+    { 
+      header: "Product", 
+      accessor: row => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '50px', height: '50px', overflow: 'hidden', borderRadius: '4px' }}>
+            <img 
+              src={row.images?.[0]?.image_url || '/placeholder.png'} 
+              alt={row.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontWeight: '500' }}>{row.name}</span>
+              <BadgeDisplay badge={row.badge} />
+            </div>
+            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
+              SKU: {row.variations?.[0]?.sku || 'N/A'}
+            </div>
+          </div>
+        </div>
+      )
+    },
+    { 
+      header: "Category", 
+      accessor: row => (
+        <span style={{ 
+          backgroundColor: '#F3F4F6', 
+          padding: '4px 8px', 
+          borderRadius: '4px',
+          fontSize: '13px'
+        }}>
+          {row.category?.name || 'Uncategorized'}
+        </span>
+      )
+    },
     { 
       header: "Price", 
-      accessor: row => row.ProductVariations?.[0]?.price || 'N/A'
+      accessor: row => {
+        const price = row.variations?.[0]?.price;
+        const comparePrice = row.variations?.[0]?.comparePrice;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{ fontWeight: '500', color: '#111827' }}>
+              ₹{price ? price.toLocaleString() : 'N/A'}
+            </span>
+            {comparePrice && (
+              <span style={{ 
+                fontSize: '12px', 
+                color: '#6B7280', 
+                textDecoration: 'line-through' 
+              }}>
+                ₹{comparePrice.toLocaleString()}
+              </span>
+            )}
+          </div>
+        );
+      }
     },
     { 
       header: "Stock", 
-      accessor: row => row.ProductVariations?.[0]?.stock || 'N/A'
+      accessor: row => {
+        const stock = row.variations?.[0]?.stock;
+        return (
+          <span style={{ 
+            color: stock > 10 ? '#059669' : stock > 0 ? '#D97706' : '#DC2626',
+            fontWeight: '500'
+          }}>
+            {stock || 0} units
+          </span>
+        );
+      }
     },
-    { header: "Status", accessor: "status" },
+    { 
+      header: "Status", 
+      accessor: row => (
+        <span style={{ 
+          backgroundColor: row.status === 'active' ? '#D1FAE5' : '#FEE2E2',
+          color: row.status === 'active' ? '#059669' : '#DC2626',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          fontSize: '13px',
+          fontWeight: '500'
+        }}>
+          {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
+        </span>
+      )
+    },
     {
       header: "Actions",
       accessor: "actions",
       cell: ({ id }) => (
-        <div className="adding-button">
+        <div className="adding-button" style={{ gap: '8px' }}>
           <button
             className="action-btn edit"
             title="Edit"
             onClick={() => handleEdit(id)}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '4px',
+              padding: '6px 12px',
+              borderRadius: '4px',
+              border: 'none',
+              backgroundColor: '#EFF6FF',
+              color: '#2563EB',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
           >
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z"/>
@@ -187,6 +317,18 @@ const ProductsPage = () => {
             className="action-btn delete"
             title="Delete"
             onClick={() => handleDelete(id)}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '4px',
+              padding: '6px 12px',
+              borderRadius: '4px',
+              border: 'none',
+              backgroundColor: '#FEF2F2',
+              color: '#DC2626',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
           >
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -198,70 +340,102 @@ const ProductsPage = () => {
     }
   ];
 
+  // Update handleEdit to include badge
   const handleEdit = async (id) => {
     try {
       setLoading(true);
-      const response = await productService.getProductById(id);
-      const product = response.data;
+      const response = await productService.getProduct(id);
+      console.log('Product API Response:', response);
+      
+      const product = response;
       
       // Format the data for the form
       const formData = {
         id: product.id,
         name: product.name,
         description: product.description,
-        categoryId: product.category_id,
+        categoryId: product.categoryId,
         status: product.status,
-        images: product.ProductImages?.map(img => ({
-          name: img.filename,
-          url: img.url,
+        badge: product.badge || 'none',
+        total_sold: product.total_sold || 0,
+        images: product.images?.map(img => ({
+          name: img.image_url.split('/').pop(),
+          url: `${process.env.NEXT_PUBLIC_API_URL}${img.image_url}`,
           type: 'image/jpeg'
         })) || [],
-        variations: product.ProductVariations?.map(variation => ({
-          id: variation.id,
-          price: variation.price,
-          comparePrice: variation.compare_price,
-          stock: variation.stock,
-          sku: variation.sku,
-          weight: variation.weight,
-          dimensions: variation.dimensions,
-          attributes: variation.attributes || {}
-        })) || [],
-        seo: product.ProductSEO ? {
-          metaTitle: product.ProductSEO.meta_title,
-          metaDescription: product.ProductSEO.meta_description,
-          metaKeywords: product.ProductSEO.meta_keywords,
-          ogTitle: product.ProductSEO.og_title,
-          ogDescription: product.ProductSEO.og_description,
-          ogImage: product.ProductSEO.og_image,
-          canonicalUrl: product.ProductSEO.canonical_url,
-          structuredData: product.ProductSEO.structured_data
-        } : {
-          metaTitle: product.name,
-          metaDescription: product.description,
-          metaKeywords: '',
-          ogTitle: product.name,
-          ogDescription: product.description,
-          ogImage: null,
-          canonicalUrl: `${window.location.origin}/products/${product.slug}`,
-          structuredData: JSON.stringify({
+        variations: product.variations?.map(variation => {
+          // Parse dimensions if it's a string
+          let dimensions = variation.dimensions;
+          if (typeof dimensions === 'string') {
+            try {
+              dimensions = JSON.parse(dimensions);
+            } catch (e) {
+              dimensions = { length: '', width: '', height: '' };
+            }
+          }
+
+          // Parse attributes if it's a string
+          let attributes = variation.attributes;
+          if (typeof attributes === 'string') {
+            try {
+              attributes = JSON.parse(attributes);
+            } catch (e) {
+              attributes = {};
+            }
+          }
+
+          // Convert attribute arrays to comma-separated strings
+          const formattedAttributes = {};
+          Object.entries(attributes).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+              formattedAttributes[key] = value.join(', ');
+            } else {
+              formattedAttributes[key] = value;
+            }
+          });
+
+          return {
+            id: variation.id,
+            price: variation.price,
+            comparePrice: variation.comparePrice,
+            stock: variation.stock,
+            sku: variation.sku,
+            weight: variation.weight,
+            weightUnit: variation.weightUnit || 'g',
+            dimensions: dimensions,
+            dimensionUnit: variation.dimensionUnit || 'cm',
+            attributes: formattedAttributes
+          };
+        }) || [],
+        seo: {
+          metaTitle: product.seo?.meta_title || product.name,
+          metaDescription: product.seo?.meta_description || product.description,
+          metaKeywords: product.seo?.meta_keywords || '',
+          ogTitle: product.seo?.og_title || product.name,
+          ogDescription: product.seo?.og_description || product.description,
+          ogImage: product.seo?.og_image || (product.images?.[0] ? `${process.env.NEXT_PUBLIC_API_URL}${product.images[0].image_url}` : null),
+          canonicalUrl: product.seo?.canonical_url || `${window.location.origin}/products/${product.slug}`,
+          structuredData: product.seo?.structured_data || JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Product",
             "name": product.name,
             "description": product.description,
-            "image": product.ProductImages?.[0]?.url || null,
+            "image": product.images?.[0] ? `${process.env.NEXT_PUBLIC_API_URL}${product.images[0].image_url}` : null,
             "offers": {
               "@type": "Offer",
-              "price": product.ProductVariations?.[0]?.price || 0,
+              "price": product.variations?.[0]?.price || 0,
               "priceCurrency": "USD",
-              "availability": product.ProductVariations?.[0]?.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+              "availability": product.variations?.[0]?.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
             }
           })
         }
       };
 
+      console.log('Formatted Form Data:', formData);
       setFormData(formData);
       setIsModalOpen(true);
     } catch (err) {
+      console.error('Error fetching product:', err);
       setError(err.response?.data?.message || "Error fetching product details");
     } finally {
       setLoading(false);
@@ -314,7 +488,12 @@ const ProductsPage = () => {
       seo: {
         metaTitle: "",
         metaDescription: "",
-        metaKeywords: ""
+        metaKeywords: "",
+        ogTitle: "",
+        ogDescription: "",
+        ogImage: "",
+        canonicalUrl: "",
+        structuredData: ""
       }
     });
     setCurrentStep(1);
@@ -354,7 +533,12 @@ const ProductsPage = () => {
       seo: {
         metaTitle: "",
         metaDescription: "",
-        metaKeywords: ""
+        metaKeywords: "",
+        ogTitle: "",
+        ogDescription: "",
+        ogImage: "",
+        canonicalUrl: "",
+        structuredData: ""
       }
     });
   };
@@ -384,16 +568,32 @@ const ProductsPage = () => {
         }
       }));
     } else if (name.startsWith('variations.')) {
-      const [_, index, field] = name.split('.');
+      const [_, index, ...fields] = name.split('.');
       const variationIndex = parseInt(index);
       
       setFormData(prev => {
         const newVariations = [...prev.variations];
-        newVariations[variationIndex] = {
-          ...newVariations[variationIndex],
-          [field]: type === 'number' ? Number(value) : value
-        };
+        let current = newVariations[variationIndex];
         
+        // Handle nested fields (dimensions)
+        if (fields.length > 1) {
+          const [field, subField] = fields;
+          current = {
+            ...current,
+            [field]: {
+              ...current[field],
+              [subField]: type === 'number' ? (value ? Number(value) : '') : value
+            }
+          };
+        } else {
+          const field = fields[0];
+          current = {
+            ...current,
+            [field]: type === 'number' ? (value ? Number(value) : '') : value
+          };
+        }
+        
+        newVariations[variationIndex] = current;
         return {
           ...prev,
           variations: newVariations
@@ -489,33 +689,49 @@ const ProductsPage = () => {
     setError(null);
 
     try {
-        const formDataToSend = new FormData();
-        formDataToSend.append('name', formData.name);
-        formDataToSend.append('description', formData.description);
-        formDataToSend.append('categoryId', formData.categoryId);
-        formDataToSend.append('status', formData.status);
-
-        // Handle images
+        // Get the first image URL for SEO
+        let firstImageUrl = null;
         if (formData.images && formData.images.length > 0) {
-            formData.images.forEach((image, index) => {
-                if (image instanceof File) {
-                    formDataToSend.append(`images`, image);
-                }
-            });
+            const firstImage = formData.images[0];
+            if (firstImage instanceof File) {
+                firstImageUrl = URL.createObjectURL(firstImage);
+            } else if (firstImage.url) {
+                firstImageUrl = firstImage.url;
+            }
         }
 
         // Handle variations with attributes
-        const variationsWithAttributes = formData.variations.map(variation => ({
-            price: variation.price,
-            compare_price: variation.comparePrice,
-            stock: variation.stock,
-            sku: variation.sku,
-            weight: variation.weight,
-            dimensions: variation.dimensions,
-            attributes: variation.attributes
-        }));
+        const variationsWithAttributes = formData.variations.map(variation => {
+            // Process attributes to ensure they are arrays
+            const processedAttributes = {};
+            Object.entries(variation.attributes).forEach(([key, value]) => {
+                if (typeof value === 'string') {
+                    // Split by comma and clean up
+                    processedAttributes[key] = value.split(',')
+                        .map(v => v.trim())
+                        .filter(v => v);
+                } else if (Array.isArray(value)) {
+                    processedAttributes[key] = value;
+                }
+            });
 
-        formDataToSend.append('variations', JSON.stringify(variationsWithAttributes));
+            return {
+                id: variation.id,
+                price: variation.price,
+                comparePrice: variation.comparePrice || null,
+                stock: variation.stock,
+                sku: variation.sku,
+                weight: variation.weight || null,
+                weightUnit: variation.weightUnit || 'g',
+                dimensions: variation.dimensions || {
+                    length: '',
+                    width: '',
+                    height: ''
+                },
+                dimensionUnit: variation.dimensionUnit || 'cm',
+                attributes: processedAttributes
+            };
+        });
 
         // Handle SEO data
         const seoData = {
@@ -524,39 +740,72 @@ const ProductsPage = () => {
             metaKeywords: formData.seo.metaKeywords || '',
             ogTitle: formData.seo.metaTitle || formData.name,
             ogDescription: formData.seo.metaDescription || formData.description,
-            ogImage: formData.images?.[0] ? URL.createObjectURL(formData.images[0]) : null,
+            ogImage: firstImageUrl,
             canonicalUrl: formData.seo.canonicalUrl || `${window.location.origin}/products/${formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-')}`,
-            structuredData: formData.seo.structuredData || JSON.stringify({
+            structuredData: JSON.stringify({
                 "@context": "https://schema.org",
                 "@type": "Product",
                 "name": formData.name,
                 "description": formData.description,
-                "image": formData.images?.[0] ? URL.createObjectURL(formData.images[0]) : null,
+                "image": firstImageUrl,
                 "offers": {
                     "@type": "Offer",
                     "price": variationsWithAttributes[0]?.price || 0,
-                    "priceCurrency": "USD",
+                    "priceCurrency": "INR",
                     "availability": variationsWithAttributes[0]?.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
                 }
             })
         };
 
+        // Create FormData
+        const formDataToSend = new FormData();
+
+        // Add basic fields
+        formDataToSend.append('name', formData.name);
+        formDataToSend.append('description', formData.description);
+        formDataToSend.append('categoryId', formData.categoryId);
+        formDataToSend.append('status', formData.status);
+        formDataToSend.append('badge', formData.badge || 'none');
+        formDataToSend.append('total_sold', formData.total_sold || 0);
+
+        // Add variations
+        formDataToSend.append('variations', JSON.stringify(variationsWithAttributes));
+
+        // Add SEO data
         formDataToSend.append('seo', JSON.stringify(seoData));
 
-        // Log the complete FormData for debugging
+        // Add images
+        if (formData.images && formData.images.length > 0) {
+            formData.images.forEach((image, index) => {
+                if (image instanceof File) {
+                    formDataToSend.append(`images`, image);
+                }
+            });
+        }
+
+        // Log all data being sent
+        console.log('Form SEO Data:', formData.seo);
+        console.log('Formatted SEO Data:', seoData);
+        console.log('FormData entries:');
         for (let pair of formDataToSend.entries()) {
-            console.log(pair[0] + ': ' + pair[1]);
+            console.log(pair[0], pair[1]);
         }
 
+        let response;
         if (formData.id) {
-            await productService.updateProduct(formData.id, formDataToSend);
+            response = await productService.updateProduct(formData.id, formDataToSend);
         } else {
-            await productService.createProduct(formDataToSend);
+            response = await productService.createProduct(formDataToSend);
         }
 
-        setIsModalOpen(false);
-        fetchProducts();
+        if (response.success) {
+            setIsModalOpen(false);
+            await fetchProducts();
+        } else {
+            throw new Error(response.message || 'Failed to save product');
+        }
     } catch (err) {
+        console.error('Error saving product:', err);
         setError(err.response?.data?.message || "Error saving product");
     } finally {
         setLoading(false);
@@ -653,8 +902,9 @@ const ProductsPage = () => {
                     label="Compare Price"
                     type="number"
                     name={`variations.${index}.comparePrice`}
-                    value={variation.comparePrice}
+                    value={variation.comparePrice || ''}
                     onChange={handleInputChange}
+                    placeholder="Enter compare price"
                   />
                   <InputField
                     label="Stock"
@@ -672,10 +922,95 @@ const ProductsPage = () => {
                     onChange={handleInputChange}
                     required
                   />
-                  {renderAttributesSection(index)}
+                  <div className="weight-dimensions-section">
+                    <div className="weight-section">
+                      <InputField
+                        label="Weight"
+                        type="number"
+                        name={`variations.${index}.weight`}
+                        value={variation.weight || ''}
+                        onChange={handleInputChange}
+                        placeholder="Enter weight"
+                      />
+                      <InputField
+                        label="Weight Unit"
+                        type="select"
+                        name={`variations.${index}.weightUnit`}
+                        value={variation.weightUnit || 'g'}
+                        onChange={handleInputChange}
+                        options={[
+                          { value: 'g', label: 'Grams (g)' },
+                          { value: 'kg', label: 'Kilograms (kg)' },
+                          { value: 'lb', label: 'Pounds (lb)' },
+                          { value: 'oz', label: 'Ounces (oz)' }
+                        ]}
+                      />
+                    </div>
+                    <div className="dimensions-section">
+                      <h6>Dimensions</h6>
+                      <div className="dimensions-inputs">
+                        <InputField
+                          label="Length"
+                          type="number"
+                          name={`variations.${index}.dimensions.length`}
+                          value={variation.dimensions?.length || ''}
+                          onChange={handleInputChange}
+                          placeholder="Length"
+                        />
+                        <InputField
+                          label="Width"
+                          type="number"
+                          name={`variations.${index}.dimensions.width`}
+                          value={variation.dimensions?.width || ''}
+                          onChange={handleInputChange}
+                          placeholder="Width"
+                        />
+                        <InputField
+                          label="Height"
+                          type="number"
+                          name={`variations.${index}.dimensions.height`}
+                          value={variation.dimensions?.height || ''}
+                          onChange={handleInputChange}
+                          placeholder="Height"
+                        />
+                        <InputField
+                          label="Dimension Unit"
+                          type="select"
+                          name={`variations.${index}.dimensionUnit`}
+                          value={variation.dimensionUnit || 'cm'}
+                          onChange={handleInputChange}
+                          options={[
+                            { value: 'cm', label: 'Centimeters (cm)' },
+                            { value: 'm', label: 'Meters (m)' },
+                            { value: 'in', label: 'Inches (in)' },
+                            { value: 'ft', label: 'Feet (ft)' }
+                          ]}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="attributes-section">
+                    <h5>Attributes</h5>
+                    {attributes.map((attribute) => (
+                      <InputField
+                        key={attribute.id}
+                        label={attribute.name}
+                        type="text"
+                        name={`attributes.${index}.${attribute.name}`}
+                        value={formData.variations[index].attributes[attribute.name] || ''}
+                        onChange={handleInputChange}
+                        placeholder={`Enter ${attribute.name} values (comma-separated)`}
+                      />
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
+          </>
+        );
+      case 3:
+        return (
+          <>
             <div className="input-field">
               <label className="input-field-label">Product Images</label>
               <input
@@ -692,9 +1027,7 @@ const ProductsPage = () => {
                   {formData.images.map((image, index) => (
                     <img 
                       key={index}
-                      src={typeof image === 'string' 
-                        ? `${process.env.NEXT_PUBLIC_API_URL}${image}` 
-                        : URL.createObjectURL(image)} 
+                      src={image instanceof File ? URL.createObjectURL(image) : (image.url || image)}
                       alt={`Product Preview ${index + 1}`} 
                       className="product-image-preview" 
                     />
@@ -702,11 +1035,6 @@ const ProductsPage = () => {
                 </div>
               )}
             </div>
-          </>
-        );
-      case 3:
-        return (
-          <>
             <InputField
               label="Meta Title"
               type="text"
@@ -733,31 +1061,6 @@ const ProductsPage = () => {
       default:
         return null;
     }
-  };
-
-  const renderAttributesSection = (variationIndex) => {
-    return (
-      <div className="attributes-section">
-        <h5>Attributes</h5>
-        {attributes.map((attribute) => (
-          <InputField
-            key={attribute.id}
-            label={attribute.name}
-            type="select"
-            name={`attributes.${variationIndex}.${attribute.name}`}
-            value={formData.variations[variationIndex].attributes[attribute.name] || ''}
-            onChange={handleInputChange}
-            options={[
-              { value: '', label: `Select ${attribute.name}` },
-              ...attribute.AttributeValues.map(value => ({
-                value: value.value,
-                label: value.value
-              }))
-            ]}
-          />
-        ))}
-      </div>
-    );
   };
 
   return (
@@ -804,8 +1107,8 @@ const ProductsPage = () => {
                 </div>
               ) : (
                 <>
-        <Table
-          columns={columns}
+                  <Table
+                    columns={columns}
                     data={currentItemsWithSN}
                     className="w-full"
                     striped={true}
@@ -813,12 +1116,12 @@ const ProductsPage = () => {
                   />
                   {filteredData.length > itemsPerPage && (
                     <div className="seo-pagination-container">
-        <Pagination
-          currentPage={currentPage}
+                      <Pagination
+                        currentPage={currentPage}
                         totalItems={filteredData.length}
                         itemsPerPage={itemsPerPage}
-          onPageChange={setCurrentPage}
-        />
+                        onPageChange={setCurrentPage}
+                      />
                     </div>
                   )}
                 </>
@@ -881,7 +1184,7 @@ const ProductsPage = () => {
                 </Button>
               </>
             )}
-    </div>
+          </div>
         </form>
       </Modal>
     </>

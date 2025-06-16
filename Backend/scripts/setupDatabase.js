@@ -170,8 +170,8 @@ export const setupDatabase = async () => {
 
         // Add essential indexes and foreign keys
         console.log('Setting up indexes and foreign keys...');
-                const dbName = process.env.DB_NAME || process.env.DB_DATABASE;
-                await sequelize.query(`USE ${dbName}`);
+        const dbName = process.env.DB_NAME || process.env.DB_DATABASE;
+        await sequelize.query(`USE ${dbName}`);
 
         // Foreign Keys
         const foreignKeys = [
@@ -187,7 +187,11 @@ export const setupDatabase = async () => {
             `ALTER TABLE orders ADD UNIQUE INDEX IF NOT EXISTS idx_orders_order_number (order_number)`,
             `ALTER TABLE orders ADD INDEX IF NOT EXISTS idx_orders_status (status)`,
             `ALTER TABLE product_variations ADD INDEX IF NOT EXISTS idx_product_variations_productId (productId)`,
-            `ALTER TABLE coupons ADD UNIQUE INDEX IF NOT EXISTS idx_coupons_code (code)`
+            `ALTER TABLE coupons ADD UNIQUE INDEX IF NOT EXISTS idx_coupons_code (code)`,
+            // New indexes for Product model
+            `ALTER TABLE products ADD INDEX IF NOT EXISTS idx_products_badge (badge)`,
+            `ALTER TABLE products ADD INDEX IF NOT EXISTS idx_products_total_sold (total_sold)`,
+            `ALTER TABLE products ADD INDEX IF NOT EXISTS idx_products_created_at (created_at)`
         ];
 
         // Apply foreign keys
@@ -204,8 +208,21 @@ export const setupDatabase = async () => {
             );
         }
 
+        // Add new columns to products table if they don't exist
+        const productColumns = [
+            `ALTER TABLE products ADD COLUMN IF NOT EXISTS badge ENUM('new_arrival', 'hot_selling', 'low_stock', 'none') DEFAULT 'none'`,
+            `ALTER TABLE products ADD COLUMN IF NOT EXISTS total_sold INT DEFAULT 0`,
+            `ALTER TABLE products ADD COLUMN IF NOT EXISTS created_at DATETIME DEFAULT CURRENT_TIMESTAMP`
+        ];
+
+        for (const column of productColumns) {
+            await sequelize.query(column).catch(err => 
+                console.warn(`⚠️ Could not add column: ${err.message}`)
+            );
+        }
+
         console.log('✓ Database setup completed successfully!');
-            return true;
+        return true;
     } catch (error) {
         console.error('❌ Database setup failed:', error.message);
         if (error.parent?.sqlMessage) {
