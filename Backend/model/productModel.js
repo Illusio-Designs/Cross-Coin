@@ -56,6 +56,20 @@ export const Product = sequelize.define('Product', {
         constraints: false
         // Note: The reference to reviews table is defined in associations.js
         // to avoid circular dependencies
+    },
+    // Badge field
+    badge: {
+        type: DataTypes.ENUM('new_arrival', 'hot_selling', 'low_stock', 'none'),
+        defaultValue: 'none'
+    },
+    // Badge calculation fields
+    total_sold: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+    created_at: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW
     }
 }, {
     tableName: 'products',
@@ -69,6 +83,9 @@ export const Product = sequelize.define('Product', {
         },
         {
             fields: ['categoryId']
+        },
+        {
+            fields: ['badge']
         }
     ]
 });

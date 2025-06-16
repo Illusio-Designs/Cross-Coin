@@ -19,15 +19,52 @@ const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/products'
 const formatProductResponse = (product) => {
     const productData = product.toJSON();
     
-    // Add image URLs
-    if (productData.images) {
-        productData.images = productData.images.map(img => ({
-            ...img,
-            url: `/uploads/products/${img.imageName}`
-        }));
+    // Format SEO data
+    if (productData.ProductSEO) {
+        productData.seo = {
+            metaTitle: productData.ProductSEO.meta_title,
+            metaDescription: productData.ProductSEO.meta_description,
+            metaKeywords: productData.ProductSEO.meta_keywords,
+            ogTitle: productData.ProductSEO.og_title,
+            ogDescription: productData.ProductSEO.og_description,
+            ogImage: productData.ProductSEO.og_image,
+            canonicalUrl: productData.ProductSEO.canonical_url,
+            structuredData: productData.ProductSEO.structured_data
+        };
+        delete productData.ProductSEO;
     }
 
-    // Add category details
+    // Format variations
+    if (productData.ProductVariations) {
+        productData.variations = productData.ProductVariations.map(variation => ({
+            id: variation.id,
+            price: variation.price,
+            comparePrice: variation.comparePrice,
+            stock: variation.stock,
+            sku: variation.sku,
+            weight: variation.weight,
+            weightUnit: variation.weightUnit,
+            dimensions: variation.dimensions,
+            dimensionUnit: variation.dimensionUnit,
+            attributes: variation.attributes
+        }));
+        delete productData.ProductVariations;
+    }
+
+    // Format images
+    if (productData.ProductImages) {
+        productData.images = productData.ProductImages.map(image => ({
+            id: image.id,
+            image_url: image.image_url,
+            alt_text: image.alt_text,
+            display_order: image.display_order,
+            is_primary: image.is_primary,
+            status: image.status
+        }));
+        delete productData.ProductImages;
+    }
+
+    // Format category
     if (productData.Category) {
         productData.category = {
             id: productData.Category.id,
@@ -37,15 +74,67 @@ const formatProductResponse = (product) => {
         delete productData.Category;
     }
 
-    // Add variation details
-    if (productData.variations) {
-        productData.variations = productData.variations.map(variation => ({
-            ...variation,
-            attributes: variation.attributes || {}
-        }));
-    }
-
     return productData;
+};
+
+// Helper function to calculate product badge
+const calculateProductBadge = async (product, transaction) => {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+    
+    // Check if product is new (created within last 30 days)
+    const isNewArrival = product.created_at >= thirtyDaysAgo;
+    
+    // Check if product is hot selling (total_sold > 25)
+    const isHotSelling = product.total_sold > 25;
+    
+    // Check if any variation has low stock (stock < 10)
+    const variations = await ProductVariation.findAll({
+        where: { productId: product.id },
+        transaction
+    });
+    const hasLowStock = variations.some(v => v.stock < 10);
+
+    // Determine badge priority
+    if (isNewArrival) {
+        return 'new_arrival';
+    } else if (isHotSelling) {
+        return 'hot_selling';
+    } else if (hasLowStock) {
+        return 'low_stock';
+    }
+    return 'none';
+};
+
+// Helper function to handle product attributes
+const handleProductAttributes = async (variation, productId, transaction) => {
+    if (!variation.attributes) return;
+
+    // Process each attribute
+    for (const [attrName, attrValue] of Object.entries(variation.attributes)) {
+        // Find or create attribute
+        let [attribute] = await Attribute.findOrCreate({
+            where: { name: attrName },
+            defaults: {
+                type: 'select',
+                isRequired: true,
+                status: 'active'
+            },
+            transaction
+        });
+
+        // Find or create attribute value
+        let [attributeValue] = await AttributeValue.findOrCreate({
+            where: {
+                attributeId: attribute.id,
+                value: attrValue
+            },
+            defaults: {
+                status: 'active'
+            },
+            transaction
+        });
+    }
 };
 
 // Create a new product
@@ -108,16 +197,41 @@ export const createProduct = async (req, res) => {
 
         console.log('\n=== CREATING SEO ===');
         // Create SEO record with proper data
+        console.log('\n=== SEO DATA BEFORE CREATION ===');
+        console.log('SEO Data:', {
+            product_id: product.id,
+            meta_title: seo.meta_title || name,
+            meta_description: seo.meta_description || description,
+            meta_keywords: seo.meta_keywords || '',
+            og_title: seo.og_title || name,
+            og_description: seo.og_description || description,
+            og_image: seo.og_image || null,
+            canonical_url: seo.canonical_url || `${process.env.FRONTEND_URL}/products/${product.slug}`,
+            structured_data: seo.structured_data || JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "Product",
+                "name": name,
+                "description": description,
+                "image": images?.[0] ? `/uploads/products/${images[0].filename}` : null,
+                "offers": {
+                    "@type": "Offer",
+                    "price": variations[0]?.price || 0,
+                    "priceCurrency": "USD",
+                    "availability": variations[0]?.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+                }
+            })
+        });
+
         const seoRecord = await ProductSEO.create({
             product_id: product.id,
-            meta_title: seo.metaTitle || name,
-            meta_description: seo.metaDescription || description,
-            meta_keywords: seo.metaKeywords || '',
-            og_title: seo.ogTitle || name,
-            og_description: seo.ogDescription || description,
-            og_image: seo.ogImage || null,
-            canonical_url: seo.canonicalUrl || `${process.env.FRONTEND_URL}/products/${product.slug}`,
-            structured_data: seo.structuredData || JSON.stringify({
+            meta_title: seo.meta_title || name,
+            meta_description: seo.meta_description || description,
+            meta_keywords: seo.meta_keywords || '',
+            og_title: seo.og_title || name,
+            og_description: seo.og_description || description,
+            og_image: seo.og_image || null,
+            canonical_url: seo.canonical_url || `${process.env.FRONTEND_URL}/products/${product.slug}`,
+            structured_data: seo.structured_data || JSON.stringify({
                 "@context": "https://schema.org",
                 "@type": "Product",
                 "name": name,
@@ -133,7 +247,7 @@ export const createProduct = async (req, res) => {
         }, { transaction });
         console.log('SEO record created with ID:', seoRecord.id);
 
-        // Handle variations
+        // Handle variations with attributes
         if (variations && variations.length > 0) {
             console.log('\n=== CREATING VARIATIONS ===');
             for (const variation of variations) {
@@ -160,8 +274,15 @@ export const createProduct = async (req, res) => {
                     attributes: variation.attributes || {}
                 }, { transaction });
                 console.log('Variation created with ID:', variationRecord.id);
+
+                // Handle attributes for this variation
+                await handleProductAttributes(variation, product.id, transaction);
             }
         }
+
+        // Calculate and set initial badge
+        const badge = await calculateProductBadge(product, transaction);
+        await product.update({ badge }, { transaction });
 
         // Handle images
         if (images && images.length > 0) {
@@ -296,70 +417,206 @@ export const getProduct = async (req, res) => {
 
 // Update product
 export const updateProduct = async (req, res) => {
+    const transaction = await sequelize.transaction();
+    
     try {
         const { id } = req.params;
-        const updateData = req.body;
+        console.log('=== UPDATE PRODUCT REQUEST ===');
+        console.log('Product ID:', id);
+        console.log('Request Body:', JSON.stringify(req.body, null, 2));
+        console.log('Files:', req.files ? req.files.map(f => ({
+            filename: f.filename,
+            originalname: f.originalname,
+            mimetype: f.mimetype,
+            size: f.size
+        })) : 'No files');
 
-        const product = await Product.findByPk(id);
+        // Parse form data
+        const name = req.body.name?.trim();
+        const description = req.body.description?.trim();
+        const categoryId = req.body.categoryId;
+        const status = req.body.status || 'active';
+        const variations = JSON.parse(req.body.variations || '[]');
+        const seo = JSON.parse(req.body.seo || '{}');
+        const images = req.files;
+
+        console.log('\n=== PARSED SEO DATA ===');
+        console.log('Received SEO data:', req.body.seo);
+        console.log('Parsed SEO data:', seo);
+
+        // Validate required fields
+        if (!name) {
+            throw new Error('Product name is required');
+        }
+
+        if (!categoryId) {
+            throw new Error('Category is required');
+        }
+
+        // Find existing product
+        const product = await Product.findByPk(id, {
+            include: [
+                { model: ProductImage, as: 'ProductImages' },
+                { model: ProductVariation, as: 'ProductVariations' },
+                { model: ProductSEO, as: 'ProductSEO' }
+            ],
+            transaction
+        });
+
         if (!product) {
-            return res.status(404).json({ message: 'Product not found' });
+            throw new Error('Product not found');
         }
 
-        // Handle main image update
-        if (req.file) {
-            try {
-                updateData.image = await imageHandler.handleProductImage(
-                    product.image,
-                    req.file.path,
-                    product.id
-                );
-            } catch (error) {
-                console.error('Error handling product image update:', error);
-                return res.status(500).json({ 
-                    success: false,
-                    message: 'Failed to process image',
-                    error: error.message 
-                });
+        console.log('\n=== EXISTING PRODUCT DATA ===');
+        console.log('Product:', product.toJSON());
+        console.log('Existing SEO:', product.ProductSEO?.toJSON());
+
+        // Update basic product info
+        await product.update({
+            name,
+            description,
+            categoryId,
+            status,
+            slug: slugify(name, { lower: true })
+        }, { transaction });
+
+        // Update or create SEO data
+        const seoData = {
+            metaTitle: seo.metaTitle || seo.meta_title || name,
+            metaDescription: seo.metaDescription || seo.meta_description || description,
+            metaKeywords: seo.metaKeywords || seo.meta_keywords || '',
+            ogTitle: seo.metaTitle || seo.meta_title || name,
+            ogDescription: seo.metaDescription || seo.meta_description || description,
+            ogImage: seo.ogImage || seo.og_image || null,
+            canonicalUrl: seo.canonicalUrl || seo.canonical_url || `${process.env.FRONTEND_URL}/products/${product.slug}`,
+            structuredData: seo.structuredData || seo.structured_data || JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "Product",
+                "name": name,
+                "description": description,
+                "image": images?.[0] ? `/uploads/products/${images[0].filename}` : null,
+                "offers": {
+                    "@type": "Offer",
+                    "price": variations[0]?.price || 0,
+                    "priceCurrency": "INR",
+                    "availability": variations[0]?.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+                }
+            })
+        };
+
+        console.log('\n=== SEO DATA TO BE SAVED ===');
+        console.log('SEO Data:', seoData);
+
+        if (product.ProductSEO) {
+            console.log('\n=== UPDATING EXISTING SEO ===');
+            await product.ProductSEO.update(seoData, { transaction });
+            console.log('SEO updated successfully');
+        } else {
+            console.log('\n=== CREATING NEW SEO ===');
+            const seoRecord = await ProductSEO.create({
+                product_id: product.id,
+                ...seoData
+            }, { transaction });
+            console.log('New SEO record created with ID:', seoRecord.id);
+        }
+
+        // Handle variations with attributes
+        if (variations && variations.length > 0) {
+            // Delete existing variations
+            await ProductVariation.destroy({
+                where: { productId: id },
+                transaction
+            });
+
+            // Create new variations
+            for (const variation of variations) {
+                if (!variation.price || isNaN(variation.price) || variation.price <= 0) {
+                    throw new Error('Invalid price for variation');
+                }
+
+                const timestamp = Date.now();
+                const randomString = Math.random().toString(36).substring(2, 8);
+                const uniqueSku = variation.sku || `SKU-${product.id}-${timestamp}-${randomString}`;
+
+                await ProductVariation.create({
+                    productId: product.id,
+                    sku: uniqueSku,
+                    price: Number(variation.price),
+                    comparePrice: variation.comparePrice ? Number(variation.comparePrice) : null,
+                    stock: Number(variation.stock || 0),
+                    weight: variation.weight ? Number(variation.weight) : null,
+                    weightUnit: variation.weightUnit || 'g',
+                    dimensions: variation.dimensions || null,
+                    dimensionUnit: variation.dimensionUnit || 'cm',
+                    attributes: variation.attributes || {}
+                }, { transaction });
+
+                // Handle attributes for this variation
+                await handleProductAttributes(variation, product.id, transaction);
             }
         }
 
-        // Handle gallery images if provided
-        if (req.files && req.files.gallery) {
-            try {
-                const galleryImages = await Promise.all(
-                    req.files.gallery.map((file, index) => 
-                        imageHandler.handleProductGalleryImage(
-                            product.gallery?.[index],
-                            file.path,
-                            product.id,
-                            index
-                        )
-                    )
-                );
-                updateData.gallery = galleryImages;
-            } catch (error) {
-                console.error('Error handling product gallery update:', error);
-                return res.status(500).json({ 
-                    success: false,
-                    message: 'Failed to process gallery images',
-                    error: error.message 
-                });
+        // Recalculate and update badge
+        const badge = await calculateProductBadge(product, transaction);
+        await product.update({ badge }, { transaction });
+
+        // Handle images
+        if (images && images.length > 0) {
+            // Delete existing images from storage
+            if (product.ProductImages && product.ProductImages.length > 0) {
+                for (const image of product.ProductImages) {
+                    const imagePath = path.join(__dirname, '../uploads/products', image.image_url.split('/').pop());
+                    try {
+                        await fs.unlink(imagePath);
+                    } catch (error) {
+                        console.error('Error deleting image file:', error);
+                    }
+                }
+            }
+
+            // Delete existing images from database
+            await ProductImage.destroy({
+                where: { product_id: id },
+                transaction
+            });
+
+            // Create new images
+            for (const [index, image] of images.entries()) {
+                await ProductImage.create({
+                    product_id: product.id,
+                    image_url: `/uploads/products/${image.filename}`,
+                    alt_text: name,
+                    display_order: index,
+                    is_primary: index === 0,
+                    status: 'active'
+                }, { transaction });
             }
         }
 
-        await product.update(updateData);
-        
-        res.json({ 
-            success: true, 
-            message: 'Product updated successfully', 
-            data: product 
+        await transaction.commit();
+
+        // Fetch updated product
+        const updatedProduct = await Product.findByPk(id, {
+            include: [
+                { model: Category },
+                { model: ProductVariation, as: 'ProductVariations' },
+                { model: ProductImage, as: 'ProductImages' },
+                { model: ProductSEO, as: 'ProductSEO' }
+            ]
+        });
+
+        res.json({
+            success: true,
+            message: 'Product updated successfully',
+            data: formatProductResponse(updatedProduct)
         });
     } catch (error) {
+        await transaction.rollback();
         console.error('Error updating product:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
-            message: 'Failed to update product', 
-            error: error.message 
+            message: 'Failed to update product',
+            error: error.message
         });
     }
 };
