@@ -35,6 +35,10 @@ export const Slider = sequelize.define('Slider', {
     status: {
         type: DataTypes.ENUM('active', 'inactive'),
         defaultValue: 'active'
+    },
+    position: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
     }
 }, {
     timestamps: true,
@@ -42,6 +46,9 @@ export const Slider = sequelize.define('Slider', {
     indexes: [
         {
             fields: ['status']
+        },
+        {
+            fields: ['position']
         }
     ]
 });

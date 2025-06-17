@@ -39,7 +39,7 @@ const Header = () => {
       <div className="header__top">
         <div className="header__logo">
           <Link href="/">
-            <Image src={logo} alt="logo" />
+            <Image src={logo} alt="logo" priority />
           </Link>
         </div>
         <nav className="header__nav">
