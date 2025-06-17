@@ -21,7 +21,11 @@ const Table = ({ columns, data, onRowClick }) => {
             >
               {columns.map((column, colIndex) => (
                 <td key={column.accessor || column.key || colIndex}>
-                  {column.cell ? column.cell({ ...row, index }) : row[column.accessor]}
+                  {column.cell
+                    ? column.cell({ ...row, index })
+                    : typeof column.accessor === 'function'
+                      ? column.accessor(row)
+                      : row[column.accessor]}
                 </td>
               ))}
             </tr>

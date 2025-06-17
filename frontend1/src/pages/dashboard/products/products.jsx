@@ -8,6 +8,7 @@ import { productService } from "@/services";
 import { categoryService } from "@/services";
 import { attributeService } from "@/services";
 import { debounce } from 'lodash';
+import AttributeSelector from '@/components/products/AttributeSelector';
 import "../../../styles/dashboard/products.css";
 
 const ProductsPage = () => {
@@ -34,11 +35,7 @@ const ProductsPage = () => {
       comparePrice: "",
       stock: "",
       sku: "",
-      attributes: {
-        size: "",
-        color: "",
-        material: ""
-      },
+      attributes: {},
       weight: "",
       weightUnit: "g",
       dimensions: {
@@ -93,7 +90,14 @@ const ProductsPage = () => {
   const fetchAttributes = async () => {
     try {
       const response = await attributeService.getAllAttributes();
-      setAttributes(response);
+      console.log('Raw attribute service response:', response);
+      // Transform the response into the expected format for AttributeSelector
+      const formattedAttributes = response.reduce((acc, attribute) => {
+        // Ensure attribute.values is an array, default to empty array if undefined or null
+        acc[attribute.name] = Array.isArray(attribute.values) ? attribute.values : [];
+        return acc;
+      }, {});
+      setAttributes(formattedAttributes);
     } catch (err) {
       console.error("Error fetching attributes:", err);
     }
@@ -108,14 +112,12 @@ const ProductsPage = () => {
     setLoading(true);
     try {
       const response = await productService.getAllProducts();
-      console.log('Products API Response:', response);
       if (response && response.products) {
         setProducts(response.products);
       } else {
         setError('Invalid response format');
       }
     } catch (error) {
-      console.error('Error fetching products:', error);
       setError(error.message || 'Failed to fetch products');
     } finally {
       setLoading(false);
@@ -192,41 +194,27 @@ const ProductsPage = () => {
     );
   };
 
-  // Update columns definition to include badge
+  // Update columns definition to include badge and avg_rating
   const columns = [
     {
       header: "S/N",
       accessor: "serial_number"
     },
-    { 
-      header: "Product", 
+    {
+      header: "Product",
       accessor: row => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '50px', height: '50px', overflow: 'hidden', borderRadius: '4px' }}>
-            <img 
-              src={row.images?.[0]?.image_url || '/placeholder.png'} 
-              alt={row.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontWeight: '500' }}>{row.name}</span>
-              <BadgeDisplay badge={row.badge} />
-            </div>
-            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
-              SKU: {row.variations?.[0]?.sku || 'N/A'}
-            </div>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontWeight: '500' }}>{row.name}</span>
+          <BadgeDisplay badge={row.badge} />
         </div>
       )
     },
-    { 
-      header: "Category", 
+    {
+      header: "Category",
       accessor: row => (
-        <span style={{ 
-          backgroundColor: '#F3F4F6', 
-          padding: '4px 8px', 
+        <span style={{
+          backgroundColor: '#F3F4F6',
+          padding: '4px 8px',
           borderRadius: '4px',
           fontSize: '13px'
         }}>
@@ -234,47 +222,18 @@ const ProductsPage = () => {
         </span>
       )
     },
-    { 
-      header: "Price", 
-      accessor: row => {
-        const price = row.variations?.[0]?.price;
-        const comparePrice = row.variations?.[0]?.comparePrice;
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span style={{ fontWeight: '500', color: '#111827' }}>
-              ₹{price ? price.toLocaleString() : 'N/A'}
-            </span>
-            {comparePrice && (
-              <span style={{ 
-                fontSize: '12px', 
-                color: '#6B7280', 
-                textDecoration: 'line-through' 
-              }}>
-                ₹{comparePrice.toLocaleString()}
-              </span>
-            )}
-          </div>
-        );
-      }
-    },
-    { 
-      header: "Stock", 
-      accessor: row => {
-        const stock = row.variations?.[0]?.stock;
-        return (
-          <span style={{ 
-            color: stock > 10 ? '#059669' : stock > 0 ? '#D97706' : '#DC2626',
-            fontWeight: '500'
-          }}>
-            {stock || 0} units
-          </span>
-        );
-      }
-    },
-    { 
-      header: "Status", 
+    {
+      header: "Avg. Rating",
       accessor: row => (
-        <span style={{ 
+        <span style={{ fontWeight: '500' }}>
+          {row.avg_rating ? `${row.avg_rating.toFixed(1)} / 5` : 'N/A'}
+        </span>
+      )
+    },
+    {
+      header: "Status",
+      accessor: row => (
+        <span style={{
           backgroundColor: row.status === 'active' ? '#D1FAE5' : '#FEE2E2',
           color: row.status === 'active' ? '#059669' : '#DC2626',
           padding: '4px 8px',
@@ -295,9 +254,9 @@ const ProductsPage = () => {
             className="action-btn edit"
             title="Edit"
             onClick={() => handleEdit(id)}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
+            style={{
+              display: 'flex',
+              alignItems: 'center',
               gap: '4px',
               padding: '6px 12px',
               borderRadius: '4px',
@@ -317,9 +276,9 @@ const ProductsPage = () => {
             className="action-btn delete"
             title="Delete"
             onClick={() => handleDelete(id)}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
+            style={{
+              display: 'flex',
+              alignItems: 'center',
               gap: '4px',
               padding: '6px 12px',
               borderRadius: '4px',
@@ -345,8 +304,6 @@ const ProductsPage = () => {
     try {
       setLoading(true);
       const response = await productService.getProduct(id);
-      console.log('Product API Response:', response);
-      
       const product = response;
       
       // Format the data for the form
@@ -374,8 +331,8 @@ const ProductsPage = () => {
             }
           }
 
-          // Parse attributes if it's a string
-          let attributes = variation.attributes;
+          // Parse attributes if it's a string and ensure proper object structure
+          let attributes = variation.attributes || {}; // Directly get attributes from attributes from variation
           if (typeof attributes === 'string') {
             try {
               attributes = JSON.parse(attributes);
@@ -383,39 +340,42 @@ const ProductsPage = () => {
               attributes = {};
             }
           }
+          console.log('Original variation.attributes:', variation.attributes);
+          console.log('Parsed attributes (before formatting):', attributes);
 
-          // Convert attribute arrays to comma-separated strings
+          // Convert attribute values to arrays for the AttributeSelector component
+          // And ensure keys are consistently lowercase for the form
           const formattedAttributes = {};
-          Object.entries(attributes).forEach(([key, value]) => {
-            if (Array.isArray(value)) {
-              formattedAttributes[key] = value.join(', ');
-            } else {
-              formattedAttributes[key] = value;
-            }
-          });
+          if (attributes) {
+            Object.entries(attributes).forEach(([key, value]) => {
+              const formattedKey = key.toLowerCase(); // Normalize to lowercase
+              formattedAttributes[formattedKey] = Array.isArray(value) ? value : [String(value)]; // Ensure value is array of strings for selector
+            });
+          }
+          console.log('Formatted attributes for form:', formattedAttributes);
 
           return {
-            id: variation.id,
-            price: variation.price,
+          id: variation.id,
+          price: variation.price,
             comparePrice: variation.comparePrice,
-            stock: variation.stock,
-            sku: variation.sku,
-            weight: variation.weight,
+          stock: variation.stock,
+          sku: variation.sku,
+          weight: variation.weight,
             weightUnit: variation.weightUnit || 'g',
             dimensions: dimensions,
             dimensionUnit: variation.dimensionUnit || 'cm',
-            attributes: formattedAttributes
+            attributes: formattedAttributes // Pass as object of arrays
           };
         }) || [],
         seo: {
-          metaTitle: product.seo?.meta_title || product.name,
-          metaDescription: product.seo?.meta_description || product.description,
-          metaKeywords: product.seo?.meta_keywords || '',
-          ogTitle: product.seo?.og_title || product.name,
-          ogDescription: product.seo?.og_description || product.description,
-          ogImage: product.seo?.og_image || (product.images?.[0] ? `${process.env.NEXT_PUBLIC_API_URL}${product.images[0].image_url}` : null),
-          canonicalUrl: product.seo?.canonical_url || `${window.location.origin}/products/${product.slug}`,
-          structuredData: product.seo?.structured_data || JSON.stringify({
+          metaTitle: product.seo?.metaTitle || product.name,
+          metaDescription: product.seo?.metaDescription || product.description,
+          metaKeywords: product.seo?.metaKeywords || '',
+          ogTitle: product.seo?.ogTitle || product.name,
+          ogDescription: product.seo?.ogDescription || product.description,
+          ogImage: product.seo?.ogImage || (product.images?.[0] ? `${process.env.NEXT_PUBLIC_API_URL}${product.images[0].image_url}` : null),
+          canonicalUrl: product.seo?.canonicalUrl || `${window.location.origin}/products/${product.slug}`,
+          structuredData: product.seo?.structuredData || JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Product",
             "name": product.name,
@@ -424,18 +384,16 @@ const ProductsPage = () => {
             "offers": {
               "@type": "Offer",
               "price": product.variations?.[0]?.price || 0,
-              "priceCurrency": "USD",
+              "priceCurrency": "INR",
               "availability": product.variations?.[0]?.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
             }
           })
         }
       };
 
-      console.log('Formatted Form Data:', formData);
       setFormData(formData);
       setIsModalOpen(true);
     } catch (err) {
-      console.error('Error fetching product:', err);
       setError(err.response?.data?.message || "Error fetching product details");
     } finally {
       setLoading(false);
@@ -450,7 +408,6 @@ const ProductsPage = () => {
         await fetchProducts();
       } catch (err) {
         setError(err.message || "Failed to delete product");
-        console.error("Error deleting product:", err);
       } finally {
         setLoading(false);
       }
@@ -471,11 +428,7 @@ const ProductsPage = () => {
         comparePrice: "",
         stock: "",
         sku: "",
-        attributes: {
-          size: "",
-          color: "",
-          material: ""
-        },
+        attributes: {},
         weight: "",
         weightUnit: "g",
         dimensions: {
@@ -516,11 +469,7 @@ const ProductsPage = () => {
         comparePrice: "",
         stock: "",
         sku: "",
-        attributes: {
-          size: "",
-          color: "",
-          material: ""
-        },
+        attributes: {},
         weight: "",
         weightUnit: "g",
         dimensions: {
@@ -546,15 +495,7 @@ const ProductsPage = () => {
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
     
-    console.log('Input Change:', {
-      name,
-      value,
-      type,
-      currentFormData: formData
-    });
-
     if (!name) {
-      console.error('Input field missing name attribute:', e.target);
       return;
     }
     
@@ -576,7 +517,7 @@ const ProductsPage = () => {
         let current = newVariations[variationIndex];
         
         // Handle nested fields (dimensions)
-        if (fields.length > 1) {
+        if (fields[0] === 'dimensions') {
           const [field, subField] = fields;
           current = {
             ...current,
@@ -599,34 +540,13 @@ const ProductsPage = () => {
           variations: newVariations
         };
       });
-    } else if (name.startsWith('attributes.')) {
-      const [_, index, attrField] = name.split('.');
-      const variationIndex = parseInt(index);
-      
-      setFormData(prev => {
-        const newVariations = [...prev.variations];
-        const currentAttributes = newVariations[variationIndex].attributes || {};
-        
-        newVariations[variationIndex] = {
-          ...newVariations[variationIndex],
-          attributes: {
-            ...currentAttributes,
-            [attrField]: value
-          }
-        };
-        
-        return {
-          ...prev,
-          variations: newVariations
-        };
-      });
     } else if (type === 'file') {
       if (name === 'images') {
         const files = Array.from(e.target.files);
         if (files.length > 5) {
           alert('You can only upload up to 5 images');
           return;
-        }
+        };
         setFormData(prev => ({
           ...prev,
           images: files
@@ -640,6 +560,21 @@ const ProductsPage = () => {
     }
   };
 
+  // New handler for AttributeSelector changes
+  const handleAttributeChange = (variationIndex, updatedAttributes) => {
+    setFormData(prev => {
+      const newVariations = [...prev.variations];
+      newVariations[variationIndex] = {
+        ...newVariations[variationIndex],
+        attributes: updatedAttributes
+      };
+      return {
+        ...prev,
+        variations: newVariations
+      };
+    });
+  };
+
   const addVariation = () => {
     setFormData(prev => ({
       ...prev,
@@ -650,11 +585,7 @@ const ProductsPage = () => {
           comparePrice: "",
           stock: "",
           sku: "",
-          attributes: {
-            size: "",
-            color: "",
-            material: ""
-          },
+          attributes: {},
           weight: "",
           weightUnit: "g",
           dimensions: {
@@ -702,25 +633,32 @@ const ProductsPage = () => {
 
         // Handle variations with attributes
         const variationsWithAttributes = formData.variations.map(variation => {
-            // Process attributes to ensure they are arrays
+            // Process attributes: filter out empty, ensure values are arrays of strings
             const processedAttributes = {};
-            Object.entries(variation.attributes).forEach(([key, value]) => {
-                if (typeof value === 'string') {
-                    // Split by comma and clean up
-                    processedAttributes[key] = value.split(',')
-                        .map(v => v.trim())
-                        .filter(v => v);
-                } else if (Array.isArray(value)) {
-                    processedAttributes[key] = value;
-                }
-            });
+            if (variation.attributes) {
+                Object.entries(variation.attributes).forEach(([key, value]) => {
+                    // Normalize key to lowercase to ensure consistency
+                    const normalizedKey = key.toLowerCase(); 
+                    
+                    let cleanedValues = [];
+                    if (typeof value === 'string' && value.trim() !== '') {
+                        cleanedValues = value.split(',').map(v => v.trim()).filter(v => v !== '');
+                    } else if (Array.isArray(value)) {
+                        cleanedValues = value.map(v => String(v).trim()).filter(v => v !== '');
+                    }
+
+                    if (cleanedValues.length > 0) {
+                        processedAttributes[normalizedKey] = cleanedValues;
+                    }
+                });
+            }
 
             return {
                 id: variation.id,
-                price: variation.price,
+            price: variation.price,
                 comparePrice: variation.comparePrice || null,
-                stock: variation.stock,
-                sku: variation.sku,
+            stock: variation.stock,
+            sku: variation.sku,
                 weight: variation.weight || null,
                 weightUnit: variation.weightUnit || 'g',
                 dimensions: variation.dimensions || {
@@ -783,14 +721,6 @@ const ProductsPage = () => {
             });
         }
 
-        // Log all data being sent
-        console.log('Form SEO Data:', formData.seo);
-        console.log('Formatted SEO Data:', seoData);
-        console.log('FormData entries:');
-        for (let pair of formDataToSend.entries()) {
-            console.log(pair[0], pair[1]);
-        }
-
         let response;
         if (formData.id) {
             response = await productService.updateProduct(formData.id, formDataToSend);
@@ -799,13 +729,12 @@ const ProductsPage = () => {
         }
 
         if (response.success) {
-            setIsModalOpen(false);
+        setIsModalOpen(false);
             await fetchProducts();
         } else {
             throw new Error(response.message || 'Failed to save product');
         }
     } catch (err) {
-        console.error('Error saving product:', err);
         setError(err.response?.data?.message || "Error saving product");
     } finally {
         setLoading(false);
@@ -991,17 +920,12 @@ const ProductsPage = () => {
                   </div>
                   <div className="attributes-section">
                     <h5>Attributes</h5>
-                    {attributes.map((attribute) => (
-                      <InputField
-                        key={attribute.id}
-                        label={attribute.name}
-                        type="text"
-                        name={`attributes.${index}.${attribute.name}`}
-                        value={formData.variations[index].attributes[attribute.name] || ''}
-                        onChange={handleInputChange}
-                        placeholder={`Enter ${attribute.name} values (comma-separated)`}
-                      />
-                    ))}
+                    <AttributeSelector
+                      variationIndex={index}
+                      attributes={attributes}
+                      selectedAttributes={variation.attributes}
+                      onChange={handleAttributeChange}
+                    />
                   </div>
                 </div>
               ))}
@@ -1107,21 +1031,22 @@ const ProductsPage = () => {
                 </div>
               ) : (
                 <>
-                  <Table
-                    columns={columns}
+        <Table
+          columns={columns}
                     data={currentItemsWithSN}
                     className="w-full"
                     striped={true}
                     hoverable={true}
                   />
+                  {console.log('Data passed to Table:', currentItemsWithSN)}
                   {filteredData.length > itemsPerPage && (
                     <div className="seo-pagination-container">
-                      <Pagination
-                        currentPage={currentPage}
+        <Pagination
+          currentPage={currentPage}
                         totalItems={filteredData.length}
                         itemsPerPage={itemsPerPage}
-                        onPageChange={setCurrentPage}
-                      />
+          onPageChange={setCurrentPage}
+        />
                     </div>
                   )}
                 </>
@@ -1184,7 +1109,7 @@ const ProductsPage = () => {
                 </Button>
               </>
             )}
-          </div>
+    </div>
         </form>
       </Modal>
     </>
