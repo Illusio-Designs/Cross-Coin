@@ -1,7 +1,8 @@
 import express from 'express';
 import { 
     getAllShippingFees,
-    createOrUpdateShippingFee,
+    createShippingFee,
+    updateShippingFee,
     getShippingFeeByType,
     deleteShippingFee
 } from '../controller/shippingFeeController.js';
@@ -14,7 +15,8 @@ router.get('/', getAllShippingFees);
 router.get('/:type', getShippingFeeByType);
 
 // Admin routes
-router.post('/', isAuthenticated, authorize(['admin']), createOrUpdateShippingFee);
+router.post('/', isAuthenticated, authorize(['admin']), createShippingFee);
+router.put('/:id', isAuthenticated, authorize(['admin']), updateShippingFee);
 router.delete('/:id', isAuthenticated, authorize(['admin']), deleteShippingFee);
 
 export default router; 
