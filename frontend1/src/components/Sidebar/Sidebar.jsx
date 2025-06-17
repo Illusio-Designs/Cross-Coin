@@ -47,14 +47,6 @@ const menu = [
     view: "shippingFees"
   },
   {
-    label: "Cart & Wishlist",
-    icon: <FaShoppingCart />,
-    submenu: [
-      { label: "Shopping Cart", view: "cart" },
-      { label: "Wishlist", view: "wishlist" },
-    ]
-  },
-  {
     label: "Reviews",
     icon: <FaStar />, view: "reviews"
   },
