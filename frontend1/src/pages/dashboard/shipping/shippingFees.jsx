@@ -127,7 +127,7 @@ export default function ShippingFees() {
       orderType: rowData.orderType || "cod",
       fee: parseFloat(rowData.fee || 0)
     });
-    setIsEditModalOpen(true);
+        setIsEditModalOpen(true);
   };
 
   const handleDelete = async (id) => {
