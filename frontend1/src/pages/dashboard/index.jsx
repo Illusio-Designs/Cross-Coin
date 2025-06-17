@@ -15,9 +15,8 @@ import Users from "./users/users";
 import Cart from "./cart/cart";
 import Wishlist from "./cart/wishlist";
 import ShippingFees from "./shipping/shippingFees";
-import ShippingAddresses from "./shipping/shippingAddresses";
 import Payments from "./payments/payments";
-import Coupons from "./payments/coupons";
+// import Coupons from "./coupons/coupons";
 import Reviews from "./reviews/reviews";
 import SEO from "./seo/seo";
 import Slider from "./slider/slider";
@@ -111,8 +110,6 @@ export default function Dashboard() {
         return <Wishlist />;
       case 'shippingFees':
         return <ShippingFees />;
-      case 'shippingAddresses':
-        return <ShippingAddresses />;
       case 'payments':
         return <Payments />;
       case 'coupons':
