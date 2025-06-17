@@ -22,14 +22,14 @@ const formatProductResponse = (product) => {
     // Format SEO data
     if (productData.ProductSEO) {
         productData.seo = {
-            metaTitle: productData.ProductSEO.meta_title,
-            metaDescription: productData.ProductSEO.meta_description,
-            metaKeywords: productData.ProductSEO.meta_keywords,
-            ogTitle: productData.ProductSEO.og_title,
-            ogDescription: productData.ProductSEO.og_description,
-            ogImage: productData.ProductSEO.og_image,
-            canonicalUrl: productData.ProductSEO.canonical_url,
-            structuredData: productData.ProductSEO.structured_data
+            metaTitle: productData.ProductSEO.metaTitle,
+            metaDescription: productData.ProductSEO.metaDescription,
+            metaKeywords: productData.ProductSEO.metaKeywords,
+            ogTitle: productData.ProductSEO.ogTitle,
+            ogDescription: productData.ProductSEO.ogDescription,
+            ogImage: productData.ProductSEO.ogImage,
+            canonicalUrl: productData.ProductSEO.canonicalUrl,
+            structuredData: productData.ProductSEO.structuredData
         };
         delete productData.ProductSEO;
     }
@@ -107,34 +107,40 @@ const calculateProductBadge = async (product, transaction) => {
 };
 
 // Helper function to handle product attributes
-const handleProductAttributes = async (variation, productId, transaction) => {
-    if (!variation.attributes) return;
+const handleProductAttributes = async (variation, transaction) => {
+    const productAttributes = [];
+    if (variation.attributes) {
+        for (const attributeName in variation.attributes) {
+            console.log('Processing attribute:', attributeName, 'with values:', variation.attributes[attributeName]);
+            const normalizedAttributeName = attributeName.toLowerCase();
+            let attributeValues = variation.attributes[attributeName];
 
-    // Process each attribute
-    for (const [attrName, attrValue] of Object.entries(variation.attributes)) {
-        // Find or create attribute
-        let [attribute] = await Attribute.findOrCreate({
-            where: { name: attrName },
-            defaults: {
-                type: 'select',
-                isRequired: true,
-                status: 'active'
-            },
-            transaction
-        });
+            // Ensure attributeValues is an array
+            if (!Array.isArray(attributeValues)) {
+                attributeValues = [attributeValues];
+            }
 
-        // Find or create attribute value
-        let [attributeValue] = await AttributeValue.findOrCreate({
-            where: {
-                attributeId: attribute.id,
-                value: attrValue
-            },
-            defaults: {
-                status: 'active'
-            },
-            transaction
-        });
+            // Join multiple values into a single string if necessary
+            const joinedValue = attributeValues.join(', ').trim();
+
+            if (joinedValue) { // Only process if there's a value
+                const [attribute] = await Attribute.findOrCreate({
+                    where: { name: normalizedAttributeName }, // Use normalized name here
+                    defaults: { name: normalizedAttributeName, type: 'text', isRequired: false, status: 'active' },
+                    transaction
+                });
+
+                const [attributeValue] = await AttributeValue.findOrCreate({
+                    where: { attributeId: attribute.id, value: joinedValue },
+                    defaults: { attributeId: attribute.id, value: joinedValue, status: 'active' },
+                    transaction
+                });
+
+                productAttributes.push(attributeValue.id);
+            }
+        }
     }
+    return productAttributes;
 };
 
 // Create a new product
@@ -165,8 +171,8 @@ export const createProduct = async (req, res) => {
         console.log('Description:', description);
         console.log('Category ID:', categoryId);
         console.log('Status:', status);
-        console.log('Variations:', JSON.stringify(variations, null, 2));
-        console.log('SEO:', JSON.stringify(seo, null, 2));
+        console.log('Variations (parsed from req.body):', JSON.stringify(variations, null, 2));
+        console.log('SEO (parsed from req.body):', JSON.stringify(seo, null, 2));
         console.log('Images Count:', images?.length || 0);
 
         // Validate required fields
@@ -200,14 +206,14 @@ export const createProduct = async (req, res) => {
         console.log('\n=== SEO DATA BEFORE CREATION ===');
         console.log('SEO Data:', {
             product_id: product.id,
-            meta_title: seo.meta_title || name,
-            meta_description: seo.meta_description || description,
-            meta_keywords: seo.meta_keywords || '',
-            og_title: seo.og_title || name,
-            og_description: seo.og_description || description,
-            og_image: seo.og_image || null,
-            canonical_url: seo.canonical_url || `${process.env.FRONTEND_URL}/products/${product.slug}`,
-            structured_data: seo.structured_data || JSON.stringify({
+            metaTitle: seo.metaTitle || name,
+            metaDescription: seo.metaDescription || description,
+            metaKeywords: seo.metaKeywords || '',
+            ogTitle: seo.ogTitle || name,
+            ogDescription: seo.ogDescription || description,
+            ogImage: seo.ogImage || null,
+            canonicalUrl: seo.canonicalUrl || `${process.env.FRONTEND_URL}/products/${product.slug}`,
+            structuredData: seo.structuredData || JSON.stringify({
                 "@context": "https://schema.org",
                 "@type": "Product",
                 "name": name,
@@ -216,7 +222,7 @@ export const createProduct = async (req, res) => {
                 "offers": {
                     "@type": "Offer",
                     "price": variations[0]?.price || 0,
-                    "priceCurrency": "USD",
+                    "priceCurrency": "INR",
                     "availability": variations[0]?.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
                 }
             })
@@ -224,14 +230,14 @@ export const createProduct = async (req, res) => {
 
         const seoRecord = await ProductSEO.create({
             product_id: product.id,
-            meta_title: seo.meta_title || name,
-            meta_description: seo.meta_description || description,
-            meta_keywords: seo.meta_keywords || '',
-            og_title: seo.og_title || name,
-            og_description: seo.og_description || description,
-            og_image: seo.og_image || null,
-            canonical_url: seo.canonical_url || `${process.env.FRONTEND_URL}/products/${product.slug}`,
-            structured_data: seo.structured_data || JSON.stringify({
+            metaTitle: seo.metaTitle || name,
+            metaDescription: seo.metaDescription || description,
+            metaKeywords: seo.metaKeywords || '',
+            ogTitle: seo.ogTitle || name,
+            ogDescription: seo.ogDescription || description,
+            ogImage: seo.ogImage || null,
+            canonicalUrl: seo.canonicalUrl || `${process.env.FRONTEND_URL}/products/${product.slug}`,
+            structuredData: seo.structuredData || JSON.stringify({
                 "@context": "https://schema.org",
                 "@type": "Product",
                 "name": name,
@@ -240,7 +246,7 @@ export const createProduct = async (req, res) => {
                 "offers": {
                     "@type": "Offer",
                     "price": variations[0]?.price || 0,
-                    "priceCurrency": "USD",
+                    "priceCurrency": "INR",
                     "availability": variations[0]?.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
                 }
             })
@@ -276,7 +282,7 @@ export const createProduct = async (req, res) => {
                 console.log('Variation created with ID:', variationRecord.id);
 
                 // Handle attributes for this variation
-                await handleProductAttributes(variation, product.id, transaction);
+                await handleProductAttributes(variation, transaction);
             }
         }
 
@@ -485,8 +491,8 @@ export const updateProduct = async (req, res) => {
             metaTitle: seo.metaTitle || seo.meta_title || name,
             metaDescription: seo.metaDescription || seo.meta_description || description,
             metaKeywords: seo.metaKeywords || seo.meta_keywords || '',
-            ogTitle: seo.metaTitle || seo.meta_title || name,
-            ogDescription: seo.metaDescription || seo.meta_description || description,
+            ogTitle: seo.ogTitle || seo.og_title || name,
+            ogDescription: seo.ogDescription || seo.og_description || description,
             ogImage: seo.ogImage || seo.og_image || null,
             canonicalUrl: seo.canonicalUrl || seo.canonical_url || `${process.env.FRONTEND_URL}/products/${product.slug}`,
             structuredData: seo.structuredData || seo.structured_data || JSON.stringify({
@@ -552,7 +558,7 @@ export const updateProduct = async (req, res) => {
                 }, { transaction });
 
                 // Handle attributes for this variation
-                await handleProductAttributes(variation, product.id, transaction);
+                await handleProductAttributes(variation, transaction);
             }
         }
 

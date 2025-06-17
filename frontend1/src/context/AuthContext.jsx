@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { userService } from '../services';
 
 const AuthContext = createContext(null);
@@ -7,11 +7,7 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        checkAuth();
-    }, []);
-
-    const checkAuth = async () => {
+    const checkAuth = useCallback(async () => {
         try {
             const token = localStorage.getItem('token');
             if (token) {
@@ -25,9 +21,13 @@ export const AuthProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const login = async (credentials) => {
+    useEffect(() => {
+        checkAuth();
+    }, [checkAuth]);
+
+    const login = useCallback(async (credentials) => {
         try {
             const response = await userService.login(credentials);
             localStorage.setItem('token', response.token);
@@ -36,9 +36,9 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
             throw error;
         }
-    };
+    }, []);
 
-    const logout = async () => {
+    const logout = useCallback(async () => {
         try {
             await userService.logout();
         } catch (error) {
@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }) => {
             localStorage.removeItem('token');
             setUser(null);
         }
-    };
+    }, []);
 
     const value = {
         user,
