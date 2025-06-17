@@ -8,6 +8,7 @@ import { sliderService, categoryService } from "@/services";
 import { debounce } from 'lodash';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../../context/AuthContext';
+import Image from 'next/image';
 import "../../../styles/dashboard/seo.css";
 import { toast } from 'react-hot-toast';
 
@@ -138,12 +139,13 @@ export default function Slider() {
       header: "Image", 
       accessor: "image",
       cell: ({ image }) => (
-        <img 
-          src={`${process.env.NEXT_PUBLIC_API_URL}${image}`} 
-          alt="Slider" 
-          className="slider-table-image" 
-          style={{ width: '100px', height: '60px', objectFit: 'cover' }}
-        />
+        <div style={{ width: '100px', height: '60px', position: 'relative' }}>
+          <img 
+            src={image}
+            alt="Slider" 
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        </div>
       )
     },
     { header: "Title", accessor: "title" },
@@ -470,13 +472,15 @@ export default function Slider() {
                 required={!formData.id}
               />
               {formData.image && (
-                <img 
-                  src={typeof formData.image === 'string' 
-                    ? `${process.env.NEXT_PUBLIC_API_URL}${formData.image}` 
-                    : URL.createObjectURL(formData.image)} 
-                  alt="Slider Preview" 
-                  className="seo-image-preview" 
-                />
+                <div style={{ width: '200px', height: '120px', position: 'relative', marginTop: '10px' }}>
+                  <img 
+                    src={typeof formData.image === 'string' 
+                      ? formData.image 
+                      : URL.createObjectURL(formData.image)} 
+                    alt="Slider Preview" 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </div>
               )}
             </div>
           </div>

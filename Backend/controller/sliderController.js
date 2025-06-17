@@ -32,8 +32,8 @@ export const upload = multer({ storage });
 const formatSliderResponse = (slider) => {
     const sliderData = slider.toJSON();
     sliderData.categoryName = slider.category ? slider.category.name : null;
-    // Add full image path
-    sliderData.image = `/uploads/slider/${sliderData.image}`;
+    // Add full image path with API URL
+    sliderData.image = `${process.env.API_URL || 'http://localhost:5000'}/uploads/slider/${sliderData.image}`;
     console.log('Formatted slider image path:', sliderData.image);
     delete sliderData.category;
     return sliderData;
@@ -224,7 +224,7 @@ export const getPublicSliders = async (req, res) => {
                 as: 'category',
                 attributes: ['id', 'name', 'slug']
             }],
-            order: [['position', 'ASC']],
+            order: [['createdAt', 'DESC']],
             attributes: ['id', 'title', 'description', 'buttonText', 'image', 'categoryId']
         });
 
@@ -232,6 +232,8 @@ export const getPublicSliders = async (req, res) => {
             const sliderData = slider.toJSON();
             sliderData.categoryName = slider.category ? slider.category.name : null;
             sliderData.categorySlug = slider.category ? slider.category.slug : null;
+            // Add full image path
+            sliderData.image = `${process.env.API_URL || 'http://localhost:5000'}/uploads/slider/${sliderData.image}`;
             delete sliderData.category;
             return sliderData;
         });

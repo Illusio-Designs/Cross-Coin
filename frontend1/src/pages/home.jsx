@@ -6,51 +6,22 @@ import Testimonials from "../components/Testimonials";
 import ProductCard, { products } from "../components/ProductCard";
 import Image from "next/image";
 import card1_left from "../assets/card1-left.webp";
-import { FiHeart } from 'react-icons/fi';
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
-
-const slides = [
-  {
-    title: "Get up to 30% off",
-    highlight: "New Arrivals test",
-    description: "Introducing our latest collection of woollen Socks",
-    button: "ORDER NOW →",
-    image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80"
-  },
-  {
-    title: "Winter Sale",
-    highlight: "Hot Deals",
-    description: "Stay warm with our exclusive offers on winter wear!",
-    button: "SHOP NOW →",
-    image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80"
-  },
-  {
-    title: "Get up to 30% off",
-    highlight: "New Arrivals",
-    description: "Introducing our latest collection of woollen Socks",
-    button: "ORDER NOW →",
-    image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80"
-  },
-  {
-    title: "Winter Sale",
-    highlight: "Hot Deals",
-    description: "Stay warm with our exclusive offers on winter wear!",
-    button: "SHOP NOW →",
-    image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80"
-  }
-];
+import { getPublicSliders } from '../services/publicindex';
 
 const formatTwoDigits = (num) => num.toString().padStart(2, '0');
 
 const Home = () => {
   const [current, setCurrent] = useState(0);
+  const [slides, setSlides] = useState([]);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const { addToCart } = useCart();
   const [selectedThumbnail, setSelectedThumbnail] = useState(0);
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [loading, setLoading] = useState(true);
   
   const categorySliderRef = useRef(null);
   const latestSliderRef = useRef(null);
@@ -71,11 +42,28 @@ const Home = () => {
   }));
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % slides.length);
-    }, 5000);
-    return () => clearInterval(interval);
+    const fetchSliders = async () => {
+      try {
+        const data = await getPublicSliders();
+        setSlides(data);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching sliders:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchSliders();
   }, []);
+
+  useEffect(() => {
+    if (slides.length > 0) {
+      const interval = setInterval(() => {
+        setCurrent((prev) => (prev + 1) % slides.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [slides]);
 
   useEffect(() => {
     // Set your target date here (e.g., 7 days from now)
@@ -169,18 +157,30 @@ const Home = () => {
       <Header />
       <div className="home-page">
         <div className="hero-slider">
-          <div className="hero-slide" key={current}>
-            <div className="hero-slide__image">
-              <img src={slides[current].image} alt="slide visual" />
-            </div>
-            <div className="hero-slide__content">
-              <div className="hero-slide__content-text">
-                <h1>{slides[current].title} <span className="highlight">{slides[current].highlight}</span></h1>
-                <p>{slides[current].description}</p>
-                <button className="hero-btn">{slides[current].button}</button>
+          {loading ? (
+            <div className="loading-spinner">Loading...</div>
+          ) : slides.length > 0 ? (
+            <div className="hero-slide" key={current}>
+              <div className="hero-slide__image">
+                <Image 
+                  src={slides[current].image} 
+                  alt={slides[current].title} 
+                  fill
+                  priority
+                  style={{ objectFit: 'cover' }}
+                />
+              </div>
+              <div className="hero-slide__content">
+                <div className="hero-slide__content-text">
+                  <h1>{slides[current].title} <span className="highlight">{slides[current].highlight}</span></h1>
+                  <p>{slides[current].description}</p>
+                  <button className="hero-btn">{slides[current].buttonText}</button>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="no-slides">No slides available</div>
+          )}
           <div className="hero-slider__nav">
             {slides.map((_, idx) => (
               <span key={idx} className={`dot${idx === current ? ' active' : ''}`} onClick={() => setCurrent(idx)}></span>
