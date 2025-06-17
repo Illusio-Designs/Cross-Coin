@@ -12,7 +12,8 @@ const AttributeSelector = ({
 }) => {
   const handleAttributeChange = (attributeName, selectedOptions) => {
     const newAttributes = { ...selectedAttributes };
-    newAttributes[attributeName] = selectedOptions.map(option => option.value);
+    // Ensure the key is normalized to lowercase when updating attributes
+    newAttributes[attributeName.toLowerCase()] = selectedOptions.map(option => option.value);
     onChange(variationIndex, newAttributes);
   };
 
@@ -26,16 +27,19 @@ const AttributeSelector = ({
   return (
     <div className="attribute-selector">
       {Object.entries(attributes).map(([attributeName, values]) => {
+        // Normalize attributeName to lowercase for consistent access with selectedAttributes
+        const normalizedAttributeName = attributeName.toLowerCase();
+
         console.log(`AttributeSelector: Processing attribute: ${attributeName}`);
         console.log(`AttributeSelector: Available values for ${attributeName}:`, values);
-        console.log(`AttributeSelector: Selected values for ${attributeName}:`, selectedAttributes[attributeName]);
+        console.log(`AttributeSelector: Selected values for ${attributeName}:`, selectedAttributes[normalizedAttributeName]);
         return (
           <div key={attributeName} className="attribute-group">
             <label>{attributeName}</label>
             <CreatableSelect
               isMulti
               options={values.map(value => ({ value, label: value }))}
-              value={selectedAttributes[attributeName]?.map(value => ({ value, label: value })) || []}
+              value={selectedAttributes[normalizedAttributeName]?.map(value => ({ value, label: value })) || []}
               onChange={(selected) => handleAttributeChange(attributeName, selected)}
               placeholder={`Select or create ${attributeName}`}
             />

@@ -88,22 +88,26 @@ const ProductsPage = () => {
 
   // Fetch attributes
   const fetchAttributes = async () => {
+    console.log("Attempting to fetch attributes...");
     try {
       const response = await attributeService.getAllAttributes();
       console.log('Raw attribute service response:', response);
-      // Transform the response into the expected format for AttributeSelector
+      // Correctly access `AttributeValues` from the backend response
+      // And map them to an array of just the string values
       const formattedAttributes = response.reduce((acc, attribute) => {
-        // Ensure attribute.values is an array, default to empty array if undefined or null
-        acc[attribute.name] = Array.isArray(attribute.values) ? attribute.values : [];
+        const attributeValues = attribute.AttributeValues?.map(val => val.value) || [];
+        acc[attribute.name] = attributeValues;
         return acc;
       }, {});
       setAttributes(formattedAttributes);
+      console.log('Attributes state after fetch:', formattedAttributes);
     } catch (err) {
       console.error("Error fetching attributes:", err);
     }
   };
 
   useEffect(() => {
+    console.log("useEffect for fetchAttributes is running.");
     fetchAttributes();
   }, []);
 
