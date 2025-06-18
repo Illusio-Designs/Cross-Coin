@@ -53,14 +53,18 @@ const formatProductResponse = (product) => {
 
     // Format images
     if (productData.ProductImages) {
-        productData.images = productData.ProductImages.map(image => ({
-            id: image.id,
-            image_url: image.image_url,
-            alt_text: image.alt_text,
-            display_order: image.display_order,
-            is_primary: image.is_primary,
-            status: image.status
-        }));
+        productData.images = productData.ProductImages.map(image => {
+            // Extract just the filename from the path
+            const filename = image.image_url.split('/').pop();
+            return {
+                id: image.id,
+                image_url: filename, // Store just the filename
+                alt_text: image.alt_text,
+                display_order: image.display_order,
+                is_primary: image.is_primary,
+                status: image.status
+            };
+        });
         delete productData.ProductImages;
     }
 
@@ -574,7 +578,7 @@ export const updateProduct = async (req, res) => {
                     const imagePath = path.join(__dirname, '../uploads/products', image.image_url.split('/').pop());
                     try {
                         await fs.unlink(imagePath);
-            } catch (error) {
+                    } catch (error) {
                         console.error('Error deleting image file:', error);
                     }
                 }
@@ -797,12 +801,13 @@ export const searchProducts = async (req, res) => {
     }
 };
 
-// Get public product by ID
-export const getPublicProductById = async (req, res) => {
+// Get public product by slug
+export const getPublicProductBySlug = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { slug } = req.params;
         
-        const product = await Product.findByPk(id, {
+        const product = await Product.findOne({
+            where: { slug },
             include: [
                 { model: Category },
                 { model: ProductVariation, as: 'ProductVariations' },
@@ -818,9 +823,20 @@ export const getPublicProductById = async (req, res) => {
             });
         }
 
+        // Format the product response
+        const formattedProduct = formatProductResponse(product);
+        
+        // Add full image URLs
+        if (formattedProduct.images) {
+            formattedProduct.images = formattedProduct.images.map(image => ({
+                ...image,
+                image_url: `${process.env.BACKEND_URL || 'http://localhost:5000'}/uploads/products/${image.image_url}`
+            }));
+        }
+
         res.json({
             success: true,
-            data: formatProductResponse(product)
+            data: formattedProduct
         });
     } catch (error) {
         console.error('Error getting public product:', error);
@@ -848,10 +864,28 @@ export const getAllPublicProducts = async (req, res) => {
         }
 
         // Build sort options
-        const sortOptions = [];
+        let sortOptions = [];
         if (sort) {
-            const [field, order] = sort.split(':');
-            sortOptions.push([field, order.toUpperCase()]);
+            // Handle different sort cases
+            switch (sort) {
+                case 'featured':
+                    sortOptions = [['createdAt', 'DESC']];
+                    break;
+                case 'price:asc':
+                    sortOptions = [['price', 'ASC']];
+                    break;
+                case 'price:desc':
+                    sortOptions = [['price', 'DESC']];
+                    break;
+                case 'newest':
+                    sortOptions = [['createdAt', 'DESC']];
+                    break;
+                default:
+                    sortOptions = [['createdAt', 'DESC']];
+            }
+        } else {
+            // Default sort
+            sortOptions = [['createdAt', 'DESC']];
         }
 
         // Get products with pagination
@@ -868,10 +902,22 @@ export const getAllPublicProducts = async (req, res) => {
             ]
         });
 
+        // Format products with proper image URLs
+        const formattedProducts = products.rows.map(product => {
+            const formattedProduct = formatProductResponse(product);
+            if (formattedProduct.images) {
+                formattedProduct.images = formattedProduct.images.map(image => ({
+                    ...image,
+                    image_url: `${process.env.BACKEND_URL || 'http://localhost:5000'}/uploads/products/${image.image_url}`
+                }));
+            }
+            return formattedProduct;
+        });
+
         res.json({
             success: true,
             data: {
-                products: products.rows.map(formatProductResponse),
+                products: formattedProducts,
                 total: products.count,
                 page: parseInt(page),
                 totalPages: Math.ceil(products.count / parseInt(limit))

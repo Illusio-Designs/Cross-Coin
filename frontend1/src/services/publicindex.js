@@ -71,10 +71,10 @@ export const getPublicSliders = async () => {
     }
 };
 
-// Get public product by ID
-export const getPublicProductById = async (productId) => {
+// Get public product by slug
+export const getPublicProductBySlug = async (slug) => {
     try {
-        const response = await axios.get(`${API_URL}/api/products/public/${productId}`);
+        const response = await axios.get(`${API_URL}/api/products/public/${slug}`);
         return response.data;
     } catch (error) {
         throw error.response?.data || error.message;

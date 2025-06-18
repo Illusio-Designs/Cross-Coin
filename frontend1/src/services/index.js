@@ -677,9 +677,25 @@ export const reviewService = {
 
     moderateReview: async (id, moderationData) => {
         try {
-            const response = await api.put(`/api/reviews/admin/${id}/moderate`, moderationData);
+            console.log('Moderating review:', { id, moderationData });
+            // Ensure the data is in the correct format
+            const formattedData = {
+                status: moderationData.status,
+                is_featured: moderationData.is_featured,
+                admin_notes: moderationData.admin_notes
+            };
+            console.log('Formatted moderation data:', formattedData);
+            
+            const response = await api.put(`/api/reviews/admin/${id}/moderate`, formattedData);
+            console.log('Moderation response:', response.data);
+            
+            if (!response.data) {
+                throw new Error('No response data received');
+            }
+            
             return response.data;
         } catch (error) {
+            console.error('Moderation error:', error.response?.data || error);
             throw handleApiError(error);
         }
     },

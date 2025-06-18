@@ -18,7 +18,6 @@ import Payments from "./payments/payments";
 import Reviews from "./reviews/reviews";
 import SEO from "./seo/seo";
 import Slider from "./slider/slider";
-// import Analytics from "./analytics/analytics";
 
 function DashboardHeader({ isCollapsed }) {
   const sidebarWidth = isCollapsed ? 72 : 260;
@@ -116,7 +115,7 @@ export default function Dashboard() {
       case 'slider':
         return <Slider />;
       default:
-        return <Analytics />;
+        return <CardGrid />;
     }
   };
 

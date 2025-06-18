@@ -10,7 +10,7 @@ import {
     getFeaturedProducts,
     getNewArrivals,
     getBestSellers,
-    getPublicProductById,
+    getPublicProductBySlug,
     getAllPublicProducts
 } from '../controller/productController.js';
 import { isAuthenticated, authorize } from '../middleware/authMiddleware.js';
@@ -20,7 +20,7 @@ const router = express.Router();
 
 // Public routes
 router.get('/public', getAllPublicProducts);
-router.get('/public/:id', getPublicProductById);
+router.get('/public/:slug', getPublicProductBySlug);
 router.get('/search', searchProducts);
 router.get('/featured', getFeaturedProducts);
 router.get('/new-arrivals', getNewArrivals);

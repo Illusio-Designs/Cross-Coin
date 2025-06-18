@@ -3,128 +3,150 @@ import { useSearchParams } from "next/navigation";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import Image from "next/image";
-import card1 from "../assets/card1-right.webp";
-import card2 from "../assets/card3-right.webp";
-import card3 from "../assets/card2-left.webp";
-import card4 from "../assets/card3-right.webp";
-import card5 from "../assets/card1-right.webp";
 import { useCart } from '../context/CartContext';
 import { useRouter } from "next/navigation";
+import { getPublicProductBySlug, createPublicReview } from '../services/publicindex';
 
 export default function ProductDetails() {
   const searchParams = useSearchParams();
-  const productName = searchParams.get('name');
+  const productSlug = searchParams.get('slug');
   const { addToCart } = useCart();
   const router = useRouter();
   
   const [selectedThumbnail, setSelectedThumbnail] = useState(0);
-  const [selectedColor, setSelectedColor] = useState("");
-  const [selectedSize, setSelectedSize] = useState("");
+  const [selectedVariation, setSelectedVariation] = useState(null);
+  const [selectedAttributes, setSelectedAttributes] = useState({});
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState("description");
   const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showAddedToCart, setShowAddedToCart] = useState(false);
-
-  // Mock product data - in a real app, this would come from an API
-  const products = [
-    {
-      name: "Premium Wool Socks",
-      originalPrice: 39.99,
-      price: 29.99,
-      category: "Woollen Shocks",
-      images: [card1, card2, card3, card1, card2],
-      rating: 4.5,
-      reviews: 128,
-      description: "Premium quality wool socks for ultimate comfort and warmth. Perfect for cold weather.",
-      colors: ["brown", "navy", "black"],
-      sizes: ["S", "M", "L", "XL"],
-      material: "Wool",
-      gender: "Unisex"
-    },
-    {
-      name: "Cotton Comfort Socks",
-      originalPrice: 29.99,
-      price: 19.99,
-      category: "Cotton Shocks",
-      images: [card2, card3, card1, card2, card3],
-      rating: 4.2,
-      reviews: 95,
-      description: "Soft and breathable cotton socks for everyday comfort. Ideal for daily wear.",
-      colors: ["white", "gray", "black"],
-      sizes: ["S", "M", "L", "XL"],
-      material: "Cotton",
-      gender: "Unisex"
-    },
-    {
-      name: "Silk Luxury Socks",
-      originalPrice: 39.99,
-      price: 39.99,
-      category: "Silk Shocks",
-      images: [card3, card1, card2, card3, card1],
-      rating: 4.8,
-      reviews: 64,
-      description: "Luxurious silk socks for special occasions. Elegant and comfortable.",
-      colors: ["black", "navy", "burgundy"],
-      sizes: ["S", "M", "L", "XL"],
-      material: "Silk",
-      gender: "Unisex"
-    },
-    {
-      name: "Winter Thermal Socks",
-      originalPrice: 34.99,
-      price: 34.99,
-      category: "Winter Special",
-      images: [card1, card2, card3, card1, card2],
-      rating: 4.6,
-      reviews: 112,
-      description: "Extra warm thermal socks for extreme cold weather. Stay cozy all winter long.",
-      colors: ["gray", "black", "navy"],
-      sizes: ["S", "M", "L", "XL"],
-      material: "Thermal",
-      gender: "Unisex"
-    },
-    {
-      name: "Summer Breathable Socks",
-      originalPrice: 24.99,
-      price: 24.99,
-      category: "Summer Special",
-      images: [card2, card3, card1, card2, card3],
-      rating: 4.3,
-      reviews: 87,
-      description: "Lightweight and breathable socks perfect for summer. Stay cool and comfortable.",
-      colors: ["white", "light gray", "beige"],
-      sizes: ["S", "M", "L", "XL"],
-      material: "Cotton Blend",
-      gender: "Unisex"
-    },
-    {
-      name: "Net Pattern Socks",
-      originalPrice: 22.99,
-      price: 22.99,
-      category: "Net Shocks",
-      images: [card3, card1, card2, card3, card1],
-      rating: 4.4,
-      reviews: 73,
-      description: "Stylish net pattern socks for a unique look. Fashion meets comfort.",
-      colors: ["black", "white", "red"],
-      sizes: ["S", "M", "L", "XL"],
-      material: "Net",
-      gender: "Unisex"
-    }
-  ];
+  const [reviewForm, setReviewForm] = useState({
+    rating: 5,
+    comment: '',
+    name: '',
+    email: ''
+  });
+  const [reviewError, setReviewError] = useState(null);
+  const [reviewSuccess, setReviewSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formTouched, setFormTouched] = useState(false);
 
   useEffect(() => {
-    if (productName) {
-      const foundProduct = products.find(p => p.name === decodeURIComponent(productName));
-      if (foundProduct) {
-        setProduct(foundProduct);
-        setSelectedColor(foundProduct.colors[0]);
-        setSelectedSize(foundProduct.sizes[0]);
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+        if (productSlug) {
+          const response = await getPublicProductBySlug(productSlug);
+          if (response.success) {
+            setProduct(response.data);
+            // Set default variation if available
+            if (response.data.variations && response.data.variations.length > 0) {
+              setSelectedVariation(response.data.variations[0]);
+              // Initialize selected attributes with first options
+              const firstVariation = response.data.variations[0];
+              if (firstVariation.attributes) {
+                const attributes = JSON.parse(firstVariation.attributes);
+                const initialAttributes = {};
+                Object.keys(attributes).forEach(key => {
+                  initialAttributes[key] = attributes[key][0];
+                });
+                setSelectedAttributes(initialAttributes);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        setError(err.message || 'Failed to fetch product');
+        console.error('Error fetching product:', err);
+      } finally {
+        setLoading(false);
       }
-    }
-  }, [productName]);
+    };
 
-  if (!product) {
+    fetchProduct();
+  }, [productSlug]);
+
+  const handleAttributeChange = (attributeName, value) => {
+    setSelectedAttributes(prev => {
+      const newAttributes = { ...prev, [attributeName]: value };
+      // Find matching variation
+      const matchingVariation = product.variations.find(variation => {
+        const attrs = JSON.parse(variation.attributes);
+        return Object.entries(newAttributes).every(([key, val]) => 
+          attrs[key]?.includes(val)
+        );
+      });
+      if (matchingVariation) {
+        setSelectedVariation(matchingVariation);
+      }
+      return newAttributes;
+    });
+  };
+
+  const validateForm = () => {
+    if (!reviewForm.name.trim()) return 'Please enter your name';
+    if (!reviewForm.email.trim()) return 'Please enter your email';
+    if (!reviewForm.email.includes('@')) return 'Please enter a valid email';
+    if (!reviewForm.comment.trim()) return 'Please enter your review';
+    if (reviewForm.comment.length < 10) return 'Review must be at least 10 characters';
+    return null;
+  };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    setFormTouched(true);
+    
+    const validationError = validateForm();
+    if (validationError) {
+      setReviewError(validationError);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setReviewError(null);
+    setReviewSuccess(false);
+
+    try {
+      const formData = new FormData();
+      formData.append('productId', product.id);
+      formData.append('rating', reviewForm.rating);
+      formData.append('comment', reviewForm.comment.trim());
+      formData.append('name', reviewForm.name.trim());
+      formData.append('email', reviewForm.email.trim());
+
+      const response = await createPublicReview(formData);
+      if (response.success) {
+        setReviewSuccess(true);
+        setReviewForm({
+          rating: 5,
+          comment: '',
+          name: '',
+          email: ''
+        });
+        setFormTouched(false);
+        // Refresh product data to get updated reviews
+        const updatedProduct = await getPublicProductBySlug(productSlug);
+        if (updatedProduct.success) {
+          setProduct(updatedProduct.data);
+        }
+      }
+    } catch (error) {
+      setReviewError(error.message || 'Failed to submit review. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    setReviewForm(prev => ({ ...prev, [field]: value }));
+    if (formTouched) {
+      setReviewError(null);
+    }
+  };
+
+  if (loading) {
     return (
       <div className="loading-container">
         <Header />
@@ -134,69 +156,160 @@ export default function ProductDetails() {
     );
   }
 
-  // Mock reviews
-  const reviews = [
-    {
-      name: "Samantha D.",
-      verified: true,
-      rating: 5,
-      text: "I absolutely love this Shocks! The design is unique and the fabric feels so comfortable. As a fellow designer, I appreciate the attention to detail. It's become my favorite go-to shocks.",
-      date: "August 14, 2023",
-    },
-    {
-      name: "Ethan R.",
-      verified: true,
-      rating: 4.5,
-      text: "I absolutely love this Shocks! The design is unique and the fabric feels so comfortable. As a fellow designer, I appreciate the attention to detail. It's become my favorite go-to shocks.",
-      date: "August 14, 2023",
-    },
-    {
-      name: "Olivia P.",
-      verified: true,
-      rating: 4.5,
-      text: "I absolutely love this Shocks! The design is unique and the fabric feels so comfortable. As a fellow designer, I appreciate the attention to detail. It's become my favorite go-to shocks.",
-      date: "August 14, 2023",
-    },
-  ];
-
-  function renderStars(rating) {
-    const fullStars = Math.floor(rating);
-    const halfStar = rating % 1 >= 0.5;
+  if (error || !product) {
     return (
-      <span className="review-stars">
-        {Array(fullStars)
-          .fill()
-          .map((_, i) => (
-            <span key={i}>★</span>
-          ))}
-        {halfStar && <span>☆</span>}
-        {Array(5 - fullStars - (halfStar ? 1 : 0))
-          .fill()
-          .map((_, i) => (
-            <span key={i + fullStars + 1}>☆</span>
-          ))}
-      </span>
+      <div className="error-container">
+        <Header />
+        <div className="error">Error: {error || 'Product not found'}</div>
+        <Footer />
+      </div>
     );
   }
 
   const handleAddToCart = () => {
-    if (!selectedColor || !selectedSize) {
-      alert('Please select both color and size');
+    if (!selectedVariation) {
+      alert('Please select all variations');
       return;
     }
-    addToCart(product, selectedColor, selectedSize, quantity);
+    addToCart(product, selectedVariation, quantity);
     setShowAddedToCart(true);
     setTimeout(() => setShowAddedToCart(false), 2000);
   };
 
   const handleBuyNow = () => {
-    if (!selectedColor || !selectedSize) {
-      alert('Please select both color and size');
+    if (!selectedVariation) {
+      alert('Please select all variations');
       return;
     }
-    addToCart(product, selectedColor, selectedSize, quantity);
+    addToCart(product, selectedVariation, quantity);
     router.push('/checkout');
   };
+
+  const renderAttributeOptions = () => {
+    if (!selectedVariation) return null;
+    const attributes = JSON.parse(selectedVariation.attributes);
+    
+    return Object.entries(attributes).map(([key, values]) => (
+      <div key={key} className="variation-group">
+        <span className="option-label">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
+        <div className="variation-options">
+          {values.map((value) => (
+            <button
+              key={value}
+              className={`variation-option${selectedAttributes[key] === value ? " selected" : ""}`}
+              onClick={() => handleAttributeChange(key, value)}
+            >
+              {value}
+            </button>
+          ))}
+        </div>
+      </div>
+    ));
+  };
+
+  const renderReviewForm = () => (
+    <div className="review-form-container">
+      {reviewSuccess ? (
+        <div className="review-success">
+          <svg className="success-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          <p>Thank you for your review! It will be published after moderation.</p>
+        </div>
+      ) : (
+        <form onSubmit={handleReviewSubmit} className="review-form">
+          <div className="form-group">
+            <label>Your Rating</label>
+            <div className="rating-input">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  className={`star-button ${reviewForm.rating >= star ? 'active' : ''}`}
+                  onClick={() => handleInputChange('rating', star)}
+                  aria-label={`${star} star${star === 1 ? '' : 's'}`}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="name">Your Name</label>
+            <input
+              type="text"
+              id="name"
+              value={reviewForm.name}
+              onChange={(e) => handleInputChange('name', e.target.value)}
+              placeholder="Enter your name"
+              required
+              className={formTouched && !reviewForm.name.trim() ? 'error' : ''}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="email">Your Email</label>
+            <input
+              type="email"
+              id="email"
+              value={reviewForm.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              placeholder="Enter your email"
+              required
+              className={formTouched && (!reviewForm.email.trim() || !reviewForm.email.includes('@')) ? 'error' : ''}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="comment">Your Review</label>
+            <textarea
+              id="comment"
+              value={reviewForm.comment}
+              onChange={(e) => handleInputChange('comment', e.target.value)}
+              placeholder="Share your experience with this product (minimum 10 characters)"
+              required
+              rows={4}
+              className={formTouched && (!reviewForm.comment.trim() || reviewForm.comment.length < 10) ? 'error' : ''}
+              style={{padding: '10px', background: '#fafbfc', border: '1px solid #e0e0e0'}}
+            />
+            <div className="character-count">
+              {reviewForm.comment.length}/500 characters
+            </div>
+          </div>
+
+          {reviewError && (
+            <div className="review-error">
+              <svg className="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              {reviewError}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="submit-review"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <svg className="loading-spinner" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
+                </svg>
+                Submitting...
+              </>
+            ) : (
+              'Submit Review'
+            )}
+          </button>
+        </form>
+      )}
+    </div>
+  );
 
   return (
     <div className="product-details-container">
@@ -205,18 +318,18 @@ export default function ProductDetails() {
         <div className="product-images">
           <Image
             className="main-image"
-            src={product.images[selectedThumbnail]}
-            alt={product.name}
+            src={product.images[selectedThumbnail]?.image_url || '/placeholder.jpg'}
+            alt={product.images[selectedThumbnail]?.alt_text || product.name}
             width={500}
             height={500}
             style={{ objectFit: 'cover' }}
           />
           <div className="thumbnail-images">
-            {product.images.map((src, idx) => (
+            {product.images.map((image, idx) => (
               <Image
-                key={idx}
-                src={src}
-                alt={`${product.name} thumbnail ${idx + 1}`}
+                key={image.id}
+                src={image.image_url}
+                alt={image.alt_text || `${product.name} thumbnail ${idx + 1}`}
                 className={selectedThumbnail === idx ? "active" : ""}
                 onClick={() => setSelectedThumbnail(idx)}
                 width={100}
@@ -230,61 +343,28 @@ export default function ProductDetails() {
           <h1>{product.name}</h1>
           <div className="product-rating-row">
             <span className="stars">★ ★ ★ ☆ ☆</span>
-            <span className="rating-value">{product.rating}</span>
-            <span className="review-count">{product.reviews}</span>
-            <span className="sku-label">| SKU: <span className="sku-value">E7F8G9H0</span></span>
+            <span className="rating-value">{product.avg_rating || 0}</span>
+            <span className="review-count">({product.review_count || 0} reviews)</span>
+            {selectedVariation && (
+              <span className="sku-label">| SKU: <span className="sku-value">{selectedVariation.sku}</span></span>
+            )}
           </div>
           <hr className="product-divider" />
           <div className="product-desc-short">
             <span>{product.description}</span>
           </div>
           <div className="product-price-row">
-            <span className="current-price">${product.price}</span>
-            <span className="original-price">${product.originalPrice}</span>
+            {selectedVariation && (
+              <>
+                <span className="current-price">₹{selectedVariation.price}</span>
+                {selectedVariation.comparePrice && (
+                  <span className="original-price">₹{selectedVariation.comparePrice}</span>
+                )}
+              </>
+            )}
           </div>
           <div className="product-options">
-            <div className="colors">
-              <span className="option-label">Select Colors</span>
-              <div className="color-options">
-                {product.colors.map((color) => (
-                  <button
-                    key={color}
-                    className={`color-option${selectedColor === color ? " selected" : ""}`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setSelectedColor(color)}
-                  >
-                    {selectedColor === color && (
-                      <span className="color-check">✔</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="sizes">
-              <span className="option-label">Choose Size</span>
-              <div className="size-options">
-                {product.sizes.map((size) => (
-                  <button
-                    key={size}
-                    className={`size-option${selectedSize === size ? " selected" : ""}`}
-                    onClick={() => setSelectedSize(size)}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="product-special-offer">
-            <span className="special-offer-label">Special Offer :</span>
-            <span className="special-offer-timer">
-              <span className="timer-box">81</span>
-              <span className="timer-box">06</span>
-              <span className="timer-box">50</span>
-              <span>:</span>
-              <span className="timer-box">02</span>
-            </span>
-            <span className="special-offer-note">Remains until the end of the offer.</span>
+            {renderAttributeOptions()}
           </div>
           <div className="product-action-box">
             <div className="quantity-and-buttons">
@@ -304,7 +384,6 @@ export default function ProductDetails() {
           <div className="product-info-extra">
             <div className="payment-info">
               <span className="info-icon">
-                {/* Simple black/white SVG icon for payment */}
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
               </span>
               <span>
@@ -313,7 +392,6 @@ export default function ProductDetails() {
             </div>
             <div className="warranty-info">
               <span className="info-icon">
-                {/* Simple black/white SVG icon for warranty */}
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
               </span>
               <span>
@@ -325,49 +403,44 @@ export default function ProductDetails() {
       </div>
       {/* Tabs for Description and Review */}
       <div className="product-tabs-section">
-      <div className="product-tabs-container">
-        <div className="product-tabs">
-          <button
-            className={`tab${activeTab === "description" ? " active" : ""}`}
-          onClick={() => setActiveTab("description")}
-        >
-          Description
-        </button>
-        <button
-          className={`tab${activeTab === "review" ? " active" : ""}`}
-          onClick={() => setActiveTab("review")}
-        >
-          Review
-        </button>
-      </div>
-      {/* Tab Content */}
-      {activeTab === "description" ? (
-        <div className="product-description">
-          <p>Lorem ipsum dolor sit amet consectetur adipiscing elit. Error in vero sapiente odio, error dolore vero temporibus consequatur, nobis veniam odit dignissimos consequatur quae in perferendis doloribudebitis corporis, eaque dicta, repellat amet, illum adipisci vel perferendis dolor! Quis vel consequuntur repellat distinctio rem. Corrupti ratione alias odio,error dolore temporibus consequatur, nobis veniam odit laborum dignissimos consequatur quae vero in perferendis provident quis.</p>
-          <h3>Packaging & Delivery</h3>
-          <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Error in vero perferendis dolor! Quis vel consequuntur repellat distinctio rem. Corrupti ratione alias odio, error dolore temporibus consequatur, nobis veniam odit laborum dignissimosconsequatur quae vero in perferendis provident quis.</p>
-        </div>
-      ) : (
-        <div className="product-reviews">
-          {reviews.map((review, idx) => (
-            <div className="review-card" key={idx}>
-              <div className="review-header">
-                {renderStars(review.rating)}
-                <span className="review-user">
-                  <h3>{review.name}</h3>
-                  {review.verified && <span className="review-verified">●</span>}
-                </span>
-              </div>
-              <div className="review-body">
-                <p>"{review.text}"</p>
-              </div>
-              <div className="review-date">Posted on {review.date}</div>
+        <div className="product-tabs-container">
+          <div className="product-tabs">
+            <button
+              className={`tab${activeTab === "description" ? " active" : ""}`}
+              onClick={() => setActiveTab("description")}
+            >
+              Description
+            </button>
+            <button
+              className={`tab${activeTab === "review" ? " active" : ""}`}
+              onClick={() => setActiveTab("review")}
+            >
+              Review ({product.review_count || 0})
+            </button>
+          </div>
+          {/* Tab Content */}
+          {activeTab === "description" ? (
+            <div className="product-description">
+              <p>{product.description}</p>
+              {product.seo?.metaDescription && (
+                <p>{product.seo.metaDescription}</p>
+              )}
             </div>
-          ))}
-          <button className="load-more-reviews">Load More Reviews</button>
+          ) : (
+            <div className="product-reviews">
+              {product.has_video_reviews && (
+                <div className="video-reviews">
+                  <h3>Video Reviews</h3>
+                  <p>Video reviews available</p>
+                </div>
+              )}
+              <div className="review-section">
+                <h3>Write a Review</h3>
+                {renderReviewForm()}
+              </div>
+            </div>
+          )}
         </div>
-      )}
-      </div>
       </div>
       <Footer />
     </div>
