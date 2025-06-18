@@ -52,7 +52,7 @@
 
 .hero-slide__content-text {
   color: white;
-  max-width: 600px;
+  max-width: 500px;
   position: relative;
   animation: slideInLeft 1s ease-out;
 }
