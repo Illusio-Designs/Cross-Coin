@@ -24,10 +24,8 @@ const generateOrderNumber = () => {
 const calculateShippingFee = async (paymentType) => {
     try {
         const orderType = paymentType === 'cod' ? 'cod' : 'prepaid';
-        const shippingFee = await ShippingFee.findOne({ where: { order_type: orderType } });
-        return shippingFee ? 
-            (shippingFee.fee + shippingFee.weight_based_fee + shippingFee.location_based_fee) : 
-            (orderType === 'cod' ? 5.99 : 0.00);
+        const shippingFee = await ShippingFee.findOne({ where: { orderType } });
+        return shippingFee ? shippingFee.fee : (orderType === 'cod' ? 5.99 : 0.00);
     } catch (error) {
         console.error('Error calculating shipping fee:', error);
         return orderType === 'cod' ? 5.99 : 0.00; // Default values if calculation fails

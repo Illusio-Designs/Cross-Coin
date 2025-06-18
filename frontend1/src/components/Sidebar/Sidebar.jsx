@@ -42,20 +42,9 @@ const menu = [
     ]
   },
   {
-    label: "Shipping",
+    label: "Shipping Fees",
     icon: <FaTruck />,
-    submenu: [
-      { label: "Shipping Addresses", view: "shippingAddresses" },
-      { label: "Shipping Fees", view: "shippingFees" },
-    ]
-  },
-  {
-    label: "Cart & Wishlist",
-    icon: <FaShoppingCart />,
-    submenu: [
-      { label: "Shopping Cart", view: "cart" },
-      { label: "Wishlist", view: "wishlist" },
-    ]
+    view: "shippingFees"
   },
   {
     label: "Reviews",
@@ -96,6 +85,22 @@ const Sidebar = ({ isCollapsed, onToggleCollapse, onViewChange, currentView }) =
       setOpenMenu(openMenu === idx ? null : idx);
     }
   };
+
+  const dashboardNavLinks = [
+    { label: "Dashboard", view: "dashboard" },
+    { label: "Orders", view: "orders" },
+    { label: "Products", view: "products" },
+    { label: "Categories", view: "categories" },
+    { label: "Attributes", view: "attributes" },
+    { label: "Coupons", view: "coupons" },
+    { label: "Shipping Fees", view: "shippingFees" },
+    { label: "Payments", view: "payments" },
+    { label: "Reviews", view: "reviews" },
+    { label: "Customers", view: "customers" },
+    { label: "Admins", view: "admins" },
+    { label: "Wishlist", view: "wishlist" },
+    { label: "SEO", view: "seo" }
+  ];
 
   return (
     <aside className={`sidebar-v2${isCollapsed ? " collapsed" : ""}`}> 

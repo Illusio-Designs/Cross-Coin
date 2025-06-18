@@ -159,66 +159,13 @@ export const setupDatabase = async () => {
         try {
             const associationsPath = path.join(__dirname, '..', 'model', 'associations.js');
             if (fs.existsSync(associationsPath)) {
-                 await import(`file://${associationsPath}`);
+                await import(`file://${associationsPath}`);
                 console.log('✓ Associations applied successfully');
             } else {
                 console.warn('⚠️ associations.js not found. Models should define their own associations.');
             }
         } catch (assocError) {
             console.error('❌ Error applying associations:', assocError.message);
-        }
-
-        // Add essential indexes and foreign keys
-        console.log('Setting up indexes and foreign keys...');
-        const dbName = process.env.DB_NAME || process.env.DB_DATABASE;
-        await sequelize.query(`USE ${dbName}`);
-
-        // Foreign Keys
-        const foreignKeys = [
-            `ALTER TABLE reviews ADD CONSTRAINT IF NOT EXISTS fk_reviews_product FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE ON UPDATE CASCADE`,
-            `ALTER TABLE reviews ADD CONSTRAINT IF NOT EXISTS fk_reviews_user FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE`,
-            `ALTER TABLE review_images ADD CONSTRAINT IF NOT EXISTS fk_review_images_review FOREIGN KEY (reviewId) REFERENCES reviews(id) ON DELETE CASCADE ON UPDATE CASCADE`
-        ];
-
-        // Indexes
-        const indexes = [
-            `ALTER TABLE users ADD UNIQUE INDEX IF NOT EXISTS idx_users_email (email)`,
-            `ALTER TABLE categories ADD INDEX IF NOT EXISTS idx_categories_parentId (parentId)`,
-            `ALTER TABLE orders ADD UNIQUE INDEX IF NOT EXISTS idx_orders_order_number (order_number)`,
-            `ALTER TABLE orders ADD INDEX IF NOT EXISTS idx_orders_status (status)`,
-            `ALTER TABLE product_variations ADD INDEX IF NOT EXISTS idx_product_variations_productId (productId)`,
-            `ALTER TABLE coupons ADD UNIQUE INDEX IF NOT EXISTS idx_coupons_code (code)`,
-            // New indexes for Product model
-            `ALTER TABLE products ADD INDEX IF NOT EXISTS idx_products_badge (badge)`,
-            `ALTER TABLE products ADD INDEX IF NOT EXISTS idx_products_total_sold (total_sold)`,
-            `ALTER TABLE products ADD INDEX IF NOT EXISTS idx_products_created_at (created_at)`
-        ];
-
-        // Apply foreign keys
-        for (const fk of foreignKeys) {
-            await sequelize.query(fk).catch(err => 
-                console.warn(`⚠️ Could not create foreign key: ${err.message}`)
-            );
-        }
-
-        // Apply indexes
-        for (const idx of indexes) {
-            await sequelize.query(idx).catch(err => 
-                console.warn(`⚠️ Could not create index: ${err.message}`)
-            );
-        }
-
-        // Add new columns to products table if they don't exist
-        const productColumns = [
-            `ALTER TABLE products ADD COLUMN IF NOT EXISTS badge ENUM('new_arrival', 'hot_selling', 'low_stock', 'none') DEFAULT 'none'`,
-            `ALTER TABLE products ADD COLUMN IF NOT EXISTS total_sold INT DEFAULT 0`,
-            `ALTER TABLE products ADD COLUMN IF NOT EXISTS created_at DATETIME DEFAULT CURRENT_TIMESTAMP`
-        ];
-
-        for (const column of productColumns) {
-            await sequelize.query(column).catch(err => 
-                console.warn(`⚠️ Could not add column: ${err.message}`)
-            );
         }
 
         console.log('✓ Database setup completed successfully!');

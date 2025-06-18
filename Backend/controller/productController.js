@@ -574,7 +574,7 @@ export const updateProduct = async (req, res) => {
                     const imagePath = path.join(__dirname, '../uploads/products', image.image_url.split('/').pop());
                     try {
                         await fs.unlink(imagePath);
-                    } catch (error) {
+            } catch (error) {
                         console.error('Error deleting image file:', error);
                     }
                 }
@@ -610,19 +610,19 @@ export const updateProduct = async (req, res) => {
                 { model: ProductSEO, as: 'ProductSEO' }
             ]
         });
-
-        res.json({
-            success: true,
-            message: 'Product updated successfully',
+        
+        res.json({ 
+            success: true, 
+            message: 'Product updated successfully', 
             data: formatProductResponse(updatedProduct)
         });
     } catch (error) {
         await transaction.rollback();
         console.error('Error updating product:', error);
-        res.status(500).json({
+        res.status(500).json({ 
             success: false,
-            message: 'Failed to update product',
-            error: error.message
+            message: 'Failed to update product', 
+            error: error.message 
         });
     }
 };

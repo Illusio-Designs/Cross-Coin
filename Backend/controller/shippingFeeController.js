@@ -12,52 +12,91 @@ export const getAllShippingFees = async (req, res) => {
     }
 };
 
-// Create or update shipping fee
-export const createOrUpdateShippingFee = async (req, res) => {
+// Create a new shipping fee
+export const createShippingFee = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
-        const { order_type, fee, weight_based_fee, location_based_fee } = req.body;
+        const { orderType, fee } = req.body;
         
-        if (!order_type || fee === undefined) {
+        if (!orderType || fee === undefined) {
             await transaction.rollback();
             return res.status(400).json({ message: 'Order type and fee are required' });
         }
         
-        // Check if this order type already exists
+        // Check if this order type already exists to prevent duplicates for ENUM type
         const existingFee = await ShippingFee.findOne({
-            where: { order_type },
+            where: { orderType },
             transaction
         });
         
-        let shippingFee;
         if (existingFee) {
-            // Update existing fee
-            shippingFee = existingFee;
-            shippingFee.fee = fee;
-            shippingFee.weight_based_fee = weight_based_fee !== undefined ? weight_based_fee : shippingFee.weight_based_fee;
-            shippingFee.location_based_fee = location_based_fee !== undefined ? location_based_fee : shippingFee.location_based_fee;
-            await shippingFee.save({ transaction });
-        } else {
-            // Create new fee
-            shippingFee = await ShippingFee.create({
-                order_type,
-                fee,
-                weight_based_fee: weight_based_fee || 0,
-                location_based_fee: location_based_fee || 0
-            }, { transaction });
+            await transaction.rollback();
+            return res.status(409).json({ message: 'Shipping fee for this order type already exists. Please update it instead.' });
         }
+        
+        // Create new fee
+        const shippingFee = await ShippingFee.create({
+            orderType,
+            fee
+        }, { transaction });
         
         await transaction.commit();
         
-        res.status(existingFee ? 200 : 201).json({
-            message: `Shipping fee ${existingFee ? 'updated' : 'created'} successfully`,
+        res.status(201).json({
+            message: 'Shipping fee created successfully',
             shippingFee
         });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error creating/updating shipping fee:', error);
-        res.status(500).json({ message: 'Failed to create/update shipping fee', error: error.message });
+        console.error('Error creating shipping fee:', error);
+        res.status(500).json({ message: 'Failed to create shipping fee', error: error.message });
+    }
+};
+
+// Update an existing shipping fee by ID
+export const updateShippingFee = async (req, res) => {
+    const transaction = await sequelize.transaction();
+    
+    try {
+        const { id } = req.params;
+        const { orderType, fee } = req.body;
+
+        const shippingFee = await ShippingFee.findByPk(id, { transaction });
+
+        if (!shippingFee) {
+            await transaction.rollback();
+            return res.status(404).json({ message: 'Shipping fee not found' });
+        }
+
+        // Check for duplicate orderType if it's being changed to an already existing one
+        if (orderType && orderType !== shippingFee.orderType) {
+            const existingFeeWithNewType = await ShippingFee.findOne({
+                where: { orderType },
+                transaction
+            });
+            if (existingFeeWithNewType && existingFeeWithNewType.id !== shippingFee.id) {
+                await transaction.rollback();
+                return res.status(409).json({ message: 'Cannot change to an order type that already has a shipping fee.' });
+            }
+        }
+
+        // Update existing fee
+        await shippingFee.update({
+            orderType: orderType || shippingFee.orderType,
+            fee: fee !== undefined ? fee : shippingFee.fee
+        }, { transaction });
+        
+        await transaction.commit();
+        
+        res.json({
+            message: 'Shipping fee updated successfully',
+            shippingFee
+        });
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Error updating shipping fee:', error);
+        res.status(500).json({ message: 'Failed to update shipping fee', error: error.message });
     }
 };
 
@@ -67,7 +106,7 @@ export const getShippingFeeByType = async (req, res) => {
         const orderType = req.params.type;
         
         const shippingFee = await ShippingFee.findOne({
-            where: { order_type: orderType }
+            where: { orderType }
         });
         
         if (!shippingFee) {

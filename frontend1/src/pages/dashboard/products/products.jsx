@@ -498,7 +498,7 @@ const ProductsPage = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
-    
+
     if (!name) {
       return;
     }
