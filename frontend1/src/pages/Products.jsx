@@ -5,7 +5,8 @@ import Footer from "../components/Footer";
 import { FiFilter, FiChevronDown } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import { useCart } from '../context/CartContext';
-import ProductCard, { products, filterOptions } from "../components/ProductCard";
+import ProductCard, { filterOptions } from "../components/ProductCard";
+import { getAllPublicProducts } from "../services/publicindex";
 
 const Products = () => {
   const router = useRouter();
@@ -24,39 +25,66 @@ const Products = () => {
   const [showColors, setShowColors] = useState(false);
   const [showSizes, setShowSizes] = useState(false);
   const [showGender, setShowGender] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const formatTwoDigits = (num) => num.toString().padStart(2, '0');
-
-  const [current, setCurrent] = useState(0);
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  // Debug logs
+  console.log('Products Component State:', {
+    selectedCategory,
+    sortBy,
+    priceRange,
+    currentPage,
+    totalPages,
+    loading,
+    error
+  });
 
   useEffect(() => {
-    // Set your target date here (e.g., 7 days from now)
-    const startTime = new Date();
-    const targetDate = new Date(startTime);
-    targetDate.setDate(targetDate.getDate() + 7);
+    fetchProducts();
+  }, [currentPage, sortBy, selectedCategory]);
 
-    const updateTimer = () => {
-      const now = new Date();
-      const diff = targetDate - now;
-      if (diff > 0) {
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-        const minutes = Math.floor((diff / (1000 * 60)) % 60);
-        const seconds = Math.floor((diff / 1000) % 60);
-        setTimeLeft({ days, hours, minutes, seconds });
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching products with params:', {
+        page: currentPage,
+        limit: 12,
+        sort: sortBy,
+        category: selectedCategory.length > 0 ? selectedCategory.join(',') : undefined
+      });
+
+      const params = {
+        page: currentPage,
+        limit: 12,
+        sort: sortBy,
+        category: selectedCategory.length > 0 ? selectedCategory.join(',') : undefined
+      };
+
+      const response = await getAllPublicProducts(params);
+      console.log('API Response:', response);
+
+      if (response?.success) {
+        setProducts(response.data?.products || []);
+        setTotalPages(response.data?.totalPages || 1);
       } else {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        console.error('API Error Response:', response);
+        setError(response?.message || 'Failed to fetch products');
+        setProducts([]);
       }
-    };
-    updateTimer();
-    const timerInterval = setInterval(updateTimer, 1000);
-    return () => clearInterval(timerInterval);
-  }, []);
-
-  const { days, hours, minutes, seconds } = timeLeft;
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setError(err?.response?.data?.message || err?.message || 'An error occurred while fetching products');
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleFilterChange = (filterType, value) => {
+    console.log('Filter Change:', { filterType, value });
     switch (filterType) {
       case 'price':
         setPriceRange(value);
@@ -81,62 +109,24 @@ const Products = () => {
     }
   };
 
-  const filteredProducts = products.filter(product => {
-    const inPriceRange = product.price >= priceRange[0] && product.price <= priceRange[1];
-    const matchesColor = selectedColors.length === 0 || selectedColors.includes(product.color);
-    const matchesSize = selectedSizes.length === 0 || selectedSizes.includes(product.size);
-    const matchesGender = selectedGender.length === 0 || selectedGender.includes(product.gender);
-    const matchesMaterial = selectedMaterial.length === 0 || selectedMaterial.includes(product.material);
-    const matchesCategory = selectedCategory.length === 0 || selectedCategory.includes(product.category);
-    return inPriceRange && matchesColor && matchesSize && matchesGender && matchesMaterial && matchesCategory;
-  });
-
   const handleProductClick = (product) => {
-    const productName = encodeURIComponent(product.name);
-    router.push(`/ProductDetails?name=${productName}`);
+    console.log('Product Click:', product);
+    router.push(`/ProductDetails?slug=${product.slug}`);
   };
 
   const handleAddToCart = (e, product) => {
     e.stopPropagation();
-    // Add default color and size for quick add
-    const defaultColor = product.colors?.[0] || 'black';
-    const defaultSize = product.sizes?.[0] || 'M';
-    addToCart(product, defaultColor, defaultSize, 1);
+    console.log('Add to Cart:', product);
+    const variation = product.variations?.[0];
+    if (variation) {
+      addToCart(product, variation.id, 1);
+    }
   };
 
   return (
     <>
       <Header />
       <div className="products-page">
-        <div className="products-hero">
-          <div className="summer-collections-section">
-            <div className="summer-collections-content">
-              <h2><span className="summer-highlight">SUMMER</span> COLLECTIONS</h2>
-              <button className="summer-shop-btn">SHOP NOW &rarr;</button>
-            </div>
-            <div className="summer-countdown">
-              <div className="summer-countdown-block">
-                <div className="summer-countdown-digit">{formatTwoDigits(days)}</div>
-                <div className="summer-countdown-label">Days</div>
-              </div>
-              <span>:</span>
-              <div className="summer-countdown-block">
-                <div className="summer-countdown-digit">{formatTwoDigits(hours)}</div>
-                <div className="summer-countdown-label">Hours</div>
-              </div>
-              <span>:</span>
-              <div className="summer-countdown-block">
-                <div className="summer-countdown-digit">{formatTwoDigits(minutes)}</div>
-                <div className="summer-countdown-label">Minutes</div>
-              </div>
-              <span>:</span>
-              <div className="summer-countdown-block">
-                <div className="summer-countdown-digit">{formatTwoDigits(seconds)}</div>
-                <div className="summer-countdown-label">Seconds</div>
-              </div>
-            </div>
-          </div>
-        </div>
         <div className="products-header">
           <h1>Our Products</h1>
           <div className="products-controls">
@@ -297,15 +287,41 @@ const Products = () => {
           )}
 
           <div className="products-grid">
-            {filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onProductClick={handleProductClick}
-                onAddToCart={handleAddToCart}
-              />
-            ))}
+            {loading ? (
+              <div className="loading">Loading products...</div>
+            ) : error ? (
+              <div className="error">{error}</div>
+            ) : products.length === 0 ? (
+              <div className="no-products">No products found</div>
+            ) : (
+              products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onProductClick={handleProductClick}
+                  onAddToCart={handleAddToCart}
+                />
+              ))
+            )}
           </div>
+
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </button>
+              <span>Page {currentPage} of {totalPages}</span>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </div>
       <Footer />
