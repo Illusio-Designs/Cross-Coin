@@ -97,9 +97,18 @@ export const shippingFeeService = {
         }
     },
 
-    createOrUpdateShippingFee: async (feeData) => {
+    createShippingFee: async (feeData) => {
         try {
             const response = await api.post('/api/shipping-fees', feeData);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
+
+    updateShippingFee: async (id, feeData) => {
+        try {
+            const response = await api.put(`/api/shipping-fees/${id}`, feeData);
             return response.data;
         } catch (error) {
             throw error.response?.data || error.message;
