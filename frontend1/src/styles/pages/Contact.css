@@ -123,6 +123,10 @@
   margin-top: 0.25rem;
 }
 
+.info-icon.call{
+  rotate: 90deg;
+}
+
 .info-item h3 {
   font-size: 1.2rem;
   margin-bottom: 0.5rem;

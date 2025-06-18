@@ -958,6 +958,8 @@ const ProductsPage = () => {
                       src={image instanceof File ? URL.createObjectURL(image) : (image.url || image)}
                       alt={`Product Preview ${index + 1}`} 
                       className="product-image-preview" 
+                      style={{ height: '200px', width: '200px', objectFit: 'cover'
+                      }}
                     />
                   ))}
                 </div>

@@ -57,7 +57,7 @@ const Contact = () => {
               <p className="info-intro">Have questions about our products or need assistance? We're here to help!</p>
               <div className="info-items">
                 <div className="info-item">
-                  <FaPhone className="info-icon" />
+                  <FaPhone className="info-icon call" />
                   <div>
                     <h3>Phone</h3>
                     <p>+91 9712891700</p>
@@ -76,7 +76,6 @@ const Contact = () => {
                   <div>
                     <h3>Address</h3>
                     <p>123 Sock Street, Fashion District<br />New York, NY 10001</p>
-                    <p className="info-sub">Visit our showroom</p>
                   </div>
                 </div>
               </div>
