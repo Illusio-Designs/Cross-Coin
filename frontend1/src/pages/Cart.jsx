@@ -5,6 +5,7 @@ import { FiTrash2 } from "react-icons/fi";
 import { FaBoxOpen, FaTruck, FaLock, FaUndo } from "react-icons/fa";
 import { useRouter } from "next/router";
 import { useCart } from "../context/CartContext";
+import SeoWrapper from '../console/SeoWrapper';
 
 export default function Cart() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function Cart() {
   };
 
   return (
-    <>
+    <SeoWrapper pageName="cart">
       <Header />
       <div className="cart-main">
         <div className="cart-section">
@@ -127,6 +128,6 @@ export default function Cart() {
         </div>
       )}
       <Footer />
-    </>
+    </SeoWrapper>
   );
 } 

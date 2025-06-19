@@ -253,23 +253,11 @@ const ProductsPage = () => {
       header: "Actions",
       accessor: "actions",
       cell: ({ id }) => (
-        <div className="adding-button" style={{ gap: '8px' }}>
+        <div className="adding-button">
           <button
             className="action-btn edit"
             title="Edit"
             onClick={() => handleEdit(id)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '6px 12px',
-              borderRadius: '4px',
-              border: 'none',
-              backgroundColor: '#EFF6FF',
-              color: '#2563EB',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
           >
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z"/>
@@ -280,18 +268,6 @@ const ProductsPage = () => {
             className="action-btn delete"
             title="Delete"
             onClick={() => handleDelete(id)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '6px 12px',
-              borderRadius: '4px',
-              border: 'none',
-              backgroundColor: '#FEF2F2',
-              color: '#DC2626',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
           >
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

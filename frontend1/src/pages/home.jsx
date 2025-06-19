@@ -9,6 +9,7 @@ import card1_left from "../assets/card1-left.webp";
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
 import { getPublicSliders, getPublicCategories, getPublicCategoryByName } from '../services/publicindex';
+import SeoWrapper from '../console/SeoWrapper';
 
 const formatTwoDigits = (num) => num.toString().padStart(2, '0');
 
@@ -275,7 +276,7 @@ const Home = () => {
   };
 
   return (
-    <>
+    <SeoWrapper pageName="home">
       <Header />
       <div className="home-page">
         <div className="hero-slider">
@@ -352,7 +353,7 @@ const Home = () => {
         <div className="shop-by-category">
           <div style={{ display: 'flex', justifyContent: 'end', alignItems: 'center', marginBottom: '3rem' , gap: '17rem' }}>
             <h2 className="section-title">Curate Your Collection</h2>
-            <button className="hero-btn" onClick={() => window.location.href = '/Products'}>
+            <button className="hero-btn" onClick={() => window.location.href = `/Products?category=${encodeURIComponent(currentCategory.name)}`}>
               View All Products
             </button>
           </div>
@@ -384,44 +385,40 @@ const Home = () => {
                     </button>
                   )}
                   <div className="products-slider" ref={categorySliderRef}>
-                    {categoryLoading ? (
-                      <div className="loading-spinner">Loading products...</div>
-                    ) : (
-                      currentCategoryProducts.map((product) => {
-                        // Format product data to match ProductCard expectations
-                        const formattedProduct = {
-                          id: product.id,
-                          name: product.name,
-                          slug: product.slug,
-                          description: product.description,
-                          badge: product.badge || null,
-                          images: product.image ? [{
-                            image_url: product.image,
-                            is_primary: true
-                          }] : [],
-                          variations: [{
-                            price: product.price || 0,
-                            comparePrice: product.comparePrice || 0,
-                            stock: product.stock || 0
-                          }],
-                          category: {
-                            name: currentCategory.name
-                          }
-                        };
-                        
-                        return (
-                          <ProductCard
-                            key={product.id}
-                            product={formattedProduct}
-                            onProductClick={(product) => console.log('Product clicked:', product)}
-                            onAddToCart={(e, product) => {
-                              e.stopPropagation();
-                              console.log('Add to cart:', product);
-                            }}
-                          />
-                        );
-                      })
-                    )}
+                    {currentCategoryProducts.map((product) => {
+                      // Format product data to match ProductCard expectations
+                      const formattedProduct = {
+                        id: product.id,
+                        name: product.name,
+                        slug: product.slug,
+                        description: product.description,
+                        badge: product.badge || null,
+                        images: product.image ? [{
+                          image_url: product.image,
+                          is_primary: true
+                        }] : [],
+                        variations: [{
+                          price: product.price || 0,
+                          comparePrice: product.comparePrice || 0,
+                          stock: product.stock || 0
+                        }],
+                        category: {
+                          name: currentCategory.name
+                        }
+                      };
+                      
+                      return (
+                        <ProductCard
+                          key={product.id}
+                          product={formattedProduct}
+                          onProductClick={(product) => console.log('Product clicked:', product)}
+                          onAddToCart={(e, product) => {
+                            e.stopPropagation();
+                            console.log('Add to cart:', product);
+                          }}
+                        />
+                      );
+                    })}
                   </div>
                   {currentCategoryProducts.length > 2 && (
                     <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('right')}>
@@ -633,9 +630,9 @@ const Home = () => {
             </div>
           </div>
         </div>
-        </div>
         <Footer />
-    </>
+      </div>
+    </SeoWrapper>
   );
 };
 

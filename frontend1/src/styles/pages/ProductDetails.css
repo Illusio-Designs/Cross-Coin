@@ -160,7 +160,7 @@
   text-shadow: 0 0 2px #222, 0 0 4px #222;
 }
 
-.size-options {
+.product-options .size-options {
   display: flex;
   gap: 0.7em;
   margin-top: 0.5em;

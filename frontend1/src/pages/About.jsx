@@ -3,10 +3,11 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { FaSocks, FaTshirt, FaHeart, FaUsers } from 'react-icons/fa';
 import '../styles/pages/About.css';
+import SeoWrapper from '../console/SeoWrapper';
 
 const About = () => {
   return (
-    <>
+    <SeoWrapper pageName="about">
       <Header />
       <div className="about-page">
         <div className="about-hero">
@@ -58,7 +59,7 @@ const About = () => {
         </div>
       </div>
       <Footer />
-    </>
+    </SeoWrapper>
   );
 };
 

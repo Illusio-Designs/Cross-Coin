@@ -5,6 +5,7 @@ import { FaPlus } from "react-icons/fa";
 import Image from "next/image";
 import { useCart } from "../context/CartContext";
 import { useEffect, useState } from "react";
+import SeoWrapper from '../console/SeoWrapper';
 
 export default function Checkout() {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function Checkout() {
   const total = subtotal - discount;
 
   return (
-    <>
+    <SeoWrapper pageName="checkout">
       <Header />
       <div className="cart-main checkout-container">
         <div className="cart-section">
@@ -124,6 +125,6 @@ export default function Checkout() {
         </div>
       </div>
       <Footer />
-    </>
+    </SeoWrapper>
   );
 } 

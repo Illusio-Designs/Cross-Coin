@@ -3,6 +3,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { FaPhone, FaEnvelope, FaMapMarkerAlt, FaClock, FaFacebook, FaTwitter, FaInstagram, FaWhatsapp } from 'react-icons/fa';
 import '../styles/pages/Contact.css';
+import SeoWrapper from '../console/SeoWrapper';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -26,7 +27,7 @@ const Contact = () => {
   };
 
   return (
-    <>
+    <SeoWrapper pageName="contact">
       <Header />
       <div className="contact-page">
         <div className="contact-hero">
@@ -149,7 +150,7 @@ const Contact = () => {
         </div>
       </div>
       <Footer />
-    </>
+    </SeoWrapper>
   );
 };
 
