@@ -1,4 +1,4 @@
-import { Product, ProductVariation, Attribute, AttributeValue, ProductImage, ProductSEO, Category } from '../model/associations.js';
+import { Product, ProductVariation, Attribute, AttributeValue, ProductImage, ProductSEO, Category, Review, ReviewImage, User } from '../model/associations.js';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -812,7 +812,26 @@ export const getPublicProductBySlug = async (req, res) => {
                 { model: Category },
                 { model: ProductVariation, as: 'ProductVariations' },
                 { model: ProductImage, as: 'ProductImages' },
-                { model: ProductSEO, as: 'ProductSEO' }
+                { model: ProductSEO, as: 'ProductSEO' },
+                {
+                    model: Review,
+                    as: 'Reviews',
+                    where: { status: 'approved' },
+                    required: false,
+                    include: [
+                        { 
+                            model: User, 
+                            as: 'User', 
+                            attributes: ['id', 'username', 'profileImage']
+                        },
+                        { 
+                            model: ReviewImage, 
+                            as: 'ReviewImages'
+                        }
+                    ],
+                    order: [['createdAt', 'DESC']],
+                    limit: 10
+                }
             ]
         });
 
@@ -832,6 +851,24 @@ export const getPublicProductBySlug = async (req, res) => {
                 ...image,
                 image_url: `${process.env.BACKEND_URL || 'http://localhost:5000'}/uploads/products/${image.image_url}`
             }));
+        }
+
+        // Format reviews
+        if (product.Reviews) {
+            formattedProduct.reviews = product.Reviews.map(review => ({
+                id: review.id,
+                rating: review.rating,
+                review: review.review,
+                createdAt: review.createdAt,
+                reviewerName: review.User ? review.User.username : review.guestName,
+                ReviewImages: review.ReviewImages ? review.ReviewImages.map(img => ({
+                    id: img.id,
+                    fileName: img.fileName,
+                    fileType: img.fileType
+                })) : []
+            }));
+        } else {
+            formattedProduct.reviews = [];
         }
 
         res.json({

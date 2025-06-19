@@ -6,7 +6,7 @@ import {
     updateCategory,
     deleteCategory,
     getPublicCategories,
-    getPublicCategoryById
+    getPublicCategoryByName
 } from '../controller/categoryController.js';
 import { isAuthenticated, authorize } from '../middleware/authMiddleware.js';
 import { categoryUpload } from '../middleware/uploadMiddleware.js';
@@ -15,7 +15,7 @@ const router = express.Router();
 
 // Public routes
 router.get('/public', getPublicCategories);
-router.get('/public/:id', getPublicCategoryById);
+router.get('/public/name/:name', getPublicCategoryByName);
 
 // Admin routes
 router.post('/', isAuthenticated, authorize(['admin']), categoryUpload.single('image'), createCategory);

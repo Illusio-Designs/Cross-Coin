@@ -3,12 +3,12 @@ import React, { useState, useEffect, useRef } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import Testimonials from "../components/Testimonials";
-import ProductCard, { products } from "../components/ProductCard";
+import ProductCard from "../components/ProductCard";
 import Image from "next/image";
 import card1_left from "../assets/card1-left.webp";
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
-import { getPublicSliders } from '../services/publicindex';
+import { getPublicSliders, getPublicCategories, getPublicCategoryByName } from '../services/publicindex';
 
 const formatTwoDigits = (num) => num.toString().padStart(2, '0');
 
@@ -22,24 +22,53 @@ const Home = () => {
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState([]);
+  const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
+  const [currentCategoryProducts, setCurrentCategoryProducts] = useState([]);
+  const [categoryLoading, setCategoryLoading] = useState(false);
+  const [latestProducts, setLatestProducts] = useState([]);
+  const [latestProductsLoading, setLatestProductsLoading] = useState(false);
   
   const categorySliderRef = useRef(null);
   const latestSliderRef = useRef(null);
-
-  // This would come from backend in real implementation
-  const currentCategory = {
-    name: 'Winter Collection',
-    image: card1_left,
-    products: products.slice(0, 6) // Display first 6 products for now
-  };
+  const categoryImageRef = useRef(null);
 
   // Featured products for the details section
-  const featuredProducts = products.slice(0, 3).map(product => ({
-    ...product,
-    images: [card1_left, card1_left, card1_left, card1_left, card1_left],
-    colors: ["brown", "navy", "black"],
-    sizes: ["S", "M", "L", "XL"]
-  }));
+  const featuredProducts = [
+    {
+      id: 1,
+      name: "Premium Winter Jacket",
+      price: 299,
+      originalPrice: 399,
+      rating: 4.5,
+      reviews: 128,
+      images: [card1_left, card1_left, card1_left, card1_left, card1_left],
+      colors: ["brown", "navy", "black"],
+      sizes: ["S", "M", "L", "XL"]
+    },
+    {
+      id: 2,
+      name: "Classic Denim Jacket",
+      price: 199,
+      originalPrice: 249,
+      rating: 4.3,
+      reviews: 95,
+      images: [card1_left, card1_left, card1_left, card1_left, card1_left],
+      colors: ["blue", "black", "gray"],
+      sizes: ["S", "M", "L", "XL"]
+    },
+    {
+      id: 3,
+      name: "Leather Bomber Jacket",
+      price: 399,
+      originalPrice: 499,
+      rating: 4.7,
+      reviews: 156,
+      images: [card1_left, card1_left, card1_left, card1_left, card1_left],
+      colors: ["black", "brown", "tan"],
+      sizes: ["S", "M", "L", "XL"]
+    }
+  ];
 
   useEffect(() => {
     const fetchSliders = async () => {
@@ -53,8 +82,54 @@ const Home = () => {
       }
     };
 
+    const fetchCategories = async () => {
+      try {
+        const data = await getPublicCategories();
+        setCategories(data);
+        if (data.length > 0) {
+          await fetchCategoryProducts(data[0].name);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+
+    const fetchLatestProducts = async () => {
+      try {
+        setLatestProductsLoading(true);
+        // Fetch latest products from all categories
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/products/public?limit=15&sort=newest`);
+        const data = await response.json();
+        if (data.success && data.data.products) {
+          setLatestProducts(data.data.products);
+        } else {
+          setLatestProducts([]);
+        }
+      } catch (error) {
+        console.error('Error fetching latest products:', error);
+        setLatestProducts([]);
+      } finally {
+        setLatestProductsLoading(false);
+      }
+    };
+
     fetchSliders();
+    fetchCategories();
+    fetchLatestProducts();
   }, []);
+
+  const fetchCategoryProducts = async (categoryName) => {
+    try {
+      setCategoryLoading(true);
+      const data = await getPublicCategoryByName(categoryName);
+      setCurrentCategoryProducts(data.products || []);
+    } catch (error) {
+      console.error('Error fetching category products:', error);
+      setCurrentCategoryProducts([]);
+    } finally {
+      setCategoryLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (slides.length > 0) {
@@ -64,6 +139,13 @@ const Home = () => {
       return () => clearInterval(interval);
     }
   }, [slides]);
+
+  // Handle category change when currentCategoryIndex changes
+  useEffect(() => {
+    if (categories.length > 0 && categories[currentCategoryIndex]) {
+      fetchCategoryProducts(categories[currentCategoryIndex].name);
+    }
+  }, [currentCategoryIndex, categories]);
 
   useEffect(() => {
     // Set your target date here (e.g., 7 days from now)
@@ -135,6 +217,18 @@ const Home = () => {
     }
   };
 
+  const scrollCategoryImage = (direction) => {
+    if (direction === 'left') {
+      setCurrentCategoryIndex(prev => prev > 0 ? prev - 1 : categories.length - 1);
+    } else {
+      setCurrentCategoryIndex(prev => prev < categories.length - 1 ? prev + 1 : 0);
+    }
+  };
+
+  const handleCategoryChange = async (categoryName) => {
+    await fetchCategoryProducts(categoryName);
+  };
+
   const handleAddToCart = (product) => {
     if (!selectedColor || !selectedSize) {
       alert('Please select both color and size');
@@ -150,6 +244,34 @@ const Home = () => {
     }
     addToCart(product, selectedColor, selectedSize, quantity);
     router.push('/checkout');
+  };
+
+  const currentCategory = categories[currentCategoryIndex] || {
+    name: 'Loading...',
+    image: card1_left
+  };
+
+  // Debug logging
+  console.log('Categories:', categories);
+  console.log('Current category index:', currentCategoryIndex);
+  console.log('Current category:', currentCategory);
+  console.log('Category image path:', currentCategory.image);
+
+  // Get the image source with fallback
+  const getCategoryImageSrc = () => {
+    if (currentCategory.image && currentCategory.image !== card1_left) {
+      // If it's a full URL, use it as is
+      if (currentCategory.image.startsWith('http')) {
+        return currentCategory.image;
+      }
+      // If it's a relative path, construct the full URL
+      if (currentCategory.image.startsWith('/uploads/')) {
+        return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${currentCategory.image}`;
+      }
+      // If it's just a filename, construct the path
+      return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/uploads/categories/${currentCategory.image}`;
+    }
+    return card1_left;
   };
 
   return (
@@ -236,31 +358,85 @@ const Home = () => {
           </div>
           <div className="category-section">
             <div className="category-sidebar">
-              <div className="category-item">
-                <Image src={currentCategory.image} alt={currentCategory.name} />
+              <div className="category-item" ref={categoryImageRef}>
+              <button className="slider-arrow slider-arrow-left" onClick={() => scrollCategoryImage('left')}>
+                <IoIosArrowBack />
+              </button>
+                <Image 
+                  src={getCategoryImageSrc()} 
+                  alt={currentCategory.name} 
+                  width={300}
+                  height={300}
+                  style={{ objectFit: 'cover' }}
+                />
                 <h3>{currentCategory.name}</h3>
+                <button className="slider-arrow slider-arrow-right" onClick={() => scrollCategoryImage('right')}>
+                <IoIosArrowForward />
+              </button>
               </div>
             </div>
             <div className="category-products">
-              <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('left')}>
-                <IoIosArrowBack />
-              </button>
-              <div className="products-slider" ref={categorySliderRef}>
-                {currentCategory.products.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onProductClick={(product) => console.log('Product clicked:', product)}
-                    onAddToCart={(e, product) => {
-                      e.stopPropagation();
-                      console.log('Add to cart:', product);
-                    }}
-                  />
-                ))}
-              </div>
-              <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('right')}>
-                <IoIosArrowForward />
-              </button>
+              {currentCategoryProducts.length > 0 && (
+                <>
+                  {currentCategoryProducts.length > 2 && (
+                    <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('left')}>
+                      <IoIosArrowBack />
+                    </button>
+                  )}
+                  <div className="products-slider" ref={categorySliderRef}>
+                    {categoryLoading ? (
+                      <div className="loading-spinner">Loading products...</div>
+                    ) : (
+                      currentCategoryProducts.map((product) => {
+                        // Format product data to match ProductCard expectations
+                        const formattedProduct = {
+                          id: product.id,
+                          name: product.name,
+                          slug: product.slug,
+                          description: product.description,
+                          badge: product.badge || null,
+                          images: product.image ? [{
+                            image_url: product.image,
+                            is_primary: true
+                          }] : [],
+                          variations: [{
+                            price: product.price || 0,
+                            comparePrice: product.comparePrice || 0,
+                            stock: product.stock || 0
+                          }],
+                          category: {
+                            name: currentCategory.name
+                          }
+                        };
+                        
+                        return (
+                          <ProductCard
+                            key={product.id}
+                            product={formattedProduct}
+                            onProductClick={(product) => console.log('Product clicked:', product)}
+                            onAddToCart={(e, product) => {
+                              e.stopPropagation();
+                              console.log('Add to cart:', product);
+                            }}
+                          />
+                        );
+                      })
+                    )}
+                  </div>
+                  {currentCategoryProducts.length > 2 && (
+                    <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('right')}>
+                      <IoIosArrowForward />
+                    </button>
+                  )}
+                </>
+              )}
+              {!categoryLoading && currentCategoryProducts.length === 0 && (
+                <div className="no-products-center">
+                  <p style={{ color: '#CE1E36', fontSize: '1.2rem', fontWeight: '500' }}>
+                    No products available in this category
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -373,25 +549,60 @@ const Home = () => {
             </button>
           </div>
           <div className="category-products">
-            <button className="slider-arrow slider-arrow-left" onClick={() => scrollLatestSlider('left')}>
-              <IoIosArrowBack />
-            </button>
+            {latestProducts.length > 2 && (
+              <button className="slider-arrow slider-arrow-left" onClick={() => scrollLatestSlider('left')}>
+                <IoIosArrowBack />
+              </button>
+            )}
             <div className="products-slider" ref={latestSliderRef}>
-              {products.slice(6, 12).map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onProductClick={(product) => console.log('Product clicked:', product)}
-                  onAddToCart={(e, product) => {
-                    e.stopPropagation();
-                    console.log('Add to cart:', product);
-                  }}
-                />
-              ))}
+              {latestProductsLoading ? (
+                <div className="loading-spinner">Loading latest products...</div>
+              ) : (
+                latestProducts.slice(0, 15).map((product) => {
+                  // Format product data to match ProductCard expectations
+                  const formattedProduct = {
+                    id: product.id,
+                    name: product.name,
+                    slug: product.slug,
+                    description: product.description,
+                    badge: product.badge || null,
+                    images: product.images && product.images.length > 0 ? product.images.map(img => ({
+                      image_url: img.image_url,
+                      is_primary: img.is_primary
+                    })) : [],
+                    variations: product.variations && product.variations.length > 0 ? product.variations.map(variation => ({
+                      price: variation.price || 0,
+                      comparePrice: variation.comparePrice || 0,
+                      stock: variation.stock || 0
+                    })) : [{
+                      price: 0,
+                      comparePrice: 0,
+                      stock: 0
+                    }],
+                    category: {
+                      name: product.category?.name || 'Uncategorized'
+                    }
+                  };
+                  
+                  return (
+                    <ProductCard
+                      key={product.id}
+                      product={formattedProduct}
+                      onProductClick={(product) => console.log('Product clicked:', product)}
+                      onAddToCart={(e, product) => {
+                        e.stopPropagation();
+                        console.log('Add to cart:', product);
+                      }}
+                    />
+                  );
+                })
+              )}
             </div>
-            <button className="slider-arrow slider-arrow-right" onClick={() => scrollLatestSlider('right')}>
-              <IoIosArrowForward />
-            </button>
+            {latestProducts.length > 2 && (
+              <button className="slider-arrow slider-arrow-right" onClick={() => scrollLatestSlider('right')}>
+                <IoIosArrowForward />
+              </button>
+            )}
           </div>
         </div>
         <Testimonials />

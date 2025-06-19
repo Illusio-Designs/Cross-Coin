@@ -52,8 +52,8 @@
 }
 
 .testimonial-text {
-  font-size: 1rem;
-  color: #444;
+  font-size: 20px;
+  color: #000000;
   margin-bottom: 24px;
   flex: 1;
 }

@@ -306,7 +306,7 @@ const getPublicCategories = async (req, res) => {
             description: category.description,
             parentId: category.parentId,
             parentName: category.parent ? category.parent.name : null,
-            image: category.image,
+            image: category.image ? `/uploads/categories/${category.image}` : null,
             slug: category.slug
         }));
 
@@ -317,14 +317,14 @@ const getPublicCategories = async (req, res) => {
     }
 };
 
-// Get Public Category by ID
-const getPublicCategoryById = async (req, res) => {
+// Get Public Category by Name
+const getPublicCategoryByName = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { name } = req.params;
         
         const category = await Category.findOne({
             where: {
-                id,
+                name: name,
                 status: 'active'
             },
             include: [
@@ -371,7 +371,7 @@ const getPublicCategoryById = async (req, res) => {
             description: category.description,
             parentId: category.parentId,
             parentName: category.parent ? category.parent.name : null,
-            image: category.image,
+            image: category.image ? `/uploads/categories/${category.image}` : null,
             slug: category.slug,
             products: category.products ? category.products.map(product => ({
                 id: product.id,
@@ -390,7 +390,7 @@ const getPublicCategoryById = async (req, res) => {
 
         res.status(200).json(categoryResponse);
     } catch (error) {
-        console.error('Get public category error:', error);
+        console.error('Get public category by name error:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -402,6 +402,6 @@ export {
     updateCategory,
     deleteCategory,
     getPublicCategories,
-    getPublicCategoryById,
+    getPublicCategoryByName,
     categoryUpload
 };

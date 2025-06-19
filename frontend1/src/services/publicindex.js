@@ -42,17 +42,17 @@ export const resetPassword = async (resetData) => {
 // Get public categories
 export const getPublicCategories = async () => {
     try {
-        const response = await axios.get(`${API_URL}/api/categories/public/categories`);
+        const response = await axios.get(`${API_URL}/api/categories/public`);
         return response.data;
     } catch (error) {
         throw error.response?.data || error.message;
     }
 };
 
-// Get public category by ID
-export const getPublicCategoryById = async (categoryId) => {
+// Get public category by name
+export const getPublicCategoryByName = async (categoryName) => {
     try {
-        const response = await axios.get(`${API_URL}/api/categories/public/categories/${categoryId}`);
+        const response = await axios.get(`${API_URL}/api/categories/public/name/${categoryName}`);
         return response.data;
     } catch (error) {
         throw error.response?.data || error.message;

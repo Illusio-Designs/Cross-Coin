@@ -39,9 +39,28 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
   };
 
   // Get the primary image or first image from the images array
-  const productImage = product?.images?.find(img => img.is_primary)?.image_url || 
-                      product?.images?.[0]?.image_url || 
-                      '/placeholder-image.jpg';
+  const getProductImageSrc = () => {
+    const imageData = product?.images?.find(img => img.is_primary) || product?.images?.[0];
+    
+    if (imageData?.image_url) {
+      const imageUrl = imageData.image_url;
+      
+      // If it's a full URL, use it as is
+      if (imageUrl.startsWith('http')) {
+        return imageUrl;
+      }
+      // If it's a relative path, construct the full URL
+      if (imageUrl.startsWith('/uploads/')) {
+        return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${imageUrl}`;
+      }
+      // If it's just a filename, construct the path
+      return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/uploads/products/${imageUrl}`;
+    }
+    
+    return '/placeholder-image.jpg';
+  };
+
+  const productImage = getProductImageSrc();
 
   // Get the first variation for price
   const variation = product?.variations?.[0];
@@ -64,6 +83,12 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
     variation,
     categoryName,
     formattedBadge: formatBadge(product?.badge)
+  });
+
+  console.log('Image Debug:', {
+    images: product?.images,
+    imageData: product?.images?.find(img => img.is_primary) || product?.images?.[0],
+    finalImageSrc: productImage
   });
 
   return (
