@@ -7,6 +7,7 @@ import card2 from "../assets/card2-left.webp";
 import card3 from "../assets/card3-right.webp";
 import "../styles/pages/Profile.css";
 import { useRouter } from "next/router";
+import SeoWrapper from '../console/SeoWrapper';
 
 const tabs = [
   { label: "My Orders" },
@@ -71,7 +72,7 @@ export default function Profile() {
   );
 
   return (
-    <>
+    <SeoWrapper pageName="profile">
       <Header />
       <div className="profile-layout">
         <aside className="profile-sidebar">
@@ -338,6 +339,6 @@ export default function Profile() {
         </main>
       </div>
       <Footer />
-    </>
+    </SeoWrapper>
   );
 } 

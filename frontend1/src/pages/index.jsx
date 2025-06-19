@@ -1,5 +1,6 @@
 import Home from "./home";
 import { useEffect } from 'react';
+import SeoWrapper from '../console/SeoWrapper';
 
 export default function MainPage() {
   useEffect(() => {
@@ -13,5 +14,9 @@ export default function MainPage() {
     };
   }, []);
 
-  return <Home />;
+  return (
+    <SeoWrapper pageName="home">
+      <Home />
+    </SeoWrapper>
+  );
 } 

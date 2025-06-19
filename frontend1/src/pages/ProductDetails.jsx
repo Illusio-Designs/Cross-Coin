@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useCart } from '../context/CartContext';
 import { useRouter } from "next/navigation";
 import { getPublicProductBySlug, createPublicReview } from '../services/publicindex';
+import SeoWrapper from '../console/SeoWrapper';
 
 export default function ProductDetails() {
   const searchParams = useSearchParams();
@@ -423,190 +424,192 @@ export default function ProductDetails() {
   );
 
   return (
-    <div className="product-details-container">
-      <Header />
-      <div className="product-details">
-        <div className="product-images">
-          <Image
-            className="main-image"
-            src={product.images[selectedThumbnail]?.image_url || '/placeholder.jpg'}
-            alt={product.images[selectedThumbnail]?.alt_text || product.name}
-            width={500}
-            height={500}
-            style={{ objectFit: 'cover' }}
-          />
-          <div className="thumbnail-images">
-            {product.images.map((image, idx) => (
-              <Image
-                key={image.id}
-                src={image.image_url}
-                alt={image.alt_text || `${product.name} thumbnail ${idx + 1}`}
-                className={selectedThumbnail === idx ? "active" : ""}
-                onClick={() => setSelectedThumbnail(idx)}
-                width={100}
-                height={100}
-                style={{ objectFit: 'cover' }}
-              />
-            ))}
-          </div>
-        </div>
-        <div className="product-info">
-          <h1>{product.name}</h1>
-          <div className="product-rating-row">
-            <span className="stars">★ ★ ★ ☆ ☆</span>
-            <span className="rating-value">{product.avg_rating || 0}</span>
-            <span className="review-count">({product.review_count || 0} reviews)</span>
-            {selectedVariation && (
-              <span className="sku-label">| SKU: <span className="sku-value">{selectedVariation.sku}</span></span>
-            )}
-          </div>
-          <hr className="product-divider" />
-          <div className="product-desc-short">
-            <span>{product.description}</span>
-          </div>
-          <div className="product-price-row">
-            {selectedVariation && (
-              <>
-                <span className="current-price">₹{selectedVariation.price}</span>
-                {selectedVariation.comparePrice && (
-                  <span className="original-price">₹{selectedVariation.comparePrice}</span>
-                )}
-              </>
-            )}
-          </div>
-          <div className="product-options">
-            {renderAttributeOptions()}
-          </div>
-          <div className="product-action-box">
-            <div className="quantity-and-buttons">
-              <div className="quantity-box">
-                <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="quantity-btn">-</button>
-                <span className="quantity-value">{quantity}</span>
-                <button onClick={() => setQuantity(q => q + 1)} className="quantity-btn">+</button>
-              </div>
-              <button className="add-to-cart" onClick={handleAddToCart}>
-                {showAddedToCart ? 'Added to Cart!' : 'Add to cart'}
-              </button>
-              <button className="buy-now" onClick={handleBuyNow}>
-                Buy Now
-              </button>
+    <SeoWrapper pageName="product-details">
+      <div className="product-details-container">
+        <Header />
+        <div className="product-details">
+          <div className="product-images">
+            <Image
+              className="main-image"
+              src={product.images[selectedThumbnail]?.image_url || '/placeholder.jpg'}
+              alt={product.images[selectedThumbnail]?.alt_text || product.name}
+              width={500}
+              height={500}
+              style={{ objectFit: 'cover' }}
+            />
+            <div className="thumbnail-images">
+              {product.images.map((image, idx) => (
+                <Image
+                  key={image.id}
+                  src={image.image_url}
+                  alt={image.alt_text || `${product.name} thumbnail ${idx + 1}`}
+                  className={selectedThumbnail === idx ? "active" : ""}
+                  onClick={() => setSelectedThumbnail(idx)}
+                  width={100}
+                  height={100}
+                  style={{ objectFit: 'cover' }}
+                />
+              ))}
             </div>
           </div>
-          <div className="product-info-extra">
-            <div className="payment-info">
-              <span className="info-icon">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-              </span>
-              <span>
-                <strong>Payment.</strong> Payment upon receipt of goods, Payment by card in the department, Google Pay, Online card, -5% discount in case of payment
-              </span>
-            </div>
-            <div className="warranty-info">
-              <span className="info-icon">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
-              </span>
-              <span>
-                <strong>Warranty.</strong> The Consumer Protection Act does not provide for the return of this product of proper quality.
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-      {/* Tabs for Description and Review */}
-      <div className="product-tabs-section">
-        <div className="product-tabs-container">
-          <div className="product-tabs">
-            <button
-              className={`tab${activeTab === "description" ? " active" : ""}`}
-              onClick={() => setActiveTab("description")}
-            >
-              Description
-            </button>
-            <button
-              className={`tab${activeTab === "review" ? " active" : ""}`}
-              onClick={() => setActiveTab("review")}
-            >
-              Review ({product.reviews?.length || 0})
-            </button>
-          </div>
-          {/* Tab Content */}
-          {activeTab === "description" ? (
-            <div className="product-description">
-              <p>{product.description}</p>
-              {product.seo?.metaDescription && (
-                <p>{product.seo.metaDescription}</p>
+          <div className="product-info">
+            <h1>{product.name}</h1>
+            <div className="product-rating-row">
+              <span className="stars">★ ★ ★ ☆ ☆</span>
+              <span className="rating-value">{product.avg_rating || 0}</span>
+              <span className="review-count">({product.review_count || 0} reviews)</span>
+              {selectedVariation && (
+                <span className="sku-label">| SKU: <span className="sku-value">{selectedVariation.sku}</span></span>
               )}
             </div>
-          ) : (
-            <div className="product-reviews">
-              {product.has_video_reviews && (
-                <div className="video-reviews">
-                  <h3>Video Reviews</h3>
-                  <p>Video reviews available</p>
+            <hr className="product-divider" />
+            <div className="product-desc-short">
+              <span>{product.description}</span>
+            </div>
+            <div className="product-price-row">
+              {selectedVariation && (
+                <>
+                  <span className="current-price">₹{selectedVariation.price}</span>
+                  {selectedVariation.comparePrice && (
+                    <span className="original-price">₹{selectedVariation.comparePrice}</span>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="product-options">
+              {renderAttributeOptions()}
+            </div>
+            <div className="product-action-box">
+              <div className="quantity-and-buttons">
+                <div className="quantity-box">
+                  <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="quantity-btn">-</button>
+                  <span className="quantity-value">{quantity}</span>
+                  <button onClick={() => setQuantity(q => q + 1)} className="quantity-btn">+</button>
                 </div>
-              )}
-              
-              {/* Display existing reviews */}
-              <div className="existing-reviews">
-                <h3>Customer Reviews ({product.reviews?.length || 0})</h3>
-                {product.reviews && product.reviews.length > 0 ? (
-                  <div className="reviews-list">
-                    {product.reviews.map((review, index) => (
-                      <div key={review.id || index} className="review-item">
-                        <div className="review-header">
-                          <div className="reviewer-info">
-                            <span className="reviewer-name">{review.reviewerName || review.User?.username || review.guestName || 'Anonymous'}</span>
-                            <div className="review-rating">
-                              {Array.from({ length: review.rating }).map((_, i) => (
-                                <span key={i} className="star">★</span>
-                              ))}
-                            </div>
-                          </div>
-                          <span className="review-date">
-                            {new Date(review.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div className="review-content">
-                          <p className="review-text">{review.review}</p>
-                          {review.ReviewImages && review.ReviewImages.length > 0 && (
-                            <div className="review-images">
-                              {review.ReviewImages.map((image, imgIndex) => (
-                                <div key={image.id || imgIndex} className="review-image">
-                                  {image.fileType === 'video' ? (
-                                    <video 
-                                      src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/uploads/reviews/${image.fileName}`}
-                                      controls
-                                      style={{ width: '100px', height: '100px', objectFit: 'cover' }}
-                                    />
-                                  ) : (
-                                    <img 
-                                      src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/uploads/reviews/${image.fileName}`}
-                                      alt={`Review image ${imgIndex + 1}`}
-                                      style={{ width: '100px', height: '100px', objectFit: 'cover' }}
-                                    />
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="no-reviews">No reviews yet. Be the first to review this product!</p>
-                )}
-              </div>
-
-              <div className="review-section">
-                <h3>Write a Review</h3>
-                {renderReviewForm()}
+                <button className="add-to-cart" onClick={handleAddToCart}>
+                  {showAddedToCart ? 'Added to Cart!' : 'Add to cart'}
+                </button>
+                <button className="buy-now" onClick={handleBuyNow}>
+                  Buy Now
+                </button>
               </div>
             </div>
-          )}
+            <div className="product-info-extra">
+              <div className="payment-info">
+                <span className="info-icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                </span>
+                <span>
+                  <strong>Payment.</strong> Payment upon receipt of goods, Payment by card in the department, Google Pay, Online card, -5% discount in case of payment
+                </span>
+              </div>
+              <div className="warranty-info">
+                <span className="info-icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+                </span>
+                <span>
+                  <strong>Warranty.</strong> The Consumer Protection Act does not provide for the return of this product of proper quality.
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
+        {/* Tabs for Description and Review */}
+        <div className="product-tabs-section">
+          <div className="product-tabs-container">
+            <div className="product-tabs">
+              <button
+                className={`tab${activeTab === "description" ? " active" : ""}`}
+                onClick={() => setActiveTab("description")}
+              >
+                Description
+              </button>
+              <button
+                className={`tab${activeTab === "review" ? " active" : ""}`}
+                onClick={() => setActiveTab("review")}
+              >
+                Review ({product.reviews?.length || 0})
+              </button>
+            </div>
+            {/* Tab Content */}
+            {activeTab === "description" ? (
+              <div className="product-description">
+                <p>{product.description}</p>
+                {product.seo?.metaDescription && (
+                  <p>{product.seo.metaDescription}</p>
+                )}
+              </div>
+            ) : (
+              <div className="product-reviews">
+                {product.has_video_reviews && (
+                  <div className="video-reviews">
+                    <h3>Video Reviews</h3>
+                    <p>Video reviews available</p>
+                  </div>
+                )}
+                
+                {/* Display existing reviews */}
+                <div className="existing-reviews">
+                  <h3>Customer Reviews ({product.reviews?.length || 0})</h3>
+                  {product.reviews && product.reviews.length > 0 ? (
+                    <div className="reviews-list">
+                      {product.reviews.map((review, index) => (
+                        <div key={review.id || index} className="review-item">
+                          <div className="review-header">
+                            <div className="reviewer-info">
+                              <span className="reviewer-name">{review.reviewerName || review.User?.username || review.guestName || 'Anonymous'}</span>
+                              <div className="review-rating">
+                                {Array.from({ length: review.rating }).map((_, i) => (
+                                  <span key={i} className="star">★</span>
+                                ))}
+                              </div>
+                            </div>
+                            <span className="review-date">
+                              {new Date(review.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div className="review-content">
+                            <p className="review-text">{review.review}</p>
+                            {review.ReviewImages && review.ReviewImages.length > 0 && (
+                              <div className="review-images">
+                                {review.ReviewImages.map((image, imgIndex) => (
+                                  <div key={image.id || imgIndex} className="review-image">
+                                    {image.fileType === 'video' ? (
+                                      <video 
+                                        src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/uploads/reviews/${image.fileName}`}
+                                        controls
+                                        style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+                                      />
+                                    ) : (
+                                      <img 
+                                        src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/uploads/reviews/${image.fileName}`}
+                                        alt={`Review image ${imgIndex + 1}`}
+                                        style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+                                      />
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="no-reviews">No reviews yet. Be the first to review this product!</p>
+                  )}
+                </div>
+
+                <div className="review-section">
+                  <h3>Write a Review</h3>
+                  {renderReviewForm()}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        <Footer />
       </div>
-      <Footer />
-    </div>
+    </SeoWrapper>
   );
 } 

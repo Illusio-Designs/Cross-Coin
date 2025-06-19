@@ -3,13 +3,15 @@ import React, { useState, useEffect } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { FiFilter, FiChevronDown } from "react-icons/fi";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCart } from '../context/CartContext';
 import ProductCard, { filterOptions } from "../components/ProductCard";
 import { getAllPublicProducts } from "../services/publicindex";
+import SeoWrapper from '../console/SeoWrapper';
 
 const Products = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { addToCart } = useCart();
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState([]);
@@ -41,6 +43,14 @@ const Products = () => {
     loading,
     error
   });
+
+  // On mount, check for category in query params
+  useEffect(() => {
+    const categoryFromQuery = searchParams.get('category');
+    if (categoryFromQuery) {
+      setSelectedCategory([categoryFromQuery]);
+    }
+  }, []);
 
   useEffect(() => {
     fetchProducts();
@@ -124,7 +134,7 @@ const Products = () => {
   };
 
   return (
-    <>
+    <SeoWrapper pageName="products">
       <Header />
       <div className="products-page">
         <div className="products-header">
@@ -292,7 +302,7 @@ const Products = () => {
             ) : error ? (
               <div className="error">{error}</div>
             ) : products.length === 0 ? (
-              <div className="no-products">No products found</div>
+              <div className="no-products">{selectedCategory.length > 0 ? 'No products available in this category.' : 'No products found'}</div>
             ) : (
               products.map((product) => (
                 <ProductCard
@@ -325,7 +335,7 @@ const Products = () => {
         </div>
       </div>
       <Footer />
-    </>
+    </SeoWrapper>
   );
 };
 
