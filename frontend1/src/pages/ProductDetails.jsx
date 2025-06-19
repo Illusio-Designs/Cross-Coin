@@ -26,12 +26,15 @@ export default function ProductDetails() {
     rating: 5,
     comment: '',
     name: '',
-    email: ''
+    email: '',
+    files: []
   });
   const [reviewError, setReviewError] = useState(null);
   const [reviewSuccess, setReviewSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formTouched, setFormTouched] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [filePreview, setFilePreview] = useState([]);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -116,6 +119,13 @@ export default function ProductDetails() {
       formData.append('name', reviewForm.name.trim());
       formData.append('email', reviewForm.email.trim());
 
+      // Append files if they exist
+      if (selectedFiles.length > 0) {
+        selectedFiles.forEach(file => {
+          formData.append('files', file);
+        });
+      }
+
       const response = await createPublicReview(formData);
       if (response.success) {
         setReviewSuccess(true);
@@ -123,7 +133,8 @@ export default function ProductDetails() {
           rating: 5,
           comment: '',
           name: '',
-          email: ''
+          email: '',
+          files: []
         });
         setFormTouched(false);
         // Refresh product data to get updated reviews
@@ -144,6 +155,54 @@ export default function ProductDetails() {
     if (formTouched) {
       setReviewError(null);
     }
+  };
+
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    const maxFiles = 5;
+    const maxSize = 5 * 1024 * 1024; // 5MB
+
+    if (files.length > maxFiles) {
+      setReviewError(`You can only upload up to ${maxFiles} files`);
+      return;
+    }
+
+    const validFiles = files.filter(file => {
+      if (file.size > maxSize) {
+        setReviewError(`${file.name} is too large. Maximum size is 5MB`);
+        return false;
+      }
+      if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+        setReviewError(`${file.name} is not a valid image or video file`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length !== files.length) {
+      return;
+    }
+
+    setSelectedFiles(validFiles);
+    setReviewForm(prev => ({ ...prev, files: validFiles }));
+
+    // Create preview URLs
+    const previews = validFiles.map(file => ({
+      url: URL.createObjectURL(file),
+      name: file.name,
+      type: file.type
+    }));
+    setFilePreview(previews);
+    setReviewError(null);
+  };
+
+  const removeFile = (index) => {
+    const newFiles = selectedFiles.filter((_, i) => i !== index);
+    const newPreviews = filePreview.filter((_, i) => i !== index);
+    
+    setSelectedFiles(newFiles);
+    setReviewForm(prev => ({ ...prev, files: newFiles }));
+    setFilePreview(newPreviews);
   };
 
   if (loading) {
@@ -278,6 +337,58 @@ export default function ProductDetails() {
               {reviewForm.comment.length}/500 characters
             </div>
           </div>
+
+          <div className="form-group">
+            <label htmlFor="files">Upload Images/Videos (Optional)</label>
+            <input
+              type="file"
+              id="files"
+              multiple
+              accept="image/*,video/*"
+              onChange={handleFileChange}
+              style={{ padding: '10px', background: '#fafbfc', border: '1px solid #e0e0e0' }}
+            />
+            <small style={{ color: '#666', fontSize: '12px' }}>
+              You can upload up to 5 files (images or videos). Maximum size: 5MB per file.
+            </small>
+          </div>
+
+          {filePreview.length > 0 && (
+            <div className="file-preview">
+              <h4>Selected Files:</h4>
+              <div className="preview-grid">
+                {filePreview.map((file, index) => (
+                  <div key={index} className="preview-item">
+                    {file.type.startsWith('image/') ? (
+                      <img src={file.url} alt={file.name} style={{ width: '100px', height: '100px', objectFit: 'cover' }} />
+                    ) : (
+                      <video 
+                        src={file.url} 
+                        style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+                        controls
+                      />
+                    )}
+                    <p style={{ fontSize: '12px', margin: '5px 0' }}>{file.name}</p>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(index)}
+                      style={{
+                        background: '#dc2626',
+                        color: 'white',
+                        border: 'none',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {reviewError && (
             <div className="review-error">
@@ -415,7 +526,7 @@ export default function ProductDetails() {
               className={`tab${activeTab === "review" ? " active" : ""}`}
               onClick={() => setActiveTab("review")}
             >
-              Review ({product.review_count || 0})
+              Review ({product.reviews?.length || 0})
             </button>
           </div>
           {/* Tab Content */}
@@ -434,6 +545,59 @@ export default function ProductDetails() {
                   <p>Video reviews available</p>
                 </div>
               )}
+              
+              {/* Display existing reviews */}
+              <div className="existing-reviews">
+                <h3>Customer Reviews ({product.reviews?.length || 0})</h3>
+                {product.reviews && product.reviews.length > 0 ? (
+                  <div className="reviews-list">
+                    {product.reviews.map((review, index) => (
+                      <div key={review.id || index} className="review-item">
+                        <div className="review-header">
+                          <div className="reviewer-info">
+                            <span className="reviewer-name">{review.reviewerName || review.User?.username || review.guestName || 'Anonymous'}</span>
+                            <div className="review-rating">
+                              {Array.from({ length: review.rating }).map((_, i) => (
+                                <span key={i} className="star">★</span>
+                              ))}
+                            </div>
+                          </div>
+                          <span className="review-date">
+                            {new Date(review.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="review-content">
+                          <p className="review-text">{review.review}</p>
+                          {review.ReviewImages && review.ReviewImages.length > 0 && (
+                            <div className="review-images">
+                              {review.ReviewImages.map((image, imgIndex) => (
+                                <div key={image.id || imgIndex} className="review-image">
+                                  {image.fileType === 'video' ? (
+                                    <video 
+                                      src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/uploads/reviews/${image.fileName}`}
+                                      controls
+                                      style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+                                    />
+                                  ) : (
+                                    <img 
+                                      src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/uploads/reviews/${image.fileName}`}
+                                      alt={`Review image ${imgIndex + 1}`}
+                                      style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+                                    />
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="no-reviews">No reviews yet. Be the first to review this product!</p>
+                )}
+              </div>
+
               <div className="review-section">
                 <h3>Write a Review</h3>
                 {renderReviewForm()}

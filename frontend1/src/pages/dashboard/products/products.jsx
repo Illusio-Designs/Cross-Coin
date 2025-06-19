@@ -230,7 +230,7 @@ const ProductsPage = () => {
       header: "Avg. Rating",
       accessor: row => (
         <span style={{ fontWeight: '500' }}>
-          {row.avg_rating ? `${row.avg_rating.toFixed(1)} / 5` : 'N/A'}
+          {row.avg_rating ? `${Number(row.avg_rating).toFixed(1)} / 5` : 'N/A'}
         </span>
       )
     },

@@ -712,3 +712,143 @@
   align-items: center;
   gap: 8px;
 }
+
+.file-preview {
+  margin-top: 15px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.file-preview h4 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.preview-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.preview-item img,
+.preview-item video {
+  border-radius: 4px;
+  border: 1px solid #eee;
+}
+
+.preview-item p {
+  margin: 5px 0;
+  text-align: center;
+  word-break: break-word;
+  max-width: 100px;
+}
+
+.existing-reviews {
+  margin-bottom: 30px;
+}
+
+.existing-reviews h3 {
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 18px;
+}
+
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.review-item {
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+}
+
+.reviewer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.reviewer-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+
+.review-rating {
+  display: flex;
+  gap: 2px;
+}
+
+.review-rating .star {
+  color: #ffd700;
+  font-size: 14px;
+}
+
+.review-date {
+  color: #666;
+  font-size: 12px;
+}
+
+.review-content {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.review-text {
+  color: #333;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.review-images {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.review-image img,
+.review-image video {
+  border-radius: 6px;
+  border: 1px solid #eee;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.review-image img:hover,
+.review-image video:hover {
+  transform: scale(1.05);
+}
+
+.no-reviews {
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  padding: 40px 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
