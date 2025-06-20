@@ -7,6 +7,8 @@ import { useCart } from '../context/CartContext';
 import { useRouter } from "next/navigation";
 import { getPublicProductBySlug, createPublicReview } from '../services/publicindex';
 import SeoWrapper from '../console/SeoWrapper';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function ProductDetails() {
   const searchParams = useSearchParams();
@@ -88,6 +90,7 @@ export default function ProductDetails() {
       });
       if (matchingVariation) {
         setSelectedVariation(matchingVariation);
+        console.log('Variation selected:', matchingVariation);
       }
       return newAttributes;
     });
@@ -232,12 +235,14 @@ export default function ProductDetails() {
 
   const handleAddToCart = () => {
     if (!selectedVariation) {
-      alert('Please select all variations');
+      toast.error('Please select all required variations.');
+      console.log('Add to cart failed: No variation selected');
       return;
     }
     addToCart(product, selectedVariation, quantity);
     setShowAddedToCart(true);
     setTimeout(() => setShowAddedToCart(false), 2000);
+    console.log('Add to cart:', { product, selectedVariation, quantity });
   };
 
   const handleBuyNow = () => {
@@ -429,7 +434,18 @@ export default function ProductDetails() {
   );
 
   return (
-    <SeoWrapper pageName="product-details">
+    <SeoWrapper
+      pageName={product.name || "product-details"}
+      metaTitle={product.seo?.metaTitle}
+      metaDescription={product.seo?.metaDescription}
+      metaKeywords={product.seo?.metaKeywords}
+      ogTitle={product.seo?.ogTitle}
+      ogDescription={product.seo?.ogDescription}
+      ogImage={product.seo?.ogImage}
+      canonicalUrl={product.seo?.canonicalUrl}
+      structuredData={product.seo?.structuredData}
+    >
+      <ToastContainer position="top-right" autoClose={3000} />
       <div className="product-details-container">
         <Header />
         <div className="product-details">

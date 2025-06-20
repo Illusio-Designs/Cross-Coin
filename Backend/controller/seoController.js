@@ -1,9 +1,10 @@
-import { SeoMetadata } from '../model/seoMetadataModel.js';
+import { SeoMetadata, Product, ProductSEO } from '../model/associations.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import ImageHandler from '../utils/imageHandler.js';
 import slugify from 'slugify';
+import { Op } from 'sequelize';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -141,23 +142,49 @@ export const uploadImage = async (req, res) => {
 export const getSEOData = async (req, res) => {
     try {
         const { page_name } = req.query;
-        
+        console.log('[SEO] Incoming page_name:', page_name);
         if (!page_name) {
-            return res.status(400).json({ message: 'Page name is required' });
+            return res.status(400).json({ message: 'Missing page_name parameter' });
         }
-
-        const seoData = await SeoMetadata.findOne({
-            where: { page_name }
-        });
-
+        // First try to find existing SEO data using exact page_name
+        let seoData = await SeoMetadata.findOne({ where: { page_name } });
+        console.log('[SEO] SeoMetadata lookup result:', seoData);
         if (!seoData) {
+            // Try to find a product by name or slug, including ProductSEO
+            const product = await Product.findOne({
+                where: {
+                    [Op.or]: [
+                        { name: page_name },
+                        { slug: page_name }
+                    ]
+                },
+                include: [
+                    {
+                        model: ProductSEO,
+                        as: 'ProductSEO'
+                    }
+                ]
+            });
+            console.log('[SEO] Product lookup result:', product);
+            if (product && product.ProductSEO) {
+                console.log('[SEO] Returning ProductSEO:', product.ProductSEO);
+                return res.json({ success: true, data: product.ProductSEO });
+            }
+            // fallback: if product.seo exists (legacy)
+            if (product && product.seo) {
+                console.log('[SEO] Returning legacy product.seo:', product.seo);
+                return res.json({ success: true, data: product.seo });
+            }
+        }
+        if (!seoData) {
+            console.log('[SEO] No SEO data found for page_name:', page_name);
             return res.status(404).json({ message: 'SEO data not found' });
         }
-
-        res.json(seoData);
+        console.log('[SEO] Returning SeoMetadata:', seoData);
+        res.json({ success: true, data: seoData });
     } catch (error) {
-        console.error('Error getting SEO data:', error);
-        res.status(500).json({ message: 'Failed to get SEO data', error: error.message });
+        console.error('[SEO] Error in getSEOData:', error);
+        res.status(500).json({ message: 'Failed to fetch SEO data', error: error.message });
     }
 };
 
