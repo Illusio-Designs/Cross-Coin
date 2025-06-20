@@ -194,3 +194,7 @@ CouponUsage.belongsTo(Coupon, { foreignKey: 'couponId' });
 
 User.hasMany(CouponUsage, { foreignKey: 'userId', as: 'CouponUsages' });
 CouponUsage.belongsTo(User, { foreignKey: 'userId' });
+
+// Wishlist <-> Product association
+Wishlist.belongsTo(Product, { foreignKey: 'productId' });
+Product.hasMany(Wishlist, { foreignKey: 'productId' });

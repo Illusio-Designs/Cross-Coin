@@ -10,6 +10,7 @@ import { useRouter } from "next/router";
 import SeoWrapper from '../console/SeoWrapper';
 import { resetPassword, getCurrentUser, updateUserProfile, createShippingAddress, getUserShippingAddresses, updateShippingAddress, deleteShippingAddress, setDefaultShippingAddress } from '../services/publicindex';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 const tabs = [
   { label: "My Orders" },
@@ -22,8 +23,7 @@ const tabs = [
 export default function Profile() {
   const [selectedTab, setSelectedTab] = useState(0);
   const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("Johndeo@gmail.com");
+  const { user, isAuthenticated } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -53,26 +53,17 @@ export default function Profile() {
 
   // Check authentication on component mount
   useEffect(() => {
-    const isLoggedIn = sessionStorage.getItem('isLoggedIn');
-    if (!isLoggedIn) {
+    if (!isAuthenticated) {
       router.push('/login');
     }
-  }, [router]);
+  }, [router, isAuthenticated]);
 
-  // Fetch user details on mount
+  // Set user details from context
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const user = await getCurrentUser();
-        setUsername(user.username || "");
-        setEmail(user.email || "");
-        setProfileImageUrl(user.profileImageUrl || "");
-      } catch (err) {
-        setProfileError(err.message || "Failed to load user details.");
-      }
-    };
-    fetchUser();
-  }, []);
+    if (user) {
+      setProfileImageUrl(user.profileImageUrl || "");
+    }
+  }, [user]);
 
   useEffect(() => {
     const fetchAddresses = async () => {
@@ -92,10 +83,10 @@ export default function Profile() {
   const handleLogout = async () => {
     try {
       await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/users/logout`);
-      sessionStorage.removeItem('isLoggedIn');
-      localStorage.removeItem('user');
+    sessionStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('user');
       localStorage.removeItem('token');
-      router.push('/login');
+    router.push('/login');
     } catch (err) {
       alert('Logout failed. Please try again.');
     }
@@ -195,7 +186,7 @@ export default function Profile() {
             <span className="profile-avatar">👤</span>
             <div>
               <div className="profile-hello">Welcome back,</div>
-              <div className="profile-name">{username}</div>
+              <div className="profile-name">{user?.username}</div>
             </div>
           </div>
           <nav className="profile-tabs">
@@ -373,21 +364,21 @@ export default function Profile() {
                       <div className="form-group">
                         <label>Postal Code</label>
                         <input type="text" name="postalCode" value={addressForm.postalCode} onChange={handleAddressInputChange} required />
-                      </div>
+                  </div>
                       <div className="form-group">
                         <label>Country</label>
                         <input type="text" name="country" value={addressForm.country} onChange={handleAddressInputChange} required />
-                      </div>
+                </div>
                       <div className="form-group">
                         <label>Phone Number</label>
                         <input type="text" name="phoneNumber" value={addressForm.phoneNumber} onChange={handleAddressInputChange} required />
-                      </div>
+                  </div>
                       <div className="form-group">
                         <label>
                           <input type="checkbox" name="isDefault" checked={addressForm.isDefault} onChange={handleAddressInputChange} />
                           Set as default
                         </label>
-                      </div>
+                </div>
                       <button type="submit">{editingId ? "Update Address" : "Add Address"}</button>
                       {addressError && <div className="profile-error-message">{addressError}</div>}
                     </form>
@@ -405,8 +396,8 @@ export default function Profile() {
                 setProfileError("");
                 try {
                   const formData = new FormData();
-                  formData.append("username", username);
-                  formData.append("email", email);
+                  formData.append("username", user?.username || "");
+                  formData.append("email", user?.email || "");
                   if (profileImage) {
                     formData.append("profileImage", profileImage);
                   }
@@ -425,8 +416,8 @@ export default function Profile() {
                   <input
                     id="username"
                     type="text"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
+                    value={user?.username || ""}
+                    readOnly
                   />
                 </div>
                 <div className="form-group">
@@ -434,8 +425,8 @@ export default function Profile() {
                   <input
                     id="email"
                     type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
+                    value={user?.email || ""}
+                    readOnly
                   />
                 </div>
                 <div className="form-group">

@@ -261,3 +261,64 @@ export const setDefaultShippingAddress = async (id) => {
         throw error.response?.data || error.message;
     }
 };
+
+// Wishlist APIs (public, require token)
+export const getWishlist = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_URL}/api/wishlist`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data.wishlist || [];
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const addToWishlist = async (productId) => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.post(`${API_URL}/api/wishlist/add/${productId}`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const removeFromWishlist = async (productId) => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.delete(`${API_URL}/api/wishlist/remove/${productId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const clearWishlist = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.delete(`${API_URL}/api/wishlist/clear`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const logout = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.post(`${API_URL}/api/users/logout`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};

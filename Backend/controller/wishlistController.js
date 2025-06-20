@@ -1,9 +1,14 @@
-import { Wishlist, Product, ProductImage, Cart } from '../model/associations.js';
+import { Wishlist, Product, ProductImage, ProductVariation, Cart } from '../model/associations.js';
 
 // Add product to wishlist
 export const addToWishlist = async (req, res) => {
+    console.log('addToWishlist called:', {
+        userId: req.user?.id,
+        productId: req.params.productId,
+        body: req.body
+    });
     try {
-        const { productId } = req.body;
+        const productId = req.params.productId;
         const userId = req.user.id; // From auth middleware
 
         // Check if product exists
@@ -60,18 +65,32 @@ export const getWishlist = async (req, res) => {
                     include: [
                         {
                             model: ProductImage,
-                            attributes: ['id', 'imageName', 'altText', 'isDefault'],
+                            as: 'ProductImages',
+                            attributes: ['id', 'image_url', 'alt_text', 'is_primary'],
                             limit: 1,
-                            where: { isDefault: true },
+                            where: { is_primary: true },
+                            required: false
+                        },
+                        {
+                            model: ProductVariation,
+                            as: 'ProductVariations',
+                            attributes: ['id', 'price', 'comparePrice', 'sku', 'stock', 'status'],
                             required: false
                         }
                     ]
                 }
             ],
-            order: [['addedAt', 'DESC']]
+            order: [['createdAt', 'DESC']]
         });
 
+        console.log('Wishlist Items from DB:', JSON.stringify(wishlistItems, null, 2));
+
         res.status(200).json({
+            count: wishlistItems.length,
+            wishlist: wishlistItems
+        });
+
+        console.log('Wishlist Response Sent:', {
             count: wishlistItems.length,
             wishlist: wishlistItems
         });
