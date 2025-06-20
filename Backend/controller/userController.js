@@ -30,7 +30,9 @@ const addImageUrlToResponse = (userResponse) => {
 // **User Registration**
 export const register = async (req, res) => {
     try {
-        const { username, email, password, role } = req.body;
+        const { username, email, password } = req.body;
+        // Ignore any role from the frontend, always set to 'consumer'
+        const role = 'consumer';
 
         if (!username || !email || !password) {
             return res.status(400).json({ message: 'All fields are required' });
@@ -45,7 +47,7 @@ export const register = async (req, res) => {
             username,
             email,
             password: hashedPassword,
-            role: role || 'consumer'
+            role
         });
 
         // Remove password from response
@@ -70,6 +72,11 @@ export const login = async (req, res) => {
 
         const user = await User.findOne({ where: { email } });
         if (!user) return res.status(400).json({ message: 'User not found' });
+
+        // Only allow login for consumer role
+        if (user.role !== 'consumer') {
+            return res.status(403).json({ message: 'Only consumer accounts can login here.' });
+        }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });

@@ -11,7 +11,7 @@ import Categories from "./products/categories";
 import Attributes from "./products/attributes";
 import Orders from "./orders/orders";
 import OrderStatus from "./orders/orderStatus";
-import Users from "./users/users";
+import Consumers from "./consumers/consumers";
 import ShippingFees from "./shipping/shippingFees";
 import Payments from "./payments/payments";
 // import Coupons from "./coupons/coupons";
@@ -100,8 +100,8 @@ export default function Dashboard() {
         return <Orders />;
       case 'orderStatus':
         return <OrderStatus />;
-      case 'users':
-        return <Users />;
+      case 'consumers':
+        return <Consumers />;
       case 'shippingFees':
         return <ShippingFees />;
       case 'payments':
