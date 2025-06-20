@@ -6,8 +6,7 @@ import Link from "next/link";
 import { registerUser } from '@/services/publicindex';
 
 export default function Register() {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -19,7 +18,7 @@ export default function Register() {
     setError("");
     try {
       const userData = {
-        username: `${firstName} ${lastName}`.trim(),
+        username: username.trim(),
         email,
         password,
         role: 'consumer'
@@ -46,10 +45,8 @@ export default function Register() {
         <p className="auth-info">If you have an account, login in with your user name or email address.</p>
         {error && <div className="auth-error">{error}</div>}
         <form className="auth-form" onSubmit={handleSubmit}>
-          <label>First Name</label>
-          <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} required />
-          <label>Last Name</label>
-          <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} required />
+          <label>Username</label>
+          <input type="text" value={username} onChange={e => setUsername(e.target.value)} required />
           <label>Email address</label>
           <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
           <label>Password</label>

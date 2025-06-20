@@ -151,3 +151,113 @@ export const createPublicReview = async (reviewData) => {
         throw error.response?.data || error.message;
     }
 };
+
+// Get current user (public, requires token)
+export const getCurrentUser = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_URL}/api/users/me`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+// Update user profile (public, requires token)
+export const updateUserProfile = async (profileData) => {
+    try {
+        const token = localStorage.getItem('token');
+        let headers = { Authorization: `Bearer ${token}` };
+        let data = profileData;
+        if (profileData instanceof FormData) {
+            headers['Content-Type'] = 'multipart/form-data';
+        }
+        const response = await axios.put(`${API_URL}/api/users/me`, data, { headers });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+// Shipping Address APIs (public, require token)
+export const createShippingAddress = async (addressData) => {
+    try {
+        const token = localStorage.getItem('token');
+        // Map camelCase to snake_case for backend
+        const payload = {
+            address: addressData.address,
+            city: addressData.city,
+            state: addressData.state,
+            postal_code: addressData.postalCode,
+            country: addressData.country,
+            phone_number: addressData.phoneNumber,
+            is_default: addressData.isDefault
+        };
+        const response = await axios.post(`${API_URL}/api/shipping-addresses`, payload, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const getUserShippingAddresses = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_URL}/api/shipping-addresses`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data.shippingAddresses;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const updateShippingAddress = async (id, addressData) => {
+    try {
+        const token = localStorage.getItem('token');
+        // Map camelCase to snake_case for backend
+        const payload = {
+            address: addressData.address,
+            city: addressData.city,
+            state: addressData.state,
+            postal_code: addressData.postalCode,
+            country: addressData.country,
+            phone_number: addressData.phoneNumber,
+            is_default: addressData.isDefault
+        };
+        const response = await axios.put(`${API_URL}/api/shipping-addresses/${id}`, payload, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const deleteShippingAddress = async (id) => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.delete(`${API_URL}/api/shipping-addresses/${id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const setDefaultShippingAddress = async (id) => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.put(`${API_URL}/api/shipping-addresses/${id}/default`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};

@@ -1,45 +1,98 @@
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCart } from "../context/CartContext";
+import { createShippingAddress, getUserShippingAddresses, updateShippingAddress, deleteShippingAddress, setDefaultShippingAddress } from '../services/publicindex';
 
 export default function Shipping() {
   const router = useRouter();
   const { cartItems } = useCart();
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    building: '',
-    society: '',
-    street: '',
-    landmark: '',
+  const [addresses, setAddresses] = useState([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(true);
+  const [addressForm, setAddressForm] = useState({
+    address: '',
     city: '',
-    pincode: '',
-    addressType: 'Home'
+    state: '',
+    postalCode: '',
+    country: '',
+    phoneNumber: '',
+    isDefault: false
   });
+  const [editingId, setEditingId] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      setLoadingAddresses(true);
+      try {
+        const data = await getUserShippingAddresses();
+        setAddresses(data);
+      } catch (err) {
+        setError(err.message || "Failed to load addresses");
+      }
+      setLoadingAddresses(false);
+    };
+    fetchAddresses();
+  }, []);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
+    const { name, value, type, checked } = e.target;
+    setAddressForm(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate required fields
-    if (!formData.firstName || !formData.lastName || !formData.building || 
-        !formData.street || !formData.city || !formData.pincode) {
-      alert('Please fill in all required fields');
-      return;
+    setError("");
+    try {
+      if (editingId) {
+        await updateShippingAddress(editingId, addressForm);
+      } else {
+        await createShippingAddress(addressForm);
+      }
+      setAddressForm({ address: '', city: '', state: '', postalCode: '', country: '', phoneNumber: '', isDefault: false });
+      setEditingId(null);
+      const data = await getUserShippingAddresses();
+      setAddresses(data);
+    } catch (err) {
+      setError(err.message || "Failed to save address");
     }
+  };
 
-    // Save address to session storage
-    sessionStorage.setItem('shippingAddress', JSON.stringify(formData));
-    router.push('/Checkout');
+  const handleEdit = (address) => {
+    setEditingId(address.id);
+    setAddressForm({
+      address: address.address,
+      city: address.city,
+      state: address.state,
+      postalCode: address.postalCode,
+      country: address.country,
+      phoneNumber: address.phoneNumber,
+      isDefault: address.isDefault
+    });
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await deleteShippingAddress(id);
+      const data = await getUserShippingAddresses();
+      setAddresses(data);
+    } catch (err) {
+      setError(err.message || "Failed to delete address");
+    }
+  };
+
+  const handleSetDefault = async (id) => {
+    try {
+      await setDefaultShippingAddress(id);
+      const data = await getUserShippingAddresses();
+      setAddresses(data);
+    } catch (err) {
+      setError(err.message || "Failed to set default address");
+    }
   };
 
   // Calculate order summary
@@ -65,84 +118,65 @@ export default function Shipping() {
               <form onSubmit={handleSubmit} className="shipping-form">
                 <div className="form-row-2col">
                   <div className="form-group">
-                    <label>First Name *</label>
+                    <label>Address *</label>
                     <input 
                       type="text" 
-                      name="firstName"
-                      value={formData.firstName}
+                      name="address"
+                      value={addressForm.address}
                       onChange={handleInputChange}
                       required 
                     />
                   </div>
                   <div className="form-group">
-                    <label>Last Name *</label>
-                    <input 
-                      type="text" 
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      required 
-                    />
-                  </div>
-                </div>
-                <div className="form-row-2col">
-                  <div className="form-group">
-                    <label>Building Name</label>
-                    <input 
-                      type="text" 
-                      name="building"
-                      value={formData.building}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Society Name</label>
-                    <input 
-                      type="text" 
-                      name="society"
-                      value={formData.society}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-                <div className="form-row-2col">
-                  <div className="form-group">
-                    <label>Street, Area *</label>
-                    <input 
-                      type="text" 
-                      name="street"
-                      value={formData.street}
-                      onChange={handleInputChange}
-                      required 
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Landmark</label>
-                    <input 
-                      type="text" 
-                      name="landmark"
-                      value={formData.landmark}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-                <div className="form-row-2col">
-                  <div className="form-group">
-                    <label>Town/City *</label>
+                    <label>City *</label>
                     <input 
                       type="text" 
                       name="city"
-                      value={formData.city}
+                      value={addressForm.city}
+                      onChange={handleInputChange}
+                      required 
+                    />
+                  </div>
+                </div>
+                <div className="form-row-2col">
+                  <div className="form-group">
+                    <label>State *</label>
+                    <input 
+                      type="text" 
+                      name="state"
+                      value={addressForm.state}
                       onChange={handleInputChange}
                       required 
                     />
                   </div>
                   <div className="form-group">
-                    <label>Pincode *</label>
+                    <label>Postal Code *</label>
                     <input 
                       type="text" 
-                      name="pincode"
-                      value={formData.pincode}
+                      name="postalCode"
+                      value={addressForm.postalCode}
+                      onChange={handleInputChange}
+                      required 
+                    />
+                  </div>
+                </div>
+                <div className="form-row-2col">
+                  <div className="form-group">
+                    <label>Country *</label>
+                    <input 
+                      type="text" 
+                      name="country"
+                      value={addressForm.country}
+                      onChange={handleInputChange}
+                      required 
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Phone Number *</label>
+                    <input 
+                      type="text" 
+                      name="phoneNumber"
+                      value={addressForm.phoneNumber}
                       onChange={handleInputChange}
                       required 
                     />
