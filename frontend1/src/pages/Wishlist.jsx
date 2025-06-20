@@ -6,11 +6,12 @@ import { useCart } from '../context/CartContext';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { FiHeart, FiShoppingCart, FiTrash2 } from 'react-icons/fi';
+import { AiFillHeart } from 'react-icons/ai';
 import '../styles/pages/Wishlist.css';
 import SeoWrapper from '../console/SeoWrapper';
 
 const Wishlist = () => {
-  const { wishlist, removeFromWishlist, clearWishlist } = useWishlist();
+  const { wishlist, removeFromWishlist, clearWishlist, isInWishlist, addToWishlist } = useWishlist();
   const { addToCart } = useCart();
   const router = useRouter();
   const [sortOrder, setSortOrder] = useState('newest');
@@ -119,14 +120,24 @@ const Wishlist = () => {
                     height={250}
                     style={{ objectFit: 'cover' }}
                   />
+                  <button
+                    className="wishlist-icon-btn"
+                    onClick={e => {
+                      e.stopPropagation();
+                      isInWishlist(item.id) ? removeFromWishlist(item.id) : addToWishlist(item);
+                    }}
+                    aria-label={isInWishlist(item.id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                  >
+                    {isInWishlist(item.id) ? <AiFillHeart color="#e11d48" size={24} /> : <FiHeart size={24} />}
+                  </button>
                 </div>
                 <div className="wishlist-item-details">
                   <h3>{item.name}</h3>
                   <div className="wishlist-item-price">
-                    {item.originalPrice > item.price && (
-                      <span className="original-price">${item.originalPrice}</span>
+                    {item.comparePrice > item.price && (
+                      <span className="original-price">₹{item.comparePrice}</span>
                     )}
-                    <span className="current-price">${item.price}</span>
+                    <span className="current-price">₹{item.price}</span>
                   </div>
                   <div className="wishlist-item-actions">
                     <button 
