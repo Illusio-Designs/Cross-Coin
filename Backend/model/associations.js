@@ -104,7 +104,7 @@ Product.hasMany(ProductImage, { foreignKey: 'productId', as: 'ProductImages' });
 ProductImage.belongsTo(Product, { foreignKey: 'productId' });
 
 Product.hasOne(ProductSEO, { foreignKey: 'product_id', as: 'ProductSEO' });
-ProductSEO.belongsTo(Product, { foreignKey: 'product_id' });
+ProductSEO.belongsTo(Product, { foreignKey: 'product_id', as: 'Product' });
 
 // Product-Review association
 Product.hasMany(Review, { foreignKey: 'productId', as: 'reviews' });

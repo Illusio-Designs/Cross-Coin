@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { usePathname } from 'next/navigation';
 import { seoService } from '../services/index';
+import Head from 'next/head';
 
-const SeoWrapper = ({ pageName, children, fallbackSeo = null }) => {
+const SeoWrapper = ({ pageName, children, fallbackSeo = null, seo }) => {
     const [seoData, setSeoData] = useState({
         meta_title: 'Cross-Coin - Your Trusted Shopping Partner',
         meta_description: 'Discover amazing products at Cross-Coin, your one-stop shop for all your needs.',
@@ -77,34 +78,47 @@ const SeoWrapper = ({ pageName, children, fallbackSeo = null }) => {
 
     const fullImageUrl = getFullImageUrl(seoData.meta_image);
 
+    const meta = seo || {};
+
     return (
-        <HelmetProvider>
-            <Helmet>
-                <title>{seoData.meta_title}</title>
-                <meta name="description" content={seoData.meta_description} />
-                <meta name="keywords" content={seoData.meta_keywords} />
-                <link rel="canonical" href={seoData.canonical_url} />
-                
-                {/* Open Graph tags */}
-                <meta property="og:title" content={seoData.meta_title} />
-                <meta property="og:description" content={seoData.meta_description} />
-                <meta property="og:url" content={seoData.canonical_url} />
-                <meta property="og:type" content="website" />
-                {fullImageUrl && <meta property="og:image" content={fullImageUrl} />}
-                
-                {/* Twitter Card tags */}
-                <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:title" content={seoData.meta_title} />
-                <meta name="twitter:description" content={seoData.meta_description} />
-                {fullImageUrl && <meta name="twitter:image" content={fullImageUrl} />}
-                
-                {/* Additional meta tags */}
-                <meta name="robots" content="index, follow" />
-                <meta name="author" content="Cross-Coin" />
-                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            </Helmet>
+        <>
+            <Head>
+                <title>{meta.metaTitle || pageName || 'Cross Coin'}</title>
+                {meta.metaDescription && <meta name="description" content={meta.metaDescription} />}
+                {meta.metaKeywords && <meta name="keywords" content={meta.metaKeywords} />}
+                {meta.ogTitle && <meta property="og:title" content={meta.ogTitle} />}
+                {meta.ogDescription && <meta property="og:description" content={meta.ogDescription} />}
+                {meta.ogImage && <meta property="og:image" content={meta.ogImage} />}
+                {meta.canonicalUrl && <link rel="canonical" href={meta.canonicalUrl} />}
+            </Head>
+            <HelmetProvider>
+                <Helmet>
+                    <title>{seoData.meta_title}</title>
+                    <meta name="description" content={seoData.meta_description} />
+                    <meta name="keywords" content={seoData.meta_keywords} />
+                    <link rel="canonical" href={seoData.canonical_url} />
+                    
+                    {/* Open Graph tags */}
+                    <meta property="og:title" content={seoData.meta_title} />
+                    <meta property="og:description" content={seoData.meta_description} />
+                    <meta property="og:url" content={seoData.canonical_url} />
+                    <meta property="og:type" content="website" />
+                    {fullImageUrl && <meta property="og:image" content={fullImageUrl} />}
+                    
+                    {/* Twitter Card tags */}
+                    <meta name="twitter:card" content="summary_large_image" />
+                    <meta name="twitter:title" content={seoData.meta_title} />
+                    <meta name="twitter:description" content={seoData.meta_description} />
+                    {fullImageUrl && <meta name="twitter:image" content={fullImageUrl} />}
+                    
+                    {/* Additional meta tags */}
+                    <meta name="robots" content="index, follow" />
+                    <meta name="author" content="Cross-Coin" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                </Helmet>
+            </HelmetProvider>
             {children}
-        </HelmetProvider>
+        </>
     );
 };
 
