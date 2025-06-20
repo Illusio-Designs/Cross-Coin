@@ -7,7 +7,7 @@ export const ShippingAddress = sequelize.define('ShippingAddress', {
         primaryKey: true,
         autoIncrement: true
     },
-    userId: {
+    user_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
@@ -27,7 +27,7 @@ export const ShippingAddress = sequelize.define('ShippingAddress', {
         type: DataTypes.STRING(100),
         allowNull: false
     },
-    postalCode: {
+    postal_code: {
         type: DataTypes.STRING(20),
         allowNull: false
     },
@@ -35,11 +35,11 @@ export const ShippingAddress = sequelize.define('ShippingAddress', {
         type: DataTypes.STRING(100),
         allowNull: false
     },
-    phoneNumber: {
+    phone_number: {
         type: DataTypes.STRING(20),
         allowNull: false
     },
-    isDefault: {
+    is_default: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
     }
@@ -50,7 +50,7 @@ export const ShippingAddress = sequelize.define('ShippingAddress', {
     collate: 'utf8mb4_general_ci',
     indexes: [
         {
-            fields: ['userId']
+            fields: ['user_id']
         }
     ]
 }); 
