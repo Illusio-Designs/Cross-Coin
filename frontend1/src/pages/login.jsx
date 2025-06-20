@@ -3,7 +3,7 @@ import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { loginUser } from '@/services/publicindex';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -12,6 +12,13 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const { login, user, isAuthenticated } = useAuth();
+
+  // Redirect if already logged in
+  if (isAuthenticated) {
+    router.replace('/profile');
+    return null;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,9 +28,8 @@ export default function Login() {
       return;
     }
     try {
-      const response = await loginUser({ email, password });
-      const user = response.user || response;
-      if (user.role !== 'consumer' && user.role !== 'customer') {
+      const response = await login({ email, password });
+      if (response.user.role !== 'consumer' && response.user.role !== 'customer') {
         setError("Only consumer accounts are allowed to login here.");
         return;
       }
@@ -31,7 +37,6 @@ export default function Login() {
         localStorage.setItem('user', JSON.stringify({ email }));
       }
       sessionStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('token', response.token);
       router.push('/profile');
     } catch (err) {
       setError(err.message || "Invalid email or password");

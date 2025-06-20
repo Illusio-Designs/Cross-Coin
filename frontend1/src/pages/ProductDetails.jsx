@@ -239,10 +239,12 @@ export default function ProductDetails() {
       console.log('Add to cart failed: No variation selected');
       return;
     }
-    addToCart(product, selectedVariation, quantity);
+    const selectedColor = selectedAttributes.color || '';
+    const selectedSize = selectedAttributes.size || '';
+    addToCart(product, selectedColor, selectedSize, quantity);
     setShowAddedToCart(true);
     setTimeout(() => setShowAddedToCart(false), 2000);
-    console.log('Add to cart:', { product, selectedVariation, quantity });
+    console.log('Add to cart:', { product, selectedColor, selectedSize, quantity });
   };
 
   const handleBuyNow = () => {
@@ -250,7 +252,9 @@ export default function ProductDetails() {
       alert('Please select all variations');
       return;
     }
-    addToCart(product, selectedVariation, quantity);
+    const selectedColor = selectedAttributes.color || '';
+    const selectedSize = selectedAttributes.size || '';
+    addToCart(product, selectedColor, selectedSize, quantity);
     router.push('/checkout');
   };
 
@@ -262,15 +266,27 @@ export default function ProductDetails() {
     return Object.entries(attributes).map(([key, values]) => (
       <div key={key} className="variation-group">
         <span className="option-label">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
-        <div className="variation-options">
+        <div className={`variation-options ${key === 'color' ? 'color-options' : ''}`}> 
           {values.map((value) => (
-            <button
-              key={value}
-              className={`variation-option${selectedAttributes[key] === value ? " selected" : ""}`}
-              onClick={() => handleAttributeChange(key, value)}
-            >
-              {value}
-            </button>
+            key === 'color' ? (
+              <button
+                key={value}
+                className={`color-option${selectedAttributes[key] === value ? ' selected' : ''}`}
+                style={{ backgroundColor: value.toLowerCase(), border: selectedAttributes[key] === value ? '2px solid #e60000' : '1px solid #ccc' }}
+                onClick={() => handleAttributeChange(key, value)}
+                aria-label={value}
+              >
+                {selectedAttributes[key] === value && <span className="color-check">✓</span>}
+              </button>
+            ) : (
+              <button
+                key={value}
+                className={`size-option${selectedAttributes[key] === value ? ' selected' : ''}`}
+                onClick={() => handleAttributeChange(key, value)}
+              >
+                {value}
+              </button>
+            )
           ))}
         </div>
       </div>
@@ -533,6 +549,13 @@ export default function ProductDetails() {
                 </span>
               </div>
             </div>
+            {selectedVariation && (
+              <div className="selected-variation-info">
+                <span>Selected SKU: <b>{selectedVariation.sku}</b></span>
+                <span>Price: <b>₹{selectedVariation.price}</b></span>
+                {selectedVariation.stock !== undefined && <span>Stock: <b>{selectedVariation.stock}</b></span>}
+              </div>
+            )}
           </div>
         </div>
         {/* Tabs for Description and Review */}
