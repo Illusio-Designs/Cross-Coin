@@ -51,7 +51,9 @@ export default function ProductDetails() {
               // Initialize selected attributes with first options
               const firstVariation = response.data.variations[0];
               if (firstVariation.attributes) {
-                const attributes = JSON.parse(firstVariation.attributes);
+                const attributes = typeof firstVariation.attributes === 'string'
+                  ? JSON.parse(firstVariation.attributes)
+                  : firstVariation.attributes;
                 const initialAttributes = {};
                 Object.keys(attributes).forEach(key => {
                   initialAttributes[key] = attributes[key][0];
@@ -77,7 +79,9 @@ export default function ProductDetails() {
       const newAttributes = { ...prev, [attributeName]: value };
       // Find matching variation
       const matchingVariation = product.variations.find(variation => {
-        const attrs = JSON.parse(variation.attributes);
+        const attrs = typeof variation.attributes === 'string'
+          ? JSON.parse(variation.attributes)
+          : variation.attributes;
         return Object.entries(newAttributes).every(([key, val]) => 
           attrs[key]?.includes(val)
         );
@@ -247,8 +251,9 @@ export default function ProductDetails() {
 
   const renderAttributeOptions = () => {
     if (!selectedVariation) return null;
-    const attributes = JSON.parse(selectedVariation.attributes);
-    
+    const attributes = typeof selectedVariation.attributes === 'string'
+      ? JSON.parse(selectedVariation.attributes)
+      : selectedVariation.attributes;
     return Object.entries(attributes).map(([key, values]) => (
       <div key={key} className="variation-group">
         <span className="option-label">{key.charAt(0).toUpperCase() + key.slice(1)}</span>

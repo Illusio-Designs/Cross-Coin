@@ -55,8 +55,8 @@ const menu = [
     icon: <FaCog />, view: "seo"
   },
   {
-    label: "Users",
-    icon: <FaUser />, view: "users"
+    label: "Consumers",
+    icon: <FaUser />, view: "consumers"
   },
   {
     label: "Logout",
