@@ -111,7 +111,13 @@ const Wishlist = () => {
               <div key={item.id} className="wishlist-item">
                 <div 
                   className="wishlist-item-image"
-                  onClick={() => router.push(`/ProductDetails?name=${encodeURIComponent(item.name)}`)}
+                  onClick={() => {
+                    if (item.slug) {
+                      router.push(`/ProductDetails?slug=${item.slug}`);
+                    } else {
+                      console.error('Product slug not found:', item);
+                    }
+                  }}
                 >
                   <Image 
                     src={item.image} 

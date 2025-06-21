@@ -6,7 +6,7 @@ import { FiFilter, FiChevronDown } from "react-icons/fi";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCart } from '../context/CartContext';
 import ProductCard, { filterOptions } from "../components/ProductCard";
-import { getAllPublicProducts } from "../services/publicindex";
+import { getAllPublicProducts, getPublicCategories } from "../services/publicindex";
 import SeoWrapper from '../console/SeoWrapper';
 
 const Products = () => {
@@ -32,6 +32,7 @@ const Products = () => {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [categories, setCategories] = useState([]);
 
   // Debug logs
   console.log('Products Component State:', {
@@ -44,13 +45,26 @@ const Products = () => {
     error
   });
 
+  // Fetch categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await getPublicCategories();
+        setCategories(data);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   // On mount, check for category in query params
   useEffect(() => {
     const categoryFromQuery = searchParams.get('category');
     if (categoryFromQuery) {
       setSelectedCategory([categoryFromQuery]);
     }
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     fetchProducts();
@@ -133,13 +147,54 @@ const Products = () => {
     }
   };
 
+  // Get category name by ID for display
+  const getCategoryNameById = (categoryId) => {
+    const category = categories.find(cat => cat.id.toString() === categoryId.toString());
+    return category ? category.name : categoryId;
+  };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSelectedCategory([]);
+    setSelectedColors([]);
+    setSelectedSizes([]);
+    setSelectedGender([]);
+    setSelectedMaterial([]);
+    setPriceRange([20, 250]);
+    setCurrentPage(1);
+    // Clear URL parameters
+    router.push('/Products');
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = selectedCategory.length > 0 || 
+                          selectedColors.length > 0 || 
+                          selectedSizes.length > 0 || 
+                          selectedGender.length > 0 || 
+                          selectedMaterial.length > 0 ||
+                          priceRange[0] !== 20 || 
+                          priceRange[1] !== 250;
+
   return (
     <SeoWrapper pageName="products">
       <Header />
       <div className="products-page">
         <div className="products-header">
-          <h1>Our Products</h1>
+          <h1>
+            {selectedCategory.length > 0 
+              ? `Products - ${getCategoryNameById(selectedCategory[0])}`
+              : 'Our Products'
+            }
+          </h1>
           <div className="products-controls">
+            {hasActiveFilters && (
+              <button 
+                className="clear-filters-btn"
+                onClick={clearAllFilters}
+              >
+                Clear Filters
+              </button>
+            )}
             <button 
               className="filter-toggle"
               onClick={() => setShowFilters(!showFilters)}
@@ -168,17 +223,17 @@ const Products = () => {
                 </h3>
                 {showCategory && (
                   <div className="category-list">
-                    {filterOptions.categories.map((category) => (
-                      <label key={category} className="checkbox-label">
+                    {categories.map((category) => (
+                      <label key={category.id} className="checkbox-label">
                         <div className="checkbox-group">
                           <input
                             type="checkbox"
-                            checked={selectedCategory.includes(category)}
-                            onChange={() => handleFilterChange('category', category)}
+                            checked={selectedCategory.includes(category.id.toString())}
+                            onChange={() => handleFilterChange('category', category.id.toString())}
                           />
-                          <p>{category}</p> 
+                          <p>{category.name}</p> 
                         </div>
-                        <span>[20]</span>
+                        <span>[{category.productCount || 0}]</span>
                       </label>
                     ))}
                   </div>
@@ -302,7 +357,12 @@ const Products = () => {
             ) : error ? (
               <div className="error">{error}</div>
             ) : products.length === 0 ? (
-              <div className="no-products">{selectedCategory.length > 0 ? 'No products available in this category.' : 'No products found'}</div>
+              <div className="no-products">
+                {selectedCategory.length > 0 
+                  ? `No products available in "${getCategoryNameById(selectedCategory[0])}" category. Try selecting a different category or clearing filters.`
+                  : 'No products found matching your criteria. Try adjusting your filters.'
+                }
+              </div>
             ) : (
               products.map((product) => (
                 <ProductCard

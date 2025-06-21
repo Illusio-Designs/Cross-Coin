@@ -20,7 +20,7 @@ const About = () => {
         <div className="mission-section">
           <div className="container">
             <div className="mission-content">
-              <h2>Our Mission</h2>
+              <h2 className='section-title'>Our Mission</h2>
               <p>At Cross-Coin, we believe that comfort should never be compromised for style. Our journey began with a simple idea: to create socks that not only look great but feel amazing. Today, we're proud to offer a wide range of premium socks that combine innovative materials, thoughtful design, and exceptional comfort.</p>
             </div>
           </div>
@@ -28,7 +28,7 @@ const About = () => {
 
         <div className="features-section">
           <div className="container">
-            <h2>Why Choose Us</h2>
+            <h2 className='section-title'>Why Choose Us</h2>
             <div className="features-grid">
               <div className="feature-card">
                 <FaSocks className="feature-icon" />
@@ -51,7 +51,7 @@ const About = () => {
 
         <div className="team-section">
           <div className="container">
-            <h2>Our Team</h2>
+            <h2 className='section-title'>Our Team</h2>
             <div className="team-intro">
               <p>Behind every pair of Cross-Coin socks is a dedicated team of passionate individuals who work tirelessly to bring you the best in comfort and style. From our skilled designers to our customer service representatives, we're united by our commitment to quality and innovation.</p>
             </div>

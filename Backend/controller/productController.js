@@ -892,7 +892,15 @@ export const getAllPublicProducts = async (req, res) => {
         
         // Build filter
         const filter = { status: 'active' }; // Only get active products
-        if (category) filter.categoryId = category;
+        if (category) {
+            // Handle multiple category IDs (comma-separated)
+            if (category.includes(',')) {
+                const categoryIds = category.split(',').map(id => parseInt(id.trim()));
+                filter.categoryId = { [Op.in]: categoryIds };
+            } else {
+                filter.categoryId = parseInt(category);
+            }
+        }
         if (search) {
             filter[Op.or] = [
                 { name: { [Op.iLike]: `%${search}%` } },
