@@ -14,7 +14,7 @@ import OrderStatus from "./orders/orderStatus";
 import Users from "./users/users";
 import ShippingFees from "./shipping/shippingFees";
 import Payments from "./payments/payments";
-// import Coupons from "./coupons/coupons";
+import Coupons from "./coupon/coupons";
 import Reviews from "./reviews/reviews";
 import SEO from "./seo/seo";
 import Slider from "./slider/slider";
