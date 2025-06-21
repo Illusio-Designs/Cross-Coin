@@ -10,10 +10,12 @@ import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
 import { getPublicSliders, getPublicCategories, getPublicCategoryByName } from '../services/publicindex';
 import SeoWrapper from '../console/SeoWrapper';
+import { useRouter } from 'next/navigation';
 
 const formatTwoDigits = (num) => num.toString().padStart(2, '0');
 
 const Home = () => {
+  const router = useRouter();
   const [current, setCurrent] = useState(0);
   const [slides, setSlides] = useState([]);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -230,12 +232,23 @@ const Home = () => {
     await fetchCategoryProducts(categoryName);
   };
 
-  const handleAddToCart = (product) => {
-    if (!selectedColor || !selectedSize) {
-      alert('Please select both color and size');
-      return;
+  const handleProductClick = (product) => {
+    console.log('Product clicked:', product);
+    if (product && product.slug) {
+      router.push(`/ProductDetails?slug=${product.slug}`);
+    } else {
+      console.error('Product slug not found:', product);
     }
-    addToCart(product, selectedColor, selectedSize, quantity);
+  };
+
+  const handleAddToCart = (e, product) => {
+    e.stopPropagation();
+    console.log('Add to cart:', product);
+    // Add to cart logic here
+    if (product && product.variations && product.variations.length > 0) {
+      const variation = product.variations[0];
+      addToCart(product, variation.id || variation, 1);
+    }
   };
 
   const handleBuyNow = () => {
@@ -248,6 +261,7 @@ const Home = () => {
   };
 
   const currentCategory = categories[currentCategoryIndex] || {
+    id: null,
     name: 'Loading...',
     image: card1_left
   };
@@ -280,9 +294,7 @@ const Home = () => {
       <Header />
       <div className="home-page">
         <div className="hero-slider">
-          {loading ? (
-            <div className="loading-spinner">Loading...</div>
-          ) : slides.length > 0 ? (
+          {slides.length > 0 ? (
             <div className="hero-slide" key={current}>
               <div className="hero-slide__image">
                 <Image 
@@ -353,7 +365,13 @@ const Home = () => {
         <div className="shop-by-category">
           <div style={{ display: 'flex', justifyContent: 'end', alignItems: 'center', marginBottom: '3rem' , gap: '17rem' }}>
             <h2 className="section-title">Curate Your Collection</h2>
-            <button className="hero-btn" onClick={() => window.location.href = `/Products?category=${encodeURIComponent(currentCategory.name)}`}>
+            <button className="hero-btn" onClick={() => {
+              if (currentCategory.id) {
+                window.location.href = `/Products?category=${currentCategory.id}`;
+              } else {
+                window.location.href = '/Products';
+              }
+            }}>
               View All Products
             </button>
           </div>
@@ -411,11 +429,8 @@ const Home = () => {
                         <ProductCard
                           key={product.id}
                           product={formattedProduct}
-                          onProductClick={(product) => console.log('Product clicked:', product)}
-                          onAddToCart={(e, product) => {
-                            e.stopPropagation();
-                            console.log('Add to cart:', product);
-                          }}
+                          onProductClick={handleProductClick}
+                          onAddToCart={handleAddToCart}
                         />
                       );
                     })}
@@ -521,7 +536,7 @@ const Home = () => {
                           <span className="quantity-value">{quantity}</span>
                           <button onClick={() => setQuantity(q => q + 1)} className="quantity-btn">+</button>
                         </div>
-                        <button className="add-to-cart" onClick={() => handleAddToCart(product)}>
+                        <button className="add-to-cart" onClick={(e) => handleAddToCart(e, product)}>
                           Add to cart
                         </button>
                         <button className="buy-now" onClick={handleBuyNow}>
@@ -552,48 +567,41 @@ const Home = () => {
               </button>
             )}
             <div className="products-slider" ref={latestSliderRef}>
-              {latestProductsLoading ? (
-                <div className="loading-spinner">Loading latest products...</div>
-              ) : (
-                latestProducts.slice(0, 15).map((product) => {
-                  // Format product data to match ProductCard expectations
-                  const formattedProduct = {
-                    id: product.id,
-                    name: product.name,
-                    slug: product.slug,
-                    description: product.description,
-                    badge: product.badge || null,
-                    images: product.images && product.images.length > 0 ? product.images.map(img => ({
-                      image_url: img.image_url,
-                      is_primary: img.is_primary
-                    })) : [],
-                    variations: product.variations && product.variations.length > 0 ? product.variations.map(variation => ({
-                      price: variation.price || 0,
-                      comparePrice: variation.comparePrice || 0,
-                      stock: variation.stock || 0
-                    })) : [{
-                      price: 0,
-                      comparePrice: 0,
-                      stock: 0
-                    }],
-                    category: {
-                      name: product.category?.name || 'Uncategorized'
-                    }
-                  };
-                  
-                  return (
-                    <ProductCard
-                      key={product.id}
-                      product={formattedProduct}
-                      onProductClick={(product) => console.log('Product clicked:', product)}
-                      onAddToCart={(e, product) => {
-                        e.stopPropagation();
-                        console.log('Add to cart:', product);
-                      }}
-                    />
-                  );
-                })
-              )}
+              {latestProducts.slice(0, 15).map((product) => {
+                // Format product data to match ProductCard expectations
+                const formattedProduct = {
+                  id: product.id,
+                  name: product.name,
+                  slug: product.slug,
+                  description: product.description,
+                  badge: product.badge || null,
+                  images: product.images && product.images.length > 0 ? product.images.map(img => ({
+                    image_url: img.image_url,
+                    is_primary: img.is_primary
+                  })) : [],
+                  variations: product.variations && product.variations.length > 0 ? product.variations.map(variation => ({
+                    price: variation.price || 0,
+                    comparePrice: variation.comparePrice || 0,
+                    stock: variation.stock || 0
+                  })) : [{
+                    price: 0,
+                    comparePrice: 0,
+                    stock: 0
+                  }],
+                  category: {
+                    name: product.category?.name || 'Uncategorized'
+                  }
+                };
+                
+                return (
+                  <ProductCard
+                    key={product.id}
+                    product={formattedProduct}
+                    onProductClick={handleProductClick}
+                    onAddToCart={handleAddToCart}
+                  />
+                );
+              })}
             </div>
             {latestProducts.length > 2 && (
               <button className="slider-arrow slider-arrow-right" onClick={() => scrollLatestSlider('right')}>
