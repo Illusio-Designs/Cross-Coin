@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import Image from "next/image";
@@ -5,16 +6,77 @@ import { FiTrash2 } from "react-icons/fi";
 import { FaBoxOpen, FaTruck, FaLock, FaUndo } from "react-icons/fa";
 import { useRouter } from "next/router";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import SeoWrapper from '../console/SeoWrapper';
+import { validateCoupon, getPublicCoupons } from "../services/publicindex";
 
 export default function Cart() {
   const router = useRouter();
+  const { user } = useAuth();
   const { cartItems, removeFromCart, updateQuantity } = useCart();
+  const [promoCode, setPromoCode] = useState("");
+  const [discount, setDiscount] = useState(0);
+  const [couponError, setCouponError] = useState("");
+  const [couponSuccess, setCouponSuccess] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+
+  useEffect(() => {
+    const fetchCoupons = async () => {
+        try {
+            const data = await getPublicCoupons();
+            if (data && data.coupons) {
+              setAvailableCoupons(data.coupons);
+            }
+        } catch (error) {
+            console.error("Failed to fetch available coupons:", error);
+        }
+    };
+    fetchCoupons();
+  }, []);
+
+  useEffect(() => {
+    // Clear coupon when cart changes
+    setDiscount(0);
+    setAppliedCoupon(null);
+    setCouponError("");
+    setCouponSuccess("");
+    setPromoCode("");
+  }, [cartItems]);
+
+  console.log('Cart.jsx: rendering with cartItems:', cartItems);
 
   // Calculate order summary
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discount = Math.round(subtotal * 0.2);
   const total = subtotal - discount;
+
+  const handleApplyCoupon = async () => {
+    if (!promoCode) {
+      setCouponError("Please enter a promo code.");
+      setCouponSuccess("");
+      return;
+    }
+
+    if (!user) {
+      setCouponError("Please log in to apply a coupon.");
+      setCouponSuccess("");
+      router.push('/auth/login');
+      return;
+    }
+
+    try {
+      const response = await validateCoupon(promoCode);
+      setDiscount(parseFloat(response.discountAmount));
+      setAppliedCoupon(response.coupon);
+      setCouponError("");
+      setCouponSuccess(response.message || "Coupon applied successfully!");
+    } catch (error) {
+      setCouponError(error.message || "An error occurred.");
+      setDiscount(0);
+      setAppliedCoupon(null);
+      setCouponSuccess("");
+    }
+  };
 
   const handleCheckout = () => {
     if (cartItems.length === 0) {
@@ -22,6 +84,37 @@ export default function Cart() {
       return;
     }
     router.push('/Checkout');
+  };
+
+  const handleCouponClick = (code) => {
+    setPromoCode(code);
+  };
+
+  const generateCouponDescription = (coupon) => {
+    const value = parseFloat(coupon.value);
+    const minPurchase = parseFloat(coupon.minPurchase);
+    const maxDiscount = parseFloat(coupon.maxDiscount);
+
+    if (coupon.type === 'percentage') {
+      let description = `Get ${value}% off`;
+      if (minPurchase > 0) {
+        description += ` on a minimum purchase of ₹${minPurchase}`;
+      }
+      if (maxDiscount > 0) {
+        description += `. Maximum discount: ₹${maxDiscount}`;
+      }
+      return description + '.';
+    }
+
+    if (coupon.type === 'fixed') {
+      let description = `Get a flat ₹${value} discount`;
+      if (minPurchase > 0) {
+        description += ` on a minimum purchase of ₹${minPurchase}`;
+      }
+      return description + '.';
+    }
+    
+    return 'A special discount on your order.';
   };
 
   return (
@@ -43,12 +136,12 @@ export default function Cart() {
             ) : (
               cartItems.map((item) => (
                 <div className="cart-item" key={item.id}>
-                  <Image src={item.image} alt={item.name} className="cart-item-img" />
+                  <Image src={item.image || '/placeholder.png'} alt={item.name} width={100} height={100} className="cart-item-img" />
                   <div className="cart-item-details">
                     <div className="cart-item-title">{item.name}</div>
-                    <div className="cart-item-meta">Size: {item.size}</div>
-                    <div className="cart-item-meta">Color: {item.color}</div>
-                    <div className="cart-item-price">${item.price}</div>
+                    <div className="cart-item-meta">Size: {item.size || 'N/A'}</div>
+                    <div className="cart-item-meta">Color: {item.color || 'N/A'}</div>
+                    <div className="cart-item-price">₹{item.price}</div>
                   </div>
                   <div className="cart-item-qty">
                     <button
@@ -71,29 +164,67 @@ export default function Cart() {
         {cartItems.length > 0 && (
           <div className="order-summary-section">
             <div className="order-summary-box">
+              
               <div className="order-summary-title">Order Summary</div>
               <div className="order-summary-row">
                 <span>Subtotal</span>
-                <span>${subtotal}</span>
+                <span>₹{subtotal.toFixed(2)}</span>
               </div>
-              <div className="order-summary-row">
-                <span>Discount (-20%)</span>
-                <span className="discount">-${discount}</span>
-              </div>
+              {appliedCoupon ? (
+                <div className="order-summary-row">
+                  <span>Discount ({appliedCoupon.code})</span>
+                  <span className="discount">-₹{discount.toFixed(2)}</span>
+                </div>
+              ) : (
+                <div className="order-summary-row">
+                  <span>Discount</span>
+                  <span className="discount">-₹{discount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="order-summary-row">
                 <span>Delivery Fee</span>
-                <span>$0</span>
+                <span>₹0.00</span>
               </div>
               <div className="order-summary-total">
                 <span>Total</span>
-                <span>${total}</span>
+                <span>₹{total.toFixed(2)}</span>
               </div>
-              <div className="promo-row">
-                <input className="promo-input" placeholder="Add promo code" />
-                <button className="promo-apply">Apply</button>
+              <div className="promo-section">
+                <div className="promo-row">
+                  <input
+                    className="promo-input"
+                    placeholder="Enter promo code"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value)}
+                  />
+                  <button className="promo-apply" onClick={handleApplyCoupon}>Apply</button>
+                </div>
+                {couponError && <div className="coupon-message coupon-error">{couponError}</div>}
+                {couponSuccess && <div className="coupon-message coupon-success">{couponSuccess}</div>}
               </div>
-              <button 
-                className="checkout-btn" 
+              {availableCoupons.length > 0 && (
+                <div className="available-coupons">
+                  <h3 className="available-coupons-title">Available Coupons</h3>
+                  <div className="coupons-list">
+                    {availableCoupons.map((coupon) => (
+                      <div
+                        key={coupon.id}
+                        className={`coupon-card ${promoCode === coupon.code ? 'selected' : ''}`}
+                        onClick={() => handleCouponClick(coupon.code)}
+                      >
+                        <div className="coupon-card-header">
+                            <span className="coupon-card-code">{coupon.code}</span>
+                        </div>
+                        <div className="coupon-card-body">
+                            <p className="coupon-card-description">{generateCouponDescription(coupon)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <button
+                className="checkout-btn"
                 onClick={handleCheckout}
                 disabled={cartItems.length === 0}
               >

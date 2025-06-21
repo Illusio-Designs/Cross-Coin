@@ -90,6 +90,43 @@ export default function ProductDetails() {
     fetchCoupons();
   }, []);
 
+  const generateCouponDescription = (coupon) => {
+    const value = parseFloat(coupon.value);
+    const minPurchase = parseFloat(coupon.minPurchase);
+    const maxDiscount = parseFloat(coupon.maxDiscount);
+
+    if (coupon.type === 'percentage') {
+      let description = `Get ${value}% off`;
+      if (minPurchase > 0) {
+        description += ` on a minimum purchase of ₹${minPurchase}`;
+      }
+      if (maxDiscount > 0) {
+        description += `. Maximum discount: ₹${maxDiscount}`;
+      }
+      return description + '.';
+    }
+
+    if (coupon.type === 'fixed') {
+      let description = `Get a flat ₹${value} discount`;
+      if (minPurchase > 0) {
+        description += ` on a minimum purchase of ₹${minPurchase}`;
+      }
+      return description + '.';
+    }
+    
+    return 'A special discount on your order.';
+  };
+
+  const renderStars = (rating) => {
+    const totalStars = 5;
+    const roundedRating = Math.round(rating || 0);
+    const stars = [];
+    for (let i = 0; i < totalStars; i++) {
+      stars.push(i < roundedRating ? '★' : '☆');
+    }
+    return stars.join(' ');
+  };
+
   const handleAttributeChange = (attributeName, value) => {
     setSelectedAttributes(prev => {
       const newAttributes = { ...prev, [attributeName]: value };
@@ -506,8 +543,8 @@ export default function ProductDetails() {
           <div className="product-info">
             <h1>{product.name}</h1>
             <div className="product-rating-row">
-              <span className="stars">★ ★ ★ ☆ ☆</span>
-              <span className="rating-value">{product.avg_rating || 0}</span>
+              <span className="stars">{renderStars(product.avg_rating)}</span>
+              <span className="rating-value">{parseFloat(product.avg_rating || 0).toFixed(1)}</span>
               <span className="review-count">({product.review_count || 0} reviews)</span>
               {selectedVariation && (
                 <span className="sku-label">| SKU: <span className="sku-value">{selectedVariation.sku}</span></span>
@@ -532,26 +569,16 @@ export default function ProductDetails() {
             </div>
             {/* Coupons Display */}
             {coupons && coupons.length > 0 && (
-              <div className="product-coupons-box" style={{margin: '20px 0', padding: '16px', background: '#f8fafc', border: '1px solid #e0e0e0', borderRadius: '8px'}}>
-                <h3 style={{marginBottom: '10px', color: '#CE1E36'}}>Available Coupons</h3>
-                <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+              <div className="product-coupons-box">
+                <h3 className="product-coupons-title">Available Coupons</h3>
+                <div className="product-coupons-list">
                   {coupons.map((coupon) => (
-                    <li key={coupon.id || coupon.code} style={{marginBottom: '8px', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px dashed #CE1E36'}}>
-                      <span style={{fontWeight: 600, color: '#CE1E36'}}>{coupon.code}</span>
-                      {coupon.description && <span style={{marginLeft: 8, color: '#555'}}>{coupon.description}</span>}
-                      {coupon.discountType && coupon.discountValue && (
-                        <span style={{marginLeft: 8, color: '#222'}}>
-                          {coupon.discountType === 'percentage' ? `${coupon.discountValue}% off` : `₹${coupon.discountValue} off`}
-                        </span>
-                      )}
-                      {coupon.expiryDate && (
-                        <span style={{marginLeft: 8, color: '#888', fontSize: '12px'}}>
-                          (Expires: {new Date(coupon.expiryDate).toLocaleDateString()})
-                        </span>
-                      )}
-                    </li>
+                    <div key={coupon.id} className="coupon-card-details">
+                        <div className="coupon-code-details">{coupon.code}</div>
+                        <p className="coupon-description-details">{generateCouponDescription(coupon)}</p>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
             )}
             <div className="product-action-box">
@@ -569,31 +596,6 @@ export default function ProductDetails() {
                 </button>
               </div>
             </div>
-            <div className="product-info-extra">
-              <div className="payment-info">
-                <span className="info-icon">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                </span>
-                <span>
-                  <strong>Payment.</strong> Payment upon receipt of goods, Payment by card in the department, Google Pay, Online card, -5% discount in case of payment
-                </span>
-              </div>
-              <div className="warranty-info">
-                <span className="info-icon">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
-                </span>
-                <span>
-                  <strong>Warranty.</strong> The Consumer Protection Act does not provide for the return of this product of proper quality.
-                </span>
-              </div>
-            </div>
-            {selectedVariation && (
-              <div className="selected-variation-info">
-                <span>Selected SKU: <b>{selectedVariation.sku}</b></span>
-                <span>Price: <b>₹{selectedVariation.price}</b></span>
-                {selectedVariation.stock !== undefined && <span>Stock: <b>{selectedVariation.stock}</b></span>}
-              </div>
-            )}
           </div>
         </div>
         {/* Tabs for Description and Review */}

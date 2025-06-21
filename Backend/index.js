@@ -3,13 +3,12 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
-import { sequelize } from './config/db.js';
+import { sequelize, connectDB } from './config/db.js';
 import routesManager from './routes/routesManager.js';
 import passport from './config/passport.js';
 import session from 'express-session';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { setupDatabase, findAvailablePort } from './scripts/setupDatabase.js';
 import { initializeSeoData } from './utils/initializeSeoData.js';
 import fs from 'fs';
 
@@ -110,9 +109,9 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
     try {
-        // Setup database
-        await setupDatabase();
-        
+        // Connect and sync the database
+        await connectDB();
+
         // Initialize default SEO data
         await initializeSeoData();
         
@@ -126,7 +125,7 @@ const startServer = async () => {
     }
 };
 
-    startServer();
+startServer();
 
 export { app };
 export default app;

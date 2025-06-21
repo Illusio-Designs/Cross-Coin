@@ -123,6 +123,19 @@ export const getPublicProductReviews = async (productId, params = {}) => {
     }
 };
 
+// Validate a coupon
+export const validateCoupon = async (code) => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.post(`${API_URL}/api/coupons/validate`, { code }, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
 // Create a public review
 export const createPublicReview = async (reviewData) => {
     try {
@@ -327,32 +340,38 @@ export const logout = async () => {
 export const getCart = async () => {
     try {
         const token = localStorage.getItem('token');
+        console.log('publicindex: getCart called');
         const response = await axios.get(`${API_URL}/api/cart`, {
             headers: { Authorization: `Bearer ${token}` }
         });
+        console.log('publicindex: getCart response:', response.data);
         return response.data.cart || [];
     } catch (error) {
+        console.error('publicindex: getCart error:', error.response?.data || error.message);
         throw error.response?.data || error.message;
     }
 };
 
 export const addToCart = async ({ productId, variationId, quantity }) => {
     try {
+        console.log('publicindex: addToCart called with:', { productId, variationId, quantity });
         const token = localStorage.getItem('token');
         const payload = { productId, variationId, quantity };
         const response = await axios.post(`${API_URL}/api/cart/add`, payload, {
             headers: { Authorization: `Bearer ${token}` }
         });
+        console.log('publicindex: addToCart response:', response.data);
         return response.data;
     } catch (error) {
+        console.error('publicindex: addToCart error:', error.response?.data || error.message);
         throw error.response?.data || error.message;
     }
 };
 
-export const updateCartItem = async (productId, quantity) => {
+export const updateCartItem = async (productId, quantity, variationId) => {
     try {
         const token = localStorage.getItem('token');
-        const payload = { quantity };
+        const payload = { quantity, variationId };
         const response = await axios.put(`${API_URL}/api/cart/item/${productId}`, payload, {
             headers: { Authorization: `Bearer ${token}` }
         });

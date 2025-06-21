@@ -17,6 +17,7 @@ export const CartProvider = ({ children }) => {
   // Sync isAuthenticated on token change
   useEffect(() => {
     const handleStorage = () => {
+      console.log('CartContext: storage event, token changed');
       setIsAuthenticated(!!localStorage.getItem('token'));
     };
     window.addEventListener('storage', handleStorage);
@@ -26,14 +27,19 @@ export const CartProvider = ({ children }) => {
   // Load cart from backend or localStorage on initial render or auth change
   useEffect(() => {
     const fetchCart = async () => {
+      console.log('CartContext: useEffect fetchCart, isAuthenticated:', isAuthenticated);
       if (isAuthenticated) {
         try {
+          console.log('CartContext: fetching cart from backend');
           const backendCart = await apiGetCart();
+          console.log('CartContext: backend cart received', backendCart);
           setCartItems(backendCart);
-        } catch {
+        } catch (error){
+          console.error('CartContext: error fetching backend cart', error);
           setCartItems([]);
         }
       } else {
+        console.log('CartContext: loading cart from localStorage');
         const savedCartItems = localStorage.getItem('cartItems');
         if (savedCartItems) {
           setCartItems(JSON.parse(savedCartItems));
@@ -54,8 +60,11 @@ export const CartProvider = ({ children }) => {
   }, [cartItems, isAuthenticated]);
 
   const addToCart = async (product, selectedColor, selectedSize, quantity = 1) => {
+    console.log('CartContext: addToCart called with:', { product, selectedColor, selectedSize, quantity });
+    console.log('CartContext: isAuthenticated:', isAuthenticated);
     if (isAuthenticated) {
       try {
+        console.log('CartContext: addToCart for authenticated user');
         // Find variationId if available
         let variationId = null;
         if (product.variations && product.variations.length > 0) {
@@ -66,11 +75,16 @@ export const CartProvider = ({ children }) => {
           });
           if (match) variationId = match.id;
         }
+        console.log('CartContext: calling apiAddToCart with:', { productId: product.id, variationId, quantity });
         await apiAddToCart({ productId: product.id, variationId, quantity });
         const backendCart = await apiGetCart();
         setCartItems(backendCart);
-      } catch {}
+        console.log('CartContext: cart updated from backend after adding item');
+      } catch(error) {
+        console.error('CartContext: error adding to cart for authenticated user', error);
+      }
     } else {
+      console.log('CartContext: addToCart for guest user');
       setCartItems(prevItems => {
         const existingItem = prevItems.find(
           item =>
@@ -79,13 +93,15 @@ export const CartProvider = ({ children }) => {
             item.size === selectedSize
         );
         if (existingItem) {
-          return prevItems.map(item =>
+          const newItems = prevItems.map(item =>
             item.id === product.id && item.color === selectedColor && item.size === selectedSize
               ? { ...item, quantity: item.quantity + quantity }
               : item
           );
+          console.log('CartContext: updated existing item in guest cart', newItems);
+          return newItems;
         }
-        return [
+        const newItems = [
           ...prevItems,
           {
             id: product.id,
@@ -97,11 +113,14 @@ export const CartProvider = ({ children }) => {
             quantity: quantity
           }
         ];
+        console.log('CartContext: added new item to guest cart', newItems);
+        return newItems;
       });
     }
   };
 
   const removeFromCart = async (itemId) => {
+    console.log('CartContext: removeFromCart called with itemId:', itemId);
     if (isAuthenticated) {
       try {
         await apiRemoveFromCart(itemId);
@@ -115,23 +134,28 @@ export const CartProvider = ({ children }) => {
 
   const updateQuantity = async (itemId, change) => {
     if (isAuthenticated) {
-      try {
-        // Find the item to get the new quantity
-        const item = cartItems.find(i => i.id === itemId);
-        if (!item) return;
-        const newQuantity = Math.max(1, item.quantity + change);
-        await apiUpdateCartItem(itemId, newQuantity);
-        const backendCart = await apiGetCart();
-        setCartItems(backendCart);
-      } catch {}
+        try {
+            const item = cartItems.find(i => i.id === itemId);
+            if (!item) return;
+
+            const newQuantity = Math.max(1, item.quantity + change);
+            
+            // Pass productId and variationId to the API
+            await apiUpdateCartItem(item.productId, newQuantity, item.variationId);
+            
+            const backendCart = await apiGetCart();
+            setCartItems(backendCart);
+        } catch (error) {
+            console.error("Failed to update quantity:", error);
+        }
     } else {
-      setCartItems(prevItems =>
-        prevItems.map(item =>
-          item.id === itemId
-            ? { ...item, quantity: Math.max(1, item.quantity + change) }
-            : item
-        )
-      );
+        setCartItems(prevItems =>
+            prevItems.map(item =>
+                item.id === itemId
+                    ? { ...item, quantity: Math.max(1, item.quantity + change) }
+                    : item
+            )
+        );
     }
   };
 
