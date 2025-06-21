@@ -17,6 +17,7 @@ import orderStatusHistoryRoutes from './orderStatusHistoryRoutes.js';
 import seoRoutes from './seoRoutes.js';
 import attributeRoutes from './attributeRoutes.js';
 import reviewRoutes from './reviewRoutes.js';
+import cartRoutes from './cartRoutes.js';
 
 // Core Routes
 router.use('/users', userRoutes); // This now includes both auth and user routes
@@ -38,6 +39,9 @@ router.use('/attributes', attributeRoutes);
 
 // Review routes
 router.use('/reviews', reviewRoutes);
+
+// Cart routes
+router.use('/cart', cartRoutes);
 
 // Health Check Route
 router.get('/health', (req, res) => {

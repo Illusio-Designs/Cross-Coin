@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getWishlist, addToWishlist as apiAddToWishlist, removeFromWishlist as apiRemoveFromWishlist, clearWishlist as apiClearWishlist } from '../services/publicindex';
 
 const WishlistContext = createContext();
 
@@ -13,47 +14,121 @@ export const useWishlist = () => {
 export const WishlistProvider = ({ children }) => {
   const [wishlist, setWishlist] = useState([]);
   const [wishlistCount, setWishlistCount] = useState(0);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
 
-  // Load wishlist from localStorage on initial render
+  // Load wishlist from backend or localStorage on initial render
   useEffect(() => {
-    const savedWishlist = localStorage.getItem('wishlist');
-    if (savedWishlist) {
-      const parsedWishlist = JSON.parse(savedWishlist);
-      setWishlist(parsedWishlist);
-      setWishlistCount(parsedWishlist.length);
-    }
-  }, []);
+    const fetchWishlist = async () => {
+      if (isAuthenticated) {
+        try {
+          const backendWishlist = await getWishlist();
+          setWishlist(backendWishlist.map(item => {
+            const product = item.Product;
+            let primaryImage = product?.ProductImages?.[0]?.image_url || '';
+            if (primaryImage) {
+              if (primaryImage.startsWith('http')) {
+                // do nothing
+              } else if (primaryImage.startsWith('/uploads/')) {
+                primaryImage = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${primaryImage}`;
+              } else {
+                primaryImage = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/uploads/products/${primaryImage}`;
+              }
+            }
+            // Get price and comparePrice from the first variation
+            const firstVariation = product?.ProductVariations?.[0] || {};
+            return {
+              ...product,
+              id: product.id,
+              image: primaryImage,
+              price: firstVariation.price || 0,
+              comparePrice: firstVariation.comparePrice || 0,
+              addedAt: item.addedAt || new Date().toISOString()
+            };
+          }));
+        } catch {
+          setWishlist([]);
+        }
+      } else {
+        const savedWishlist = localStorage.getItem('wishlist');
+        if (savedWishlist) {
+          const parsedWishlist = JSON.parse(savedWishlist);
+          setWishlist(parsedWishlist);
+        }
+      }
+    };
+    fetchWishlist();
+  }, [isAuthenticated]);
 
-  // Save wishlist to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('wishlist', JSON.stringify(wishlist));
     setWishlistCount(wishlist.length);
   }, [wishlist]);
 
-  const addToWishlist = (product) => {
-    setWishlist(prevWishlist => {
-      // Check if product already exists in wishlist
-      const exists = prevWishlist.some(item => item.id === product.id);
-      if (!exists) {
-        return [...prevWishlist, { ...product, addedAt: new Date().toISOString() }];
-      }
-      return prevWishlist;
-    });
+  const addToWishlist = async (product) => {
+    if (isAuthenticated) {
+      try {
+        await apiAddToWishlist(product.id);
+        const backendWishlist = await getWishlist();
+        setWishlist(backendWishlist.map(item => {
+          const product = item.Product;
+          let primaryImage = product?.ProductImages?.[0]?.image_url || '';
+          if (primaryImage) {
+            if (primaryImage.startsWith('http')) {
+              // do nothing
+            } else if (primaryImage.startsWith('/uploads/')) {
+              primaryImage = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${primaryImage}`;
+            } else {
+              primaryImage = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/uploads/products/${primaryImage}`;
+            }
+          }
+          // Get price and comparePrice from the first variation
+          const firstVariation = product?.ProductVariations?.[0] || {};
+          return {
+            ...product,
+            id: product.id,
+            image: primaryImage,
+            price: firstVariation.price || 0,
+            comparePrice: firstVariation.comparePrice || 0,
+            addedAt: item.addedAt || new Date().toISOString()
+          };
+        }));
+      } catch {}
+    } else {
+      setWishlist(prevWishlist => {
+        const exists = prevWishlist.some(item => item.id === product.id);
+        if (!exists) {
+          return [...prevWishlist, { ...product, addedAt: new Date().toISOString() }];
+        }
+        return prevWishlist;
+      });
+    }
   };
 
-  const removeFromWishlist = (productId) => {
-    setWishlist(prevWishlist => 
-      prevWishlist.filter(item => item.id !== productId)
-    );
+  const removeFromWishlist = async (productId) => {
+    if (isAuthenticated) {
+      try {
+        await apiRemoveFromWishlist(productId);
+        setWishlist(prev => prev.filter(item => item.id !== productId));
+      } catch {}
+    } else {
+      setWishlist(prevWishlist => prevWishlist.filter(item => item.id !== productId));
+    }
+  };
+
+  const clearWishlist = async () => {
+    if (isAuthenticated) {
+      try {
+        await apiClearWishlist();
+        setWishlist([]);
+      } catch {}
+    } else {
+      setWishlist([]);
+      localStorage.removeItem('wishlist');
+    }
   };
 
   const isInWishlist = (productId) => {
     return wishlist.some(item => item.id === productId);
-  };
-
-  const clearWishlist = () => {
-    setWishlist([]);
-    localStorage.removeItem('wishlist');
   };
 
   const value = {
@@ -62,7 +137,8 @@ export const WishlistProvider = ({ children }) => {
     addToWishlist,
     removeFromWishlist,
     isInWishlist,
-    clearWishlist
+    clearWishlist,
+    setIsAuthenticated
   };
 
   return (
@@ -70,4 +146,6 @@ export const WishlistProvider = ({ children }) => {
       {children}
     </WishlistContext.Provider>
   );
-}; 
+};
+
+export { WishlistContext }; 

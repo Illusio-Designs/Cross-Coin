@@ -104,7 +104,11 @@ Product.hasMany(ProductImage, { foreignKey: 'productId', as: 'ProductImages' });
 ProductImage.belongsTo(Product, { foreignKey: 'productId' });
 
 Product.hasOne(ProductSEO, { foreignKey: 'product_id', as: 'ProductSEO' });
-ProductSEO.belongsTo(Product, { foreignKey: 'product_id' });
+ProductSEO.belongsTo(Product, { foreignKey: 'product_id', as: 'Product' });
+
+// Product-Review association
+Product.hasMany(Review, { foreignKey: 'productId', as: 'reviews' });
+Review.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
 
 // Product Variation and Attribute Associations
 ProductVariation.belongsToMany(Attribute, { 
@@ -190,3 +194,7 @@ CouponUsage.belongsTo(Coupon, { foreignKey: 'couponId' });
 
 User.hasMany(CouponUsage, { foreignKey: 'userId', as: 'CouponUsages' });
 CouponUsage.belongsTo(User, { foreignKey: 'userId' });
+
+// Wishlist <-> Product association
+Wishlist.belongsTo(Product, { foreignKey: 'productId' });
+Product.hasMany(Wishlist, { foreignKey: 'productId' });

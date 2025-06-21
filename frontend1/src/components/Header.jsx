@@ -7,6 +7,7 @@ import { useRouter } from 'next/router';
 import logo from '../assets/crosscoin_logo.webp';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useAuth } from '../context/AuthContext';
 
 const Header = () => {
   const { cartCount } = useCart();
@@ -15,6 +16,7 @@ const Header = () => {
   const [activePage, setActivePage] = useState('/');
   const [isSticky, setIsSticky] = useState(false);
   const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     setActivePage(router.pathname);
@@ -67,10 +69,17 @@ const Header = () => {
           </ul>
         </nav>
         <div className="header__actions"> 
-          <Link href="/login" className="header__account">
-            <FiUser />
-            <span>Sign In<br /><b>Account</b></span>
-          </Link>
+          {isAuthenticated && user ? (
+            <Link href="/profile" className="header__account">
+              <FiUser />
+              <span>{user.username}<br /><b>Account</b></span>
+            </Link>
+          ) : (
+            <Link href="/login" className="header__account">
+              <FiUser />
+              <span>Sign In<br /><b>Account</b></span>
+            </Link>
+          )}
           <button className="header__search-icon" onClick={() => setShowSearch(true)}>
             <FiSearch />
           </button>

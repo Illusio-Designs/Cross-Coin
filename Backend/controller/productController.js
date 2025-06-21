@@ -815,7 +815,7 @@ export const getPublicProductBySlug = async (req, res) => {
                 { model: ProductSEO, as: 'ProductSEO' },
                 {
                     model: Review,
-                    as: 'Reviews',
+                    as: 'reviews',
                     where: { status: 'approved' },
                     required: false,
                     include: [
@@ -854,8 +854,8 @@ export const getPublicProductBySlug = async (req, res) => {
         }
 
         // Format reviews
-        if (product.Reviews) {
-            formattedProduct.reviews = product.Reviews.map(review => ({
+        if (product.reviews) {
+            formattedProduct.reviews = product.reviews.map(review => ({
                 id: review.id,
                 rating: review.rating,
                 review: review.review,
