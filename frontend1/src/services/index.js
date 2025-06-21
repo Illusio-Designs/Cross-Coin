@@ -255,7 +255,7 @@ export const settingsService = {
 export const authService = {
     login: async (credentials) => {
         try {
-            const response = await api.post('/api/users/login', credentials);
+            const response = await api.post('/api/users/admin/login', credentials);
             return response.data;
         } catch (error) {
             throw error.response?.data || error.message;

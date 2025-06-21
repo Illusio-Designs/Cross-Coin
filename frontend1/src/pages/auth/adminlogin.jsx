@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { authService } from "../../services";
+import { useAuth } from "../../context/AuthContext";
 import "../../styles/pages/auth/adminlogin.css";
 
 const EyeOpen = () => (
@@ -17,6 +17,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { adminLogin, logout } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -24,24 +25,18 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await authService.login({
+      const response = await adminLogin({
         email,
         password,
-        role: 'admin'
       });
 
-      if (response.token) {
-        localStorage.setItem('token', response.token);
-        if (response.user) {
-          localStorage.setItem('user', JSON.stringify(response.user));
-        }
-        // Use replace instead of push to prevent back navigation to login
+      if (response.user && response.user.role === 'admin') {
         router.replace("/dashboard");
       } else {
-        setError("Invalid response from server");
+        await logout();
+        setError("Access denied. Only admin accounts are allowed.");
       }
     } catch (err) {
-      console.error("Login error:", err);
       setError(err.message || "Invalid email or password");
     } finally {
       setLoading(false);
