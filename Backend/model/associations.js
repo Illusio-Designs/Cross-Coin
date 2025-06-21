@@ -162,11 +162,31 @@ ShippingAddress.belongsTo(Order, {
 // Cart Associations
 Cart.hasMany(CartItem, { 
     foreignKey: 'cartId',
+    as: 'CartItems',
     onDelete: 'CASCADE'
 });
 CartItem.belongsTo(Cart, { 
     foreignKey: 'cartId',
     onDelete: 'CASCADE'
+});
+
+// CartItem <-> Product / ProductVariation associations
+CartItem.belongsTo(Product, { 
+    foreignKey: 'productId',
+    onDelete: 'CASCADE'
+});
+Product.hasMany(CartItem, { 
+    foreignKey: 'productId',
+    onDelete: 'CASCADE'
+});
+
+CartItem.belongsTo(ProductVariation, { 
+    foreignKey: 'variationId',
+    onDelete: 'SET NULL' 
+});
+ProductVariation.hasMany(CartItem, { 
+    foreignKey: 'variationId',
+    onDelete: 'SET NULL'
 });
 
 // Review Associations

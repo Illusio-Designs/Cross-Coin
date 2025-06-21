@@ -6,15 +6,19 @@ import {
     updateCoupon,
     deleteCoupon,
     validateCoupon,
-    getPublicCoupons
+    getPublicCoupons,
+    applyCoupon
 } from '../controller/couponController.js';
-import { isAuthenticated, authorize } from '../middleware/authMiddleware.js';
+import { isAuthenticated, authorize, authenticate } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // Public routes
-router.post('/validate', validateCoupon);
+router.post('/validate', authenticate, validateCoupon);
 router.get('/public', getPublicCoupons);
+
+// Authenticated user route
+router.post('/apply', authenticate, applyCoupon);
 
 // Admin routes
 router.post('/', isAuthenticated, authorize(['admin']), createCoupon);

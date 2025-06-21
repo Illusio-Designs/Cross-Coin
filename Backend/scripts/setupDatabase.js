@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 
 // Create Sequelize instance
 const sequelize = new Sequelize(
-    process.env.DB_NAME,
+    process.env.DB_DATABASE,
     process.env.DB_USER,
     process.env.DB_PASSWORD,
     {
@@ -40,7 +40,7 @@ export const setupDatabase = async () => {
         });
 
         // Create database if it doesn't exist with proper collation
-        await tempSequelize.query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME || process.env.DB_DATABASE} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;`);
+        await tempSequelize.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_DATABASE}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;`);
         await tempSequelize.close();
 
         // Now connect to the specific database
@@ -68,69 +68,25 @@ export const setupDatabase = async () => {
             }
         }
         
-        // Sync tables in correct order based on dependencies
-        const syncOrder = {
-            base: ['User', 'Category', 'Attribute', 'Settings', 'ShippingFee', 'SeoMetadata', 'Coupon'],
-            product: ['Product'],
-            variation: ['ProductVariation'],
-            attribute: ['AttributeValue'],
-            dependent: [
-                'Review', 'ReviewImage', 'ProductImage', 'ProductSEO', 
-                'Order', 'OrderItem', 'OrderStatusHistory',
-                'Payment', 'ShippingAddress', 'Cart', 'CartItem', 'Wishlist'
-            ]
-        };
-
-        // Sync base tables first
-        console.log('Syncing base tables...');
-        for (const modelName of syncOrder.base) {
-            if (models[modelName]) {
-                await models[modelName].sync({ alter: true, hooks: false });
-                console.log(`✓ ${modelName} table synced`);
+        // Apply associations
+        console.log('Applying model associations...');
+        try {
+            const associationsPath = path.join(__dirname, '..', 'model', 'associations.js');
+            if (fs.existsSync(associationsPath)) {
+                await import(`file://${associationsPath}`);
+                console.log('✓ Associations applied successfully');
+            } else {
+                console.warn('⚠️ associations.js not found. Models should define their own associations.');
             }
+        } catch (assocError) {
+            console.error('❌ Error applying associations:', assocError.message);
+            throw assocError;
         }
 
-        // Sync product-related tables
-        console.log('Syncing product-related tables...');
-        for (const modelName of syncOrder.product) {
-            if (models[modelName]) {
-                await models[modelName].sync({ alter: true, hooks: false });
-                console.log(`✓ ${modelName} table synced`);
-            }
-        }
-
-        // Sync variation and attribute tables
-        console.log('Syncing variation and attribute tables...');
-        for (const modelName of [...syncOrder.variation, ...syncOrder.attribute]) {
-            if (models[modelName]) {
-                await models[modelName].sync({ alter: true, hooks: false });
-                console.log(`✓ ${modelName} table synced`);
-            }
-        }
-
-        // Sync dependent tables
-        console.log('Syncing dependent tables...');
-        for (const modelName of syncOrder.dependent) {
-            if (models[modelName]) {
-                await models[modelName].sync({ alter: true, hooks: false });
-                console.log(`✓ ${modelName} table synced`);
-            }
-        }
-
-        // Handle special cases for Slider and Category tables
-        console.log('Handling special table modifications...');
-        
-        // Slider table modifications
-        if (models['Slider']) {
-            await models['Slider'].sync({ alter: true, hooks: false });
-            console.log('✓ Slider table synced');
-        }
-
-        // Category table modifications
-        if (models['Category']) {
-            await models['Category'].sync({ alter: true, hooks: false });
-            console.log('✓ Category table synced');
-        }
+        // Sync all tables at once
+        console.log('Syncing all tables...');
+        await sequelize.sync({ alter: true, hooks: false });
+        console.log('✓ All tables synced');
 
         // Create admin user if not exists
         if (models['User']) {
@@ -154,20 +110,6 @@ export const setupDatabase = async () => {
             }
         }
 
-        // Apply associations
-        console.log('Applying model associations...');
-        try {
-            const associationsPath = path.join(__dirname, '..', 'model', 'associations.js');
-            if (fs.existsSync(associationsPath)) {
-                await import(`file://${associationsPath}`);
-                console.log('✓ Associations applied successfully');
-            } else {
-                console.warn('⚠️ associations.js not found. Models should define their own associations.');
-            }
-        } catch (assocError) {
-            console.error('❌ Error applying associations:', assocError.message);
-        }
-
         console.log('✓ Database setup completed successfully!');
         return true;
     } catch (error) {
@@ -182,22 +124,15 @@ export const setupDatabase = async () => {
     }
 };
 
-export const findAvailablePort = async (startPort) => {
-    const net = await import('net');
-    return new Promise((resolve, reject) => {
-        const server = net.createServer();
-        server.unref();
-        server.on('error', (err) => {
-            if (err.code === 'EADDRINUSE') {
-                resolve(findAvailablePort(startPort + 1));
-            } else {
-                reject(err);
-            }
+// If the script is run directly, execute the setup
+if (import.meta.url.startsWith('file:') && process.argv[1] === fileURLToPath(import.meta.url)) {
+    setupDatabase()
+        .then(() => {
+            console.log("Database setup script finished.");
+            process.exit(0);
+        })
+        .catch((error) => {
+            console.error("Database setup script failed:", error);
+            process.exit(1);
         });
-        server.listen(startPort, () => {
-            server.close(() => {
-                resolve(startPort);
-            });
-        });
-    });
-}; 
+} 

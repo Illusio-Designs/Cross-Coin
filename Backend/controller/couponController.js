@@ -1,4 +1,4 @@
-import { Coupon, CouponUsage } from '../model/associations.js';
+import { Coupon, CouponUsage, Cart, CartItem, Product, Category, User, ProductVariation } from '../model/associations.js';
 import { Op } from 'sequelize';
 
 // Create a new coupon
@@ -6,6 +6,7 @@ export const createCoupon = async (req, res) => {
     try {
         const {
             code,
+            description,
             type,
             value,
             minPurchase,
@@ -13,7 +14,10 @@ export const createCoupon = async (req, res) => {
             startDate,
             endDate,
             usageLimit,
-            status
+            perUserLimit,
+            status,
+            applicableCategories,
+            applicableProducts
         } = req.body;
 
         // Check if coupon code already exists
@@ -74,6 +78,7 @@ export const createCoupon = async (req, res) => {
         // Create the coupon
         const newCoupon = await Coupon.create({
             code: code.toUpperCase(),
+            description,
             type,
             value: Number(value),
             minPurchase: minPurchase ? Number(minPurchase) : null,
@@ -81,7 +86,10 @@ export const createCoupon = async (req, res) => {
             startDate: start,
             endDate: end,
             usageLimit: usageLimit || null,
-            status: status || 'active'
+            perUserLimit: perUserLimit || null,
+            status: status || 'active',
+            applicableCategories: applicableCategories || null,
+            applicableProducts: applicableProducts || null
         });
 
         res.status(201).json({
@@ -101,11 +109,13 @@ export const createCoupon = async (req, res) => {
 export const getAllCoupons = async (req, res) => {
     try {
         const coupons = await Coupon.findAll({
+            /*
             include: [{
                 model: CouponUsage,
                 as: 'CouponUsages',
                 attributes: ['userId', 'usedAt']
             }]
+            */
         });
 
         res.status(200).json({
@@ -150,19 +160,15 @@ export const getCouponById = async (req, res) => {
 // Validate a coupon
 export const validateCoupon = async (req, res) => {
     try {
-        const { code, orderAmount, userId } = req.body;
+        const { code } = req.body;
+        const userId = req.user.id;
 
         if (!code) {
             return res.status(400).json({ message: 'Coupon code is required' });
         }
 
-        if (!userId) {
-            return res.status(400).json({ message: 'User ID is required' });
-        }
-
-        // Find the coupon
         const coupon = await Coupon.findOne({
-            where: { 
+            where: {
                 code: code.toUpperCase(),
                 status: 'active',
                 startDate: { [Op.lte]: new Date() },
@@ -174,55 +180,111 @@ export const validateCoupon = async (req, res) => {
             return res.status(404).json({ message: 'Invalid or expired coupon code' });
         }
 
-        // Check if user has already used this coupon
-        const userUsage = await CouponUsage.findOne({
-            where: {
-                couponId: coupon.id,
-                userId: userId
+        // Check total usage limit
+        if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
+            return res.status(400).json({ message: 'This coupon has reached its usage limit.' });
+        }
+
+        // Check per-user usage limit
+        const userUsageCount = await CouponUsage.count({
+            where: { couponId: coupon.id, userId: userId }
+        });
+
+        if (coupon.perUserLimit && userUsageCount >= coupon.perUserLimit) {
+            return res.status(400).json({ message: `You have already used this coupon the maximum number of times.` });
+        }
+
+        // Specific check for coupons with no per-user limit (implying one-time use)
+        if (!coupon.perUserLimit && userUsageCount > 0) {
+            return res.status(400).json({ message: 'You have already used this coupon.' });
+        }
+
+        // Get user's cart to check applicability and order amount
+        const userCart = await Cart.findOne({
+            where: { user_id: userId },
+            include: [{
+                model: CartItem,
+                as: 'CartItems',
+                include: [{
+                    model: Product,
+                    include: [{ model: Category }]
+                }]
+            }]
+        });
+
+        if (!userCart || !userCart.CartItems || userCart.CartItems.length === 0) {
+            return res.status(400).json({ message: 'Your cart is empty.' });
+        }
+
+        let cartItems = userCart.CartItems;
+        let applicableItems = [];
+        let applicableAmount = 0;
+
+        // Defensively parse applicableProducts and applicableCategories
+        let applicableProducts = coupon.applicableProducts;
+        if (typeof applicableProducts === 'string') {
+            try { applicableProducts = JSON.parse(applicableProducts); } catch (e) { applicableProducts = null; }
+        }
+        if (!Array.isArray(applicableProducts)) {
+            applicableProducts = null;
+        }
+
+        let applicableCategories = coupon.applicableCategories;
+        if (typeof applicableCategories === 'string') {
+            try { applicableCategories = JSON.parse(applicableCategories); } catch (e) { applicableCategories = null; }
+        }
+        if (!Array.isArray(applicableCategories)) {
+            applicableCategories = null;
+        }
+
+        for (const item of cartItems) {
+            const product = item.Product;
+            if (!product) continue;
+
+            const isApplicableProduct = !applicableProducts || applicableProducts.length === 0 || applicableProducts.includes(product.id);
+            const isApplicableCategory = !applicableCategories || applicableCategories.length === 0 || applicableCategories.includes(product.categoryId);
+
+            if (isApplicableProduct && isApplicableCategory) {
+                applicableItems.push(item);
+                // The price is already stored on the cart item, so we can use it directly.
+                applicableAmount += item.price * item.quantity;
             }
-        });
-
-        if (userUsage) {
-            return res.status(400).json({ message: 'You have already used this coupon' });
         }
 
-        // Check if coupon is already used to its maximum
-        const totalUsage = await CouponUsage.count({
-            where: { couponId: coupon.id }
-        });
-
-        if (coupon.usageLimit && totalUsage >= coupon.usageLimit) {
-            return res.status(400).json({ message: 'Coupon has reached maximum usage limit' });
+        if (applicableItems.length === 0) {
+            return res.status(400).json({ message: 'This coupon is not applicable to any items in your cart.' });
         }
 
-        // Check if order meets minimum amount
-        if (orderAmount < coupon.minPurchase) {
-            return res.status(400).json({ 
-                message: `Order must be at least ${coupon.minPurchase} to use this coupon` 
+        if (coupon.minPurchase && applicableAmount < coupon.minPurchase) {
+            return res.status(400).json({
+                message: `You must spend at least ${coupon.minPurchase} on eligible items to use this coupon.`
             });
         }
 
-        // Calculate discount amount
         let discountAmount = 0;
         if (coupon.type === 'percentage') {
-            discountAmount = (orderAmount * coupon.value) / 100;
+            discountAmount = (applicableAmount * parseFloat(coupon.value)) / 100;
             if (coupon.maxDiscount && discountAmount > coupon.maxDiscount) {
-                discountAmount = coupon.maxDiscount;
+                discountAmount = parseFloat(coupon.maxDiscount);
             }
-        } else {
-            discountAmount = coupon.value;
-            // Ensure discount doesn't exceed order amount
-            if (discountAmount > orderAmount) {
-                discountAmount = orderAmount;
-            }
+        } else { // Fixed amount
+            discountAmount = parseFloat(coupon.value);
         }
 
+        if (discountAmount > applicableAmount) {
+            discountAmount = applicableAmount;
+        }
+
+        const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const finalAmount = subtotal - discountAmount;
+
         res.status(200).json({
-            message: 'Coupon is valid',
-            coupon,
-            discountAmount,
-            finalAmount: orderAmount - discountAmount
+            message: 'Coupon applied successfully!',
+            discountAmount: discountAmount.toFixed(2),
+            finalAmount: finalAmount.toFixed(2),
+            coupon: { code: coupon.code }
         });
+
     } catch (error) {
         console.error('Error validating coupon:', error);
         res.status(500).json({
@@ -259,24 +321,20 @@ export const applyCoupon = async (req, res) => {
             return res.status(404).json({ message: 'Invalid or expired coupon code' });
         }
 
-        // Check if user has already used this coupon
-        const userUsage = await CouponUsage.findOne({
-            where: {
-                couponId: coupon.id,
-                userId: userId
-            }
+        // Check per-user usage limit
+        const userUsageCount = await CouponUsage.count({
+            where: { couponId: coupon.id, userId: userId }
         });
 
-        if (userUsage) {
-            return res.status(400).json({ message: 'You have already used this coupon' });
+        if (coupon.perUserLimit && userUsageCount >= coupon.perUserLimit) {
+            return res.status(400).json({ message: 'You have already used this coupon the maximum number of times.' });
+        }
+        if (!coupon.perUserLimit && userUsageCount > 0) {
+            return res.status(400).json({ message: 'You have already used this coupon.' });
         }
 
         // Check if coupon is already used to its maximum
-        const totalUsage = await CouponUsage.count({
-            where: { couponId: coupon.id }
-        });
-
-        if (coupon.usageLimit && totalUsage >= coupon.usageLimit) {
+        if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
             return res.status(400).json({ message: 'Coupon has reached maximum usage limit' });
         }
 
@@ -286,6 +344,9 @@ export const applyCoupon = async (req, res) => {
             userId: userId,
             usedAt: new Date()
         });
+
+        // Increment usage count on the coupon itself
+        await coupon.increment('usageCount');
 
         res.status(200).json({
             message: 'Coupon applied successfully',
@@ -333,6 +394,7 @@ export const updateCoupon = async (req, res) => {
         const { id } = req.params;
         const {
             code,
+            description,
             type,
             value,
             minPurchase,
@@ -340,7 +402,10 @@ export const updateCoupon = async (req, res) => {
             startDate,
             endDate,
             usageLimit,
-            status
+            perUserLimit,
+            status,
+            applicableCategories,
+            applicableProducts
         } = req.body;
 
         const coupon = await Coupon.findByPk(id);
@@ -414,14 +479,18 @@ export const updateCoupon = async (req, res) => {
         // Update the coupon
         await coupon.update({
             code: code ? code.toUpperCase() : coupon.code,
+            description: description !== undefined ? description : coupon.description,
             type: type || coupon.type,
             value: value || coupon.value,
             minPurchase: minPurchase !== undefined ? minPurchase : coupon.minPurchase,
             maxDiscount: maxDiscount !== undefined ? maxDiscount : coupon.maxDiscount,
             startDate: start,
             endDate: end,
-            usageLimit: usageLimit || coupon.usageLimit,
-            status: status || coupon.status
+            usageLimit: usageLimit !== undefined ? usageLimit : coupon.usageLimit,
+            perUserLimit: perUserLimit !== undefined ? perUserLimit : coupon.perUserLimit,
+            status: status || coupon.status,
+            applicableCategories: applicableCategories !== undefined ? applicableCategories : coupon.applicableCategories,
+            applicableProducts: applicableProducts !== undefined ? applicableProducts : coupon.applicableProducts
         });
 
         res.status(200).json({

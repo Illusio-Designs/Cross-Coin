@@ -1,26 +1,71 @@
-import { Cart, CartItem, Product, ProductVariation } from '../model/associations.js';
+import { Cart, CartItem, Product, ProductImage, ProductVariation } from '../model/associations.js';
+import { sequelize } from '../config/db.js';
 
-// Get user's cart and items
-export const getUserCart = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    let cart = await Cart.findOne({ where: { user_id: userId } });
-    if (!cart) {
-      cart = await Cart.create({ user_id: userId });
+// Get user's cart
+export const getCart = async (req, res) => {
+    try {
+        const cart = await Cart.findOne({
+            where: { user_id: req.user.id },
+            include: [{
+                model: CartItem,
+                as: 'CartItems',
+                include: [
+                    { 
+                        model: Product,
+                        include: [
+                            { model: ProductImage, as: 'ProductImages' },
+                            { model: ProductVariation, as: 'ProductVariations' }
+                        ]
+                    },
+                    { model: ProductVariation }
+                ]
+            }]
+        });
+
+        if (!cart) {
+            return res.json({ cart: [] });
+        }
+
+        const formattedCart = cart.CartItems.map(item => {
+            const product = item.Product;
+            let variation = item.ProductVariation;
+            
+            // If cart item lacks a specific variation, use the first one from the product as a default.
+            if (!variation && product && product.ProductVariations && product.ProductVariations.length > 0) {
+                variation = product.ProductVariations[0];
+            }
+
+            // Determine attributes, image, and price
+            const attributes = variation && variation.attributes ? JSON.parse(variation.attributes) : {};
+            const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+            
+            let image = '/placeholder.png'; // Fallback image
+            if (product && product.ProductImages && product.ProductImages.length > 0) {
+                // The image_url from the DB already contains the path, e.g., /uploads/products/image.png
+                image = `${baseUrl}${product.ProductImages[0].image_url}`;
+            }
+
+            const price = variation ? variation.price : (product ? product.price : 0);
+
+            return {
+                id: item.id,
+                productId: product ? product.id : null,
+                variationId: variation ? variation.id : null,
+                name: product ? product.name : 'Product not found',
+                image: image,
+                price: price,
+                quantity: item.quantity,
+                size: attributes.size || null,
+                color: attributes.color || null,
+                stock: variation ? variation.stock : (product ? product.stock_quantity : 0)
+            };
+        });
+
+        res.json({ cart: formattedCart });
+    } catch (error) {
+        console.error('Error fetching cart:', error);
+        res.status(500).json({ message: 'Failed to fetch cart', error: error.message });
     }
-    const items = await CartItem.findAll({
-      where: { cart_id: cart.id },
-      include: [
-        { model: Product },
-        { model: ProductVariation, required: false }
-      ]
-    });
-    console.log('[Cart] getUserCart for user:', userId, 'cartId:', cart.id, 'items:', items.length);
-    res.json({ success: true, cart: items });
-  } catch (error) {
-    console.error('[Cart] Error in getUserCart:', error);
-    res.status(500).json({ message: 'Failed to fetch cart', error: error.message });
-  }
 };
 
 // Add item to cart
@@ -33,8 +78,8 @@ export const addToCart = async (req, res) => {
       cart = await Cart.create({ user_id: userId });
     }
     // Check if item already exists (by product and variation)
-    let where = { cart_id: cart.id, product_id: productId };
-    if (variationId) where.variation_id = variationId;
+    let where = { cartId: cart.id, productId: productId };
+    if (variationId) where.variationId = variationId;
     let item = await CartItem.findOne({ where });
     if (item) {
       item.quantity += quantity;
@@ -51,9 +96,9 @@ export const addToCart = async (req, res) => {
         price = variation ? variation.price : 0;
       }
       item = await CartItem.create({
-        cart_id: cart.id,
-        product_id: productId,
-        variation_id: variationId || null,
+        cartId: cart.id,
+        productId: productId,
+        variationId: variationId || null,
         quantity,
         price
       });
@@ -66,22 +111,49 @@ export const addToCart = async (req, res) => {
   }
 };
 
-// Update cart item quantity
+// Update cart item
 export const updateCartItem = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { productId } = req.params;
-    const { quantity } = req.body;
-    let cart = await Cart.findOne({ where: { user_id: userId } });
-    if (!cart) return res.status(404).json({ message: 'Cart not found' });
-    let item = await CartItem.findOne({ where: { cart_id: cart.id, product_id: productId } });
-    if (!item) return res.status(404).json({ message: 'Cart item not found' });
-    item.quantity = quantity;
-    await item.save();
-    res.json({ success: true, item });
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to update cart item', error: error.message });
-  }
+    try {
+        const { productId } = req.params;
+        const { quantity, variationId } = req.body;
+        const userId = req.user.id;
+
+        if (quantity < 1) {
+            return res.status(400).json({ success: false, message: 'Quantity must be at least 1.' });
+        }
+
+        const cart = await Cart.findOne({ where: { user_id: userId } });
+        if (!cart) {
+            return res.status(404).json({ success: false, message: 'Cart not found.' });
+        }
+
+        const whereClause = {
+            cartId: cart.id,
+            productId: productId
+        };
+        if (variationId) {
+            whereClause.variationId = variationId;
+        }
+        
+        let cartItem = await CartItem.findOne({ where: whereClause });
+
+        if (!cartItem) {
+            // If not found, try finding without variationId, in case the item is basic
+            const fallbackCartItem = await CartItem.findOne({ where: { cartId: cart.id, productId: productId, variationId: null } });
+            if (!fallbackCartItem) {
+                return res.status(404).json({ success: false, message: 'Cart item not found.' });
+            }
+            cartItem = fallbackCartItem;
+        }
+
+        cartItem.quantity = quantity;
+        await cartItem.save();
+
+        res.json({ success: true, message: 'Cart item updated.', item: cartItem });
+    } catch (error) {
+        console.error('Error updating cart item:', error);
+        res.status(500).json({ success: false, message: 'Failed to update cart item.', error: error.message });
+    }
 };
 
 // Remove item from cart
@@ -91,7 +163,7 @@ export const removeFromCart = async (req, res) => {
     const { productId } = req.params;
     let cart = await Cart.findOne({ where: { user_id: userId } });
     if (!cart) return res.status(404).json({ message: 'Cart not found' });
-    const deleted = await CartItem.destroy({ where: { cart_id: cart.id, product_id: productId } });
+    const deleted = await CartItem.destroy({ where: { cartId: cart.id, productId: productId } });
     res.json({ success: true, deleted });
   } catch (error) {
     res.status(500).json({ message: 'Failed to remove cart item', error: error.message });
@@ -104,7 +176,7 @@ export const clearCart = async (req, res) => {
     const userId = req.user.id;
     let cart = await Cart.findOne({ where: { user_id: userId } });
     if (!cart) return res.status(404).json({ message: 'Cart not found' });
-    await CartItem.destroy({ where: { cart_id: cart.id } });
+    await CartItem.destroy({ where: { cartId: cart.id } });
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ message: 'Failed to clear cart', error: error.message });

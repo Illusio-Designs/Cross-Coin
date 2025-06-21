@@ -884,3 +884,55 @@
   gap: 2.5rem;
   align-items: center;
 }
+
+/* Styles for ProductDetails Page */
+
+.product-coupons-box {
+  margin: 20px 0;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+.product-coupons-title {
+  margin-bottom: 12px;
+  color: #180D3E; /* User color */
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.product-coupons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.coupon-card-details {
+  background-color: #fff;
+  border-left: 5px solid #CE1E36; /* User color */
+  padding: 12px 16px;
+  border-radius: 6px;
+  border: 1px solid #eee;
+  border-left-width: 5px;
+  transition: all 0.2s ease-in-out;
+}
+
+.coupon-card-details:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.coupon-code-details {
+  font-weight: 700;
+  font-family: 'Courier New', Courier, monospace;
+  color: #180D3E; /* User color */
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+}
+
+.coupon-description-details {
+  font-size: 0.9rem;
+  color: #555;
+  margin: 0;
+}

@@ -6,7 +6,6 @@ import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
 import { couponService } from "@/services";
 import { debounce } from 'lodash';
-import "../../../styles/dashboard/coupons.css";
 
 export default function Coupons() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -19,10 +18,10 @@ export default function Coupons() {
   const [formData, setFormData] = useState({
     code: "",
     description: "",
-    discountType: "percentage",
-    discountValue: "",
-    minOrderAmount: "",
-    maxDiscountAmount: "",
+    type: "percentage",
+    value: "",
+    minPurchase: "",
+    maxDiscount: "",
     usageLimit: "",
     usageCount: "",
     perUserLimit: "",
@@ -53,7 +52,12 @@ export default function Coupons() {
       setLoading(true);
       setError(null);
       const data = await couponService.getAllCoupons();
-      setCoupons(data);
+      if (data && Array.isArray(data.coupons)) {
+        setCoupons(data.coupons);
+      } else {
+        setCoupons([]); // Set to empty array if data is not in expected format
+        console.error("Fetched data does not contain a coupons array:", data);
+      }
     } catch (err) {
       setError(err.message || "Failed to fetch coupons");
       console.error("Error fetching coupons:", err);
@@ -98,8 +102,8 @@ export default function Coupons() {
     { header: "S/N", accessor: "serial_number" },
     { header: "Code", accessor: "code" },
     { header: "Description", accessor: "description" },
-    { header: "Type", accessor: "discountType" },
-    { header: "Value", accessor: "discountValue" },
+    { header: "Type", accessor: "type" },
+    { header: "Value", accessor: "value" },
     { header: "Status", accessor: "status" },
     {
       header: "Actions",
@@ -139,10 +143,10 @@ export default function Coupons() {
         id: data.id,
         code: data.code || "",
         description: data.description || "",
-        discountType: data.discountType || "percentage",
-        discountValue: data.discountValue || "",
-        minOrderAmount: data.minOrderAmount || "",
-        maxDiscountAmount: data.maxDiscountAmount || "",
+        type: data.type || "percentage",
+        value: data.value || "",
+        minPurchase: data.minPurchase || "",
+        maxDiscount: data.maxDiscount || "",
         usageLimit: data.usageLimit || "",
         usageCount: data.usageCount || "",
         perUserLimit: data.perUserLimit || "",
@@ -180,10 +184,10 @@ export default function Coupons() {
     setFormData({
       code: "",
       description: "",
-      discountType: "percentage",
-      discountValue: "",
-      minOrderAmount: "",
-      maxDiscountAmount: "",
+      type: "percentage",
+      value: "",
+      minPurchase: "",
+      maxDiscount: "",
       usageLimit: "",
       usageCount: "",
       perUserLimit: "",
@@ -201,10 +205,10 @@ export default function Coupons() {
     setFormData({
       code: "",
       description: "",
-      discountType: "percentage",
-      discountValue: "",
-      minOrderAmount: "",
-      maxDiscountAmount: "",
+      type: "percentage",
+      value: "",
+      minPurchase: "",
+      maxDiscount: "",
       usageLimit: "",
       usageCount: "",
       perUserLimit: "",
@@ -223,10 +227,34 @@ export default function Coupons() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null); // Clear previous errors
     try {
       setLoading(true);
       const couponData = { ...formData };
+
+      // Convert comma-separated strings to arrays of numbers
+      if (typeof couponData.applicableCategories === 'string') {
+        couponData.applicableCategories = couponData.applicableCategories.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0);
+      }
+      if (typeof couponData.applicableProducts === 'string') {
+        couponData.applicableProducts = couponData.applicableProducts.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0);
+      }
+      
+      // Sanitize numeric fields
+      const numericFields = ['value', 'minPurchase', 'maxDiscount', 'usageLimit', 'perUserLimit'];
+      numericFields.forEach(field => {
+        if (couponData[field] === '' || couponData[field] === null || couponData[field] === undefined) {
+          couponData[field] = null;
+        } else {
+          couponData[field] = Number(couponData[field]);
+        }
+      });
+      
+      // usageCount should not be sent, it is managed by the backend.
+      delete couponData.usageCount;
+
       if (formData.id) {
+        delete couponData.id;
         await couponService.updateCoupon(formData.id, couponData);
       } else {
         await couponService.createCoupon(couponData);
@@ -236,10 +264,10 @@ export default function Coupons() {
       setFormData({
         code: "",
         description: "",
-        discountType: "percentage",
-        discountValue: "",
-        minOrderAmount: "",
-        maxDiscountAmount: "",
+        type: "percentage",
+        value: "",
+        minPurchase: "",
+        maxDiscount: "",
         usageLimit: "",
         usageCount: "",
         perUserLimit: "",
@@ -329,6 +357,7 @@ export default function Coupons() {
         title={formData.id ? "Edit Coupon" : "Add New Coupon"}
       >
         <form onSubmit={handleSubmit} className="seo-form">
+          {error && <div className="modal-error-banner">{error}</div>}
           <div className="modal-body">
             <InputField
               label="Coupon Code"
@@ -349,8 +378,8 @@ export default function Coupons() {
             <InputField
               label="Discount Type"
               type="select"
-              name="discountType"
-              value={formData.discountType}
+              name="type"
+              value={formData.type}
               onChange={handleInputChange}
               required
               options={[
@@ -361,23 +390,23 @@ export default function Coupons() {
             <InputField
               label="Discount Value"
               type="number"
-              name="discountValue"
-              value={formData.discountValue}
+              name="value"
+              value={formData.value}
               onChange={handleInputChange}
               required
             />
             <InputField
-              label="Minimum Order Amount"
+              label="Minimum Purchase Amount"
               type="number"
-              name="minOrderAmount"
-              value={formData.minOrderAmount}
+              name="minPurchase"
+              value={formData.minPurchase}
               onChange={handleInputChange}
             />
             <InputField
               label="Maximum Discount Amount"
               type="number"
-              name="maxDiscountAmount"
-              value={formData.maxDiscountAmount}
+              name="maxDiscount"
+              value={formData.maxDiscount}
               onChange={handleInputChange}
             />
             <InputField
@@ -393,6 +422,7 @@ export default function Coupons() {
               name="usageCount"
               value={formData.usageCount}
               onChange={handleInputChange}
+              disabled
             />
             <InputField
               label="Per User Limit"
@@ -414,18 +444,20 @@ export default function Coupons() {
               ]}
             />
             <InputField
-              label="Applicable Categories"
+              label="Applicable Category IDs"
               type="text"
               name="applicableCategories"
-              value={formData.applicableCategories.join(", ")}
+              value={Array.isArray(formData.applicableCategories) ? formData.applicableCategories.join(', ') : formData.applicableCategories}
               onChange={handleInputChange}
+              placeholder="e.g., 1, 2, 3"
             />
             <InputField
-              label="Applicable Products"
+              label="Applicable Product IDs"
               type="text"
               name="applicableProducts"
-              value={formData.applicableProducts.join(", ")}
+              value={Array.isArray(formData.applicableProducts) ? formData.applicableProducts.join(', ') : formData.applicableProducts}
               onChange={handleInputChange}
+              placeholder="e.g., 101, 102"
             />
             <InputField
               label="Start Date"

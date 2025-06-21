@@ -624,6 +624,15 @@ export const couponService = {
         }
     },
 
+    updateCoupon: async (id, couponData) => {
+        try {
+            const response = await api.put(`/api/coupons/${id}`, couponData);
+            return response.data;
+        } catch (error) {
+            throw handleApiError(error);
+        }
+    },
+
     deleteCoupon: async (id) => {
         try {
             const response = await api.delete(`/api/coupons/${id}`);

@@ -132,6 +132,7 @@ export const createOrder = async (req, res) => {
                 order_id: order.id,
                 ...item
             }, { transaction });
+
         }
 
         // Create initial status history
@@ -459,4 +460,5 @@ export const getOrderStats = async (req, res) => {
         res.status(500).json({ message: 'Failed to fetch order statistics', error: error.message });
     }
 };
+
 
