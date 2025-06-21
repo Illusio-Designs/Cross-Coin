@@ -268,14 +268,28 @@
   align-items: flex-start;
 }
 
+.color-options {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
 .color-option {
-  width: 25px;
-  height: 25px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  display: inline-block;
-  margin-right: 0.5rem;
   border: 1px solid #ccc;
+  margin-right: 0.5rem;
   cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border 0.2s;
+}
+
+.color-option.selected {
+  border: 2.5px solid #e60000;
 }
 
 .color-option.black {
@@ -851,4 +865,22 @@
   padding: 40px 20px;
   background: #f8f9fa;
   border-radius: 8px;
+}
+
+.variation-group {
+  margin-bottom: 1.2rem;
+}
+
+.size-option.selected {
+  background: #e60000;
+  color: #fff;
+  border: 1.5px solid #e60000;
+}
+
+.selected-variation-info {
+  margin: 1.2rem 0 1.5rem 0;
+  font-weight: 500;
+  display: flex;
+  gap: 2.5rem;
+  align-items: center;
 }

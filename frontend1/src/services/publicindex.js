@@ -151,3 +151,237 @@ export const createPublicReview = async (reviewData) => {
         throw error.response?.data || error.message;
     }
 };
+
+// Get current user (public, requires token)
+export const getCurrentUser = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_URL}/api/users/me`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+// Update user profile (public, requires token)
+export const updateUserProfile = async (profileData) => {
+    try {
+        const token = localStorage.getItem('token');
+        let headers = { Authorization: `Bearer ${token}` };
+        let data = profileData;
+        if (profileData instanceof FormData) {
+            headers['Content-Type'] = 'multipart/form-data';
+        }
+        const response = await axios.put(`${API_URL}/api/users/me`, data, { headers });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+// Shipping Address APIs (public, require token)
+export const createShippingAddress = async (addressData) => {
+    try {
+        const token = localStorage.getItem('token');
+        // Map camelCase to snake_case for backend
+        const payload = {
+            address: addressData.address,
+            city: addressData.city,
+            state: addressData.state,
+            postal_code: addressData.postalCode,
+            country: addressData.country,
+            phone_number: addressData.phoneNumber,
+            is_default: addressData.isDefault
+        };
+        const response = await axios.post(`${API_URL}/api/shipping-addresses`, payload, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const getUserShippingAddresses = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_URL}/api/shipping-addresses`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data.shippingAddresses;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const updateShippingAddress = async (id, addressData) => {
+    try {
+        const token = localStorage.getItem('token');
+        // Map camelCase to snake_case for backend
+        const payload = {
+            address: addressData.address,
+            city: addressData.city,
+            state: addressData.state,
+            postal_code: addressData.postalCode,
+            country: addressData.country,
+            phone_number: addressData.phoneNumber,
+            is_default: addressData.isDefault
+        };
+        const response = await axios.put(`${API_URL}/api/shipping-addresses/${id}`, payload, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const deleteShippingAddress = async (id) => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.delete(`${API_URL}/api/shipping-addresses/${id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const setDefaultShippingAddress = async (id) => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.put(`${API_URL}/api/shipping-addresses/${id}/default`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+// Wishlist APIs (public, require token)
+export const getWishlist = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_URL}/api/wishlist`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data.wishlist || [];
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const addToWishlist = async (productId) => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.post(`${API_URL}/api/wishlist/add/${productId}`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const removeFromWishlist = async (productId) => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.delete(`${API_URL}/api/wishlist/remove/${productId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const clearWishlist = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.delete(`${API_URL}/api/wishlist/clear`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const logout = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.post(`${API_URL}/api/users/logout`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+// Cart APIs (public, require token)
+export const getCart = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_URL}/api/cart`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data.cart || [];
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const addToCart = async ({ productId, variationId, quantity }) => {
+    try {
+        const token = localStorage.getItem('token');
+        const payload = { productId, variationId, quantity };
+        const response = await axios.post(`${API_URL}/api/cart/add`, payload, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const updateCartItem = async (productId, quantity) => {
+    try {
+        const token = localStorage.getItem('token');
+        const payload = { quantity };
+        const response = await axios.put(`${API_URL}/api/cart/item/${productId}`, payload, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const removeFromCart = async (productId) => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.delete(`${API_URL}/api/cart/item/${productId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const clearCart = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.delete(`${API_URL}/api/cart/clear`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};

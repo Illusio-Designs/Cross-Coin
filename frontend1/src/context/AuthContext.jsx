@@ -1,18 +1,35 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { userService } from '../services';
+import { loginUser, registerUser, getCurrentUser as getPublicCurrentUser, logout as publicLogout } from '../services/publicindex';
+import { useContext as useReactContext } from 'react';
+import { WishlistContext } from './WishlistContext';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    let setIsAuthenticated;
+    try {
+      const wishlistCtx = useContext(WishlistContext);
+      setIsAuthenticated = wishlistCtx?.setIsAuthenticated;
+    } catch (e) {
+      setIsAuthenticated = undefined;
+    }
 
     const checkAuth = useCallback(async () => {
         try {
             const token = localStorage.getItem('token');
             if (token) {
-                const userData = await userService.getCurrentUser();
-                setUser(userData);
+                // Try public user first
+                try {
+                    const userData = await getPublicCurrentUser();
+                    setUser(userData);
+                } catch {
+                    // fallback to admin user
+                    const userData = await userService.getCurrentUser();
+                    setUser(userData);
+                }
             }
         } catch (error) {
             console.error('Auth check failed:', error);
@@ -29,9 +46,31 @@ export const AuthProvider = ({ children }) => {
 
     const login = useCallback(async (credentials) => {
         try {
-            const response = await userService.login(credentials);
+            // Try public login first
+            let response;
+            try {
+                response = await loginUser(credentials);
+                if (response.user.role !== 'consumer' && response.user.role !== 'customer') {
+                    throw new Error('Only consumer accounts can log in here.');
+                }
+            } catch (err) {
+                // fallback to admin login
+                response = await userService.login(credentials);
+            }
             localStorage.setItem('token', response.token);
             setUser(response.user);
+            if (setIsAuthenticated) {
+                setIsAuthenticated(true);
+            }
+            return response;
+        } catch (error) {
+            throw error;
+        }
+    }, [setIsAuthenticated]);
+
+    const register = useCallback(async (userData) => {
+        try {
+            const response = await registerUser(userData);
             return response;
         } catch (error) {
             throw error;
@@ -40,21 +79,31 @@ export const AuthProvider = ({ children }) => {
 
     const logout = useCallback(async () => {
         try {
-            await userService.logout();
+            // Try public logout first
+            try {
+                await publicLogout();
+            } catch {
+                await userService.logout();
+            }
         } catch (error) {
             console.error('Logout error:', error);
         } finally {
             localStorage.removeItem('token');
             setUser(null);
+            if (setIsAuthenticated) {
+                setIsAuthenticated(false);
+            }
         }
-    }, []);
+    }, [setIsAuthenticated]);
 
     const value = {
         user,
         loading,
         login,
         logout,
-        checkAuth
+        register,
+        checkAuth,
+        isAuthenticated: !!user
     };
 
     return (

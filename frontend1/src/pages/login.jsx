@@ -3,6 +3,7 @@ import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -11,41 +12,34 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const { login, user, isAuthenticated } = useAuth();
+
+  // Redirect if already logged in
+  if (isAuthenticated) {
+    router.replace('/profile');
+    return null;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
-    // Basic validation
     if (!email || !password) {
       setError("Please fill in all fields");
       return;
     }
-
     try {
-      // Here you would typically make an API call to your backend
-      // For demo purposes, we'll simulate a successful login
-      const mockLogin = {
-        email: "user@example.com",
-        password: "password123"
-      };
-
-      if (email === mockLogin.email && password === mockLogin.password) {
-        // Store user info in localStorage if remember me is checked
-        if (rememberMe) {
-          localStorage.setItem('user', JSON.stringify({ email }));
-        }
-
-        // Store session info
-        sessionStorage.setItem('isLoggedIn', 'true');
-        
-        // Redirect to profile page
-        router.push('/profile');
-      } else {
-        setError("Invalid email or password");
+      const response = await login({ email, password });
+      if (response.user.role !== 'consumer' && response.user.role !== 'customer') {
+        setError("Only consumer accounts are allowed to login here.");
+        return;
       }
+      if (rememberMe) {
+        localStorage.setItem('user', JSON.stringify({ email }));
+      }
+      sessionStorage.setItem('isLoggedIn', 'true');
+      router.push('/profile');
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      setError(err.message || "Invalid email or password");
     }
   };
 

@@ -3,18 +3,35 @@ import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import { registerUser } from '@/services/publicindex';
 
 export default function Register() {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle registration logic here
+    setError("");
+    try {
+      const userData = {
+        username: username.trim(),
+        email,
+        password,
+        role: 'consumer'
+      };
+      const response = await registerUser(userData);
+      if (response.user && (response.user.role !== 'consumer' && response.user.role !== 'customer')) {
+        setError("Only consumer accounts can be registered here.");
+        return;
+      }
+      router.push('/login');
+    } catch (err) {
+      setError(err.message || "Registration failed");
+    }
   };
 
   return (
@@ -26,11 +43,10 @@ export default function Register() {
           <span className="active">Register</span>
         </div>
         <p className="auth-info">If you have an account, login in with your user name or email address.</p>
+        {error && <div className="auth-error">{error}</div>}
         <form className="auth-form" onSubmit={handleSubmit}>
-          <label>First Name</label>
-          <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} required />
-          <label>Last Name</label>
-          <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} required />
+          <label>Username</label>
+          <input type="text" value={username} onChange={e => setUsername(e.target.value)} required />
           <label>Email address</label>
           <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
           <label>Password</label>

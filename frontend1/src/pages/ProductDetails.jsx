@@ -7,6 +7,8 @@ import { useCart } from '../context/CartContext';
 import { useRouter } from "next/navigation";
 import { getPublicProductBySlug, createPublicReview, getPublicCoupons } from '../services/publicindex';
 import SeoWrapper from '../console/SeoWrapper';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function ProductDetails() {
   const searchParams = useSearchParams();
@@ -52,7 +54,9 @@ export default function ProductDetails() {
               // Initialize selected attributes with first options
               const firstVariation = response.data.variations[0];
               if (firstVariation.attributes) {
-                const attributes = JSON.parse(firstVariation.attributes);
+                const attributes = typeof firstVariation.attributes === 'string'
+                  ? JSON.parse(firstVariation.attributes)
+                  : firstVariation.attributes;
                 const initialAttributes = {};
                 Object.keys(attributes).forEach(key => {
                   initialAttributes[key] = attributes[key][0];
@@ -91,13 +95,16 @@ export default function ProductDetails() {
       const newAttributes = { ...prev, [attributeName]: value };
       // Find matching variation
       const matchingVariation = product.variations.find(variation => {
-        const attrs = JSON.parse(variation.attributes);
+        const attrs = typeof variation.attributes === 'string'
+          ? JSON.parse(variation.attributes)
+          : variation.attributes;
         return Object.entries(newAttributes).every(([key, val]) => 
           attrs[key]?.includes(val)
         );
       });
       if (matchingVariation) {
         setSelectedVariation(matchingVariation);
+        console.log('Variation selected:', matchingVariation);
       }
       return newAttributes;
     });
@@ -242,12 +249,16 @@ export default function ProductDetails() {
 
   const handleAddToCart = () => {
     if (!selectedVariation) {
-      alert('Please select all variations');
+      toast.error('Please select all required variations.');
+      console.log('Add to cart failed: No variation selected');
       return;
     }
-    addToCart(product, selectedVariation, quantity);
+    const selectedColor = selectedAttributes.color || '';
+    const selectedSize = selectedAttributes.size || '';
+    addToCart(product, selectedColor, selectedSize, quantity);
     setShowAddedToCart(true);
     setTimeout(() => setShowAddedToCart(false), 2000);
+    console.log('Add to cart:', { product, selectedColor, selectedSize, quantity });
   };
 
   const handleBuyNow = () => {
@@ -255,26 +266,41 @@ export default function ProductDetails() {
       alert('Please select all variations');
       return;
     }
-    addToCart(product, selectedVariation, quantity);
+    const selectedColor = selectedAttributes.color || '';
+    const selectedSize = selectedAttributes.size || '';
+    addToCart(product, selectedColor, selectedSize, quantity);
     router.push('/checkout');
   };
 
   const renderAttributeOptions = () => {
     if (!selectedVariation) return null;
-    const attributes = JSON.parse(selectedVariation.attributes);
-    
+    const attributes = typeof selectedVariation.attributes === 'string'
+      ? JSON.parse(selectedVariation.attributes)
+      : selectedVariation.attributes;
     return Object.entries(attributes).map(([key, values]) => (
       <div key={key} className="variation-group">
         <span className="option-label">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
-        <div className="variation-options">
+        <div className={`variation-options ${key === 'color' ? 'color-options' : ''}`}> 
           {values.map((value) => (
-            <button
-              key={value}
-              className={`variation-option${selectedAttributes[key] === value ? " selected" : ""}`}
-              onClick={() => handleAttributeChange(key, value)}
-            >
-              {value}
-            </button>
+            key === 'color' ? (
+              <button
+                key={value}
+                className={`color-option${selectedAttributes[key] === value ? ' selected' : ''}`}
+                style={{ backgroundColor: value.toLowerCase(), border: selectedAttributes[key] === value ? '2px solid #e60000' : '1px solid #ccc' }}
+                onClick={() => handleAttributeChange(key, value)}
+                aria-label={value}
+              >
+                {selectedAttributes[key] === value && <span className="color-check">✓</span>}
+              </button>
+            ) : (
+              <button
+                key={value}
+                className={`size-option${selectedAttributes[key] === value ? ' selected' : ''}`}
+                onClick={() => handleAttributeChange(key, value)}
+              >
+                {value}
+              </button>
+            )
           ))}
         </div>
       </div>
@@ -438,7 +464,18 @@ export default function ProductDetails() {
   );
 
   return (
-    <SeoWrapper pageName="product-details">
+    <SeoWrapper
+      pageName={product.name || "product-details"}
+      metaTitle={product.seo?.metaTitle}
+      metaDescription={product.seo?.metaDescription}
+      metaKeywords={product.seo?.metaKeywords}
+      ogTitle={product.seo?.ogTitle}
+      ogDescription={product.seo?.ogDescription}
+      ogImage={product.seo?.ogImage}
+      canonicalUrl={product.seo?.canonicalUrl}
+      structuredData={product.seo?.structuredData}
+    >
+      <ToastContainer position="top-right" autoClose={3000} />
       <div className="product-details-container">
         <Header />
         <div className="product-details">
@@ -550,6 +587,13 @@ export default function ProductDetails() {
                 </span>
               </div>
             </div>
+            {selectedVariation && (
+              <div className="selected-variation-info">
+                <span>Selected SKU: <b>{selectedVariation.sku}</b></span>
+                <span>Price: <b>₹{selectedVariation.price}</b></span>
+                {selectedVariation.stock !== undefined && <span>Stock: <b>{selectedVariation.stock}</b></span>}
+              </div>
+            )}
           </div>
         </div>
         {/* Tabs for Description and Review */}
