@@ -5,7 +5,7 @@ import Header from "../components/Header";
 import Image from "next/image";
 import { useCart } from '../context/CartContext';
 import { useRouter } from "next/navigation";
-import { getPublicProductBySlug, createPublicReview } from '../services/publicindex';
+import { getPublicProductBySlug, createPublicReview, getPublicCoupons } from '../services/publicindex';
 import SeoWrapper from '../console/SeoWrapper';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -38,6 +38,7 @@ export default function ProductDetails() {
   const [formTouched, setFormTouched] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [filePreview, setFilePreview] = useState([]);
+  const [coupons, setCoupons] = useState([]);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -75,6 +76,19 @@ export default function ProductDetails() {
 
     fetchProduct();
   }, [productSlug]);
+
+  // Fetch coupons for display
+  useEffect(() => {
+    const fetchCoupons = async () => {
+      try {
+        const data = await getPublicCoupons();
+        setCoupons(Array.isArray(data) ? data : data.coupons || []);
+      } catch (err) {
+        // Optionally handle error
+      }
+    };
+    fetchCoupons();
+  }, []);
 
   const handleAttributeChange = (attributeName, value) => {
     setSelectedAttributes(prev => {
@@ -516,6 +530,30 @@ export default function ProductDetails() {
             <div className="product-options">
               {renderAttributeOptions()}
             </div>
+            {/* Coupons Display */}
+            {coupons && coupons.length > 0 && (
+              <div className="product-coupons-box" style={{margin: '20px 0', padding: '16px', background: '#f8fafc', border: '1px solid #e0e0e0', borderRadius: '8px'}}>
+                <h3 style={{marginBottom: '10px', color: '#CE1E36'}}>Available Coupons</h3>
+                <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+                  {coupons.map((coupon) => (
+                    <li key={coupon.id || coupon.code} style={{marginBottom: '8px', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px dashed #CE1E36'}}>
+                      <span style={{fontWeight: 600, color: '#CE1E36'}}>{coupon.code}</span>
+                      {coupon.description && <span style={{marginLeft: 8, color: '#555'}}>{coupon.description}</span>}
+                      {coupon.discountType && coupon.discountValue && (
+                        <span style={{marginLeft: 8, color: '#222'}}>
+                          {coupon.discountType === 'percentage' ? `${coupon.discountValue}% off` : `₹${coupon.discountValue} off`}
+                        </span>
+                      )}
+                      {coupon.expiryDate && (
+                        <span style={{marginLeft: 8, color: '#888', fontSize: '12px'}}>
+                          (Expires: {new Date(coupon.expiryDate).toLocaleDateString()})
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="product-action-box">
               <div className="quantity-and-buttons">
                 <div className="quantity-box">
