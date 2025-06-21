@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { userService } from '../services';
+import { userService, authService } from '../services';
 import { loginUser, registerUser, getCurrentUser as getPublicCurrentUser, logout as publicLogout } from '../services/publicindex';
 import { useContext as useReactContext } from 'react';
 import { WishlistContext } from './WishlistContext';
@@ -9,25 +9,18 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    let setIsAuthenticated;
-    try {
-      const wishlistCtx = useContext(WishlistContext);
-      setIsAuthenticated = wishlistCtx?.setIsAuthenticated;
-    } catch (e) {
-      setIsAuthenticated = undefined;
-    }
+    const { setIsAuthenticated } = useContext(WishlistContext) || {};
 
     const checkAuth = useCallback(async () => {
         try {
             const token = localStorage.getItem('token');
             if (token) {
-                // Try public user first
+                // Unified check for current user
                 try {
-                    const userData = await getPublicCurrentUser();
+                    const userData = await userService.getCurrentUser();
                     setUser(userData);
                 } catch {
-                    // fallback to admin user
-                    const userData = await userService.getCurrentUser();
+                    const userData = await getPublicCurrentUser();
                     setUser(userData);
                 }
             }
@@ -46,17 +39,24 @@ export const AuthProvider = ({ children }) => {
 
     const login = useCallback(async (credentials) => {
         try {
-            // Try public login first
-            let response;
-            try {
-                response = await loginUser(credentials);
-                if (response.user.role !== 'consumer' && response.user.role !== 'customer') {
-                    throw new Error('Only consumer accounts can log in here.');
-                }
-            } catch (err) {
-                // fallback to admin login
-                response = await userService.login(credentials);
+            const response = await loginUser(credentials);
+            if (response.user.role !== 'consumer' && response.user.role !== 'customer') {
+                throw new Error('Only consumer accounts can log in here.');
             }
+            localStorage.setItem('token', response.token);
+            setUser(response.user);
+            if (setIsAuthenticated) {
+                setIsAuthenticated(true);
+            }
+            return response;
+        } catch (error) {
+            throw error;
+        }
+    }, [setIsAuthenticated]);
+
+    const adminLogin = useCallback(async (credentials) => {
+        try {
+            const response = await authService.login(credentials);
             localStorage.setItem('token', response.token);
             setUser(response.user);
             if (setIsAuthenticated) {
@@ -100,6 +100,7 @@ export const AuthProvider = ({ children }) => {
         user,
         loading,
         login,
+        adminLogin,
         logout,
         register,
         checkAuth,

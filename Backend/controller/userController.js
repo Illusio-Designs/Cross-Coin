@@ -98,6 +98,43 @@ export const login = async (req, res) => {
     }
 };
 
+// **Admin Login**
+export const adminLogin = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ message: 'All fields are required' });
+        }
+
+        const user = await User.findOne({ where: { email } });
+        if (!user) return res.status(400).json({ message: 'User not found' });
+
+        // Only allow login for admin role
+        if (user.role !== 'admin') {
+            return res.status(403).json({ message: 'Access denied. Only admin accounts can log in here.' });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
+
+        const token = jwt.sign(
+            { id: user.id, email: user.email, role: user.role }, 
+            process.env.JWT_SECRET, 
+            { expiresIn: '1d' }
+        );
+
+        // Remove password from response
+        const userResponse = user.toJSON();
+        delete userResponse.password;
+
+        res.json({ message: 'Admin login successful', token, user: userResponse });
+    } catch (error) {
+        console.error('Admin login error:', error);
+        res.status(500).json({ message: 'Admin login failed', error: error.message });
+    }
+};
+
 // **Google Authentication**
 export const googleAuth = passport.authenticate('google', {
     scope: ['profile', 'email']
