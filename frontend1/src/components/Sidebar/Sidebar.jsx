@@ -35,11 +35,11 @@ const menu = [
   },
   {
     label: "Payments",
-    icon: <FaCreditCard />,
-    submenu: [
-      { label: "Payment Methods", view: "payments" },
-      { label: "Coupons", view: "coupons" },
-    ]
+    icon: <FaCreditCard />, view: "payments",
+  },
+  {
+    label: "Coupons",
+    icon: <FaTags />, view: "coupons",
   },
   {
     label: "Shipping Fees",
