@@ -8,7 +8,7 @@ import card3 from "../assets/card3-right.webp";
 import "../styles/pages/Profile.css";
 import { useRouter } from "next/router";
 import SeoWrapper from '../console/SeoWrapper';
-import { resetPassword, getCurrentUser, updateUserProfile, createShippingAddress, getUserShippingAddresses, updateShippingAddress, deleteShippingAddress, setDefaultShippingAddress } from '../services/publicindex';
+import { resetPassword, getCurrentUser, updateUserProfile, createShippingAddress, getUserShippingAddresses, updateShippingAddress, deleteShippingAddress, setDefaultShippingAddress, getUserOrders } from '../services/publicindex';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
@@ -50,6 +50,9 @@ export default function Profile() {
   const [editingId, setEditingId] = useState(null);
   const [addressError, setAddressError] = useState("");
   const [showAddressModal, setShowAddressModal] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+  const [ordersError, setOrdersError] = useState("");
 
   // Check authentication on component mount
   useEffect(() => {
@@ -78,6 +81,24 @@ export default function Profile() {
     };
     fetchAddresses();
   }, []);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+        setLoadingOrders(true);
+        try {
+            const data = await getUserOrders();
+            setOrders(data.orders);
+            setOrdersError("");
+        } catch (err) {
+            setOrdersError(err.message || "Failed to load orders");
+        }
+        setLoadingOrders(false);
+    };
+
+    if (selectedTab === 0) {
+        fetchOrders();
+    }
+  }, [selectedTab]);
 
   // Handle Logout
   const handleLogout = async () => {
@@ -205,103 +226,49 @@ export default function Profile() {
           {selectedTab === 0 && (
             <div>
               <div className="orders-list">
-                {/* Order Card 1 - Delivered */}
-                <div className="order-card">
-                  <div className="order-card-header">
-                    <div>
-                      <div className="order-meta">
-                        <span>Order Placed<br /><b style={{color: "#000000"}}>10, June 2023</b></span>
-                        <span>Total<br /><b style={{color: "#000000"}}>$320</b></span>
-                        <span>Ship to<br /><b style={{color: "#000000"}}>Irish Watson</b></span>
+                {loadingOrders ? (
+                  <div>Loading orders...</div>
+                ) : ordersError ? (
+                  <div className="profile-error-message">{ordersError}</div>
+                ) : orders.length === 0 ? (
+                  <div>No orders found.</div>
+                ) : (
+                  orders.map(order => (
+                    <div className="order-card" key={order.id}>
+                      <div className="order-card-header">
+                        <div>
+                          <div className="order-meta">
+                            <span>Order Placed<br /><b style={{ color: "#000000" }}>{new Date(order.createdAt).toLocaleDateString()}</b></span>
+                            <span>Total<br /><b style={{ color: "#000000" }}>${order.final_amount}</b></span>
+                            <span>Ship to<br /><b style={{ color: "#000000" }}>{user?.username}</b></span>
+                          </div>
+                        </div>
+                        <div className="order-actions">
+                          <span className="order-id">Order #{order.order_number}</span>
+                          <div className="order-actions-buttons">
+                            <a href="#" className="order-link">View order details</a>
+                            <span className="part">|</span>
+                            <a href="#" className="order-link">View Invoice</a>
+                          </div>
+                        </div>
                       </div>
-                      
+                      <div className="order-status">{order.status}</div>
+                      {order.OrderItems && order.OrderItems.map(item => (
+                        <div className="order-card-body" key={item.id}>
+                           <Image src={item.Product?.ProductImages?.[0]?.image_url || card1} alt={item.Product?.name} className="order-product-img" width={100} height={100} />
+                          <div className="order-product-info">
+                            <div className="order-product-title">{item.Product?.name}</div>
+                            <div className="order-product-desc">Quantity: {item.quantity}</div>
+                            <div className="order-card-buttons">
+                              <button className="order-btn buy-again">Buy Again</button>
+                              <button className="order-btn view-product">View your product</button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="order-actions"> 
-                      <span className="order-id">Order #348461351</span>
-                      <div className="order-actions-buttons">
-                        <a href="#" className="order-link">View order details</a>
-                        <span className="part">|</span>
-                        <a href="#" className="order-link">View Invoice</a>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="order-status">Delivered on 15, June, 2023</div>
-                  <div className="order-card-body">
-
-                    <Image src={card1} alt="Gradient Shocks" className="order-product-img" />
-                    <div className="order-product-info">
-                      <div className="order-product-title">Gradient Shocks</div>
-                      <div className="order-product-desc">Return or replace items: Eligible through 20, June 2025</div>
-                      <div className="order-card-buttons">
-                        <button className="order-btn buy-again">Buy Again</button>
-                        <button className="order-btn view-product">View your product</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* Order Card 2 - Processing */}
-                <div className="order-card">
-                  <div className="order-card-header">
-                    <div>
-                      <div className="order-meta">
-                        <span>Order Placed<br /><b style={{color: "#000000"}}>10, June 2023</b></span>
-                        <span>Total<br /><b style={{color: "#000000"}}>$320</b></span>
-                        <span>Ship to<br /><b style={{color: "#000000"}}>Irish Watson</b></span>
-                      </div>
-                     
-                    </div>
-                    <div className="order-actions">
-                      <span className="order-id">Order #348461351</span>
-                      <div className="order-actions-buttons">
-                        <a href="#" className="order-link">View order details</a>
-                        <a href="#" className="order-link">View Invoice</a>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="order-status">Out for delivery on Today</div>
-                  <div className="order-card-body">
-                    <Image src={card2} alt="Gradient Shocks" className="order-product-img" />
-                    <div className="order-product-info">
-                      <div className="order-product-title">Gradient Shocks</div>
-                      <div className="order-product-desc">Return or replace items: Eligible through 20, June 2025</div>
-                      <div className="order-card-buttons">
-                        <button className="order-btn buy-again">Buy Again</button>
-                        <button className="order-btn view-product">View your product</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* Order Card 3 - Cancelled */}
-                <div className="order-card">
-                  <div className="order-card-header">
-                    <div>
-                      <div className="order-meta">
-                        <span>Order Placed<br /><b style={{color: "#000000"}}>10, June 2023</b></span>
-                        <span>Total<br /><b style={{color: "#000000"}}>$320</b></span>
-                        <span>Ship to<br /><b style={{color: "#000000"}}>Irish Watson</b></span>
-                      </div> 
-                    </div>
-                    <div className="order-actions">
-                      <span className="order-id">Order #348461351</span>
-                      <div className="order-actions-buttons">
-                        <a href="#" className="order-link">View order details</a>
-                        <a href="#" className="order-link">View Invoice</a>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="order-status">Cancelled on 15, June, 2023</div>
-                  <div className="order-card-body">
-                    <Image src={card3} alt="Gradient Shocks" className="order-product-img" />
-                    <div className="order-product-info">
-                      <div className="order-product-title">Gradient Shocks</div>
-                      <div className="order-product-desc">Return or replace items: Eligible through 20, June 2025</div>
-                      <div className="order-card-buttons">
-                        <button className="order-btn buy-again">Buy Again</button>
-                        <button className="order-btn view-product">View your product</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  ))
+                )}
               </div>
             </div>
           )}

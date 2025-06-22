@@ -7,6 +7,7 @@ import { ShippingAddress } from '../model/shippingAddressModel.js';
 import { ShippingFee } from '../model/shippingFeeModel.js';
 import { Payment } from '../model/paymentModel.js';
 import { User } from '../model/userModel.js';
+import { ProductImage } from '../model/productImageModel.js';
 import { Op } from 'sequelize';
 import { sequelize } from '../config/db.js';
 
@@ -60,8 +61,9 @@ export const createOrder = async (req, res) => {
         const validatedItems = [];
 
         for (const item of items) {
-            const { product_id, variation_id, quantity } = item;
-            
+            const { product_id, quantity } = item;
+            let { variation_id } = item; // Use a local, mutable variation_id
+
             if (!product_id || !quantity) {
                 await transaction.rollback();
                 return res.status(400).json({ message: 'Product ID and quantity are required for each item' });
@@ -82,11 +84,16 @@ export const createOrder = async (req, res) => {
                 }
                 price = variation.price;
             } else {
-                // For products without variations, you need to have a base price in the product model
-                // This is just a placeholder logic
-                const variations = await ProductVariation.findOne({ where: { productId: product_id } });
-                price = variations ? variations.price : 0;
-                if (price === 0) {
+                const variations = await ProductVariation.findAll({ where: { productId: product_id } });
+                if (variations.length > 0) {
+                    // If variations exist but none was chosen, default to the first one
+                    variation_id = variations[0].id; // Assign to the local variable
+                    price = variations[0].price;
+                } else {
+                    price = product.price;
+                }
+
+                if (!price || price <= 0) {
                     await transaction.rollback();
                     return res.status(400).json({ message: `No price found for product ${product_id}` });
                 }
@@ -101,7 +108,7 @@ export const createOrder = async (req, res) => {
 
             validatedItems.push({
                 product_id,
-                variation_id: variation_id || null,
+                variation_id: variation_id || null, // Use the local variable
                 quantity,
                 price,
                 discount,
@@ -199,7 +206,17 @@ export const getAllOrders = async (req, res) => {
             where: filter,
             include: [
                 { model: User, attributes: ['id', 'username', 'email'] },
-                { model: OrderItem, include: [Product] }
+                { 
+                    model: OrderItem, 
+                    include: [
+                        {
+                            model: Product,
+                            include: [
+                                { model: ProductImage, as: 'ProductImages' }
+                            ]
+                        }
+                    ] 
+                }
             ],
             order: [['createdAt', 'DESC']],
             limit: parseInt(limit),
@@ -239,7 +256,17 @@ export const getUserOrders = async (req, res) => {
         const orders = await Order.findAndCountAll({
             where: filter,
             include: [
-                { model: OrderItem, include: [Product] }
+                { 
+                    model: OrderItem, 
+                    include: [
+                        {
+                            model: Product,
+                            include: [
+                                { model: ProductImage, as: 'ProductImages' }
+                            ]
+                        }
+                    ] 
+                }
             ],
             order: [['createdAt', 'DESC']],
             limit: parseInt(limit),

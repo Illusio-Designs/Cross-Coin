@@ -275,6 +275,36 @@ export const setDefaultShippingAddress = async (id) => {
     }
 };
 
+// Get user orders
+export const getUserOrders = async (params = {}) => {
+    try {
+        const token = localStorage.getItem('token');
+        const queryParams = new URLSearchParams();
+        if (params.status) queryParams.append('status', params.status);
+        if (params.page) queryParams.append('page', params.page);
+        if (params.limit) queryParams.append('limit', params.limit);
+
+        const response = await axios.get(`${API_URL}/api/orders/my-orders?${queryParams.toString()}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const createOrder = async (orderData) => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.post(`${API_URL}/api/orders`, orderData, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
 // Shipping Fees
 export const getShippingFees = async () => {
     try {

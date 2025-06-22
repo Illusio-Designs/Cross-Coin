@@ -1,60 +1,92 @@
 .thankyou-container {
-  background: #F3F4F6;
-  padding: 0 50px 50px;
-  max-width: 400px;
-  margin: 50px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 60px 20px;
+  background-color: #f9f9f9;
+  min-height: 70vh;
 }
 
-.thankyou-cart-icon {
-  height: 200px;
+.thankyou-icon-container {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: #28a745;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.thankyou-icon {
+  color: #fff;
+  font-size: 48px;
+  font-weight: bold;
+  line-height: 1;
 }
 
 .thankyou-container h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
+  font-size: 2.5rem;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.order-confirmation {
+  font-size: 1.2rem;
+  color: #555;
+  margin-bottom: 8px;
 }
 
 .thankyou-desc {
-  color: #6B7280;
   font-size: 1rem;
-  margin-bottom: 2rem;
+  color: #666;
+  max-width: 500px;
+  margin-bottom: 24px;
+}
+
+.delivery-info {
+  font-size: 1.1rem;
+  color: #333;
+  padding: 16px;
+  background-color: #e9ecef;
+  border-radius: 8px;
+  margin-bottom: 32px;
 }
 
 .thankyou-buttons {
   display: flex;
-  justify-content: center;
-  gap: 1rem;
+  gap: 16px;
+}
+
+.shop-again, .track-order {
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .shop-again {
-  background: #fff;
-  color: #6B7280;
-  border: none;
-  padding: 0.75rem 2rem;
-  width: 100%;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: box-shadow 0.2s;
+  background-color: #E94B5A;
+  color: white;
+  border: 2px solid #E94B5A;
 }
 
 .shop-again:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  background-color: #d83a49;
+  border-color: #d83a49;
 }
 
 .track-order {
-  width: 100%;
-  background: #000;
-  color: #ffffff;
-  border: none;
-  padding: 0.75rem 2rem;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.2s;
+  background-color: transparent;
+  color: #E94B5A;
+  border: 2px solid #E94B5A;
 }
 
 .track-order:hover {
-  background: #222;
+  background-color: #E94B5A;
+  color: white;
 } 
