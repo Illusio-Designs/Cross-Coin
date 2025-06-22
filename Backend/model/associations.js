@@ -225,3 +225,7 @@ Product.hasMany(OrderItem, { foreignKey: 'product_id' });
 
 OrderItem.belongsTo(ProductVariation, { foreignKey: 'variation_id' });
 ProductVariation.hasMany(OrderItem, { foreignKey: 'variation_id' });
+
+// OrderStatusHistory -> User
+OrderStatusHistory.belongsTo(User, { as: 'UpdatedBy', foreignKey: 'updated_by' });
+User.hasMany(OrderStatusHistory, { foreignKey: 'updated_by' });

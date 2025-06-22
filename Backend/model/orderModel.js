@@ -26,6 +26,11 @@ export const Order = sequelize.define('Order', {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false
     },
+    discount_amount: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+        defaultValue: 0.00
+    },
     shipping_fee: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
@@ -38,6 +43,15 @@ export const Order = sequelize.define('Order', {
     payment_type: {
         type: DataTypes.ENUM('cod', 'credit_card', 'debit_card', 'upi', 'wallet'),
         allowNull: false
+    },
+    coupon_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'coupons',
+            key: 'id'
+        },
+        onDelete: 'SET NULL'
     },
     payment_status: {
         type: DataTypes.ENUM('pending', 'paid', 'failed', 'refunded'),
