@@ -273,6 +273,60 @@
     cursor: pointer;
 }
 
+/* Delivery Methods - from Shipping.css */
+.delivery-methods-section {
+  margin-top: 2.5rem;
+}
+.delivery-methods-section h4 {
+  font-size: 1.08rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+.delivery-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.delivery-card {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  background: #fafbfc;
+  border: 1.5px solid #e0e0e0;
+  padding: 1.1rem 1.5rem;
+  cursor: pointer;
+  flex: 1;
+  transition: border 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+.delivery-card.selected, .delivery-card:hover {
+  border: 2px solid #222;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.delivery-card input[type="radio"] {
+  accent-color: #222;
+  margin-right: 0.7rem;
+}
+.delivery-title {
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.delivery-desc {
+  font-size: 0.93rem;
+  color: #888;
+}
+.delivery-fee {
+  margin-left: auto;
+  font-weight: 600;
+  font-size: 1rem;
+}
+.delivery-fee.free {
+  color: #2ecc40;
+}
+.delivery-fee.paid {
+  color: #222;
+}
+
 /* Payment Step - from CheckoutUPI.css */
 .payment-section {
     padding: 1rem;

@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { validateCoupon, getPublicCoupons } from "../../services/publicindex";
 import { useRouter } from "next/router";
 
-export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddress, isProcessing }) {
+export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddress, shippingFee, isProcessing }) {
   const router = useRouter();
   const { user } = useAuth();
   const { cartItems } = useCart();
@@ -41,7 +41,8 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
   }, []);
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const total = subtotal - discount;
+  const deliveryFee = shippingFee ? parseFloat(shippingFee.fee || 0) : 0;
+  const total = subtotal - discount + deliveryFee;
 
   const handleApplyCoupon = async () => {
     if (!promoCode) {
@@ -80,7 +81,9 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
 
   const getButtonText = () => {
     if (step === 'cart') return 'Proceed to Shipping';
-    if (step === 'shipping') return 'Proceed to Payment';
+    if (step === 'shipping') {
+        return shippingFee?.orderType === 'cod' ? 'Place Order' : 'Proceed to Payment';
+    }
     if (step === 'payment') return isProcessing ? 'Processing...' : 'Place Order';
     return 'Next';
   };
@@ -143,7 +146,7 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
       )}
       <div className="order-summary-row">
         <span>Delivery Fee</span>
-        <span>₹0.00</span>
+        <span>{shippingFee ? `₹${parseFloat(shippingFee.fee || 0).toFixed(2)}` : 'Free'}</span>
       </div>
       <div className="order-summary-total">
         <span>Total</span>
@@ -176,7 +179,7 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
                     <span className="coupon-card-code">{coupon.code}</span>
                 </div>
                 <div className="coupon-card-body">
-                    <p className="coupon-card-description">{generateCouponDescription(coupon)}</p>
+                    <p className="coupon-card-description">{coupon.description || generateCouponDescription(coupon)}</p>
                 </div>
               </div>
             ))}

@@ -275,6 +275,29 @@ export const setDefaultShippingAddress = async (id) => {
     }
 };
 
+// Shipping Fees
+export const getShippingFees = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_URL}/api/shipping-fees`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+// SEO
+export const getSeoByPageName = async (pageName) => {
+    try {
+        const response = await axios.get(`${API_URL}/api/seo/${pageName}`);
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
 // Wishlist APIs (public, require token)
 export const getWishlist = async () => {
     try {
