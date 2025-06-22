@@ -1,0 +1,518 @@
+/* General Layout - from Cart.css */
+.cart-main {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 50px 10%;
+  background: #fff;
+}
+
+.cart-section {
+  flex: 2;
+}
+
+.order-summary-section {
+  flex: 1;
+  background: #F3F4F6;
+  padding: 2rem 1.5rem;
+  min-width: 320px;
+  max-width: 350px;
+  height: fit-content;
+}
+
+/* Step Headers */
+.cart-section h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+
+/* Cart Step - from Cart.css */
+.cart-items-list-container {
+    border: 1px solid #0000001A;
+    padding: 1rem;
+}
+.cart-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.cart-item {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  border-bottom: 1px solid #0000001A;
+  padding-bottom: 1rem;
+}
+
+.cart-item:last-child {
+  border-bottom: none;
+}
+
+.cart-item-img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+}
+
+.cart-item-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.cart-item-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.cart-item-meta {
+  color: #888;
+  font-size: 0.95rem;
+}
+
+.cart-item-price {
+  font-weight: 700;
+  color: #222;
+  margin-top: 25px;
+}
+
+.cart-item-qty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #eee;
+  padding: 0.2rem;
+}
+
+.qty-btn {
+  background: none;
+  border: none;
+  width: 28px;
+  height: 28px;
+  font-size: 25px;
+  cursor: pointer;
+  color: #333;
+  transition: all 0.2s;
+}
+
+.qty-btn-disabled {
+  color: #e74c3c;
+  cursor: not-allowed;
+}
+
+.cart-item-remove {
+  background: none;
+  border: none;
+  color: #e74c3c;
+  font-size: 1.3rem;
+  cursor: pointer;
+  margin-left: 1rem;
+  transition: color 0.2s;
+}
+
+.cart-item-remove:hover {
+  color: #b71c1c;
+}
+
+.empty-cart {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+}
+
+.empty-cart-icon {
+  font-size: 150px;
+  color: #222;
+}
+
+.empty-cart-text {
+  padding: 20px 10%;
+  margin-bottom: 20px;
+}
+
+.cart-items-list.empty {
+  padding: 0;
+  border: none;
+}
+
+/* Shipping Step - from Shipping.css & Checkout.css */
+.shipping-addresses h2, .payment-section h3 {
+  font-size: 1.25rem;
+  color: #2d3748;
+  margin-bottom: 1rem;
+}
+
+.address-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.address-card {
+  padding: 1rem;
+  border: 1px solid #e0e0e0;
+  cursor: pointer;
+  transition: border 0.2s, box-shadow 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.address-card.selected, .address-card:hover {
+  border: 2px solid #222;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+
+.address-card h3 {
+  color: #2d3748;
+  margin-bottom: 0.5rem;
+}
+
+.address-card p {
+  color: #4a5568;
+  margin: 0.25rem 0;
+}
+
+.address-card-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+.address-card-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #6B7280;
+}
+
+
+.add-address-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #f7fafc;
+  border: 2px dashed #e0e0e0;
+  color: #4a5568;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 1rem;
+}
+
+.add-address-btn:hover {
+  background: #edf2f7;
+  border-color: #a0aec0;
+}
+
+.shipping-form-container {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    border: 1px solid #e0e0e0;
+}
+.shipping-form-container h4 {
+  margin-bottom: 1.2rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.shipping-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.form-row-2col {
+  display: flex;
+  gap: 1.2rem;
+}
+.form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.form-group label {
+  font-size: 0.98rem;
+  color: #222;
+  font-weight: 500;
+}
+.form-group input {
+  padding: 0.7rem 0.9rem;
+  border: 1px solid #e0e0e0;
+  font-size: 1rem;
+  background: #fafbfc;
+}
+.save-address-btn {
+  margin-top: 1.2rem;
+  background: #222;
+  color: #fff;
+  border: none;
+  padding: 0.9rem 0;
+  font-size: 1.08rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.save-address-btn:hover {
+  background: #111;
+}
+
+.cancel-btn {
+    margin-top: 0.5rem;
+    background: #e0e0e0;
+    color: #000;
+    border: none;
+    padding: 0.9rem 0;
+    font-size: 1.08rem;
+    cursor: pointer;
+}
+
+/* Payment Step - from CheckoutUPI.css */
+.payment-section {
+    padding: 1rem;
+    border: 1px solid #e0e0e0;
+}
+
+.payment-method {
+  border: 1px solid #eee;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  cursor: pointer;
+  background: #fff;
+  transition: border 0.2s;
+  position: relative;
+}
+
+.payment-method.active {
+  border: 2px solid #222;
+  background: #fafafa;
+}
+
+.payment-method input[type="radio"] {
+  margin-top: 4px;
+}
+
+.payment-method-content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.payment-method .label {
+  font-weight: 500;
+  margin-right: 1rem;
+  min-width: 160px;
+}
+
+.payment-method .icons img {
+  width: 28px;
+  height: 18px;
+  object-fit: contain;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.upi-input-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  width: 100%;
+}
+
+.upi-input-row input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #bbb;
+}
+
+.upi-input-row button {
+  padding: 0.5rem 1.2rem;
+  background: #111;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+
+/* Order Summary - from Cart.css */
+.order-summary-box {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.order-summary-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.7rem;
+}
+
+.order-summary-row {
+  display: flex;
+  justify-content: space-between;
+  color: #444;
+  font-size: 1rem;
+}
+
+.order-summary-row .discount {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.order-summary-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.promo-section {
+    border-top: 1px solid #e0e0e0;
+    padding-top: 1rem;
+}
+
+.promo-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.7rem;
+}
+
+.promo-input {
+  flex: 1;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid #ddd;
+  font-size: 1rem;
+  border-radius: 4px;
+  transition: border-color 0.2s;
+}
+
+.promo-apply {
+  background: #180D3E;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1.1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-radius: 4px;
+}
+
+.promo-apply:hover {
+  background: #CE1E36;
+}
+
+.checkout-btn {
+  width: 100%;
+  background: #000000;
+  color: #fff;
+  border: none;
+  padding: 0.8rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.7rem;
+  transition: all 0.2s;
+  align-items: center;
+}
+
+.checkout-btn:hover {
+  background: transparent;
+  border: 1px solid #000000;
+  color: #000000;
+}
+.checkout-btn:disabled {
+    background: #cccccc;
+    cursor: not-allowed;
+}
+.checkout-btn:disabled:hover {
+    color: #fff;
+    border-color: transparent;
+}
+
+
+/* Coupon styles from Cart.css */
+.available-coupons {
+  margin-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 1rem;
+}
+.available-coupons-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+.coupons-list {
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.coupon-card {
+  border: 1px dashed #ccc;
+  padding: 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.coupon-card:hover {
+  border-color: #999;
+}
+.coupon-card.selected {
+  border-style: solid;
+  border-color: #180D3E;
+  background-color: #f3f4f6;
+}
+.coupon-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.coupon-card-code {
+  font-weight: bold;
+  font-family: monospace;
+  background: #e0e0e0;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.coupon-card-body {
+  margin-top: 0.5rem;
+}
+.coupon-card-description {
+  font-size: 0.9rem;
+  color: #666;
+}
+.coupon-message {
+  padding: 0.5rem;
+  margin-top: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+.coupon-error {
+  background-color: #fdd;
+  border: 1px solid #fbb;
+  color: #c00;
+}
+.coupon-success {
+  background-color: #dfd;
+  border: 1px solid #bfb;
+  color: #070;
+}
+
+/* Scrollbar for coupons */
+.coupons-list::-webkit-scrollbar { width: 6px; }
+.coupons-list::-webkit-scrollbar-track { background: #f1f1f1; }
+.coupons-list::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
+.coupons-list::-webkit-scrollbar-thumb:hover { background: #555; }

@@ -39,6 +39,7 @@ export default function ProductDetails() {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [filePreview, setFilePreview] = useState([]);
   const [coupons, setCoupons] = useState([]);
+  const [copiedCoupon, setCopiedCoupon] = useState(null);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -115,6 +116,16 @@ export default function ProductDetails() {
     }
     
     return 'A special discount on your order.';
+  };
+
+  const handleCopyCoupon = async (couponCode) => {
+    try {
+      await navigator.clipboard.writeText(couponCode);
+      setCopiedCoupon(couponCode);
+      setTimeout(() => setCopiedCoupon(null), 2000); // Hide tooltip after 2 seconds
+    } catch (err) {
+      console.error('Failed to copy coupon code:', err);
+    }
   };
 
   const renderStars = (rating) => {
@@ -573,9 +584,34 @@ export default function ProductDetails() {
                 <h3 className="product-coupons-title">Available Coupons</h3>
                 <div className="product-coupons-list">
                   {coupons.map((coupon) => (
-                    <div key={coupon.id} className="coupon-card-details">
+                    <div 
+                      key={coupon.id} 
+                      className="coupon-card-details"
+                      onClick={() => handleCopyCoupon(coupon.code)}
+                      style={{ cursor: 'pointer', position: 'relative' }}
+                    >
                         <div className="coupon-code-details">{coupon.code}</div>
-                        <p className="coupon-description-details">{generateCouponDescription(coupon)}</p>
+                        <p className="coupon-description-details">
+                          {coupon.description || generateCouponDescription(coupon)}
+                        </p>
+                        {copiedCoupon === coupon.code && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '-40px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            background: '#CE1E36',
+                            color: 'white',
+                            padding: '8px 12px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            zIndex: 10,
+                            animation: 'fadeInOut 2s ease-in-out'
+                          }}>
+                            Copied!
+                          </div>
+                        )}
                     </div>
                   ))}
                 </div>

@@ -557,7 +557,7 @@ export const getPublicCoupons = async (req, res) => {
                 startDate: { [Op.lte]: new Date() },
                 endDate: { [Op.gte]: new Date() }
             },
-            attributes: ['id', 'code', 'type', 'value', 'minPurchase', 'maxDiscount', 'endDate']
+            attributes: ['id', 'code', 'description', 'type', 'value', 'minPurchase', 'maxDiscount', 'endDate']
         });
 
         res.status(200).json({
