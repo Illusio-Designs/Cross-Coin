@@ -235,36 +235,36 @@ export default function Profile() {
                 ) : (
                   orders.map(order => (
                     <div className="order-card" key={order.id}>
-                      <div className="order-card-header">
-                        <div>
-                          <div className="order-meta">
+                  <div className="order-card-header">
+                    <div>
+                      <div className="order-meta">
                             <span>Order Placed<br /><b style={{ color: "#000000" }}>{new Date(order.createdAt).toLocaleDateString()}</b></span>
-                            <span>Total<br /><b style={{ color: "#000000" }}>${order.final_amount}</b></span>
+                            <span>Total<br /><b style={{ color: "#000000" }}>₹{order.final_amount}</b></span>
                             <span>Ship to<br /><b style={{ color: "#000000" }}>{user?.username}</b></span>
-                          </div>
-                        </div>
-                        <div className="order-actions">
-                          <span className="order-id">Order #{order.order_number}</span>
-                          <div className="order-actions-buttons">
-                            <a href="#" className="order-link">View order details</a>
-                            <span className="part">|</span>
-                            <a href="#" className="order-link">View Invoice</a>
-                          </div>
-                        </div>
                       </div>
+                    </div>
+                    <div className="order-actions"> 
+                          <span className="order-id">Order #{order.order_number}</span>
+                      <div className="order-actions-buttons">
+                        <a href="#" className="order-link">View order details</a>
+                        <span className="part">|</span>
+                        <a href="#" className="order-link">View Invoice</a>
+                      </div>
+                    </div>
+                  </div>
                       <div className="order-status">{order.status}</div>
                       {order.OrderItems && order.OrderItems.map(item => (
                         <div className="order-card-body" key={item.id}>
-                           <Image src={item.Product?.ProductImages?.[0]?.image_url || card1} alt={item.Product?.name} className="order-product-img" width={100} height={100} />
-                          <div className="order-product-info">
+                           <Image src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${item.Product?.ProductImages?.[0]?.image_url}`} alt={item.Product?.name} className="order-product-img" width={100} height={100} />
+                    <div className="order-product-info">
                             <div className="order-product-title">{item.Product?.name}</div>
                             <div className="order-product-desc">Quantity: {item.quantity}</div>
-                            <div className="order-card-buttons">
-                              <button className="order-btn buy-again">Buy Again</button>
-                              <button className="order-btn view-product">View your product</button>
-                            </div>
-                          </div>
-                        </div>
+                      <div className="order-card-buttons">
+                        <button className="order-btn buy-again">Buy Again</button>
+                        <button className="order-btn view-product">View your product</button>
+                      </div>
+                    </div>
+                  </div>
                       ))}
                     </div>
                   ))

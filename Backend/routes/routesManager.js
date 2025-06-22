@@ -32,7 +32,7 @@ router.use('/wishlist', wishlistRoutes);
 router.use('/shipping-addresses', shippingAddressRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/shipping-fees', shippingFeeRoutes);
-router.use('/order-status', orderStatusHistoryRoutes);
+router.use('/order-status-history', orderStatusHistoryRoutes);
 router.use('/seo', seoRoutes);
 router.use('/attributes', attributeRoutes);
 

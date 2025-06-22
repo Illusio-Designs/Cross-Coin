@@ -2,6 +2,47 @@ import { OrderStatusHistory } from '../model/orderStatusHistoryModel.js';
 import { Order } from '../model/orderModel.js';
 import { Op } from 'sequelize';
 import { sequelize } from '../config/db.js';
+import { User } from '../model/userModel.js';
+
+// Get all status history records (admin)
+export const getAllOrderStatusHistory = async (req, res) => {
+    try {
+        const { page = 1, limit = 10 } = req.query;
+        const offset = (page - 1) * limit;
+
+        const history = await OrderStatusHistory.findAndCountAll({
+            include: [
+                {
+                    model: Order,
+                    attributes: ['order_number'],
+                },
+                {
+                    model: User,
+                    as: 'UpdatedBy',
+                    attributes: ['username']
+                }
+            ],
+            order: [['createdAt', 'DESC']],
+            limit: parseInt(limit),
+            offset: parseInt(offset)
+        });
+
+        const totalPages = Math.ceil(history.count / limit);
+        
+        res.json({
+            history: history.rows,
+            pagination: {
+                total: history.count,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                totalPages
+            }
+        });
+    } catch (error) {
+        console.error('Error getting all order status history:', error);
+        res.status(500).json({ message: 'Failed to get order status history', error: error.message });
+    }
+};
 
 // Get status history for an order
 export const getOrderStatusHistory = async (req, res) => {

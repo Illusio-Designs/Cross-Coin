@@ -173,6 +173,45 @@ export const shippingAddressService = {
     }
 };
 
+// Order Services
+export const orderService = {
+    getAllOrders: async (params = {}) => {
+        try {
+            const response = await api.get('/api/orders', { params });
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
+
+    getOrderById: async (id) => {
+        try {
+            const response = await api.get(`/api/orders/${id}`);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
+
+    updateOrderStatus: async (id, statusData) => {
+        try {
+            const response = await api.put(`/api/orders/${id}/status`, statusData);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
+
+    getAllOrderStatusHistory: async (params = {}) => {
+        try {
+            const response = await api.get('/api/order-status-history', { params });
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    }
+};
+
 // Payment Services
 export const paymentService = {
     getAllPayments: async () => {
@@ -548,47 +587,6 @@ export const productService = {
             return response.data;
         } catch (error) {
             throw error.response?.data || error.message;
-        }
-    }
-};
-
-// Slider Services
-
-// Order Services
-export const orderService = {
-    getAllOrders: async () => {
-        try {
-            const response = await api.get('/api/orders');
-            return response.data;
-        } catch (error) {
-            throw handleApiError(error);
-        }
-    },
-
-    getOrderById: async (id) => {
-        try {
-            const response = await api.get(`/api/orders/${id}`);
-            return response.data;
-        } catch (error) {
-            throw handleApiError(error);
-        }
-    },
-
-    updateOrderStatus: async (id, statusData) => {
-        try {
-            const response = await api.put(`/api/orders/${id}/status`, statusData);
-            return response.data;
-        } catch (error) {
-            throw handleApiError(error);
-        }
-    },
-
-    deleteOrder: async (id) => {
-        try {
-            const response = await api.delete(`/api/orders/${id}`);
-            return response.data;
-        } catch (error) {
-            throw handleApiError(error);
         }
     }
 };

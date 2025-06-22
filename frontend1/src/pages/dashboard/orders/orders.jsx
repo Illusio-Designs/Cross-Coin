@@ -1,192 +1,182 @@
-import { useState } from "react";
-import TableWithControls from "@/components/common/TableWithControls";
-import Button from "@/components/common/Button";
+import React, { useState, useEffect, useCallback } from 'react';
+import { orderService } from '../../../services';
+import { debounce } from 'lodash';
+import Table from "@/components/common/Table";
+import Pagination from "@/components/common/Pagination";
 import Modal from "@/components/common/Modal";
-import InputField from "@/components/common/InputField";
-import DropdownSelect from "@/components/common/DropdownSelect";
-import DatePicker from "@/components/common/DatePicker";
+import Button from "@/components/common/Button";
+import '../../../styles/dashboard/orders.css';
+import "../../../styles/dashboard/seo.css"; // Reusing styles for consistency
 
-export default function Orders() {
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
+const Orders = () => {
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [filterValue, setFilterValue] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(10);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // Sample data - replace with your actual data
-  const orders = [
-    { 
-      id: 1, 
-      orderNumber: "ORD-001", 
-      customer: "John Doe", 
-      date: "2024-03-15", 
-      total: "$150.00", 
-      status: "pending",
-      items: [
-        { name: "Product 1", quantity: 2, price: "$50.00" },
-        { name: "Product 2", quantity: 1, price: "$50.00" }
-      ]
-    },
-    { 
-      id: 2, 
-      orderNumber: "ORD-002", 
-      customer: "Jane Smith", 
-      date: "2024-03-14", 
-      total: "$200.00", 
-      status: "completed",
-      items: [
-        { name: "Product 3", quantity: 1, price: "$200.00" }
-      ]
-    }
-  ];
+    const fetchOrders = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            // Fetch all orders, pagination will be handled client-side for now
+            const data = await orderService.getAllOrders({ limit: 1000 }); // A high limit to get all data for client-side filtering
+            setOrders(data.orders);
+        } catch (err) {
+            setError(err.message || 'Failed to fetch orders');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  const columns = [
-    { key: "orderNumber", header: "Order Number" },
-    { key: "customer", header: "Customer" },
-    { key: "date", header: "Date" },
-    { key: "total", header: "Total" },
-    { key: "status", header: "Status" }
-  ];
+    useEffect(() => {
+        fetchOrders();
+    }, []);
 
-  const filters = [
-    {
-      key: "status",
-      label: "Status",
-      options: [
-        { label: "All", value: "" },
-        { label: "Pending", value: "pending" },
-        { label: "Processing", value: "processing" },
-        { label: "Completed", value: "completed" },
-        { label: "Cancelled", value: "cancelled" }
-      ]
-    }
-  ];
+    const debouncedSearch = useCallback(debounce((searchTerm) => setFilterValue(searchTerm), 300), []);
+    const handleSearchChange = (e) => debouncedSearch(e.target.value);
 
-  const actions = [
-    {
-      variant: "primary",
-      icon: "eye",
-      tooltip: "View Order",
-      onClick: (row) => {
-        setSelectedOrder(row);
-        setIsViewModalOpen(true);
-      }
-    },
-    {
-      variant: "success",
-      icon: "check",
-      tooltip: "Mark as Completed",
-      onClick: (row) => {
-        // Handle status update
-        console.log("Mark as completed:", row);
-      },
-      disabled: (row) => row.status === "completed"
-    },
-    {
-      variant: "danger",
-      icon: "times",
-      tooltip: "Cancel Order",
-      onClick: (row) => {
-        // Handle cancellation
-        console.log("Cancel order:", row);
-      },
-      disabled: (row) => row.status === "cancelled" || row.status === "completed"
-    }
-  ];
+    const handleStatusChange = async (orderId, newStatus) => {
+        try {
+            await orderService.updateOrderStatus(orderId, { status: newStatus });
+            fetchOrders(); // Refresh all orders
+        } catch (err) {
+            alert(`Failed to update status: ${err.message || 'Unknown error'}`);
+        }
+    };
 
-  return (
-    <div className="dashboard-page">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">Orders Management</h1>
-        <div className="flex gap-2">
-          <DatePicker
-            placeholder="Start Date"
-            onChange={(date) => console.log("Start date:", date)}
-          />
-          <DatePicker
-            placeholder="End Date"
-            onChange={(date) => console.log("End date:", date)}
-          />
-        </div>
-      </div>
+    const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
-      <TableWithControls
-        columns={columns}
-        data={orders}
-        searchFields={["orderNumber", "customer"]}
-        filters={filters}
-        actions={actions}
-        itemsPerPage={10}
-      />
+    const filteredData = orders.filter(order => {
+        if (!filterValue) return true;
+        const searchTerm = filterValue.toLowerCase();
+        return (
+            order.order_number.toLowerCase().includes(searchTerm) ||
+            order.User?.username.toLowerCase().includes(searchTerm)
+        );
+    });
 
-      {/* View Order Modal */}
-      <Modal
-        isOpen={isViewModalOpen}
-        onClose={() => setIsViewModalOpen(false)}
-        title={`Order Details - ${selectedOrder?.orderNumber}`}
-      >
-        {selectedOrder && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h3 className="font-semibold mb-2">Order Information</h3>
-                <p><strong>Order Number:</strong> {selectedOrder.orderNumber}</p>
-                <p><strong>Customer:</strong> {selectedOrder.customer}</p>
-                <p><strong>Date:</strong> {selectedOrder.date}</p>
-                <p><strong>Status:</strong> {selectedOrder.status}</p>
-                <p><strong>Total:</strong> {selectedOrder.total}</p>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-2">Shipping Information</h3>
-                <p><strong>Address:</strong> 123 Main St, City, Country</p>
-                <p><strong>Phone:</strong> +1 234 567 890</p>
-                <p><strong>Email:</strong> customer@example.com</p>
-              </div>
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem).map((item, idx) => ({ ...item, serial_number: indexOfFirstItem + idx + 1 }));
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filterValue]);
+
+    const columns = [
+        { header: "S/N", accessor: "serial_number" },
+        { header: "Order ID", accessor: "order_number" },
+        { header: "Customer", cell: (row) => row.User?.username || 'N/A' },
+        { header: "Date", cell: (row) => formatDate(row.createdAt) },
+        { header: "Total", cell: (row) => `₹${parseFloat(row.final_amount).toFixed(2)}` },
+        { header: "Payment", cell: (row) => <span className={`status-badge status-${row.payment_status}`}>{row.payment_status}</span> },
+        { header: "Status", cell: (row) => <span className={`status-badge status-${row.status}`}>{row.status}</span> },
+        {
+            header: "Actions",
+            cell: (row) => (
+                <div className="adding-button">
+                    <button className="action-btn edit" title="View Details" onClick={() => { setSelectedOrder(row); setIsViewModalOpen(true); }}>
+                         <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                        View
+                    </button>
+                    <select value={row.status} onChange={(e) => handleStatusChange(row.id, e.target.value)} className="action-btn status-select-action">
+                        <option value="pending">Pending</option>
+                        <option value="processing">Processing</option>
+                        <option value="shipped">Shipped</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+            )
+        }
+    ];
+
+    return (
+        <>
+            <div className="dashboard-page">
+                <div className="seo-header-container">
+                    <h1 className="seo-title">Manage Orders</h1>
+                    <div className="adding-button">
+                        <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
+                            <div className="modern-searchbar-group">
+                                <span className="modern-searchbar-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </span>
+                                <input type="text" className="modern-searchbar-input" placeholder="Search" onChange={handleSearchChange} />
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div className="seo-table-container">
+                    {loading ? <div className="seo-loading">Loading...</div> :
+                        <>
+                            {filteredData.length === 0 ? <div className="seo-empty-state">No orders found.</div> :
+                                <>
+                                    <Table columns={columns} data={currentItems} className="w-full" striped={true} hoverable={true} />
+                                    {filteredData.length > itemsPerPage && (
+                                        <div className="seo-pagination-container">
+                                            <Pagination currentPage={currentPage} totalItems={filteredData.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} />
+                                        </div>
+                                    )}
+                                </>
+                            }
+                        </>
+                    }
+                </div>
             </div>
 
-            <div>
-              <h3 className="font-semibold mb-2">Order Items</h3>
-              <table className="w-full">
-                <thead>
-                  <tr>
-                    <th className="text-left">Item</th>
-                    <th className="text-right">Quantity</th>
-                    <th className="text-right">Price</th>
-                    <th className="text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedOrder.items.map((item, index) => (
-                    <tr key={index}>
-                      <td>{item.name}</td>
-                      <td className="text-right">{item.quantity}</td>
-                      <td className="text-right">{item.price}</td>
-                      <td className="text-right">
-                        ${(parseFloat(item.price.replace("$", "")) * item.quantity).toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title={`Order Details: #${selectedOrder?.order_number}`}>
+                {selectedOrder && (
+                    <div className="order-details-modal">
+                        <div className="order-info-grid">
+                            <div><strong>Customer:</strong> {selectedOrder.User?.username}</div>
+                            <div><strong>Date:</strong> {formatDate(selectedOrder.createdAt)}</div>
+                            <div><strong>Payment:</strong> {selectedOrder.payment_type} ({selectedOrder.payment_status})</div>
+                            <div><strong>Status:</strong> {selectedOrder.status}</div>
+                        </div>
+                        <h4>Items Ordered</h4>
+                        <table className="items-table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {selectedOrder.OrderItems.map(item => (
+                                    <tr key={item.id}>
+                                        <td>{item.Product?.name || 'N/A'}</td>
+                                        <td>{item.quantity}</td>
+                                        <td>₹{parseFloat(item.price).toFixed(2)}</td>
+                                        <td>₹{parseFloat(item.subtotal).toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        <div className="order-summary-grid">
+                            <div><strong>Subtotal:</strong> ₹{parseFloat(selectedOrder.total_amount).toFixed(2)}</div>
+                            <div><strong>Shipping:</strong> ₹{parseFloat(selectedOrder.shipping_fee).toFixed(2)}</div>
+                            <div><strong>Discount:</strong> - ₹{parseFloat(selectedOrder.discount_amount || 0).toFixed(2)}</div>
+                            <div><strong>Total:</strong> ₹{parseFloat(selectedOrder.final_amount).toFixed(2)}</div>
+                        </div>
+                         <div className="modal-footer">
+                            <Button variant="secondary" onClick={() => setIsViewModalOpen(false)}>Close</Button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
+        </>
+    );
+};
 
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => setIsViewModalOpen(false)}
-              >
-                Close
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  // Handle print or export
-                  console.log("Print/Export order:", selectedOrder);
-                }}
-              >
-                Print/Export
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
-    </div>
-  );
-} 
+export default Orders; 
