@@ -87,7 +87,7 @@ const Header = () => {
             <FiHeart />
             <span className="header__badge">{wishlistCount}</span>
           </Link>
-          <Link href="/Cart" className="header__cart">
+          <Link href="/UnifiedCheckout" className="header__cart">
             <BsCart />
             <span className="header__badge">{cartCount}</span>
           </Link>
