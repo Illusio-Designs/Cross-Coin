@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const paymentMethods = [
+const allPaymentMethods = [
     {
       label: "UPI",
       value: "upi",
@@ -27,6 +27,8 @@ const paymentMethods = [
       ],
     },
   ];
+  
+const paymentMethods = allPaymentMethods.filter(method => method.value !== 'cod');
 
 export default function PaymentStep({ paymentDetails, setPaymentDetails }) {
 

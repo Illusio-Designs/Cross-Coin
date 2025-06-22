@@ -17,6 +17,7 @@ export default function UnifiedCheckout() {
   const router = useRouter();
 
   const [shippingAddress, setShippingAddress] = useState(null);
+  const [shippingFee, setShippingFee] = useState(null);
   const [paymentDetails, setPaymentDetails] = useState({ method: 'upi', upiId: '' });
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -57,14 +58,28 @@ export default function UnifiedCheckout() {
     sessionStorage.setItem('shippingAddress', JSON.stringify(address));
   };
 
+  const handleSelectFee = (fee) => {
+    setShippingFee(fee);
+  }
+
   const goToNextStep = () => {
-    if (step === 'cart') setStep('shipping');
-    else if (step === 'shipping') {
+    if (step === 'cart') {
+        setStep('shipping');
+    } else if (step === 'shipping') {
         if (!shippingAddress) {
             alert('Please select a shipping address.');
             return;
         }
-        setStep('payment');
+        if (!shippingFee) {
+            alert('Please select a delivery method.');
+            return;
+        }
+        // If COD is selected, place order directly. Otherwise, proceed to payment.
+        if (shippingFee.orderType === 'cod') {
+            handlePlaceOrder();
+        } else {
+            setStep('payment');
+        }
     }
   };
   
@@ -74,15 +89,19 @@ export default function UnifiedCheckout() {
   };
 
   const handlePlaceOrder = () => {
-    if (paymentDetails.method === 'upi' && !paymentDetails.upiId) {
-      alert('Please enter UPI ID');
-      return;
+    // For prepaid, validate payment details. For COD, skip this.
+    if (shippingFee?.orderType !== 'cod') {
+        if (paymentDetails.method === 'upi' && !paymentDetails.upiId) {
+            alert('Please enter UPI ID');
+            return;
+        }
     }
 
     console.log("Placing order with:", {
         shippingAddress,
-        paymentDetails,
-        cartItems
+        paymentDetails: shippingFee?.orderType === 'cod' ? { method: 'cod' } : paymentDetails,
+        cartItems,
+        shippingFee
     });
 
     setIsProcessing(true);
@@ -100,7 +119,12 @@ export default function UnifiedCheckout() {
       case 'cart':
         return <CartStep />;
       case 'shipping':
-        return <ShippingStep onSelectAddress={handleSelectAddress} selectedAddress={shippingAddress} />;
+        return <ShippingStep 
+                    onSelectAddress={handleSelectAddress} 
+                    selectedAddress={shippingAddress}
+                    onSelectFee={handleSelectFee}
+                    selectedFee={shippingFee}
+                />;
       case 'payment':
         return <PaymentStep paymentDetails={paymentDetails} setPaymentDetails={setPaymentDetails} />;
       default:
@@ -121,6 +145,7 @@ export default function UnifiedCheckout() {
             onNext={goToNextStep}
             onPlaceOrder={handlePlaceOrder}
             shippingAddress={shippingAddress}
+            shippingFee={shippingFee}
             isProcessing={isProcessing}
           />
         </div>

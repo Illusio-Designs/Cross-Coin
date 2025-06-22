@@ -89,7 +89,7 @@ export default function ShippingFees() {
     },
     {
       header: "Fee",
-      accessor: row => `$${parseFloat(row.fee).toFixed(2)}`
+      accessor: row => `₹${parseFloat(row.fee).toFixed(2)}`
     },
     {
       header: "Actions",
@@ -216,7 +216,7 @@ export default function ShippingFees() {
               <input
                 type="text"
                 className="modern-searchbar-input"
-                placeholder="Search by Order Type or Fee"
+                placeholder="Search"
                 onChange={handleSearchChange}
                 defaultValue={filterValue}
               />

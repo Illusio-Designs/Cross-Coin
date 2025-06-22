@@ -17,7 +17,8 @@ export const ProductVariation = sequelize.define('ProductVariation', {
     },
     sku: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: false,
+        unique: 'idx_sku'
     },
     price: {
         type: DataTypes.DECIMAL(10, 2),
@@ -61,17 +62,10 @@ export const ProductVariation = sequelize.define('ProductVariation', {
 }, {
     tableName: 'product_variations',
     timestamps: true,
-    indexes: [] // Remove all indexes initially
-});
-
-// Add indexes after model definition
-ProductVariation.addHook('afterSync', async () => {
-    try {
-        // Add unique constraint on SKU
-        await sequelize.query('ALTER TABLE product_variations ADD UNIQUE INDEX idx_sku (sku)');
-        // Add index on productId
-        await sequelize.query('ALTER TABLE product_variations ADD INDEX idx_product_id (productId)');
-    } catch (error) {
-        console.error('Error adding indexes:', error);
-    }
+    indexes: [
+        {
+            name: 'idx_product_id',
+            fields: ['productId']
+        }
+    ]
 }); 

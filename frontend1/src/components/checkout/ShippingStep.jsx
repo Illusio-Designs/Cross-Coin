@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { createShippingAddress, getUserShippingAddresses, updateShippingAddress, deleteShippingAddress, setDefaultShippingAddress } from '../../services/publicindex';
+import { createShippingAddress, getUserShippingAddresses, updateShippingAddress, deleteShippingAddress, setDefaultShippingAddress, getShippingFees } from '../../services/publicindex';
 import { FaPlus, FaTrash, FaEdit } from "react-icons/fa";
 
-export default function ShippingStep({ onSelectAddress, selectedAddress }) {
+export default function ShippingStep({ onSelectAddress, selectedAddress, onSelectFee, selectedFee }) {
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -11,6 +11,40 @@ export default function ShippingStep({ onSelectAddress, selectedAddress }) {
   });
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
+  const [shippingFees, setShippingFees] = useState([]);
+
+  useEffect(() => {
+    const fetchInitialData = async () => {
+        setLoading(true);
+        try {
+            const [addressData, feeData] = await Promise.all([
+                getUserShippingAddresses(),
+                getShippingFees()
+            ]);
+            
+            setAddresses(addressData);
+            if (addressData.length === 0) {
+                setShowForm(true);
+            } else if (!selectedAddress) {
+                const defaultAddress = addressData.find(a => a.isDefault);
+                if (defaultAddress) onSelectAddress(defaultAddress);
+            }
+
+            // Ensure shippingFees is always an array
+            const fees = Array.isArray(feeData) ? feeData : (feeData?.shippingFees || feeData?.fees || []);
+            console.log('Shipping fees data:', fees); // Debug log
+            setShippingFees(fees);
+            if (!selectedFee && fees.length > 0) {
+                onSelectFee(fees.find(f => f.isDefault) || fees[0]);
+            }
+        } catch (err) {
+            setError(err.message || "Failed to load shipping data");
+            setShippingFees([]); // Set empty array on error
+        }
+        setLoading(false);
+    };
+    fetchInitialData();
+  }, []);
 
   const fetchAddresses = async () => {
     setLoading(true);
@@ -25,10 +59,6 @@ export default function ShippingStep({ onSelectAddress, selectedAddress }) {
     }
     setLoading(false);
   };
-
-  useEffect(() => {
-    fetchAddresses();
-  }, []);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -96,9 +126,9 @@ export default function ShippingStep({ onSelectAddress, selectedAddress }) {
           >
             <div className="address-card-body">
                 <h3>{address.address} {address.isDefault && "(Default)"}</h3>
-                <p>{address.city}, {address.state} {address.postalCode}</p>
+                <p>{address.city}, {address.state} {address.postal_code}</p>
                 <p>{address.country}</p>
-                <p>Phone: {address.phoneNumber}</p>
+                <p>Phone: {address.phone_number}</p>
             </div>
             <div className="address-card-actions">
                 <button onClick={(e) => {e.stopPropagation(); handleEdit(address)}}><FaEdit/></button>
@@ -158,6 +188,41 @@ export default function ShippingStep({ onSelectAddress, selectedAddress }) {
             </form>
           </div>
       )}
+
+    <div className="delivery-methods-section">
+        <h4>Delivery Methods</h4>
+        {error && <p className="error-message">{error}</p>}
+        <div className="delivery-methods">
+            {loading ? <p>Loading delivery methods...</p> : (Array.isArray(shippingFees) ? shippingFees.map(fee => (
+                <label 
+                    key={fee.id}
+                    className={`delivery-card ${selectedFee?.id === fee.id ? 'selected' : ''}`}
+                >
+                    <input 
+                        type="radio" 
+                        name="delivery" 
+                        checked={selectedFee?.id === fee.id}
+                        onChange={() => onSelectFee(fee)}
+                    />
+                    <div>
+                        <div className="delivery-title">
+                            {fee.orderType === 'cod' ? 'Cash on Delivery' : 
+                             fee.orderType === 'prepaid' ? 'Prepaid Delivery' : 
+                             fee.orderType}
+                        </div>
+                        <div className="delivery-desc">
+                            {fee.orderType === 'cod' ? 'Pay when you receive your order' : 
+                             fee.orderType === 'prepaid' ? 'Pay online before delivery' : 
+                             'Standard delivery'}
+                        </div>
+                    </div>
+                    <div className={`delivery-fee ${parseFloat(fee.fee || 0) === 0 ? 'free' : 'paid'}`}>
+                        {parseFloat(fee.fee || 0) === 0 ? 'Free' : `₹${parseFloat(fee.fee || 0).toFixed(2)}`}
+                    </div>
+                </label>
+            )) : <p>No delivery methods available</p>)}
+        </div>
+      </div>
     </div>
   )
 } 
