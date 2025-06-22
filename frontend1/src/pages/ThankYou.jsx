@@ -1,34 +1,54 @@
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { useRouter } from "next/router";
+import "../styles/pages/ThankYou.css"; // Import new stylesheet
 
 export default function ThankYou() {
   const router = useRouter();
+  const { order_number } = router.query;
+
+  // Calculate estimated delivery date (e.g., 5 days from now)
+  const getDeliveryDate = () => {
+    const date = new Date();
+    date.setDate(date.getDate() + 5);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
 
   const handleShopAgain = () => {
     router.push('/Products');
+  };
+
+  const handleTrackOrder = () => {
+    router.push('/profile'); // Redirect to profile page
   };
 
   return (
     <>
       <Header />
       <div className="thankyou-container">
-        <div className="thankyou-cart-icon">
-          {/* Simple SVG cart icon */}
-          <svg width="100%" height="100%" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="16" y="20" width="32" height="20" rx="4" fill="#E94B5A"/>
-            <circle cx="24" cy="48" r="4" fill="#E94B5A"/>
-            <circle cx="40" cy="48" r="4" fill="#E94B5A"/>
-            <rect x="20" y="16" width="24" height="8" rx="4" fill="#F7C7CE"/>
-          </svg>
+        <div className="thankyou-icon-container">
+            <span className="thankyou-icon">✓</span>
         </div>
-        <h1>Thanks for the order</h1>
+        <h1>Thank you for your order!</h1>
+        {order_number && (
+          <p className="order-confirmation">
+            Your order <strong>#{order_number}</strong> has been placed.
+          </p>
+        )}
         <p className="thankyou-desc">
-          Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry.
+          An email confirmation has been sent to your registered email address.
         </p>
+        <div className="delivery-info">
+            Estimated delivery by <strong>{getDeliveryDate()}</strong>
+        </div>
         <div className="thankyou-buttons">
-          <button className="shop-again" onClick={handleShopAgain}>Shop Again</button>
-          <button className="track-order">Track Order</button>
+          <button className="shop-again" onClick={handleShopAgain}>Continue Shopping</button>
+          <button className="track-order" onClick={handleTrackOrder}>Track Your Order</button>
         </div>
       </div>
       <Footer />

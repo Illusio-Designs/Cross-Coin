@@ -29,7 +29,7 @@ const connectDB = async () => {
         console.log('Database connection established successfully.');
         
         // Sync the database with alterations to apply schema changes
-        await syncDatabase(false);
+        await syncDatabase(true);
         console.log('Database synchronized on connection.');
     } catch (error) {
         console.error('Unable to connect to the database:', error);

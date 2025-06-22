@@ -9,6 +9,7 @@ import ShippingStep from '../components/checkout/ShippingStep';
 import PaymentStep from '../components/checkout/PaymentStep';
 import OrderSummary from '../components/checkout/OrderSummary';
 import { useAuth } from "../context/AuthContext";
+import { createOrder } from "../services/publicindex";
 
 export default function UnifiedCheckout() {
   const [step, setStep] = useState('cart'); // cart, shipping, payment
@@ -20,6 +21,7 @@ export default function UnifiedCheckout() {
   const [shippingFee, setShippingFee] = useState(null);
   const [paymentDetails, setPaymentDetails] = useState({ method: 'upi', upiId: '' });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [orderPlaced, setOrderPlaced] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -28,10 +30,10 @@ export default function UnifiedCheckout() {
   }, [isAuthenticated, router]);
 
   useEffect(() => {
-    if (cartItems.length === 0 && !isProcessing) {
+    if (cartItems.length === 0 && !isProcessing && !orderPlaced) {
       router.push('/Products');
     }
-  }, [cartItems, router, isProcessing]);
+  }, [cartItems, router, isProcessing, orderPlaced]);
 
   useEffect(() => {
     const savedAddress = sessionStorage.getItem('shippingAddress');
@@ -88,7 +90,7 @@ export default function UnifiedCheckout() {
     else if (step === 'shipping') setStep('cart');
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     // For prepaid, validate payment details. For COD, skip this.
     if (shippingFee?.orderType !== 'cod') {
         if (paymentDetails.method === 'upi' && !paymentDetails.upiId) {
@@ -97,21 +99,33 @@ export default function UnifiedCheckout() {
         }
     }
 
-    console.log("Placing order with:", {
-        shippingAddress,
-        paymentDetails: shippingFee?.orderType === 'cod' ? { method: 'cod' } : paymentDetails,
-        cartItems,
-        shippingFee
-    });
-
     setIsProcessing(true);
-    setTimeout(() => {
-      clearCart();
-      sessionStorage.removeItem('shippingAddress');
-      sessionStorage.removeItem('appliedCoupon');
-      router.push('/ThankYou');
-      setIsProcessing(false);
-    }, 2000);
+
+    const orderData = {
+        shipping_address_id: shippingAddress.id,
+        items: cartItems.map(item => ({
+            product_id: item.productId,
+            variation_id: item.variation?.id || null,
+            quantity: item.quantity
+        })),
+        payment_type: shippingFee?.orderType === 'cod' ? 'cod' : paymentDetails.method,
+        notes: '' // You can add notes if you have a field for it
+    };
+
+    try {
+        const result = await createOrder(orderData);
+        console.log("Order placed successfully", result);
+        setOrderPlaced(true);
+        clearCart();
+        sessionStorage.removeItem('shippingAddress');
+        sessionStorage.removeItem('appliedCoupon');
+        router.push(`/ThankYou?order_number=${result.order.order_number}`);
+    } catch (error) {
+        console.error("Order placement failed in component:", error);
+        alert(`Order placement failed: ${error.message || 'Unknown error'}`);
+    } finally {
+        setIsProcessing(false);
+    }
   };
 
   const renderStep = () => {
