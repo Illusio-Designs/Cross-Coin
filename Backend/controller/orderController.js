@@ -10,6 +10,7 @@ import { User } from '../model/userModel.js';
 import { ProductImage } from '../model/productImageModel.js';
 import { Op } from 'sequelize';
 import { sequelize } from '../config/db.js';
+import { createShiprocketOrder, getShiprocketTracking, getShiprocketLabel, requestShiprocketPickup, cancelShiprocketShipment } from '../services/shiprocketService.js';
 
 // Generate unique order number
 const generateOrderNumber = () => {
@@ -170,6 +171,54 @@ export const createOrder = async (req, res) => {
                 { model: OrderStatusHistory, order: [['updated_at', 'DESC']] }
             ]
         });
+
+        // Shiprocket integration
+        try {
+            // Map your order data to Shiprocket's required format
+            const shiprocketOrderPayload = {
+                order_id: createdOrder.order_number,
+                order_date: new Date().toISOString().slice(0, 10),
+                pickup_location: 'Default', // You may want to make this dynamic
+                billing_customer_name: createdOrder.User.username,
+                billing_last_name: '',
+                billing_address: createdOrder.ShippingAddress?.address_line1 || '',
+                billing_address_2: createdOrder.ShippingAddress?.address_line2 || '',
+                billing_city: createdOrder.ShippingAddress?.city || '',
+                billing_pincode: createdOrder.ShippingAddress?.postal_code || '',
+                billing_state: createdOrder.ShippingAddress?.state || '',
+                billing_country: createdOrder.ShippingAddress?.country || '',
+                billing_email: createdOrder.User.email,
+                billing_phone: createdOrder.ShippingAddress?.phone || '',
+                shipping_is_billing: true,
+                order_items: createdOrder.OrderItems.map(item => ({
+                    name: item.Product.name,
+                    sku: item.Product.sku || '',
+                    units: item.quantity,
+                    selling_price: item.price,
+                    discount: item.discount || 0
+                })),
+                payment_method: createdOrder.payment_type === 'cod' ? 'COD' : 'Prepaid',
+                sub_total: createdOrder.total_amount,
+                length: 10, // Default, update as needed
+                breadth: 10,
+                height: 10,
+                weight: 1 // Default, update as needed
+            };
+            const shiprocketResponse = await createShiprocketOrder(shiprocketOrderPayload);
+            // Store shiprocket order and shipment IDs in the local order
+            await createdOrder.update({
+                shiprocket_order_id: shiprocketResponse.order_id || null,
+                shiprocket_shipment_id: (shiprocketResponse.shipments && shiprocketResponse.shipments[0]?.shipment_id) || null
+            });
+            console.log('Shiprocket order created:', shiprocketResponse);
+
+            if (createdOrder.shiprocket_shipment_id) {
+                const pickupRes = await requestShiprocketPickup([createdOrder.shiprocket_shipment_id]);
+                console.log('Shiprocket pickup requested:', pickupRes);
+            }
+        } catch (shipErr) {
+            console.error('Failed to create Shiprocket order:', shipErr?.response?.data || shipErr.message);
+        }
 
         res.status(201).json({
             message: 'Order created successfully',
@@ -454,6 +503,15 @@ export const cancelOrder = async (req, res) => {
             }
         }
         
+        if (order.shiprocket_shipment_id) {
+            try {
+                const cancelRes = await cancelShiprocketShipment([order.shiprocket_shipment_id]);
+                console.log('Shiprocket shipment cancelled:', cancelRes);
+            } catch (err) {
+                console.error('Failed to cancel Shiprocket shipment:', err?.response?.data || err.message);
+            }
+        }
+        
         await transaction.commit();
         
         res.json({
@@ -485,6 +543,38 @@ export const getOrderStats = async (req, res) => {
     } catch (error) {
         console.error('Error fetching order statistics:', error);
         res.status(500).json({ message: 'Failed to fetch order statistics', error: error.message });
+    }
+};
+
+// Get Shiprocket tracking info for an order
+export const getShiprocketTrackingForOrder = async (req, res) => {
+    try {
+        const { id } = req.params; // order id
+        const order = await Order.findByPk(id);
+        if (!order || !order.shiprocket_shipment_id) {
+            return res.status(404).json({ message: 'Order or Shiprocket shipment not found' });
+        }
+        const tracking = await getShiprocketTracking(order.shiprocket_shipment_id);
+        res.json({ tracking });
+    } catch (error) {
+        console.error('Error fetching Shiprocket tracking:', error);
+        res.status(500).json({ message: 'Failed to fetch Shiprocket tracking', error: error.message });
+    }
+};
+
+// Get Shiprocket label for an order
+export const getShiprocketLabelForOrder = async (req, res) => {
+    try {
+        const { id } = req.params; // order id
+        const order = await Order.findByPk(id);
+        if (!order || !order.shiprocket_shipment_id) {
+            return res.status(404).json({ message: 'Order or Shiprocket shipment not found' });
+        }
+        const labelData = await getShiprocketLabel(order.shiprocket_shipment_id);
+        res.json({ label_url: labelData.label_url });
+    } catch (error) {
+        console.error('Error fetching Shiprocket label:', error);
+        res.status(500).json({ message: 'Failed to fetch Shiprocket label', error: error.message });
     }
 };
 

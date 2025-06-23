@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { Sequelize } from 'sequelize';
+import { sequelize } from '../config/db.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -7,32 +7,10 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Create Sequelize instance
-const sequelize = new Sequelize(
-    process.env.DB_DATABASE,
-    process.env.DB_USER,
-    process.env.DB_PASSWORD,
-    {
-        host: process.env.DB_HOST,
-        dialect: process.env.DB_DIALECT || 'mysql',
-        logging: console.log,
-        pool: {
-            max: 5,
-            min: 0,
-            acquire: 30000,
-            idle: 10000
-        },
-        define: {
-            charset: 'utf8mb4',
-            collate: 'utf8mb4_general_ci',
-            engine: 'InnoDB'
-        }
-    }
-);
-
 export const setupDatabase = async () => {
     try {
         // First, try to connect without selecting a database
+        const { Sequelize } = await import('sequelize');
         const tempSequelize = new Sequelize('', process.env.DB_USER, process.env.DB_PASSWORD, {
             host: process.env.DB_HOST,
             dialect: process.env.DB_DIALECT || 'mysql',
@@ -40,14 +18,14 @@ export const setupDatabase = async () => {
         });
 
         // Create database if it doesn't exist with proper collation
-        await tempSequelize.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_DATABASE}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;`);
+        await tempSequelize.query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_DATABASE} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;`);
         await tempSequelize.close();
 
         // Now connect to the specific database
         await sequelize.authenticate();
         console.log('Database connection established successfully.');
         
-        // Load models and create/alter tables
+        // Load models
         console.log('Loading models and creating/altering tables...');
         
         const modelDir = path.join(__dirname, '..', 'model');
@@ -67,8 +45,8 @@ export const setupDatabase = async () => {
                 console.warn(`Skipping non-model file or model without sync method: ${file}`);
             }
         }
-        
-        // Apply associations
+
+        // Apply associations BEFORE syncing
         console.log('Applying model associations...');
         try {
             const associationsPath = path.join(__dirname, '..', 'model', 'associations.js');
@@ -80,15 +58,15 @@ export const setupDatabase = async () => {
             }
         } catch (assocError) {
             console.error('❌ Error applying associations:', assocError.message);
-            throw assocError;
         }
 
-        // Sync all tables at once
+        // Sync all tables at once (this creates all tables and relationships)
+        // AUTOMATION: Always alter tables to match the latest model definitions (auto-migration)
         console.log('Syncing all tables...');
         await sequelize.sync({ alter: true, hooks: false });
         console.log('✓ All tables synced');
 
-        // Create admin user if not exists
+        // Now it's safe to create the admin user
         if (models['User']) {
             const bcrypt = await import('bcryptjs');
             const adminEmail = 'admin@admin.com';
@@ -124,15 +102,22 @@ export const setupDatabase = async () => {
     }
 };
 
-// If the script is run directly, execute the setup
-if (import.meta.url.startsWith('file:') && process.argv[1] === fileURLToPath(import.meta.url)) {
-    setupDatabase()
-        .then(() => {
-            console.log("Database setup script finished.");
-            process.exit(0);
-        })
-        .catch((error) => {
-            console.error("Database setup script failed:", error);
-            process.exit(1);
+export const findAvailablePort = async (startPort) => {
+    const net = await import('net');
+    return new Promise((resolve, reject) => {
+        const server = net.createServer();
+        server.unref();
+        server.on('error', (err) => {
+            if (err.code === 'EADDRINUSE') {
+                resolve(findAvailablePort(startPort + 1));
+            } else {
+                reject(err);
+            }
         });
-} 
+        server.listen(startPort, () => {
+            server.close(() => {
+                resolve(startPort);
+            });
+        });
+    });
+}; 

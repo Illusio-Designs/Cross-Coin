@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
-import { sequelize, connectDB } from './config/db.js';
+import { sequelize } from './config/db.js';
 import routesManager from './routes/routesManager.js';
 import passport from './config/passport.js';
 import session from 'express-session';
@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { initializeSeoData } from './utils/initializeSeoData.js';
 import fs from 'fs';
+import { setupDatabase } from './scripts/setupDatabase.js';
 
 // Get the directory name of the current module
 const __filename = fileURLToPath(import.meta.url);
@@ -109,10 +110,10 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
     try {
-        // Connect and sync the database
-        await connectDB();
+        // Create all tables
+        await setupDatabase();
 
-        // Initialize default SEO data
+        // Now it's safe to initialize SEO data
         await initializeSeoData();
         
         // Start server

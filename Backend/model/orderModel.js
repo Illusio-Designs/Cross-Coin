@@ -64,6 +64,14 @@ export const Order = sequelize.define('Order', {
     notes: {
         type: DataTypes.TEXT,
         allowNull: true
+    },
+    shiprocket_order_id: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    shiprocket_shipment_id: {
+        type: DataTypes.STRING,
+        allowNull: true
     }
 }, {
     tableName: 'orders',

@@ -6,7 +6,9 @@ import {
     updateOrderStatus,
     cancelOrder,
     getUserOrders,
-    getOrderStats
+    getOrderStats,
+    getShiprocketTrackingForOrder,
+    getShiprocketLabelForOrder
 } from '../controller/orderController.js';
 import { isAuthenticated, authorize } from '../middleware/authMiddleware.js';
 
@@ -17,6 +19,8 @@ router.post('/', isAuthenticated, createOrder);
 router.get('/my-orders', isAuthenticated, getUserOrders);
 router.get('/:id', isAuthenticated, getOrder);
 router.put('/:id/cancel', isAuthenticated, cancelOrder);
+router.get('/:id/shiprocket/tracking', isAuthenticated, getShiprocketTrackingForOrder);
+router.get('/:id/shiprocket/label', isAuthenticated, getShiprocketLabelForOrder);
 
 // Admin routes
 router.get('/', isAuthenticated, authorize(['admin']), getAllOrders);
