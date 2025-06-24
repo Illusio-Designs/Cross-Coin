@@ -537,12 +537,16 @@ export const productService = {
         }
     },
 
-    getAllProducts: async () => {
+    getAllProducts: async (page = 1, limit = 10, search = '') => {
         try {
-            const response = await api.get('/api/products');
+            const params = { page, limit, search };
+            if (!search) {
+                delete params.search;
+            }
+            const response = await api.get('/api/products', { params });
             return response.data;
         } catch (error) {
-            throw error.response?.data || error.message;
+            handleApiError(error);
         }
     },
 

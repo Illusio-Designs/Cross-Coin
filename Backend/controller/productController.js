@@ -355,44 +355,38 @@ export const createProduct = async (req, res) => {
 // Get all products
 export const getAllProducts = async (req, res) => {
     try {
-        const { category, search, sort, page = 1, limit = 10 } = req.query;
+        const { search, page = 1, limit = 10 } = req.query;
         
-        // Build filter
-        const filter = {};
-        if (category) filter.categoryId = category;
+        const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+        // Build filter options
+        const whereOptions = {};
         if (search) {
-            filter[Op.or] = [
+            whereOptions[Op.or] = [
                 { name: { [Op.iLike]: `%${search}%` } },
                 { description: { [Op.iLike]: `%${search}%` } }
             ];
         }
 
-        // Build sort options
-        const sortOptions = [];
-        if (sort) {
-            const [field, order] = sort.split(':');
-            sortOptions.push([field, order.toUpperCase()]);
-        }
-
-        // Get products with pagination
-        const products = await Product.findAndCountAll({
-            where: filter,
-            order: sortOptions,
-            limit: parseInt(limit),
-            offset: (parseInt(page) - 1) * parseInt(limit),
+        const { count, rows } = await Product.findAndCountAll({
+            where: whereOptions,
+            limit: parseInt(limit, 10),
+            offset: offset,
+            order: [['createdAt', 'DESC']],
             include: [
                 { model: Category },
                 { model: ProductVariation, as: 'ProductVariations' },
                 { model: ProductImage, as: 'ProductImages' },
                 { model: ProductSEO, as: 'ProductSEO' }
-            ]
+            ],
+            distinct: true
         });
 
         res.json({
-            products: products.rows.map(formatProductResponse),
-            total: products.count,
-            page: parseInt(page),
-            totalPages: Math.ceil(products.count / parseInt(limit))
+            products: rows.map(formatProductResponse),
+            totalProducts: count,
+            currentPage: parseInt(page, 10),
+            totalPages: Math.ceil(count / parseInt(limit, 10))
         });
     } catch (error) {
         console.error('Error getting products:', error);
