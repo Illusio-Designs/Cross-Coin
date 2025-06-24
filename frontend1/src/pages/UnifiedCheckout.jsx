@@ -9,7 +9,7 @@ import ShippingStep from '../components/checkout/ShippingStep';
 import PaymentStep from '../components/checkout/PaymentStep';
 import OrderSummary from '../components/checkout/OrderSummary';
 import { useAuth } from "../context/AuthContext";
-import { createOrder } from "../services/publicindex";
+import { createOrder, createRazorpayOrder } from "../services/publicindex";
 
 export default function UnifiedCheckout() {
   const [step, setStep] = useState('cart'); // cart, shipping, payment
@@ -90,6 +90,19 @@ export default function UnifiedCheckout() {
     else if (step === 'shipping') setStep('cart');
   };
 
+  // Helper to load Razorpay script
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (document.getElementById('razorpay-script')) return resolve(true);
+      const script = document.createElement('script');
+      script.id = 'razorpay-script';
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handlePlaceOrder = async () => {
     // For prepaid, validate payment details. For COD, skip this.
     if (shippingFee?.orderType !== 'cod') {
@@ -113,17 +126,68 @@ export default function UnifiedCheckout() {
     };
 
     try {
-        const result = await createOrder(orderData);
-        console.log("Order placed successfully", result);
-        setOrderPlaced(true);
-        clearCart();
-        sessionStorage.removeItem('shippingAddress');
-        sessionStorage.removeItem('appliedCoupon');
-        router.push(`/ThankYou?order_number=${result.order.order_number}`);
+        if (shippingFee?.orderType === 'cod') {
+            // COD: Place order directly
+            const orderResult = await createOrder(orderData);
+            setOrderPlaced(true);
+            clearCart();
+            sessionStorage.removeItem('shippingAddress');
+            sessionStorage.removeItem('appliedCoupon');
+            router.push(`/ThankYou?order_number=${orderResult.order.order_number}`);
+        } else {
+            // Prepaid: Razorpay flow
+            const scriptLoaded = await loadRazorpayScript();
+            if (!scriptLoaded) {
+                alert('Failed to load Razorpay SDK. Please try again.');
+                setIsProcessing(false);
+                return;
+            }
+            // Create Razorpay order from backend
+            const amount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0) + (shippingFee?.amount || 0);
+            const razorpayOrder = await createRazorpayOrder({ amount, currency: 'INR' });
+            const options = {
+                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, // Set this in your .env file
+                amount: razorpayOrder.amount,
+                currency: razorpayOrder.currency,
+                name: 'Cross Coin',
+                description: 'Order Payment',
+                order_id: razorpayOrder.id,
+                handler: async function (response) {
+                    // On payment success, place order with payment details
+                    const paymentDetailsWithRazorpay = {
+                        ...paymentDetails,
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_signature: response.razorpay_signature
+                    };
+                    try {
+                        const razorpayOrderResult = await createOrder({ ...orderData, payment_details: paymentDetailsWithRazorpay });
+                        setOrderPlaced(true);
+                        clearCart();
+                        sessionStorage.removeItem('shippingAddress');
+                        sessionStorage.removeItem('appliedCoupon');
+                        router.push(`/ThankYou?order_number=${razorpayOrderResult.order.order_number}`);
+                    } catch (error) {
+                        alert(`Order placement failed: ${error.message || 'Unknown error'}`);
+                    } finally {
+                        setIsProcessing(false);
+                    }
+                },
+                prefill: {
+                    name: user?.name || '',
+                    email: user?.email || '',
+                },
+                theme: {
+                    color: '#3399cc'
+                }
+            };
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+            setIsProcessing(false);
+        }
     } catch (error) {
         console.error("Order placement failed in component:", error);
         alert(`Order placement failed: ${error.message || 'Unknown error'}`);
-    } finally {
         setIsProcessing(false);
     }
   };

@@ -3,6 +3,7 @@ import { Order } from '../model/orderModel.js';
 import { Op } from 'sequelize';
 import { sequelize } from '../config/db.js';
 import { PaymentService } from '../services/paymentService.js';
+import Razorpay from 'razorpay';
 
 // Process a payment
 export const processPayment = async (req, res) => {
@@ -447,5 +448,33 @@ export const refundPayment = async (req, res) => {
         await transaction.rollback();
         console.error('Error processing refund:', error);
         res.status(500).json({ message: 'Failed to process refund', error: error.message });
+    }
+};
+
+// Razorpay order creation
+export const createRazorpayOrder = async (req, res) => {
+    try {
+        const { amount, currency = 'INR', receipt } = req.body;
+        if (!amount) {
+            return res.status(400).json({ message: 'Amount is required' });
+        }
+
+        // Initialize Razorpay instance
+        const razorpay = new Razorpay({
+            key_id: process.env.RAZORPAY_KEY_ID,
+            key_secret: process.env.RAZORPAY_KEY_SECRET
+        });
+
+        // Create order
+        const options = {
+            amount: Math.round(amount * 100), // amount in paise
+            currency,
+            receipt: receipt || `rcpt_${Date.now()}`,
+        };
+        const order = await razorpay.orders.create(options);
+        res.json({ order });
+    } catch (error) {
+        console.error('Error creating Razorpay order:', error);
+        res.status(500).json({ message: 'Failed to create Razorpay order', error: error.message });
     }
 }; 

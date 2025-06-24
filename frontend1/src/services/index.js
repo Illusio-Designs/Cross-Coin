@@ -209,6 +209,16 @@ export const orderService = {
         } catch (error) {
             throw error.response?.data || error.message;
         }
+    },
+
+    // Update payment status for an order (admin)
+    updateOrderPaymentStatus: async (id, paymentStatusData) => {
+        try {
+            const response = await api.put(`/api/orders/${id}/payment-status`, paymentStatusData);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
     }
 };
 

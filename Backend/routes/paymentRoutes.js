@@ -5,7 +5,8 @@ import {
     getPaymentStatus,
     refundPayment,
     getAllPayments,
-    getUserPayments
+    getUserPayments,
+    createRazorpayOrder
 } from '../controller/paymentController.js';
 import { isAuthenticated, authorize } from '../middleware/authMiddleware.js';
 
@@ -16,6 +17,7 @@ router.post('/create-payment-intent', isAuthenticated, createPaymentIntent);
 router.post('/confirm/:paymentIntentId', isAuthenticated, confirmPayment);
 router.get('/status/:paymentIntentId', isAuthenticated, getPaymentStatus);
 router.get('/my-payments', isAuthenticated, getUserPayments);
+router.post('/razorpay-order', isAuthenticated, createRazorpayOrder);
 
 // Admin routes
 router.get('/', isAuthenticated, authorize(['admin']), getAllPayments);
