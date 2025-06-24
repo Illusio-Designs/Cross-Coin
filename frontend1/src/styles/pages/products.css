@@ -483,3 +483,74 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+
+.product-listing {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 0;
+  margin-top: auto;
+}
+
+.pagination button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0 0.5rem;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.pagination button svg {
+  color: #180D3E;
+  font-size: 1.5rem;
+  transition: color 0.3s;
+}
+
+.pagination button:hover:not(:disabled) {
+  background-color: #180D3E;
+  border-color: #180D3E;
+}
+
+.pagination button:hover:not(:disabled) svg {
+  color: #fff;
+}
+
+.pagination button:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  border-color: #eee;
+}
+
+.pagination button:disabled svg {
+  color: #aaa;
+}
+
+.pagination span {
+  font-size: 1rem;
+  color: #555;
+  font-weight: 500;
+  margin: 0 1rem;
+}
+
+.no-products {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  color: #555;
+  min-height: 300px;
+}
