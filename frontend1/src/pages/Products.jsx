@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { FiFilter, FiChevronDown } from "react-icons/fi";
+import { FiFilter, FiChevronDown, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCart } from '../context/CartContext';
 import ProductCard, { filterOptions } from "../components/ProductCard";
@@ -32,6 +32,7 @@ const Products = () => {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
   const [categories, setCategories] = useState([]);
 
   // Debug logs
@@ -75,14 +76,14 @@ const Products = () => {
       setLoading(true);
       console.log('Fetching products with params:', {
         page: currentPage,
-        limit: 12,
+        limit: 20,
         sort: sortBy,
         category: selectedCategory.length > 0 ? selectedCategory.join(',') : undefined
       });
 
       const params = {
         page: currentPage,
-        limit: 12,
+        limit: 20,
         sort: sortBy,
         category: selectedCategory.length > 0 ? selectedCategory.join(',') : undefined
       };
@@ -93,6 +94,7 @@ const Products = () => {
       if (response?.success) {
         setProducts(response.data?.products || []);
         setTotalPages(response.data?.totalPages || 1);
+        setTotalProducts(response.data?.totalProducts || 0);
       } else {
         console.error('API Error Response:', response);
         setError(response?.message || 'Failed to fetch products');
@@ -351,47 +353,49 @@ const Products = () => {
             </div>
           )}
 
-          <div className="products-grid">
-            {loading ? (
-              <div className="loading">Loading products...</div>
-            ) : error ? (
-              <div className="error">{error}</div>
-            ) : products.length === 0 ? (
-              <div className="no-products">
-                {selectedCategory.length > 0 
-                  ? `No products available in "${getCategoryNameById(selectedCategory[0])}" category. Try selecting a different category or clearing filters.`
-                  : 'No products found matching your criteria. Try adjusting your filters.'
-                }
+          <div className="product-listing">
+            <div className="products-grid">
+              {loading ? (
+                <div className="loading">Loading products...</div>
+              ) : error ? (
+                <div className="error">{error}</div>
+              ) : products.length === 0 ? (
+                <div className="no-products">
+                  {selectedCategory.length > 0 
+                    ? `No products available in "${getCategoryNameById(selectedCategory[0])}" category. Try selecting a different category or clearing filters.`
+                    : 'No products found matching your criteria. Try adjusting your filters.'
+                  }
+                </div>
+              ) : (
+                products.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onProductClick={handleProductClick}
+                    onAddToCart={handleAddToCart}
+                  />
+                ))
+              )}
+            </div>
+
+            {totalProducts > 20 && totalPages > 1 && (
+              <div className="pagination">
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                >
+                  <FiChevronLeft />
+                </button>
+                <span>Page {currentPage} of {totalPages}</span>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                >
+                  <FiChevronRight />
+                </button>
               </div>
-            ) : (
-              products.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onProductClick={handleProductClick}
-                  onAddToCart={handleAddToCart}
-                />
-              ))
             )}
           </div>
-
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button 
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </button>
-              <span>Page {currentPage} of {totalPages}</span>
-              <button 
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </button>
-            </div>
-          )}
         </div>
       </div>
       <Footer />

@@ -472,13 +472,13 @@ export default function Slider() {
                 required={!formData.id}
               />
               {formData.image && (
-                <div style={{ width: '200px', height: '120px', position: 'relative', marginTop: '10px' }}>
+                <div style={{ width: '300px', height: '125px', position: 'relative', marginTop: '10px' }}>
                   <img 
                     src={typeof formData.image === 'string' 
                       ? formData.image 
                       : URL.createObjectURL(formData.image)} 
                     alt="Slider Preview" 
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{ width: '100%', objectFit: 'cover' }}
                   />
                 </div>
               )}
