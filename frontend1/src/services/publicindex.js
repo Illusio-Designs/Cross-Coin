@@ -457,3 +457,18 @@ export const clearCart = async () => {
         throw error.response?.data || error.message;
     }
 };
+
+// Create Razorpay order (public)
+export const createRazorpayOrder = async ({ amount, currency = 'INR', receipt }) => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.post(
+            `${API_URL}/api/payments/razorpay-order`,
+            { amount, currency, receipt },
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
+        return response.data.order;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
