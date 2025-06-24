@@ -70,5 +70,23 @@ export const defaultSeoData = [
         meta_keywords: 'my account, account settings, profile, order history',
         canonical_url: '/account',
         meta_image: '/images/seo/account-meta.jpg'
+    },
+    {
+        page_name: 'profile',
+        slug: '/profile',
+        meta_title: 'My Profile - Your Personal Details',
+        meta_description: 'View and manage your personal details, shipping addresses, and other settings.',
+        meta_keywords: 'profile, my profile, user profile, account details',
+        canonical_url: '/profile',
+        meta_image: '/images/seo/profile-meta.jpg'
+    },
+    {
+        page_name: 'orders',
+        slug: '/orders',
+        meta_title: 'My Orders - Track Your Purchases',
+        meta_description: 'View your order history, track your shipments, and manage your returns.',
+        meta_keywords: 'my orders, order history, track shipment, returns',
+        canonical_url: '/orders',
+        meta_image: '/images/seo/orders-meta.jpg'
     }
 ]; 

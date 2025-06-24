@@ -15,6 +15,7 @@ const ProductsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [totalProducts, setTotalProducts] = useState(0);
   const [filterValue, setFilterValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
@@ -115,9 +116,10 @@ const ProductsPage = () => {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await productService.getAllProducts();
+      const response = await productService.getAllProducts(currentPage, itemsPerPage, filterValue);
       if (response && response.products) {
         setProducts(response.products);
+        setTotalProducts(response.totalProducts);
       } else {
         setError('Invalid response format');
       }
@@ -126,35 +128,23 @@ const ProductsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPage, itemsPerPage, filterValue]);
 
   // Initial data fetch for products
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
-  // Enhanced filter function
-  const filteredData = products.filter(item => {
-    if (!filterValue) return true;
-    
-    const searchTerm = filterValue.toLowerCase();
-    return (
-      (item.name?.toLowerCase().includes(searchTerm)) ||
-      (item.description?.toLowerCase().includes(searchTerm)) ||
-      (item.category?.name?.toLowerCase().includes(searchTerm))
-    );
-  });
+  // Backend handles filtering and pagination
+  const filteredData = products;
 
-  // Pagination
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(totalProducts / itemsPerPage);
+  const currentItems = filteredData;
 
   // Add serial number to each row
   const currentItemsWithSN = currentItems.map((item, idx) => ({
     ...item,
-    serial_number: indexOfFirstItem + idx + 1
+    serial_number: (currentPage - 1) * itemsPerPage + idx + 1
   }));
 
   // Reset to first page when filter changes
@@ -1021,11 +1011,11 @@ const ProductsPage = () => {
                     hoverable={true}
                   />
                   {console.log('Data passed to Table:', currentItemsWithSN)}
-                  {filteredData.length > itemsPerPage && (
+                  {totalProducts > itemsPerPage && (
                     <div className="seo-pagination-container">
         <Pagination
           currentPage={currentPage}
-                        totalItems={filteredData.length}
+                        totalItems={totalProducts}
                         itemsPerPage={itemsPerPage}
           onPageChange={setCurrentPage}
         />
