@@ -43,8 +43,23 @@ app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(cookieParser());
 app.use(morgan('dev'));
 
+// Redis session store setup
+let sessionStore;
+if (process.env.NODE_ENV === 'production' && process.env.REDIS_URL) {
+  const RedisStore = require('connect-redis')(session);
+  const redis = require('redis');
+  const redisClient = redis.createClient({ url: process.env.REDIS_URL });
+  redisClient.connect().catch(console.error);
+  sessionStore = new RedisStore({ client: redisClient });
+  console.log('Using Redis for session storage.');
+} else {
+  sessionStore = undefined; // Use default MemoryStore in development
+  console.log('Using MemoryStore for session storage (development only).');
+}
+
 // Session configuration
 app.use(session({
+    store: sessionStore,
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
