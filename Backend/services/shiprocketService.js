@@ -1,4 +1,4 @@
-import axios from 'axios';
+const axios = require('axios');
 
 const SHIPROCKET_EMAIL = process.env.SHIPROCKET_EMAIL;
 const SHIPROCKET_PASSWORD = process.env.SHIPROCKET_PASSWORD;
@@ -6,7 +6,7 @@ const SHIPROCKET_BASE_URL = 'https://apiv2.shiprocket.in/v1/external';
 
 let token = null;
 
-export async function authenticateShiprocket() {
+async function authenticateShiprocket() {
     const res = await axios.post(`${SHIPROCKET_BASE_URL}/auth/login`, {
         email: SHIPROCKET_EMAIL,
         password: SHIPROCKET_PASSWORD
@@ -15,7 +15,7 @@ export async function authenticateShiprocket() {
     return token;
 }
 
-export async function createShiprocketOrder(orderData) {
+async function createShiprocketOrder(orderData) {
     if (!token) await authenticateShiprocket();
     const res = await axios.post(
         `${SHIPROCKET_BASE_URL}/orders/create/adhoc`,
@@ -25,7 +25,7 @@ export async function createShiprocketOrder(orderData) {
     return res.data;
 }
 
-export async function getShiprocketTracking(shipmentId) {
+async function getShiprocketTracking(shipmentId) {
     if (!token) await authenticateShiprocket();
     const res = await axios.get(
         `${SHIPROCKET_BASE_URL}/courier/track/shipment/${shipmentId}`,
@@ -34,7 +34,7 @@ export async function getShiprocketTracking(shipmentId) {
     return res.data;
 }
 
-export async function getShiprocketLabel(shipmentId) {
+async function getShiprocketLabel(shipmentId) {
     if (!token) await authenticateShiprocket();
     const res = await axios.get(
         `${SHIPROCKET_BASE_URL}/courier/generate/label/${shipmentId}`,
@@ -44,7 +44,7 @@ export async function getShiprocketLabel(shipmentId) {
     return res.data;
 }
 
-export async function requestShiprocketPickup(shipmentIds, pickupLocation = 'Default') {
+async function requestShiprocketPickup(shipmentIds, pickupLocation = 'Default') {
     if (!token) await authenticateShiprocket();
     const res = await axios.post(
         `${SHIPROCKET_BASE_URL}/courier/generate/pickup`,
@@ -57,7 +57,7 @@ export async function requestShiprocketPickup(shipmentIds, pickupLocation = 'Def
     return res.data;
 }
 
-export async function cancelShiprocketShipment(shipmentIds) {
+async function cancelShiprocketShipment(shipmentIds) {
     if (!token) await authenticateShiprocket();
     const res = await axios.post(
         `${SHIPROCKET_BASE_URL}/courier/cancel/shipment`,
@@ -65,4 +65,13 @@ export async function cancelShiprocketShipment(shipmentIds) {
         { headers: { Authorization: `Bearer ${token}` } }
     );
     return res.data;
-} 
+}
+
+module.exports = {
+    authenticateShiprocket,
+    createShiprocketOrder,
+    getShiprocketTracking,
+    getShiprocketLabel,
+    requestShiprocketPickup,
+    cancelShiprocketShipment
+}; 

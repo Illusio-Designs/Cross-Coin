@@ -1,11 +1,11 @@
-import { OrderStatusHistory } from '../model/orderStatusHistoryModel.js';
-import { Order } from '../model/orderModel.js';
-import { Op } from 'sequelize';
-import { sequelize } from '../config/db.js';
-import { User } from '../model/userModel.js';
+const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
+const { Order } = require('../model/orderModel.js');
+const { Op } = require('sequelize');
+const { sequelize } = require('../config/db.js');
+const { User } = require('../model/userModel.js');
 
 // Get all status history records (admin)
-export const getAllOrderStatusHistory = async (req, res) => {
+module.exports.getAllOrderStatusHistory = async (req, res) => {
     try {
         const { page = 1, limit = 10 } = req.query;
         const offset = (page - 1) * limit;
@@ -45,7 +45,7 @@ export const getAllOrderStatusHistory = async (req, res) => {
 };
 
 // Get status history for an order
-export const getOrderStatusHistory = async (req, res) => {
+module.exports.getOrderStatusHistory = async (req, res) => {
     try {
         const orderId = req.params.orderId;
         const userId = req.user.id;
@@ -74,7 +74,7 @@ export const getOrderStatusHistory = async (req, res) => {
 };
 
 // Add a new status entry (admin only)
-export const addOrderStatusEntry = async (req, res) => {
+module.exports.addOrderStatusEntry = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {

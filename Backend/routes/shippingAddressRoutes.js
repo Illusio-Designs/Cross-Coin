@@ -1,13 +1,13 @@
-import express from 'express';
-import { 
+const express = require('express');
+const {
     createShippingAddress,
     getUserShippingAddresses,
     getShippingAddressById,
     updateShippingAddress,
     deleteShippingAddress,
     setDefaultShippingAddress
-} from '../controller/shippingAddressController.js';
-import { isAuthenticated } from '../middleware/authMiddleware.js';
+} = require('../controller/shippingAddressController.js');
+const { isAuthenticated } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 
@@ -25,4 +25,4 @@ router.delete('/:id', isAuthenticated, deleteShippingAddress);
 // PUT /api/shipping-addresses/:id/default - Set default address
 router.put('/:id/default', isAuthenticated, setDefaultShippingAddress);
 
-export default router; 
+module.exports = router; 

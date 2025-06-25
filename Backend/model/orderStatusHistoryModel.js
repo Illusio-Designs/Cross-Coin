@@ -1,7 +1,7 @@
-import { DataTypes } from 'sequelize';
-import { sequelize } from '../config/db.js';
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db.js');
 
-export const OrderStatusHistory = sequelize.define('OrderStatusHistory', {
+const OrderStatusHistory = sequelize.define('OrderStatusHistory', {
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -43,4 +43,6 @@ export const OrderStatusHistory = sequelize.define('OrderStatusHistory', {
             fields: ['updated_by']
         }
     ]
-}); 
+});
+
+module.exports = { OrderStatusHistory }; 

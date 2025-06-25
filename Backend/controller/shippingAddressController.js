@@ -1,9 +1,9 @@
-import { ShippingAddress } from '../model/shippingAddressModel.js';
-import { Op } from 'sequelize';
-import { sequelize } from '../config/db.js';
+const { ShippingAddress } = require('../model/shippingAddressModel.js');
+const { Op } = require('sequelize');
+const { sequelize } = require('../config/db.js');
 
 // Create a new shipping address
-export const createShippingAddress = async (req, res) => {
+module.exports.createShippingAddress = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -65,7 +65,7 @@ export const createShippingAddress = async (req, res) => {
 };
 
 // Get all shipping addresses for a user
-export const getUserShippingAddresses = async (req, res) => {
+module.exports.getUserShippingAddresses = async (req, res) => {
     try {
         const userId = req.user.id;
 
@@ -85,7 +85,7 @@ export const getUserShippingAddresses = async (req, res) => {
 };
 
 // Get a shipping address by ID
-export const getShippingAddressById = async (req, res) => {
+module.exports.getShippingAddressById = async (req, res) => {
     try {
         const addressId = req.params.id;
         const userId = req.user.id;
@@ -109,7 +109,7 @@ export const getShippingAddressById = async (req, res) => {
 };
 
 // Update a shipping address
-export const updateShippingAddress = async (req, res) => {
+module.exports.updateShippingAddress = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -174,7 +174,7 @@ export const updateShippingAddress = async (req, res) => {
 };
 
 // Delete a shipping address
-export const deleteShippingAddress = async (req, res) => {
+module.exports.deleteShippingAddress = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -226,7 +226,7 @@ export const deleteShippingAddress = async (req, res) => {
 };
 
 // Set a shipping address as default
-export const setDefaultShippingAddress = async (req, res) => {
+module.exports.setDefaultShippingAddress = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {

@@ -1,7 +1,7 @@
-import { DataTypes } from 'sequelize';
-import { sequelize } from '../config/db.js';
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db.js');
 
-export const ProductSEO = sequelize.define('ProductSEO', {
+const ProductSEO = sequelize.define('ProductSEO', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
@@ -57,4 +57,6 @@ export const ProductSEO = sequelize.define('ProductSEO', {
             fields: ['product_id']
         }
     ]
-}); 
+});
+
+module.exports = { ProductSEO }; 

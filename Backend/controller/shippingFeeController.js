@@ -1,8 +1,8 @@
-import { ShippingFee } from '../model/shippingFeeModel.js';
-import { sequelize } from '../config/db.js';
+const { ShippingFee } = require('../model/shippingFeeModel.js');
+const { sequelize } = require('../config/db.js');
 
 // Get all shipping fees
-export const getAllShippingFees = async (req, res) => {
+module.exports.getAllShippingFees = async (req, res) => {
     try {
         const shippingFees = await ShippingFee.findAll();
         res.json({ shippingFees });
@@ -13,7 +13,7 @@ export const getAllShippingFees = async (req, res) => {
 };
 
 // Create a new shipping fee
-export const createShippingFee = async (req, res) => {
+module.exports.createShippingFee = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -55,7 +55,7 @@ export const createShippingFee = async (req, res) => {
 };
 
 // Update an existing shipping fee by ID
-export const updateShippingFee = async (req, res) => {
+module.exports.updateShippingFee = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -101,7 +101,7 @@ export const updateShippingFee = async (req, res) => {
 };
 
 // Get shipping fee by order type
-export const getShippingFeeByType = async (req, res) => {
+module.exports.getShippingFeeByType = async (req, res) => {
     try {
         const orderType = req.params.type;
         
@@ -121,7 +121,7 @@ export const getShippingFeeByType = async (req, res) => {
 };
 
 // Delete shipping fee
-export const deleteShippingFee = async (req, res) => {
+module.exports.deleteShippingFee = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {

@@ -1,8 +1,8 @@
-import { Attribute, AttributeValue } from '../model/associations.js';
-import { sequelize } from '../config/db.js';
+const { Attribute, AttributeValue } = require('../model/associations.js');
+const { sequelize } = require('../config/db.js');
 
 // Get all attributes with their values
-export const getAllAttributes = async (req, res) => {
+module.exports.getAllAttributes = async (req, res) => {
     try {
         const attributes = await Attribute.findAll({
             include: [{
@@ -25,7 +25,7 @@ export const getAllAttributes = async (req, res) => {
 };
 
 // Create a new attribute
-export const createAttribute = async (req, res) => {
+module.exports.createAttribute = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -72,7 +72,7 @@ export const createAttribute = async (req, res) => {
 };
 
 // Update an attribute
-export const updateAttribute = async (req, res) => {
+module.exports.updateAttribute = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -136,7 +136,7 @@ export const updateAttribute = async (req, res) => {
 };
 
 // Delete an attribute
-export const deleteAttribute = async (req, res) => {
+module.exports.deleteAttribute = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -170,7 +170,7 @@ export const deleteAttribute = async (req, res) => {
 };
 
 // Add values to an attribute
-export const addAttributeValues = async (req, res) => {
+module.exports.addAttributeValues = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -223,7 +223,7 @@ export const addAttributeValues = async (req, res) => {
 };
 
 // Remove values from an attribute
-export const removeAttributeValues = async (req, res) => {
+module.exports.removeAttributeValues = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -268,7 +268,7 @@ export const removeAttributeValues = async (req, res) => {
 };
 
 // Get attribute by ID
-export const getAttributeById = async (req, res) => {
+module.exports.getAttributeById = async (req, res) => {
     try {
         const { id } = req.params;
 

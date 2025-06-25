@@ -1,27 +1,26 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import morgan from 'morgan';
-import cookieParser from 'cookie-parser';
-import { sequelize } from './config/db.js';
-import routesManager from './routes/routesManager.js';
-import passport from './config/passport.js';
-import session from 'express-session';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { initializeSeoData } from './utils/initializeSeoData.js';
-import fs from 'fs';
-import { setupDatabase } from './scripts/setupDatabase.js';
+const express = require('express');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
+const { sequelize } = require('./config/db.js');
+const routesManager = require('./routes/routesManager.js');
+const passport = require('./config/passport.js');
+const session = require('express-session');
+const { dirname, join } = require('path');
+const { fileURLToPath } = require('url');
+const { initializeSeoData } = require('./utils/initializeSeoData.js');
+const fs = require('fs');
+const { setupDatabase } = require('./scripts/setupDatabase.js');
 
 // Get the directory name of the current module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// In CommonJS, __filename and __dirname are already available
 
-// Import routes - convert to ES module imports
-import googleAnalyticsRouter from './integration/googleAnalytics.js';
-import facebookPixelRouter from './integration/facebookPixel.js';
-import facebookCatalogRouter from './integration/facebookCatalog.js';
-import dashboardAnalyticsRouter from './integration/dashboardAnalytics.js';
+// Import routes
+const googleAnalyticsRouter = require('./integration/googleAnalytics.js');
+const facebookPixelRouter = require('./integration/facebookPixel.js');
+const facebookCatalogRouter = require('./integration/facebookCatalog.js');
+const dashboardAnalyticsRouter = require('./integration/dashboardAnalytics.js');
 
 // Initialize dotenv
 dotenv.config();
@@ -128,5 +127,4 @@ const startServer = async () => {
 
 startServer();
 
-export { app };
-export default app;
+module.exports = app;

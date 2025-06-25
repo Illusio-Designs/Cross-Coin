@@ -1,5 +1,5 @@
-import express from 'express';
-import { 
+const express = require('express');
+const {
     createPaymentIntent,
     confirmPayment,
     getPaymentStatus,
@@ -7,8 +7,8 @@ import {
     getAllPayments,
     getUserPayments,
     createRazorpayOrder
-} from '../controller/paymentController.js';
-import { isAuthenticated, authorize } from '../middleware/authMiddleware.js';
+} = require('../controller/paymentController.js');
+const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 
@@ -23,4 +23,4 @@ router.post('/razorpay-order', isAuthenticated, createRazorpayOrder);
 router.get('/', isAuthenticated, authorize(['admin']), getAllPayments);
 router.post('/refund/:paymentId', isAuthenticated, authorize(['admin']), refundPayment);
 
-export default router; 
+module.exports = router; 

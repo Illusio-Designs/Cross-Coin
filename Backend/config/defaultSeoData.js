@@ -1,4 +1,4 @@
-export const defaultSeoData = [
+const defaultSeoData = [
     {
         page_name: 'home',
         slug: '/',
@@ -89,4 +89,6 @@ export const defaultSeoData = [
         canonical_url: '/orders',
         meta_image: '/images/seo/orders-meta.jpg'
     }
-]; 
+];
+
+module.exports = { defaultSeoData }; 

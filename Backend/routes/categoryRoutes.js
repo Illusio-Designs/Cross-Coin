@@ -1,5 +1,5 @@
-import express from 'express';
-import { 
+const express = require('express');
+const {
     createCategory,
     getAllCategories,
     getCategoryById,
@@ -7,9 +7,9 @@ import {
     deleteCategory,
     getPublicCategories,
     getPublicCategoryByName
-} from '../controller/categoryController.js';
-import { isAuthenticated, authorize } from '../middleware/authMiddleware.js';
-import { categoryUpload } from '../middleware/uploadMiddleware.js';
+} = require('../controller/categoryController.js');
+const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
+const { categoryUpload } = require('../middleware/uploadMiddleware.js');
 
 const router = express.Router();
 
@@ -24,4 +24,4 @@ router.delete('/:id', isAuthenticated, authorize(['admin']), deleteCategory);
 router.get('/', isAuthenticated, authorize(['admin']), getAllCategories);
 router.get('/:id', isAuthenticated, authorize(['admin']), getCategoryById);
 
-export default router;
+module.exports = router;

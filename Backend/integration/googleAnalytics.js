@@ -1,4 +1,4 @@
-import axios from "axios";
+const axios = require('axios');
 
 const GA_MEASUREMENT_ID = process.env.GA_MEASUREMENT_ID;  // Use environment variable
 const GA_API_SECRET = process.env.GA_API_SECRET;          // Use environment variable
@@ -34,4 +34,4 @@ async function sendPurchaseEvent(order) {
     }
 }
 
-export default sendPurchaseEvent;
+module.exports = sendPurchaseEvent;

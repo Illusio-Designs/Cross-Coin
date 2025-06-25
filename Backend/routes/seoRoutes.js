@@ -1,13 +1,13 @@
-import express from 'express';
-import { 
+const express = require('express');
+const {
     getSEOData, 
     getAllSEOData, 
     updateSEOData, 
     createSEOData,
     deleteSEOData
-} from '../controller/seoController.js';
-import { isAuthenticated, authorize } from '../middleware/authMiddleware.js';
-import { upload } from '../middleware/uploadMiddleware.js';
+} = require('../controller/seoController.js');
+const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
+const { upload } = require('../middleware/uploadMiddleware.js');
 
 const router = express.Router();
 
@@ -30,4 +30,4 @@ router.put('/update',
 );
 router.delete('/:pageName', isAuthenticated, authorize(['admin']), deleteSEOData);
 
-export default router; 
+module.exports = router; 

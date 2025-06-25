@@ -1,15 +1,11 @@
-import { SeoMetadata, Product, ProductSEO } from '../model/associations.js';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import ImageHandler from '../utils/imageHandler.js';
-import slugify from 'slugify';
-import { Op } from 'sequelize';
+const { SeoMetadata, Product, ProductSEO } = require('../model/associations.js');
+const path = require('path');
+const fs = require('fs');
+const ImageHandler = require('../utils/imageHandler.js');
+const slugify = require('slugify');
+const { Op } = require('sequelize');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Initialize ImageHandler for SEO images
+// In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/seo'));
 
 // Create uploads directory if it doesn't exist
@@ -45,7 +41,7 @@ const generateSlugAndCanonical = (pageName) => {
 };
 
 // Initialize default SEO data for pages
-export const initializeSEOData = async () => {
+module.exports.initializeSEOData = async () => {
     try {
         const defaultPages = [
             { 
@@ -98,7 +94,7 @@ export const initializeSEOData = async () => {
 };
 
 // Handle image upload
-export const uploadImage = async (req, res) => {
+module.exports.uploadImage = async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ 
@@ -139,7 +135,7 @@ export const uploadImage = async (req, res) => {
 };
 
 // Get SEO data for a specific page
-export const getSEOData = async (req, res) => {
+module.exports.getSEOData = async (req, res) => {
     try {
         const { page_name } = req.query;
         console.log('[SEO] Incoming page_name:', page_name);
@@ -189,7 +185,7 @@ export const getSEOData = async (req, res) => {
 };
 
 // Get all SEO data
-export const getAllSEOData = async (req, res) => {
+module.exports.getAllSEOData = async (req, res) => {
     try {
         const allSEOData = await SeoMetadata.findAll({
             order: [['page_name', 'ASC']]
@@ -203,7 +199,7 @@ export const getAllSEOData = async (req, res) => {
 };
 
 // Update SEO data for a page
-export const updateSEOData = async (req, res) => {
+module.exports.updateSEOData = async (req, res) => {
     try {
         const { 
             page_name, 
@@ -297,7 +293,7 @@ export const updateSEOData = async (req, res) => {
 };
 
 // Create new SEO entry for a page
-export const createSEOData = async (req, res) => {
+module.exports.createSEOData = async (req, res) => {
     try {
         console.log('Received create request body:', req.body);
         console.log('Received create request file:', req.file);
@@ -361,7 +357,7 @@ export const createSEOData = async (req, res) => {
     }
 };
 
-export const deleteSEOData = async (req, res) => {
+module.exports.deleteSEOData = async (req, res) => {
     try {
         const { pageName } = req.params;
         

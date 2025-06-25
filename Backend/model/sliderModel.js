@@ -1,8 +1,8 @@
-import { DataTypes } from 'sequelize';
-import { sequelize } from '../config/db.js';
-import { Category } from './categoryModel.js'; // Import the Category model
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db.js');
+const { Category } = require('./categoryModel.js');
 
-export const Slider = sequelize.define('Slider', {
+const Slider = sequelize.define('Slider', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
@@ -53,6 +53,7 @@ export const Slider = sequelize.define('Slider', {
     ]
 });
 
-// Define the association with the Category model
 Slider.belongsTo(Category, { as: 'category', foreignKey: 'categoryId' });
+
+module.exports = { Slider };
 

@@ -1,10 +1,8 @@
-import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// In CommonJS, __filename and __dirname are available
 
 // Define upload directories
 const UPLOAD_DIRS = {
@@ -90,4 +88,4 @@ const categoryUpload = multer({
     }
 });
 
-export { upload, productUpload, categoryUpload }; 
+module.exports = { upload, productUpload, categoryUpload };

@@ -1,5 +1,5 @@
-import express from 'express';
-import { 
+const express = require('express');
+const {
     createProduct,
     getAllProducts,
     getProduct,
@@ -12,9 +12,9 @@ import {
     getBestSellers,
     getPublicProductBySlug,
     getAllPublicProducts
-} from '../controller/productController.js';
-import { isAuthenticated, authorize } from '../middleware/authMiddleware.js';
-import { productUpload } from '../middleware/uploadMiddleware.js';
+} = require('../controller/productController.js');
+const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
+const { productUpload } = require('../middleware/uploadMiddleware.js');
 
 const router = express.Router();
 
@@ -34,4 +34,4 @@ router.post('/', isAuthenticated, authorize(['admin']), productUpload.array('ima
 router.put('/:id', isAuthenticated, authorize(['admin']), productUpload.array('images', 5), updateProduct);
 router.delete('/:id', isAuthenticated, authorize(['admin']), deleteProduct);
 
-export default router; 
+module.exports = router; 

@@ -1,18 +1,14 @@
-import { Product, ProductVariation, Attribute, AttributeValue, ProductImage, ProductSEO, Category, Review, ReviewImage, User } from '../model/associations.js';
-import { v4 as uuidv4 } from 'uuid';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import ImageHandler from '../utils/imageHandler.js';
-import { productUpload } from '../middleware/uploadMiddleware.js';
-import slugify from 'slugify';
-import { sequelize } from '../config/db.js';
-import { Op } from 'sequelize';
-import fs from 'fs/promises';
+const { Product, ProductVariation, Attribute, AttributeValue, ProductImage, ProductSEO, Category, Review, ReviewImage, User } = require('../model/associations.js');
+const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+const ImageHandler = require('../utils/imageHandler.js');
+const { productUpload } = require('../middleware/uploadMiddleware.js');
+const slugify = require('slugify');
+const { sequelize } = require('../config/db.js');
+const { Op } = require('sequelize');
+const fs = require('fs/promises');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Initialize image handler
+// In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/products'));
 
 // Helper function to format product response
@@ -148,7 +144,7 @@ const handleProductAttributes = async (variation, transaction) => {
 };
 
 // Create a new product
-export const createProduct = async (req, res) => {
+module.exports.createProduct = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -353,7 +349,7 @@ export const createProduct = async (req, res) => {
 };
 
 // Get all products
-export const getAllProducts = async (req, res) => {
+module.exports.getAllProducts = async (req, res) => {
     try {
         const { search, page = 1, limit = 10 } = req.query;
         
@@ -395,7 +391,7 @@ export const getAllProducts = async (req, res) => {
 };
 
 // Get product by ID
-export const getProduct = async (req, res) => {
+module.exports.getProduct = async (req, res) => {
     try {
         const { id } = req.params;
         
@@ -420,7 +416,7 @@ export const getProduct = async (req, res) => {
 };
 
 // Update product
-export const updateProduct = async (req, res) => {
+module.exports.updateProduct = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -626,7 +622,7 @@ export const updateProduct = async (req, res) => {
 };
 
 // Delete product
-export const deleteProduct = async (req, res) => {
+module.exports.deleteProduct = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -696,7 +692,7 @@ export const deleteProduct = async (req, res) => {
 };
 
 // Example function to get best-selling products
-export const getBestSellers = async (req, res) => {
+module.exports.getBestSellers = async (req, res) => {
     try {
         const bestSellers = await Product.findAll({
             where: { soldCount: { [Op.gt]: 0 } }, // Assuming you have a soldCount field
@@ -712,7 +708,7 @@ export const getBestSellers = async (req, res) => {
 };
 
 // Example function to get featured products
-export const getFeaturedProducts = async (req, res) => {
+module.exports.getFeaturedProducts = async (req, res) => {
     try {
         const featuredProducts = await Product.findAll({
             where: { isFeatured: true }, // Assuming you have an isFeatured field
@@ -727,7 +723,7 @@ export const getFeaturedProducts = async (req, res) => {
 };
 
 // Example function to get new arrivals
-export const getNewArrivals = async (req, res) => {
+module.exports.getNewArrivals = async (req, res) => {
     try {
         const newArrivals = await Product.findAll({
             order: [['createdAt', 'DESC']], // Assuming you want the latest products
@@ -742,7 +738,7 @@ export const getNewArrivals = async (req, res) => {
 };
 
 // Get products by category
-export const getProductsByCategory = async (req, res) => {
+module.exports.getProductsByCategory = async (req, res) => {
     try {
         const { categoryId } = req.params;
 
@@ -767,7 +763,7 @@ export const getProductsByCategory = async (req, res) => {
 };
 
 // Search products
-export const searchProducts = async (req, res) => {
+module.exports.searchProducts = async (req, res) => {
     try {
         const { query } = req.query;
 
@@ -796,7 +792,7 @@ export const searchProducts = async (req, res) => {
 };
 
 // Get public product by slug
-export const getPublicProductBySlug = async (req, res) => {
+module.exports.getPublicProductBySlug = async (req, res) => {
     try {
         const { slug } = req.params;
         
@@ -880,7 +876,7 @@ export const getPublicProductBySlug = async (req, res) => {
 };
 
 // Get all public products
-export const getAllPublicProducts = async (req, res) => {
+module.exports.getAllPublicProducts = async (req, res) => {
     try {
         const { category, search, sort, page = 1, limit = 10 } = req.query;
         

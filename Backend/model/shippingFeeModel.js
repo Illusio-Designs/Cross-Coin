@@ -1,7 +1,7 @@
-import { DataTypes } from 'sequelize';
-import { sequelize } from '../config/db.js'; // Ensure to use .js extension
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db.js');
 
-export const ShippingFee = sequelize.define('ShippingFee', {
+const ShippingFee = sequelize.define('ShippingFee', {
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -26,4 +26,6 @@ export const ShippingFee = sequelize.define('ShippingFee', {
             fields: ['orderType']
         }
     ]
-}); 
+});
+
+module.exports = { ShippingFee }; 

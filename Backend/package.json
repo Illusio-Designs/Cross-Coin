@@ -1,7 +1,6 @@
 {
   "name": "crosscoin-backend",
   "version": "1.0.0",
-  "type": "module",
   "description": "Backend for CrossCoin e-commerce platform",
   "main": "index.js",
   "scripts": {

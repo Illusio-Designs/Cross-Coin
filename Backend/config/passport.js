@@ -1,8 +1,7 @@
-import passport from 'passport';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { User } from '../model/userModel.js';
-import dotenv from 'dotenv';
-
+const passport = require('passport');
+const { Strategy: GoogleStrategy } = require('passport-google-oauth20');
+const { User } = require('../model/userModel.js');
+const dotenv = require('dotenv');
 dotenv.config();
 
 passport.use(new GoogleStrategy({
@@ -50,4 +49,4 @@ passport.deserializeUser(async (id, done) => {
     }
 });
 
-export default passport;
+module.exports = passport;

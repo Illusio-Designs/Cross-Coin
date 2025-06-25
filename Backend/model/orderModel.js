@@ -1,7 +1,7 @@
-import { DataTypes } from 'sequelize';
-import { sequelize } from '../config/db.js'; // Ensure to use .js extension
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db.js');
 
-export const Order = sequelize.define('Order', {
+const Order = sequelize.define('Order', {
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -86,4 +86,4 @@ export const Order = sequelize.define('Order', {
     ]
 });
 
-export default Order;
+module.exports = { Order };
