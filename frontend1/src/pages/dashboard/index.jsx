@@ -4,6 +4,8 @@ import CardGrid from '@/components/Dashboard/Card';
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Loader from "@/components/Loader";
+import { FiMaximize, FiMinimize } from "react-icons/fi";
+import { FaUserCircle } from "react-icons/fa";
 
 // Import all dashboard pages
 import Products from "./products/products";
@@ -19,7 +21,7 @@ import Reviews from "./reviews/reviews";
 import SEO from "./seo/seo";
 import Slider from "./slider/slider";
 
-function DashboardHeader({ isCollapsed }) {
+function DashboardHeader({ isCollapsed, isFullscreen, onToggleFullscreen }) {
   const sidebarWidth = isCollapsed ? 72 : 260;
   return (
     <header
@@ -31,11 +33,41 @@ function DashboardHeader({ isCollapsed }) {
         width: `calc(100% - ${sidebarWidth}px)`,
         zIndex: 100,
         transition: 'left 0.3s cubic-bezier(.4,0,.2,1), width 0.3s cubic-bezier(.4,0,.2,1)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        height: 80,
+        background: '#F3F4F5',
+        borderBottom: '1px solid #E6E6E6',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
+        padding: '0 0',
       }}
     >
-      <div className="header-title">Dashboard</div>
-      <div className="header-actions">
-        <span style={{fontWeight:600, color:'#CE1E36'}}>Admin</span>
+      {/* Left group: Title only */}
+      <div style={{ display: 'flex', alignItems: 'center', marginLeft: 20 }}>
+        <div className="header-title" style={{ fontWeight: 700, fontSize: '1.7rem', color: '#180D3E', letterSpacing: 0.2 }}>Dashboard</div>
+      </div>
+      {/* Right group: Fullscreen button + Profile icon + Admin label */}
+      <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: 14, marginRight: 40, minWidth: 120, justifyContent: 'flex-end' }}>
+        <button
+          onClick={onToggleFullscreen}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: 26,
+            color: '#180D3E',
+            outline: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            marginRight: 0
+          }}
+          title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+        >
+          {isFullscreen ? <FiMinimize /> : <FiMaximize />}
+        </button>
+        <FaUserCircle style={{ fontSize: 28, color: '#180D3E' }} />
+        <span style={{ fontWeight: 600, color: '#180D3E', fontSize: '1.15rem', letterSpacing: 0.2 }}>Admin</span>
       </div>
     </header>
   );
@@ -64,6 +96,7 @@ export default function Dashboard() {
   const [currentView, setCurrentView] = useState('main');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -83,6 +116,40 @@ export default function Dashboard() {
       setCurrentView(view);
     }
   };
+
+  // Fullscreen logic
+  const handleToggleFullscreen = () => {
+    const elem = document.documentElement;
+    if (!isFullscreen) {
+      if (elem.requestFullscreen) elem.requestFullscreen();
+      else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen();
+      else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+      else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      else if (document.msExitFullscreen) document.msExitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  useEffect(() => {
+    function onFullscreenChange() {
+      setIsFullscreen(!!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement));
+    }
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    document.addEventListener('mozfullscreenchange', onFullscreenChange);
+    document.addEventListener('MSFullscreenChange', onFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', onFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', onFullscreenChange);
+    };
+  }, []);
 
   const renderContent = () => {
     if (isLoading) {
@@ -128,7 +195,7 @@ export default function Dashboard() {
           onViewChange={handleViewChange}
           currentView={currentView}
         />
-        <DashboardHeader isCollapsed={isCollapsed} />
+        <DashboardHeader isCollapsed={isCollapsed} isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} />
         <DashboardFooter isCollapsed={isCollapsed} />
         <div
           className="dashboard-main"

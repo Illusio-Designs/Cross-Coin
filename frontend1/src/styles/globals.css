@@ -5,3 +5,77 @@
 body{
   font-family: Poppins, sans-serif;
 }
+
+:fullscreen, :-webkit-full-screen, :-moz-full-screen, :-ms-fullscreen {
+  overflow: hidden !important;
+}
+:fullscreen body, :-webkit-full-screen body, :-moz-full-screen body, :-ms-fullscreen body {
+  overflow: hidden !important;
+}
+
+/* Chrome, Edge, Safari */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #CE1E36;         /* Your accent color */
+  border-radius: 8px;
+  min-height: 40px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #a81a2b;         /* Slightly darker on hover */
+}
+
+*::-webkit-scrollbar-track {
+  background: #f3f4f6;         /* Light background for track */
+  border-radius: 8px;
+}
+
+
+/* Custom Scrollbar Styles */
+*::-webkit-scrollbar {
+  width: 12px;
+  background: #f3f4f6;
+}
+*::-webkit-scrollbar-thumb {
+  background: #180D3E;
+  border-radius: 0px;
+  min-height: 40px;
+  border: 3px solid #f3f4f6;
+}
+*::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 0px;
+}
+
+html, body {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  overflow-y: scroll;
+}
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+  width: 0 !important;
+  background: transparent !important;
+}
+
+.custom-scrollbar-progress {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 100vh;
+  background: #f3f4f6;
+  z-index: 9999;
+  border-radius: 10px;
+  box-shadow: 0 0 4px rgba(24,13,62,0.08);
+}
+.custom-scrollbar-progress-fill {
+  width: 100%;
+  background: #180D3E;
+  border-radius: 10px;
+  transition: height 0.15s cubic-bezier(.4,0,.2,1);
+}

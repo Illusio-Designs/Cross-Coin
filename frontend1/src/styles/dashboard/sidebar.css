@@ -4,7 +4,10 @@
   color: #180D3E;
   border-color: #E6E6E6;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  border-radius: 18px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-top-left-radius: 18px;
+  border-bottom-left-radius: 18px;
   margin: 18px 0 18px 18px;
   min-height: calc(100vh - 36px);
   display: flex;
