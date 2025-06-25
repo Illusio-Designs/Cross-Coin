@@ -211,3 +211,125 @@
   color: #fff;
   background: #CE1E36;
 }
+
+/* Hide hamburger on desktop */
+.header__hamburger {
+  display: none;
+}
+
+/* Hide mobile menu on desktop */
+.mobile-menu,
+.mobile-menu-backdrop {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .header__top {
+    padding: 12px 5%;
+  }
+  .header__logo {
+    width: 35%;
+    min-width: 120px;
+  }
+  .header__nav {
+    display: none;
+  }
+  .header__actions {
+    display: none;
+  }
+  .header__hamburger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    font-size: 2.2rem;
+    color: #d32f2f;
+    cursor: pointer;
+    z-index: 1101;
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  }
+  .header__hamburger.open {
+    transform: rotate(90deg) scale(1.1);
+  }
+  .mobile-menu {
+    display: flex;
+    position: fixed;
+    top: 0;
+    right: -100vw;
+    width: 80vw;
+    max-width: 350px;
+    height: 100vh;
+    background: #fff;
+    box-shadow: -2px 0 16px rgba(0,0,0,0.12);
+    z-index: 1100;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 32px 24px 24px 24px;
+    transition: right 0.35s cubic-bezier(0.4,0,0.2,1);
+  }
+  .mobile-menu.open {
+    right: 0;
+  }
+  .mobile-menu-backdrop {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.45);
+    z-index: 1099;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .mobile-menu.open ~ .mobile-menu-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .mobile-menu__nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 32px 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .mobile-menu__nav li a {
+    font-size: 1.2rem;
+    color: #374151;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s;
+    padding: 8px 0;
+    border-radius: 4px;
+  }
+  .mobile-menu__nav li a.active,
+  .mobile-menu__nav li a:hover {
+    color: #d32f2f;
+    background: #fbe9e7;
+  }
+  .mobile-menu__actions {
+    display: flex;
+    flex-direction: row;
+    gap: 18px;
+    width: 100%;
+    justify-content: flex-start;
+    align-items: center;
+  }
+  .mobile-menu__actions .header__account {
+    font-size: 1rem;
+    gap: 6px;
+  }
+  .mobile-menu__actions .header__wishlist,
+  .mobile-menu__actions .header__cart {
+    font-size: 1.3rem;
+  }
+}
+
+/* Prevent body scroll when menu is open */
+body.no-scroll {
+  overflow: hidden;
+}

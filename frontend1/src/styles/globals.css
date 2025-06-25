@@ -70,12 +70,10 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   height: 100vh;
   background: #f3f4f6;
   z-index: 9999;
-  border-radius: 10px;
   box-shadow: 0 0 4px rgba(24,13,62,0.08);
 }
 .custom-scrollbar-progress-fill {
   width: 100%;
   background: #180D3E;
-  border-radius: 10px;
   transition: height 0.15s cubic-bezier(.4,0,.2,1);
 }
