@@ -1,5 +1,5 @@
-import express from 'express';
-import { 
+const express = require('express');
+const {
     createCoupon,
     getAllCoupons,
     getCoupon,
@@ -8,8 +8,8 @@ import {
     validateCoupon,
     getPublicCoupons,
     applyCoupon
-} from '../controller/couponController.js';
-import { isAuthenticated, authorize, authenticate } from '../middleware/authMiddleware.js';
+} = require('../controller/couponController.js');
+const { isAuthenticated, authorize, authenticate } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 
@@ -27,4 +27,4 @@ router.get('/:id', isAuthenticated, authorize(['admin']), getCoupon);
 router.put('/:id', isAuthenticated, authorize(['admin']), updateCoupon);
 router.delete('/:id', isAuthenticated, authorize(['admin']), deleteCoupon);
 
-export default router; 
+module.exports = router; 

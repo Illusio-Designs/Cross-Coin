@@ -1,10 +1,10 @@
-import express from 'express';
-import { 
+const express = require('express');
+const {
     getOrderStatusHistory,
     addOrderStatusEntry,
     getAllOrderStatusHistory
-} from '../controller/orderStatusHistoryController.js';
-import { isAuthenticated, isAdmin } from '../middleware/authMiddleware.js';
+} = require('../controller/orderStatusHistoryController.js');
+const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 
@@ -15,4 +15,4 @@ router.get('/', isAuthenticated, isAdmin, getAllOrderStatusHistory);
 router.get('/order/:orderId', isAuthenticated, getOrderStatusHistory);
 router.post('/order/:orderId', isAuthenticated, isAdmin, addOrderStatusEntry);
 
-export default router; 
+module.exports = router; 

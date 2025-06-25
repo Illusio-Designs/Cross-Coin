@@ -1,8 +1,8 @@
-import { Cart, CartItem, Product, ProductImage, ProductVariation } from '../model/associations.js';
-import { sequelize } from '../config/db.js';
+const { Cart, CartItem, Product, ProductImage, ProductVariation } = require('../model/associations.js');
+const { sequelize } = require('../config/db.js');
 
 // Get user's cart
-export const getCart = async (req, res) => {
+module.exports.getCart = async (req, res) => {
     try {
         const cart = await Cart.findOne({
             where: { user_id: req.user.id },
@@ -69,7 +69,7 @@ export const getCart = async (req, res) => {
 };
 
 // Add item to cart
-export const addToCart = async (req, res) => {
+module.exports.addToCart = async (req, res) => {
   try {
     const userId = req.user.id;
     const { productId, variationId, quantity } = req.body;
@@ -112,7 +112,7 @@ export const addToCart = async (req, res) => {
 };
 
 // Update cart item
-export const updateCartItem = async (req, res) => {
+module.exports.updateCartItem = async (req, res) => {
     try {
         const { productId } = req.params;
         const { quantity, variationId } = req.body;
@@ -157,7 +157,7 @@ export const updateCartItem = async (req, res) => {
 };
 
 // Remove item from cart
-export const removeFromCart = async (req, res) => {
+module.exports.removeFromCart = async (req, res) => {
   try {
     const userId = req.user.id;
     const { productId } = req.params;
@@ -171,7 +171,7 @@ export const removeFromCart = async (req, res) => {
 };
 
 // Clear cart
-export const clearCart = async (req, res) => {
+module.exports.clearCart = async (req, res) => {
   try {
     const userId = req.user.id;
     let cart = await Cart.findOne({ where: { user_id: userId } });

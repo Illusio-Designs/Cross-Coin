@@ -1,8 +1,8 @@
-import { Coupon, CouponUsage, Cart, CartItem, Product, Category, User, ProductVariation } from '../model/associations.js';
-import { Op } from 'sequelize';
+const { Coupon, CouponUsage, Cart, CartItem, Product, Category, User, ProductVariation } = require('../model/associations.js');
+const { Op } = require('sequelize');
 
 // Create a new coupon
-export const createCoupon = async (req, res) => {
+module.exports.createCoupon = async (req, res) => {
     try {
         const {
             code,
@@ -106,7 +106,7 @@ export const createCoupon = async (req, res) => {
 };
 
 // Get all coupons
-export const getAllCoupons = async (req, res) => {
+module.exports.getAllCoupons = async (req, res) => {
     try {
         const coupons = await Coupon.findAll({
             /*
@@ -132,7 +132,7 @@ export const getAllCoupons = async (req, res) => {
 };
 
 // Get a single coupon by ID
-export const getCouponById = async (req, res) => {
+module.exports.getCouponById = async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -158,7 +158,7 @@ export const getCouponById = async (req, res) => {
 };
 
 // Validate a coupon
-export const validateCoupon = async (req, res) => {
+module.exports.validateCoupon = async (req, res) => {
     try {
         const { code } = req.body;
         const userId = req.user.id;
@@ -295,7 +295,7 @@ export const validateCoupon = async (req, res) => {
 };
 
 // Apply a coupon (increment used count)
-export const applyCoupon = async (req, res) => {
+module.exports.applyCoupon = async (req, res) => {
     try {
         const { code, userId } = req.body;
 
@@ -362,7 +362,7 @@ export const applyCoupon = async (req, res) => {
 };
 
 // Get coupon usage history for a user
-export const getUserCouponHistory = async (req, res) => {
+module.exports.getUserCouponHistory = async (req, res) => {
     try {
         const { userId } = req.params;
 
@@ -389,7 +389,7 @@ export const getUserCouponHistory = async (req, res) => {
 };
 
 // Update a coupon
-export const updateCoupon = async (req, res) => {
+module.exports.updateCoupon = async (req, res) => {
     try {
         const { id } = req.params;
         const {
@@ -507,7 +507,7 @@ export const updateCoupon = async (req, res) => {
 };
 
 // Delete a coupon
-export const deleteCoupon = async (req, res) => {
+module.exports.deleteCoupon = async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -531,7 +531,7 @@ export const deleteCoupon = async (req, res) => {
 };
 
 // Get Coupon by ID
-export const getCoupon = async (req, res) => {
+module.exports.getCoupon = async (req, res) => {
     try {
         const { id } = req.params; // Assuming the coupon ID is passed as a URL parameter
 
@@ -549,7 +549,7 @@ export const getCoupon = async (req, res) => {
 };
 
 // Get all active public coupons
-export const getPublicCoupons = async (req, res) => {
+module.exports.getPublicCoupons = async (req, res) => {
     try {
         const coupons = await Coupon.findAll({
             where: {

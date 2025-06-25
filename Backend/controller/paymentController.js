@@ -1,12 +1,12 @@
-import { Payment } from '../model/paymentModel.js';
-import { Order } from '../model/orderModel.js';
-import { Op } from 'sequelize';
-import { sequelize } from '../config/db.js';
-import { PaymentService } from '../services/paymentService.js';
-import Razorpay from 'razorpay';
+const { Payment } = require('../model/paymentModel.js');
+const { Order } = require('../model/orderModel.js');
+const { Op } = require('sequelize');
+const { sequelize } = require('../config/db.js');
+const { PaymentService } = require('../services/paymentService.js');
+const Razorpay = require('razorpay');
 
 // Process a payment
-export const processPayment = async (req, res) => {
+module.exports.processPayment = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -155,7 +155,7 @@ export const processPayment = async (req, res) => {
 };
 
 // Get payment status for an order
-export const getPaymentStatus = async (req, res) => {
+module.exports.getPaymentStatus = async (req, res) => {
     try {
         const orderId = req.params.orderId;
         const userId = req.user.id;
@@ -191,7 +191,7 @@ export const getPaymentStatus = async (req, res) => {
 };
 
 // Process a refund
-export const processRefund = async (req, res) => {
+module.exports.processRefund = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -267,7 +267,7 @@ export const processRefund = async (req, res) => {
 };
 
 // Get all payments (admin only)
-export const getAllPayments = async (req, res) => {
+module.exports.getAllPayments = async (req, res) => {
     try {
         const { status, payment_type, start_date, end_date, page = 1, limit = 10 } = req.query;
         
@@ -314,7 +314,7 @@ export const getAllPayments = async (req, res) => {
 };
 
 // Confirm Payment
-export const confirmPayment = async (req, res) => {
+module.exports.confirmPayment = async (req, res) => {
     try {
         const { paymentIntentId } = req.params; // Assuming the payment intent ID is passed as a URL parameter
 
@@ -336,7 +336,7 @@ export const confirmPayment = async (req, res) => {
 };
 
 // Create Payment Intent
-export const createPaymentIntent = async (req, res) => {
+module.exports.createPaymentIntent = async (req, res) => {
     try {
         const { amount, currency } = req.body; // Assuming amount and currency are passed in the request body
 
@@ -358,7 +358,7 @@ export const createPaymentIntent = async (req, res) => {
 };
 
 // Get all payments for the authenticated user
-export const getUserPayments = async (req, res) => {
+module.exports.getUserPayments = async (req, res) => {
     try {
         const userId = req.user.id; // Assuming user ID is available in the request
 
@@ -379,7 +379,7 @@ export const getUserPayments = async (req, res) => {
 };
 
 // Process a refund
-export const refundPayment = async (req, res) => {
+module.exports.refundPayment = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -452,7 +452,7 @@ export const refundPayment = async (req, res) => {
 };
 
 // Razorpay order creation
-export const createRazorpayOrder = async (req, res) => {
+module.exports.createRazorpayOrder = async (req, res) => {
     try {
         const { amount, currency = 'INR', receipt } = req.body;
         if (!amount) {

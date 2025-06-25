@@ -1,8 +1,8 @@
-import { DataTypes } from 'sequelize';
-import { sequelize } from '../config/db.js'; // Ensure to use .js extension
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db.js');
 // import { Review } from './reviewModel.js'; // Import commented out or remove if not directly used here for defining association
 
-export const ReviewImage = sequelize.define('ReviewImage', {
+const ReviewImage = sequelize.define('ReviewImage', {
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -57,4 +57,4 @@ export const ReviewImage = sequelize.define('ReviewImage', {
 //     as: 'Review'
 // });
 
-export default ReviewImage; 
+module.exports = { ReviewImage }; 

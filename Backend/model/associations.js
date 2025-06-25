@@ -1,30 +1,30 @@
 // Import models
-import { User } from './userModel.js';
-import { Category } from './categoryModel.js';
-import { Slider } from './sliderModel.js';
-import { Product } from './productModel.js';
-import { ProductVariation } from './productVariationModel.js';
-import { Attribute } from './attributeModel.js';
-import { AttributeValue } from './attributeValueModel.js';
-import { ProductImage } from './productImageModel.js';
-import { ProductSEO } from './productSEOModel.js';
-import { Coupon } from './couponModel.js';
-import { Wishlist } from './wishlistModel.js';
-import { Cart } from './cartModel.js';
-import { CartItem } from './cartItemModel.js';
-import { Order } from './orderModel.js';
-import { OrderItem } from './orderItemModel.js';
-import { ShippingAddress } from './shippingAddressModel.js';
-import { ShippingFee } from './shippingFeeModel.js';
-import { OrderStatusHistory } from './orderStatusHistoryModel.js';
-import { Payment } from './paymentModel.js';
-import { Review } from './reviewModel.js';
-import { ReviewImage } from './reviewImageModel.js';
-import { SeoMetadata } from './seoMetadataModel.js';
-import { CouponUsage } from './couponUsageModel.js';
+const { User } = require('./userModel.js');
+const { Category } = require('./categoryModel.js');
+const { Slider } = require('./sliderModel.js');
+const { Product } = require('./productModel.js');
+const { ProductVariation } = require('./productVariationModel.js');
+const { Attribute } = require('./attributeModel.js');
+const { AttributeValue } = require('./attributeValueModel.js');
+const { ProductImage } = require('./productImageModel.js');
+const { ProductSEO } = require('./productSEOModel.js');
+const { Coupon } = require('./couponModel.js');
+const { Wishlist } = require('./wishlistModel.js');
+const { Cart } = require('./cartModel.js');
+const { CartItem } = require('./cartItemModel.js');
+const { Order } = require('./orderModel.js');
+const { OrderItem } = require('./orderItemModel.js');
+const { ShippingAddress } = require('./shippingAddressModel.js');
+const { ShippingFee } = require('./shippingFeeModel.js');
+const { OrderStatusHistory } = require('./orderStatusHistoryModel.js');
+const { Payment } = require('./paymentModel.js');
+const { Review } = require('./reviewModel.js');
+const { ReviewImage } = require('./reviewImageModel.js');
+const { SeoMetadata } = require('./seoMetadataModel.js');
+const { CouponUsage } = require('./couponUsageModel.js');
 
 // Export all models
-export {
+module.exports = {
     User,
     Category,
     Slider,

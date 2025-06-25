@@ -1,16 +1,16 @@
-import { Order } from '../model/orderModel.js';
-import { OrderItem } from '../model/orderItemModel.js';
-import { OrderStatusHistory } from '../model/orderStatusHistoryModel.js';
-import { Product } from '../model/productModel.js';
-import { ProductVariation } from '../model/productVariationModel.js';
-import { ShippingAddress } from '../model/shippingAddressModel.js';
-import { ShippingFee } from '../model/shippingFeeModel.js';
-import { Payment } from '../model/paymentModel.js';
-import { User } from '../model/userModel.js';
-import { ProductImage } from '../model/productImageModel.js';
-import { Op } from 'sequelize';
-import { sequelize } from '../config/db.js';
-import { createShiprocketOrder, getShiprocketTracking, getShiprocketLabel, requestShiprocketPickup, cancelShiprocketShipment } from '../services/shiprocketService.js';
+const { Order } = require('../model/orderModel.js');
+const { OrderItem } = require('../model/orderItemModel.js');
+const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
+const { Product } = require('../model/productModel.js');
+const { ProductVariation } = require('../model/productVariationModel.js');
+const { ShippingAddress } = require('../model/shippingAddressModel.js');
+const { ShippingFee } = require('../model/shippingFeeModel.js');
+const { Payment } = require('../model/paymentModel.js');
+const { User } = require('../model/userModel.js');
+const { ProductImage } = require('../model/productImageModel.js');
+const { Op } = require('sequelize');
+const { sequelize } = require('../config/db.js');
+const { createShiprocketOrder, getShiprocketTracking, getShiprocketLabel, requestShiprocketPickup, cancelShiprocketShipment } = require('../services/shiprocketService.js');
 
 // Generate unique order number
 const generateOrderNumber = () => {
@@ -35,7 +35,7 @@ const calculateShippingFee = async (paymentType) => {
 };
 
 // Create a new order
-export const createOrder = async (req, res) => {
+module.exports.createOrder = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -232,7 +232,7 @@ export const createOrder = async (req, res) => {
 };
 
 // Get all orders (admin)
-export const getAllOrders = async (req, res) => {
+module.exports.getAllOrders = async (req, res) => {
     try {
         const { status, payment_status, start_date, end_date, page = 1, limit = 10 } = req.query;
         
@@ -290,7 +290,7 @@ export const getAllOrders = async (req, res) => {
 };
 
 // Get user's orders
-export const getUserOrders = async (req, res) => {
+module.exports.getUserOrders = async (req, res) => {
     try {
         const userId = req.user.id;
         const { status, page = 1, limit = 10 } = req.query;
@@ -340,7 +340,7 @@ export const getUserOrders = async (req, res) => {
 };
 
 // Get Order by ID
-export const getOrder = async (req, res) => {
+module.exports.getOrder = async (req, res) => {
     try {
         const { id } = req.params; // Assuming the order ID is passed as a URL parameter
 
@@ -363,7 +363,7 @@ export const getOrder = async (req, res) => {
 };
 
 // Update order status
-export const updateOrderStatus = async (req, res) => {
+module.exports.updateOrderStatus = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -444,7 +444,7 @@ export const updateOrderStatus = async (req, res) => {
 };
 
 // Cancel order (by user)
-export const cancelOrder = async (req, res) => {
+module.exports.cancelOrder = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
@@ -525,7 +525,7 @@ export const cancelOrder = async (req, res) => {
 };
 
 // Get order statistics
-export const getOrderStats = async (req, res) => {
+module.exports.getOrderStats = async (req, res) => {
     try {
         const totalOrders = await Order.count();
         const totalRevenue = await Order.sum('final_amount');
@@ -547,7 +547,7 @@ export const getOrderStats = async (req, res) => {
 };
 
 // Get Shiprocket tracking info for an order
-export const getShiprocketTrackingForOrder = async (req, res) => {
+module.exports.getShiprocketTrackingForOrder = async (req, res) => {
     try {
         const { id } = req.params; // order id
         const order = await Order.findByPk(id);
@@ -563,7 +563,7 @@ export const getShiprocketTrackingForOrder = async (req, res) => {
 };
 
 // Get Shiprocket label for an order
-export const getShiprocketLabelForOrder = async (req, res) => {
+module.exports.getShiprocketLabelForOrder = async (req, res) => {
     try {
         const { id } = req.params; // order id
         const order = await Order.findByPk(id);

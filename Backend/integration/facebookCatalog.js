@@ -1,8 +1,8 @@
-import express from "express";
-import { Product } from '../model/productModel.js';
-import { ProductImage } from '../model/productImageModel.js';
-import { Category } from '../model/categoryModel.js';
-import { sequelize } from '../config/db.js';
+const express = require('express');
+const { Product } = require('../model/productModel.js');
+const { ProductImage } = require('../model/productImageModel.js');
+const { Category } = require('../model/categoryModel.js');
+const { sequelize } = require('../config/db.js');
 
 const router = express.Router();
 
@@ -60,4 +60,4 @@ router.get("/feed", async (req, res) => {
     res.send(xml);
 });
 
-export default router;
+module.exports = router;

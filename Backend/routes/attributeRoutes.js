@@ -1,5 +1,5 @@
-import express from 'express';
-import {
+const express = require('express');
+const {
     getAllAttributes,
     createAttribute,
     updateAttribute,
@@ -7,8 +7,8 @@ import {
     addAttributeValues,
     removeAttributeValues,
     getAttributeById
-} from '../controller/attributeController.js';
-import { isAuthenticated, authorize } from '../middleware/authMiddleware.js';
+} = require('../controller/attributeController.js');
+const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 
@@ -33,4 +33,4 @@ router.post('/:id/values', isAuthenticated, addAttributeValues);
 // Remove values from an attribute
 router.delete('/:id/values', isAuthenticated, removeAttributeValues);
 
-export default router; 
+module.exports = router;

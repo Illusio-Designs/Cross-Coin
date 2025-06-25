@@ -1,12 +1,12 @@
-import express from 'express';
-import { isAuthenticated } from '../middleware/authMiddleware.js';
-import { 
+const express = require('express');
+const { isAuthenticated } = require('../middleware/authMiddleware.js');
+const {
     getWishlist,
     addToWishlist,
     removeFromWishlist,
     clearWishlist,
     moveToCart
-} from '../controller/wishlistController.js';
+} = require('../controller/wishlistController.js');
 
 const router = express.Router();
 
@@ -27,4 +27,4 @@ router.delete('/clear', isAuthenticated, clearWishlist);
 // Move product to cart
 router.post('/move-to-cart/:productId', isAuthenticated, moveToCart);
 
-export default router; 
+module.exports = router; 

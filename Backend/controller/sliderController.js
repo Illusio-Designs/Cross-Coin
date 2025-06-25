@@ -1,18 +1,13 @@
-import { Slider } from '../model/sliderModel.js';
-import { Category } from '../model/categoryModel.js';
-import { v4 as uuidv4 } from 'uuid';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs/promises';
-import fsSync from 'fs';
-import ImageHandler from '../utils/imageHandler.js';
-import multer from 'multer';
+const { Slider } = require('../model/sliderModel.js');
+const { Category } = require('../model/categoryModel.js');
+const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+const fs = require('fs/promises');
+const fsSync = require('fs');
+const ImageHandler = require('../utils/imageHandler.js');
+const multer = require('multer');
 
-// Get directory name for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Initialize image handler
+// In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/slider'));
 
 // Configure storage for uploaded files
@@ -26,7 +21,7 @@ const storage = multer.diskStorage({
 });
 
 // Create the upload middleware
-export const upload = multer({ storage });
+const upload = multer({ storage });
 
 // Helper function to format slider response
 const formatSliderResponse = (slider) => {
@@ -40,7 +35,7 @@ const formatSliderResponse = (slider) => {
 };
 
 // Create Slider
-export const createSlider = async (req, res) => {
+const createSlider = async (req, res) => {
     try {
         const { title, description } = req.body;
 
@@ -91,7 +86,7 @@ export const createSlider = async (req, res) => {
 };
 
 // Get All Sliders
-export const getAllSliders = async (req, res) => {
+const getAllSliders = async (req, res) => {
     try {
         const sliders = await Slider.findAll({
             include: [{
@@ -112,7 +107,7 @@ export const getAllSliders = async (req, res) => {
 };
 
 // Get Slider by ID
-export const getSliderById = async (req, res) => {
+const getSliderById = async (req, res) => {
     try {
         const slider = await Slider.findByPk(req.params.id, {
             include: [{
@@ -137,7 +132,7 @@ export const getSliderById = async (req, res) => {
 };
 
 // Update Slider
-export const updateSlider = async (req, res) => {
+const updateSlider = async (req, res) => {
     try {
         const { id } = req.params;
         const { title, description, buttonText, categoryId, status } = req.body;
@@ -213,7 +208,7 @@ export const updateSlider = async (req, res) => {
 };
 
 // Get Public Sliders
-export const getPublicSliders = async (req, res) => {
+const getPublicSliders = async (req, res) => {
     try {
         const sliders = await Slider.findAll({
             where: {
@@ -246,7 +241,7 @@ export const getPublicSliders = async (req, res) => {
 };
 
 // Delete Slider
-export const deleteSlider = async (req, res) => {
+const deleteSlider = async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -274,5 +269,15 @@ export const deleteSlider = async (req, res) => {
             error: error.message 
         });
     }
+};
+
+module.exports = {
+    createSlider,
+    getAllSliders,
+    getSliderById,
+    updateSlider,
+    getPublicSliders,
+    deleteSlider,
+    upload
 };
 

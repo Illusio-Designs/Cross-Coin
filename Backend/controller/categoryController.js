@@ -1,20 +1,15 @@
-import { Category } from '../model/categoryModel.js';
-import { Product, ProductVariation, ProductImage, ProductSEO } from '../model/associations.js';
-import { v4 as uuidv4 } from 'uuid';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs/promises';
-import fsSync from 'fs';
-import { Op } from 'sequelize';
-import ImageHandler from '../utils/imageHandler.js';
-import { categoryUpload } from '../middleware/uploadMiddleware.js';
-import slugify from 'slugify';
+const { Category } = require('../model/categoryModel.js');
+const { Product, ProductVariation, ProductImage, ProductSEO } = require('../model/associations.js');
+const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+const fs = require('fs/promises');
+const fsSync = require('fs');
+const { Op } = require('sequelize');
+const ImageHandler = require('../utils/imageHandler.js');
+const { categoryUpload } = require('../middleware/uploadMiddleware.js');
+const slugify = require('slugify');
 
-// Get directory name for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Initialize image handler
+// In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/categories'));
 
 // Helper function to format category response
@@ -395,7 +390,7 @@ const getPublicCategoryByName = async (req, res) => {
     }
 };
 
-export {
+module.exports = {
     createCategory,
     getAllCategories,
     getCategoryById,

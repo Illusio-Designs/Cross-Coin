@@ -1,7 +1,7 @@
-import { DataTypes } from 'sequelize';
-import { sequelize } from '../config/db.js';
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db.js');
 
-export const CartItem = sequelize.define('CartItem', {
+const CartItem = sequelize.define('CartItem', {
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -55,4 +55,6 @@ export const CartItem = sequelize.define('CartItem', {
             fields: ['variation_id']
         }
     ]
-}); 
+});
+
+module.exports = { CartItem }; 

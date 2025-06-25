@@ -1,7 +1,7 @@
-import { SeoMetadata } from '../model/associations.js';
-import { defaultSeoData } from '../config/defaultSeoData.js';
+const { SeoMetadata } = require('../model/associations.js');
+const { defaultSeoData } = require('../config/defaultSeoData.js');
 
-export const initializeSeoData = async () => {
+const initializeSeoData = async () => {
     try {
         // Get all existing page names
         const existingPages = await SeoMetadata.findAll({
@@ -24,4 +24,6 @@ export const initializeSeoData = async () => {
     } catch (error) {
         console.error('Error initializing SEO data:', error);
     }
-}; 
+};
+
+module.exports = { initializeSeoData }; 

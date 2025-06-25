@@ -1,16 +1,14 @@
-import 'dotenv/config';
-import { sequelize } from '../config/db.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
+require('dotenv').config();
+const { sequelize } = require('../config/db.js');
+const path = require('path');
+const fs = require('fs');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// In CommonJS, __filename and __dirname are available
 
-export const setupDatabase = async () => {
+const setupDatabase = async () => {
     try {
         // First, try to connect without selecting a database
-        const { Sequelize } = await import('sequelize');
+        const { Sequelize } = require('sequelize');
         const tempSequelize = new Sequelize('', process.env.DB_USER, process.env.DB_PASSWORD, {
             host: process.env.DB_HOST,
             dialect: process.env.DB_DIALECT || 'mysql',
@@ -34,8 +32,8 @@ export const setupDatabase = async () => {
         
         const models = {};
         for (const file of modelFiles) {
-            const modelPath = `file://${path.join(modelDir, file)}`;
-            const modelModule = await import(modelPath);
+            const modelPath = path.join(modelDir, file);
+            const modelModule = require(modelPath);
             const modelName = file.charAt(0).toUpperCase() + file.slice(1).replace('Model.js', '');
             const model = modelModule[modelName];
             if (model && model.sync) {
@@ -51,7 +49,7 @@ export const setupDatabase = async () => {
         try {
             const associationsPath = path.join(__dirname, '..', 'model', 'associations.js');
             if (fs.existsSync(associationsPath)) {
-                await import(`file://${associationsPath}`);
+                require(associationsPath);
                 console.log('✓ Associations applied successfully');
             } else {
                 console.warn('⚠️ associations.js not found. Models should define their own associations.');
@@ -68,7 +66,7 @@ export const setupDatabase = async () => {
 
         // Now it's safe to create the admin user
         if (models['User']) {
-            const bcrypt = await import('bcryptjs');
+            const bcrypt = require('bcryptjs');
             const adminEmail = 'admin@admin.com';
             const adminPassword = 'Admin@123';
             const adminUsername = 'admin';
@@ -102,8 +100,8 @@ export const setupDatabase = async () => {
     }
 };
 
-export const findAvailablePort = async (startPort) => {
-    const net = await import('net');
+const findAvailablePort = async (startPort) => {
+    const net = require('net');
     return new Promise((resolve, reject) => {
         const server = net.createServer();
         server.unref();
@@ -120,4 +118,6 @@ export const findAvailablePort = async (startPort) => {
             });
         });
     });
-}; 
+};
+
+module.exports = { setupDatabase, findAvailablePort }; 

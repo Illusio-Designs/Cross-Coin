@@ -1,7 +1,7 @@
-import { Wishlist, Product, ProductImage, ProductVariation, Cart } from '../model/associations.js';
+const { Wishlist, Product, ProductImage, ProductVariation, Cart } = require('../model/associations.js');
 
 // Add product to wishlist
-export const addToWishlist = async (req, res) => {
+module.exports.addToWishlist = async (req, res) => {
     console.log('addToWishlist called:', {
         userId: req.user?.id,
         productId: req.params.productId,
@@ -52,7 +52,7 @@ export const addToWishlist = async (req, res) => {
 };
 
 // Get user's wishlist
-export const getWishlist = async (req, res) => {
+module.exports.getWishlist = async (req, res) => {
     try {
         const userId = req.user.id; // From auth middleware
 
@@ -104,7 +104,7 @@ export const getWishlist = async (req, res) => {
 };
 
 // Check if a product is in the user's wishlist
-export const checkWishlist = async (req, res) => {
+module.exports.checkWishlist = async (req, res) => {
     try {
         const { productId } = req.params;
         const userId = req.user.id; // From auth middleware
@@ -130,7 +130,7 @@ export const checkWishlist = async (req, res) => {
 };
 
 // Remove product from wishlist
-export const removeFromWishlist = async (req, res) => {
+module.exports.removeFromWishlist = async (req, res) => {
     try {
         const { productId } = req.params;
         const userId = req.user.id; // From auth middleware
@@ -163,7 +163,7 @@ export const removeFromWishlist = async (req, res) => {
 };
 
 // Clear entire wishlist
-export const clearWishlist = async (req, res) => {
+module.exports.clearWishlist = async (req, res) => {
     try {
         const userId = req.user.id; // From auth middleware
 
@@ -184,7 +184,7 @@ export const clearWishlist = async (req, res) => {
 };
 
 // Move product from wishlist to cart
-export const moveToCart = async (req, res) => {
+module.exports.moveToCart = async (req, res) => {
     try {
         const { productId } = req.params; // Assuming the product ID is passed as a URL parameter
         const userId = req.user.id; // Assuming user ID is available in the request

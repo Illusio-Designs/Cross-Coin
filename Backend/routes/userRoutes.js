@@ -1,7 +1,7 @@
-import express from 'express';
-import passport from 'passport';
-import jwt from 'jsonwebtoken';
-import { 
+const express = require('express');
+const passport = require('passport');
+const jwt = require('jsonwebtoken');
+const {
     register,
     login,
     adminLogin,
@@ -18,8 +18,8 @@ import {
     deleteUser,
     getAllUsers,
     upload
-} from '../controller/userController.js';
-import { isAuthenticated, authorize } from '../middleware/authMiddleware.js';
+} = require('../controller/userController.js');
+const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 
@@ -71,4 +71,4 @@ router.delete('/delete', isAuthenticated, deleteUser);
 // Admin routes
 router.get('/all', isAuthenticated, authorize(['admin']), getAllUsers);
 
-export default router;
+module.exports = router;

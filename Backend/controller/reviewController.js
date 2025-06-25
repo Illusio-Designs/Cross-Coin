@@ -1,19 +1,14 @@
-import { Review } from '../model/reviewModel.js';
-import { ReviewImage } from '../model/reviewImageModel.js';
-import { Product } from '../model/productModel.js';
-import { Order } from '../model/orderModel.js';
-import { OrderItem } from '../model/orderItemModel.js';
-import { User } from '../model/userModel.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
-import { Op } from 'sequelize';
-import { sequelize } from '../config/db.js';
+const { Review } = require('../model/reviewModel.js');
+const { ReviewImage } = require('../model/reviewImageModel.js');
+const { Product } = require('../model/productModel.js');
+const { Order } = require('../model/orderModel.js');
+const { OrderItem } = require('../model/orderItemModel.js');
+const { User } = require('../model/userModel.js');
+const path = require('path');
+const fs = require('fs');
+const { Op } = require('sequelize');
+const { sequelize } = require('../config/db.js');
 // import upload from '../middleware/uploadMiddleware.js'; // Assuming upload middleware is handled in routes
-
-// Get directory name for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Helper to update product review statistics
 const updateProductReviewStats = async (productIdToUpdate, transaction) => {
@@ -74,7 +69,7 @@ const updateProductReviewStats = async (productIdToUpdate, transaction) => {
 };
 
 // Create a new review (for logged-in users)
-export const createReview = async (req, res) => {
+module.exports.createReview = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
         const { product_id, order_id, rating, review } = req.body;
@@ -194,7 +189,7 @@ export const createReview = async (req, res) => {
 };
 
 // Create a public review (for non-logged-in users)
-export const createPublicReview = async (req, res) => {
+module.exports.createPublicReview = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
         const { productId: productIdBody, rating: ratingBody, comment, name, email } = req.body;
@@ -272,7 +267,7 @@ export const createPublicReview = async (req, res) => {
 };
 
 // Get public reviews for a product (ONLY APPROVED)
-export const getPublicProductReviews = async (req, res) => {
+module.exports.getPublicProductReviews = async (req, res) => {
     try {
         const { productId } = req.params;
         const { page = 1, limit = 10, sort = 'recent' } = req.query;
@@ -363,7 +358,7 @@ export const getPublicProductReviews = async (req, res) => {
 
 
 // Get all reviews for a product (can be used by admin, respects query status)
-export const getProductReviews = async (req, res) => {
+module.exports.getProductReviews = async (req, res) => {
     try {
         const { productId } = req.params;
         const { status, rating, verified, hasImages, hasVideos, featured, page = 1, limit = 10, sort = 'recent' } = req.query;
@@ -451,7 +446,7 @@ export const getProductReviews = async (req, res) => {
 };
 
 // Moderate a review (admin only)
-export const moderateReview = async (req, res) => {
+module.exports.moderateReview = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
         const { reviewId } = req.params;
@@ -514,7 +509,7 @@ export const moderateReview = async (req, res) => {
 };
 
 // Delete a review
-export const deleteReview = async (req, res) => {
+module.exports.deleteReview = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
         const { reviewId } = req.params;
@@ -576,7 +571,7 @@ export const deleteReview = async (req, res) => {
 };
 
 // Get all reviews (Admin purpose)
-export const getAllReviews = async (req, res) => {
+module.exports.getAllReviews = async (req, res) => {
     try {
         // Add pagination and filtering as needed for admin panel
         const { page = 1, limit = 10, status, sort = 'createdAt_desc' } = req.query;
@@ -625,7 +620,7 @@ export const getAllReviews = async (req, res) => {
 };
 
 // Get a single review (mainly for admin or specific user check)
-export const getReview = async (req, res) => {
+module.exports.getReview = async (req, res) => {
     try {
         const { reviewId } = req.params;
         const rId = parseInt(reviewId);
@@ -656,7 +651,7 @@ export const getReview = async (req, res) => {
 };
 
 // Update a review (by user or admin)
-export const updateReview = async (req, res) => {
+module.exports.updateReview = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
         const { reviewId } = req.params;
@@ -748,7 +743,7 @@ export const updateReview = async (req, res) => {
 
 
 // Delete a review image (by owner or admin)
-export const deleteReviewImage = async (req, res) => {
+module.exports.deleteReviewImage = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
         const { imageId } = req.params;
@@ -821,7 +816,7 @@ export const deleteReviewImage = async (req, res) => {
 };
 
 // Get user's reviews
-export const getUserReviews = async (req, res) => {
+module.exports.getUserReviews = async (req, res) => {
     try {
         const loggedInUserId = req.user.id;
         const requestedUserId = req.params.userId ? parseInt(req.params.userId) : loggedInUserId;

@@ -1,4 +1,4 @@
-import axios from "axios";
+const axios = require('axios');
 
 const FB_PIXEL_ID = process.env.FB_PIXEL_ID;              // Use environment variable
 const FB_ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN;      // Use environment variable
@@ -33,4 +33,4 @@ async function sendFacebookPurchaseEvent(order) {
     }
 }
 
-export default sendFacebookPurchaseEvent;
+module.exports = sendFacebookPurchaseEvent;

@@ -1,7 +1,7 @@
-import { DataTypes } from 'sequelize';
-import { sequelize } from '../config/db.js'; // Ensure to use .js extension
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db.js');
 
-export const Attribute = sequelize.define('Attribute', {
+const Attribute = sequelize.define('Attribute', {
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -41,4 +41,4 @@ export const Attribute = sequelize.define('Attribute', {
     ]
 });
 
-export default Attribute; // Use export default 
+module.exports = { Attribute }; 

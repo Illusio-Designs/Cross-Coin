@@ -1,5 +1,5 @@
-import express from 'express';
-import { 
+const express = require('express');
+const {
     createOrder,
     getAllOrders,
     getOrder,
@@ -9,8 +9,8 @@ import {
     getOrderStats,
     getShiprocketTrackingForOrder,
     getShiprocketLabelForOrder
-} from '../controller/orderController.js';
-import { isAuthenticated, authorize } from '../middleware/authMiddleware.js';
+} = require('../controller/orderController.js');
+const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 
@@ -27,4 +27,4 @@ router.get('/', isAuthenticated, authorize(['admin']), getAllOrders);
 router.put('/:id/status', isAuthenticated, authorize(['admin']), updateOrderStatus);
 router.get('/stats/overview', isAuthenticated, authorize(['admin']), getOrderStats);
 
-export default router; 
+module.exports = router; 
