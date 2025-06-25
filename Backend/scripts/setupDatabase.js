@@ -73,7 +73,7 @@ const setupDatabase = async () => {
             const adminRole = 'admin';
             const existingAdmin = await models['User'].findOne({ where: { email: adminEmail } });
             if (!existingAdmin) {
-                const hashedPassword = await bcrypt.default.hash(adminPassword, 10);
+                const hashedPassword = await bcrypt.hash(adminPassword, 10);
                 await models['User'].create({
                     username: adminUsername,
                     email: adminEmail,
