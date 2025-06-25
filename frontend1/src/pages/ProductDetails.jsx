@@ -582,7 +582,7 @@ export default function ProductDetails() {
             {coupons && coupons.length > 0 && (
               <div className="product-coupons-box">
                 <h3 className="product-coupons-title">Available Coupons</h3>
-                <div className="product-coupons-list">
+                <div className="product-coupons-scroller-row">
                   {coupons.map((coupon) => (
                     <div 
                       key={coupon.id} 
@@ -614,6 +614,57 @@ export default function ProductDetails() {
                         )}
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+            {/* Variation Scroller */}
+            {product.variations && product.variations.length > 1 && (
+              <div className="variation-scroller-box">
+                <h3 className="variation-scroller-title">All Variations</h3>
+                <div className="variation-scroller-row">
+                  {product.variations.map((v, idx) => {
+                    // Find image for this variation
+                    let vImgIdx = 0;
+                    if (v.image_url) {
+                      vImgIdx = product.images.findIndex(img => img.image_url === v.image_url);
+                    } else if (v.imageId) {
+                      vImgIdx = product.images.findIndex(img => img.id === v.imageId);
+                    } else if (v.images && Array.isArray(v.images)) {
+                      for (const vi of v.images) {
+                        const foundIdx = product.images.findIndex(img => img.image_url === vi.image_url);
+                        if (foundIdx !== -1) { vImgIdx = foundIdx; break; }
+                      }
+                    }
+                    if (vImgIdx === -1) vImgIdx = 0;
+                    const vImg = product.images[vImgIdx];
+                    // Get color/size attributes
+                    const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+                    const color = attrs && attrs.color ? attrs.color[0] : null;
+                    const size = attrs && attrs.size ? attrs.size[0] : null;
+                    return (
+                      <div
+                        key={v.id}
+                        className={`variation-card${selectedVariation && selectedVariation.id === v.id ? ' selected' : ''}`}
+                        onClick={() => {
+                          setSelectedVariation(v);
+                          setSelectedAttributes(attrs);
+                          setSelectedThumbnail(vImgIdx);
+                        }}
+                      >
+                        <div className="variation-card-img-wrap">
+                          <img
+                            src={vImg?.image_url || '/placeholder.jpg'}
+                            alt={vImg?.alt_text || 'Variation'}
+                            className="variation-card-img"
+                          />
+                        </div>
+                        <div className="variation-card-attrs">
+                          {color && <span className="variation-card-color" style={{background: color, borderColor: color}} title={color}></span>}
+                          {size && <span className="variation-card-size">{size}</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
