@@ -93,8 +93,11 @@
   position: fixed;
   top: 0;
   left: 260px;
-  width: calc(100% - 320px);
+  width: calc(100% - 260px);
   transition: left 0.3s cubic-bezier(.4,0,.2,1), width 0.3s cubic-bezier(.4,0,.2,1);
+  border-top-right-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-left-radius: 0;
 }
 .dashboard-header .header-title {
   font-size: 1.5rem;
@@ -109,6 +112,25 @@
 .dashboard-header .header-actions span {
   color: #CE1E36;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dashboard-header .profile-icon {
+  font-size: 24px;
+  color: #180D3E;
+  margin-right: 8px;
+}
+.dashboard-header .fullscreen-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  margin-right: 16px;
+  color: #180D3E;
+  outline: none;
+  display: flex;
+  align-items: center;
 }
 
 .dashboard-footer {
@@ -128,6 +150,9 @@
   width: calc(100% - 260px);
   z-index: 100;
   transition: left 0.3s cubic-bezier(.4,0,.2,1), width 0.3s cubic-bezier(.4,0,.2,1);
+  border-bottom-right-radius: 18px;
+  border-bottom-left-radius: 0;
+  border-top-left-radius: 0;
 }
 
 .dashboard-header.collapsed,
