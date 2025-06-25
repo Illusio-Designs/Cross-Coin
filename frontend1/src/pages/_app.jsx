@@ -3,7 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '../context/AuthContext';
 import { CartProvider } from '../context/CartContext';
 import { WishlistProvider } from '../context/WishlistContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Loader from '../components/Loader';
 import '../styles/globals.css';
@@ -25,6 +25,7 @@ import '../styles/pages/auth/adminlogin.css';
 export default function App({ Component, pageProps }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const progressRef = useRef();
 
   useEffect(() => {
     // Set initial loading state
@@ -117,11 +118,30 @@ export default function App({ Component, pageProps }) {
     };
   }, []);
 
+  useEffect(() => {
+    // Scroll progress bar logic
+    function updateScrollProgress() {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const percent = docHeight > 0 ? (scrollTop / docHeight) : 0;
+      if (progressRef.current) {
+        progressRef.current.style.height = `${percent * 100}%`;
+      }
+    }
+    window.addEventListener('scroll', updateScrollProgress);
+    updateScrollProgress();
+    return () => window.removeEventListener('scroll', updateScrollProgress);
+  }, []);
+
   return (
     <ThemeProvider attribute="class">
       <AuthProvider>
         <CartProvider>
           <WishlistProvider>
+            {/* Custom vertical scroll progress bar */}
+            <div className="custom-scrollbar-progress">
+              <div className="custom-scrollbar-progress-fill" ref={progressRef} style={{height: 0}} />
+            </div>
             {loading && (
               <div style={{
                 position: 'fixed',
@@ -136,10 +156,8 @@ export default function App({ Component, pageProps }) {
                 zIndex: 9999,
                 backdropFilter: 'blur(5px)'
               }}>
-                
-                  <Loader />
-                </div>
-             
+                <Loader />
+              </div>
             )}
             <Component {...pageProps} />
             <Toaster position="top-right" />
