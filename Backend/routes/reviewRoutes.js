@@ -10,7 +10,8 @@ const {
     deleteReviewImage,
     getAllReviews,
     getPublicProductReviews,
-    createPublicReview
+    createPublicReview,
+    getAllPublicReviews
 } = require('../controller/reviewController.js');
 const { authenticate, isAdmin } = require('../middleware/authMiddleware.js');
 const { upload } = require('../middleware/uploadMiddleware.js');
@@ -18,6 +19,7 @@ const { upload } = require('../middleware/uploadMiddleware.js');
 const router = express.Router();
 
 // Public routes (no auth required)
+router.get('/public/all', getAllPublicReviews);
 router.get('/public/:productId', getPublicProductReviews);
 router.post('/public', upload.array('files', 5), createPublicReview);
 router.get('/product/:productId', getProductReviews);

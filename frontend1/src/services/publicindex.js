@@ -472,3 +472,17 @@ export const createRazorpayOrder = async ({ amount, currency = 'INR', receipt })
         throw error.response?.data || error.message;
     }
 };
+
+// Get all public reviews (for testimonials)
+export const getAllPublicReviews = async (params = {}) => {
+    try {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append('page', params.page);
+        if (params.limit) queryParams.append('limit', params.limit);
+        if (params.sort) queryParams.append('sort', params.sort);
+        const response = await axios.get(`${API_URL}/api/reviews/public/all?${queryParams.toString()}`);
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
