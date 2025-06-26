@@ -534,7 +534,6 @@ export default function ProductDetails() {
               alt={product.images[selectedThumbnail]?.alt_text || product.name}
               width={500}
               height={500}
-              style={{ objectFit: 'cover' }}
             />
             <div className="thumbnail-images">
               {product.images.map((image, idx) => (

@@ -888,3 +888,46 @@ module.exports.getUserReviews = async (req, res) => {
     }
 };
 
+// Get all public reviews (approved only, for testimonials)
+module.exports.getAllPublicReviews = async (req, res) => {
+    try {
+        const { page = 1, limit = 20, sort = 'recent' } = req.query;
+        let order = [['createdAt', 'DESC']];
+        if (sort === 'highest') order = [['rating', 'DESC'], ['createdAt', 'DESC']];
+        if (sort === 'lowest') order = [['rating', 'ASC'], ['createdAt', 'DESC']];
+
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+
+        const reviewsData = await Review.findAndCountAll({
+            where: { status: 'approved' },
+            include: [
+                { model: User, as: 'User', attributes: ['id', 'username', 'profileImage'] },
+                { model: Product, as: 'Product', attributes: ['id', 'name'] },
+                { model: ReviewImage, as: 'ReviewImages' }
+            ],
+            order,
+            limit: parseInt(limit),
+            offset: offset,
+            distinct: true
+        });
+
+        res.json({
+            success: true,
+            reviews: reviewsData.rows.map(r => ({
+                ...r.toJSON(),
+                reviewerName: r.User ? r.User.username : r.guestName,
+                productName: r.Product ? r.Product.name : 'N/A',
+            })),
+            pagination: {
+                total: reviewsData.count,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                totalPages: Math.ceil(reviewsData.count / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching all public reviews:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch reviews', error: error.message });
+    }
+};
+
