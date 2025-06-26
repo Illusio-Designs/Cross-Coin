@@ -12,6 +12,7 @@ const { fileURLToPath } = require('url');
 const { initializeSeoData } = require('./utils/initializeSeoData.js');
 const fs = require('fs');
 const { setupDatabase } = require('./scripts/setupDatabase.js');
+const corsOptions = require('./config/corsConfig.js');
 
 // Get the directory name of the current module
 // In CommonJS, __filename and __dirname are already available
@@ -28,14 +29,7 @@ dotenv.config();
 const app = express();
 
 // Middleware
-app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-    exposedHeaders: ['Content-Range', 'X-Content-Range'],
-    maxAge: 86400 // 24 hours
-}));
+app.use(cors(corsOptions));
 
 // Body parsing middleware
 app.use(express.json({ limit: '5mb' }));

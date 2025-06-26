@@ -3,7 +3,6 @@ import { AiOutlineMail } from "react-icons/ai";
 import { FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn } from "react-icons/fa";
 import { MdOutlinePhoneInTalk } from "react-icons/md"; 
 import Image from "next/image";
-import logo from '../assets/crosscoin_logo.webp';
 import visa from '../assets/visa.webp';
 import mastercard from '../assets/mastercard.webp';
 import paypal from '../assets/Paypal.webp';
@@ -33,7 +32,7 @@ const Footer = () => {
         <div className="footer__col footer__brand">
           <div className="footer__logo">
             <span className="footer__logo">
-            <Image src={logo} alt="logo" />
+            <Image src="/assets/crosscoin_logo.webp" alt="logo" unoptimized />
             </span>
           </div>
           <p>Register now to get latest updates on promotions & coupons. Don't worry, we not spam!</p>

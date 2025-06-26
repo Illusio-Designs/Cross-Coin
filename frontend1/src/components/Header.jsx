@@ -4,7 +4,6 @@ import { BsCart } from "react-icons/bs";
 import Image from "next/image";
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import logo from '../assets/crosscoin_logo.webp';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
@@ -56,7 +55,7 @@ const Header = () => {
       <div className="header__top">
         <div className="header__logo">
           <Link href="/">
-            <Image src={logo} alt="logo" priority />
+            <Image src="/assets/crosscoin_logo.webp" alt="logo" priority unoptimized />
           </Link>
         </div>
         <nav className="header__nav">
