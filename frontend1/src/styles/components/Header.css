@@ -308,8 +308,10 @@
   }
   .mobile-menu__nav li a.active,
   .mobile-menu__nav li a:hover {
-    color: #d32f2f;
-    background: #fbe9e7;
+    color: #CE1E36;
+    text-decoration: 2px underline #CE1E36;
+    text-underline-offset: 5px;
+
   }
   .mobile-menu__actions {
     display: flex;
@@ -329,7 +331,10 @@
   }
 }
 
-/* Prevent body scroll when menu is open */
-body.no-scroll {
-  overflow: hidden;
+@media (max-width: 1024px) {
+  .header__top {
+    padding: 15px 5%;
+}
+
+
 }

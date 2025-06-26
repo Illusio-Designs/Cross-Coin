@@ -5,7 +5,6 @@ import Footer from "../components/Footer";
 import Testimonials from "../components/Testimonials";
 import ProductCard from "../components/ProductCard";
 import Image from "next/image";
-import card1_left from "../assets/card1-left.webp";
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
 import { getPublicSliders, getPublicCategories, getPublicCategoryByName } from '../services/publicindex';
@@ -45,7 +44,7 @@ const Home = () => {
       originalPrice: 399,
       rating: 4.5,
       reviews: 128,
-      images: [card1_left, card1_left, card1_left, card1_left, card1_left],
+      images: ["/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp"],
       colors: ["brown", "navy", "black"],
       sizes: ["S", "M", "L", "XL"]
     },
@@ -56,7 +55,7 @@ const Home = () => {
       originalPrice: 249,
       rating: 4.3,
       reviews: 95,
-      images: [card1_left, card1_left, card1_left, card1_left, card1_left],
+      images: ["/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp"],
       colors: ["blue", "black", "gray"],
       sizes: ["S", "M", "L", "XL"]
     },
@@ -67,7 +66,7 @@ const Home = () => {
       originalPrice: 499,
       rating: 4.7,
       reviews: 156,
-      images: [card1_left, card1_left, card1_left, card1_left, card1_left],
+      images: ["/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp"],
       colors: ["black", "brown", "tan"],
       sizes: ["S", "M", "L", "XL"]
     }
@@ -88,12 +87,17 @@ const Home = () => {
     const fetchCategories = async () => {
       try {
         const data = await getPublicCategories();
-        setCategories(data);
-        if (data.length > 0) {
-          await fetchCategoryProducts(data[0].name);
+        // Handle both array and object response
+        if (Array.isArray(data)) {
+          setCategories(data);
+        } else if (data && Array.isArray(data.categories)) {
+          setCategories(data.categories);
+        } else {
+          setCategories([]);
         }
       } catch (error) {
         console.error('Error fetching categories:', error);
+        setCategories([]);
       }
     };
 
@@ -148,7 +152,8 @@ const Home = () => {
     if (categories.length > 0 && categories[currentCategoryIndex]) {
       fetchCategoryProducts(categories[currentCategoryIndex].name);
     }
-  }, [currentCategoryIndex, categories]);
+    // Only run when categories are loaded and currentCategoryIndex changes
+  }, [currentCategoryIndex, categories.length]);
 
   useEffect(() => {
     // Set your target date here (e.g., 7 days from now)
@@ -263,18 +268,12 @@ const Home = () => {
   const currentCategory = categories[currentCategoryIndex] || {
     id: null,
     name: 'Loading...',
-    image: card1_left
+    image: '/assets/card1-left.webp'
   };
-
-  // Debug logging
-  console.log('Categories:', categories);
-  console.log('Current category index:', currentCategoryIndex);
-  console.log('Current category:', currentCategory);
-  console.log('Category image path:', currentCategory.image);
 
   // Get the image source with fallback
   const getCategoryImageSrc = () => {
-    if (currentCategory.image && currentCategory.image !== card1_left) {
+    if (currentCategory.image && currentCategory.image !== '/assets/card1-left.webp') {
       // If it's a full URL, use it as is
       if (currentCategory.image.startsWith('http')) {
         return currentCategory.image;
@@ -286,7 +285,7 @@ const Home = () => {
       // If it's just a filename, construct the path
       return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/uploads/categories/${currentCategory.image}`;
     }
-    return card1_left;
+    return '/assets/card1-left.webp';
   };
 
   return (
@@ -387,6 +386,7 @@ const Home = () => {
                   width={300}
                   height={300}
                   style={{ objectFit: 'cover' }}
+                  unoptimized
                 />
                 <h3>{currentCategory.name}</h3>
                 <button className="slider-arrow slider-arrow-right" onClick={() => scrollCategoryImage('right')}>

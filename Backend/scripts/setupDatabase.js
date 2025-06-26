@@ -2,6 +2,7 @@ require('dotenv').config();
 const { sequelize } = require('../config/db.js');
 const path = require('path');
 const fs = require('fs');
+const Policy = require('../model/policyModel');
 
 // In CommonJS, __filename and __dirname are available
 
@@ -62,6 +63,7 @@ const setupDatabase = async () => {
         // AUTOMATION: Always alter tables to match the latest model definitions (auto-migration)
         console.log('Syncing all tables...');
         await sequelize.sync({ alter: true, hooks: false });
+        await Policy.sync({ alter: true });
         console.log('✓ All tables synced');
 
         // Now it's safe to create the admin user
