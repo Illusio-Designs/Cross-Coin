@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 const { sequelize } = require('../config/db.js');
 const { PaymentService } = require('../services/paymentService.js');
 const Razorpay = require('razorpay');
+const crypto = require('crypto');
 
 // Process a payment
 module.exports.processPayment = async (req, res) => {
@@ -477,4 +478,48 @@ module.exports.createRazorpayOrder = async (req, res) => {
         console.error('Error creating Razorpay order:', error);
         res.status(500).json({ message: 'Failed to create Razorpay order', error: error.message });
     }
+};
+
+module.exports.razorpayCallback = async (req, res) => {
+  const { razorpay_payment_id, razorpay_order_id, razorpay_signature, order_number } = req.body;
+
+  // Find the order by order_number
+  const order = await Order.findOne({ where: { order_number } });
+  if (!order) {
+    return res.redirect('/UnifiedCheckout?payment=failed');
+  }
+
+  // Verify signature
+  const generated_signature = crypto
+    .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+    .update(razorpay_order_id + '|' + razorpay_payment_id)
+    .digest('hex');
+
+  if (generated_signature === razorpay_signature) {
+    // Mark order as paid
+    order.payment_status = 'paid';
+    order.status = 'processing';
+    await order.save();
+
+    // Update payment record as successful
+    await Payment.update(
+      { status: 'successful', transaction_id: razorpay_payment_id },
+      { where: { order_id: order.id } }
+    );
+
+    return res.redirect(`/ThankYou?order_number=${order.order_number}`);
+  } else {
+    // Mark order as failed
+    order.payment_status = 'failed';
+    order.status = 'pending';
+    await order.save();
+
+    // Update payment record as failed
+    await Payment.update(
+      { status: 'failed' },
+      { where: { order_id: order.id } }
+    );
+
+    return res.redirect('/UnifiedCheckout?payment=failed');
+  }
 }; 

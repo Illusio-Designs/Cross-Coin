@@ -64,7 +64,7 @@ export default function UnifiedCheckout() {
     setShippingFee(fee);
   }
 
-  const goToNextStep = () => {
+  const goToNextStep = async () => {
     if (step === 'cart') {
         setStep('shipping');
     } else if (step === 'shipping') {
@@ -76,11 +76,56 @@ export default function UnifiedCheckout() {
             alert('Please select a delivery method.');
             return;
         }
-        // If COD is selected, place order directly. Otherwise, proceed to payment.
         if (shippingFee.orderType === 'cod') {
             handlePlaceOrder();
         } else {
-            setStep('payment');
+            // Prepaid: create order and redirect to Razorpay
+            setIsProcessing(true);
+            const orderData = {
+                shipping_address_id: shippingAddress.id,
+                items: cartItems.map(item => ({
+                    product_id: item.productId,
+                    variation_id: item.variation?.id || null,
+                    quantity: item.quantity
+                })),
+                payment_type: paymentDetails.method,
+                notes: ''
+            };
+            try {
+                const orderResult = await createOrder(orderData);
+                // Now create Razorpay order
+                const amount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0) + (shippingFee?.amount || 0);
+                const razorpayOrder = await createRazorpayOrder({ amount, currency: 'INR' });
+                const scriptLoaded = await loadRazorpayScript();
+                if (!scriptLoaded || !window.Razorpay) {
+                    alert('Failed to load Razorpay SDK. Please try again.');
+                    setIsProcessing(false);
+                    return;
+                }
+                const options = {
+                    key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                    amount: razorpayOrder.amount,
+                    currency: razorpayOrder.currency,
+                    name: 'Cross Coin',
+                    description: 'Order Payment',
+                    order_id: razorpayOrder.id,
+                    prefill: {
+                        name: user?.name || '',
+                        email: user?.email || '',
+                    },
+                    theme: {
+                        color: '#3399cc'
+                    },
+                    redirect: true,
+                    callback_url: `https://api.crosscoin.in/api/razorpay/callback?order_number=${orderResult.order.order_number}`
+                };
+                const rzp = new window.Razorpay(options);
+                rzp.open();
+            } catch (error) {
+                alert(`Order or payment initiation failed: ${error.message || 'Unknown error'}`);
+            } finally {
+                setIsProcessing(false);
+            }
         }
     }
   };
@@ -142,9 +187,18 @@ export default function UnifiedCheckout() {
                 setIsProcessing(false);
                 return;
             }
+            // Debug: Check if Razorpay is loaded
+            if (!window.Razorpay) {
+                alert('Razorpay SDK not loaded');
+                setIsProcessing(false);
+                return;
+            }
             // Create Razorpay order from backend
             const amount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0) + (shippingFee?.amount || 0);
             const razorpayOrder = await createRazorpayOrder({ amount, currency: 'INR' });
+            // Debug: Log Razorpay order and key
+            console.log('Razorpay Order:', razorpayOrder);
+            console.log('Razorpay Key:', process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
             const options = {
                 key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, // Set this in your .env file
                 amount: razorpayOrder.amount,
@@ -152,35 +206,18 @@ export default function UnifiedCheckout() {
                 name: 'Cross Coin',
                 description: 'Order Payment',
                 order_id: razorpayOrder.id,
-                handler: async function (response) {
-                    // On payment success, place order with payment details
-                    const paymentDetailsWithRazorpay = {
-                        ...paymentDetails,
-                        razorpay_payment_id: response.razorpay_payment_id,
-                        razorpay_order_id: response.razorpay_order_id,
-                        razorpay_signature: response.razorpay_signature
-                    };
-                    try {
-                        const razorpayOrderResult = await createOrder({ ...orderData, payment_details: paymentDetailsWithRazorpay });
-                        setOrderPlaced(true);
-                        clearCart();
-                        sessionStorage.removeItem('shippingAddress');
-                        sessionStorage.removeItem('appliedCoupon');
-                        router.push(`/ThankYou?order_number=${razorpayOrderResult.order.order_number}`);
-                    } catch (error) {
-                        alert(`Order placement failed: ${error.message || 'Unknown error'}`);
-                    } finally {
-                        setIsProcessing(false);
-                    }
-                },
                 prefill: {
                     name: user?.name || '',
                     email: user?.email || '',
                 },
                 theme: {
                     color: '#3399cc'
-                }
+                },
+                redirect: true,
+                callback_url: `https://api.crosscoin.in/api/razorpay/callback?order_number=${orderResult.order.order_number}`
             };
+            // Debug: Log options before opening Razorpay
+            console.log('Opening Razorpay with options:', options);
             const rzp = new window.Razorpay(options);
             rzp.open();
             setIsProcessing(false);
@@ -203,8 +240,6 @@ export default function UnifiedCheckout() {
                     onSelectFee={handleSelectFee}
                     selectedFee={shippingFee}
                 />;
-      case 'payment':
-        return <PaymentStep paymentDetails={paymentDetails} setPaymentDetails={setPaymentDetails} />;
       default:
         return <CartStep />;
     }

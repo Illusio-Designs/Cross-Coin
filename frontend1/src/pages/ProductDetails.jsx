@@ -10,6 +10,21 @@ import SeoWrapper from '../console/SeoWrapper';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+// Utility function to normalize image URLs
+function normalizeImageUrl(imageUrl) {
+  if (!imageUrl) return '/placeholder.jpg';
+  if (imageUrl.includes('localhost:5000')) {
+    imageUrl = imageUrl.replace('http://localhost:5000', 'https://api.crosscoin.in');
+  }
+  if (/^https?:\/\//.test(imageUrl)) {
+    return imageUrl;
+  }
+  if (imageUrl.startsWith('/uploads/')) {
+    return `https://api.crosscoin.in${imageUrl}`;
+  }
+  return `https://api.crosscoin.in/uploads/products/${imageUrl}`;
+}
+
 export default function ProductDetails() {
   const searchParams = useSearchParams();
   const productSlug = searchParams.get('slug');
@@ -530,7 +545,7 @@ export default function ProductDetails() {
           <div className="product-images">
             <Image
               className="main-image"
-              src={product.images[selectedThumbnail]?.image_url || '/placeholder.jpg'}
+              src={normalizeImageUrl(product.images[selectedThumbnail]?.image_url)}
               alt={product.images[selectedThumbnail]?.alt_text || product.name}
               width={500}
               height={500}
@@ -539,7 +554,7 @@ export default function ProductDetails() {
               {product.images.map((image, idx) => (
                 <Image
                   key={image.id}
-                  src={image.image_url}
+                  src={normalizeImageUrl(image.image_url)}
                   alt={image.alt_text || `${product.name} thumbnail ${idx + 1}`}
                   className={selectedThumbnail === idx ? "active" : ""}
                   onClick={() => setSelectedThumbnail(idx)}
@@ -652,7 +667,7 @@ export default function ProductDetails() {
                       >
                         <div className="variation-card-img-wrap">
                           <img
-                            src={vImg?.image_url || '/placeholder.jpg'}
+                            src={normalizeImageUrl(vImg?.image_url)}
                             alt={vImg?.alt_text || 'Variation'}
                             className="variation-card-img"
                           />
@@ -746,13 +761,13 @@ export default function ProductDetails() {
                                   <div key={image.id || imgIndex} className="review-image">
                                     {image.fileType === 'video' ? (
                                       <video 
-                                        src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/uploads/reviews/${image.fileName}`}
+                                        src={normalizeImageUrl(`/uploads/reviews/${image.fileName}`)}
                                         controls
                                         style={{ width: '100px', height: '100px', objectFit: 'cover' }}
                                       />
                                     ) : (
                                       <img 
-                                        src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/uploads/reviews/${image.fileName}`}
+                                        src={normalizeImageUrl(`/uploads/reviews/${image.fileName}`)}
                                         alt={`Review image ${imgIndex + 1}`}
                                         style={{ width: '100px', height: '100px', objectFit: 'cover' }}
                                       />

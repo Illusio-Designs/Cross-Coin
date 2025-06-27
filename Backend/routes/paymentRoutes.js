@@ -6,7 +6,8 @@ const {
     refundPayment,
     getAllPayments,
     getUserPayments,
-    createRazorpayOrder
+    createRazorpayOrder,
+    razorpayCallback
 } = require('../controller/paymentController.js');
 const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
 
@@ -18,6 +19,7 @@ router.post('/confirm/:paymentIntentId', isAuthenticated, confirmPayment);
 router.get('/status/:paymentIntentId', isAuthenticated, getPaymentStatus);
 router.get('/my-payments', isAuthenticated, getUserPayments);
 router.post('/razorpay-order', isAuthenticated, createRazorpayOrder);
+router.post('/razorpay-callback', razorpayCallback);
 
 // Admin routes
 router.get('/', isAuthenticated, authorize(['admin']), getAllPayments);

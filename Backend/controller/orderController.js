@@ -77,27 +77,39 @@ module.exports.createOrder = async (req, res) => {
             }
 
             let price;
+            let stockAvailable;
+            let variation;
             if (variation_id) {
-                const variation = await ProductVariation.findByPk(variation_id);
+                variation = await ProductVariation.findByPk(variation_id);
                 if (!variation || variation.productId !== product_id) {
                     await transaction.rollback();
                     return res.status(404).json({ message: `Invalid variation for product ${product_id}` });
                 }
                 price = variation.price;
+                stockAvailable = variation.stock;
             } else {
                 const variations = await ProductVariation.findAll({ where: { productId: product_id } });
                 if (variations.length > 0) {
                     // If variations exist but none was chosen, default to the first one
-                    variation_id = variations[0].id; // Assign to the local variable
-                    price = variations[0].price;
+                    variation = variations[0];
+                    variation_id = variation.id; // Assign to the local variable
+                    price = variation.price;
+                    stockAvailable = variation.stock;
                 } else {
                     price = product.price;
+                    stockAvailable = product.stock_quantity;
                 }
 
                 if (!price || price <= 0) {
                     await transaction.rollback();
                     return res.status(400).json({ message: `No price found for product ${product_id}` });
                 }
+            }
+
+            // STOCK CHECK
+            if (typeof stockAvailable !== 'number' || stockAvailable < quantity) {
+                await transaction.rollback();
+                return res.status(400).json({ message: `Product is out of stock or insufficient quantity for product ${product_id}` });
             }
 
             // Apply discount if exists (simplified version)
@@ -113,7 +125,8 @@ module.exports.createOrder = async (req, res) => {
                 quantity,
                 price,
                 discount,
-                subtotal
+                subtotal,
+                _variation: variation // Pass the variation instance for later stock decrement
             });
         }
 
@@ -138,9 +151,26 @@ module.exports.createOrder = async (req, res) => {
         for (const item of validatedItems) {
             await OrderItem.create({
                 order_id: order.id,
-                ...item
+                product_id: item.product_id,
+                variation_id: item.variation_id,
+                quantity: item.quantity,
+                price: item.price,
+                discount: item.discount,
+                subtotal: item.subtotal
             }, { transaction });
 
+            // DECREMENT STOCK
+            if (item._variation) {
+                item._variation.stock -= item.quantity;
+                await item._variation.save({ transaction });
+            } else {
+                // If no variation, decrement product stock_quantity
+                const product = await Product.findByPk(item.product_id);
+                if (product) {
+                    product.stock_quantity = (product.stock_quantity || 0) - item.quantity;
+                    await product.save({ transaction });
+                }
+            }
         }
 
         // Create initial status history

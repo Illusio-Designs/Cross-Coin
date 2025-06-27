@@ -81,6 +81,18 @@ module.exports.addToCart = async (req, res) => {
     let where = { cartId: cart.id, productId: productId };
     if (variationId) where.variationId = variationId;
     let item = await CartItem.findOne({ where });
+    let stockAvailable = 0;
+    if (variationId) {
+      const variation = await ProductVariation.findByPk(variationId);
+      stockAvailable = variation ? variation.stock : 0;
+    } else {
+      const variation = await ProductVariation.findOne({ where: { productId } });
+      stockAvailable = variation ? variation.stock : 0;
+    }
+    const requestedQuantity = item ? item.quantity + quantity : quantity;
+    if (typeof stockAvailable !== 'number' || stockAvailable < requestedQuantity) {
+      return res.status(400).json({ message: 'Product is out of stock or insufficient quantity' });
+    }
     if (item) {
       item.quantity += quantity;
       await item.save();
