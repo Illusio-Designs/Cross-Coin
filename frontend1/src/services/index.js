@@ -906,4 +906,47 @@ export const attributeService = {
     }
 };
 
+export const policyService = {
+    createPolicy: async (data) => {
+        try {
+            const response = await api.post('/api/policies', data);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
+    getAllPolicies: async () => {
+        try {
+            const response = await api.get('/api/policies');
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
+    getPolicyById: async (id) => {
+        try {
+            const response = await api.get(`/api/policies/${id}`);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
+    updatePolicy: async (id, data) => {
+        try {
+            const response = await api.put(`/api/policies/${id}`, data);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
+    deletePolicy: async (id) => {
+        try {
+            const response = await api.delete(`/api/policies/${id}`);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    }
+};
+
 export default api;

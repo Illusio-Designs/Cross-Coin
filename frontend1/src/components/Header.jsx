@@ -55,7 +55,7 @@ const Header = () => {
       <div className="header__top">
         <div className="header__logo">
           <Link href="/">
-            <Image src="/assets/crosscoin_logo.webp" alt="logo" priority unoptimized />
+            <Image src="/assets/crosscoin_logo.webp" alt="logo" width={120} height={40} priority unoptimized />
           </Link>
         </div>
         <nav className="header__nav">

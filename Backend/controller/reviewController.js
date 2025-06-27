@@ -930,4 +930,3 @@ module.exports.getAllPublicReviews = async (req, res) => {
         res.status(500).json({ success: false, message: 'Failed to fetch reviews', error: error.message });
     }
 };
-
