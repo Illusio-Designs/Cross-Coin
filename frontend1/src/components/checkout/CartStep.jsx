@@ -4,6 +4,21 @@ import { FiTrash2 } from "react-icons/fi";
 import { FaBoxOpen } from "react-icons/fa";
 import { useCart } from "../../context/CartContext";
 
+// Utility function to normalize image URLs
+function normalizeImageUrl(imageUrl) {
+  if (!imageUrl) return '/placeholder.png';
+  if (imageUrl.includes('localhost:5000')) {
+    imageUrl = imageUrl.replace('http://localhost:5000', 'https://api.crosscoin.in');
+  }
+  if (/^https?:\/\//.test(imageUrl)) {
+    return imageUrl;
+  }
+  if (imageUrl.startsWith('/uploads/')) {
+    return `https://api.crosscoin.in${imageUrl}`;
+  }
+  return `https://api.crosscoin.in/uploads/products/${imageUrl}`;
+}
+
 export default function CartStep() {
   const router = useRouter();
   const { cartItems, removeFromCart, updateQuantity } = useCart();
@@ -21,7 +36,7 @@ export default function CartStep() {
         ) : (
             cartItems.map((item) => (
             <div className="cart-item" key={item.id}>
-                <Image src={item.image || '/placeholder.png'} alt={item.name} width={100} height={100} className="cart-item-img" />
+                <Image src={normalizeImageUrl(item.image)} alt={item.name} width={100} height={100} className="cart-item-img" />
                 <div className="cart-item-details">
                 <div className="cart-item-title">{item.name}</div>
                 <div className="cart-item-meta">Size: {item.size || 'N/A'}</div>

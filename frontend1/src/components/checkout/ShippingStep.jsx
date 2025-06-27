@@ -87,7 +87,15 @@ export default function ShippingStep({ onSelectAddress, selectedAddress, onSelec
 
   const handleEdit = (address) => {
     setEditingId(address.id);
-    setForm(address);
+    setForm({
+      address: address.address || '',
+      city: address.city || '',
+      state: address.state || '',
+      postalCode: address.postal_code || address.postalCode || '',
+      country: address.country || '',
+      phoneNumber: address.phone_number || address.phoneNumber || '',
+      isDefault: address.isDefault || address.is_default || false
+    });
     setShowForm(true);
   };
 

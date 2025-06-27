@@ -74,6 +74,13 @@ const formatProductResponse = (product) => {
         delete productData.Category;
     }
 
+    // Add outOfStock field
+    if (productData.variations && productData.variations.length > 0) {
+        productData.outOfStock = productData.variations.every(v => v.stock <= 0);
+    } else {
+        productData.outOfStock = false;
+    }
+
     return productData;
 };
 
@@ -93,10 +100,13 @@ const calculateProductBadge = async (product, transaction) => {
         where: { productId: product.id },
         transaction
     });
-    const hasLowStock = variations.some(v => v.stock < 10);
+    const hasLowStock = variations.some(v => v.stock < 10 && v.stock > 0);
+    const allOutOfStock = variations.length > 0 && variations.every(v => v.stock <= 0);
 
     // Determine badge priority
-    if (isNewArrival) {
+    if (allOutOfStock) {
+        return 'out_of_stock';
+    } else if (isNewArrival) {
         return 'new_arrival';
     } else if (isHotSelling) {
         return 'hot_selling';
@@ -966,5 +976,12 @@ module.exports.getAllPublicProducts = async (req, res) => {
             error: error.message 
         });
     }
+};
+
+// Helper to check if a product is out of stock
+const isProductOutOfStock = async (productId, transaction) => {
+    const variations = await ProductVariation.findAll({ where: { productId }, transaction });
+    if (variations.length === 0) return false;
+    return variations.every(v => v.stock <= 0);
 };
 
