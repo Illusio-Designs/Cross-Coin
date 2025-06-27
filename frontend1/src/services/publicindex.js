@@ -486,3 +486,12 @@ export const getAllPublicReviews = async (params = {}) => {
         throw error.response?.data || error.message;
     }
 };
+
+export const getPublicPolicyByName = async (name) => {
+    try {
+        const response = await axios.get(`${API_URL}/api/policies/name/${name}`);
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};

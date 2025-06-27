@@ -52,4 +52,37 @@ exports.deletePolicy = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+};
+
+exports.getPublicPolicyByName = async (req, res) => {
+  try {
+    const { name } = req.params;
+    // Normalize: replace hyphens, trim, and lowercase
+    const searchTitle = name.replace(/-/g, ' ').trim().toLowerCase();
+
+    // Try exact match first
+    let policy = await Policy.findOne({
+      where: Policy.sequelize.where(
+        Policy.sequelize.fn('LOWER', Policy.sequelize.col('title')),
+        searchTitle
+      ),
+    });
+
+    // If not found, try partial match
+    if (!policy) {
+      policy = await Policy.findOne({
+        where: Policy.sequelize.where(
+          Policy.sequelize.fn('LOWER', Policy.sequelize.col('title')),
+          { [Policy.sequelize.Op.like]: `%${searchTitle}%` }
+        ),
+      });
+    }
+
+    if (!policy) {
+      return res.status(404).json({ error: 'Policy not found' });
+    }
+    res.json(policy);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 }; 

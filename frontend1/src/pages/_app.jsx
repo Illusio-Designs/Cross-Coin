@@ -17,7 +17,7 @@ import '../styles/pages/UnifiedCheckout.css';
 import '../styles/pages/ThankYou.css';
 import '../styles/pages/Wishlist.css';
 import '../styles/pages/Login.css';
-import '../styles/pages/TC.css';
+import '../styles/pages/Policy.css';
 import '../styles/dashboard/layout.css';
 import '../styles/dashboard/sidebar.css';
 import '../styles/pages/auth/adminlogin.css';

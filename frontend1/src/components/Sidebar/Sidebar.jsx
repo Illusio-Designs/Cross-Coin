@@ -55,6 +55,10 @@ const menu = [
     icon: <FaCog />, view: "seo"
   },
   {
+    label: "Policies",
+    icon: <FaFileAlt />, view: "policies"
+  },
+  {
     label: "Consumers",
     icon: <FaUser />, view: "consumers"
   },
@@ -99,7 +103,8 @@ const Sidebar = ({ isCollapsed, onToggleCollapse, onViewChange, currentView }) =
     { label: "Customers", view: "customers" },
     { label: "Admins", view: "admins" },
     { label: "Wishlist", view: "wishlist" },
-    { label: "SEO", view: "seo" }
+    { label: "SEO", view: "seo" },
+    { label: "Policies", view: "policies"}
   ];
 
   return (

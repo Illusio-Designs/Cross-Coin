@@ -20,6 +20,7 @@ import Coupons from "./coupon/coupons";
 import Reviews from "./reviews/reviews";
 import SEO from "./seo/seo";
 import Slider from "./slider/slider";
+import Policies from "./policies";
 
 function DashboardHeader({ isCollapsed, isFullscreen, onToggleFullscreen }) {
   const sidebarWidth = isCollapsed ? 72 : 260;
@@ -179,6 +180,8 @@ export default function Dashboard() {
         return <Reviews />;
       case 'seo':
         return <SEO />;
+      case 'policies':
+        return <Policies />;
       case 'slider':
         return <Slider />;
       default:

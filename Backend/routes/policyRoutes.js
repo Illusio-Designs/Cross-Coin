@@ -4,6 +4,7 @@ const policyController = require('../controller/policyController');
 
 router.post('/', policyController.createPolicy);
 router.get('/', policyController.getPolicies);
+router.get('/name/:name', policyController.getPublicPolicyByName);
 router.get('/:id', policyController.getPolicyById);
 router.put('/:id', policyController.updatePolicy);
 router.delete('/:id', policyController.deletePolicy);

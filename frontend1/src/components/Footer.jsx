@@ -32,7 +32,7 @@ const Footer = () => {
         <div className="footer__col footer__brand">
           <div className="footer__logo">
             <span className="footer__logo">
-            <Image src="/assets/crosscoin_logo.webp" alt="logo" unoptimized />
+            <Image src="/assets/crosscoin_logo.webp" alt="logo" width={120} height={40} unoptimized />
             </span>
           </div>
           <p>Register now to get latest updates on promotions & coupons. Don't worry, we not spam!</p>
@@ -40,9 +40,7 @@ const Footer = () => {
             <h2>Follow us on social media:</h2>
             <div className="footer__social-icons">
             <a href="#" className="facebook"><FaFacebookF /></a>
-            <a href="#" className="twitter"><FaTwitter /></a>
             <a href="#" className="instagram"><FaInstagram /></a>
-            <a href="#" className="linkedin"><FaLinkedinIn /></a>
             </div>
           </div>
         </div>
@@ -82,7 +80,7 @@ const Footer = () => {
       </div>
       <div className="footer__bottom">
         <div className="footer__copyright">
-          Copyright 2025 &copy; crosscoin PVT LTD. All right reserved
+          Copyright 2025 &copy; crosscoin Manage by OBZUS INDIA PRIVATE LIMITED. All right reserved
           <div className="footer__payments">
           <Image src={visa} alt="Visa" className="visa" unoptimized />
           <Image src={mastercard} alt="Mastercard" className="mastercard" unoptimized/>
@@ -93,9 +91,10 @@ const Footer = () => {
         </div>
        
         <div className="footer__links">
-          <a href="/tc">Terms and Conditions</a>
-          <a href="#">Privacy Policy</a>
-          <a href="#">Order Tracking</a>
+          <a href="/policy?name=terms-and-conditions">Terms and Conditions</a>
+          <a href="/policy?name=privacy-policy">Privacy Policy</a>
+          <a href="/policy?name=shipping-policy">Shipping Policy</a>
+          <a href="/policy?name=cancellation-and-refund">Cancellation & Refund</a>
         </div>
       </div>
     </footer>
