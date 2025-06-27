@@ -89,7 +89,7 @@ const Home = () => {
         const data = await getPublicCategories();
         // Handle both array and object response
         if (Array.isArray(data)) {
-          setCategories(data);
+        setCategories(data);
         } else if (data && Array.isArray(data.categories)) {
           setCategories(data.categories);
         } else {
@@ -469,6 +469,7 @@ const Home = () => {
                       width={400}
                       height={400}
                       style={{ objectFit: 'cover' }}
+                      unoptimized
                     />
                     <div className="thumbnail-images">
                       {product.images.map((src, idx) => (
@@ -481,6 +482,7 @@ const Home = () => {
                           width={60}
                           height={60}
                           style={{ objectFit: 'cover' }}
+                          unoptimized
                         />
                       ))}
                     </div>
