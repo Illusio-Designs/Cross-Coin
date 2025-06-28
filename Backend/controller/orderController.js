@@ -10,7 +10,7 @@ const { User } = require('../model/userModel.js');
 const { ProductImage } = require('../model/productImageModel.js');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/db.js');
-const { createShiprocketOrder, getShiprocketTracking, getShiprocketLabel, requestShiprocketPickup, cancelShiprocketShipment, getAllShiprocketOrders } = require('../services/shiprocketService.js');
+const { createShiprocketOrder, getShiprocketTracking, getShiprocketLabel, requestShiprocketPickup, cancelShiprocketShipment, getAllShiprocketOrders, authenticateShiprocket } = require('../services/shiprocketService.js');
 
 // Generate unique order number
 const generateOrderNumber = () => {
@@ -207,8 +207,10 @@ module.exports.createOrder = async (req, res) => {
             // Map your order data to Shiprocket's required format
             const shiprocketOrderPayload = {
                 order_id: createdOrder.order_number,
-                order_date: new Date().toISOString().slice(0, 10),
-                pickup_location: 'Default', // You may want to make this dynamic
+                order_date: new Date().toISOString().slice(0, 19).replace('T', ' '), // Format: "2019-07-24 11:11"
+                pickup_location: 'Default',
+                channel_id: "1", // Default channel ID
+                comment: `Order from Cross-Coin: ${createdOrder.order_number}`,
                 billing_customer_name: createdOrder.User.username,
                 billing_last_name: '',
                 billing_address: createdOrder.ShippingAddress?.address_line1 || '',
@@ -216,23 +218,39 @@ module.exports.createOrder = async (req, res) => {
                 billing_city: createdOrder.ShippingAddress?.city || '',
                 billing_pincode: createdOrder.ShippingAddress?.postal_code || '',
                 billing_state: createdOrder.ShippingAddress?.state || '',
-                billing_country: createdOrder.ShippingAddress?.country || '',
+                billing_country: createdOrder.ShippingAddress?.country || 'India',
                 billing_email: createdOrder.User.email,
                 billing_phone: createdOrder.ShippingAddress?.phone || '',
                 shipping_is_billing: true,
+                shipping_customer_name: '',
+                shipping_last_name: '',
+                shipping_address: '',
+                shipping_address_2: '',
+                shipping_city: '',
+                shipping_pincode: '',
+                shipping_country: '',
+                shipping_state: '',
+                shipping_email: '',
+                shipping_phone: '',
                 order_items: createdOrder.OrderItems.map(item => ({
                     name: item.Product.name,
                     sku: item.Product.sku || '',
                     units: item.quantity,
-                    selling_price: item.price,
-                    discount: item.discount || 0
+                    selling_price: item.price.toString(),
+                    discount: item.discount ? item.discount.toString() : '',
+                    tax: '',
+                    hsn: 441122 // Default HSN code
                 })),
                 payment_method: createdOrder.payment_type === 'cod' ? 'COD' : 'Prepaid',
+                shipping_charges: 0,
+                giftwrap_charges: 0,
+                transaction_charges: 0,
+                total_discount: 0,
                 sub_total: createdOrder.total_amount,
-                length: 10, // Default, update as needed
-                breadth: 10,
-                height: 10,
-                weight: 1 // Default, update as needed
+                length: 10,
+                breadth: 15,
+                height: 20,
+                weight: 2.5
             };
             const shiprocketResponse = await createShiprocketOrder(shiprocketOrderPayload);
             // Store shiprocket order and shipment IDs in the local order
@@ -628,6 +646,25 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
+        console.log('=== SHIPROCKET SYNC PROCESS START ===');
+        console.log('Request headers:', req.headers);
+        console.log('Request user:', req.user);
+        
+        // First, test Shiprocket authentication
+        try {
+            console.log('=== TESTING SHIPROCKET AUTHENTICATION ===');
+            await authenticateShiprocket();
+            console.log('=== SHIPROCKET AUTHENTICATION SUCCESS ===');
+        } catch (authError) {
+            console.error('=== SHIPROCKET AUTHENTICATION FAILED ===');
+            console.error('Auth error:', authError);
+            await transaction.rollback();
+            return res.status(400).json({ 
+                message: 'Shiprocket authentication failed', 
+                error: authError.message 
+            });
+        }
+
         // Get all orders that don't have Shiprocket IDs
         const unsyncedOrders = await Order.findAll({
             where: {
@@ -643,6 +680,24 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
             ]
         });
 
+        console.log(`Found ${unsyncedOrders.length} unsynced orders`);
+
+        // Debug: Check all shipping addresses
+        const allShippingAddresses = await ShippingAddress.findAll({
+            limit: 5
+        });
+        console.log('Sample shipping addresses:', allShippingAddresses.map(addr => ({
+            id: addr.id,
+            user_id: addr.user_id,
+            address_line1: addr.address_line1,
+            address_line2: addr.address_line2,
+            city: addr.city,
+            postal_code: addr.postal_code,
+            state: addr.state,
+            country: addr.country,
+            phone: addr.phone
+        })));
+
         const syncResults = {
             total: unsyncedOrders.length,
             successful: 0,
@@ -657,47 +712,131 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
                     continue;
                 }
 
-                // Get shipping address for the order
-                const shippingAddress = await ShippingAddress.findOne({
-                    where: { user_id: order.user_id }
-                });
+                console.log(`Processing order ${order.order_number} for user ${order.user_id}:`);
+
+                // Try multiple ways to get shipping address
+                let shippingAddress = null;
+                
+                // First, try to get from the order's included data
+                if (order.ShippingAddress) {
+                    shippingAddress = order.ShippingAddress;
+                    console.log('Found shipping address from order include');
+                } else {
+                    // If not included, try to find by user_id
+                    shippingAddress = await ShippingAddress.findOne({
+                        where: { user_id: order.user_id }
+                    });
+                    console.log('Found shipping address by user_id query');
+                }
+
+                // If still not found, try to find any address for this user
+                if (!shippingAddress) {
+                    const userAddresses = await ShippingAddress.findAll({
+                        where: { user_id: order.user_id }
+                    });
+                    if (userAddresses.length > 0) {
+                        shippingAddress = userAddresses[0];
+                        console.log('Found shipping address from user addresses list');
+                    }
+                }
+
+                console.log('Shipping address found:', !!shippingAddress);
+                if (shippingAddress) {
+                    console.log('Address data:', {
+                        id: shippingAddress.id,
+                        user_id: shippingAddress.user_id,
+                        address_line1: shippingAddress.address_line1,
+                        address_line2: shippingAddress.address_line2,
+                        city: shippingAddress.city,
+                        postal_code: shippingAddress.postal_code,
+                        state: shippingAddress.state,
+                        country: shippingAddress.country,
+                        phone: shippingAddress.phone
+                    });
+                }
 
                 if (!shippingAddress) {
                     syncResults.failed++;
-                    syncResults.errors.push(`Order ${order.order_number}: No shipping address found`);
+                    syncResults.errors.push(`Order ${order.order_number}: No shipping address found for user ${order.user_id}`);
                     continue;
                 }
+
+                // Validate and prepare address data with fallbacks
+                const billingAddress = shippingAddress.address_line1 || 
+                                     shippingAddress.address_line2 || 
+                                     'Default Address';
+                
+                const billingPhone = shippingAddress.phone || 
+                                   '9999999999'; // Default phone number
+                
+                const billingCity = shippingAddress.city || 'Default City';
+                const billingPincode = shippingAddress.postal_code || '000000';
+                const billingState = shippingAddress.state || 'Default State';
+
+                console.log('Processed address data:', {
+                    billingAddress,
+                    billingPhone,
+                    billingCity,
+                    billingPincode,
+                    billingState
+                });
 
                 // Map order data to Shiprocket's required format
                 const shiprocketOrderPayload = {
                     order_id: order.order_number,
-                    order_date: order.createdAt.toISOString().slice(0, 10),
+                    order_date: order.createdAt.toISOString().slice(0, 19).replace('T', ' '), // Format: "2019-07-24 11:11"
                     pickup_location: 'Default',
+                    channel_id: "1", // Default channel ID
+                    comment: `Order from Cross-Coin: ${order.order_number}`,
                     billing_customer_name: order.User.username,
                     billing_last_name: '',
-                    billing_address: shippingAddress.address_line1 || '',
+                    billing_address: billingAddress,
                     billing_address_2: shippingAddress.address_line2 || '',
-                    billing_city: shippingAddress.city || '',
-                    billing_pincode: shippingAddress.postal_code || '',
-                    billing_state: shippingAddress.state || '',
-                    billing_country: shippingAddress.country || '',
+                    billing_city: billingCity,
+                    billing_pincode: billingPincode,
+                    billing_state: billingState,
+                    billing_country: shippingAddress.country || 'India',
                     billing_email: order.User.email,
-                    billing_phone: shippingAddress.phone || '',
+                    billing_phone: billingPhone,
                     shipping_is_billing: true,
+                    shipping_customer_name: '',
+                    shipping_last_name: '',
+                    shipping_address: '',
+                    shipping_address_2: '',
+                    shipping_city: '',
+                    shipping_pincode: '',
+                    shipping_country: '',
+                    shipping_state: '',
+                    shipping_email: '',
+                    shipping_phone: '',
                     order_items: order.OrderItems.map(item => ({
                         name: item.Product.name,
                         sku: item.Product.sku || '',
                         units: item.quantity,
-                        selling_price: item.price,
-                        discount: item.discount || 0
+                        selling_price: item.price.toString(),
+                        discount: item.discount ? item.discount.toString() : '',
+                        tax: '',
+                        hsn: 441122 // Default HSN code
                     })),
                     payment_method: order.payment_type === 'cod' ? 'COD' : 'Prepaid',
+                    shipping_charges: 0,
+                    giftwrap_charges: 0,
+                    transaction_charges: 0,
+                    total_discount: 0,
                     sub_total: order.total_amount,
                     length: 10,
-                    breadth: 10,
-                    height: 10,
-                    weight: 1
+                    breadth: 15,
+                    height: 20,
+                    weight: 2.5
                 };
+
+                console.log('Shiprocket payload prepared:', {
+                    order_id: shiprocketOrderPayload.order_id,
+                    billing_address: shiprocketOrderPayload.billing_address,
+                    billing_phone: shiprocketOrderPayload.billing_phone,
+                    billing_city: shiprocketOrderPayload.billing_city,
+                    billing_pincode: shiprocketOrderPayload.billing_pincode
+                });
 
                 const shiprocketResponse = await createShiprocketOrder(shiprocketOrderPayload);
                 
@@ -727,6 +866,8 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
         }
 
         await transaction.commit();
+        console.log('=== SHIPROCKET SYNC PROCESS COMPLETED ===');
+        console.log('Final results:', syncResults);
         
         res.json({
             message: 'Order sync completed',
@@ -734,8 +875,31 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
         });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error syncing orders with Shiprocket:', error);
+        console.error('=== SHIPROCKET SYNC PROCESS FAILED ===');
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            response: error.response?.data,
+            status: error.response?.status
+        });
         res.status(500).json({ message: 'Failed to sync orders with Shiprocket', error: error.message });
+    }
+};
+
+// Test Shiprocket credentials
+module.exports.testShiprocketCredentials = async (req, res) => {
+    try {
+        await authenticateShiprocket();
+        res.json({ 
+            message: 'Shiprocket credentials are valid',
+            status: 'success'
+        });
+    } catch (error) {
+        res.status(400).json({ 
+            message: 'Shiprocket credentials are invalid',
+            error: error.message,
+            status: 'error'
+        });
     }
 };
 
