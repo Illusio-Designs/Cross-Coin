@@ -249,11 +249,18 @@ const Home = () => {
   const handleAddToCart = (e, product) => {
     e.stopPropagation();
     console.log('Add to cart:', product);
-    // Add to cart logic here
-    if (product && product.variations && product.variations.length > 0) {
-      const variation = product.variations[0];
-      addToCart(product, variation.id || variation, 1);
+    // Get default color and size from the first variation
+    const variation = product.variations?.[0];
+    let defaultColor = '';
+    let defaultSize = '';
+    
+    if (variation && variation.attributes) {
+      const attrs = typeof variation.attributes === 'string' ? JSON.parse(variation.attributes) : variation.attributes;
+      defaultColor = attrs.color?.[0] || '';
+      defaultSize = attrs.size?.[0] || '';
     }
+    
+    addToCart(product, defaultColor, defaultSize, 1);
   };
 
   const handleBuyNow = () => {

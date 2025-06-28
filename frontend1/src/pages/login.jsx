@@ -10,7 +10,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { login, user, isAuthenticated } = useAuth();
 
@@ -22,15 +22,13 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
     if (!email || !password) {
-      setError("Please fill in all fields");
       return;
     }
+    setIsLoading(true);
     try {
       const response = await login({ email, password });
       if (response.user.role !== 'consumer' && response.user.role !== 'customer') {
-        setError("Only consumer accounts are allowed to login here.");
         return;
       }
       if (rememberMe) {
@@ -39,7 +37,9 @@ export default function Login() {
       sessionStorage.setItem('isLoggedIn', 'true');
       router.push('/profile');
     } catch (err) {
-      setError(err.message || "Invalid email or password");
+      // Error is handled by toast notification in AuthContext
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -52,7 +52,6 @@ export default function Login() {
           <Link href="/register" className="inactive">Register</Link>
         </div>
         <p className="auth-info">If you have an account, login in with your user name or email address.</p>
-        {error && <div className="auth-error">{error}</div>}
         <form className="auth-form" onSubmit={handleSubmit}>
           <label>Email address</label>
           <input 
@@ -61,6 +60,7 @@ export default function Login() {
             onChange={e => setEmail(e.target.value)} 
             required 
             placeholder="Enter your email"
+            disabled={isLoading}
           />
           <label>Password</label>
           <div className="password-wrapper">
@@ -70,6 +70,7 @@ export default function Login() {
               onChange={e => setPassword(e.target.value)} 
               required 
               placeholder="Enter your password"
+              disabled={isLoading}
             />
             <span className="toggle-password" onClick={() => setShowPassword(!showPassword)}>
               {showPassword ? (
@@ -94,11 +95,14 @@ export default function Login() {
                 type="checkbox" 
                 checked={rememberMe} 
                 onChange={e => setRememberMe(e.target.checked)} 
+                disabled={isLoading}
               /> Remember me
             </label>
             <Link href="/forgot-password" className="forgot-password">Forgot password?</Link>
           </div>
-          <button type="submit" className="auth-btn">Log in</button>
+          <button type="submit" className="auth-btn" disabled={isLoading}>
+            {isLoading ? 'Logging in...' : 'Log in'}
+          </button>
         </form>
       </div>
       <Footer />

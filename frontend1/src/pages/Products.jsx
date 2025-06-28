@@ -143,10 +143,18 @@ const Products = () => {
   const handleAddToCart = (e, product) => {
     e.stopPropagation();
     console.log('Add to Cart:', product);
+    // Get default color and size from the first variation
     const variation = product.variations?.[0];
-    if (variation) {
-      addToCart(product, variation.id, 1);
+    let defaultColor = '';
+    let defaultSize = '';
+    
+    if (variation && variation.attributes) {
+      const attrs = typeof variation.attributes === 'string' ? JSON.parse(variation.attributes) : variation.attributes;
+      defaultColor = attrs.color?.[0] || '';
+      defaultSize = attrs.size?.[0] || '';
     }
+    
+    addToCart(product, defaultColor, defaultSize, 1);
   };
 
   // Get category name by ID for display

@@ -11,6 +11,15 @@ import SeoWrapper from '../console/SeoWrapper';
 import { resetPassword, getCurrentUser, updateUserProfile, createShippingAddress, getUserShippingAddresses, updateShippingAddress, deleteShippingAddress, setDefaultShippingAddress, getUserOrders } from '../services/publicindex';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { 
+  showProfileUpdateSuccessToast, 
+  showProfileUpdateErrorToast, 
+  showAddressAddedSuccessToast, 
+  showAddressUpdatedSuccessToast, 
+  showAddressDeletedSuccessToast, 
+  showValidationErrorToast,
+  showLogoutSuccessToast 
+} from '../utils/toast';
 
 const tabs = [
   { label: "My Orders" },
@@ -30,10 +39,6 @@ export default function Profile() {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [resetMessage, setResetMessage] = useState("");
-  const [resetError, setResetError] = useState("");
-  const [profileMessage, setProfileMessage] = useState("");
-  const [profileError, setProfileError] = useState("");
   const [profileImage, setProfileImage] = useState(null);
   const [profileImageUrl, setProfileImageUrl] = useState("");
   const [addresses, setAddresses] = useState([]);
@@ -48,7 +53,6 @@ export default function Profile() {
     isDefault: false
   });
   const [editingId, setEditingId] = useState(null);
-  const [addressError, setAddressError] = useState("");
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
@@ -104,12 +108,13 @@ export default function Profile() {
   const handleLogout = async () => {
     try {
       await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/users/logout`);
-    sessionStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('user');
+      sessionStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('user');
       localStorage.removeItem('token');
-    router.push('/login');
+      showLogoutSuccessToast();
+      router.push('/login');
     } catch (err) {
-      alert('Logout failed. Please try again.');
+      showProfileUpdateErrorToast('Logout failed. Please try again.');
     }
   };
 
@@ -132,19 +137,20 @@ export default function Profile() {
 
   const handleAddressSubmit = async (e) => {
     e.preventDefault();
-    setAddressError("");
     try {
       if (editingId) {
         await updateShippingAddress(editingId, addressForm);
+        showAddressUpdatedSuccessToast();
       } else {
         await createShippingAddress(addressForm);
+        showAddressAddedSuccessToast();
       }
       setAddressForm({ address: '', city: '', state: '', postalCode: '', country: '', phoneNumber: '', isDefault: false });
       setEditingId(null);
       const data = await getUserShippingAddresses();
       setAddresses(data);
     } catch (err) {
-      setAddressError(err.message || "Failed to save address");
+      showProfileUpdateErrorToast(err.message || "Failed to save address");
     }
   };
 
@@ -166,8 +172,9 @@ export default function Profile() {
       await deleteShippingAddress(id);
       const data = await getUserShippingAddresses();
       setAddresses(data);
+      showAddressDeletedSuccessToast();
     } catch (err) {
-      setAddressError(err.message || "Failed to delete address");
+      showProfileUpdateErrorToast(err.message || "Failed to delete address");
     }
   };
 
@@ -176,8 +183,9 @@ export default function Profile() {
       await setDefaultShippingAddress(id);
       const data = await getUserShippingAddresses();
       setAddresses(data);
+      showAddressUpdatedSuccessToast();
     } catch (err) {
-      setAddressError(err.message || "Failed to set default address");
+      showProfileUpdateErrorToast(err.message || "Failed to set default address");
     }
   };
 
@@ -347,7 +355,6 @@ export default function Profile() {
                         </label>
                 </div>
                       <button type="submit">{editingId ? "Update Address" : "Add Address"}</button>
-                      {addressError && <div className="profile-error-message">{addressError}</div>}
                     </form>
                     <button onClick={() => setShowAddressModal(false)} style={{marginTop: 10}}>Close</button>
                   </div>
@@ -359,8 +366,6 @@ export default function Profile() {
             <div className="account-details-form">
               <form onSubmit={async e => {
                 e.preventDefault();
-                setProfileMessage("");
-                setProfileError("");
                 try {
                   const formData = new FormData();
                   formData.append("username", user?.username || "");
@@ -369,13 +374,13 @@ export default function Profile() {
                     formData.append("profileImage", profileImage);
                   }
                   await updateUserProfile(formData);
-                  setProfileMessage("Profile updated successfully.");
+                  showProfileUpdateSuccessToast();
                   // Optionally refresh image
                   if (profileImage) {
                     setProfileImageUrl(URL.createObjectURL(profileImage));
                   }
                 } catch (err) {
-                  setProfileError(err.message || "Failed to update profile.");
+                  showProfileUpdateErrorToast(err.message || "Failed to update profile.");
                 }
               }}>
                 <div className="form-group">
@@ -410,8 +415,6 @@ export default function Profile() {
                     </div>
                   )}
                 </div>
-                {profileMessage && <div className="profile-success-message">{profileMessage}</div>}
-                {profileError && <div className="profile-error-message">{profileError}</div>}
                 <button className="update-profile-btn" type="submit">Update Profile</button>
               </form>
             </div>
@@ -420,14 +423,12 @@ export default function Profile() {
             <div className="reset-password-form">
               <form onSubmit={async e => {
                 e.preventDefault();
-                setResetMessage("");
-                setResetError("");
                 if (!currentPassword || !newPassword || !confirmPassword) {
-                  setResetError("All fields are required.");
+                  showValidationErrorToast("All fields are required.");
                   return;
                 }
                 if (newPassword !== confirmPassword) {
-                  setResetError("New passwords do not match.");
+                  showValidationErrorToast("New passwords do not match.");
                   return;
                 }
                 try {
@@ -437,12 +438,12 @@ export default function Profile() {
                     password: newPassword,
                     confirmPassword: confirmPassword
                   });
-                  setResetMessage(response.message || "Password updated successfully.");
+                  showProfileUpdateSuccessToast(response.message || "Password updated successfully.");
                   setCurrentPassword("");
                   setNewPassword("");
                   setConfirmPassword("");
                 } catch (err) {
-                  setResetError(err.message || "Failed to update password.");
+                  showProfileUpdateErrorToast(err.message || "Failed to update password.");
                 }
               }}>
                 <div className="form-group">
@@ -505,8 +506,6 @@ export default function Profile() {
                     </button>
                   </div>
                 </div>
-                {resetMessage && <div className="profile-success-message">{resetMessage}</div>}
-                {resetError && <div className="profile-error-message">{resetError}</div>}
                 <button className="update-profile-btn" type="submit">Update Password</button>
               </form>
             </div>

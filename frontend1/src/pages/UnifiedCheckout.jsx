@@ -10,11 +10,20 @@ import PaymentStep from '../components/checkout/PaymentStep';
 import OrderSummary from '../components/checkout/OrderSummary';
 import { useAuth } from "../context/AuthContext";
 import { createOrder, createRazorpayOrder } from "../services/publicindex";
+import { showOrderPlacedSuccessToast, showOrderPlacedErrorToast, showValidationErrorToast } from "../utils/toast";
 
 export default function UnifiedCheckout() {
-  const [step, setStep] = useState('cart'); // cart, shipping, payment
+  const [step, setStep] = useState(() => {
+    // Initialize step from sessionStorage or default to 'cart'
+    if (typeof window !== 'undefined') {
+      const savedStep = sessionStorage.getItem('checkoutStep') || 'cart';
+      console.log('UnifiedCheckout: Initializing step from sessionStorage:', savedStep);
+      return savedStep;
+    }
+    return 'cart';
+  }); // cart, shipping, payment
   const { user, isAuthenticated } = useAuth();
-  const { cartItems, clearCart } = useCart();
+  const { cartItems, clearCart, isCartLoading } = useCart();
   const router = useRouter();
 
   const [shippingAddress, setShippingAddress] = useState(null);
@@ -30,10 +39,29 @@ export default function UnifiedCheckout() {
   }, [isAuthenticated, router]);
 
   useEffect(() => {
-    if (cartItems.length === 0 && !isProcessing && !orderPlaced) {
-      router.push('/Products');
+    if (cartItems.length === 0 && !isProcessing && !orderPlaced && !isCartLoading) {
+      // Don't redirect, let the CartStep component show the empty cart message
+      console.log('UnifiedCheckout: Cart is empty, showing empty cart message');
     }
-  }, [cartItems, router, isProcessing, orderPlaced]);
+  }, [cartItems, router, isProcessing, orderPlaced, isCartLoading]);
+
+  // Validate step progression - ensure user can't skip steps
+  useEffect(() => {
+    if (!isCartLoading && cartItems.length > 0) {
+      // If user is on shipping step but cart is empty, go back to cart
+      if (step === 'shipping' && cartItems.length === 0) {
+        console.log('UnifiedCheckout: Validation - redirecting from shipping to cart (empty cart)');
+        setStep('cart');
+        sessionStorage.setItem('checkoutStep', 'cart');
+      }
+      // If user is on payment step but hasn't completed shipping requirements, go back to shipping
+      else if (step === 'payment' && (!shippingAddress || !shippingFee)) {
+        console.log('UnifiedCheckout: Validation - redirecting from payment to shipping (missing requirements)');
+        setStep('shipping');
+        sessionStorage.setItem('checkoutStep', 'shipping');
+      }
+    }
+  }, [step, cartItems.length, shippingAddress, shippingFee, isCartLoading]);
 
   useEffect(() => {
     const savedAddress = sessionStorage.getItem('shippingAddress');
@@ -66,14 +94,17 @@ export default function UnifiedCheckout() {
 
   const goToNextStep = async () => {
     if (step === 'cart') {
-        setStep('shipping');
+        const newStep = 'shipping';
+        console.log('UnifiedCheckout: Moving from cart to shipping step');
+        setStep(newStep);
+        sessionStorage.setItem('checkoutStep', newStep);
     } else if (step === 'shipping') {
         if (!shippingAddress) {
-            alert('Please select a shipping address.');
+            showValidationErrorToast('Please select a shipping address.');
             return;
         }
         if (!shippingFee) {
-            alert('Please select a delivery method.');
+            showValidationErrorToast('Please select a delivery method.');
             return;
         }
         if (shippingFee.orderType === 'cod') {
@@ -98,7 +129,7 @@ export default function UnifiedCheckout() {
                 const razorpayOrder = await createRazorpayOrder({ amount, currency: 'INR' });
                 const scriptLoaded = await loadRazorpayScript();
                 if (!scriptLoaded || !window.Razorpay) {
-                    alert('Failed to load Razorpay SDK. Please try again.');
+                    showOrderPlacedErrorToast('Failed to load Razorpay SDK. Please try again.');
                     setIsProcessing(false);
                     return;
                 }
@@ -122,7 +153,7 @@ export default function UnifiedCheckout() {
                 const rzp = new window.Razorpay(options);
                 rzp.open();
             } catch (error) {
-                alert(`Order or payment initiation failed: ${error.message || 'Unknown error'}`);
+                showOrderPlacedErrorToast(`Order or payment initiation failed: ${error.message || 'Unknown error'}`);
             } finally {
                 setIsProcessing(false);
             }
@@ -131,8 +162,17 @@ export default function UnifiedCheckout() {
   };
   
   const goToPrevStep = () => {
-    if (step === 'payment') setStep('shipping');
-    else if (step === 'shipping') setStep('cart');
+    if (step === 'payment') {
+        const newStep = 'shipping';
+        console.log('UnifiedCheckout: Moving from payment to shipping step');
+        setStep(newStep);
+        sessionStorage.setItem('checkoutStep', newStep);
+    } else if (step === 'shipping') {
+        const newStep = 'cart';
+        console.log('UnifiedCheckout: Moving from shipping to cart step');
+        setStep(newStep);
+        sessionStorage.setItem('checkoutStep', newStep);
+    }
   };
 
   // Helper to load Razorpay script
@@ -152,7 +192,7 @@ export default function UnifiedCheckout() {
     // For prepaid, validate payment details. For COD, skip this.
     if (shippingFee?.orderType !== 'cod') {
         if (paymentDetails.method === 'upi' && !paymentDetails.upiId) {
-            alert('Please enter UPI ID');
+            showValidationErrorToast('Please enter UPI ID');
             return;
         }
     }
@@ -178,18 +218,20 @@ export default function UnifiedCheckout() {
             clearCart();
             sessionStorage.removeItem('shippingAddress');
             sessionStorage.removeItem('appliedCoupon');
+            sessionStorage.removeItem('checkoutStep'); // Clear checkout step
+            showOrderPlacedSuccessToast(orderResult.order.order_number);
             router.push(`/ThankYou?order_number=${orderResult.order.order_number}`);
         } else {
             // Prepaid: Razorpay flow
             const scriptLoaded = await loadRazorpayScript();
             if (!scriptLoaded) {
-                alert('Failed to load Razorpay SDK. Please try again.');
+                showOrderPlacedErrorToast('Failed to load Razorpay SDK. Please try again.');
                 setIsProcessing(false);
                 return;
             }
             // Debug: Check if Razorpay is loaded
             if (!window.Razorpay) {
-                alert('Razorpay SDK not loaded');
+                showOrderPlacedErrorToast('Razorpay SDK not loaded');
                 setIsProcessing(false);
                 return;
             }
@@ -224,10 +266,45 @@ export default function UnifiedCheckout() {
         }
     } catch (error) {
         console.error("Order placement failed in component:", error);
-        alert(`Order placement failed: ${error.message || 'Unknown error'}`);
+        showOrderPlacedErrorToast(`Order placement failed: ${error.message || 'Unknown error'}`);
         setIsProcessing(false);
     }
   };
+
+  // Cleanup function to clear sessionStorage when component unmounts
+  useEffect(() => {
+    return () => {
+      // Only clear if user is leaving the checkout page (not going to ThankYou)
+      if (!orderPlaced) {
+        sessionStorage.removeItem('checkoutStep');
+      }
+    };
+  }, [orderPlaced]);
+
+  // Function to reset checkout step (useful for debugging or manual reset)
+  const resetCheckoutStep = () => {
+    console.log('UnifiedCheckout: Resetting checkout step to cart');
+    setStep('cart');
+    sessionStorage.setItem('checkoutStep', 'cart');
+  };
+
+  // Listen for page visibility changes to handle when user returns to checkout
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && !orderPlaced) {
+        // When user returns to the page, validate the current step
+        const savedStep = sessionStorage.getItem('checkoutStep');
+        if (savedStep && savedStep !== step) {
+          setStep(savedStep);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [step, orderPlaced]);
 
   const renderStep = () => {
     switch (step) {
@@ -248,21 +325,34 @@ export default function UnifiedCheckout() {
   return (
     <SeoWrapper pageName="checkout">
       <Header />
-      <div className="cart-main checkout-container">
-        <div className="cart-section">
-          {renderStep()}
+      {isCartLoading ? (
+        <div className="cart-main checkout-container">
+          <div className="cart-section">
+            <div className="loading-container">
+              <div className="loader"></div>
+              <p>Loading your cart...</p>
+            </div>
+          </div>
         </div>
-        <div className="order-summary-section">
-          <OrderSummary 
-            step={step} 
-            onNext={goToNextStep}
-            onPlaceOrder={handlePlaceOrder}
-            shippingAddress={shippingAddress}
-            shippingFee={shippingFee}
-            isProcessing={isProcessing}
-          />
+      ) : (
+        <div className="cart-main checkout-container">
+          <div className="cart-section">
+            {renderStep()}
+          </div>
+          {cartItems.length > 0 && (
+            <div className="order-summary-section">
+              <OrderSummary 
+                step={step} 
+                onNext={goToNextStep}
+                onPlaceOrder={handlePlaceOrder}
+                shippingAddress={shippingAddress}
+                shippingFee={shippingFee}
+                isProcessing={isProcessing}
+              />
+            </div>
+          )}
         </div>
-      </div>
+      )}
       <Footer />
     </SeoWrapper>
   );
