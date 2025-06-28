@@ -239,6 +239,16 @@ export const orderService = {
         } catch (error) {
             throw error.response?.data || error.message;
         }
+    },
+
+    // Test Shiprocket credentials
+    testShiprocketCredentials: async () => {
+        try {
+            const response = await api.get('/api/orders/shiprocket/test-credentials');
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error;
+        }
     }
 };
 

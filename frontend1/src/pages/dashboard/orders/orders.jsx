@@ -7,6 +7,8 @@ import Modal from "@/components/common/Modal";
 import Button from "@/components/common/Button";
 import '../../../styles/dashboard/orders.css';
 import "../../../styles/dashboard/seo.css"; // Reusing styles for consistency
+import { toast } from 'react-hot-toast';
+import { apiService } from '../../../services';
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -53,48 +55,62 @@ const Orders = () => {
         }
     };
 
-    const syncOrdersWithShiprocket = async () => {
+    const testCredentials = async () => {
+        setLoading(true);
         try {
-            // Show loading state
-            const syncButton = document.querySelector('.sync-button');
-            syncButton.innerHTML = `
-                <svg class="animate-spin" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Syncing...
-            `;
-            syncButton.disabled = true;
+            console.log('=== Testing Shiprocket Credentials ===');
+            const result = await apiService.testShiprocketCredentials();
+            console.log('Credentials test result:', result);
+            toast.success(result.message);
+        } catch (error) {
+            console.error('Credentials test failed:', error);
+            console.error('Error details:', {
+                message: error.message,
+                status: error.status,
+                data: error.data
+            });
+            toast.error(error.message || 'Failed to test credentials');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-            showNotification('Starting sync with Shiprocket...', 'info');
-
-            const result = await orderService.syncOrdersWithShiprocket();
+    const syncOrders = async () => {
+        setLoading(true);
+        try {
+            console.log('=== Starting Order Sync with Shiprocket ===');
+            console.log('Current orders state:', orders);
             
-            // Show success message with results
-            const message = `Sync completed! Total: ${result.results.total}, Successful: ${result.results.successful}, Failed: ${result.results.failed}`;
+            const result = await apiService.syncOrdersWithShiprocket();
+            console.log('Sync result:', result);
             
             if (result.results.successful > 0) {
-                showNotification(message, 'success');
-            } else if (result.results.failed > 0) {
-                showNotification(message, 'warning');
-            } else {
-                showNotification('No orders to sync', 'info');
+                toast.success(`Successfully synced ${result.results.successful} orders`);
             }
-
-            // Refresh orders to show updated Shiprocket information
-            fetchOrders();
             
-        } catch (err) {
-            showNotification(`Failed to sync orders: ${err.message || 'Unknown error'}`, 'error');
+            if (result.results.failed > 0) {
+                console.error('Failed orders:', result.results.errors);
+                toast.error(`Failed to sync ${result.results.failed} orders. Check console for details.`);
+            }
+            
+            // Refresh orders after sync
+            fetchOrders();
+        } catch (error) {
+            console.error('=== Order Sync Failed ===');
+            console.error('Error object:', error);
+            console.error('Error message:', error.message);
+            console.error('Error status:', error.status);
+            console.error('Error data:', error.data);
+            console.error('Full error details:', {
+                name: error.name,
+                stack: error.stack,
+                response: error.response,
+                request: error.request
+            });
+            
+            toast.error(error.message || 'Failed to sync orders');
         } finally {
-            // Reset button state
-            const syncButton = document.querySelector('.sync-button');
-            syncButton.innerHTML = `
-                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Sync Shiprocket
-            `;
-            syncButton.disabled = false;
+            setLoading(false);
         }
     };
 
@@ -442,7 +458,7 @@ const Orders = () => {
                     <div className="adding-button">
                         <button 
                             className="sync-button"
-                            onClick={syncOrdersWithShiprocket}
+                            onClick={syncOrders}
                             title="Sync orders with Shiprocket"
                         >
                             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -450,24 +466,32 @@ const Orders = () => {
                             </svg>
                             Sync Shiprocket
                         </button>
-                        {/* Sync Stats */}
-                        {(() => {
-                            const syncStats = getSyncStats();
-                            return (
-                                <div className="sync-stats">
-                                    <span className="sync-stat-item">
-                                        <span className="sync-stat-label">Sync:</span>
-                                        <span className={`sync-stat-value ${syncStats.syncPercentage === 100 ? 'complete' : 'partial'}`}>
-                                            {syncStats.syncPercentage}%
-                                        </span>
-                                    </span>
-                                    <span className="sync-stat-item">
-                                        <span className="sync-stat-label">Synced:</span>
-                                        <span className="sync-stat-value">{syncStats.synced}/{syncStats.total}</span>
-                                    </span>
-                                </div>
-                            );
-                        })()}
+                        <button 
+                            className="test-credentials-button"
+                            onClick={testCredentials}
+                            title="Test Shiprocket credentials"
+                        >
+                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Test Credentials
+                        </button>
+                        <div className="shiprocket-controls">
+                            <button 
+                                onClick={testCredentials}
+                                disabled={loading}
+                                className="btn btn-secondary"
+                            >
+                                {loading ? 'Testing...' : 'Test Credentials'}
+                            </button>
+                            <button 
+                                onClick={syncOrders}
+                                disabled={loading}
+                                className="btn btn-primary"
+                            >
+                                {loading ? 'Syncing...' : 'Sync Orders'}
+                            </button>
+                        </div>
                         <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
                             <div className="modern-searchbar-group">
                                 <span className="modern-searchbar-icon">
