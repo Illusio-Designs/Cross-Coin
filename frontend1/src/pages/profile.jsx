@@ -206,6 +206,19 @@ export default function Profile() {
     </svg>
   );
 
+  // Helper function to format currency
+  const formatCurrency = (amount) => {
+    return `₹${parseFloat(amount || 0).toFixed(2)}`;
+  };
+
+  // Helper function to calculate order total
+  const calculateOrderTotal = (order) => {
+    const subtotal = order.OrderItems?.reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0) || 0;
+    const shippingFee = parseFloat(order.shipping_fee || 0);
+    const discountAmount = parseFloat(order.discount_amount || 0);
+    return Math.max(0, subtotal - discountAmount + shippingFee);
+  };
+
   return (
     <SeoWrapper pageName="profile">
       <Header />
@@ -243,24 +256,37 @@ export default function Profile() {
                 ) : (
                   orders.map(order => (
                     <div className="order-card" key={order.id}>
-                  <div className="order-card-header">
-                    <div>
-                      <div className="order-meta">
-                            <span>Order Placed<br /><b style={{ color: "#000000" }}>{new Date(order.createdAt).toLocaleDateString()}</b></span>
-                            <span>Total<br /><b style={{ color: "#000000" }}>₹{order.final_amount}</b></span>
-                            <span>Ship to<br /><b style={{ color: "#000000" }}>{user?.username}</b></span>
+                      <div className="order-card-header">
+                        <div>
+                          <div className="order-meta">
+                                <span>Order Placed<br /><b style={{ color: "#000000" }}>{new Date(order.createdAt).toLocaleDateString()}</b></span>
+                                <span>Total<br /><b style={{ color: "#000000" }}>{formatCurrency(calculateOrderTotal(order))}</b></span>
+                                <span>Ship to<br /><b style={{ color: "#000000" }}>{user?.username}</b></span>
+                          </div>
+                        </div>
+                        <div className="order-actions"> 
+                              <span className="order-id">Order #{order.order_number}</span>
+                          <div className="order-actions-buttons">
+                            <a href="#" className="order-link">View order details</a>
+                            <span className="part">|</span>
+                            <a href="#" className="order-link">View Invoice</a>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="order-actions"> 
-                          <span className="order-id">Order #{order.order_number}</span>
-                      <div className="order-actions-buttons">
-                        <a href="#" className="order-link">View order details</a>
-                        <span className="part">|</span>
-                        <a href="#" className="order-link">View Invoice</a>
-                      </div>
-                    </div>
-                  </div>
                       <div className="order-status">{order.status}</div>
+                      {/* Shiprocket Information */}
+                      {(order.shiprocket_order_id || order.shiprocket_shipment_id) && (
+                        <div className="shiprocket-info">
+                          <div className="shiprocket-details">
+                            {order.shiprocket_order_id && (
+                              <span className="shiprocket-id">Shiprocket Order: {order.shiprocket_order_id}</span>
+                            )}
+                            {order.shiprocket_shipment_id && (
+                              <span className="shiprocket-shipment">Shipment ID: {order.shiprocket_shipment_id}</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       {order.OrderItems && order.OrderItems.map(item => (
                         <div className="order-card-body" key={item.id}>
                            <Image src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${item.Product?.ProductImages?.[0]?.image_url}`} alt={item.Product?.name} className="order-product-img" width={100} height={100} />

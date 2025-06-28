@@ -10,7 +10,7 @@ const { User } = require('../model/userModel.js');
 const { ProductImage } = require('../model/productImageModel.js');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/db.js');
-const { createShiprocketOrder, getShiprocketTracking, getShiprocketLabel, requestShiprocketPickup, cancelShiprocketShipment } = require('../services/shiprocketService.js');
+const { createShiprocketOrder, getShiprocketTracking, getShiprocketLabel, requestShiprocketPickup, cancelShiprocketShipment, getAllShiprocketOrders } = require('../services/shiprocketService.js');
 
 // Generate unique order number
 const generateOrderNumber = () => {
@@ -605,6 +605,137 @@ module.exports.getShiprocketLabelForOrder = async (req, res) => {
     } catch (error) {
         console.error('Error fetching Shiprocket label:', error);
         res.status(500).json({ message: 'Failed to fetch Shiprocket label', error: error.message });
+    }
+};
+
+// Get all Shiprocket orders
+module.exports.getAllShiprocketOrders = async (req, res) => {
+    try {
+        const { page = 1, limit = 50 } = req.query;
+        const shiprocketOrders = await getAllShiprocketOrders({ 
+            page: parseInt(page), 
+            limit: parseInt(limit) 
+        });
+        res.json(shiprocketOrders);
+    } catch (error) {
+        console.error('Error fetching Shiprocket orders:', error);
+        res.status(500).json({ message: 'Failed to fetch Shiprocket orders', error: error.message });
+    }
+};
+
+// Sync existing orders with Shiprocket
+module.exports.syncOrdersWithShiprocket = async (req, res) => {
+    const transaction = await sequelize.transaction();
+    
+    try {
+        // Get all orders that don't have Shiprocket IDs
+        const unsyncedOrders = await Order.findAll({
+            where: {
+                [Op.or]: [
+                    { shiprocket_order_id: null },
+                    { shiprocket_shipment_id: null }
+                ]
+            },
+            include: [
+                { model: OrderItem, include: [Product] },
+                { model: User, attributes: ['id', 'username', 'email'] },
+                { model: ShippingAddress }
+            ]
+        });
+
+        const syncResults = {
+            total: unsyncedOrders.length,
+            successful: 0,
+            failed: 0,
+            errors: []
+        };
+
+        for (const order of unsyncedOrders) {
+            try {
+                // Check if order already has Shiprocket IDs
+                if (order.shiprocket_order_id && order.shiprocket_shipment_id) {
+                    continue;
+                }
+
+                // Get shipping address for the order
+                const shippingAddress = await ShippingAddress.findOne({
+                    where: { user_id: order.user_id }
+                });
+
+                if (!shippingAddress) {
+                    syncResults.failed++;
+                    syncResults.errors.push(`Order ${order.order_number}: No shipping address found`);
+                    continue;
+                }
+
+                // Map order data to Shiprocket's required format
+                const shiprocketOrderPayload = {
+                    order_id: order.order_number,
+                    order_date: order.createdAt.toISOString().slice(0, 10),
+                    pickup_location: 'Default',
+                    billing_customer_name: order.User.username,
+                    billing_last_name: '',
+                    billing_address: shippingAddress.address_line1 || '',
+                    billing_address_2: shippingAddress.address_line2 || '',
+                    billing_city: shippingAddress.city || '',
+                    billing_pincode: shippingAddress.postal_code || '',
+                    billing_state: shippingAddress.state || '',
+                    billing_country: shippingAddress.country || '',
+                    billing_email: order.User.email,
+                    billing_phone: shippingAddress.phone || '',
+                    shipping_is_billing: true,
+                    order_items: order.OrderItems.map(item => ({
+                        name: item.Product.name,
+                        sku: item.Product.sku || '',
+                        units: item.quantity,
+                        selling_price: item.price,
+                        discount: item.discount || 0
+                    })),
+                    payment_method: order.payment_type === 'cod' ? 'COD' : 'Prepaid',
+                    sub_total: order.total_amount,
+                    length: 10,
+                    breadth: 10,
+                    height: 10,
+                    weight: 1
+                };
+
+                const shiprocketResponse = await createShiprocketOrder(shiprocketOrderPayload);
+                
+                // Update order with Shiprocket IDs
+                await order.update({
+                    shiprocket_order_id: shiprocketResponse.order_id || null,
+                    shiprocket_shipment_id: (shiprocketResponse.shipments && shiprocketResponse.shipments[0]?.shipment_id) || null
+                }, { transaction });
+
+                // Request pickup if shipment ID exists
+                if (shiprocketResponse.shipments && shiprocketResponse.shipments[0]?.shipment_id) {
+                    try {
+                        await requestShiprocketPickup([shiprocketResponse.shipments[0].shipment_id]);
+                    } catch (pickupErr) {
+                        console.error('Failed to request pickup for order', order.order_number, pickupErr);
+                    }
+                }
+
+                syncResults.successful++;
+                console.log(`Successfully synced order ${order.order_number} with Shiprocket`);
+
+            } catch (error) {
+                syncResults.failed++;
+                syncResults.errors.push(`Order ${order.order_number}: ${error.message}`);
+                console.error(`Failed to sync order ${order.order_number}:`, error);
+            }
+        }
+
+        await transaction.commit();
+        
+        res.json({
+            message: 'Order sync completed',
+            results: syncResults
+        });
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Error syncing orders with Shiprocket:', error);
+        res.status(500).json({ message: 'Failed to sync orders with Shiprocket', error: error.message });
     }
 };
 

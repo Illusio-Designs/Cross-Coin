@@ -67,11 +67,24 @@ async function cancelShiprocketShipment(shipmentIds) {
     return res.data;
 }
 
+async function getAllShiprocketOrders(params = {}) {
+    if (!token) await authenticateShiprocket();
+    const res = await axios.get(
+        `${SHIPROCKET_BASE_URL}/orders`,
+        { 
+            params,
+            headers: { Authorization: `Bearer ${token}` } 
+        }
+    );
+    return res.data;
+}
+
 module.exports = {
     authenticateShiprocket,
     createShiprocketOrder,
     getShiprocketTracking,
     getShiprocketLabel,
     requestShiprocketPickup,
-    cancelShiprocketShipment
+    cancelShiprocketShipment,
+    getAllShiprocketOrders
 }; 
