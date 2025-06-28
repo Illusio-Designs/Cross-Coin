@@ -219,6 +219,26 @@ export const orderService = {
         } catch (error) {
             throw error.response?.data || error.message;
         }
+    },
+
+    // Get all Shiprocket orders
+    getAllShiprocketOrders: async (params = {}) => {
+        try {
+            const response = await api.get('/api/orders/shiprocket/all', { params });
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
+
+    // Sync orders with Shiprocket
+    syncOrdersWithShiprocket: async () => {
+        try {
+            const response = await api.post('/api/orders/shiprocket/sync');
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
     }
 };
 

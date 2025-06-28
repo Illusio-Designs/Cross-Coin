@@ -40,9 +40,28 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
     }
   }, []);
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = cartItems.reduce((sum, item) => {
+    const itemPrice = parseFloat(item.price) || 0;
+    const itemQuantity = parseInt(item.quantity) || 0;
+    return sum + (itemPrice * itemQuantity);
+  }, 0);
+  
   const deliveryFee = shippingFee ? parseFloat(shippingFee.fee || 0) : 0;
-  const total = subtotal - discount + deliveryFee;
+  const discountAmount = parseFloat(discount) || 0;
+  
+  // Ensure discount doesn't exceed subtotal and handle edge cases
+  const finalDiscount = Math.min(discountAmount, subtotal);
+  const total = Math.max(0, subtotal - finalDiscount + deliveryFee);
+
+  // Reset discount if subtotal becomes 0
+  useEffect(() => {
+    if (subtotal === 0 && discount > 0) {
+      setDiscount(0);
+      setAppliedCoupon(null);
+      setCouponSuccess("");
+      sessionStorage.removeItem('appliedCoupon');
+    }
+  }, [subtotal, discount]);
 
   const handleApplyCoupon = async () => {
     if (!promoCode) {
@@ -57,6 +76,13 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
     try {
       const response = await validateCoupon(promoCode);
       const discountAmount = parseFloat(response.discountAmount);
+      
+      // Validate that discount doesn't exceed subtotal
+      if (discountAmount > subtotal) {
+        setCouponError("Discount cannot exceed subtotal amount.");
+        return;
+      }
+      
       setDiscount(discountAmount);
       setAppliedCoupon(response.coupon);
       setCouponError("");
@@ -126,31 +152,42 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
     return 'A special discount on your order.';
   };
 
+  // Helper function to format currency
+  const formatCurrency = (amount) => {
+    return `₹${parseFloat(amount || 0).toFixed(2)}`;
+  };
+
+  // Helper function to calculate order total
+  const calculateOrderTotal = (subtotal, discount, deliveryFee) => {
+    const finalDiscount = Math.min(parseFloat(discount) || 0, subtotal);
+    return Math.max(0, subtotal - finalDiscount + parseFloat(deliveryFee) || 0);
+  };
+
   return (
     <div className="order-summary-box">
       <div className="order-summary-title">Order Summary</div>
       <div className="order-summary-row">
         <span>Subtotal</span>
-        <span>₹{subtotal.toFixed(2)}</span>
+        <span>{formatCurrency(subtotal)}</span>
       </div>
       {appliedCoupon ? (
         <div className="order-summary-row">
           <span>Discount ({appliedCoupon.code})</span>
-          <span className="discount">-₹{discount.toFixed(2)}</span>
+          <span className="discount">-{formatCurrency(finalDiscount)}</span>
         </div>
       ) : (
         <div className="order-summary-row">
           <span>Discount</span>
-          <span className="discount">-₹{discount.toFixed(2)}</span>
+          <span className="discount">-{formatCurrency(finalDiscount)}</span>
         </div>
       )}
       <div className="order-summary-row">
         <span>Delivery Fee</span>
-        <span>{shippingFee ? `₹${parseFloat(shippingFee.fee || 0).toFixed(2)}` : 'Free'}</span>
+        <span>{shippingFee ? formatCurrency(deliveryFee) : 'Free'}</span>
       </div>
       <div className="order-summary-total">
         <span>Total</span>
-        <span>₹{total.toFixed(2)}</span>
+        <span>{formatCurrency(total)}</span>
       </div>
       <div className="promo-section">
         <div className="promo-row">

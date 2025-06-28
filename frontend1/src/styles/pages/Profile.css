@@ -466,4 +466,28 @@
 }
 .modal-content button:hover {
   background: #d1d5db;
+}
+/* Shiprocket Information */
+.shiprocket-info {
+    background-color: #f0f9ff;
+    border: 1px solid #0ea5e9;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin: 8px 0;
+}
+
+.shiprocket-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: #0369a1;
+}
+
+.shiprocket-id {
+    font-weight: 600;
+}
+
+.shiprocket-shipment {
+    font-weight: 500;
 } 
