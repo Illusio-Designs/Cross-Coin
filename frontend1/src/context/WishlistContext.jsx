@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getWishlist, addToWishlist as apiAddToWishlist, removeFromWishlist as apiRemoveFromWishlist, clearWishlist as apiClearWishlist } from '../services/publicindex';
+import { 
+  showAddToWishlistSuccessToast, 
+  showAddToWishlistErrorToast, 
+  showRemoveFromWishlistSuccessToast, 
+  showClearWishlistSuccessToast 
+} from '../utils/toast';
 
 const WishlistContext = createContext();
 
@@ -92,11 +98,16 @@ export const WishlistProvider = ({ children }) => {
             addedAt: item.addedAt || new Date().toISOString()
           };
         }));
-      } catch {}
+        showAddToWishlistSuccessToast(product.name);
+      } catch (error) {
+        console.error('WishlistContext: error adding to wishlist', error);
+        showAddToWishlistErrorToast(error.message);
+      }
     } else {
       setWishlist(prevWishlist => {
         const exists = prevWishlist.some(item => item.id === product.id);
         if (!exists) {
+          showAddToWishlistSuccessToast(product.name);
           return [...prevWishlist, { ...product, addedAt: new Date().toISOString() }];
         }
         return prevWishlist;
@@ -105,13 +116,18 @@ export const WishlistProvider = ({ children }) => {
   };
 
   const removeFromWishlist = async (productId) => {
+    const itemToRemove = wishlist.find(item => item.id === productId);
     if (isAuthenticated) {
       try {
         await apiRemoveFromWishlist(productId);
         setWishlist(prev => prev.filter(item => item.id !== productId));
-      } catch {}
+        showRemoveFromWishlistSuccessToast(itemToRemove?.name || 'Item');
+      } catch (error) {
+        console.error('WishlistContext: error removing from wishlist', error);
+      }
     } else {
       setWishlist(prevWishlist => prevWishlist.filter(item => item.id !== productId));
+      showRemoveFromWishlistSuccessToast(itemToRemove?.name || 'Item');
     }
   };
 
@@ -120,10 +136,14 @@ export const WishlistProvider = ({ children }) => {
       try {
         await apiClearWishlist();
         setWishlist([]);
-      } catch {}
+        showClearWishlistSuccessToast();
+      } catch (error) {
+        console.error('WishlistContext: error clearing wishlist', error);
+      }
     } else {
       setWishlist([]);
       localStorage.removeItem('wishlist');
+      showClearWishlistSuccessToast();
     }
   };
 

@@ -10,12 +10,12 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setIsLoading(true);
     try {
       const userData = {
         username: username.trim(),
@@ -25,12 +25,13 @@ export default function Register() {
       };
       const response = await registerUser(userData);
       if (response.user && (response.user.role !== 'consumer' && response.user.role !== 'customer')) {
-        setError("Only consumer accounts can be registered here.");
         return;
       }
       router.push('/login');
     } catch (err) {
-      setError(err.message || "Registration failed");
+      // Error is handled by toast notification in AuthContext
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -43,15 +44,32 @@ export default function Register() {
           <span className="active">Register</span>
         </div>
         <p className="auth-info">If you have an account, login in with your user name or email address.</p>
-        {error && <div className="auth-error">{error}</div>}
         <form className="auth-form" onSubmit={handleSubmit}>
           <label>Username</label>
-          <input type="text" value={username} onChange={e => setUsername(e.target.value)} required />
+          <input 
+            type="text" 
+            value={username} 
+            onChange={e => setUsername(e.target.value)} 
+            required 
+            disabled={isLoading}
+          />
           <label>Email address</label>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+          <input 
+            type="email" 
+            value={email} 
+            onChange={e => setEmail(e.target.value)} 
+            required 
+            disabled={isLoading}
+          />
           <label>Password</label>
           <div className="password-wrapper">
-            <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required />
+            <input 
+              type={showPassword ? "text" : "password"} 
+              value={password} 
+              onChange={e => setPassword(e.target.value)} 
+              required 
+              disabled={isLoading}
+            />
             <span className="toggle-password" onClick={() => setShowPassword(!showPassword)}>
               {showPassword ? (
                 <svg width="20" height="20" fill="none" stroke="#180D3E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
@@ -69,7 +87,9 @@ export default function Register() {
               )}
             </span>
           </div>
-          <button type="submit" className="auth-btn">Register</button>
+          <button type="submit" className="auth-btn" disabled={isLoading}>
+            {isLoading ? 'Registering...' : 'Register'}
+          </button>
         </form>
       </div>
       <Footer />

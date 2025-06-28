@@ -1,5 +1,6 @@
 import { ThemeProvider } from 'next-themes';
-import { Toaster } from 'react-hot-toast';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from '../context/AuthContext';
 import { CartProvider } from '../context/CartContext';
 import { WishlistProvider } from '../context/WishlistContext';
@@ -107,7 +108,18 @@ export default function App({ Component, pageProps }) {
               </div>
             )}
             <Component {...pageProps} />
-            <Toaster position="top-right" />
+            <ToastContainer
+              position="top-right"
+              autoClose={3000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="light"
+            />
           </WishlistProvider>
         </CartProvider>
       </AuthProvider>

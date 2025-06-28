@@ -6,6 +6,14 @@ import {
   removeFromCart as apiRemoveFromCart,
   clearCart as apiClearCart
 } from '../services/publicindex';
+import { 
+  showAddToCartSuccessToast, 
+  showAddToCartErrorToast, 
+  showRemoveFromCartSuccessToast, 
+  showUpdateCartSuccessToast, 
+  showClearCartSuccessToast,
+  showRemoveFromCartErrorToast
+} from '../utils/toast';
 
 const CartContext = createContext();
 
@@ -13,6 +21,7 @@ export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [cartCount, setCartCount] = useState(0);
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
+  const [isCartLoading, setIsCartLoading] = useState(true);
 
   // Sync isAuthenticated on token change
   useEffect(() => {
@@ -28,6 +37,7 @@ export const CartProvider = ({ children }) => {
   useEffect(() => {
     const fetchCart = async () => {
       console.log('CartContext: useEffect fetchCart, isAuthenticated:', isAuthenticated);
+      setIsCartLoading(true);
       if (isAuthenticated) {
         try {
           console.log('CartContext: fetching cart from backend');
@@ -47,6 +57,7 @@ export const CartProvider = ({ children }) => {
           setCartItems([]);
         }
       }
+      setIsCartLoading(false);
     };
     fetchCart();
   }, [isAuthenticated]);
@@ -80,31 +91,35 @@ export const CartProvider = ({ children }) => {
         const backendCart = await apiGetCart();
         setCartItems(backendCart);
         console.log('CartContext: cart updated from backend after adding item');
+        showAddToCartSuccessToast(product.name);
       } catch(error) {
         console.error('CartContext: error adding to cart for authenticated user', error);
+        showAddToCartErrorToast(error.message);
       }
     } else {
       console.log('CartContext: addToCart for guest user');
       setCartItems(prevItems => {
         const existingItem = prevItems.find(
           item =>
-            item.id === product.id &&
+            item.productId === product.id &&
             item.color === selectedColor &&
             item.size === selectedSize
         );
         if (existingItem) {
           const newItems = prevItems.map(item =>
-            item.id === product.id && item.color === selectedColor && item.size === selectedSize
+            item.productId === product.id && item.color === selectedColor && item.size === selectedSize
               ? { ...item, quantity: item.quantity + quantity }
               : item
           );
           console.log('CartContext: updated existing item in guest cart', newItems);
+          showAddToCartSuccessToast(product.name);
           return newItems;
         }
         const newItems = [
           ...prevItems,
           {
-            id: product.id,
+            id: Date.now() + Math.random(), // Generate unique ID for guest cart items
+            productId: product.id,
             name: product.name,
             image: product.images[0],
             price: product.price,
@@ -114,6 +129,7 @@ export const CartProvider = ({ children }) => {
           }
         ];
         console.log('CartContext: added new item to guest cart', newItems);
+        showAddToCartSuccessToast(product.name);
         return newItems;
       });
     }
@@ -121,14 +137,37 @@ export const CartProvider = ({ children }) => {
 
   const removeFromCart = async (itemId) => {
     console.log('CartContext: removeFromCart called with itemId:', itemId);
+    console.log('CartContext: current cartItems:', cartItems);
+    const itemToRemove = cartItems.find(item => item.id === itemId);
+    console.log('CartContext: itemToRemove:', itemToRemove);
+    
+    if (!itemToRemove) {
+      console.error('CartContext: Item not found for removal');
+      showRemoveFromCartErrorToast('Item not found in cart');
+      return;
+    }
+    
     if (isAuthenticated) {
       try {
-        await apiRemoveFromCart(itemId);
+        console.log('CartContext: removing from backend with productId:', itemToRemove.productId);
+        // Pass productId to the API, not the cart item ID
+        await apiRemoveFromCart(itemToRemove.productId);
         const backendCart = await apiGetCart();
+        console.log('CartContext: backend cart after removal:', backendCart);
         setCartItems(backendCart);
-      } catch {}
+        showRemoveFromCartSuccessToast(itemToRemove?.name || 'Item');
+      } catch (error) {
+        console.error('CartContext: error removing from cart', error);
+        showRemoveFromCartErrorToast(error.message || 'Failed to remove item');
+      }
     } else {
-      setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
+      console.log('CartContext: removing from local storage');
+      setCartItems(prevItems => {
+        const newItems = prevItems.filter(item => item.id !== itemId);
+        console.log('CartContext: new cart items after removal:', newItems);
+        return newItems;
+      });
+      showRemoveFromCartSuccessToast(itemToRemove?.name || 'Item');
     }
   };
 
@@ -145,6 +184,7 @@ export const CartProvider = ({ children }) => {
             
             const backendCart = await apiGetCart();
             setCartItems(backendCart);
+            showUpdateCartSuccessToast();
         } catch (error) {
             console.error("Failed to update quantity:", error);
         }
@@ -156,6 +196,7 @@ export const CartProvider = ({ children }) => {
                     : item
             )
         );
+        showUpdateCartSuccessToast();
     }
   };
 
@@ -164,10 +205,14 @@ export const CartProvider = ({ children }) => {
       try {
         await apiClearCart();
         setCartItems([]);
-      } catch {}
+        showClearCartSuccessToast();
+      } catch (error) {
+        console.error('CartContext: error clearing cart', error);
+      }
     } else {
       setCartItems([]);
       localStorage.removeItem('cartItems');
+      showClearCartSuccessToast();
     }
   };
 
@@ -179,7 +224,8 @@ export const CartProvider = ({ children }) => {
       removeFromCart,
       updateQuantity,
       clearCart,
-      setIsAuthenticated
+      setIsAuthenticated,
+      isCartLoading
     }}>
       {children}
     </CartContext.Provider>

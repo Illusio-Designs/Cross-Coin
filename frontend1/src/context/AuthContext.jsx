@@ -3,6 +3,13 @@ import { userService, authService } from '../services';
 import { loginUser, registerUser, getCurrentUser as getPublicCurrentUser, logout as publicLogout } from '../services/publicindex';
 import { useContext as useReactContext } from 'react';
 import { WishlistContext } from './WishlistContext';
+import { 
+  showLoginSuccessToast, 
+  showLoginErrorToast, 
+  showRegisterSuccessToast, 
+  showRegisterErrorToast, 
+  showLogoutSuccessToast 
+} from '../utils/toast';
 
 const AuthContext = createContext(null);
 
@@ -48,8 +55,10 @@ export const AuthProvider = ({ children }) => {
             if (setIsAuthenticated) {
                 setIsAuthenticated(true);
             }
+            showLoginSuccessToast();
             return response;
         } catch (error) {
+            showLoginErrorToast(error.message);
             throw error;
         }
     }, [setIsAuthenticated]);
@@ -62,8 +71,10 @@ export const AuthProvider = ({ children }) => {
             if (setIsAuthenticated) {
                 setIsAuthenticated(true);
             }
+            showLoginSuccessToast();
             return response;
         } catch (error) {
+            showLoginErrorToast(error.message);
             throw error;
         }
     }, [setIsAuthenticated]);
@@ -71,8 +82,10 @@ export const AuthProvider = ({ children }) => {
     const register = useCallback(async (userData) => {
         try {
             const response = await registerUser(userData);
+            showRegisterSuccessToast();
             return response;
         } catch (error) {
+            showRegisterErrorToast(error.message);
             throw error;
         }
     }, []);
@@ -93,6 +106,7 @@ export const AuthProvider = ({ children }) => {
             if (setIsAuthenticated) {
                 setIsAuthenticated(false);
             }
+            showLogoutSuccessToast();
         }
     }, [setIsAuthenticated]);
 

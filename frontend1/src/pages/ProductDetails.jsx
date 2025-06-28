@@ -4,11 +4,12 @@ import Footer from "../components/Footer";
 import Header from "../components/Header";
 import Image from "next/image";
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import { useRouter } from "next/navigation";
 import { getPublicProductBySlug, createPublicReview, getPublicCoupons } from '../services/publicindex';
 import SeoWrapper from '../console/SeoWrapper';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { showValidationErrorToast, showReviewSubmittedSuccessToast, showReviewSubmittedErrorToast } from '../utils/toast';
+import Loader from '../components/Loader';
 
 // Utility function to normalize image URLs
 function normalizeImageUrl(imageUrl) {
@@ -28,7 +29,8 @@ function normalizeImageUrl(imageUrl) {
 export default function ProductDetails() {
   const searchParams = useSearchParams();
   const productSlug = searchParams.get('slug');
-  const { addToCart } = useCart();
+  const { addToCart, removeFromCart } = useCart();
+  const { addToWishlist, removeFromWishlist } = useWishlist();
   const router = useRouter();
   
   const [selectedThumbnail, setSelectedThumbnail] = useState(0);
@@ -188,7 +190,7 @@ export default function ProductDetails() {
     
     const validationError = validateForm();
     if (validationError) {
-      setReviewError(validationError);
+      showValidationErrorToast(validationError);
       return;
     }
 
@@ -214,6 +216,7 @@ export default function ProductDetails() {
       const response = await createPublicReview(formData);
       if (response.success) {
         setReviewSuccess(true);
+        showReviewSubmittedSuccessToast();
         setReviewForm({
           rating: 5,
           comment: '',
@@ -229,7 +232,7 @@ export default function ProductDetails() {
         }
       }
     } catch (error) {
-      setReviewError(error.message || 'Failed to submit review. Please try again.');
+      showReviewSubmittedErrorToast(error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -248,17 +251,17 @@ export default function ProductDetails() {
     const maxSize = 5 * 1024 * 1024; // 5MB
 
     if (files.length > maxFiles) {
-      setReviewError(`You can only upload up to ${maxFiles} files`);
+      showValidationErrorToast(`You can only upload up to ${maxFiles} files`);
       return;
     }
 
     const validFiles = files.filter(file => {
       if (file.size > maxSize) {
-        setReviewError(`${file.name} is too large. Maximum size is 5MB`);
+        showValidationErrorToast(`${file.name} is too large. Maximum size is 5MB`);
         return false;
       }
       if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-        setReviewError(`${file.name} is not a valid image or video file`);
+        showValidationErrorToast(`${file.name} is not a valid image or video file`);
         return false;
       }
       return true;
@@ -294,7 +297,7 @@ export default function ProductDetails() {
     return (
       <div className="loading-container">
         <Header />
-        <div className="loading">Loading...</div>
+        <Loader />
         <Footer />
       </div>
     );
@@ -312,7 +315,7 @@ export default function ProductDetails() {
 
   const handleAddToCart = () => {
     if (!selectedVariation) {
-      toast.error('Please select all required variations.');
+      showValidationErrorToast('Please select all required variations.');
       console.log('Add to cart failed: No variation selected');
       return;
     }
@@ -326,13 +329,21 @@ export default function ProductDetails() {
 
   const handleBuyNow = () => {
     if (!selectedVariation) {
-      alert('Please select all variations');
+      showValidationErrorToast('Please select all variations');
       return;
     }
     const selectedColor = selectedAttributes.color || '';
     const selectedSize = selectedAttributes.size || '';
     addToCart(product, selectedColor, selectedSize, quantity);
     router.push('/checkout');
+  };
+
+  const handleAddToWishlist = () => {
+    addToWishlist(product);
+  };
+
+  const handleRemoveFromWishlist = () => {
+    removeFromWishlist(product.id);
   };
 
   const renderAttributeOptions = () => {
@@ -538,7 +549,6 @@ export default function ProductDetails() {
       canonicalUrl={product.seo?.canonicalUrl}
       structuredData={product.seo?.structuredData}
     >
-      <ToastContainer position="top-right" autoClose={3000} />
       <div className="product-details-container">
         <Header />
         <div className="product-details">
