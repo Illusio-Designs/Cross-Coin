@@ -456,6 +456,7 @@ module.exports.refundPayment = async (req, res) => {
 module.exports.createRazorpayOrder = async (req, res) => {
     try {
         const { amount, currency = 'INR', receipt } = req.body;
+        console.log('Backend: Received amount to create Razorpay order:', amount);
         if (!amount) {
             return res.status(400).json({ message: 'Amount is required' });
         }
@@ -468,10 +469,11 @@ module.exports.createRazorpayOrder = async (req, res) => {
 
         // Create order
         const options = {
-            amount: Math.round(amount * 100), // amount in paise
+            amount: amount, // amount is already in paise
             currency,
             receipt: receipt || `rcpt_${Date.now()}`,
         };
+        console.log('Backend: Sending these options to Razorpay:', options);
         const order = await razorpay.orders.create(options);
         res.json({ order });
     } catch (error) {

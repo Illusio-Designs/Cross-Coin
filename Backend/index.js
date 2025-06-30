@@ -28,8 +28,11 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
+// CORS middleware
 app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
 
 // Body parsing middleware
 app.use(express.json({ limit: '5mb' }));

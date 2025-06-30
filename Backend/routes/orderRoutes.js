@@ -5,8 +5,8 @@ const {
     getOrder,
     updateOrderStatus,
     createOrder,
-    deleteOrder,
-    getOrderStatistics,
+    cancelOrder,
+    getOrderStats,
     getShiprocketTrackingForOrder,
     getShiprocketLabelForOrder,
     getAllShiprocketOrders,
@@ -30,7 +30,7 @@ router.get('/test', (req, res) => {
 
 // Admin routes (specific routes first)
 router.get('/', isAuthenticated, authorize(['admin']), getAllOrders);
-router.get('/stats/overview', isAuthenticated, authorize(['admin']), getOrderStatistics);
+router.get('/stats/overview', isAuthenticated, authorize(['admin']), getOrderStats);
 router.get('/shiprocket/all', isAuthenticated, authorize(['admin']), getAllShiprocketOrders);
 router.post('/shiprocket/sync', isAuthenticated, authorize(['admin']), syncOrdersWithShiprocket);
 router.get('/shiprocket/test-credentials', isAuthenticated, authorize(['admin']), testShiprocketCredentials);
@@ -39,9 +39,9 @@ router.get('/shiprocket/test-credentials', isAuthenticated, authorize(['admin'])
 router.post('/', isAuthenticated, createOrder);
 router.get('/my-orders', isAuthenticated, getUserOrders);
 router.get('/:id', isAuthenticated, getOrder);
-router.put('/:id/cancel', isAuthenticated, deleteOrder);
+router.put('/:id/cancel', isAuthenticated, cancelOrder);
 router.put('/:id/status', isAuthenticated, authorize(['admin']), updateOrderStatus);
 router.get('/:id/shiprocket/tracking', isAuthenticated, getShiprocketTrackingForOrder);
 router.get('/:id/shiprocket/label', isAuthenticated, getShiprocketLabelForOrder);
 
-module.exports = router; 
+module.exports = router;

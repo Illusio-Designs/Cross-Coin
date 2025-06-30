@@ -6,7 +6,6 @@ import { useCart } from "../context/CartContext";
 import { useRouter } from "next/router";
 import CartStep from '../components/checkout/CartStep';
 import ShippingStep from '../components/checkout/ShippingStep';
-import PaymentStep from '../components/checkout/PaymentStep';
 import OrderSummary from '../components/checkout/OrderSummary';
 import { useAuth } from "../context/AuthContext";
 import { createOrder, createRazorpayOrder } from "../services/publicindex";
@@ -21,7 +20,7 @@ export default function UnifiedCheckout() {
       return savedStep;
     }
     return 'cart';
-  }); // cart, shipping, payment
+  }); // cart, shipping
   const { user, isAuthenticated } = useAuth();
   const { cartItems, clearCart, isCartLoading } = useCart();
   const router = useRouter();
@@ -31,10 +30,15 @@ export default function UnifiedCheckout() {
   const [paymentDetails, setPaymentDetails] = useState({ method: 'upi', upiId: '' });
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
         router.push('/login?redirect=/UnifiedCheckout');
+    }
+    const savedCoupon = sessionStorage.getItem('appliedCoupon');
+    if (savedCoupon) {
+      setAppliedCoupon(JSON.parse(savedCoupon));
     }
   }, [isAuthenticated, router]);
 
@@ -54,14 +58,8 @@ export default function UnifiedCheckout() {
         setStep('cart');
         sessionStorage.setItem('checkoutStep', 'cart');
       }
-      // If user is on payment step but hasn't completed shipping requirements, go back to shipping
-      else if (step === 'payment' && (!shippingAddress || !shippingFee)) {
-        console.log('UnifiedCheckout: Validation - redirecting from payment to shipping (missing requirements)');
-        setStep('shipping');
-        sessionStorage.setItem('checkoutStep', 'shipping');
-      }
     }
-  }, [step, cartItems.length, shippingAddress, shippingFee, isCartLoading]);
+  }, [step, cartItems.length, isCartLoading]);
 
   useEffect(() => {
     const savedAddress = sessionStorage.getItem('shippingAddress');
@@ -92,7 +90,7 @@ export default function UnifiedCheckout() {
     setShippingFee(fee);
   }
 
-  const goToNextStep = async () => {
+  const goToNextStep = () => {
     if (step === 'cart') {
         const newStep = 'shipping';
         console.log('UnifiedCheckout: Moving from cart to shipping step');
@@ -107,67 +105,12 @@ export default function UnifiedCheckout() {
             showValidationErrorToast('Please select a delivery method.');
             return;
         }
-        if (shippingFee.orderType === 'cod') {
-            handlePlaceOrder();
-        } else {
-            // Prepaid: create order and redirect to Razorpay
-            setIsProcessing(true);
-            const orderData = {
-                shipping_address_id: shippingAddress.id,
-                items: cartItems.map(item => ({
-                    product_id: item.productId,
-                    variation_id: item.variation?.id || null,
-                    quantity: item.quantity
-                })),
-                payment_type: paymentDetails.method,
-                notes: ''
-            };
-            try {
-                const orderResult = await createOrder(orderData);
-                // Now create Razorpay order
-                const amount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0) + (shippingFee?.amount || 0);
-                const razorpayOrder = await createRazorpayOrder({ amount, currency: 'INR' });
-                const scriptLoaded = await loadRazorpayScript();
-                if (!scriptLoaded || !window.Razorpay) {
-                    showOrderPlacedErrorToast('Failed to load Razorpay SDK. Please try again.');
-                    setIsProcessing(false);
-                    return;
-                }
-                const options = {
-                    key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-                    amount: razorpayOrder.amount,
-                    currency: razorpayOrder.currency,
-                    name: 'Cross Coin',
-                    description: 'Order Payment',
-                    order_id: razorpayOrder.id,
-                    prefill: {
-                        name: user?.name || '',
-                        email: user?.email || '',
-                    },
-                    theme: {
-                        color: '#3399cc'
-                    },
-                    redirect: true,
-                    callback_url: `https://api.crosscoin.in/api/razorpay/callback?order_number=${orderResult.order.order_number}`
-                };
-                const rzp = new window.Razorpay(options);
-                rzp.open();
-            } catch (error) {
-                showOrderPlacedErrorToast(`Order or payment initiation failed: ${error.message || 'Unknown error'}`);
-            } finally {
-                setIsProcessing(false);
-            }
-        }
+        handlePlaceOrder();
     }
   };
   
   const goToPrevStep = () => {
-    if (step === 'payment') {
-        const newStep = 'shipping';
-        console.log('UnifiedCheckout: Moving from payment to shipping step');
-        setStep(newStep);
-        sessionStorage.setItem('checkoutStep', newStep);
-    } else if (step === 'shipping') {
+    if (step === 'shipping') {
         const newStep = 'cart';
         console.log('UnifiedCheckout: Moving from shipping to cart step');
         setStep(newStep);
@@ -189,14 +132,10 @@ export default function UnifiedCheckout() {
   };
 
   const handlePlaceOrder = async () => {
-    // For prepaid, validate payment details. For COD, skip this.
-    if (shippingFee?.orderType !== 'cod') {
-        if (paymentDetails.method === 'upi' && !paymentDetails.upiId) {
-            showValidationErrorToast('Please enter UPI ID');
-            return;
-        }
+    if (!shippingAddress || !shippingFee) {
+        showValidationErrorToast('Please select shipping address and delivery method.');
+        return;
     }
-
     setIsProcessing(true);
 
     const orderData = {
@@ -206,66 +145,72 @@ export default function UnifiedCheckout() {
             variation_id: item.variation?.id || null,
             quantity: item.quantity
         })),
-        payment_type: shippingFee?.orderType === 'cod' ? 'cod' : paymentDetails.method,
-        notes: '' // You can add notes if you have a field for it
+        payment_type: shippingFee.orderType === 'cod' ? 'cod' : paymentDetails.method,
+        notes: '',
+        discount_amount: appliedCoupon?.discount || 0,
+        coupon_id: appliedCoupon?.id || null
     };
 
     try {
-        if (shippingFee?.orderType === 'cod') {
-            // COD: Place order directly
-            const orderResult = await createOrder(orderData);
+        const orderResult = await createOrder(orderData);
+        if (!orderResult?.order) {
+            throw new Error('Order creation failed to return an order.');
+        }
+
+        if (shippingFee.orderType === 'cod') {
+            // COD: Order placed, now redirect
             setOrderPlaced(true);
             clearCart();
             sessionStorage.removeItem('shippingAddress');
             sessionStorage.removeItem('appliedCoupon');
-            sessionStorage.removeItem('checkoutStep'); // Clear checkout step
+            sessionStorage.removeItem('checkoutStep');
             showOrderPlacedSuccessToast(orderResult.order.order_number);
             router.push(`/ThankYou?order_number=${orderResult.order.order_number}`);
         } else {
-            // Prepaid: Razorpay flow
+            // Prepaid: Continue to Razorpay
             const scriptLoaded = await loadRazorpayScript();
-            if (!scriptLoaded) {
+            if (!scriptLoaded || !window.Razorpay) {
                 showOrderPlacedErrorToast('Failed to load Razorpay SDK. Please try again.');
                 setIsProcessing(false);
                 return;
             }
-            // Debug: Check if Razorpay is loaded
-            if (!window.Razorpay) {
-                showOrderPlacedErrorToast('Razorpay SDK not loaded');
-                setIsProcessing(false);
-                return;
-            }
-            // Create Razorpay order from backend
-            const amount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0) + (shippingFee?.amount || 0);
-            const razorpayOrder = await createRazorpayOrder({ amount, currency: 'INR' });
-            // Debug: Log Razorpay order and key
-            console.log('Razorpay Order:', razorpayOrder);
-            console.log('Razorpay Key:', process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
+
+            const amountInPaisa = Math.round(orderResult.order.final_amount * 10);
+            console.log('Frontend: Sending this amount in paisa to backend:', amountInPaisa);
+
+            // Create Razorpay order from backend, passing amount in the smallest currency unit (paisa)
+            const razorpayOrder = await createRazorpayOrder({
+                amount: amountInPaisa,
+                currency: 'INR',
+                receipt: orderResult.order.order_number,
+                notes: {
+                    order_id: orderResult.order.id // Pass internal order ID
+                }
+            });
+
             const options = {
-                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, // Set this in your .env file
+                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
                 amount: razorpayOrder.amount,
                 currency: razorpayOrder.currency,
                 name: 'Cross Coin',
-                description: 'Order Payment',
+                description: `Order #${orderResult.order.order_number}`,
                 order_id: razorpayOrder.id,
                 prefill: {
                     name: user?.name || '',
                     email: user?.email || '',
+                    contact: shippingAddress?.phone || ''
                 },
                 theme: {
                     color: '#3399cc'
                 },
                 redirect: true,
-                callback_url: `https://api.crosscoin.in/api/razorpay/callback?order_number=${orderResult.order.order_number}`
+                callback_url: `https://api.crosscoin.in/api/payment/razorpay-callback?order_id=${orderResult.order.id}`
             };
-            // Debug: Log options before opening Razorpay
-            console.log('Opening Razorpay with options:', options);
+
             const rzp = new window.Razorpay(options);
             rzp.open();
-            setIsProcessing(false);
         }
     } catch (error) {
-        console.error("Order placement failed in component:", error);
         showOrderPlacedErrorToast(`Order placement failed: ${error.message || 'Unknown error'}`);
         setIsProcessing(false);
     }
@@ -305,6 +250,10 @@ export default function UnifiedCheckout() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [step, orderPlaced]);
+
+  const handleCouponApplied = (couponData) => {
+    setAppliedCoupon(couponData.coupon);
+  };
 
   const renderStep = () => {
     switch (step) {
@@ -348,6 +297,7 @@ export default function UnifiedCheckout() {
                 shippingAddress={shippingAddress}
                 shippingFee={shippingFee}
                 isProcessing={isProcessing}
+                onCouponApplied={handleCouponApplied}
               />
             </div>
           )}

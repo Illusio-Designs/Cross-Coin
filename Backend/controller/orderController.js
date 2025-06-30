@@ -39,7 +39,7 @@ module.exports.createOrder = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
-        const { shipping_address_id, items, payment_type, notes } = req.body;
+        const { shipping_address_id, items, payment_type, notes, coupon_id, discount_amount } = req.body;
         const userId = req.user.id;
 
         if (!shipping_address_id || !items || !payment_type) {
@@ -130,19 +130,24 @@ module.exports.createOrder = async (req, res) => {
             });
         }
 
+        const subTotal = totalAmount;
+        const appliedDiscount = discount_amount ? parseFloat(discount_amount) : 0;
+
         // Calculate shipping fee
         const shippingFee = await calculateShippingFee(payment_type);
-        const finalAmount = totalAmount + shippingFee;
+        const finalAmount = subTotal - appliedDiscount + shippingFee;
 
         // Create order
         const order = await Order.create({
             order_number: generateOrderNumber(),
             user_id: userId,
-            total_amount: totalAmount,
+            total_amount: subTotal,
+            discount_amount: appliedDiscount,
+            coupon_id: coupon_id || null,
             shipping_fee: shippingFee,
             final_amount: finalAmount,
             payment_type,
-            payment_status: payment_type === 'cod' ? 'pending' : 'pending',
+            payment_status: 'pending',
             status: 'pending',
             notes: notes || null,
         }, { transaction });
@@ -285,7 +290,12 @@ module.exports.getAllOrders = async (req, res) => {
         const { status, payment_status, start_date, end_date, page = 1, limit = 10 } = req.query;
         
         // Build filter based on query parameters
-        const filter = {};
+        const filter = {
+            [Op.or]: [
+                { payment_type: 'cod' },
+                { payment_status: { [Op.ne]: 'pending' } }
+            ]
+        };
         if (status) filter.status = status;
         if (payment_status) filter.payment_status = payment_status;
         
@@ -344,7 +354,13 @@ module.exports.getUserOrders = async (req, res) => {
         const { status, page = 1, limit = 10 } = req.query;
         
         // Build filter
-        const filter = { user_id: userId };
+        const filter = {
+            user_id: userId,
+            [Op.or]: [
+                { payment_type: 'cod' },
+                { payment_status: { [Op.ne]: 'pending' } }
+            ]
+        };
         if (status) filter.status = status;
         
         // Pagination

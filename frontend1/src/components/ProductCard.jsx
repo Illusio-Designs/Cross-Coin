@@ -43,20 +43,17 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
     const imageData = product?.images?.find(img => img.is_primary) || product?.images?.[0];
     if (imageData?.image_url) {
       let imageUrl = imageData.image_url;
-      // Convert localhost URLs to production domain
-      if (imageUrl.includes('localhost:5000')) {
-        imageUrl = imageUrl.replace('http://localhost:5000', 'https://api.crosscoin.in');
-      }
-      // If it's a full URL (http or https), use as is
+      // If it's a full URL, use as is
       if (/^https?:\/\//.test(imageUrl)) {
         return imageUrl;
       }
-      // If it's a relative path starting with /uploads/, use the production API domain
-      if (imageUrl.startsWith('/uploads/')) {
-        return `https://api.crosscoin.in${imageUrl}`;
+      // If it's a relative path, prepend the base URL from env
+      const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || '';
+      if (imageUrl.startsWith('/')) {
+        return `${baseUrl}${imageUrl}`;
       }
-      // If it's just a filename, construct the path for the production API
-      return `https://api.crosscoin.in/uploads/products/${imageUrl}`;
+      // If it's just a filename, construct the path
+      return `${baseUrl}/uploads/products/${imageUrl}`;
     }
     return '/placeholder-image.jpg';
   };
