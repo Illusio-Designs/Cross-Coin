@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { validateCoupon, getPublicCoupons } from "../../services/publicindex";
 import { useRouter } from "next/router";
 
-export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddress, shippingFee, isProcessing }) {
+export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddress, shippingFee, isProcessing, onCouponApplied }) {
   const router = useRouter();
   const { user } = useAuth();
   const { cartItems } = useCart();
@@ -87,7 +87,13 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
       setAppliedCoupon(response.coupon);
       setCouponError("");
       setCouponSuccess(response.message || "Coupon applied successfully!");
-      sessionStorage.setItem('appliedCoupon', JSON.stringify({ coupon: response.coupon, discountAmount }));
+      
+      const newCouponData = { coupon: response.coupon, discountAmount };
+      sessionStorage.setItem('appliedCoupon', JSON.stringify(newCouponData));
+      
+      if (onCouponApplied) {
+        onCouponApplied(newCouponData);
+      }
     } catch (error) {
       setCouponError(error.message || "An error occurred.");
       setDiscount(0);
