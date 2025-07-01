@@ -216,6 +216,35 @@ export const CartProvider = ({ children }) => {
     }
   };
 
+  const setQuantity = async (itemId, quantity) => {
+    const validQuantity = parseInt(quantity) || 0;
+    if (validQuantity < 1) {
+      await removeFromCart(itemId);
+      return;
+    }
+    if (isAuthenticated) {
+      try {
+        const item = cartItems.find(i => i.id === itemId);
+        if (!item) return;
+        await apiUpdateCartItem(item.productId, validQuantity, item.variationId);
+        const backendCart = await apiGetCart();
+        setCartItems(backendCart);
+        showUpdateCartSuccessToast();
+      } catch (error) {
+        console.error("Failed to set quantity:", error);
+      }
+    } else {
+      setCartItems(prevItems =>
+        prevItems.map(item =>
+          item.id === itemId
+            ? { ...item, quantity: validQuantity }
+            : item
+        ).filter(item => item.quantity > 0)
+      );
+      showUpdateCartSuccessToast();
+    }
+  };
+
   return (
     <CartContext.Provider value={{
       cartItems,
@@ -225,7 +254,8 @@ export const CartProvider = ({ children }) => {
       updateQuantity,
       clearCart,
       setIsAuthenticated,
-      isCartLoading
+      isCartLoading,
+      setQuantity
     }}>
       {children}
     </CartContext.Provider>

@@ -234,7 +234,7 @@ export const orderService = {
     // Sync orders with Shiprocket
     syncOrdersWithShiprocket: async () => {
         try {
-            const response = await api.post('/api/orders/shiprocket/sync');
+            const response = await api.post('/api/orders/shiprocket/sync', {}, { timeout: 60000 });
             return response.data;
         } catch (error) {
             throw error.response?.data || error.message;

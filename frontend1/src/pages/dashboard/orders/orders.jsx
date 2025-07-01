@@ -81,7 +81,7 @@ const Orders = () => {
             console.log('=== Starting Order Sync with Shiprocket ===');
             console.log('Current orders state:', orders);
             
-            const result = await apiService.syncOrdersWithShiprocket();
+            const result = await orderService.syncOrdersWithShiprocket();
             console.log('Sync result:', result);
             
             if (result.results.successful > 0) {
@@ -376,27 +376,11 @@ const Orders = () => {
             cell: (row) => <span className={`status-badge status-${row.status}`}>{row.status}</span> 
         },
         {
-            header: "Shiprocket",
-            cell: (row) => (
-                <div className="shiprocket-column">
-                    {row.shiprocket_order_id && (
-                        <div className="shiprocket-order-id">Order: {row.shiprocket_order_id}</div>
-                    )}
-                    {row.shiprocket_shipment_id && (
-                        <div className="shiprocket-shipment-id">Shipment: {row.shiprocket_shipment_id}</div>
-                    )}
-                    {!row.shiprocket_order_id && !row.shiprocket_shipment_id && (
-                        <div className="shiprocket-not-synced">
-                            <span className="sync-status-badge not-synced">Not synced</span>
-                        </div>
-                    )}
-                    {(row.shiprocket_order_id || row.shiprocket_shipment_id) && (
-                        <div className="shiprocket-synced">
-                            <span className="sync-status-badge synced">✓ Synced</span>
-                        </div>
-                    )}
-                </div>
-            )
+            header: "Shiprocket Sync",
+            cell: (row) =>
+                row.shiprocket_order_id
+                    ? <span className="status-badge status-synced">Synced<br/><small>ID: {row.shiprocket_order_id}</small></span>
+                    : <span className="status-badge status-unsynced">Not Synced</span>
         },
         {
             header: "Actions",
@@ -540,6 +524,15 @@ const Orders = () => {
                     >
                         Shiprocket Orders
                     </button>
+                </div>
+
+                <div style={{ marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <Button onClick={syncOrders} variant="primary" disabled={loading}>
+                        {loading ? 'Syncing...' : 'Sync with Shiprocket'}
+                    </Button>
+                    <span style={{ fontSize: '14px', color: '#888' }}>
+                        This will sync all unsynced orders to Shiprocket.
+                    </span>
                 </div>
 
                 <div className="seo-table-container">

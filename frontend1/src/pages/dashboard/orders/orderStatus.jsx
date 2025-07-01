@@ -14,22 +14,30 @@ const OrderStatus = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(15);
     const [statusFilter, setStatusFilter] = useState("all");
+    const [dashboardOrderIds, setDashboardOrderIds] = useState([]);
 
-    const fetchHistory = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const data = await orderService.getAllOrderStatusHistory({ limit: 1000 }); 
-            setHistory(data.history);
-        } catch (err) {
-            setError(err.message || 'Failed to fetch status history');
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // Fetch dashboard orders and then status history
     useEffect(() => {
-        fetchHistory();
+        const fetchOrdersAndHistory = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                // Fetch all dashboard orders (like in orders.jsx)
+                const ordersData = await orderService.getAllOrders({ limit: 1000 });
+                const orderIds = ordersData.orders.map(order => order.id);
+                setDashboardOrderIds(orderIds);
+                // Fetch all status history
+                const historyData = await orderService.getAllOrderStatusHistory({ limit: 1000 });
+                // Only keep status history for dashboard orders
+                const filteredHistory = historyData.history.filter(entry => orderIds.includes(entry.order_id));
+                setHistory(filteredHistory);
+            } catch (err) {
+                setError(err.message || 'Failed to fetch status history');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchOrdersAndHistory();
     }, []);
 
     const debouncedSearch = useCallback(debounce((searchTerm) => setFilterValue(searchTerm), 300), []);
@@ -71,14 +79,12 @@ const OrderStatus = () => {
             const matchesSearch = entry.Order?.order_number.toLowerCase().includes(searchTerm);
             if (!matchesSearch) return false;
         }
-        
         // Status filter
         if (statusFilter !== "all") {
             if (entry.status?.toLowerCase() !== statusFilter) {
                 return false;
             }
         }
-        
         return true;
     });
 

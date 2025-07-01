@@ -11,6 +11,7 @@ const { ProductImage } = require('../model/productImageModel.js');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/db.js');
 const { createShiprocketOrder, getShiprocketTracking, getShiprocketLabel, requestShiprocketPickup, cancelShiprocketShipment, getAllShiprocketOrders, authenticateShiprocket } = require('../services/shiprocketService.js');
+const { setImmediate } = require('timers');
 
 // Generate unique order number
 const generateOrderNumber = () => {
@@ -277,6 +278,27 @@ module.exports.createOrder = async (req, res) => {
             message: 'Order created successfully',
             order: createdOrder
         });
+
+        // --- Auto-sync all unsynced orders with Shiprocket in the background ---
+        try {
+            setImmediate(async () => {
+                try {
+                    await module.exports.syncOrdersWithShiprocket({
+                        user: req.user,
+                        headers: req.headers,
+                        body: {},
+                        query: {}
+                    }, {
+                        status: () => ({ json: () => {} }),
+                        json: () => {}
+                    });
+                } catch (err) {
+                    console.error('Background Shiprocket sync failed:', err.message);
+                }
+            });
+        } catch (err) {
+            console.error('Failed to trigger background Shiprocket sync:', err.message);
+        }
     } catch (error) {
         await transaction.rollback();
         console.error('Error creating order:', error);
