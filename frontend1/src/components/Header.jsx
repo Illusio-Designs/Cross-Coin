@@ -94,7 +94,7 @@ const Header = () => {
               <span>Sign In<br /><b>Account</b></span>
             </Link>
           )}
-          <button className="header__search-icon" onClick={() => setShowSearch(true)}>
+          <button className="header__search-icon" aria-label="Open search" onClick={() => setShowSearch(true)}>
             <FiSearch />
           </button>
           <Link href="/Wishlist" className="header__wishlist">

@@ -111,6 +111,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
         <button 
           className={`wishlist-btn ${isInWishlist(product?.id) ? 'active' : ''}`}
           onClick={handleWishlistClick}
+          aria-label="Add to wishlist"
         >
           <FiHeart />
         </button>
@@ -126,6 +127,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
           <button 
             className="add-to-cart"
             onClick={(e) => onAddToCart(e, product)}
+            aria-label="Quick view"
           >
             Add
           </button>

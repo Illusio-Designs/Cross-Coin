@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { AiOutlineMail } from "react-icons/ai";
 import { FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn } from "react-icons/fa";
 import { MdOutlinePhoneInTalk } from "react-icons/md"; 
@@ -8,13 +8,35 @@ import mastercard from '../assets/mastercard.webp';
 import paypal from '../assets/Paypal.webp';
 import skrill from '../assets/Skrill.webp';
 import klarna from '../assets/Klarna.webp';
+import { getPublicCategories } from "../services/publicindex";
 
 const Footer = () => {
+  const [collections, setCollections] = useState([]);
+
+  useEffect(() => {
+    const fetchCollections = async () => {
+      try {
+        const data = await getPublicCategories();
+        // Handle both array and object response
+        if (Array.isArray(data)) {
+          setCollections(data.slice(0, 5));
+        } else if (data && Array.isArray(data.categories)) {
+          setCollections(data.categories.slice(0, 5));
+        } else {
+          setCollections([]);
+        }
+      } catch (error) {
+        setCollections([]);
+      }
+    };
+    fetchCollections();
+  }, []);
+
   return (
     <footer className="footer">
       <div className="footer__newsletter">
         <div className="footer__newsletter-content">
-          <h4>Join our newsletter for $10 offs</h4>
+          <h3>Join our newsletter for 10% offs</h3>
           <p>Register now to get latest updates on promotions & coupons. Don't worry, we not spam!</p>
         </div>
         <div className="footer__newsletter-form-container">
@@ -39,38 +61,21 @@ const Footer = () => {
           <div className="footer__social">
             <h2>Follow us on social media:</h2>
             <div className="footer__social-icons">
-            <a href="#" className="facebook"><FaFacebookF /></a>
-            <a href="#" className="instagram"><FaInstagram /></a>
+            <a href="#" className="facebook" aria-label="Facebook"><FaFacebookF /></a>
+            <a href="#" className="instagram" aria-label="Instagram"><FaInstagram /></a>
             </div>
           </div>
         </div>
         <div className="footer__col">
-          <h5>Our Expertise Products</h5>
+          <h4>Popular Collections</h4>
           <ul>
-            <li>Woollen Shocks</li>
-            <li>Cotton Shocks</li>
-            <li>Silk Shocks</li>
-            <li>Winter Special Shocks</li>
-            <li>Summer Special Shocks</li>
-            <li>Net Shocks</li>
-            <li>Rubber Shocks</li>
-          </ul>
-        </div>
-        <div className="footer__col">
-          <h5>Let Us Help You</h5>
-          <ul>
-            <li>Your Orders</li>
-            <li>Returns & Replacements</li>
-            <li>Shipping Rates & Policies</li>
-            <li>Refund and Returns Policy</li>
-            <li>Privacy Policy</li>
-            <li>Terms and Conditions</li>
-            <li>Cookie Settings</li>
-            <li>Help Center</li>
+            {collections.map((col) => (
+              <li key={col.id}>{col.name}</li>
+            ))}
           </ul>
         </div>
         <div className="footer__col footer__help">
-          <h5>Do You Need Help ?</h5>
+          <h4>Do You Need Help ?</h4>
           <p>It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.</p>
           <div className="footer__contact">
             <div className="contact-item"><MdOutlinePhoneInTalk /> <span className="gap">Monday - Friday: 8:00 AM - 9:00 PM<br /><b className="bold">+91 9712891700 </b></span></div> 

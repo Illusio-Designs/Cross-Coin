@@ -115,7 +115,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse, onViewChange, currentView }) =
           <Image src="/crosscoin icon.png" alt="CrossCoin Logo" width={36} height={36} />
           {!isCollapsed && <span className="sidebar-v2-title">CrossCoin<br /><span className="sidebar-v2-subtitle">ADMIN PANEL</span></span>}
         </div>
-        <button className="sidebar-v2-toggle" onClick={onToggleCollapse}>
+        <button className="sidebar-v2-toggle" aria-label="Toggle sidebar" onClick={onToggleCollapse}>
           {isCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
         </button>
       </div>
@@ -181,7 +181,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse, onViewChange, currentView }) =
       </nav>
       {/* Footer */}
       <div className="sidebar-v2-footer">
-        <button className="sidebar-v2-help">
+        <button className="sidebar-v2-help" aria-label="Help">
           <FaQuestionCircle />
           {!isCollapsed && <span>Need help?</span>}
         </button>

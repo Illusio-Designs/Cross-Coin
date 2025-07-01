@@ -30,47 +30,11 @@ const Home = () => {
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [latestProducts, setLatestProducts] = useState([]);
   const [latestProductsLoading, setLatestProductsLoading] = useState(false);
+  const [exclusiveProducts, setExclusiveProducts] = useState([]);
   
   const categorySliderRef = useRef(null);
   const latestSliderRef = useRef(null);
   const categoryImageRef = useRef(null);
-
-  // Featured products for the details section
-  const featuredProducts = [
-    {
-      id: 1,
-      name: "Premium Winter Jacket",
-      price: 299,
-      originalPrice: 399,
-      rating: 4.5,
-      reviews: 128,
-      images: ["/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp"],
-      colors: ["brown", "navy", "black"],
-      sizes: ["S", "M", "L", "XL"]
-    },
-    {
-      id: 2,
-      name: "Classic Denim Jacket",
-      price: 199,
-      originalPrice: 249,
-      rating: 4.3,
-      reviews: 95,
-      images: ["/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp"],
-      colors: ["blue", "black", "gray"],
-      sizes: ["S", "M", "L", "XL"]
-    },
-    {
-      id: 3,
-      name: "Leather Bomber Jacket",
-      price: 399,
-      originalPrice: 499,
-      rating: 4.7,
-      reviews: 156,
-      images: ["/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp", "/assets/card1-left.webp"],
-      colors: ["black", "brown", "tan"],
-      sizes: ["S", "M", "L", "XL"]
-    }
-  ];
 
   useEffect(() => {
     const fetchSliders = async () => {
@@ -120,9 +84,26 @@ const Home = () => {
       }
     };
 
+    const fetchExclusiveProducts = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/products/public?sort=featured&limit=3`
+        );
+        const data = await response.json();
+        if (data.success && data.data.products) {
+          setExclusiveProducts(data.data.products);
+        } else {
+          setExclusiveProducts([]);
+        }
+      } catch (error) {
+        setExclusiveProducts([]);
+      }
+    };
+
     fetchSliders();
     fetchCategories();
     fetchLatestProducts();
+    fetchExclusiveProducts();
   }, []);
 
   const fetchCategoryProducts = async (categoryName) => {
@@ -384,7 +365,7 @@ const Home = () => {
           <div className="category-section">
             <div className="category-sidebar">
               <div className="category-item" ref={categoryImageRef}>
-              <button className="slider-arrow slider-arrow-left" onClick={() => scrollCategoryImage('left')}>
+              <button className="slider-arrow slider-arrow-left" aria-label="Previous category" onClick={() => scrollCategoryImage('left')}>
                 <IoIosArrowBack />
               </button>
                 <Image 
@@ -396,7 +377,7 @@ const Home = () => {
                   unoptimized
                 />
                 <h3>{currentCategory.name}</h3>
-                <button className="slider-arrow slider-arrow-right" onClick={() => scrollCategoryImage('right')}>
+                <button className="slider-arrow slider-arrow-right" aria-label="Next category" onClick={() => scrollCategoryImage('right')}>
                 <IoIosArrowForward />
               </button>
               </div>
@@ -405,7 +386,7 @@ const Home = () => {
               {currentCategoryProducts.length > 0 && (
                 <>
                   {currentCategoryProducts.length > 2 && (
-                    <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('left')}>
+                    <button className="slider-arrow slider-arrow-left" aria-label="Previous slider" onClick={() => scrollSlider('left')}>
                       <IoIosArrowBack />
                     </button>
                   )}
@@ -443,7 +424,7 @@ const Home = () => {
                     })}
                   </div>
                   {currentCategoryProducts.length > 2 && (
-                    <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('right')}>
+                    <button className="slider-arrow slider-arrow-right" aria-label="Next slider" onClick={() => scrollSlider('right')}>
                       <IoIosArrowForward />
                     </button>
                   )}
@@ -462,104 +443,41 @@ const Home = () => {
         <div className="featured-products-section">
           <h2 className="section-title">Unlocked Exclusives</h2>
           <div className="featured-products-container">
-            <button className="slider-arrow slider-arrow-left" onClick={() => scrollFeaturedSlider('left')}>
-              <IoIosArrowBack />
-            </button>
-            <div className="featured-products-slider">
-              {featuredProducts.map((product, index) => (
+            {exclusiveProducts.length > 0 ? (
+              exclusiveProducts.map((product) => (
                 <div key={product.id} className="featured-product-card">
                   <div className="product-images">
-                    <Image
-                      className="main-image"
-                      src={product.images[selectedThumbnail]}
-                      alt={product.name}
-                      width={400}
-                      height={400}
-                      style={{ objectFit: 'cover' }}
-                      unoptimized
-                    />
-                    <div className="thumbnail-images">
-                      {product.images.map((src, idx) => (
-                        <Image
-                          key={idx}
-                          src={src}
-                          alt={`${product.name} thumbnail ${idx + 1}`}
-                          className={selectedThumbnail === idx ? "active" : ""}
-                          onClick={() => setSelectedThumbnail(idx)}
-                          width={60}
-                          height={60}
-                          style={{ objectFit: 'cover' }}
-                          unoptimized
-                        />
-                      ))}
-                    </div>
+                    {product.images && product.images.length > 0 ? (
+                      <Image
+                        className="main-image"
+                        src={product.images[0].image_url}
+                        alt={product.name}
+                        width={400}
+                        height={400}
+                        style={{ objectFit: 'cover' }}
+                        unoptimized
+                      />
+                    ) : (
+                      <div style={{ width: 400, height: 400, background: '#f3f3f3' }} />
+                    )}
                   </div>
                   <div className="product-info">
                     <h3>{product.name}</h3>
                     <div className="product-rating-row">
                       <span className="stars">★ ★ ★ ★ ☆</span>
-                      <span className="rating-value">{product.rating}</span>
-                      <span className="review-count">({product.reviews} reviews)</span>
+                      <span className="rating-value">{product.rating || ''}</span>
+                      <span className="review-count">({product.reviews || 0} reviews)</span>
                     </div>
                     <div className="product-price-row">
-                      <span className="current-price">${product.price}</span>
-                      <span className="original-price">${product.originalPrice}</span>
-                    </div>
-                    <div className="product-options">
-                      <div className="colors">
-                        <span className="option-label">Colors</span>
-                        <div className="color-options">
-                          {product.colors.map((color) => (
-                            <button
-                              key={color}
-                              className={`color-option${selectedColor === color ? " selected" : ""}`}
-                              style={{ backgroundColor: color }}
-                              onClick={() => setSelectedColor(color)}
-                            >
-                              {selectedColor === color && (
-                                <span className="color-check">✔</span>
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="sizes">
-                        <span className="option-label">Size</span>
-                        <div className="size-options">
-                          {product.sizes.map((size) => (
-                            <button
-                              key={size}
-                              className={`size-option${selectedSize === size ? " selected" : ""}`}
-                              onClick={() => setSelectedSize(size)}
-                            >
-                              {size}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="product-action-box">
-                      <div className="quantity-and-buttons">
-                        <div className="quantity-box">
-                          <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="quantity-btn">-</button>
-                          <span className="quantity-value">{quantity}</span>
-                          <button onClick={() => setQuantity(q => q + 1)} className="quantity-btn">+</button>
-                        </div>
-                        <button className="add-to-cart" onClick={(e) => handleAddToCart(e, product)}>
-                          Add to cart
-                        </button>
-                        <button className="buy-now" onClick={handleBuyNow}>
-                Buy Now
-              </button>
-                      </div>
+                      <span className="current-price">₹{product.price || (product.variations && product.variations[0]?.price) || ''}</span>
+                      <span className="original-price">{product.comparePrice || (product.variations && product.variations[0]?.comparePrice) ? `₹${product.comparePrice || product.variations[0]?.comparePrice}` : ''}</span>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-            <button className="slider-arrow slider-arrow-right" onClick={() => scrollFeaturedSlider('right')}>
-              <IoIosArrowForward />
-            </button>
+              ))
+            ) : (
+              <div>No exclusive products available.</div>
+            )}
           </div>
         </div>
         <div className="shop-by-category">
@@ -571,7 +489,7 @@ const Home = () => {
           </div>
           <div className="category-products">
             {latestProducts.length > 2 && (
-              <button className="slider-arrow slider-arrow-left" onClick={() => scrollLatestSlider('left')}>
+              <button className="slider-arrow slider-arrow-left" aria-label="Previous latest product" onClick={() => scrollLatestSlider('left')}>
                 <IoIosArrowBack />
               </button>
             )}
@@ -613,7 +531,7 @@ const Home = () => {
               })}
             </div>
             {latestProducts.length > 2 && (
-              <button className="slider-arrow slider-arrow-right" onClick={() => scrollLatestSlider('right')}>
+              <button className="slider-arrow slider-arrow-right" aria-label="Next latest product" onClick={() => scrollLatestSlider('right')}>
                 <IoIosArrowForward />
               </button>
             )}
