@@ -1,3 +1,4 @@
+const express = require('express');
 const axios = require('axios');
 
 const FB_PIXEL_ID = process.env.FB_PIXEL_ID || '1386995345678287'; // Use env or fallback
@@ -34,4 +35,18 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
     }
 }
 
-module.exports = { sendFacebookEvent };
+const router = express.Router();
+
+// POST /api/facebook-pixel/send-event
+router.post('/send-event', async (req, res) => {
+    try {
+        const { eventName, order, extraData } = req.body;
+        await sendFacebookEvent(eventName, order, extraData);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+module.exports = router;
+module.exports.sendFacebookEvent = sendFacebookEvent;
