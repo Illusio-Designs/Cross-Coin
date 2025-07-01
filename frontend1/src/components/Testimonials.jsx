@@ -67,7 +67,7 @@ const Testimonials = () => {
       <h3 className="section-title">CUSTOMER SATISFACTION</h3>
       <div className="testimonials-container">
         {reviews.length > 2 && (
-          <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('left')}>
+          <button className="slider-arrow slider-arrow-left" aria-label="Previous testimonial" onClick={() => scrollSlider('left')}>
             <IoIosArrowBack />
           </button>
         )}
@@ -89,7 +89,7 @@ const Testimonials = () => {
           ))}
         </div>
         {reviews.length > 2 && (
-          <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('right')}>
+          <button className="slider-arrow slider-arrow-right" aria-label="Next testimonial" onClick={() => scrollSlider('right')}>
             <IoIosArrowForward />
           </button>
         )}

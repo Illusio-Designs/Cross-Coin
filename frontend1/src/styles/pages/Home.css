@@ -611,10 +611,10 @@
 }
 
 .products-slider .original-price {
+  font-size: 1.1rem;
+  color: #222;
   text-decoration: line-through;
-  color: #999;
   margin-right: 0.5rem;
-  font-size: 0.9rem;
 }
 
 .products-slider .add-to-cart {
@@ -860,7 +860,7 @@
 
 .featured-product-card .original-price {
   font-size: 1.1rem;
-  color: #999;
+  color: #222;
   text-decoration: line-through;
 }
 
@@ -1155,4 +1155,8 @@
     padding: 6px 16px;
     font-size: 14px;
   }
+}
+
+.footer p, .footer__newsletter-policy, .footer__copyright {
+  color: #222;
 }
