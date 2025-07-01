@@ -979,4 +979,6 @@ export const policyService = {
     }
 };
 
+export const testShiprocketCredentials = () => api.get('/api/shiprocket/test-credentials');
+
 export default api;

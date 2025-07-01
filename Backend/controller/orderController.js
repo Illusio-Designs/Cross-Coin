@@ -211,42 +211,45 @@ module.exports.createOrder = async (req, res) => {
 
         // Shiprocket integration
         try {
-            // Map your order data to Shiprocket's required format
-            const shiprocketOrderPayload = {
+            const user = createdOrder.User;
+            const address = createdOrder.ShippingAddress;
+
+            // Validate address and phone
+            if (!address || !address.address_line1 || !address.phone) {
+                console.error(`Order ${createdOrder.order_number}: Missing address or phone, cannot sync to Shiprocket.`);
+                // Optionally, update order status or add a note
+                return;
+            }
+
+            const orderItems = createdOrder.OrderItems.map(item => ({
+                product_name: item.Product.name,
+                sku: item.Product.sku || '',
+                quantity: item.quantity,
+                price: item.price
+            }));
+
+            const shiprocketPayload = {
                 order_id: createdOrder.order_number,
-                order_date: new Date().toISOString().slice(0, 19).replace('T', ' '), // Format: "2019-07-24 11:11"
+                order_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
                 pickup_location: 'Default',
-                channel_id: "7361105", // Updated to Cross Coin channel ID
-                comment: `Order from Cross-Coin: ${createdOrder.order_number}`,
-                billing_customer_name: createdOrder.User.username,
+                channel_id: "7361105",
+                billing_customer_name: user.username,
                 billing_last_name: '',
-                billing_address: createdOrder.ShippingAddress?.address_line1 || '',
-                billing_address_2: createdOrder.ShippingAddress?.address_line2 || '',
-                billing_city: createdOrder.ShippingAddress?.city || '',
-                billing_pincode: createdOrder.ShippingAddress?.postal_code || '',
-                billing_state: createdOrder.ShippingAddress?.state || '',
-                billing_country: createdOrder.ShippingAddress?.country || 'India',
-                billing_email: createdOrder.User.email,
-                billing_phone: createdOrder.ShippingAddress?.phone || '',
+                billing_address: address.address_line1,
+                billing_address_2: address.address_line2 || '',
+                billing_city: address.city,
+                billing_pincode: address.postal_code,
+                billing_state: address.state,
+                billing_country: address.country || 'India',
+                billing_email: user.email,
+                billing_phone: address.phone,
                 shipping_is_billing: true,
-                shipping_customer_name: '',
-                shipping_last_name: '',
-                shipping_address: '',
-                shipping_address_2: '',
-                shipping_city: '',
-                shipping_pincode: '',
-                shipping_country: '',
-                shipping_state: '',
-                shipping_email: '',
-                shipping_phone: '',
-                order_items: createdOrder.OrderItems.map(item => ({
-                    name: item.Product.name,
-                    sku: item.Product.sku || '',
+                order_items: orderItems.map(item => ({
+                    name: item.product_name,
+                    sku: item.sku || '',
                     units: item.quantity,
                     selling_price: item.price.toString(),
-                    discount: item.discount ? item.discount.toString() : '',
-                    tax: '',
-                    hsn: 441122 // Default HSN code
+                    hsn: 441122
                 })),
                 payment_method: createdOrder.payment_type === 'cod' ? 'COD' : 'Prepaid',
                 shipping_charges: 0,
@@ -259,20 +262,17 @@ module.exports.createOrder = async (req, res) => {
                 height: 20,
                 weight: 2.5
             };
-            const shiprocketResponse = await createShiprocketOrder(shiprocketOrderPayload);
-            // Store shiprocket order and shipment IDs in the local order
-            await createdOrder.update({
-                shiprocket_order_id: shiprocketResponse.order_id || null,
-                shiprocket_shipment_id: (shiprocketResponse.shipments && shiprocketResponse.shipments[0]?.shipment_id) || null
-            });
-            console.log('Shiprocket order created:', shiprocketResponse);
 
-            if (createdOrder.shiprocket_shipment_id) {
-                const pickupRes = await requestShiprocketPickup([createdOrder.shiprocket_shipment_id]);
-                console.log('Shiprocket pickup requested:', pickupRes);
-            }
-        } catch (shipErr) {
-            console.error('Failed to create Shiprocket order:', shipErr?.response?.data || shipErr.message);
+            const shipRes = await createShiprocketOrder(shiprocketPayload);
+
+            await createdOrder.update({
+                shiprocket_order_id: shipRes.order_id,
+                shiprocket_shipment_id: shipRes.shipments?.[0]?.shipment_id || null
+            });
+
+            console.log('✅ Shiprocket Order Created:', shipRes.order_id);
+        } catch (err) {
+            console.error('❌ Failed to create Shiprocket order:', err.message);
         }
 
         res.status(201).json({
@@ -946,16 +946,9 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
 module.exports.testShiprocketCredentials = async (req, res) => {
     try {
         await authenticateShiprocket();
-        res.json({ 
-            message: 'Shiprocket credentials are valid',
-            status: 'success'
-        });
+        res.json({ message: 'Shiprocket credentials are valid', status: 'success' });
     } catch (error) {
-        res.status(400).json({ 
-            message: 'Shiprocket credentials are invalid',
-            error: error.message,
-            status: 'error'
-        });
+        res.status(400).json({ message: 'Shiprocket credentials are invalid', error: error.message, status: 'error' });
     }
 };
 

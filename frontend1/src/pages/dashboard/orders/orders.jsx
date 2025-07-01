@@ -441,41 +441,27 @@ const Orders = () => {
                     <h1 className="seo-title">Manage Orders</h1>
                     <div className="adding-button">
                         <button 
-                            className="sync-button"
-                            onClick={syncOrders}
-                            title="Sync orders with Shiprocket"
-                        >
-                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            Sync Shiprocket
-                        </button>
-                        <button 
                             className="test-credentials-button"
                             onClick={testCredentials}
                             title="Test Shiprocket credentials"
+                            disabled={loading}
                         >
                             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            Test Credentials
+                            {loading ? 'Testing...' : 'Test Credentials'}
                         </button>
-                        <div className="shiprocket-controls">
-                            <button 
-                                onClick={testCredentials}
-                                disabled={loading}
-                                className="btn btn-secondary"
-                            >
-                                {loading ? 'Testing...' : 'Test Credentials'}
-                            </button>
-                            <button 
-                                onClick={syncOrders}
-                                disabled={loading}
-                                className="btn btn-primary"
-                            >
-                                {loading ? 'Syncing...' : 'Sync Orders'}
-                            </button>
-                        </div>
+                        <button 
+                            className="sync-button"
+                            onClick={syncOrders}
+                            title="Sync orders with Shiprocket"
+                            disabled={loading}
+                        >
+                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            {loading ? 'Syncing...' : 'Sync Orders'}
+                        </button>
                         <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
                             <div className="modern-searchbar-group">
                                 <span className="modern-searchbar-icon">
@@ -527,9 +513,6 @@ const Orders = () => {
                 </div>
 
                 <div style={{ marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <Button onClick={syncOrders} variant="primary" disabled={loading}>
-                        {loading ? 'Syncing...' : 'Sync with Shiprocket'}
-                    </Button>
                     <span style={{ fontSize: '14px', color: '#888' }}>
                         This will sync all unsynced orders to Shiprocket.
                     </span>
