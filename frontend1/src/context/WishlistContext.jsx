@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getWishlist, addToWishlist as apiAddToWishlist, removeFromWishlist as apiRemoveFromWishlist, clearWishlist as apiClearWishlist } from '../services/publicindex';
+import { fbqTrack } from '../components/common/Analytics';
 import { 
   showAddToWishlistSuccessToast, 
   showAddToWishlistErrorToast, 
@@ -99,6 +100,13 @@ export const WishlistProvider = ({ children }) => {
           };
         }));
         showAddToWishlistSuccessToast(product.name);
+        fbqTrack('AddToWishlist', {
+          content_ids: [product.id],
+          content_name: product.name,
+          content_type: 'product',
+          value: product.price,
+          currency: 'INR',
+        });
       } catch (error) {
         console.error('WishlistContext: error adding to wishlist', error);
         showAddToWishlistErrorToast(error.message);
@@ -108,6 +116,13 @@ export const WishlistProvider = ({ children }) => {
         const exists = prevWishlist.some(item => item.id === product.id);
         if (!exists) {
           showAddToWishlistSuccessToast(product.name);
+          fbqTrack('AddToWishlist', {
+            content_ids: [product.id],
+            content_name: product.name,
+            content_type: 'product',
+            value: product.price,
+            currency: 'INR',
+          });
           return [...prevWishlist, { ...product, addedAt: new Date().toISOString() }];
         }
         return prevWishlist;
@@ -122,12 +137,30 @@ export const WishlistProvider = ({ children }) => {
         await apiRemoveFromWishlist(productId);
         setWishlist(prev => prev.filter(item => item.id !== productId));
         showRemoveFromWishlistSuccessToast(itemToRemove?.name || 'Item');
+        if (itemToRemove) {
+          fbqTrack('RemoveFromWishlist', {
+            content_ids: [itemToRemove.id],
+            content_name: itemToRemove.name,
+            content_type: 'product',
+            value: itemToRemove.price,
+            currency: 'INR',
+          });
+        }
       } catch (error) {
         console.error('WishlistContext: error removing from wishlist', error);
       }
     } else {
       setWishlist(prevWishlist => prevWishlist.filter(item => item.id !== productId));
       showRemoveFromWishlistSuccessToast(itemToRemove?.name || 'Item');
+      if (itemToRemove) {
+        fbqTrack('RemoveFromWishlist', {
+          content_ids: [itemToRemove.id],
+          content_name: itemToRemove.name,
+          content_type: 'product',
+          value: itemToRemove.price,
+          currency: 'INR',
+        });
+      }
     }
   };
 

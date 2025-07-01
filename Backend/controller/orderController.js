@@ -12,6 +12,7 @@ const { Op } = require('sequelize');
 const { sequelize } = require('../config/db.js');
 const { createShiprocketOrder, getShiprocketTracking, getShiprocketLabel, requestShiprocketPickup, cancelShiprocketShipment, getAllShiprocketOrders, authenticateShiprocket } = require('../services/shiprocketService.js');
 const { setImmediate } = require('timers');
+const { sendFacebookEvent } = require('../integration/facebookPixel.js');
 
 // Generate unique order number
 const generateOrderNumber = () => {
@@ -517,6 +518,23 @@ module.exports.updateOrderStatus = async (req, res) => {
                 { model: Payment }
             ]
         });
+        
+        // Facebook Pixel: Track purchase when order is delivered/completed
+        if (status === 'delivered' || status === 'completed') {
+            // Prepare order data for Facebook Pixel
+            const orderForPixel = {
+                ...updatedOrder.dataValues,
+                items: updatedOrder.OrderItems.map(item => ({
+                    product_id: item.product_id,
+                    quantity: item.quantity
+                })),
+                ip_address: req.ip,
+                user_agent: req.headers['user-agent'],
+                currency: 'INR',
+                total_amount: updatedOrder.final_amount
+            };
+            sendFacebookEvent('Purchase', orderForPixel).catch(console.error);
+        }
         
         res.json({
             message: 'Order status updated successfully',

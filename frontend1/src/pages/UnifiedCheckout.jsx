@@ -10,6 +10,7 @@ import OrderSummary from '../components/checkout/OrderSummary';
 import { useAuth } from "../context/AuthContext";
 import { createOrder, createRazorpayOrder } from "../services/publicindex";
 import { showOrderPlacedSuccessToast, showOrderPlacedErrorToast, showValidationErrorToast } from "../utils/toast";
+import { fbqTrack } from '../components/common/Analytics';
 
 export default function UnifiedCheckout() {
   const [step, setStep] = useState(() => {
@@ -156,6 +157,30 @@ export default function UnifiedCheckout() {
         if (!orderResult?.order) {
             throw new Error('Order creation failed to return an order.');
         }
+
+        // --- Facebook Pixel: Track Purchase Event ---
+        const fbOrder = orderResult.order;
+        fbqTrack('Purchase', {
+          value: fbOrder.final_amount,
+          currency: 'INR',
+          contents: fbOrder.OrderItems?.map(item => ({
+            id: item.product_id?.toString(),
+            quantity: item.quantity
+          })) || [],
+        });
+        // Optionally, send to backend for server-side sync (if not already done)
+        fetch('/api/facebook-pixel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'Purchase',
+            order: {
+              ...fbOrder,
+              ip_address: typeof window !== 'undefined' ? window.location.hostname : '',
+              user_agent: typeof window !== 'undefined' ? window.navigator.userAgent : '',
+            }
+          })
+        });
 
         if (shippingFee.orderType === 'cod') {
             // COD: Order placed, now redirect

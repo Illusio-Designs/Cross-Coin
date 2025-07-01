@@ -33,6 +33,13 @@ const FacebookPixel = () => {
   );
 };
 
+// Helper to track custom Facebook Pixel events
+export function fbqTrack(event, params = {}) {
+  if (typeof window !== 'undefined' && window.fbq) {
+    window.fbq('track', event, params);
+  }
+}
+
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID || 'G-XXXXXXXXXX'; // Google Analytics Measurement ID
 const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID || 'lzy55n7g8h'; // Microsoft Clarity Project ID
 
