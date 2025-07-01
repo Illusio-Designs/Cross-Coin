@@ -736,6 +736,10 @@
   -ms-overflow-style: none;
 }
 
+.featured-products-slider::-webkit-scrollbar {
+  display: none;
+}
+
 .featured-products-container .slider-arrow {
   position: absolute;
   top: 50%;
