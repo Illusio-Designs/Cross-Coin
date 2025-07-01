@@ -216,7 +216,7 @@ module.exports.createOrder = async (req, res) => {
                 order_id: createdOrder.order_number,
                 order_date: new Date().toISOString().slice(0, 19).replace('T', ' '), // Format: "2019-07-24 11:11"
                 pickup_location: 'Default',
-                channel_id: "1", // Default channel ID
+                channel_id: "7361105", // Updated to Cross Coin channel ID
                 comment: `Order from Cross-Coin: ${createdOrder.order_number}`,
                 billing_customer_name: createdOrder.User.username,
                 billing_last_name: '',
@@ -842,7 +842,7 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
                     order_id: order.order_number,
                     order_date: order.createdAt.toISOString().slice(0, 19).replace('T', ' '), // Format: "2019-07-24 11:11"
                     pickup_location: 'Default',
-                    channel_id: "1", // Default channel ID
+                    channel_id: "7361105", // Updated to Cross Coin channel ID
                     comment: `Order from Cross-Coin: ${order.order_number}`,
                     billing_customer_name: order.User.username,
                     billing_last_name: '',
