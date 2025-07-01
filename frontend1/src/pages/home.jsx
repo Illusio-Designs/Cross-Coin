@@ -10,6 +10,7 @@ import { useCart } from '../context/CartContext';
 import { getPublicSliders, getPublicCategories, getPublicCategoryByName } from '../services/publicindex';
 import SeoWrapper from '../console/SeoWrapper';
 import { useRouter } from 'next/navigation';
+import { fbqTrack } from '../components/common/Analytics';
 
 const formatTwoDigits = (num) => num.toString().padStart(2, '0');
 
@@ -242,6 +243,14 @@ const Home = () => {
     }
     
     addToCart(product, defaultColor, defaultSize, 1);
+    fbqTrack('AddToCart', {
+      content_ids: [product.id],
+      content_name: product.name,
+      content_type: 'product',
+      value: product.price,
+      currency: 'INR',
+      quantity: 1,
+    });
   };
 
   const handleBuyNow = () => {
@@ -251,6 +260,14 @@ const Home = () => {
     }
     addToCart(product, selectedColor, selectedSize, quantity);
     router.push('/checkout');
+    fbqTrack('InitiateCheckout', {
+      content_ids: [product.id],
+      content_name: product.name,
+      content_type: 'product',
+      value: product.price,
+      currency: 'INR',
+      quantity,
+    });
   };
 
   const currentCategory = categories[currentCategoryIndex] || {

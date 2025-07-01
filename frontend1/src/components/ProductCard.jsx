@@ -15,22 +15,8 @@ export const filterOptions = {
 const ProductCard = ({ product, onProductClick, onAddToCart }) => {
   const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
 
-  // Debug logs
-  console.log('Product Card Props:', { product, onProductClick, onAddToCart });
-  console.log('Product Details:', {
-    id: product?.id,
-    name: product?.name,
-    slug: product?.slug,
-    badge: product?.badge,
-    variations: product?.variations,
-    images: product?.images,
-    category: product?.category
-  });
-
   const handleWishlistClick = (e) => {
     e.stopPropagation(); // Prevent triggering product click
-    console.log('Wishlist Click:', { productId: product.id, isInWishlist: isInWishlist(product.id) });
-    
     if (isInWishlist(product.id)) {
       removeFromWishlist(product.id);
     } else {
@@ -73,21 +59,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
     if (!badge) return '';
     return badge.toString().replace(/_/g, ' ').toUpperCase();
   };
-
-  console.log('Processed Product Data:', {
-    productImage,
-    price,
-    comparePrice,
-    variation,
-    categoryName,
-    formattedBadge: formatBadge(product?.badge)
-  });
-
-  console.log('Image Debug:', {
-    images: product?.images,
-    imageData: product?.images?.find(img => img.is_primary) || product?.images?.[0],
-    finalImageSrc: productImage
-  });
 
   return (
     <div 

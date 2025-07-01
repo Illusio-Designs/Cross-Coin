@@ -8,6 +8,7 @@ import { useCart } from '../context/CartContext';
 import ProductCard, { filterOptions } from "../components/ProductCard";
 import { getAllPublicProducts, getPublicCategories } from "../services/publicindex";
 import SeoWrapper from '../console/SeoWrapper';
+import { fbqTrack } from '../components/common/Analytics';
 
 const Products = () => {
   const router = useRouter();
@@ -155,6 +156,14 @@ const Products = () => {
     }
     
     addToCart(product, defaultColor, defaultSize, 1);
+    fbqTrack('AddToCart', {
+      content_ids: [product.id],
+      content_name: product.name,
+      content_type: 'product',
+      value: product.price,
+      currency: 'INR',
+      quantity: 1,
+    });
   };
 
   // Get category name by ID for display

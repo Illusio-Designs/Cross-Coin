@@ -13,6 +13,7 @@ const { initializeSeoData } = require('./utils/initializeSeoData.js');
 const fs = require('fs');
 const { setupDatabase } = require('./scripts/setupDatabase.js');
 const corsOptions = require('./config/corsConfig.js');
+const { sendFacebookEvent } = require('./integration/facebookPixel.js');
 
 // Get the directory name of the current module
 // In CommonJS, __filename and __dirname are already available
@@ -106,6 +107,20 @@ app.use('/api/google-analytics', googleAnalyticsRouter);
 app.use('/api/facebook-pixel', facebookPixelRouter);
 app.use('/api/facebook-catalog', facebookCatalogRouter);
 app.use('/api/dashboard', dashboardAnalyticsRouter);
+
+// Endpoint to receive Facebook Pixel events from frontend and sync server-side
+app.post('/api/facebook-pixel', async (req, res) => {
+  const { event, order } = req.body;
+  if (!event || !order) {
+    return res.status(400).json({ success: false, message: 'Event and order are required' });
+  }
+  try {
+    await sendFacebookEvent(event, order);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {

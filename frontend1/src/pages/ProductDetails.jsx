@@ -10,6 +10,7 @@ import { getPublicProductBySlug, createPublicReview, getPublicCoupons } from '..
 import SeoWrapper from '../console/SeoWrapper';
 import { showValidationErrorToast, showReviewSubmittedSuccessToast, showReviewSubmittedErrorToast } from '../utils/toast';
 import Loader from '../components/Loader';
+import { fbqTrack } from '../components/common/Analytics';
 
 // Utility function to normalize image URLs
 function normalizeImageUrl(imageUrl) {
@@ -325,6 +326,14 @@ export default function ProductDetails() {
     setShowAddedToCart(true);
     setTimeout(() => setShowAddedToCart(false), 2000);
     console.log('Add to cart:', { product, selectedColor, selectedSize, quantity });
+    fbqTrack('AddToCart', {
+      content_ids: [product.id],
+      content_name: product.name,
+      content_type: 'product',
+      value: product.price,
+      currency: 'INR',
+      quantity,
+    });
   };
 
   const handleBuyNow = () => {
@@ -336,14 +345,36 @@ export default function ProductDetails() {
     const selectedSize = selectedAttributes.size || '';
     addToCart(product, selectedColor, selectedSize, quantity);
     router.push('/checkout');
+    fbqTrack('InitiateCheckout', {
+      content_ids: [product.id],
+      content_name: product.name,
+      content_type: 'product',
+      value: product.price,
+      currency: 'INR',
+      quantity,
+    });
   };
 
   const handleAddToWishlist = () => {
     addToWishlist(product);
+    fbqTrack('AddToWishlist', {
+      content_ids: [product.id],
+      content_name: product.name,
+      content_type: 'product',
+      value: product.price,
+      currency: 'INR',
+    });
   };
 
   const handleRemoveFromWishlist = () => {
     removeFromWishlist(product.id);
+    fbqTrack('RemoveFromWishlist', {
+      content_ids: [product.id],
+      content_name: product.name,
+      content_type: 'product',
+      value: product.price,
+      currency: 'INR',
+    });
   };
 
   const renderAttributeOptions = () => {
