@@ -3,6 +3,7 @@ import Image from "next/image";
 import { FiTrash2 } from "react-icons/fi";
 import { FaBoxOpen } from "react-icons/fa";
 import { useCart } from "../../context/CartContext";
+import { useState } from "react";
 
 // Utility function to normalize image URLs (same logic as ProductCard.jsx)
 function getNormalizedImageUrl(imageUrl) {
@@ -23,7 +24,27 @@ function getNormalizedImageUrl(imageUrl) {
 export default function CartStep() {
   const router = useRouter();
   const { cartItems, removeFromCart, updateQuantity, setQuantity } = useCart();
-  
+  const [inputValues, setInputValues] = useState({});
+
+  const handleInputChange = (itemId, value) => {
+    // Allow only numbers
+    if (/^\d*$/.test(value)) {
+      setInputValues(prev => ({ ...prev, [itemId]: value }));
+    }
+  };
+
+  const handleInputBlur = (itemId, value) => {
+    const num = parseInt(value, 10);
+    if (!value || isNaN(num) || num < 1) {
+      setInputValues(prev => ({ ...prev, [itemId]: "1" }));
+      setQuantity(itemId, 1);
+    } else if (num === 0) {
+      removeFromCart(itemId);
+    } else {
+      setQuantity(itemId, num);
+    }
+  };
+
   return (
     <div className="cart-items-list-container">
         <h2>Shopping Cart</h2>
@@ -61,8 +82,9 @@ export default function CartStep() {
                   type="number"
                   min={0}
                   className="qty-input improved-qty-input"
-                  value={item.quantity}
-                  onChange={e => setQuantity(item.id, e.target.value)}
+                  value={inputValues[item.id] !== undefined ? inputValues[item.id] : item.quantity}
+                  onChange={e => handleInputChange(item.id, e.target.value)}
+                  onBlur={e => handleInputBlur(item.id, e.target.value)}
                   style={{ width: 60, textAlign: 'center', border: '1px solid #ccc', borderRadius: 4, padding: '4px 8px', margin: '0 8px' }}
                 />
                 <button
