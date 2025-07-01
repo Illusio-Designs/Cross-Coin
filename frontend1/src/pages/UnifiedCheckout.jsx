@@ -175,8 +175,9 @@ export default function UnifiedCheckout() {
                 return;
             }
 
-            const amountInPaisa = Math.round(orderResult.order.final_amount * 10);
-            console.log('Frontend: Sending this amount in paisa to backend:', amountInPaisa);
+            console.log('Order final_amount:', orderResult.order.final_amount);
+            const amountInPaisa = Math.round(orderResult.order.final_amount * 100);
+            console.log('Amount in paisa sent to Razorpay:', amountInPaisa);
 
             // Create Razorpay order from backend, passing amount in the smallest currency unit (paisa)
             const razorpayOrder = await createRazorpayOrder({
