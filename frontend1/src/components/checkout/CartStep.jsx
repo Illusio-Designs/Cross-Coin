@@ -22,7 +22,7 @@ function getNormalizedImageUrl(imageUrl) {
 
 export default function CartStep() {
   const router = useRouter();
-  const { cartItems, removeFromCart, updateQuantity } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, setQuantity } = useCart();
   
   return (
     <div className="cart-items-list-container">
@@ -37,7 +37,14 @@ export default function CartStep() {
         ) : (
             cartItems.map((item) => (
             <div className="cart-item" key={item.id}>
-                <Image src={getNormalizedImageUrl(item.image)} alt={item.name} width={100} height={100} className="cart-item-img" />
+                <Image 
+                  src={getNormalizedImageUrl(item.image)} 
+                  alt={item.name} 
+                  width={100} 
+                  height={100} 
+                  className="cart-item-img" 
+                  onError={(e) => { e.target.src = '/placeholder.png'; }} // fallback if image fails
+                />
                 <div className="cart-item-details">
                 <div className="cart-item-title">{item.name}</div>
                 <div className="cart-item-meta">Size: {item.size || 'N/A'}</div>
@@ -50,7 +57,14 @@ export default function CartStep() {
                     onClick={() => updateQuantity(item.id, -1)}
                     disabled={item.quantity === 1}
                 >-</button>
-                <span>{item.quantity}</span>
+                <input
+                  type="number"
+                  min={0}
+                  className="qty-input improved-qty-input"
+                  value={item.quantity}
+                  onChange={e => setQuantity(item.id, e.target.value)}
+                  style={{ width: 60, textAlign: 'center', border: '1px solid #ccc', borderRadius: 4, padding: '4px 8px', margin: '0 8px' }}
+                />
                 <button
                     className="qty-btn"
                     onClick={() => updateQuantity(item.id, 1)}
