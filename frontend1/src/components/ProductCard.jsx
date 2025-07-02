@@ -2,6 +2,7 @@ import React from 'react';
 import Image from 'next/image';
 import { FiHeart } from 'react-icons/fi';
 import { useWishlist } from '../context/WishlistContext';
+import { getProductImageSrc } from '../utils/imageUtils';
 
 // Filter options data - This should come from API in real implementation
 export const filterOptions = {
@@ -25,26 +26,8 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
   };
 
   // Get the primary image or first image from the images array
-  const getProductImageSrc = () => {
-    const imageData = product?.images?.find(img => img.is_primary) || product?.images?.[0];
-    if (imageData?.image_url) {
-      let imageUrl = imageData.image_url;
-      // If it's a full URL, use as is
-      if (/^https?:\/\//.test(imageUrl)) {
-        return imageUrl;
-      }
-      // If it's a relative path, prepend the base URL from env
-      const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || '';
-      if (imageUrl.startsWith('/')) {
-        return `${baseUrl}${imageUrl}`;
-      }
-      // If it's just a filename, construct the path
-      return `${baseUrl}/uploads/products/${imageUrl}`;
-    }
-    return '/placeholder-image.jpg';
-  };
-
-  const productImage = getProductImageSrc();
+  const imageData = product?.images?.find(img => img.is_primary) || product?.images?.[0];
+  const productImage = getProductImageSrc(imageData);
 
   // Get the first variation for price
   const variation = product?.variations?.[0];
