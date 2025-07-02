@@ -140,10 +140,11 @@ const Wishlist = () => {
                 <div className="wishlist-item-details">
                   <h3>{item.name}</h3>
                   <div className="wishlist-item-price">
+                    <span className="current-price">₹{item.price}</span>
                     {item.comparePrice > item.price && (
                       <span className="original-price">₹{item.comparePrice}</span>
                     )}
-                    <span className="current-price">₹{item.price}</span>
+                    
                   </div>
                   <div className="wishlist-item-actions">
                     <button 
