@@ -14,7 +14,6 @@ const fs = require('fs');
 const { setupDatabase } = require('./scripts/setupDatabase.js');
 const corsOptions = require('./config/corsConfig.js');
 const { sendFacebookEvent } = require('./integration/facebookPixel.js');
-const shiprocketRoutes = require('./routes/shiprocketRoutes');
 
 // Get the directory name of the current module
 // In CommonJS, __filename and __dirname are already available
