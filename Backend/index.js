@@ -107,7 +107,6 @@ app.use('/api/google-analytics', googleAnalyticsRouter);
 app.use('/api/facebook-pixel', facebookPixelRouter);
 app.use('/api/facebook-catalog', facebookCatalogRouter);
 app.use('/api/dashboard', dashboardAnalyticsRouter);
-app.use('/api/shiprocket', shiprocketRoutes);
 
 // Endpoint to receive Facebook Pixel events from frontend and sync server-side
 app.post('/api/facebook-pixel', async (req, res) => {
