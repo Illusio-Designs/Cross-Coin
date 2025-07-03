@@ -7,7 +7,7 @@ import ProductCard from "../components/ProductCard";
 import Image from "next/image";
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
-import { getPublicSliders, getPublicCategories, getPublicCategoryByName } from '../services/publicindex';
+import { getPublicSliders, getPublicCategories, getPublicCategoryByName, getPublicProductReviews } from '../services/publicindex';
 import SeoWrapper from '../console/SeoWrapper';
 import { useRouter } from 'next/navigation';
 import { fbqTrack } from '../components/common/Analytics';
@@ -33,6 +33,8 @@ const Home = () => {
   const [latestProductsLoading, setLatestProductsLoading] = useState(false);
   const [exclusiveProducts, setExclusiveProducts] = useState([]);
   const [exclusiveStates, setExclusiveStates] = useState([]);
+  const [exclusiveReviewCounts, setExclusiveReviewCounts] = useState([]);
+  const [exclusiveAvgRatings, setExclusiveAvgRatings] = useState([]);
   
   const categorySliderRef = useRef(null);
   const latestSliderRef = useRef(null);
@@ -96,13 +98,35 @@ const Home = () => {
         if (data.success && data.data.products) {
           setExclusiveProducts(data.data.products);
           setExclusiveStates(data.data.products.map(() => ({ selectedThumbnail: 0, selectedColor: '', selectedSize: '', quantity: 1 })));
+          // Fetch review counts and average ratings for each product
+          const reviewStats = await Promise.all(
+            data.data.products.map(async (product) => {
+              try {
+                const reviewData = await getPublicProductReviews(product.id, { limit: 10 });
+                const count = reviewData.total || (reviewData.reviews ? reviewData.reviews.length : 0);
+                let avg = 0;
+                if (reviewData.reviews && reviewData.reviews.length > 0) {
+                  avg = reviewData.reviews.reduce((acc, r) => acc + (r.rating || 0), 0) / reviewData.reviews.length;
+                }
+                return { count, avg };
+              } catch {
+                return { count: 0, avg: 0 };
+              }
+            })
+          );
+          setExclusiveReviewCounts(reviewStats.map(s => s.count));
+          setExclusiveAvgRatings(reviewStats.map(s => s.avg));
         } else {
           setExclusiveProducts([]);
           setExclusiveStates([]);
+          setExclusiveReviewCounts([]);
+          setExclusiveAvgRatings([]);
         }
       } catch (error) {
         setExclusiveProducts([]);
         setExclusiveStates([]);
+        setExclusiveReviewCounts([]);
+        setExclusiveAvgRatings([]);
       }
     };
 
@@ -283,17 +307,19 @@ const Home = () => {
 
   // Get the image source with fallback
   const getCategoryImageSrc = () => {
-    if (currentCategory.image && currentCategory.image !== '/assets/card1-left.webp') {
-      // If it's a full URL, use it as is
-      if (currentCategory.image.startsWith('http')) {
-        return currentCategory.image;
+    if (currentCategory && currentCategory.image) {
+      const img = currentCategory.image;
+      if (img.startsWith('http')) {
+        return img;
       }
-      // If it's a relative path, construct the full URL
-      if (currentCategory.image.startsWith('/uploads/')) {
-        return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${currentCategory.image}`;
+      // Remove any duplicate '/uploads/categories/' in the middle of the path
+      const cleanedPath = img.replace(/(\/uploads\/categories\/)+/g, '/uploads/categories/');
+      // Ensure only one slash between base URL and path
+      let baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      if (cleanedPath.startsWith('/')) {
+        return `${baseUrl}${cleanedPath}`;
       }
-      // If it's just a filename, construct the path
-      return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/uploads/categories/${currentCategory.image}`;
+      return `${baseUrl}/${cleanedPath}`;
     }
     return '/assets/card1-left.webp';
   };
@@ -307,6 +333,17 @@ const Home = () => {
         exclusiveSliderRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
       }
     }
+  };
+
+  // Add renderStars function from ProductDetails.jsx
+  const renderStars = (rating) => {
+    const totalStars = 5;
+    const roundedRating = Math.round(rating || 0);
+    const stars = [];
+    for (let i = 0; i < totalStars; i++) {
+      stars.push(i < roundedRating ? '★' : '☆');
+    }
+    return stars.join(' ');
   };
 
   return (
@@ -383,93 +420,96 @@ const Home = () => {
           </div>
         </div>
         <div className="shop-by-category">
-          <div style={{ display: 'flex', justifyContent: 'end', alignItems: 'center', marginBottom: '3rem' , gap: '17rem' }}>
-            <h2 className="section-title">Curate Your Collection</h2>
-            <button className="hero-btn" onClick={() => {
-              if (currentCategory.id) {
-                window.location.href = `/Products?category=${currentCategory.id}`;
-              } else {
-                window.location.href = '/Products';
-              }
-            }}>
-              View All Products
-            </button>
-          </div>
-          <div className="category-section">
-            <div className="category-sidebar">
-              <div className="category-item" ref={categoryImageRef}>
-              <button className="slider-arrow slider-arrow-left" aria-label="Previous category" onClick={() => scrollCategoryImage('left')}>
-                <IoIosArrowBack />
+          <div className="shop-by-category__container">
+            <div style={{ display: 'flex', justifyContent: 'end', alignItems: 'center', marginBottom: '3rem' , gap: '17rem' }}>
+              <h2 className="section-title">Curate Your Collection</h2>
+              <button className="hero-btn" onClick={() => {
+                if (currentCategory.id) {
+                  window.location.href = `/Products?category=${currentCategory.id}`;
+                } else {
+                  window.location.href = '/Products';
+                }
+              }}>
+                View All Products
               </button>
-                <Image 
-                  src={getCategoryImageSrc()} 
-                  alt={currentCategory.name} 
-                  width={300}
-                  height={300}
-                  style={{ objectFit: 'cover' }}
-                  unoptimized
-                />
-                <h3>{currentCategory.name}</h3>
-                <button className="slider-arrow slider-arrow-right" aria-label="Next category" onClick={() => scrollCategoryImage('right')}>
-                <IoIosArrowForward />
-              </button>
-              </div>
             </div>
-            <div className="category-products">
-              {currentCategoryProducts.length > 0 && (
-                <>
-                  {currentCategoryProducts.length > 2 && (
-                    <button className="slider-arrow slider-arrow-left" aria-label="Previous slider" onClick={() => scrollSlider('left')}>
-                      <IoIosArrowBack />
-                    </button>
-                  )}
-                  <div className="products-slider" ref={categorySliderRef}>
-                    {currentCategoryProducts.map((product) => {
-                      // Format product data to match ProductCard expectations
-                      const formattedProduct = {
-                        id: product.id,
-                        name: product.name,
-                        slug: product.slug,
-                        description: product.description,
-                        badge: product.badge || null,
-                        images: product.image ? [{
-                          image_url: product.image,
-                          is_primary: true
-                        }] : [],
-                        variations: [{
-                          price: product.price || 0,
-                          comparePrice: product.comparePrice || 0,
-                          stock: product.stock || 0
-                        }],
-                        category: {
-                          name: currentCategory.name
-                        }
-                      };
-                      
-                      return (
-                        <ProductCard
-                          key={product.id}
-                          product={formattedProduct}
-                          onProductClick={handleProductClick}
-                          onAddToCart={handleAddToCart}
-                        />
-                      );
-                    })}
-                  </div>
-                  {currentCategoryProducts.length > 2 && (
-                    <button className="slider-arrow slider-arrow-right" aria-label="Next slider" onClick={() => scrollSlider('right')}>
-                      <IoIosArrowForward />
-                    </button>
-                  )}
-                </>
-              )}
-              {!categoryLoading && currentCategoryProducts.length === 0 && (
-                <div className="no-products-center">
-                  <p style={{ color: '#CE1E36', fontSize: '1.2rem', fontWeight: '500' }}>
-                    No products available in this category
-                  </p>
+            <div className="category-section">
+              <div className="category-sidebar">
+                <div className="category-item" ref={categoryImageRef}>
+                <button className="slider-arrow slider-arrow-left" aria-label="Previous category" onClick={() => scrollCategoryImage('left')}>
+                  <IoIosArrowBack />
+                </button>
+                  <Image 
+                    src={getCategoryImageSrc()} 
+                    alt={currentCategory.name || 'Category'} 
+                    width={300}
+                    height={300}
+                    style={{ objectFit: 'cover' }}
+                    unoptimized
+                    onError={e => { e.target.src = '/assets/card1-left.webp'; }}
+                  />
+                  <h3>{currentCategory.name}</h3>
+                  <button className="slider-arrow slider-arrow-right" aria-label="Next category" onClick={() => scrollCategoryImage('right')}>
+                  <IoIosArrowForward />
+                </button>
                 </div>
-              )}
+              </div>
+              <div className="category-products">
+                {currentCategoryProducts.length > 0 && (
+                  <>
+                    {currentCategoryProducts.length > 2 && (
+                      <button className="slider-arrow slider-arrow-left" aria-label="Previous slider" onClick={() => scrollSlider('left')}>
+                        <IoIosArrowBack />
+                      </button>
+                    )}
+                    <div className="products-slider" ref={categorySliderRef}>
+                      {currentCategoryProducts.map((product) => {
+                        // Format product data to match ProductCard expectations
+                        const formattedProduct = {
+                          id: product.id,
+                          name: product.name,
+                          slug: product.slug,
+                          description: product.description,
+                          badge: product.badge || null,
+                          images: product.image ? [{
+                            image_url: product.image,
+                            is_primary: true
+                          }] : [],
+                          variations: [{
+                            price: product.price || 0,
+                            comparePrice: product.comparePrice || 0,
+                            stock: product.stock || 0
+                          }],
+                          category: {
+                            name: currentCategory.name
+                          }
+                        };
+                        
+                        return (
+                          <ProductCard
+                            key={product.id}
+                            product={formattedProduct}
+                            onProductClick={handleProductClick}
+                            onAddToCart={handleAddToCart}
+                          />
+                        );
+                      })}
+                    </div>
+                    {currentCategoryProducts.length > 2 && (
+                      <button className="slider-arrow slider-arrow-right" aria-label="Next slider" onClick={() => scrollSlider('right')}>
+                        <IoIosArrowForward />
+                      </button>
+                    )}
+                  </>
+                )}
+                {!categoryLoading && currentCategoryProducts.length === 0 && (
+                  <div className="no-products-center">
+                    <p style={{ color: '#CE1E36', fontSize: '1.2rem', fontWeight: '500' }}>
+                      No products available in this category
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -485,8 +525,28 @@ const Home = () => {
               {exclusiveProducts.map((product, index) => {
                 const state = exclusiveStates[index] || { selectedThumbnail: 0, selectedColor: '', selectedSize: '', quantity: 1 };
                 const images = product.images && product.images.length > 0 ? product.images.map(img => img.image_url) : ['/assets/card1-left.webp'];
-                const colors = product.variations && product.variations[0]?.attributes?.color || [];
-                const sizes = product.variations && product.variations[0]?.attributes?.size || [];
+                // Defensive: handle variations/attributes
+                const variation = product.variations && product.variations[0] ? product.variations[0] : {};
+                let colors = [];
+                let sizes = [];
+                if (variation.attributes) {
+                  if (typeof variation.attributes === 'string') {
+                    try {
+                      const attrs = JSON.parse(variation.attributes);
+                      colors = attrs.color || [];
+                      sizes = attrs.size || [];
+                    } catch {
+                      colors = [];
+                      sizes = [];
+                    }
+                  } else {
+                    colors = variation.attributes.color || [];
+                    sizes = variation.attributes.size || [];
+                  }
+                }
+                // Use fetched review count and avg rating if available
+                const reviewCount = exclusiveReviewCounts[index] !== undefined ? exclusiveReviewCounts[index] : 0;
+                const avgRating = exclusiveAvgRatings[index] !== undefined ? exclusiveAvgRatings[index] : 0;
                 return (
                   <div key={product.id} className="featured-product-card">
                     <div className="product-images">
@@ -520,19 +580,19 @@ const Home = () => {
                     <div className="product-info">
                       <h3>{product.name}</h3>
                       <div className="product-rating-row">
-                        <span className="stars">★ ★ ★ ★ ☆</span>
-                        <span className="rating-value">{product.rating || ''}</span>
-                        <span className="review-count">({product.reviews || 0} reviews)</span>
+                        <span className="stars">{renderStars(avgRating)}</span>
+                        <span className="rating-value">{parseFloat(avgRating).toFixed(1)}</span>
+                        <span className="review-count">({reviewCount} reviews)</span>
                       </div>
                       <div className="product-price-row">
-                        <span className="current-price">₹{product.price || (product.variations && product.variations[0]?.price) || ''}</span>
-                        <span className="original-price">{product.comparePrice || (product.variations && product.variations[0]?.comparePrice) ? `₹${product.comparePrice || product.variations[0]?.comparePrice}` : ''}</span>
+                        <span className="current-price">₹{product.price || (variation.price) || ''}</span>
+                        <span className="original-price">{product.comparePrice || variation.comparePrice ? `₹${product.comparePrice || variation.comparePrice}` : ''}</span>
                       </div>
                       <div className="product-options">
                         <div className="colors">
                           <span className="option-label">Colors</span>
                           <div className="color-options">
-                            {colors.map((color) => (
+                            {colors.length > 0 ? colors.map((color) => (
                               <button
                                 key={color}
                                 className={`color-option${state.selectedColor === color ? ' selected' : ''}`}
@@ -541,13 +601,13 @@ const Home = () => {
                               >
                                 {state.selectedColor === color && <span className="color-check">✔</span>}
                               </button>
-                            ))}
+                            )) : <span style={{ fontSize: '0.9em', color: '#888' }}>N/A</span>}
                           </div>
                         </div>
                         <div className="sizes">
                           <span className="option-label">Size</span>
                           <div className="size-options">
-                            {sizes.map((size) => (
+                            {sizes.length > 0 ? sizes.map((size) => (
                               <button
                                 key={size}
                                 className={`size-option${state.selectedSize === size ? ' selected' : ''}`}
@@ -555,7 +615,7 @@ const Home = () => {
                               >
                                 {size}
                               </button>
-                            ))}
+                            )) : <span style={{ fontSize: '0.9em', color: '#888' }}>N/A</span>}
                           </div>
                         </div>
                       </div>
