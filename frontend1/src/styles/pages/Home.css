@@ -612,7 +612,7 @@
 
 .products-slider .original-price {
   font-size: 1.1rem;
-  color: #222;
+  color: #bbb;
   text-decoration: line-through;
   margin-right: 0.5rem;
 }
@@ -1113,9 +1113,6 @@
   margin: 0 3%;
 }
 }
-
-
-
 
 @media (max-width: 426px) {
   .home-page .product-card{

@@ -123,11 +123,18 @@
   height: 24px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .testimonials-container {
-    padding: 0 30px;
-  }
+    position: relative;
+    padding: 40px 0;
+}
+  .testimonials-section {
+    padding: 50px 3%;
+    background: #ffffff;
+}
+}
 
+@media (max-width: 768px) {
   .testimonials-container .slider-arrow {
     width: 32px;
     height: 32px;
@@ -142,8 +149,7 @@
     min-width: 280px;
     max-width: 280px;
   }
-
-  .testimonials-section {
-    padding: 40px 5%;
+  .footer__newsletter-policy{
+    text-align: left;
   }
 } 
