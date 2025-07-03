@@ -597,7 +597,7 @@ export default function ProductDetails() {
             <div className="product-rating-row">
               <span className="stars">{renderStars(product.avg_rating)}</span>
               <span className="rating-value">{parseFloat(product.avg_rating || 0).toFixed(1)}</span>
-              <span className="review-count">({product.review_count || 0} reviews)</span>
+              <span className="review-count">({product.reviews?.length || 0} reviews)</span>
               {selectedVariation && (
                 <span className="sku-label">| SKU: <span className="sku-value">{selectedVariation.sku}</span></span>
               )}
