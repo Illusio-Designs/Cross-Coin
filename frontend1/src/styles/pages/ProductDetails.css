@@ -1238,3 +1238,136 @@
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
 }
+
+/* ========================= RESPONSIVE BREAKPOINTS ========================= */
+
+/* 1440px and below */
+@media (max-width: 1440px) {
+  .product-details {
+    padding: 40px 5%;
+    gap: 1.5rem;
+  }
+  .main-image {
+    max-width: 420px;
+  }
+  .product-info h1 {
+    font-size: 2.1rem;
+  }
+}
+
+/* 1024px and below */
+@media (max-width: 1024px) {
+  .product-details {
+    padding: 32px 5%;
+    gap: 2.5rem;
+    align-items: stretch;
+  }
+  .product-tabs-section {
+    padding: 0 5% 50px;
+}
+  .product-images {
+    position: static;
+    top: unset;
+    margin-bottom: 2rem;
+  }
+  .product-info {
+    min-width: unset;
+  }
+}
+
+/* 768px and below */
+@media (max-width: 768px) {
+  .product-details {
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+  .thumbnail-images img {
+    width: 70px;
+    height: 70px;
+  }
+  .product-info h1 {
+    font-size: 1.5rem;
+  }
+  .product-rating-row {
+    font-size: 1rem;
+  }
+  .product-price-row .current-price {
+    font-size: 1.2rem;
+  }
+  .product-action-box {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  .product-coupons-box {
+    padding: 10px;
+  }
+}
+
+/* 426px and below (mobile) */
+@media (max-width: 426px) {
+  .product-details {
+    gap: 0.7rem;
+  }
+  .thumbnail-images img {
+    width: 48px;
+    height: 48px;
+  }
+  .product-info h1 {
+    font-size: 1.1rem;
+    margin-bottom: 0.3rem;
+  }
+  .product-rating-row {
+    font-size: 0.95rem;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+  }
+  .product-price-row .current-price {
+    font-size: 1rem;
+  }
+  .product-action-box {
+    padding: 10px 0;
+    gap: 6px;
+  }
+  .quantity-and-buttons {
+    gap: 6px;
+  }
+  .product-coupons-box {
+    padding: 6px;
+  }
+  .variation-scroller-title,
+  .product-coupons-title {
+    font-size: 1rem;
+  }
+}
+
+/* 320px and below (smallest mobile) */
+@media (max-width: 320px) {
+  .product-details {
+    padding: 2px 0;
+    gap: 0.3rem;
+  }
+  .thumbnail-images img {
+    width: 32px;
+    height: 32px;
+  }
+  .product-info h1 {
+    font-size: 0.9rem;
+  }
+  .product-rating-row {
+    font-size: 0.8rem;
+  }
+  .product-price-row .current-price {
+    font-size: 0.85rem;
+  }
+  .product-action-box {
+    padding: 4px 0;
+    gap: 2px;
+  }
+  .quantity-and-buttons {
+    gap: 2px;
+  }
+  .product-coupons-box {
+    padding: 2px;
+  }
+}

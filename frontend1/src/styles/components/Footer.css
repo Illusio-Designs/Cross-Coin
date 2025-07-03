@@ -138,7 +138,7 @@
   color: #0077B5;
 }
 
-.footer__col h5 {
+.footer__col h4 {
   font-size: 18px;
   font-weight: 700;
   margin-bottom: 15px;
@@ -209,12 +209,12 @@
 
 .footer__bottom {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
   justify-content: space-between;
   padding-top: 2%;
   border-top: 1px solid #ececec;
   font-size: 0.95rem;
+  gap: 20px;
 }
 
 .footer__copyright {
@@ -263,9 +263,12 @@
   vertical-align: middle;
 }
 
+.footer__links{
+  display: flex;
+}
+
 .footer__links a {
   color: #111827;
-  margin-left: 18px;
   text-decoration: underline;
   font-size: 0.95rem;
   transition: color 0.2s;
@@ -275,21 +278,195 @@
   color: #d32f2f;
 }
 
+@media (max-width: 1024px) {
+  .footer {
+    padding: 30px 5%;
+  }
+  .footer__main {
+    align-items: flex-start;
+    gap: 32px;
+    padding: 4% 0;
+  }
+  .footer__brand {
+    min-width: 0;
+    width: 100%;
+    margin-bottom: 24px;
+  }
+  .footer__col {
+    min-width: 0;
+    width: 100%;
+    margin-bottom: 24px;
+  }
+  .footer__help {
+    margin-left: 0;
+  }
+  .footer__newsletter {
+    align-items: flex-start;
+    gap: px;
+  }
+  .footer__newsletter-content {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .footer {
+    box-sizing: border-box;
+  }
+  .footer__main {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 10px 0px;
+}
+.footer__col, .footer__brand {
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 40px;
+  box-sizing: border-box;
+}
+  .footer__newsletter {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding-bottom: 18px;
+  }
+  .footer__brand p {
+    margin: 25px 0;
+}
+  .footer__newsletter-content {
+    width: 100%;
+    text-align: left;
+    margin-bottom: 8px;
+  }
+  .footer__newsletter-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+  .footer__newsletter-form input,
+  .footer__newsletter-form button {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .footer__newsletter-form input {
+    padding: 10px 12px;
+    font-size: 1rem;
+    border-radius: 4px;
+  }
+  .footer__newsletter-form button {
+    padding: 10px 0;
+    font-size: 1rem;
+    border-radius: 4px;
+  }
+  .footer__bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding-top: 16px;
+  }
+  .footer__links {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .footer__links a {
+    margin: 0 8px 8px 0;
+    font-size: 1rem;
+    display: inline-block;
+  }
+  .footer__payments {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .footer__payments img,
+  .footer__payments .mastercard,
+  .footer__payments .visa,
+  .footer__payments .paypal,
+  .footer__payments .skrill,
+  .footer__payments .klarna {
+    width: 40px !important;
+    height: 14px !important;
+    margin-right: 6px;
+    margin-bottom: 6px;
+  }
+  .footer__social-icons {
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .footer__help {
+    margin-left: 0;
+  }
+}
+
 @media (max-width: 426px) {
+  .footer {
+    box-sizing: border-box;
+  }
   .footer__newsletter{
     flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding-bottom: 12px;
   }
   .footer__newsletter-content{
     width: 100%;
+    margin-bottom: 6px;
+  }
+  .footer__newsletter-form {
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
   }
   .footer__newsletter-form input {
-    padding: 8px;
+    padding: 8px 8px 8px 16px;
+    font-size: 0.95rem;
+    border-radius: 4px;
   }
   .footer__newsletter-form button {
-    padding: 8px;
-  } 
+    padding: 8px 0;
+    font-size: 0.95rem;
+    border-radius: 4px;
+  }
+  .footer__main {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 4% 0;
+  }
+  .footer__col, .footer__brand {
+    width: 100%;
+    min-width: 0;
+    margin-bottom: 10px;
+  }
   .footer__help{
     margin-left: 0;
   }
-
+  .footer__bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding-top: 8px;
+  }
+  .footer__links {
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .footer__links a {
+    margin: 0 6px 6px 0;
+    display: inline-block;
+    font-size: 0.92rem;
+  }
+  .footer__payments img, .footer__payments .mastercard, .footer__payments .visa, .footer__payments .paypal, .footer__payments .skrill, .footer__payments .klarna {
+    width: 32px !important;
+    height: 12px !important;
+    margin-right: 4px;
+    margin-bottom: 4px;
+  }
+  .footer__social-icons {
+    gap: 10px;
+    margin-bottom: 6px;
+  }
 }
