@@ -14,7 +14,7 @@
 
 .testimonials-container {
   position: relative;
-  padding: 40px;
+  padding: 40px 0;
 }
 
 .testimonials-slider {
@@ -131,6 +131,11 @@
   .testimonials-section {
     padding: 50px 3%;
     background: #ffffff;
+}
+.testimonial-card {
+  padding: 24px;
+  min-height: 170px;
+  min-width: 260px;
 }
 }
 

@@ -263,8 +263,9 @@
   vertical-align: middle;
 }
 
-.footer__links{
+.footer__links {
   display: flex;
+  gap: 15px;
 }
 
 .footer__links a {
@@ -298,8 +299,8 @@
     margin-bottom: 24px;
   }
   .footer__help {
-    margin-left: 0;
-  }
+    margin-left: -90px;
+}
   .footer__newsletter {
     align-items: flex-start;
     gap: px;

@@ -41,6 +41,27 @@ const Home = () => {
   const categoryImageRef = useRef(null);
   const exclusiveSliderRef = useRef(null);
 
+  const [showCategoryArrows, setShowCategoryArrows] = useState(false);
+  const [showLatestArrows, setShowLatestArrows] = useState(false);
+
+  // Helper to check if slider is scrollable (even if partially hidden)
+  const checkSliderScrollable = (ref, setShow) => {
+    if (ref.current) {
+      setShow(ref.current.scrollWidth > ref.current.clientWidth + 1);
+    }
+  };
+
+  // Check on mount, when products change, and on resize
+  useEffect(() => {
+    const handleResize = () => {
+      checkSliderScrollable(categorySliderRef, setShowCategoryArrows);
+      checkSliderScrollable(latestSliderRef, setShowLatestArrows);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [currentCategoryProducts, latestProducts]);
+
   useEffect(() => {
     const fetchSliders = async () => {
       try {
@@ -421,7 +442,7 @@ const Home = () => {
         </div>
         <div className="shop-by-category">
           <div className="shop-by-category__container">
-            <div style={{ display: 'flex', justifyContent: 'end', alignItems: 'center', marginBottom: '3rem' , gap: '17rem' }}>
+            <div className="category-title">
               <h2 className="section-title">Curate Your Collection</h2>
               <button className="hero-btn" onClick={() => {
                 if (currentCategory.id) {
@@ -457,7 +478,7 @@ const Home = () => {
               <div className="category-products">
                 {currentCategoryProducts.length > 0 && (
                   <>
-                    {currentCategoryProducts.length > 2 && (
+                    {showCategoryArrows && (
                       <button className="slider-arrow slider-arrow-left" aria-label="Previous slider" onClick={() => scrollSlider('left')}>
                         <IoIosArrowBack />
                       </button>
@@ -495,7 +516,7 @@ const Home = () => {
                         );
                       })}
                     </div>
-                    {currentCategoryProducts.length > 2 && (
+                    {showCategoryArrows && (
                       <button className="slider-arrow slider-arrow-right" aria-label="Next slider" onClick={() => scrollSlider('right')}>
                         <IoIosArrowForward />
                       </button>
@@ -648,14 +669,14 @@ const Home = () => {
           </div>
         </div>
         <div className="shop-by-category">
-          <div style={{ display: 'flex', justifyContent: 'end', alignItems: 'center', marginBottom: '3rem', gap: '20rem' }}>
+          <div className="latest-title">
             <h2 className="section-title">Latest Products</h2>
             <button className="hero-btn" onClick={() => window.location.href = '/Products'}>
               View All Products
             </button>
           </div>
           <div className="category-products">
-            {latestProducts.length > 2 && (
+            {showLatestArrows && (
               <button className="slider-arrow slider-arrow-left" aria-label="Previous latest product" onClick={() => scrollLatestSlider('left')}>
                 <IoIosArrowBack />
               </button>
@@ -697,7 +718,7 @@ const Home = () => {
                 );
               })}
             </div>
-            {latestProducts.length > 2 && (
+            {showLatestArrows && (
               <button className="slider-arrow slider-arrow-right" aria-label="Next latest product" onClick={() => scrollLatestSlider('right')}>
                 <IoIosArrowForward />
               </button>
