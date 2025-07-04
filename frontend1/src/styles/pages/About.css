@@ -60,13 +60,13 @@
 }
 
 .mission-section {
-  padding: 6rem 0;
+  padding: 6rem 10%;
   background-color: #f8f9fa;
   position: relative;
 }
 
 .mission-content {
-  max-width: 800px;
+  max-width: 1000px;
   margin: 0 auto;
   text-align: center;
 }
@@ -172,7 +172,7 @@
 }
 
 .process-section {
-  padding: 6rem 0;
+  padding: 6rem 10%;
   background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
 }
 
@@ -215,7 +215,7 @@
 }
 
 .team-section {
-  padding: 6rem 0;
+  padding: 6rem 10%;
   background-color: #f8f9fa;
   text-align: center;
 }
@@ -227,8 +227,8 @@
 }
 
 .team-intro {
-  max-width: 800px;
-  margin: 0 auto 4rem;
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
 .team-intro p {
@@ -262,82 +262,38 @@
   line-height: 1.6;
 }
 
-.cta-section {
-  padding: 6rem 0;
-  background: linear-gradient(135deg, #180D3E 0%, #CE1E36 100%);
-  color: white;
-  text-align: center;
-}
-
-.cta-section h2 {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-  color: white;
-}
-
-.cta-section p {
-  font-size: 1.2rem;
-  margin-bottom: 2rem;
-  opacity: 0.9;
-}
-
-.cta-button {
-  background: white;
-  color: #180D3E;
-  padding: 1rem 3rem;
-  font-size: 1.2rem;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.cta-button:hover {
-  background: #CE1E36;
-  color: white;
-  transform: translateY(-2px);
-}
 
 @media (max-width: 1024px) {
-  .process-steps {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .mission-values,
-  .team-values {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .mission-section {
+    padding: 6rem 5%;
+}
+.mission-content {
+  max-width: 850px;
+}
+.features-section {
+  padding: 50px 5%;
+}
+.team-section {
+  padding: 6rem 5%;
+}
+.team-intro {
+  max-width: 850px;
+}
 }
 
 @media (max-width: 768px) {
   .about-hero {
-    padding: 6rem 0 4rem;
-  }
-
-  .about-hero h1 {
-    font-size: 3rem;
-  }
-
-  .hero-stats {
-    flex-direction: column;
-    gap: 2rem;
-  }
-
-  .mission-content h2,
-  .features-section h2,
-  .process-section h2,
-  .team-section h2,
-  .cta-section h2 {
-    font-size: 2rem;
-  }
-
-  .process-steps,
-  .mission-values,
-  .team-values {
-    grid-template-columns: 1fr;
-  }
-
-  .features-grid {
-    grid-template-columns: 1fr;
-  }
+    padding: 5rem 0 4rem;
+}
 } 
+@media (max-width: 426px) {
+  .mission-section {
+    padding: 4rem 5%;
+}
+.features-section {
+  padding: 50px 5%;
+}
+.team-section {
+  padding: 4rem 5%;
+}
+}
