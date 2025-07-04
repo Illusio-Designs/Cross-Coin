@@ -330,7 +330,7 @@ export default function ProductDetails() {
     const selectedColor = selectedAttributes.color || '';
     const selectedSize = selectedAttributes.size || '';
     addToCart(product, selectedColor, selectedSize, quantity);
-    router.push('/checkout');
+    router.push('/unifiedcheckout');
     fbqTrack('InitiateCheckout', {
       content_ids: [product.id],
       content_name: product.name,
