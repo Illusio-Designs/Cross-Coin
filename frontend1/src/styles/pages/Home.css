@@ -1099,10 +1099,7 @@
   .featured-products-section {
     padding: 2rem 5%;
   }
-
-  .featured-product-card .main-image {
-    height: 300px;
-  }
+  
   .latest-products-container {
     padding: 0 30px;
   }
@@ -1206,6 +1203,7 @@
   .featured-product-card {
     min-width: 255px;
     flex-direction: column;
+    padding: 15px;
 }
 .latest-title{
   flex-direction: column;

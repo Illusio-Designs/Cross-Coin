@@ -187,7 +187,6 @@
 
 .form-group input,
 .form-group textarea {
-  width: 100%;
   padding: 0.75rem;
   border: 1px solid #180D3E;
   font-size: 1rem;
@@ -249,15 +248,23 @@
   }
 
   .contact-grid {
-    grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 1rem;
   }
 
   .contact-info, .contact-form {
-    padding: 2rem;
+    padding: 1rem;
   }
 
   .contact-info h2, .contact-form h2 {
     font-size: 1.8rem;
   }
 } 
+@media (max-width: 426px) {
+  .contact-hero {
+    padding: 2rem 0 2rem;
+}
+  .contact-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
