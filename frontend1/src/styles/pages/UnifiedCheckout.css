@@ -41,6 +41,7 @@
 
 .cart-item {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 1.5rem;
   border-bottom: 1px solid #0000001A;
@@ -600,4 +601,24 @@
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .cart-main {
+    flex-direction: column;
+  }
+  .order-summary-section {
+    min-width: 567px;
+}
+}
+@media (max-width: 426px){
+  .order-summary-section {
+    min-width: 260px;
+    max-width: 297px;
+}
+}
+@media (max-width: 390px){
+  .promo-row {
+    flex-direction: column;
+}
 }

@@ -3,11 +3,6 @@ import { AiOutlineMail } from "react-icons/ai";
 import { FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn } from "react-icons/fa";
 import { MdOutlinePhoneInTalk } from "react-icons/md"; 
 import Image from "next/image";
-import visa from '../assets/visa.webp';
-import mastercard from '../assets/mastercard.webp';
-import paypal from '../assets/Paypal.webp';
-import skrill from '../assets/Skrill.webp';
-import klarna from '../assets/Klarna.webp';
 import { getPublicCategories } from "../services/publicindex";
 
 const Footer = () => {
@@ -86,13 +81,6 @@ const Footer = () => {
       <div className="footer__bottom">
         <div className="footer__copyright">
           Copyright 2025 &copy; crosscoin Manage by OBZUS INDIA PRIVATE LIMITED. All right reserved
-          <div className="footer__payments">
-          <Image src={visa} alt="Visa" className="visa" unoptimized />
-          <Image src={mastercard} alt="Mastercard" className="mastercard" unoptimized/>
-          <Image src={paypal} alt="PayPal" className="paypal" unoptimized/>
-          <Image src={skrill} alt="Skrill" className="skrill" unoptimized/>
-          <Image src={klarna} alt="Klarna" className="klarna" unoptimized/>
-        </div>
         </div>
        
         <div className="footer__links">
