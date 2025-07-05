@@ -35,6 +35,7 @@ const Products = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
   const [categories, setCategories] = useState([]);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Debug logs
   console.log('Products Component State:', {
@@ -71,6 +72,15 @@ const Products = () => {
   useEffect(() => {
     fetchProducts();
   }, [currentPage, sortBy, selectedCategory]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 500);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const fetchProducts = async () => {
     try {
@@ -215,7 +225,7 @@ const Products = () => {
               </button>
             )}
             <button 
-              className="filter-toggle"
+              className={`filter-toggle${isMobile ? ' mobile-fixed' : ''}`}
               onClick={() => setShowFilters(!showFilters)}
             >
               <FiFilter /> Filters
@@ -234,7 +244,8 @@ const Products = () => {
         </div>
 
         <div className="products-container">
-          {showFilters && (
+          {/* Desktop Sidebar */}
+          {!isMobile && showFilters && (
             <div className="filters-sidebar">
               <div className="filter-section">
                 <h3 onClick={() => setShowCategory(!showCategory)} className={`clickable-heading ${showCategory ? 'open' : ''}`}>
@@ -366,6 +377,157 @@ const Products = () => {
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+          {/* Mobile Modal */}
+          {isMobile && showFilters && (
+            <div className="mobile-filter-modal-overlay">
+              <div className="mobile-filter-modal">
+                <div className="mobile-filter-modal-header">
+                  <span className="modal-title">F I L T E R S</span>
+                  <button className="modal-close" onClick={() => setShowFilters(false)}>&times;</button>
+                  <button className="modal-clear" onClick={clearAllFilters}>Clear All</button>
+                </div>
+                <div className="mobile-filter-modal-body">
+                  {/* Product Category */}
+                  <div className="modal-filter-section">
+                    <div className="modal-filter-label" onClick={() => setShowCategory(!showCategory)}>
+                      Product Category <FiChevronDown className={`arrow-icon ${showCategory ? 'open' : ''}`} />
+                    </div>
+                    {showCategory && (
+                      <div className="category-list">
+                        {categories.map((category) => (
+                          <label key={category.id} className="checkbox-label">
+                            <div className="checkbox-group">
+                              <input
+                                type="checkbox"
+                                checked={selectedCategory.includes(category.id.toString())}
+                                onChange={() => handleFilterChange('category', category.id.toString())}
+                              />
+                              <p>{category.name}</p> 
+                            </div>
+                            <span>[{category.productCount || 0}]</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Material */}
+                  <div className="modal-filter-section">
+                    <div className="modal-filter-label" onClick={() => setShowMaterial(!showMaterial)}>
+                      Material <FiChevronDown className={`arrow-icon ${showMaterial ? 'open' : ''}`} />
+                    </div>
+                    {showMaterial && (
+                      <div className="material-list">
+                        {filterOptions.materials.map((material) => (
+                          <label key={material} className="checkbox-label">
+                            <div className="checkbox-group">
+                              <input
+                                type="checkbox"
+                                checked={selectedMaterial.includes(material)}
+                                onChange={() => handleFilterChange('material', material)}
+                              />
+                              <p>{material}</p> 
+                            </div>
+                            <span>[20]</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* By Price */}
+                  <div className="modal-filter-section">
+                    <div className="modal-filter-label" onClick={() => setShowPrice(!showPrice)}>
+                      By Price <FiChevronDown className={`arrow-icon ${showPrice ? 'open' : ''}`} />
+                    </div>
+                    {showPrice && (
+                      <div className="price-range">
+                        <input
+                          type="range"
+                          min="20"
+                          max="250"
+                          value={priceRange[0]}
+                          onChange={(e) => handleFilterChange('price', [e.target.value, priceRange[1]])}
+                        />
+                        <input
+                          type="range"
+                          min="20"
+                          max="250"
+                          value={priceRange[1]}
+                          onChange={(e) => handleFilterChange('price', [priceRange[0], e.target.value])}
+                        />
+                        <div className="price-inputs">
+                          <span>${priceRange[0]}</span> - <span>${priceRange[1]}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {/* Colors */}
+                  <div className="modal-filter-section">
+                    <div className="modal-filter-label" onClick={() => setShowColors(!showColors)}>
+                      Colors <FiChevronDown className={`arrow-icon ${showColors ? 'open' : ''}`} />
+                    </div>
+                    {showColors && (
+                      <div className="color-options">
+                        {filterOptions.colors.map(color => (
+                          <button
+                            key={color}
+                            className={`color-btn ${selectedColors.includes(color) ? 'active' : ''}`}
+                            style={{ backgroundColor: color }}
+                            onClick={() => handleFilterChange('color', color)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Size */}
+                  <div className="modal-filter-section">
+                    <div className="modal-filter-label" onClick={() => setShowSizes(!showSizes)}>
+                      Size <FiChevronDown className={`arrow-icon ${showSizes ? 'open' : ''}`} />
+                    </div>
+                    {showSizes && (
+                      <div className="size-options">
+                        {filterOptions.sizes.map(size => (
+                          <label key={size} className="checkbox-label">
+                            <div className="checkbox-group">
+                              <input
+                                type="checkbox"
+                                checked={selectedSizes.includes(size)}
+                                onChange={() => handleFilterChange('size', size)}
+                              />
+                              <p>{size} </p>
+                            </div>
+                            <span>[20]</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Gender */}
+                  <div className="modal-filter-section">
+                    <div className="modal-filter-label" onClick={() => setShowGender(!showGender)}>
+                      Gender <FiChevronDown className={`arrow-icon ${showGender ? 'open' : ''}`} />
+                    </div>
+                    {showGender && (
+                      <div className="gender-options">
+                        {filterOptions.genders.map(gender => (
+                          <label key={gender} className="checkbox-label">
+                            <div className="checkbox-group">
+                              <input
+                                type="checkbox"
+                                checked={selectedGender.includes(gender)}
+                                onChange={() => handleFilterChange('gender', gender)}
+                              />
+                              <p>{gender} </p>
+                            </div>
+                            <span>[20]</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}

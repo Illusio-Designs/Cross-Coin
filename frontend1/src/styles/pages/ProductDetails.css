@@ -1337,6 +1337,9 @@
   .product-coupons-title {
     font-size: 1rem;
   }
+  .product-tabs-container {
+    padding: 0px;
+}
 }
 
 /* 320px and below (smallest mobile) */
