@@ -260,7 +260,7 @@ module.exports.createOrder = async (req, res) => {
                 length: 10,
                 breadth: 15,
                 height: 20,
-                weight: 2.5
+                weight: product.weight || 2.5 // Use product weight if available, fallback to 2.5
             };
 
             const shipRes = await createShiprocketOrder(shiprocketPayload);

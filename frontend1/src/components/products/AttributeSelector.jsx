@@ -4,10 +4,10 @@ import CreatableSelect from 'react-select/creatable';
 // Assuming attributeService is imported from '@/services' in the parent component
 // and passed as a prop, or directly imported here if preferred.
 
-const AttributeSelector = ({ 
-  variationIndex, 
+const AttributeSelector = ({
+  variationIndex,
   attributes, // All attribute types (e.g., Size, Color) with their values
-  selectedAttributes, // Current attributes for THIS variation (e.g., { size: ["Small"], color: ["Red"] })
+  selectedAttributes = {}, // default to empty object
   onChange // Callback to update parent form data
 }) => {
   const handleAttributeChange = (attributeName, selectedOptions) => {

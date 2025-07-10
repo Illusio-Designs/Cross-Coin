@@ -15,6 +15,15 @@ const ProductImage = sequelize.define('ProductImage', {
             key: 'id'
         }
     },
+    product_variation_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'product_variations',
+            key: 'id'
+        },
+        comment: 'If set, this image belongs to a specific product variation.'
+    },
     image_url: {
         type: DataTypes.STRING,
         allowNull: false

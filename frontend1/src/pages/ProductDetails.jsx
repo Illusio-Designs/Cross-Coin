@@ -12,6 +12,7 @@ import { showValidationErrorToast, showReviewSubmittedSuccessToast, showReviewSu
 import Loader from '../components/Loader';
 import { fbqTrack } from '../components/common/Analytics';
 import { getProductImageSrc } from '../utils/imageUtils';
+import DOMPurify from 'dompurify';
 
 export default function ProductDetails() {
   const searchParams = useSearchParams();
@@ -746,9 +747,9 @@ export default function ProductDetails() {
             {/* Tab Content */}
             {activeTab === "description" ? (
               <div className="product-description">
-                <p>{product.description}</p>
+                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.description || '') }} />
                 {product.seo?.metaDescription && (
-                  <p>{product.seo.metaDescription}</p>
+                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.seo.metaDescription) }} />
                 )}
               </div>
             ) : (

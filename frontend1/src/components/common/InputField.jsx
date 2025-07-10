@@ -38,20 +38,31 @@ const InputField = ({
           <div className="file-input-wrapper">
             <input
               type="file"
-              onChange={handleFileChange}
+              onChange={onChange}
               accept={accept}
               required={required}
               className="file-input"
               name={name}
+              multiple
             />
             <div className="file-input-placeholder">
-              {value ? value.name : placeholder || "Choose a file"}
+              {Array.isArray(value) && value.length > 0
+                ? value.map((file, idx) => file.name || (file.url && file.url.split('/').pop()) || `Image ${idx + 1}`).join(', ')
+                : (value && value.name) || placeholder || "Choose a file"}
             </div>
             <button className="file-input-button">Browse</button>
           </div>
-          {preview && (
-            <div className="file-preview">
-              <img src={preview} alt="Preview" className="file-preview-image" />
+          {Array.isArray(value) && value.length > 0 && (
+            <div className="file-preview-grid">
+              {value.map((file, idx) => (
+                <img
+                  key={idx}
+                  src={file instanceof File ? URL.createObjectURL(file) : (file.url || file)}
+                  alt={`Preview ${idx + 1}`}
+                  className="file-preview-image"
+                  style={{ height: '60px', width: '60px', objectFit: 'cover', marginRight: 8 }}
+                />
+              ))}
             </div>
           )}
         </div>

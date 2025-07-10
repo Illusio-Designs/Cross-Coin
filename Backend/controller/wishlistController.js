@@ -77,7 +77,12 @@ module.exports.getWishlist = async (req, res) => {
                             attributes: ['id', 'price', 'comparePrice', 'sku', 'stock', 'status'],
                             required: false
                         }
-                    ]
+                    ],
+                    // Add product-level physical fields
+                    weight: Product.weight,
+                    weightUnit: Product.weightUnit,
+                    dimensions: Product.dimensions,
+                    dimensionUnit: Product.dimensionUnit
                 }
             ],
             order: [['createdAt', 'DESC']]

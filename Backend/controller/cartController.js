@@ -57,7 +57,11 @@ module.exports.getCart = async (req, res) => {
                 quantity: item.quantity,
                 size: attributes.size || null,
                 color: attributes.color || null,
-                stock: variation ? variation.stock : (product ? product.stock_quantity : 0)
+                stock: variation ? variation.stock : (product ? product.stock_quantity : 0),
+                weight: product ? product.weight : null,
+                weightUnit: product ? product.weightUnit : null,
+                dimensions: product ? product.dimensions : null,
+                dimensionUnit: product ? product.dimensionUnit : null
             };
         });
 
