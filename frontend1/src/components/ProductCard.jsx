@@ -72,7 +72,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
       </div>
       <div className="product-info">
         <h3>{product?.name}</h3>
-        {categoryName && <p className="product-category">{categoryName}</p>}
         <div className="product-meta">
           <span className="product-price">
             ₹{price}

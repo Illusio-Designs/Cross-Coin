@@ -33,23 +33,6 @@ const ProductVariation = sequelize.define('ProductVariation', {
         allowNull: false,
         defaultValue: 0
     },
-    weight: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: true
-    },
-    weightUnit: {
-        type: DataTypes.ENUM('g', 'kg', 'lb', 'oz'),
-        allowNull: true
-    },
-    dimensions: {
-        type: DataTypes.JSON,
-        allowNull: true,
-        comment: 'JSON object containing length, width, height'
-    },
-    dimensionUnit: {
-        type: DataTypes.ENUM('cm', 'm', 'in', 'ft'),
-        allowNull: true
-    },
     attributes: {
         type: DataTypes.JSON,
         allowNull: false,

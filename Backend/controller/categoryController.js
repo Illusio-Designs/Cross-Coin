@@ -379,7 +379,11 @@ const getPublicCategoryByName = async (req, res) => {
                 stock: product.ProductVariations?.[0]?.stock || 0,
                 image: product.ProductImages?.find(img => img.is_primary)?.image_url || null,
                 metaTitle: product.ProductSEO?.meta_title,
-                metaDescription: product.ProductSEO?.meta_description
+                metaDescription: product.ProductSEO?.meta_description,
+                weight: product.weight,
+                weightUnit: product.weightUnit,
+                dimensions: product.dimensions,
+                dimensionUnit: product.dimensionUnit
             })) : []
         };
 

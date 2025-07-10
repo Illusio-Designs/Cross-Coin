@@ -32,18 +32,28 @@ const formatProductResponse = (product) => {
 
     // Format variations
     if (productData.ProductVariations) {
-        productData.variations = productData.ProductVariations.map(variation => ({
-            id: variation.id,
-            price: variation.price,
-            comparePrice: variation.comparePrice,
-            stock: variation.stock,
-            sku: variation.sku,
-            weight: variation.weight,
-            weightUnit: variation.weightUnit,
-            dimensions: variation.dimensions,
-            dimensionUnit: variation.dimensionUnit,
-            attributes: variation.attributes
-        }));
+        productData.variations = productData.ProductVariations.map(variation => {
+            const variationObj = {
+                id: variation.id,
+                price: variation.price,
+                comparePrice: variation.comparePrice,
+                stock: variation.stock,
+                sku: variation.sku,
+                attributes: variation.attributes
+            };
+            // Attach variation images if present
+            if (variation.VariationImages) {
+                variationObj.images = variation.VariationImages.map(image => ({
+                    id: image.id,
+                    image_url: image.image_url.split('/').pop(),
+                    alt_text: image.alt_text,
+                    display_order: image.display_order,
+                    is_primary: image.is_primary,
+                    status: image.status
+                }));
+            }
+            return variationObj;
+        });
         delete productData.ProductVariations;
     }
 
@@ -207,7 +217,11 @@ module.exports.createProduct = async (req, res) => {
             description,
             categoryId,
             status,
-            slug: slugify(name, { lower: true })
+            slug: slugify(name, { lower: true }),
+            weight: req.body.weight ? Number(req.body.weight) : null,
+            weightUnit: req.body.weightUnit || 'g',
+            dimensions: req.body.dimensions ? JSON.parse(req.body.dimensions) : null,
+            dimensionUnit: req.body.dimensionUnit || 'cm'
         }, { transaction });
         console.log('Product created with ID:', product.id);
 
@@ -283,16 +297,29 @@ module.exports.createProduct = async (req, res) => {
                     price: Number(variation.price),
                     comparePrice: variation.comparePrice ? Number(variation.comparePrice) : null,
                     stock: Number(variation.stock || 0),
-                    weight: variation.weight ? Number(variation.weight) : null,
-                    weightUnit: variation.weightUnit || 'g',
-                    dimensions: variation.dimensions || null,
-                    dimensionUnit: variation.dimensionUnit || 'cm',
+                    // Removed weight, weightUnit, dimensions, dimensionUnit from here
                     attributes: variation.attributes || {}
                 }, { transaction });
                 console.log('Variation created with ID:', variationRecord.id);
 
                 // Handle attributes for this variation
                 await handleProductAttributes(variation, transaction);
+
+                // Associate images with the variation if provided
+                if (images && images.length > 0) {
+                    for (const [index, image] of images.entries()) {
+                        if (image.originalname.includes(`variation_${index}_image`)) {
+                            await ProductImage.create({
+                                product_id: product.id,
+                                image_url: `/uploads/products/${image.filename}`,
+                                alt_text: name, // Use product name as alt text for variations
+                                display_order: index,
+                                is_primary: false, // Variation images are not primary
+                                status: 'active'
+                            }, { transaction });
+                        }
+                    }
+                }
             }
         }
 
@@ -300,14 +327,14 @@ module.exports.createProduct = async (req, res) => {
         const badge = await calculateProductBadge(product, transaction);
         await product.update({ badge }, { transaction });
 
-        // Handle images
+        // Handle product-level images
         if (images && images.length > 0) {
-            console.log('\n=== PROCESSING IMAGES ===');
-            console.log('Total images to process:', images.length);
+            console.log('\n=== PROCESSING PRODUCT-LEVEL IMAGES ===');
+            console.log('Total product-level images to process:', images.length);
             
             // Create an array of image creation promises
             const imagePromises = images.map(async (image, index) => {
-                console.log(`Processing image ${index + 1}:`, image.originalname);
+                console.log(`Processing product-level image ${index + 1}:`, image.originalname);
                 const imageRecord = await ProductImage.create({
                     product_id: product.id,
                     image_url: `/uploads/products/${image.filename}`,
@@ -316,13 +343,13 @@ module.exports.createProduct = async (req, res) => {
                     is_primary: index === 0,
                     status: 'active'
                 }, { transaction });
-                console.log(`Image ${index + 1} created with ID:`, imageRecord.id);
+                console.log(`Product-level image ${index + 1} created with ID:`, imageRecord.id);
                 return imageRecord;
             });
 
-            // Wait for all images to be created
+            // Wait for all product-level images to be created
             await Promise.all(imagePromises);
-            console.log('All images processed successfully');
+            console.log('All product-level images processed successfully');
         }
 
         await transaction.commit();
@@ -487,7 +514,11 @@ module.exports.updateProduct = async (req, res) => {
             description,
             categoryId,
             status,
-            slug: slugify(name, { lower: true })
+            slug: slugify(name, { lower: true }),
+            weight: req.body.weight ? Number(req.body.weight) : null,
+            weightUnit: req.body.weightUnit || 'g',
+            dimensions: req.body.dimensions ? JSON.parse(req.body.dimensions) : null,
+            dimensionUnit: req.body.dimensionUnit || 'cm'
         }, { transaction });
 
         // Update or create SEO data
@@ -554,15 +585,28 @@ module.exports.updateProduct = async (req, res) => {
                     price: Number(variation.price),
                     comparePrice: variation.comparePrice ? Number(variation.comparePrice) : null,
                     stock: Number(variation.stock || 0),
-                    weight: variation.weight ? Number(variation.weight) : null,
-                    weightUnit: variation.weightUnit || 'g',
-                    dimensions: variation.dimensions || null,
-                    dimensionUnit: variation.dimensionUnit || 'cm',
+                    // Removed weight, weightUnit, dimensions, dimensionUnit from here
                     attributes: variation.attributes || {}
                 }, { transaction });
 
                 // Handle attributes for this variation
                 await handleProductAttributes(variation, transaction);
+
+                // Associate images with the variation if provided
+                if (images && images.length > 0) {
+                    for (const [index, image] of images.entries()) {
+                        if (image.originalname.includes(`variation_${index}_image`)) {
+                            await ProductImage.create({
+                                product_id: product.id,
+                                image_url: `/uploads/products/${image.filename}`,
+                                alt_text: name, // Use product name as alt text for variations
+                                display_order: index,
+                                is_primary: false, // Variation images are not primary
+                                status: 'active'
+                            }, { transaction });
+                        }
+                    }
+                }
             }
         }
 

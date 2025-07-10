@@ -67,6 +67,24 @@ const Product = sequelize.define('Product', {
         type: DataTypes.INTEGER,
         defaultValue: 0
     },
+    // Product-wide physical properties
+    weight: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true
+    },
+    weightUnit: {
+        type: DataTypes.ENUM('g', 'kg', 'lb', 'oz'),
+        allowNull: true
+    },
+    dimensions: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        comment: 'JSON object containing length, width, height'
+    },
+    dimensionUnit: {
+        type: DataTypes.ENUM('cm', 'm', 'in', 'ft'),
+        allowNull: true
+    },
     created_at: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW
