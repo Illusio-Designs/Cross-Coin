@@ -68,10 +68,13 @@ const formatProductResponse = (product) => {
                 alt_text: image.alt_text,
                 display_order: image.display_order,
                 is_primary: image.is_primary,
-                status: image.status
+                status: image.status,
+                product_variation_id: image.product_variation_id // <-- Add this line
             };
         });
         delete productData.ProductImages;
+    } else {
+        productData.images = [];
     }
 
     // Format category
@@ -308,16 +311,21 @@ module.exports.createProduct = async (req, res) => {
                 // Associate images with the variation if provided
                 if (images && images.length > 0) {
                     for (const image of images) {
-                        if (image.fieldname === `variation_${variations.indexOf(variation)}_image`) {
-                            await ProductImage.create({
-                                product_id: product.id,
-                                product_variation_id: variationRecord.id, // Associate with specific variation
-                                image_url: `/uploads/products/${image.filename}`,
-                                alt_text: name, // Use product name as alt text for variations
-                                display_order: 0,
-                                is_primary: false, // Variation images are not primary
-                                status: 'active'
-                            }, { transaction });
+                        // Check if this image is for a variation
+                        const match = image.fieldname.match(/^variation_(\d+)_image$/);
+                        if (match) {
+                            const variationIdx = parseInt(match[1], 10);
+                            if (variations[variationIdx] && variations[variationIdx].sku === variation.sku) {
+                                await ProductImage.create({
+                                    product_id: product.id,
+                                    product_variation_id: variationRecord.id,
+                                    image_url: `/uploads/products/${image.filename}`,
+                                    alt_text: name,
+                                    display_order: 0,
+                                    is_primary: false,
+                                    status: 'active'
+                                }, { transaction });
+                            }
                         }
                     }
                 }
@@ -338,6 +346,7 @@ module.exports.createProduct = async (req, res) => {
                 console.log(`Processing product-level image ${index + 1}:`, image.originalname);
                 const imageRecord = await ProductImage.create({
                     product_id: product.id,
+                    product_variation_id: null, // Explicitly set to null for product-level images
                     image_url: `/uploads/products/${image.filename}`,
                     alt_text: name,
                     display_order: index,
@@ -620,16 +629,21 @@ module.exports.updateProduct = async (req, res) => {
                 // Associate images with the variation if provided
                 if (images && images.length > 0) {
                     for (const image of images) {
-                        if (image.fieldname === `variation_${variations.indexOf(variation)}_image`) {
-                            await ProductImage.create({
-                                product_id: product.id,
-                                product_variation_id: variationRecord.id, // Associate with specific variation
-                                image_url: `/uploads/products/${image.filename}`,
-                                alt_text: name, // Use product name as alt text for variations
-                                display_order: 0,
-                                is_primary: false, // Variation images are not primary
-                                status: 'active'
-                            }, { transaction });
+                        // Check if this image is for a variation
+                        const match = image.fieldname.match(/^variation_(\d+)_image$/);
+                        if (match) {
+                            const variationIdx = parseInt(match[1], 10);
+                            if (variations[variationIdx] && variations[variationIdx].sku === variation.sku) {
+                                await ProductImage.create({
+                                    product_id: product.id,
+                                    product_variation_id: variationRecord.id, // Associate with specific variation
+                                    image_url: `/uploads/products/${image.filename}`,
+                                    alt_text: name, // Use product name as alt text for variations
+                                    display_order: 0,
+                                    is_primary: false, // Variation images are not primary
+                                    status: 'active'
+                                }, { transaction });
+                            }
                         }
                     }
                 }
@@ -664,6 +678,7 @@ module.exports.updateProduct = async (req, res) => {
             for (const [index, image] of images.entries()) {
                 await ProductImage.create({
                     product_id: product.id,
+                    product_variation_id: null, // Explicitly set to null for product-level images
                     image_url: `/uploads/products/${image.filename}`,
                     alt_text: name,
                     display_order: index,
@@ -927,6 +942,30 @@ module.exports.getPublicProductBySlug = async (req, res) => {
                 ...image,
                 image_url: `${process.env.BACKEND_URL || 'http://localhost:5000'}/uploads/products/${image.image_url}`
             }));
+        } else {
+            formattedProduct.images = [];
+        }
+
+        // For each variation, attach its images (use formattedProduct, not product)
+        if (formattedProduct.variations && formattedProduct.images) {
+          formattedProduct.variations = formattedProduct.variations.map((variation, idx) => {
+            // Try to get images for this variation
+            let images = formattedProduct.images.filter(img => img.product_variation_id === variation.id);
+            // If no images for this variation, fall back to product-level images
+            if (images.length === 0) {
+              images = formattedProduct.images.filter(img => img.product_variation_id === null);
+            }
+            // Fallback: If all images are present in every variation, assign only 3 images per variation by index
+            if (images.length === formattedProduct.variations.length * 3) {
+              images = formattedProduct.images.slice(idx * 3, idx * 3 + 3);
+            }
+            return {
+              ...variation,
+              images
+            };
+          });
+          // Remove the top-level images array after assigning to variations
+          delete formattedProduct.images;
         }
 
         // Format reviews
