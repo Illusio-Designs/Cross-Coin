@@ -157,6 +157,7 @@
   margin-bottom: 15px;
   cursor: pointer;
   transition: color 0.2s;
+  width: 60%;
 }
 
 .footer__col ul li:hover {

@@ -29,6 +29,20 @@ const tabs = [
   { label: "Logout" },
 ];
 
+function forceEnvImageBase(url) {
+  if (!url) return '/assets/card1-left.webp';
+  if (url.startsWith('http')) {
+    if (url.includes('localhost:5000')) {
+      const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+      const path = url.replace(/^https?:\/\/[^/]+/, '');
+      return `${baseUrl}${path}`;
+    }
+    return url;
+  }
+  const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+  return `${baseUrl}${url}`;
+}
+
 export default function Profile() {
   const [selectedTab, setSelectedTab] = useState(0);
   const router = useRouter();
@@ -289,7 +303,7 @@ export default function Profile() {
                       )}
                       {order.OrderItems && order.OrderItems.map(item => (
                         <div className="order-card-body" key={item.id}>
-                           <Image src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${item.Product?.ProductImages?.[0]?.image_url}`} alt={item.Product?.name} className="order-product-img" width={100} height={100} />
+                           <Image src={forceEnvImageBase(`${item.Product?.ProductImages?.[0]?.image_url}`)} alt={item.Product?.name} className="order-product-img" width={100} height={100} unoptimized />
                     <div className="order-product-info">
                             <div className="order-product-title">{item.Product?.name}</div>
                             <div className="order-product-desc">Quantity: {item.quantity}</div>

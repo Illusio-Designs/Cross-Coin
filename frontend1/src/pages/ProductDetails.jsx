@@ -13,6 +13,7 @@ import Loader from '../components/Loader';
 import { fbqTrack } from '../components/common/Analytics';
 import { getProductImageSrc } from '../utils/imageUtils';
 import DOMPurify from 'dompurify';
+import Modal from "../components/common/Modal";
 
 export default function ProductDetails() {
   const searchParams = useSearchParams();
@@ -45,6 +46,33 @@ export default function ProductDetails() {
   const [filePreview, setFilePreview] = useState([]);
   const [coupons, setCoupons] = useState([]);
   const [copiedCoupon, setCopiedCoupon] = useState(null);
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
+
+  // Add color selection by name
+  const [selectedColor, setSelectedColor] = useState(null);
+  // Add type/model selection state
+  const [selectedType, setSelectedType] = useState(null);
+
+  // Add state for selectedSku
+  const [selectedSku, setSelectedSku] = useState(product?.variations?.[0]?.sku || '');
+
+  // Find the selected variation by SKU
+  const selectedVariationBySku = product?.variations.find(v => v.sku === selectedSku) || product?.variations[0];
+
+  // Use images from selected variation if available, else fallback to product images
+  const variationImages = selectedVariationBySku?.images && selectedVariationBySku.images.length > 0
+    ? selectedVariationBySku.images
+    : product?.images || [];
+
+  // Reset selectedThumbnail when SKU changes
+  useEffect(() => {
+    setSelectedThumbnail(0);
+  }, [selectedSku]);
+
+  // Parse attributes
+  const attrs = selectedVariationBySku && typeof selectedVariationBySku.attributes === 'string'
+    ? JSON.parse(selectedVariationBySku.attributes)
+    : selectedVariationBySku?.attributes || {};
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -95,6 +123,66 @@ export default function ProductDetails() {
     };
     fetchCoupons();
   }, []);
+
+  // Get all unique color names from variations
+  const colorOptions = product?.variations
+    ? Array.from(new Set(product.variations.flatMap(v => {
+        const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+        return attrs && attrs.color ? attrs.color : [];
+      })))
+    : [];
+
+  // Find the variation for the selected color
+  const selectedColorVariation = product?.variations
+    ? product.variations.find(v => {
+        const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+        return attrs && attrs.color && attrs.color.includes(selectedColor || colorOptions[0]);
+      })
+    : null;
+
+  // Get all unique types from variations
+  const typeOptions = product?.variations
+    ? Array.from(new Set(product.variations.flatMap(v => {
+        const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+        return attrs && attrs.type ? attrs.type : [];
+      })))
+    : [];
+
+  // Get all colors for the selected type
+  const colorsForSelectedType = product?.variations
+    ? Array.from(new Set(product.variations
+        .filter(v => {
+          const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+          return attrs && attrs.type && attrs.type.includes(selectedType || typeOptions[0]);
+        })
+        .flatMap(v => {
+          const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+          return attrs && attrs.color ? attrs.color : [];
+        })
+      ))
+    : [];
+
+  // Find the variation for the selected type and color
+  const selectedTypeColorVariation = product?.variations
+    ? product.variations.find(v => {
+        const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+        return attrs && attrs.type && attrs.type.includes(selectedType || typeOptions[0]) &&
+               attrs.color && attrs.color.includes(selectedColor || colorsForSelectedType[0]);
+      })
+    : null;
+
+  // Update selectedType and selectedColor on mount if not set
+  useEffect(() => {
+    if (!selectedType && typeOptions.length > 0) {
+      setSelectedType(typeOptions[0]);
+    }
+  }, [typeOptions, selectedType]);
+
+  useEffect(() => {
+    if (!selectedColor && colorsForSelectedType.length > 0) {
+      setSelectedColor(colorsForSelectedType[0]);
+    }
+  }, [colorsForSelectedType, selectedColor]);
 
   const generateCouponDescription = (coupon) => {
     const value = parseFloat(coupon.value);
@@ -281,6 +369,16 @@ export default function ProductDetails() {
     setFilePreview(newPreviews);
   };
 
+  // Add this decodeHtml function
+  function decodeHtml(html) {
+    if (typeof window !== 'undefined') {
+      const txt = document.createElement('textarea');
+      txt.innerHTML = html;
+      return txt.value;
+    }
+    return html;
+  }
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -299,6 +397,40 @@ export default function ProductDetails() {
         <Footer />
       </div>
     );
+  }
+
+  // Log product description and image URL
+  console.log('Product Description:', product.description);
+  const mainImageUrl = product.images && product.images.length > 0
+    ? (product.images[0].image_url || product.images[0].url || product.images[0])
+    : '';
+  console.log('Main Image URL:', mainImageUrl);
+
+  // Use home page logic for image URL (getCategoryImageSrc equivalent)
+  function getProductImageSrcForDetails(imageObj) {
+    if (!imageObj) return '/assets/card1-left.webp';
+    const img = imageObj.image_url || imageObj.url || imageObj;
+    if (typeof img !== 'string') return '/assets/card1-left.webp';
+    if (img.startsWith('http')) return img;
+    let baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+    if (img.startsWith('/')) {
+      return `${baseUrl}${img}`;
+    }
+    return `${baseUrl}/${img}`;
+  }
+
+  function forceEnvImageBase(url) {
+    if (!url) return '/assets/card1-left.webp';
+    if (url.startsWith('http')) {
+      if (url.includes('localhost:5000')) {
+        const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+        const path = url.replace(/^https?:\/\/[^/]+/, '');
+        return `${baseUrl}${path}`;
+      }
+      return url;
+    }
+    const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+    return `${baseUrl}${url}`;
   }
 
   const handleAddToCart = () => {
@@ -362,41 +494,6 @@ export default function ProductDetails() {
       value: product.price,
       currency: 'INR',
     });
-  };
-
-  const renderAttributeOptions = () => {
-    if (!selectedVariation) return null;
-    const attributes = typeof selectedVariation.attributes === 'string'
-      ? JSON.parse(selectedVariation.attributes)
-      : selectedVariation.attributes;
-    return Object.entries(attributes).map(([key, values]) => (
-      <div key={key} className="variation-group">
-        <span className="option-label">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
-        <div className={`variation-options ${key === 'color' ? 'color-options' : ''}`}> 
-          {values.map((value) => (
-            key === 'color' ? (
-              <button
-                key={value}
-                className={`color-option${selectedAttributes[key] === value ? ' selected' : ''}`}
-                style={{ backgroundColor: value.toLowerCase(), border: selectedAttributes[key] === value ? '2px solid #e60000' : '1px solid #ccc' }}
-                onClick={() => handleAttributeChange(key, value)}
-                aria-label={value}
-              >
-                {selectedAttributes[key] === value && <span className="color-check">✓</span>}
-              </button>
-            ) : (
-              <button
-                key={value}
-                className={`size-option${selectedAttributes[key] === value ? ' selected' : ''}`}
-                onClick={() => handleAttributeChange(key, value)}
-              >
-                {value}
-              </button>
-            )
-          ))}
-        </div>
-      </div>
-    ));
   };
 
   const renderReviewForm = () => (
@@ -510,7 +607,6 @@ export default function ProductDetails() {
                         color: 'white',
                         border: 'none',
                         padding: '2px 8px',
-                        borderRadius: '4px',
                         cursor: 'pointer',
                         fontSize: '12px'
                       }}
@@ -555,6 +651,8 @@ export default function ProductDetails() {
     </div>
   );
 
+  const { wishlist } = useWishlist();
+
   return (
     <SeoWrapper
       pageName={product.name || "product-details"}
@@ -570,55 +668,162 @@ export default function ProductDetails() {
       <div className="product-details-container">
         <Header />
         <div className="product-details">
-          <div className="product-images">
-            <Image
-              className="main-image"
-              src={getProductImageSrc(product.images[selectedThumbnail])}
-              alt={product.images[selectedThumbnail]?.alt_text || product.name}
-              width={500}
-              height={500}
-            />
-            <div className="thumbnail-images">
-              {product.images.map((image, idx) => (
-                <Image
-                  key={image.id}
-                  src={getProductImageSrc(image)}
+          <div className="product-gallery" style={{ textAlign: 'center', marginBottom: 32 }}>
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              <img
+                src={forceEnvImageBase(
+                  variationImages[selectedThumbnail]?.image_url ||
+                  variationImages[selectedThumbnail]?.url ||
+                  variationImages[selectedThumbnail]
+                )}
+                alt={variationImages[selectedThumbnail]?.alt_text || product.name}
+                style={{ width: 500, objectFit: 'contain', boxShadow: '0 2px 8px #eee' }}
+                onClick={() => setIsZoomOpen(true)}
+              />
+              {/* Zoom button overlay */}
+              <button
+                onClick={() => setIsZoomOpen(true)}
+                style={{
+                  position: 'absolute',
+                  right: 16,
+                  bottom: 16,
+                  background: 'white',
+                  border: '1px solid #ccc',
+                  borderRadius: '50%',
+                  width: 32,
+                  height: 32,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px #eee',
+                  cursor: 'pointer'
+                }}
+                aria-label="Zoom"
+              >
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </button>
+            </div>
+            {/* Thumbnails */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 16 }}>
+              {variationImages.map((image, idx) => (
+                <img
+                  key={image.id || idx}
+                  src={forceEnvImageBase(image.image_url || image.url || image)}
                   alt={image.alt_text || `${product.name} thumbnail ${idx + 1}`}
-                  className={selectedThumbnail === idx ? "active" : ""}
+                  style={{
+                    width: 100,
+                    height: 100,
+                    objectFit: 'cover',
+                    borderRadius: 4,
+                    border: selectedThumbnail === idx ? '2px solid #222' : '1px solid #eee',
+                    cursor: 'pointer',
+                    opacity: selectedThumbnail === idx ? 1 : 0.7
+                  }}
                   onClick={() => setSelectedThumbnail(idx)}
-                  width={100}
-                  height={100}
-                  style={{ objectFit: 'cover' }}
                 />
               ))}
             </div>
+            {/* Zoom Modal */}
+            {isZoomOpen && (
+              <Modal isOpen={isZoomOpen} onClose={() => setIsZoomOpen(false)}>
+                <img
+                  src={forceEnvImageBase(
+                    variationImages[selectedThumbnail]?.image_url ||
+                    variationImages[selectedThumbnail]?.url ||
+                    variationImages[selectedThumbnail]
+                  )}
+                  alt="Zoomed"
+                  style={{ width: '100%', maxWidth: 700, objectFit: 'contain', borderRadius: 8 }}
+                />
+              </Modal>
+            )}
           </div>
           <div className="product-info">
-            <h1>{product.name}</h1>
-            <div className="product-rating-row">
-              <span className="stars">{renderStars(product.avg_rating)}</span>
-              <span className="rating-value">{parseFloat(product.avg_rating || 0).toFixed(1)}</span>
-              <span className="review-count">({product.reviews?.length || 0} reviews)</span>
-              {selectedVariation && (
-                <span className="sku-label">| SKU: <span className="sku-value">{selectedVariation.sku}</span></span>
-              )}
-            </div>
-            <hr className="product-divider" />
-            <div className="product-desc-short">
-              <span>{product.description}</span>
-            </div>
-            <div className="product-price-row">
-              {selectedVariation && (
-                <>
-                  <span className="current-price">₹{selectedVariation.price}</span>
-                  {selectedVariation.comparePrice && (
-                    <span className="original-price">₹{selectedVariation.comparePrice}</span>
+            {/* A. Title, price, review, wishlist */}
+            <div className="product-title-row">
+              <div>
+                <h1 className="product-title">{product.name}</h1>
+                <div className="product-price-row">
+                  <span className="current-price">₹{selectedVariationBySku.price}</span>
+                  {selectedVariationBySku.comparePrice && (
+                    <span className="original-price">₹{selectedVariationBySku.comparePrice}</span>
                   )}
-                </>
-              )}
+                  <span className="review-summary">
+                    <span className="stars">{renderStars(product.avg_rating || 0)}</span>
+                    <span className="rating-value">{parseFloat(product.avg_rating || 0).toFixed(1)}</span>
+                    <span className="review-count">({product.review_count || 0} reviews)</span>
+                  </span>
+                </div>
+              </div>
+              {/* Wishlist icon */}
+              <button
+                className="wishlist-btn"
+                onClick={() => {
+                  if (wishlist.some(item => item.id === product.id)) {
+                    removeFromWishlist(product.id);
+                  } else {
+                    addToWishlist(product);
+                  }
+                }}
+                aria-label={wishlist.some(item => item.id === product.id) ? 'Remove from wishlist' : 'Add to wishlist'}
+              >
+                <svg
+                  className="wishlist-icon"
+                  width="32"
+                  height="32"
+                  viewBox="0 0 24 24"
+                  fill={wishlist.some(item => item.id === product.id) ? '#e60000' : 'none'}
+                  stroke="#222"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                </svg>
+              </button>
             </div>
-            <div className="product-options">
-              {renderAttributeOptions()}
+
+            {/* D. Details section */}
+            <div className="product-details-section">
+              <h3 className="details-heading">Details</h3>
+              <div className="details-table">
+                <div className="details-row">
+                  <div>
+                  <span className="details-label">Type:</span>
+                  <span className="details-value">{attrs.type?.[0] || '-'}</span>
+                  </div>
+                  <div>
+                  <span className="details-label">Color:</span>
+                  <span className="details-value">{attrs.color?.[0] || '-'}</span>
+                  </div>
+                  <div>
+                  <span className="details-label">Size:</span>
+                  <span className="details-value">{attrs.size?.[0] || '-'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* B. SKU buttons row */}
+            <div className="model-btn-row">
+              <div>
+            <span className="details-heading">Models</span>
+            </div>
+            <div className="variation-button">
+              {product.variations.map(variation => (
+                
+                <button
+                  key={variation.sku}
+                  className={`model-btn${selectedSku === variation.sku ? ' selected' : ''}`}
+                  onClick={() => setSelectedSku(variation.sku)}
+                >
+                  {variation.sku}
+                </button>
+              ))}
+              </div>
             </div>
             {/* Coupons Display */}
             {coupons && coupons.length > 0 && (
@@ -659,71 +864,22 @@ export default function ProductDetails() {
                 </div>
               </div>
             )}
-            {/* Variation Scroller */}
-            {product.variations && product.variations.length > 1 && (
-              <div className="variation-scroller-box">
-                <h3 className="variation-scroller-title">All Variations</h3>
-                <div className="variation-scroller-row">
-                  {product.variations.map((v, idx) => {
-                    // Find image for this variation
-                    let vImgIdx = 0;
-                    if (v.image_url) {
-                      vImgIdx = product.images.findIndex(img => img.image_url === v.image_url);
-                    } else if (v.imageId) {
-                      vImgIdx = product.images.findIndex(img => img.id === v.imageId);
-                    } else if (v.images && Array.isArray(v.images)) {
-                      for (const vi of v.images) {
-                        const foundIdx = product.images.findIndex(img => img.image_url === vi.image_url);
-                        if (foundIdx !== -1) { vImgIdx = foundIdx; break; }
-                      }
-                    }
-                    if (vImgIdx === -1) vImgIdx = 0;
-                    const vImg = product.images[vImgIdx];
-                    // Get color/size attributes
-                    const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
-                    const color = attrs && attrs.color ? attrs.color[0] : null;
-                    const size = attrs && attrs.size ? attrs.size[0] : null;
-                    return (
-                      <div
-                        key={v.id}
-                        className={`variation-card${selectedVariation && selectedVariation.id === v.id ? ' selected' : ''}`}
-                        onClick={() => {
-                          setSelectedVariation(v);
-                          setSelectedAttributes(attrs);
-                          setSelectedThumbnail(vImgIdx);
-                        }}
-                      >
-                        <div className="variation-card-img-wrap">
-                          <img
-                            src={getProductImageSrc(vImg)}
-                            alt={vImg?.alt_text || 'Variation'}
-                            className="variation-card-img"
-                          />
-                        </div>
-                        <div className="variation-card-attrs">
-                          {color && <span className="variation-card-color" style={{background: color, borderColor: color}} title={color}></span>}
-                          {size && <span className="variation-card-size">{size}</span>}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+            {/* Quantity and Action Buttons Section */}
+            <div className="quantity-section">
+              <div className="details-heading">Quantity:</div>
+              <div className="quantity-box">
+                <button className="quantity-btn" onClick={() => setQuantity(q => Math.max(1, q - 1))}>-</button>
+                <span className="quantity-value">{quantity}</span>
+                <button className="quantity-btn" onClick={() => setQuantity(q => q + 1)}>+</button>
               </div>
-            )}
-            <div className="product-action-box">
-              <div className="quantity-and-buttons">
-                <div className="quantity-box">
-                  <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="quantity-btn">-</button>
-                  <span className="quantity-value">{quantity}</span>
-                  <button onClick={() => setQuantity(q => q + 1)} className="quantity-btn">+</button>
-                </div>
-                <button className="add-to-cart" onClick={handleAddToCart}>
-                  {showAddedToCart ? 'Added to Cart!' : 'Add to cart'}
-                </button>
-                <button className="buy-now" onClick={handleBuyNow}>
-                  Buy Now
-                </button>
-              </div>
+            </div>
+            <div className="action-buttons-row">
+              <button className="add-to-cart-btn" onClick={handleAddToCart}>
+                ADD TO CART
+              </button>
+              <button className="buy-now-btn" onClick={handleBuyNow}>
+                BUY IT NOW
+              </button>
             </div>
           </div>
         </div>
@@ -747,10 +903,7 @@ export default function ProductDetails() {
             {/* Tab Content */}
             {activeTab === "description" ? (
               <div className="product-description">
-                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.description || '') }} />
-                {product.seo?.metaDescription && (
-                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.seo.metaDescription) }} />
-                )}
+                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(decodeHtml(product.description || '')) }} />
               </div>
             ) : (
               <div className="product-reviews">
@@ -789,13 +942,13 @@ export default function ProductDetails() {
                                   <div key={image.id || imgIndex} className="review-image">
                                     {image.fileType === 'video' ? (
                                       <video 
-                                        src={getProductImageSrc(`/uploads/reviews/${image.fileName}`)}
+                                        src={forceEnvImageBase(`/uploads/reviews/${image.fileName}`)}
                                         controls
                                         style={{ width: '100px', height: '100px', objectFit: 'cover' }}
                                       />
                                     ) : (
                                       <img 
-                                        src={getProductImageSrc(`/uploads/reviews/${image.fileName}`)}
+                                        src={forceEnvImageBase(`/uploads/reviews/${image.fileName}`)}
                                         alt={`Review image ${imgIndex + 1}`}
                                         style={{ width: '100px', height: '100px', objectFit: 'cover' }}
                                       />

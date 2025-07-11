@@ -598,7 +598,8 @@ export const productService = {
             const response = await api.put(`/api/products/${id}`, productData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
-                }
+                },
+                timeout: 30000 // 30 seconds
             });
             return response.data;
         } catch (error) {

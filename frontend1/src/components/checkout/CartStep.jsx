@@ -13,12 +13,26 @@ function getNormalizedImageUrl(imageUrl) {
     return imageUrl;
   }
   // If it's a relative path, prepend the base URL from env
-  const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || '';
+  const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
   if (imageUrl.startsWith('/')) {
     return `${baseUrl}${imageUrl}`;
   }
   // If it's just a filename, construct the path
   return `${baseUrl}/uploads/products/${imageUrl}`;
+}
+
+function forceEnvImageBase(url) {
+  if (!url) return '/assets/card1-left.webp';
+  if (url.startsWith('http')) {
+    if (url.includes('localhost:5000')) {
+      const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+      const path = url.replace(/^https?:\/\/[^/]+/, '');
+      return `${baseUrl}${path}`;
+    }
+    return url;
+  }
+  const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+  return `${baseUrl}${url}`;
 }
 
 export default function CartStep() {
@@ -59,12 +73,13 @@ export default function CartStep() {
             cartItems.map((item) => (
             <div className="cart-item" key={item.id}>
                 <Image 
-                  src={getNormalizedImageUrl(item.image)} 
+                  src={forceEnvImageBase(item.image)} 
                   alt={item.name} 
                   width={100} 
                   height={100} 
                   className="cart-item-img" 
                   onError={(e) => { e.target.src = '/placeholder.png'; }} // fallback if image fails
+                  unoptimized
                 />
                 <div className="cart-item-details">
                 <div className="cart-item-title">{item.name}</div>
