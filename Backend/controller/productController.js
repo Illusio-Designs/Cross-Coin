@@ -307,13 +307,14 @@ module.exports.createProduct = async (req, res) => {
 
                 // Associate images with the variation if provided
                 if (images && images.length > 0) {
-                    for (const [index, image] of images.entries()) {
-                        if (image.originalname.includes(`variation_${index}_image`)) {
+                    for (const image of images) {
+                        if (image.fieldname === `variation_${variations.indexOf(variation)}_image`) {
                             await ProductImage.create({
                                 product_id: product.id,
+                                product_variation_id: variationRecord.id, // Associate with specific variation
                                 image_url: `/uploads/products/${image.filename}`,
                                 alt_text: name, // Use product name as alt text for variations
-                                display_order: index,
+                                display_order: 0,
                                 is_primary: false, // Variation images are not primary
                                 status: 'active'
                             }, { transaction });
@@ -359,7 +360,13 @@ module.exports.createProduct = async (req, res) => {
         const completeProduct = await Product.findByPk(product.id, {
             include: [
                 { model: Category },
-                { model: ProductVariation, as: 'ProductVariations' },
+                { 
+                    model: ProductVariation, 
+                    as: 'ProductVariations',
+                    include: [
+                        { model: ProductImage, as: 'VariationImages' }
+                    ]
+                },
                 { model: ProductImage, as: 'ProductImages' },
                 { model: ProductSEO, as: 'ProductSEO' }
             ]
@@ -408,7 +415,13 @@ module.exports.getAllProducts = async (req, res) => {
             order: [['createdAt', 'DESC']],
             include: [
                 { model: Category },
-                { model: ProductVariation, as: 'ProductVariations' },
+                { 
+                    model: ProductVariation, 
+                    as: 'ProductVariations',
+                    include: [
+                        { model: ProductImage, as: 'VariationImages' }
+                    ]
+                },
                 { model: ProductImage, as: 'ProductImages' },
                 { model: ProductSEO, as: 'ProductSEO' }
             ],
@@ -435,7 +448,13 @@ module.exports.getProduct = async (req, res) => {
         const product = await Product.findByPk(id, {
             include: [
                 { model: Category },
-                { model: ProductVariation, as: 'ProductVariations' },
+                { 
+                    model: ProductVariation, 
+                    as: 'ProductVariations',
+                    include: [
+                        { model: ProductImage, as: 'VariationImages' }
+                    ]
+                },
                 { model: ProductImage, as: 'ProductImages' },
                 { model: ProductSEO, as: 'ProductSEO' }
             ]
@@ -494,7 +513,13 @@ module.exports.updateProduct = async (req, res) => {
         const product = await Product.findByPk(id, {
             include: [
                 { model: ProductImage, as: 'ProductImages' },
-                { model: ProductVariation, as: 'ProductVariations' },
+                { 
+                    model: ProductVariation, 
+                    as: 'ProductVariations',
+                    include: [
+                        { model: ProductImage, as: 'VariationImages' }
+                    ]
+                },
                 { model: ProductSEO, as: 'ProductSEO' }
             ],
             transaction
@@ -579,7 +604,7 @@ module.exports.updateProduct = async (req, res) => {
                 const randomString = Math.random().toString(36).substring(2, 8);
                 const uniqueSku = variation.sku || `SKU-${product.id}-${timestamp}-${randomString}`;
 
-                await ProductVariation.create({
+                const variationRecord = await ProductVariation.create({
                     productId: product.id,
                     sku: uniqueSku,
                     price: Number(variation.price),
@@ -594,13 +619,14 @@ module.exports.updateProduct = async (req, res) => {
 
                 // Associate images with the variation if provided
                 if (images && images.length > 0) {
-                    for (const [index, image] of images.entries()) {
-                        if (image.originalname.includes(`variation_${index}_image`)) {
+                    for (const image of images) {
+                        if (image.fieldname === `variation_${variations.indexOf(variation)}_image`) {
                             await ProductImage.create({
                                 product_id: product.id,
+                                product_variation_id: variationRecord.id, // Associate with specific variation
                                 image_url: `/uploads/products/${image.filename}`,
                                 alt_text: name, // Use product name as alt text for variations
-                                display_order: index,
+                                display_order: 0,
                                 is_primary: false, // Variation images are not primary
                                 status: 'active'
                             }, { transaction });
@@ -653,7 +679,13 @@ module.exports.updateProduct = async (req, res) => {
         const updatedProduct = await Product.findByPk(id, {
             include: [
                 { model: Category },
-                { model: ProductVariation, as: 'ProductVariations' },
+                { 
+                    model: ProductVariation, 
+                    as: 'ProductVariations',
+                    include: [
+                        { model: ProductImage, as: 'VariationImages' }
+                    ]
+                },
                 { model: ProductImage, as: 'ProductImages' },
                 { model: ProductSEO, as: 'ProductSEO' }
             ]

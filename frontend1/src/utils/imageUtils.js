@@ -8,7 +8,7 @@ export function getProductImageSrc(imageData) {
     return imageUrl;
   }
   // If it's a relative path, prepend the base URL from env
-  const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://api.crosscoin.in';
+  const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
   if (imageUrl.startsWith('/')) {
     return `${baseUrl}${imageUrl}`;
   }

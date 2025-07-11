@@ -287,7 +287,7 @@ const ProductsPage = () => {
         total_sold: product.total_sold || 0,
         images: product.images?.map(img => ({
           name: img.image_url.split('/').pop(),
-          url: `${process.env.NEXT_PUBLIC_API_URL}${img.image_url}`,
+          url: `${process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in'}${img.image_url}`,
           type: 'image/jpeg'
         })) || [],
         weight: product.weight || '',
@@ -326,14 +326,14 @@ const ProductsPage = () => {
           metaKeywords: product.seo?.metaKeywords || '',
           ogTitle: product.seo?.ogTitle || product.name,
           ogDescription: product.seo?.ogDescription || product.description,
-          ogImage: product.seo?.ogImage || (product.images?.[0] ? `${process.env.NEXT_PUBLIC_API_URL}${product.images[0].image_url}` : null),
+          ogImage: product.seo?.ogImage || (product.images?.[0] ? `${process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in'}${product.images[0].image_url}` : null),
           canonicalUrl: product.seo?.canonicalUrl || `${window.location.origin}/products/${product.slug}`,
           structuredData: product.seo?.structuredData || JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Product",
             "name": product.name,
             "description": product.description,
-            "image": product.images?.[0] ? `${process.env.NEXT_PUBLIC_API_URL}${product.images[0].image_url}` : null,
+            "image": product.images?.[0] ? `${process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in'}${product.images[0].image_url}` : null,
             "offers": {
               "@type": "Offer",
               "price": product.variations?.[0]?.price || 0,
@@ -344,7 +344,7 @@ const ProductsPage = () => {
         },
         variationImages: product.variations?.map(variation => variation.images?.map(img => ({
           name: img.image_url.split('/').pop(),
-          url: `${process.env.NEXT_PUBLIC_API_URL}${img.image_url}`,
+          url: `${process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in'}${img.image_url}`,
           type: 'image/jpeg'
         }))) || []
       };
@@ -891,6 +891,28 @@ const ProductsPage = () => {
                     selectedAttributes={variation.attributes || {}}
                     onChange={handleAttributeChange}
                   />
+                  {/* Variation Images Upload */}
+                  <div className="variation-images-upload">
+                    <label>Variation Images</label>
+                    <input
+                      type="file"
+                      name={`variationImage.${index}`}
+                      multiple
+                      accept="image/*"
+                      onChange={handleInputChange}
+                    />
+                    <div className="variation-images-preview" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 8 }}>
+                      {(formData.variationImages && formData.variationImages[index]) && formData.variationImages[index].map((img, imgIdx) => (
+                        <div key={imgIdx} style={{ position: 'relative' }}>
+                          <img
+                            src={img instanceof File ? URL.createObjectURL(img) : img.url}
+                            alt={`Variation ${index + 1} Image ${imgIdx + 1}`}
+                            style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ))}
               <Button

@@ -14,6 +14,20 @@ import { fbqTrack } from '../components/common/Analytics';
 
 const formatTwoDigits = (num) => num.toString().padStart(2, '0');
 
+function forceEnvImageBase(url) {
+  if (!url) return '/assets/card1-left.webp';
+  if (url.startsWith('http')) {
+    if (url.includes('localhost:5000')) {
+      const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+      const path = url.replace(/^https?:\/\/[^/]+/, '');
+      return `${baseUrl}${path}`;
+    }
+    return url;
+  }
+  const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+  return `${baseUrl}${url}`;
+}
+
 const Home = () => {
   const router = useRouter();
   const [current, setCurrent] = useState(0);
@@ -336,7 +350,7 @@ const Home = () => {
       // Remove any duplicate '/uploads/categories/' in the middle of the path
       const cleanedPath = img.replace(/(\/uploads\/categories\/)+/g, '/uploads/categories/');
       // Ensure only one slash between base URL and path
-      let baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      let baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
       if (cleanedPath.startsWith('/')) {
         return `${baseUrl}${cleanedPath}`;
       }
@@ -573,7 +587,7 @@ const Home = () => {
                     <div className="product-images">
                       <Image
                         className="main-image"
-                        src={images[state.selectedThumbnail]}
+                        src={forceEnvImageBase(images[state.selectedThumbnail])}
                         alt={product.name}
                         width={400}
                         height={400}
@@ -584,7 +598,7 @@ const Home = () => {
                         {images.map((src, idx) => (
                           <Image
                             key={idx}
-                            src={src}
+                            src={forceEnvImageBase(src)}
                             alt={`${product.name} thumbnail ${idx + 1}`}
                             className={state.selectedThumbnail === idx ? 'active' : ''}
                             onClick={() => {

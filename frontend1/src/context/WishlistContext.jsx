@@ -18,6 +18,20 @@ export const useWishlist = () => {
   return context;
 };
 
+function forceEnvImageBase(url) {
+  if (!url) return '/assets/card1-left.webp';
+  if (url.startsWith('http')) {
+    if (url.includes('localhost:5000')) {
+      const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+      const path = url.replace(/^https?:\/\/[^/]+/, '');
+      return `${baseUrl}${path}`;
+    }
+    return url;
+  }
+  const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+  return `${baseUrl}${url}`;
+}
+
 export const WishlistProvider = ({ children }) => {
   const [wishlist, setWishlist] = useState([]);
   const [wishlistCount, setWishlistCount] = useState(0);
@@ -33,13 +47,7 @@ export const WishlistProvider = ({ children }) => {
             const product = item.Product;
             let primaryImage = product?.ProductImages?.[0]?.image_url || '';
             if (primaryImage) {
-              if (primaryImage.startsWith('http')) {
-                // do nothing
-              } else if (primaryImage.startsWith('/uploads/')) {
-                primaryImage = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${primaryImage}`;
-              } else {
-                primaryImage = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/uploads/products/${primaryImage}`;
-              }
+              primaryImage = forceEnvImageBase(primaryImage);
             }
             // Get price and comparePrice from the first variation
             const firstVariation = product?.ProductVariations?.[0] || {};
@@ -80,13 +88,7 @@ export const WishlistProvider = ({ children }) => {
           const product = item.Product;
           let primaryImage = product?.ProductImages?.[0]?.image_url || '';
           if (primaryImage) {
-            if (primaryImage.startsWith('http')) {
-              // do nothing
-            } else if (primaryImage.startsWith('/uploads/')) {
-              primaryImage = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${primaryImage}`;
-            } else {
-              primaryImage = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/uploads/products/${primaryImage}`;
-            }
+            primaryImage = forceEnvImageBase(primaryImage);
           }
           // Get price and comparePrice from the first variation
           const firstVariation = product?.ProductVariations?.[0] || {};
