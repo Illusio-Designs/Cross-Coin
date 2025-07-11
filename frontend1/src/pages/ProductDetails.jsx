@@ -54,7 +54,7 @@ export default function ProductDetails() {
   const [selectedType, setSelectedType] = useState(null);
 
   // Add state for selectedSku
-  const [selectedSku, setSelectedSku] = useState(product?.variations?.[0]?.sku || '');
+  const [selectedSku, setSelectedSku] = useState('');
 
   // Find the selected variation by SKU
   const selectedVariationBySku = product?.variations.find(v => v.sku === selectedSku) || product?.variations[0];
@@ -85,6 +85,7 @@ export default function ProductDetails() {
             // Set default variation if available
             if (response.data.variations && response.data.variations.length > 0) {
               setSelectedVariation(response.data.variations[0]);
+              setSelectedSku(response.data.variations[0].sku); // Always select first variation
               // Initialize selected attributes with first options
               const firstVariation = response.data.variations[0];
               if (firstVariation.attributes) {

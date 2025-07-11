@@ -753,42 +753,6 @@
   text-align: center;
 }
 
-.common-table th:nth-child(2) {
-  width: 60px;
-}
-
-.common-table th:nth-child(3) {
-  width: 120px;
-}
-
-.common-table th:nth-child(4) {
-  width: 150px;
-}
-
-.common-table th:nth-child(5) {
-  width: 100px;
-}
-
-.common-table th:nth-child(6) {
-  width: 120px;
-}
-
-.common-table th:nth-child(7) {
-  width: 120px;
-}
-
-.common-table th:nth-child(8) {
-  width: 100px;
-}
-
-.common-table th:nth-child(9) {
-  width: 120px;
-}
-
-.common-table th:last-child {
-  width: 200px;
-}
-
 /* Enhanced Modal */
 .order-details-modal {
   padding: 1.5rem;
