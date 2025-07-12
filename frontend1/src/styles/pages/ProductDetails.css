@@ -1,6 +1,6 @@
 .product-details {
   display: flex;
-  padding: 50px 10%;
+  padding: 50px 9%;
   gap: 7rem;
   align-items: flex-start;
 }

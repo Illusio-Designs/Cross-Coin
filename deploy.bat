@@ -1,43 +1,41 @@
 @echo off
-echo ===================================
-echo  Copy assets to public before build
-echo ===================================
-if exist "frontend1\public\assets" (
-    echo Removing old assets from public...
-    rmdir /s /q "frontend1\public\assets"
-)
-echo Copying assets from src/assets to public/assets...
-powershell -Command "Copy-Item -Path frontend1/src/assets -Destination frontend1/public -Recurse -Force"
+echo Starting deployment preparation...
 
-echo ===================================
-echo  Building Next.js Application...
-echo ===================================
-cd frontend1
-call npm run build
-cd ..
+REM Create deployment directory structure
+if not exist "deploy\Website" mkdir "deploy\Website"
 
-echo.
-echo ===================================
-echo  Preparing Deployment Directory...
-echo ===================================
+REM Copy necessary files to the correct structure
+echo Copying files to deployment structure...
 
-if exist "deploy" (
-    echo Deleting old deploy directory...
-    rmdir /s /q "deploy"
-)
+REM Copy server.js
+copy "frontend1\server.js" "deploy\Website\server.js"
 
-echo Creating new deploy directory...
-mkdir "deploy"
+REM Copy package.json
+copy "frontend1\package.json" "deploy\Website\package.json"
 
-echo.
-echo ===================================
-echo  Copying Files for Deployment...
-echo ===================================
-powershell -Command "Copy-Item -Path frontend1\\.next, frontend1\\public, frontend1\\package.json, frontend1\\package-lock.json, frontend1\\next.config.js, frontend1\\server.js -Destination deploy -Recurse -Verbose"
+REM Copy next.config.js
+copy "frontend1\next.config.js" "deploy\Website\next.config.js"
 
-echo.
-echo ===================================
-echo  Deployment package is ready!
-echo  The 'deploy' directory contains all the files you need to upload.
-echo ===================================
+REM Copy .env.local if exists
+if exist "frontend1\.env.local" copy "frontend1\.env.local" "deploy\Website\.env.local"
+
+REM Copy public folder
+if not exist "deploy\Website\public" mkdir "deploy\Website\public"
+xcopy "frontend1\public\*" "deploy\Website\public\" /E /Y
+
+REM Copy src folder
+if not exist "deploy\Website\src" mkdir "deploy\Website\src"
+xcopy "frontend1\src\*" "deploy\Website\src\" /E /Y
+
+REM Copy other necessary files
+copy "frontend1\jsconfig.json" "deploy\Website\jsconfig.json"
+copy "frontend1\postcss.config.mjs" "deploy\Website\postcss.config.mjs"
+copy "frontend1\tailwind.config.mjs" "deploy\Website\tailwind.config.mjs"
+
+REM Copy .htaccess
+copy "frontend1\.htaccess" "deploy\Website\.htaccess"
+
+echo Deployment package prepared in deploy\Website\
+echo Please upload the contents of deploy\Website\ to your hosting provider
+echo Make sure the files are placed in /home/crosscoin/Website/ on your server
 pause 

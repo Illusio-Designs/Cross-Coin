@@ -381,16 +381,6 @@ export default function ProductDetails() {
     return html;
   }
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <Header />
-        <Loader />
-        <Footer />
-      </div>
-    );
-  }
-
   if (error || !product) {
     return (
       <div className="error-container">
@@ -905,7 +895,7 @@ export default function ProductDetails() {
           
         </div>
         {/* Review Slider and Review Form (no tabs) */}
-        <div className="product-reviews-section" style={{ margin: '32px 0' }}>
+        <div className="product-reviews-section" style={{ margin: '32px 9%' }}>
           <div className="review-header-row">
             <h2 className="customer-reviews-heading">Customer Reviews</h2>
             <button
