@@ -1402,7 +1402,7 @@
   color: #030712;
 }
 
-.wishlist-btn {
+.product-details .wishlist-btn {
   background: none;
   border: none;
   cursor: pointer;
@@ -1413,12 +1413,12 @@
   align-items: center;
   transition: transform 0.15s;
 }
-.wishlist-btn:hover .wishlist-icon {
+.product-details .wishlist-btn:hover .wishlist-icon {
   transform: scale(1.1);
   filter: drop-shadow(0 2px 8px #eee);
 }
 
-.wishlist-icon {
+.product-details .wishlist-icon {
   width: 32px;
   height: 32px;
   display: block;

@@ -166,7 +166,7 @@ export default function Slider() {
         testImage.src = imageUrl;
         
         return (
-          <div style={{ width: '100px', height: '60px', position: 'relative' }}>
+          <div style={{ width: '150px', height: '100px', position: 'relative' }}>
             {imageUrl ? (
               <img 
                 src={imageUrl}
@@ -516,13 +516,13 @@ export default function Slider() {
                 required={!formData.id}
               />
               {formData.image && (
-                <div style={{ width: '300px', height: '125px', position: 'relative', marginTop: '10px' }}>
+                <div style={{ width: '300px', position: 'relative', marginTop: '10px' }}>
                   <img 
                     src={typeof formData.image === 'string' 
                       ? getImageUrl(formData.image)
                       : URL.createObjectURL(formData.image)} 
                     alt="Slider Preview" 
-                    style={{ width: '100%', objectFit: 'cover' }}
+                    style={{ width: '100%', objectFit: 'contain', height: '400px' }}
                   />
                 </div>
               )}
