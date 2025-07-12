@@ -8,8 +8,9 @@ import { sliderService, categoryService } from "@/services";
 import { debounce } from 'lodash';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../../context/AuthContext';
-import Image from 'next/image';
 import "../../../styles/dashboard/seo.css";
+import "../../../styles/common/TableControls.css";
+import "../../../styles/dashboard/slider.css";
 import { toast } from 'react-hot-toast';
 
 export default function Slider() {
@@ -78,11 +79,11 @@ export default function Slider() {
       if (Array.isArray(response)) {
         setSliders(response);
         console.log('Sliders data:', response);
-        console.log('Image URLs:', response.map(slider => `${process.env.NEXT_PUBLIC_API_URL}${slider.image}`));
+        console.log('Image URLs:', response.map(slider => slider.image));
       } else if (response.sliders && Array.isArray(response.sliders)) {
         setSliders(response.sliders);
         console.log('Sliders data:', response.sliders);
-        console.log('Image URLs:', response.sliders.map(slider => `${process.env.NEXT_PUBLIC_API_URL}${slider.image}`));
+        console.log('Image URLs:', response.sliders.map(slider => slider.image));
       } else {
         console.warn('Unexpected response format:', response);
         setSliders([]);
@@ -129,6 +130,22 @@ export default function Slider() {
     setCurrentPage(1);
   }, [filterValue]);
 
+  // Helper function to get image URL
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return '';
+    console.log('Processing image path:', imagePath);
+    
+    // If the image path contains localhost, replace it with the production URL
+    if (imagePath.includes('localhost:5000')) {
+      const productionUrl = imagePath.replace('http://localhost:5000', 'https://api.crosscoin.in');
+      console.log('Replaced localhost URL with production URL:', productionUrl);
+      return productionUrl;
+    }
+    
+    // The backend already returns the full URL, so just return as is
+    return imagePath;
+  };
+
   // Columns definition
   const columns = [
     {
@@ -138,15 +155,56 @@ export default function Slider() {
     { 
       header: "Image", 
       accessor: "image",
-      cell: ({ image }) => (
-        <div style={{ width: '100px', height: '60px', position: 'relative' }}>
-          <img 
-            src={image}
-            alt="Slider" 
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        </div>
-      )
+      cell: ({ image }) => {
+        const imageUrl = getImageUrl(image);
+        console.log('Image cell rendering:', { image, imageUrl });
+        
+        // Test if the image URL is accessible
+        const testImage = new Image();
+        testImage.onload = () => console.log('Image is accessible:', imageUrl);
+        testImage.onerror = () => console.error('Image is not accessible:', imageUrl);
+        testImage.src = imageUrl;
+        
+        return (
+          <div style={{ width: '100px', height: '60px', position: 'relative' }}>
+            {imageUrl ? (
+              <img 
+                src={imageUrl}
+                alt="Slider" 
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  objectFit: 'cover',
+                  borderRadius: '4px'
+                }}
+                onError={(e) => {
+                  console.error('Image failed to load:', imageUrl);
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+                onLoad={() => {
+                  console.log('Image loaded successfully:', imageUrl);
+                }}
+                crossOrigin="anonymous"
+                data-no-optimize="true"
+              />
+            ) : null}
+            <div style={{ 
+              width: '100%', 
+              height: '100%', 
+              backgroundColor: '#f0f0f0',
+              display: imageUrl ? 'none' : 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '4px',
+              fontSize: '12px',
+              color: '#666'
+            }}>
+              {imageUrl ? 'Failed to load' : 'No Image'}
+            </div>
+          </div>
+        );
+      }
     },
     { header: "Title", accessor: "title" },
     { header: "Description", accessor: "description" },
@@ -220,8 +278,10 @@ export default function Slider() {
         setLoading(true);
         await sliderService.deleteSlider(id);
         await fetchSliders();
+        toast.success("Slider deleted successfully");
       } catch (err) {
         setError(err.message || "Failed to delete slider");
+        toast.error(err.message || "Failed to delete slider");
         console.error("Error deleting slider:", err);
       } finally {
         setLoading(false);
@@ -370,23 +430,7 @@ export default function Slider() {
                     className="w-full"
                     striped={true}
                     hoverable={true}
-                  >
-                    {currentItems.map((slider) => {
-                      const imageUrl = `${process.env.NEXT_PUBLIC_API_URL}${slider.image}`;
-                      console.log('Rendering slider image URL:', imageUrl);
-                      return (
-                        <tr key={slider.id}>
-                          <td>
-                            <img 
-                              src={imageUrl}
-                              alt={slider.title} 
-                              className="seo-image-preview" 
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </Table>
+                  />
                   {filteredData.length > itemsPerPage && (
                     <div className="seo-pagination-container">
                       <Pagination
@@ -475,7 +519,7 @@ export default function Slider() {
                 <div style={{ width: '300px', height: '125px', position: 'relative', marginTop: '10px' }}>
                   <img 
                     src={typeof formData.image === 'string' 
-                      ? formData.image 
+                      ? getImageUrl(formData.image)
                       : URL.createObjectURL(formData.image)} 
                     alt="Slider Preview" 
                     style={{ width: '100%', objectFit: 'cover' }}

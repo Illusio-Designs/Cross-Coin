@@ -47,6 +47,7 @@ export default function ProductDetails() {
   const [coupons, setCoupons] = useState([]);
   const [copiedCoupon, setCopiedCoupon] = useState(null);
   const [isZoomOpen, setIsZoomOpen] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
 
   // Add color selection by name
   const [selectedColor, setSelectedColor] = useState(null);
@@ -654,6 +655,12 @@ export default function ProductDetails() {
 
   const { wishlist } = useWishlist();
 
+  // Calculate star counts for 5-1 stars
+  const starCounts = [5, 4, 3, 2, 1].map(star =>
+    product.reviews ? product.reviews.filter(r => r.rating === star).length : 0
+  );
+  const totalReviews = product.reviews ? product.reviews.length : 0;
+
   return (
     <SeoWrapper
       pageName={product.name || "product-details"}
@@ -718,10 +725,8 @@ export default function ProductDetails() {
                     width: 100,
                     height: 100,
                     objectFit: 'cover',
-                    borderRadius: 4,
                     border: selectedThumbnail === idx ? '2px solid #222' : '1px solid #eee',
-                    cursor: 'pointer',
-                    opacity: selectedThumbnail === idx ? 1 : 0.7
+                    cursor: 'pointer'
                   }}
                   onClick={() => setSelectedThumbnail(idx)}
                 />
@@ -805,6 +810,7 @@ export default function ProductDetails() {
                   <span className="details-value">{attrs.size?.[0] || '-'}</span>
                   </div>
                 </div>
+                
               </div>
             </div>
 
@@ -882,98 +888,125 @@ export default function ProductDetails() {
                 BUY IT NOW
               </button>
             </div>
-          </div>
-        </div>
-        {/* Tabs for Description and Review */}
-        <div className="product-tabs-section">
-          <div className="product-tabs-container">
-            <div className="product-tabs">
-              <button
-                className={`tab${activeTab === "description" ? " active" : ""}`}
-                onClick={() => setActiveTab("description")}
-              >
-                Description
-              </button>
-              <button
-                className={`tab${activeTab === "review" ? " active" : ""}`}
-                onClick={() => setActiveTab("review")}
-              >
-                Review ({product.reviews?.length || 0})
-              </button>
-            </div>
-            {/* Tab Content */}
-            {activeTab === "description" ? (
-              <div className="product-description">
-                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(decodeHtml(product.description || '')) }} />
-              </div>
-            ) : (
-              <div className="product-reviews">
-                {product.has_video_reviews && (
-                  <div className="video-reviews">
-                    <h3>Video Reviews</h3>
-                    <p>Video reviews available</p>
+            {/* Description row added below */}
+            <div className="details-row">
+                  <div>
+                    <div className="details-heading">Description:</div>
+                    <span className="details-value">
+                      <span
+                        dangerouslySetInnerHTML={{
+                          __html: DOMPurify.sanitize(decodeHtml(product.description || "-"))
+                        }}
+                      />
+                    </span>
                   </div>
-                )}
-                
-                {/* Display existing reviews */}
-                <div className="existing-reviews">
-                  <h3>Customer Reviews ({product.reviews?.length || 0})</h3>
-                  {product.reviews && product.reviews.length > 0 ? (
-                    <div className="reviews-list">
-                      {product.reviews.map((review, index) => (
-                        <div key={review.id || index} className="review-item">
-                          <div className="review-header">
-                            <div className="reviewer-info">
-                              <span className="reviewer-name">{review.reviewerName || review.User?.username || review.guestName || 'Anonymous'}</span>
-                              <div className="review-rating">
-                                {Array.from({ length: review.rating }).map((_, i) => (
-                                  <span key={i} className="star">★</span>
-                                ))}
-                              </div>
-                            </div>
-                            <span className="review-date">
-                              {new Date(review.createdAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div className="review-content">
-                            <p className="review-text">{review.review}</p>
-                            {review.ReviewImages && review.ReviewImages.length > 0 && (
-                              <div className="review-images">
-                                {review.ReviewImages.map((image, imgIndex) => (
-                                  <div key={image.id || imgIndex} className="review-image">
-                                    {image.fileType === 'video' ? (
-                                      <video 
-                                        src={forceEnvImageBase(`/uploads/reviews/${image.fileName}`)}
-                                        controls
-                                        style={{ width: '100px', height: '100px', objectFit: 'cover' }}
-                                      />
-                                    ) : (
-                                      <img 
-                                        src={forceEnvImageBase(`/uploads/reviews/${image.fileName}`)}
-                                        alt={`Review image ${imgIndex + 1}`}
-                                        style={{ width: '100px', height: '100px', objectFit: 'cover' }}
-                                      />
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                </div>
+          </div>
+          
+        </div>
+        {/* Review Slider and Review Form (no tabs) */}
+        <div className="product-reviews-section" style={{ margin: '32px 0' }}>
+          <div className="review-header-row">
+            <h2 className="customer-reviews-heading">Customer Reviews</h2>
+            <button
+              className="write-review-btn"
+              onClick={() => setShowReviewForm(true)}
+            >
+              Write a Review
+            </button>
+          </div>
+          <div className="star-breakdown-row">
+            {[5,4,3,2,1].map((star, idx) => (
+              <div className="star-breakdown-item" key={star}>
+                <span className="star-label">{star} <span style={{color:'#f59e42'}}>★</span></span>
+                <span className="star-count">{starCounts[idx]}</span>
+              </div>
+            ))}
+            <span className="total-reviews-label">({totalReviews} reviews)</span>
+          </div>
+          <div
+            className="review-slider"
+            style={{
+              display: 'flex',
+              overflowX: 'auto',
+              gap: '16px',
+              padding: '8px 0',
+              scrollSnapType: 'x mandatory'
+            }}
+          >
+            {(product.reviews && product.reviews.length > 0) ? (
+              product.reviews.map((review, idx) => (
+                <div
+                  key={review.id || idx}
+                  className="review-slide"
+                  style={{
+                    minWidth: '280px',
+                    maxWidth: '320px',
+                    background: '#fafbfc',
+                    border: '1px solid #eee',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    scrollSnapAlign: 'start',
+                    boxShadow: '0 2px 8px #eee'
+                  }}
+                >
+                  <div className="reviewer-name" style={{ fontWeight: 'bold', marginBottom: 4 }}>
+                    {review.reviewerName || review.User?.username || review.guestName || 'Anonymous'}
+                  </div>
+                  <div className="review-stars" style={{ color: '#f59e42', marginBottom: 4 }}>
+                    {Array.from({ length: review.rating }).map((_, i) => (
+                      <span key={i}>★</span>
+                    ))}
+                  </div>
+                  <div className="review-text" style={{ fontSize: 14, marginBottom: 8 }}>
+                    {review.review}
+                  </div>
+                  <div className="review-date" style={{ fontSize: 12, color: '#888' }}>
+                    {new Date(review.createdAt).toLocaleDateString()}
+                  </div>
+                  {review.ReviewImages && review.ReviewImages.length > 0 && (
+                    <div className="review-images" style={{ marginTop: 8, display: 'flex', gap: 4 }}>
+                      {review.ReviewImages.map((image, imgIdx) => (
+                        <img
+                          key={imgIdx}
+                          src={forceEnvImageBase(`/uploads/reviews/${image.fileName}`)}
+                          alt={`Review image ${imgIdx + 1}`}
+                          style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }}
+                        />
                       ))}
                     </div>
-                  ) : (
-                    <p className="no-reviews">No reviews yet. Be the first to review this product!</p>
                   )}
                 </div>
-
-                <div className="review-section">
-                  <h3>Write a Review</h3>
-                  {renderReviewForm()}
-                </div>
-              </div>
+              ))
+            ) : (
+              <div style={{ color: '#888', fontSize: 14 }}>No reviews yet.</div>
             )}
           </div>
+          {showReviewForm && (
+            <div className="review-form-modal">
+              <div className="review-form-modal-content">
+                <button
+                  className="close-modal-btn"
+                  onClick={() => setShowReviewForm(false)}
+                  style={{
+                    position: 'absolute',
+                    top: 12,
+                    right: 16,
+                    background: 'none',
+                    border: 'none',
+                    fontSize: 24,
+                    cursor: 'pointer',
+                    color: '#888'
+                  }}
+                  aria-label="Close"
+                >
+                  &times;
+                </button>
+                <h3>Write a Review</h3>
+                {renderReviewForm()}
+              </div>
+            </div>
+          )}
         </div>
         <Footer />
       </div>

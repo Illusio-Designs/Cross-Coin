@@ -27,8 +27,17 @@ const upload = multer({ storage });
 const formatSliderResponse = (slider) => {
     const sliderData = slider.toJSON();
     sliderData.categoryName = slider.category ? slider.category.name : null;
+    
+    // Debug environment variables
+    console.log('Environment variables:', {
+        API_URL: process.env.API_URL,
+        BACKEND_URL: process.env.BACKEND_URL,
+        NODE_ENV: process.env.NODE_ENV
+    });
+    
     // Add full image path with API URL
-    sliderData.image = `${process.env.API_URL || 'http://localhost:5000'}/uploads/slider/${sliderData.image}`;
+    const baseUrl = process.env.API_URL || process.env.BACKEND_URL || 'https://api.crosscoin.in';
+    sliderData.image = `${baseUrl}/uploads/slider/${sliderData.image}`;
     console.log('Formatted slider image path:', sliderData.image);
     delete sliderData.category;
     return sliderData;
@@ -228,7 +237,7 @@ const getPublicSliders = async (req, res) => {
             sliderData.categoryName = slider.category ? slider.category.name : null;
             sliderData.categorySlug = slider.category ? slider.category.slug : null;
             // Add full image path
-            sliderData.image = `${process.env.API_URL || 'http://localhost:5000'}/uploads/slider/${sliderData.image}`;
+            sliderData.image = `${process.env.API_URL || process.env.BACKEND_URL || 'https://api.crosscoin.in'}/uploads/slider/${sliderData.image}`;
             delete sliderData.category;
             return sliderData;
         });

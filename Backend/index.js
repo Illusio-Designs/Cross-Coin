@@ -27,6 +27,14 @@ const dashboardAnalyticsRouter = require('./integration/dashboardAnalytics.js');
 // Initialize dotenv
 dotenv.config();
 
+// Debug environment variables on startup
+console.log('Environment variables loaded:', {
+    API_URL: process.env.API_URL,
+    BACKEND_URL: process.env.BACKEND_URL,
+    NODE_ENV: process.env.NODE_ENV,
+    PORT: process.env.PORT
+});
+
 const app = express();
 
 // CORS middleware
