@@ -666,7 +666,7 @@ export default function ProductDetails() {
       <div className="product-details-container">
         <Header />
         <div className="product-details">
-          <div className="product-gallery" style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div className="product-gallery" style={{ textAlign: 'center' }}>
             <div style={{ position: 'relative', display: 'inline-block' }}>
               <img
                 src={forceEnvImageBase(
@@ -675,7 +675,7 @@ export default function ProductDetails() {
                   variationImages[selectedThumbnail]
                 )}
                 alt={variationImages[selectedThumbnail]?.alt_text || product.name}
-                style={{ width: 500, objectFit: 'contain', boxShadow: '0 2px 8px #eee' }}
+                style={{ width: '100%', height: '400px', objectFit: 'contain', boxShadow: '0 2px 8px #eee' }}
                 onClick={() => setIsZoomOpen(true)}
               />
               {/* Zoom button overlay */}

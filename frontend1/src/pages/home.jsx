@@ -49,6 +49,7 @@ const Home = () => {
   const [exclusiveStates, setExclusiveStates] = useState([]);
   const [exclusiveReviewCounts, setExclusiveReviewCounts] = useState([]);
   const [exclusiveAvgRatings, setExclusiveAvgRatings] = useState([]);
+  const [exclusiveSelectedSkus, setExclusiveSelectedSkus] = useState([]);
   
   const categorySliderRef = useRef(null);
   const latestSliderRef = useRef(null);
@@ -75,6 +76,14 @@ const Home = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [currentCategoryProducts, latestProducts]);
+
+  // Reset thumbnail when selected SKU changes for exclusive products
+  useEffect(() => {
+    setExclusiveStates(prev => prev.map((state, index) => ({
+      ...state,
+      selectedThumbnail: 0
+    })));
+  }, [exclusiveSelectedSkus]);
 
   useEffect(() => {
     const fetchSliders = async () => {
@@ -131,11 +140,30 @@ const Home = () => {
         );
         const data = await response.json();
         if (data.success && data.data.products) {
-          setExclusiveProducts(data.data.products);
-          setExclusiveStates(data.data.products.map(() => ({ selectedThumbnail: 0, selectedColor: '', selectedSize: '', quantity: 1 })));
+          // Fetch full details for each product using getPublicProductBySlug
+          const detailedProducts = await Promise.all(
+            data.data.products.map(async (product) => {
+              try {
+                // Import here to avoid circular import issues
+                const { getPublicProductBySlug } = await import('../services/publicindex');
+                const detailResp = await getPublicProductBySlug(product.slug);
+                if (detailResp && detailResp.success && detailResp.data) {
+                  return detailResp.data;
+                }
+                return product; // fallback to original if failed
+              } catch {
+                return product;
+              }
+            })
+          );
+          setExclusiveProducts(detailedProducts);
+          setExclusiveStates(detailedProducts.map(() => ({ selectedThumbnail: 0, selectedColor: '', selectedSize: '', quantity: 1 })));
+          setExclusiveSelectedSkus(detailedProducts.map(product => 
+            product.variations && product.variations.length > 0 ? product.variations[0].sku : ''
+          ));
           // Fetch review counts and average ratings for each product
           const reviewStats = await Promise.all(
-            data.data.products.map(async (product) => {
+            detailedProducts.map(async (product) => {
               try {
                 const reviewData = await getPublicProductReviews(product.id, { limit: 10 });
                 const count = reviewData.total || (reviewData.reviews ? reviewData.reviews.length : 0);
@@ -156,6 +184,7 @@ const Home = () => {
           setExclusiveStates([]);
           setExclusiveReviewCounts([]);
           setExclusiveAvgRatings([]);
+          setExclusiveSelectedSkus([]);
         }
       } catch (error) {
         setExclusiveProducts([]);
@@ -317,12 +346,12 @@ const Home = () => {
     });
   };
 
-  const handleBuyNow = () => {
-    if (!selectedColor || !selectedSize) {
+  const handleBuyNow = (product, state) => {
+    if (!state.selectedColor || !state.selectedSize) {
       alert('Please select both color and size');
       return;
     }
-    addToCart(product, selectedColor, selectedSize, quantity);
+    addToCart(product, state.selectedColor, state.selectedSize, state.quantity);
     router.push('/checkout');
     fbqTrack('InitiateCheckout', {
       content_ids: [product.id],
@@ -330,7 +359,7 @@ const Home = () => {
       content_type: 'product',
       value: product.price,
       currency: 'INR',
-      quantity,
+      quantity: state.quantity,
     });
   };
 
@@ -559,27 +588,14 @@ const Home = () => {
             <div className="featured-products-slider" ref={exclusiveSliderRef}>
               {exclusiveProducts.map((product, index) => {
                 const state = exclusiveStates[index] || { selectedThumbnail: 0, selectedColor: '', selectedSize: '', quantity: 1 };
-                const images = product.images && product.images.length > 0 ? product.images.map(img => img.image_url) : ['/assets/card1-left.webp'];
-                // Defensive: handle variations/attributes
-                const variation = product.variations && product.variations[0] ? product.variations[0] : {};
-                let colors = [];
-                let sizes = [];
-                if (variation.attributes) {
-                  if (typeof variation.attributes === 'string') {
-                    try {
-                      const attrs = JSON.parse(variation.attributes);
-                      colors = attrs.color || [];
-                      sizes = attrs.size || [];
-                    } catch {
-                      colors = [];
-                      sizes = [];
-                    }
-                  } else {
-                    colors = variation.attributes.color || [];
-                    sizes = variation.attributes.size || [];
-                  }
-                }
-                // Use fetched review count and avg rating if available
+                const selectedSku = exclusiveSelectedSkus[index] || '';
+                const selectedVariation = product.variations?.find(v => v.sku === selectedSku) || product.variations?.[0];
+                const variationImages = selectedVariation?.images && selectedVariation.images.length > 0
+                  ? selectedVariation.images.map(img => img.image_url)
+                  : (product.images && product.images.length > 0 ? product.images.map(img => img.image_url) : ['/assets/card1-left.webp']);
+                const attrs = selectedVariation && typeof selectedVariation.attributes === 'string'
+                  ? JSON.parse(selectedVariation.attributes)
+                  : selectedVariation?.attributes || {};
                 const reviewCount = exclusiveReviewCounts[index] !== undefined ? exclusiveReviewCounts[index] : 0;
                 const avgRating = exclusiveAvgRatings[index] !== undefined ? exclusiveAvgRatings[index] : 0;
                 return (
@@ -587,7 +603,7 @@ const Home = () => {
                     <div className="product-images">
                       <Image
                         className="main-image"
-                        src={forceEnvImageBase(images[state.selectedThumbnail])}
+                        src={forceEnvImageBase(variationImages[state.selectedThumbnail])}
                         alt={product.name}
                         width={400}
                         height={400}
@@ -595,7 +611,7 @@ const Home = () => {
                         unoptimized
                       />
                       <div className="thumbnail-images">
-                        {images.map((src, idx) => (
+                        {variationImages.map((src, idx) => (
                           <Image
                             key={idx}
                             src={forceEnvImageBase(src)}
@@ -613,62 +629,82 @@ const Home = () => {
                       </div>
                     </div>
                     <div className="product-info">
-                      <h3>{product.name}</h3>
-                      <div className="product-rating-row">
-                        <span className="stars">{renderStars(avgRating)}</span>
-                        <span className="rating-value">{parseFloat(avgRating).toFixed(1)}</span>
-                        <span className="review-count">({reviewCount} reviews)</span>
-                      </div>
-                      <div className="product-price-row">
-                        <span className="current-price">₹{product.price || (variation.price) || ''}</span>
-                        <span className="original-price">{product.comparePrice || variation.comparePrice ? `₹${product.comparePrice || variation.comparePrice}` : ''}</span>
-                      </div>
-                      <div className="product-options">
-                        <div className="colors">
-                          <span className="option-label">Colors</span>
-                          <div className="color-options">
-                            {colors.length > 0 ? colors.map((color) => (
-                              <button
-                                key={color}
-                                className={`color-option${state.selectedColor === color ? ' selected' : ''}`}
-                                style={{ backgroundColor: color }}
-                                onClick={() => setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, selectedColor: color } : s))}
-                              >
-                                {state.selectedColor === color && <span className="color-check">✔</span>}
-                              </button>
-                            )) : <span style={{ fontSize: '0.9em', color: '#888' }}>N/A</span>}
+                      {/* Title, price, review, wishlist */}
+                      <div className="product-title-row">
+                        <div>
+                          <h1 className="product-title">{product.name}</h1>
+                          <div className="product-price-row">
+                            <span className="current-price">₹{selectedVariation.price}</span>
+                            {selectedVariation.comparePrice && (
+                              <span className="original-price">₹{selectedVariation.comparePrice}</span>
+                            )}
+                            <span className="review-summary">
+                              <span className="stars">{renderStars(avgRating)}</span>
+                              <span className="rating-value">{parseFloat(avgRating || 0).toFixed(1)}</span>
+                              <span className="review-count">({reviewCount} reviews)</span>
+                            </span>
                           </div>
                         </div>
-                        <div className="sizes">
-                          <span className="option-label">Size</span>
-                          <div className="size-options">
-                            {sizes.length > 0 ? sizes.map((size) => (
-                              <button
-                                key={size}
-                                className={`size-option${state.selectedSize === size ? ' selected' : ''}`}
-                                onClick={() => setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, selectedSize: size } : s))}
-                              >
-                                {size}
-                              </button>
-                            )) : <span style={{ fontSize: '0.9em', color: '#888' }}>N/A</span>}
+                        {/* Wishlist icon (optional, if you have wishlist context on home) */}
+                      </div>
+                      {/* Details section */}
+                      <div className="product-details-section">
+                        <div className="details-heading">Details</div>
+                        <div className="details-table">
+                          <div className="details-row">
+                            <div>
+                              <span className="details-label">Type:</span>
+                              <span className="details-value">{attrs.type?.[0] || '-'}</span>
+                            </div>
+                            <div>
+                              <span className="details-label">Color:</span>
+                              <span className="details-value">{attrs.color?.[0] || '-'}</span>
+                            </div>
+                            <div>
+                              <span className="details-label">Size:</span>
+                              <span className="details-value">{attrs.size?.[0] || '-'}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                      <div className="product-action-box">
-                        <div className="quantity-and-buttons">
-                          <div className="quantity-box">
-                            <button onClick={() => setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, quantity: Math.max(1, s.quantity - 1) } : s))} className="quantity-btn">-</button>
-                            <span className="quantity-value">{state.quantity}</span>
-                            <button onClick={() => setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, quantity: s.quantity + 1 } : s))} className="quantity-btn">+</button>
-                          </div>
-                          <button className="add-to-cart" onClick={e => handleAddToCart(e, product)}>
-                            Add to cart
-                          </button>
-                          <button className="buy-now" onClick={() => handleBuyNow(product, state)}>
-                            Buy Now
-                          </button>
+                      {/* Models/SKU buttons row */}
+                      <div className="model-btn-row">
+                        <div>
+                          <div className="details-heading">Models</div>
+                        </div>
+                        <div className="variation-button">
+                          {product.variations.map(variation => (
+                            <button
+                              key={variation.sku}
+                              className={`model-btn${selectedSku === variation.sku ? ' selected' : ''}`}
+                              onClick={() => {
+                                setExclusiveSelectedSkus(prev => prev.map((sku, i) => i === index ? variation.sku : sku));
+                              }}
+                            >
+                              {variation.sku}
+                            </button>
+                          ))}
                         </div>
                       </div>
+                     
+                      {/* Quantity and Action Buttons Section */}
+                      <div className="quantity-section">
+                        <div className="details-heading">Quantity:</div>
+                        <div className="quantity-box">
+                          <button className="quantity-btn" onClick={() => setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, quantity: Math.max(1, s.quantity - 1) } : s))}>-</button>
+                          <span className="quantity-value">{state.quantity}</span>
+                          <button className="quantity-btn" onClick={() => setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, quantity: s.quantity + 1 } : s))}>+</button>
+                        </div>
+                      </div>
+                      <div className="action-buttons-row">
+                        <button className="add-to-cart-btn" onClick={e => handleAddToCart(e, product)}>
+                          ADD TO CART
+                        </button>
+                        <button className="buy-now-btn" onClick={() => handleBuyNow(product, state)}>
+                          BUY IT NOW
+                        </button>
+                      </div>
+                      
                     </div>
                   </div>
                 );
