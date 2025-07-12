@@ -15,9 +15,6 @@ const { setupDatabase } = require('./scripts/setupDatabase.js');
 const corsOptions = require('./config/corsConfig.js');
 const { sendFacebookEvent } = require('./integration/facebookPixel.js');
 
-// Get the directory name of the current module
-// In CommonJS, __filename and __dirname are already available
-
 // Import routes
 const googleAnalyticsRouter = require('./integration/googleAnalytics.js');
 const facebookPixelRouter = require('./integration/facebookPixel.js');
@@ -32,7 +29,9 @@ console.log('Environment variables loaded:', {
     API_URL: process.env.API_URL,
     BACKEND_URL: process.env.BACKEND_URL,
     NODE_ENV: process.env.NODE_ENV,
-    PORT: process.env.PORT
+    PORT: process.env.PORT,
+    DB_HOST: process.env.DB_HOST,
+    DB_DATABASE: process.env.DB_DATABASE
 });
 
 const app = express();
@@ -43,24 +42,43 @@ app.use(cors(corsOptions));
 // Handle preflight requests
 app.options('*', cors(corsOptions));
 
-// Body parsing middleware
-app.use(express.json({ limit: '5mb' }));
-app.use(express.urlencoded({ extended: true, limit: '5mb' }));
+// Body parsing middleware with increased limits for production
+app.use(express.json({ 
+    limit: process.env.MAX_FILE_SIZE || '5mb',
+    verify: (req, res, buf) => {
+        req.rawBody = buf;
+    }
+}));
+app.use(express.urlencoded({ 
+    extended: true, 
+    limit: process.env.MAX_FILE_SIZE || '5mb' 
+}));
 app.use(cookieParser());
-app.use(morgan('dev'));
+
+// Logging middleware
+if (process.env.NODE_ENV === 'production') {
+    app.use(morgan('combined'));
+} else {
+    app.use(morgan('dev'));
+}
 
 // Redis session store setup
 let sessionStore;
 if (process.env.NODE_ENV === 'production' && process.env.REDIS_URL) {
-  const RedisStore = require('connect-redis')(session);
-  const redis = require('redis');
-  const redisClient = redis.createClient({ url: process.env.REDIS_URL });
-  redisClient.connect().catch(console.error);
-  sessionStore = new RedisStore({ client: redisClient });
-  console.log('Using Redis for session storage.');
+    try {
+        const RedisStore = require('connect-redis')(session);
+        const redis = require('redis');
+        const redisClient = redis.createClient({ url: process.env.REDIS_URL });
+        redisClient.connect().catch(console.error);
+        sessionStore = new RedisStore({ client: redisClient });
+        console.log('Using Redis for session storage.');
+    } catch (error) {
+        console.warn('Redis not available, falling back to MemoryStore:', error.message);
+        sessionStore = undefined;
+    }
 } else {
-  sessionStore = undefined; // Use default MemoryStore in development
-  console.log('Using MemoryStore for session storage (development only).');
+    sessionStore = undefined; // Use default MemoryStore in development
+    console.log('Using MemoryStore for session storage (development only).');
 }
 
 // Session configuration
@@ -71,7 +89,9 @@ app.use(session({
     saveUninitialized: false,
     cookie: {
         secure: process.env.NODE_ENV === 'production',
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'
     }
 }));
 
@@ -80,7 +100,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Create uploads directory if it doesn't exist
-const uploadsDir = join(__dirname, 'uploads');
+const uploadsDir = join(__dirname, process.env.UPLOAD_PATH || 'uploads');
 const seoUploadsDir = join(uploadsDir, 'seo');
 
 if (!fs.existsSync(uploadsDir)) {
@@ -91,20 +111,51 @@ if (!fs.existsSync(seoUploadsDir)) {
 }
 
 // Serve static files
-app.use('/uploads', express.static(join(__dirname, 'uploads')));
+app.use('/uploads', express.static(uploadsDir));
 
-// Health check API endpoint
-app.get('/api/health', (req, res) => {
-    const healthData = {
-        uptime: process.uptime(),
-        timestamp: Date.now(),
-        status: 'ok',
-        database: {
-            status: sequelize.authenticate().then(() => 'connected').catch(() => 'disconnected')
-        }
-    };
-    
-    res.status(200).json(healthData);
+// Enhanced health check API endpoint
+app.get('/api/health', async (req, res) => {
+    try {
+        const dbStatus = await sequelize.authenticate()
+            .then(() => 'connected')
+            .catch(() => 'disconnected');
+        
+        const healthData = {
+            uptime: process.uptime(),
+            timestamp: Date.now(),
+            status: 'ok',
+            environment: process.env.NODE_ENV,
+            version: process.env.npm_package_version || '1.0.0',
+            database: {
+                status: dbStatus,
+                host: process.env.DB_HOST,
+                database: process.env.DB_DATABASE
+            },
+            memory: {
+                used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+                total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024)
+            }
+        };
+        
+        res.status(200).json(healthData);
+    } catch (error) {
+        console.error('Health check error:', error);
+        res.status(503).json({
+            status: 'error',
+            message: 'Service unavailable',
+            timestamp: Date.now()
+        });
+    }
+});
+
+// Root endpoint for basic connectivity test
+app.get('/', (req, res) => {
+    res.json({
+        message: 'CrossCoin API is running',
+        version: process.env.npm_package_version || '1.0.0',
+        environment: process.env.NODE_ENV,
+        timestamp: new Date().toISOString()
+    });
 });
 
 // Mount all routes under /api
@@ -118,21 +169,61 @@ app.use('/api/dashboard', dashboardAnalyticsRouter);
 
 // Endpoint to receive Facebook Pixel events from frontend and sync server-side
 app.post('/api/facebook-pixel', async (req, res) => {
-  const { event, order } = req.body;
-  if (!event || !order) {
-    return res.status(400).json({ success: false, message: 'Event and order are required' });
-  }
-  try {
-    await sendFacebookEvent(event, order);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
+    const { event, order } = req.body;
+    if (!event || !order) {
+        return res.status(400).json({ success: false, message: 'Event and order are required' });
+    }
+    try {
+        await sendFacebookEvent(event, order);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Facebook Pixel error:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
 });
 
-// Error handling middleware
+// 404 handler
+app.use('*', (req, res) => {
+    res.status(404).json({
+        success: false,
+        message: 'API endpoint not found',
+        path: req.originalUrl
+    });
+});
+
+// Enhanced error handling middleware
 app.use((err, req, res, next) => {
     console.error('Error:', err);
+    
+    // Log additional error details in production
+    if (process.env.NODE_ENV === 'production') {
+        console.error('Error details:', {
+            url: req.url,
+            method: req.method,
+            ip: req.ip,
+            userAgent: req.get('User-Agent'),
+            timestamp: new Date().toISOString()
+        });
+    }
+    
+    // Handle specific error types
+    if (err.name === 'SequelizeConnectionError') {
+        return res.status(503).json({
+            success: false,
+            message: 'Database connection error',
+            error: process.env.NODE_ENV === 'development' ? err.message : 'Service temporarily unavailable'
+        });
+    }
+    
+    if (err.name === 'ValidationError') {
+        return res.status(400).json({
+            success: false,
+            message: 'Validation error',
+            errors: err.errors
+        });
+    }
+    
+    // Default error response
     res.status(err.status || 500).json({
         success: false,
         message: err.message || 'Something went wrong!',
@@ -144,18 +235,51 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
     try {
+        console.log('Starting CrossCoin API server...');
+        console.log(`Environment: ${process.env.NODE_ENV}`);
+        console.log(`Port: ${PORT}`);
+        
+        // Test database connection first
+        console.log('Testing database connection...');
+        await sequelize.authenticate();
+        console.log('✓ Database connection successful');
+        
         // Create all tables
+        console.log('Setting up database...');
         await setupDatabase();
-
-        // Now it's safe to initialize SEO data
+        console.log('✓ Database setup completed');
+        
+        // Initialize SEO data
+        console.log('Initializing SEO data...');
         await initializeSeoData();
+        console.log('✓ SEO data initialized');
         
         // Start server
-        app.listen(PORT, () => {
-            console.log(`Server is running on port ${PORT}`);
+        const server = app.listen(PORT, () => {
+            console.log(`✓ Server is running on port ${PORT}`);
+            console.log(`✓ Health check available at: http://localhost:${PORT}/api/health`);
+            console.log(`✓ API base URL: http://localhost:${PORT}/api`);
         });
+        
+        // Graceful shutdown
+        process.on('SIGTERM', () => {
+            console.log('SIGTERM received, shutting down gracefully');
+            server.close(() => {
+                console.log('Process terminated');
+                process.exit(0);
+            });
+        });
+        
+        process.on('SIGINT', () => {
+            console.log('SIGINT received, shutting down gracefully');
+            server.close(() => {
+                console.log('Process terminated');
+                process.exit(0);
+            });
+        });
+        
     } catch (error) {
-        console.error('Failed to start server:', error);
+        console.error('❌ Failed to start server:', error);
         process.exit(1);
     }
 };
