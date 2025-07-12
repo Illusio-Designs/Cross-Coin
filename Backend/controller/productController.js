@@ -42,7 +42,7 @@ const formatProductResponse = (product) => {
                 attributes: variation.attributes
             };
             // Attach variation images if present
-            if (variation.VariationImages) {
+            if (variation.VariationImages && variation.VariationImages.length > 0) {
                 variationObj.images = variation.VariationImages.map(image => ({
                     id: image.id,
                     image_url: image.image_url.split('/').pop(),
@@ -175,10 +175,30 @@ module.exports.createProduct = async (req, res) => {
         console.log('Request Body:', JSON.stringify(req.body, null, 2));
         console.log('Files:', req.files ? req.files.map(f => ({
             filename: f.filename,
+            fieldname: f.fieldname,
             originalname: f.originalname,
             mimetype: f.mimetype,
             size: f.size
         })) : 'No files');
+        
+        // Debug: Show which images are variation images
+        if (req.files && req.files.length > 0) {
+            console.log('\n=== IMAGE ANALYSIS ===');
+            const variationImages = req.files.filter(f => f.fieldname.match(/^variation_(\d+)_image$/));
+            const productImages = req.files.filter(f => !f.fieldname.match(/^variation_(\d+)_image$/));
+            
+            console.log(`Total images: ${req.files.length}`);
+            console.log(`Variation images: ${variationImages.length}`);
+            console.log(`Product-level images: ${productImages.length}`);
+            
+            if (variationImages.length > 0) {
+                console.log('Variation images found:');
+                variationImages.forEach(img => {
+                    const match = img.fieldname.match(/^variation_(\d+)_image$/);
+                    console.log(`  - ${img.filename} (${img.fieldname}) -> variation ${match[1]}`);
+                });
+            }
+        }
 
         // Parse form data
         const name = req.body.name?.trim();
@@ -283,7 +303,13 @@ module.exports.createProduct = async (req, res) => {
         // Handle variations with attributes
         if (variations && variations.length > 0) {
             console.log('\n=== CREATING VARIATIONS ===');
-            for (const variation of variations) {
+            console.log(`Total variations to create: ${variations.length}`);
+            console.log('Variations data:', JSON.stringify(variations.map((v, idx) => ({ index: idx, sku: v.sku })), null, 2));
+            
+            for (let i = 0; i < variations.length; i++) {
+                const variation = variations[i];
+                console.log(`\n--- Processing Variation ${i + 1}/${variations.length} ---`);
+                console.log(`Variation index: ${i}, SKU: ${variation.sku}`);
                 if (!variation.price || isNaN(variation.price) || variation.price <= 0) {
                     throw new Error('Invalid price for variation');
                 }
@@ -310,12 +336,19 @@ module.exports.createProduct = async (req, res) => {
 
                 // Associate images with the variation if provided
                 if (images && images.length > 0) {
+                    console.log(`\n=== PROCESSING IMAGES FOR VARIATION ${variation.sku} (index ${i}) ===`);
+                    
                     for (const image of images) {
                         // Check if this image is for a variation
                         const match = image.fieldname.match(/^variation_(\d+)_image$/);
                         if (match) {
                             const variationIdx = parseInt(match[1], 10);
-                            if (variations[variationIdx] && variations[variationIdx].sku === variation.sku) {
+                            
+                            console.log(`Image ${image.filename}: fieldname=${image.fieldname}, variationIdx=${variationIdx}, currentVariationIndex=${i}`);
+                            
+                            // Check if this image belongs to the current variation by index
+                            if (variationIdx === i) {
+                                console.log(`✓ ASSIGNING image ${image.filename} to variation ${variation.sku} (index ${variationIdx})`);
                                 await ProductImage.create({
                                     product_id: product.id,
                                     product_variation_id: variationRecord.id,
@@ -325,6 +358,9 @@ module.exports.createProduct = async (req, res) => {
                                     is_primary: false,
                                     status: 'active'
                                 }, { transaction });
+                                console.log(`✓ SUCCESS: Image ${image.filename} assigned to variation ${variation.sku} with variation_id=${variationRecord.id}`);
+                            } else {
+                                console.log(`✗ SKIPPING image ${image.filename} - belongs to variation ${variationIdx}, but processing variation ${i}`);
                             }
                         }
                     }
@@ -336,30 +372,38 @@ module.exports.createProduct = async (req, res) => {
         const badge = await calculateProductBadge(product, transaction);
         await product.update({ badge }, { transaction });
 
-        // Handle product-level images
+        // Handle product-level images (only images that are NOT variation images)
         if (images && images.length > 0) {
             console.log('\n=== PROCESSING PRODUCT-LEVEL IMAGES ===');
-            console.log('Total product-level images to process:', images.length);
             
-            // Create an array of image creation promises
-            const imagePromises = images.map(async (image, index) => {
-                console.log(`Processing product-level image ${index + 1}:`, image.originalname);
-                const imageRecord = await ProductImage.create({
-                    product_id: product.id,
-                    product_variation_id: null, // Explicitly set to null for product-level images
-                    image_url: `/uploads/products/${image.filename}`,
-                    alt_text: name,
-                    display_order: index,
-                    is_primary: index === 0,
-                    status: 'active'
-                }, { transaction });
-                console.log(`Product-level image ${index + 1} created with ID:`, imageRecord.id);
-                return imageRecord;
-            });
+            // Filter out variation images - only process images that don't match variation_*_image pattern
+            const productLevelImages = images.filter(image => !image.fieldname.match(/^variation_(\d+)_image$/));
+            
+            console.log('Total product-level images to process:', productLevelImages.length);
+            
+            if (productLevelImages.length > 0) {
+                // Create an array of image creation promises
+                const imagePromises = productLevelImages.map(async (image, index) => {
+                    console.log(`Processing product-level image ${index + 1}:`, image.originalname);
+                    const imageRecord = await ProductImage.create({
+                        product_id: product.id,
+                        product_variation_id: null, // Explicitly set to null for product-level images
+                        image_url: `/uploads/products/${image.filename}`,
+                        alt_text: name,
+                        display_order: index,
+                        is_primary: index === 0,
+                        status: 'active'
+                    }, { transaction });
+                    console.log(`Product-level image ${index + 1} created with ID:`, imageRecord.id);
+                    return imageRecord;
+                });
 
-            // Wait for all product-level images to be created
-            await Promise.all(imagePromises);
-            console.log('All product-level images processed successfully');
+                // Wait for all product-level images to be created
+                await Promise.all(imagePromises);
+                console.log('All product-level images processed successfully');
+            } else {
+                console.log('No product-level images to process');
+            }
         }
 
         await transaction.commit();
@@ -491,10 +535,30 @@ module.exports.updateProduct = async (req, res) => {
         console.log('Request Body:', JSON.stringify(req.body, null, 2));
         console.log('Files:', req.files ? req.files.map(f => ({
             filename: f.filename,
+            fieldname: f.fieldname,
             originalname: f.originalname,
             mimetype: f.mimetype,
             size: f.size
         })) : 'No files');
+        
+        // Debug: Show which images are variation images
+        if (req.files && req.files.length > 0) {
+            console.log('\n=== IMAGE ANALYSIS FOR UPDATE ===');
+            const variationImages = req.files.filter(f => f.fieldname.match(/^variation_(\d+)_image$/));
+            const productImages = req.files.filter(f => !f.fieldname.match(/^variation_(\d+)_image$/));
+            
+            console.log(`Total images: ${req.files.length}`);
+            console.log(`Variation images: ${variationImages.length}`);
+            console.log(`Product-level images: ${productImages.length}`);
+            
+            if (variationImages.length > 0) {
+                console.log('Variation images found:');
+                variationImages.forEach(img => {
+                    const match = img.fieldname.match(/^variation_(\d+)_image$/);
+                    console.log(`  - ${img.filename} (${img.fieldname}) -> variation ${match[1]}`);
+                });
+            }
+        }
 
         // Parse form data
         const name = req.body.name?.trim();
@@ -604,7 +668,11 @@ module.exports.updateProduct = async (req, res) => {
             });
 
             // Create new variations
-            for (const variation of variations) {
+            for (let i = 0; i < variations.length; i++) {
+                const variation = variations[i];
+                console.log(`\n--- Processing Variation ${i + 1}/${variations.length} for UPDATE ---`);
+                console.log(`Variation index: ${i}, SKU: ${variation.sku}`);
+                
                 if (!variation.price || isNaN(variation.price) || variation.price <= 0) {
                     throw new Error('Invalid price for variation');
                 }
@@ -628,12 +696,19 @@ module.exports.updateProduct = async (req, res) => {
 
                 // Associate images with the variation if provided
                 if (images && images.length > 0) {
+                    console.log(`\n=== PROCESSING IMAGES FOR VARIATION ${variation.sku} (index ${i}) ===`);
+                    
                     for (const image of images) {
                         // Check if this image is for a variation
                         const match = image.fieldname.match(/^variation_(\d+)_image$/);
                         if (match) {
                             const variationIdx = parseInt(match[1], 10);
-                            if (variations[variationIdx] && variations[variationIdx].sku === variation.sku) {
+                            
+                            console.log(`Image ${image.filename}: fieldname=${image.fieldname}, variationIdx=${variationIdx}, currentVariationIndex=${i}`);
+                            
+                            // Check if this image belongs to the current variation by index
+                            if (variationIdx === i) {
+                                console.log(`✓ ASSIGNING image ${image.filename} to variation ${variation.sku} (index ${variationIdx})`);
                                 await ProductImage.create({
                                     product_id: product.id,
                                     product_variation_id: variationRecord.id, // Associate with specific variation
@@ -643,6 +718,9 @@ module.exports.updateProduct = async (req, res) => {
                                     is_primary: false, // Variation images are not primary
                                     status: 'active'
                                 }, { transaction });
+                                console.log(`✓ SUCCESS: Image ${image.filename} assigned to variation ${variation.sku} with variation_id=${variationRecord.id}`);
+                            } else {
+                                console.log(`✗ SKIPPING image ${image.filename} - belongs to variation ${variationIdx}, but processing variation ${i}`);
                             }
                         }
                     }
@@ -654,37 +732,45 @@ module.exports.updateProduct = async (req, res) => {
         const badge = await calculateProductBadge(product, transaction);
         await product.update({ badge }, { transaction });
 
-        // Handle images
+        // Handle product-level images (only images that are NOT variation images)
         if (images && images.length > 0) {
-            // Delete existing images from storage
-            if (product.ProductImages && product.ProductImages.length > 0) {
-                for (const image of product.ProductImages) {
-                    const imagePath = path.join(__dirname, '../uploads/products', image.image_url.split('/').pop());
-                    try {
-                        await fs.unlink(imagePath);
-                    } catch (error) {
-                        console.error('Error deleting image file:', error);
+            // Filter out variation images - only process images that don't match variation_*_image pattern
+            const productLevelImages = images.filter(image => !image.fieldname.match(/^variation_(\d+)_image$/));
+            
+            if (productLevelImages.length > 0) {
+                // Delete existing product-level images from storage
+                if (product.ProductImages && product.ProductImages.length > 0) {
+                    for (const image of product.ProductImages) {
+                        const imagePath = path.join(__dirname, '../uploads/products', image.image_url.split('/').pop());
+                        try {
+                            await fs.unlink(imagePath);
+                        } catch (error) {
+                            console.error('Error deleting image file:', error);
+                        }
                     }
                 }
-            }
 
-            // Delete existing images from database
-            await ProductImage.destroy({
-                where: { product_id: id },
-                transaction
-            });
+                // Delete existing product-level images from database
+                await ProductImage.destroy({
+                    where: { 
+                        product_id: id,
+                        product_variation_id: null // Only delete product-level images
+                    },
+                    transaction
+                });
 
-            // Create new images
-            for (const [index, image] of images.entries()) {
-                await ProductImage.create({
-                    product_id: product.id,
-                    product_variation_id: null, // Explicitly set to null for product-level images
-                    image_url: `/uploads/products/${image.filename}`,
-                    alt_text: name,
-                    display_order: index,
-                    is_primary: index === 0,
-                    status: 'active'
-                }, { transaction });
+                // Create new product-level images
+                for (const [index, image] of productLevelImages.entries()) {
+                    await ProductImage.create({
+                        product_id: product.id,
+                        product_variation_id: null, // Explicitly set to null for product-level images
+                        image_url: `/uploads/products/${image.filename}`,
+                        alt_text: name,
+                        display_order: index,
+                        is_primary: index === 0,
+                        status: 'active'
+                    }, { transaction });
+                }
             }
         }
 
@@ -901,7 +987,13 @@ module.exports.getPublicProductBySlug = async (req, res) => {
             where: { slug },
             include: [
                 { model: Category },
-                { model: ProductVariation, as: 'ProductVariations' },
+                { 
+                    model: ProductVariation, 
+                    as: 'ProductVariations',
+                    include: [
+                        { model: ProductImage, as: 'VariationImages' }
+                    ]
+                },
                 { model: ProductImage, as: 'ProductImages' },
                 { model: ProductSEO, as: 'ProductSEO' },
                 {
@@ -940,32 +1032,40 @@ module.exports.getPublicProductBySlug = async (req, res) => {
         if (formattedProduct.images) {
             formattedProduct.images = formattedProduct.images.map(image => ({
                 ...image,
-                image_url: `${process.env.BACKEND_URL || 'http://localhost:5000'}/uploads/products/${image.image_url}`
+                image_url: image.image_url.startsWith('http')
+                  ? image.image_url
+                  : `${process.env.BACKEND_URL || 'http://localhost:5000'}${image.image_url.startsWith('/uploads/') ? '' : '/uploads/products/'}${image.image_url}`
             }));
         } else {
             formattedProduct.images = [];
         }
 
-        // For each variation, attach its images (use formattedProduct, not product)
-        if (formattedProduct.variations && formattedProduct.images) {
-          formattedProduct.variations = formattedProduct.variations.map((variation, idx) => {
-            // Try to get images for this variation
-            let images = formattedProduct.images.filter(img => img.product_variation_id === variation.id);
-            // If no images for this variation, fall back to product-level images
-            if (images.length === 0) {
-              images = formattedProduct.images.filter(img => img.product_variation_id === null);
-            }
-            // Fallback: If all images are present in every variation, assign only 3 images per variation by index
-            if (images.length === formattedProduct.variations.length * 3) {
-              images = formattedProduct.images.slice(idx * 3, idx * 3 + 3);
+        // For each variation, attach its images and add full URLs
+        if (formattedProduct.variations) {
+          formattedProduct.variations = formattedProduct.variations.map((variation) => {
+            let images = [];
+            // If variation has its own images, use only those
+            if (variation.images && variation.images.length > 0) {
+              images = variation.images.map(image => ({
+                ...image,
+                image_url: image.image_url.startsWith('http')
+                  ? image.image_url
+                  : `${process.env.BACKEND_URL || 'http://localhost:5000'}${image.image_url.startsWith('/uploads/') ? '' : '/uploads/products/'}${image.image_url}`
+              }));
+            } else if (formattedProduct.images) {
+              // Only if no variation images, use product-level images
+              images = formattedProduct.images.map(image => ({
+                ...image,
+                image_url: image.image_url.startsWith('http')
+                  ? image.image_url
+                  : `${process.env.BACKEND_URL || 'http://localhost:5000'}${image.image_url.startsWith('/uploads/') ? '' : '/uploads/products/'}${image.image_url}`
+              }));
             }
             return {
               ...variation,
               images
             };
           });
-          // Remove the top-level images array after assigning to variations
-          delete formattedProduct.images;
         }
 
         // Format reviews
@@ -1068,7 +1168,9 @@ module.exports.getAllPublicProducts = async (req, res) => {
             if (formattedProduct.images) {
                 formattedProduct.images = formattedProduct.images.map(image => ({
                     ...image,
-                    image_url: `${process.env.BACKEND_URL || 'http://localhost:5000'}/uploads/products/${image.image_url}`
+                    image_url: image.image_url.startsWith('http')
+                      ? image.image_url
+                      : `${process.env.BACKEND_URL || 'http://localhost:5000'}${image.image_url.startsWith('/uploads/') ? '' : '/uploads/products/'}${image.image_url}`
                 }));
             }
             return formattedProduct;

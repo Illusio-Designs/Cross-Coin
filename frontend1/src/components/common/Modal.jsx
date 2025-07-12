@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import Button from './Button';
 import { IoClose } from 'react-icons/io5';
 import '../../styles/common/Modal.css';
@@ -23,7 +24,7 @@ const Modal = ({
     }
   };
 
-  return (
+  const modalContent = (
     <div className="modal-overlay" onClick={handleOverlayClick}>
       <div 
         className={`modal-content ${size} ${className}`}
@@ -54,6 +55,10 @@ const Modal = ({
       </div>
     </div>
   );
+
+  return typeof window !== 'undefined'
+    ? ReactDOM.createPortal(modalContent, document.body)
+    : null;
 };
 
 export default Modal; 
