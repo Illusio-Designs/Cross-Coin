@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  images: false,
+  images: {
+    unoptimized: true,
+    domains: ['api.crosscoin.in', 'localhost'],
+  },
   // Enable React strict mode for better development experience
   reactStrictMode: true,
   // Disable source maps in production for better performance
