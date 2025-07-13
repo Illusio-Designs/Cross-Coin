@@ -19,7 +19,7 @@ export const useWishlist = () => {
 };
 
 function forceEnvImageBase(url) {
-  if (!url) return '/assets/card1-left.webp';
+  if (!url || typeof url !== 'string') return '/assets/card1-left.webp';
   if (url.startsWith('http')) {
     if (url.includes('localhost:5000')) {
       const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';

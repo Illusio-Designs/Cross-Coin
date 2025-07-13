@@ -38,17 +38,21 @@ const calculateShippingFee = async (paymentType) => {
 
 // Create a new order
 module.exports.createOrder = async (req, res) => {
+    console.log('createOrder: Starting order creation...');
     const transaction = await sequelize.transaction();
     
     try {
         const { shipping_address_id, items, payment_type, notes, coupon_id, discount_amount } = req.body;
         const userId = req.user.id;
+        console.log('createOrder: Request data:', { shipping_address_id, items, payment_type, notes, coupon_id, discount_amount });
+        console.log('createOrder: User ID:', userId);
 
         if (!shipping_address_id || !items || !payment_type) {
             await transaction.rollback();
             return res.status(400).json({ message: 'Shipping address, items, and payment type are required' });
         }
 
+        console.log('createOrder: Validating shipping address...');
         // Validate shipping address belongs to user
         const shippingAddress = await ShippingAddress.findOne({
             where: { id: shipping_address_id, user_id: userId }
@@ -58,11 +62,13 @@ module.exports.createOrder = async (req, res) => {
             await transaction.rollback();
             return res.status(404).json({ message: 'Shipping address not found' });
         }
+        console.log('createOrder: Shipping address validated');
 
         // Calculate total amount and validate items
         let totalAmount = 0;
         const validatedItems = [];
 
+        console.log('createOrder: Starting item validation for', items.length, 'items');
         for (const item of items) {
             const { product_id, quantity } = item;
             let { variation_id } = item; // Use a local, mutable variation_id
@@ -72,16 +78,19 @@ module.exports.createOrder = async (req, res) => {
                 return res.status(400).json({ message: 'Product ID and quantity are required for each item' });
             }
 
+            console.log('createOrder: Validating product', product_id);
             const product = await Product.findByPk(product_id);
             if (!product) {
                 await transaction.rollback();
                 return res.status(404).json({ message: `Product with ID ${product_id} not found` });
             }
+            console.log('createOrder: Product validated:', product.name);
 
             let price;
             let stockAvailable;
             let variation;
             if (variation_id) {
+                console.log('createOrder: Validating variation', variation_id);
                 variation = await ProductVariation.findByPk(variation_id);
                 if (!variation || variation.productId !== product_id) {
                     await transaction.rollback();
@@ -89,6 +98,7 @@ module.exports.createOrder = async (req, res) => {
                 }
                 price = variation.price;
                 stockAvailable = variation.stock;
+                console.log('createOrder: Variation validated, price:', price, 'stock:', stockAvailable);
             } else {
                 const variations = await ProductVariation.findAll({ where: { productId: product_id } });
                 if (variations.length > 0) {
@@ -109,10 +119,12 @@ module.exports.createOrder = async (req, res) => {
             }
 
             // STOCK CHECK
+            console.log('createOrder: Stock check - available:', stockAvailable, 'requested:', quantity);
             if (typeof stockAvailable !== 'number' || stockAvailable < quantity) {
                 await transaction.rollback();
                 return res.status(400).json({ message: `Product is out of stock or insufficient quantity for product ${product_id}` });
             }
+            console.log('createOrder: Stock check passed');
 
             // Apply discount if exists (simplified version)
             let discount = 0;
@@ -132,13 +144,14 @@ module.exports.createOrder = async (req, res) => {
             });
         }
 
-        const subTotal = totalAmount;
-        const appliedDiscount = discount_amount ? parseFloat(discount_amount) : 0;
-
-        // Calculate shipping fee
-        const shippingFee = await calculateShippingFee(payment_type);
+        const subTotal = Number(totalAmount);
+        const appliedDiscount = discount_amount ? Number(discount_amount) : 0;
+        const shippingFee = Number(await calculateShippingFee(payment_type));
         const finalAmount = subTotal - appliedDiscount + shippingFee;
-
+        console.log('subTotal:', subTotal);
+        console.log('appliedDiscount:', appliedDiscount);
+        console.log('shippingFee:', shippingFee);
+        console.log('finalAmount:', finalAmount);
         // Create order
         const order = await Order.create({
             order_number: generateOrderNumber(),
@@ -153,6 +166,7 @@ module.exports.createOrder = async (req, res) => {
             status: 'pending',
             notes: notes || null,
         }, { transaction });
+        console.log('createOrder: Order created with ID:', order.id);
 
         // Create order items
         for (const item of validatedItems) {
@@ -198,9 +212,12 @@ module.exports.createOrder = async (req, res) => {
             }, { transaction });
         }
 
+        console.log('createOrder: Committing transaction...');
         await transaction.commit();
+        console.log('createOrder: Transaction committed successfully');
 
         // Fetch the created order with its items
+        console.log('createOrder: Fetching created order with details...');
         const createdOrder = await Order.findByPk(order.id, {
             include: [
                 { model: OrderItem, include: [Product] },
@@ -208,77 +225,84 @@ module.exports.createOrder = async (req, res) => {
                 { model: OrderStatusHistory, order: [['updated_at', 'DESC']] }
             ]
         });
+        console.log('createOrder: Order fetched successfully');
 
-        // Shiprocket integration
+        // Shiprocket integration - moved to background to avoid blocking order creation
         try {
+            // Get shipping address separately
+            const address = await ShippingAddress.findByPk(shipping_address_id);
             const user = createdOrder.User;
-            const address = createdOrder.ShippingAddress;
 
             // Validate address and phone
             if (!address || !address.address_line1 || !address.phone) {
                 console.error(`Order ${createdOrder.order_number}: Missing address or phone, cannot sync to Shiprocket.`);
-                // Optionally, update order status or add a note
-                return;
+            } else {
+                const orderItems = createdOrder.OrderItems.map(item => ({
+                    product_name: item.Product.name,
+                    sku: item.Product.sku || '',
+                    quantity: item.quantity,
+                    price: item.price
+                }));
+
+                const shiprocketPayload = {
+                    order_id: createdOrder.order_number,
+                    order_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                    pickup_location: 'Default',
+                    channel_id: "7361105",
+                    billing_customer_name: user.username,
+                    billing_last_name: '',
+                    billing_address: address.address_line1,
+                    billing_address_2: address.address_line2 || '',
+                    billing_city: address.city,
+                    billing_pincode: address.postal_code,
+                    billing_state: address.state,
+                    billing_country: address.country || 'India',
+                    billing_email: user.email,
+                    billing_phone: address.phone,
+                    shipping_is_billing: true,
+                    order_items: orderItems.map(item => ({
+                        name: item.product_name,
+                        sku: item.sku || '',
+                        units: item.quantity,
+                        selling_price: item.price.toString(),
+                        hsn: 441122
+                    })),
+                    payment_method: createdOrder.payment_type === 'cod' ? 'COD' : 'Prepaid',
+                    shipping_charges: 0,
+                    giftwrap_charges: 0,
+                    transaction_charges: 0,
+                    total_discount: 0,
+                    sub_total: createdOrder.total_amount,
+                    length: 10,
+                    breadth: 15,
+                    height: 20,
+                    weight: 2.5 // Default weight
+                };
+
+                // Run Shiprocket integration in background
+                setImmediate(async () => {
+                    try {
+                        const shipRes = await createShiprocketOrder(shiprocketPayload);
+                        await createdOrder.update({
+                            shiprocket_order_id: shipRes.order_id,
+                            shiprocket_shipment_id: shipRes.shipments?.[0]?.shipment_id || null
+                        });
+                        console.log('✅ Shiprocket Order Created:', shipRes.order_id);
+                    } catch (err) {
+                        console.error('❌ Failed to create Shiprocket order:', err.message);
+                    }
+                });
             }
-
-            const orderItems = createdOrder.OrderItems.map(item => ({
-                product_name: item.Product.name,
-                sku: item.Product.sku || '',
-                quantity: item.quantity,
-                price: item.price
-            }));
-
-            const shiprocketPayload = {
-                order_id: createdOrder.order_number,
-                order_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                pickup_location: 'Default',
-                channel_id: "7361105",
-                billing_customer_name: user.username,
-                billing_last_name: '',
-                billing_address: address.address_line1,
-                billing_address_2: address.address_line2 || '',
-                billing_city: address.city,
-                billing_pincode: address.postal_code,
-                billing_state: address.state,
-                billing_country: address.country || 'India',
-                billing_email: user.email,
-                billing_phone: address.phone,
-                shipping_is_billing: true,
-                order_items: orderItems.map(item => ({
-                    name: item.product_name,
-                    sku: item.sku || '',
-                    units: item.quantity,
-                    selling_price: item.price.toString(),
-                    hsn: 441122
-                })),
-                payment_method: createdOrder.payment_type === 'cod' ? 'COD' : 'Prepaid',
-                shipping_charges: 0,
-                giftwrap_charges: 0,
-                transaction_charges: 0,
-                total_discount: 0,
-                sub_total: createdOrder.total_amount,
-                length: 10,
-                breadth: 15,
-                height: 20,
-                weight: product.weight || 2.5 // Use product weight if available, fallback to 2.5
-            };
-
-            const shipRes = await createShiprocketOrder(shiprocketPayload);
-
-            await createdOrder.update({
-                shiprocket_order_id: shipRes.order_id,
-                shiprocket_shipment_id: shipRes.shipments?.[0]?.shipment_id || null
-            });
-
-            console.log('✅ Shiprocket Order Created:', shipRes.order_id);
         } catch (err) {
-            console.error('❌ Failed to create Shiprocket order:', err.message);
+            console.error('❌ Failed to prepare Shiprocket order:', err.message);
         }
 
+        console.log('createOrder: Sending success response...');
         res.status(201).json({
             message: 'Order created successfully',
             order: createdOrder
         });
+        console.log('createOrder: Response sent successfully');
 
         // --- Auto-sync all unsynced orders with Shiprocket in the background ---
         try {
@@ -301,6 +325,8 @@ module.exports.createOrder = async (req, res) => {
             console.error('Failed to trigger background Shiprocket sync:', err.message);
         }
     } catch (error) {
+        console.error('createOrder: Error caught:', error.message);
+        console.error('createOrder: Error stack:', error.stack);
         await transaction.rollback();
         console.error('Error creating order:', error);
         res.status(500).json({ message: 'Failed to create order', error: error.message });

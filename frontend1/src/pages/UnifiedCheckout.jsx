@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
-import SeoWrapper from '../console/SeoWrapper';
 import { useCart } from "../context/CartContext";
 import { useRouter } from "next/router";
 import CartStep from '../components/checkout/CartStep';
@@ -133,17 +132,37 @@ export default function UnifiedCheckout() {
   };
 
   const handlePlaceOrder = async () => {
+    if (!isAuthenticated) {
+        showValidationErrorToast('Please login to place an order.');
+        router.push('/login?redirect=/UnifiedCheckout');
+        return;
+    }
+    
     if (!shippingAddress || !shippingFee) {
         showValidationErrorToast('Please select shipping address and delivery method.');
         return;
     }
+    
+    if (!cartItems || cartItems.length === 0) {
+        showValidationErrorToast('Your cart is empty.');
+        return;
+    }
+    
     setIsProcessing(true);
+
+    console.log('Order placement debug:', {
+        shippingAddress,
+        shippingFee,
+        cartItems,
+        user: user?.id,
+        isAuthenticated
+    });
 
     const orderData = {
         shipping_address_id: shippingAddress.id,
         items: cartItems.map(item => ({
-            product_id: item.productId,
-            variation_id: item.variation?.id || null,
+            product_id: item.productId || item.id,
+            variation_id: item.variation?.id || item.variationId || null,
             quantity: item.quantity
         })),
         payment_type: shippingFee.orderType === 'cod' ? 'cod' : paymentDetails.method,
@@ -152,8 +171,12 @@ export default function UnifiedCheckout() {
         coupon_id: appliedCoupon?.id || null
     };
 
+    console.log('Order data being sent:', orderData);
+
     try {
         const orderResult = await createOrder(orderData);
+        console.log('Order creation response:', orderResult);
+        
         if (!orderResult?.order) {
             throw new Error('Order creation failed to return an order.');
         }
@@ -199,11 +222,13 @@ export default function UnifiedCheckout() {
                 setIsProcessing(false);
                 return;
             }
-
-            console.log('Order final_amount:', orderResult.order.final_amount);
+            // DETAILED LOGGING FOR DEBUGGING
+            console.log('--- Razorpay Debug ---');
+            console.log('orderResult:', orderResult);
+            console.log('orderResult.order:', orderResult.order);
+            console.log('orderResult.order.final_amount:', orderResult.order.final_amount);
             const amountInPaisa = Math.round(orderResult.order.final_amount * 100);
-            console.log('Amount in paisa sent to Razorpay:', amountInPaisa);
-
+            console.log('Calculated amountInPaisa (should be sent to Razorpay):', amountInPaisa);
             // Create Razorpay order from backend, passing amount in the smallest currency unit (paisa)
             const razorpayOrder = await createRazorpayOrder({
                 amount: amountInPaisa,
@@ -213,10 +238,10 @@ export default function UnifiedCheckout() {
                     order_id: orderResult.order.id // Pass internal order ID
                 }
             });
-
+            console.log('Razorpay order response:', razorpayOrder);
             const options = {
                 key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-                amount: razorpayOrder.amount,
+                amount: amountInPaisa, // Use the calculated amount in paise directly
                 currency: razorpayOrder.currency,
                 name: 'Cross Coin',
                 description: `Order #${orderResult.order.order_number}`,
@@ -232,11 +257,12 @@ export default function UnifiedCheckout() {
                 redirect: true,
                 callback_url: `https://api.crosscoin.in/api/payment/razorpay-callback?order_id=${orderResult.order.id}`
             };
-
+            console.log('Razorpay options passed to window.Razorpay:', options);
             const rzp = new window.Razorpay(options);
             rzp.open();
         }
     } catch (error) {
+        console.error('Order placement error:', error);
         showOrderPlacedErrorToast(`Order placement failed: ${error.message || 'Unknown error'}`);
         setIsProcessing(false);
     }
@@ -298,7 +324,7 @@ export default function UnifiedCheckout() {
   };
 
   return (
-    <SeoWrapper pageName="checkout">
+    <>
       <Header />
       {isCartLoading ? (
         <div className="cart-main checkout-container">
@@ -330,6 +356,6 @@ export default function UnifiedCheckout() {
         </div>
       )}
       <Footer />
-    </SeoWrapper>
+    </>
   );
 } 
