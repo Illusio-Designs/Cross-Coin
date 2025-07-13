@@ -20,4 +20,9 @@ const Policy = sequelize.define('Policy', {
   tableName: 'policies',
 });
 
-module.exports = Policy; 
+// Add sync method to ensure compatibility with setupDatabase.js
+Policy.sync = Policy.sync || (async (options) => {
+  return await sequelize.sync(options);
+});
+
+module.exports = { Policy }; 

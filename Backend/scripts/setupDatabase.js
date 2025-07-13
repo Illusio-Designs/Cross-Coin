@@ -2,7 +2,6 @@ require('dotenv').config();
 const { sequelize } = require('../config/db.js');
 const path = require('path');
 const fs = require('fs');
-const Policy = require('../model/policyModel');
 
 // In CommonJS, __filename and __dirname are available
 
@@ -36,8 +35,18 @@ const setupDatabase = async () => {
             const modelPath = path.join(modelDir, file);
             const modelModule = require(modelPath);
             const modelName = file.charAt(0).toUpperCase() + file.slice(1).replace('Model.js', '');
-            const model = modelModule[modelName];
-            if (model && model.sync) {
+            
+            // Handle different export structures
+            let model;
+            if (modelModule[modelName]) {
+                model = modelModule[modelName];
+            } else if (modelModule.default) {
+                model = modelModule.default;
+            } else if (typeof modelModule === 'function') {
+                model = modelModule;
+            }
+            
+            if (model && typeof model.sync === 'function') {
                 console.log(`Loaded model: ${modelName}`);
                 models[modelName] = model;
             } else {
@@ -63,7 +72,6 @@ const setupDatabase = async () => {
         // AUTOMATION: Always alter tables to match the latest model definitions (auto-migration)
         console.log('Syncing all tables...');
         await sequelize.sync({ alter: true, hooks: false });
-        await Policy.sync({ alter: true });
         console.log('✓ All tables synced');
 
         // Now it's safe to create the admin user
