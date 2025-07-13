@@ -469,7 +469,7 @@ module.exports.createRazorpayOrder = async (req, res) => {
 
         // Create order
         const options = {
-            amount: amount, // amount is already in paise
+            amount: amount, // amount is already in paise (frontend sends it in paise)
             currency,
             receipt: receipt || `rcpt_${Date.now()}`,
         };

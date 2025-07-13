@@ -296,11 +296,23 @@ export const getUserOrders = async (params = {}) => {
 export const createOrder = async (orderData) => {
     try {
         const token = localStorage.getItem('token');
+        console.log('createOrder: Token available:', !!token);
+        console.log('createOrder: Order data:', orderData);
+        console.log('createOrder: Making API call to:', `${API_URL}/api/orders`);
+        
         const response = await axios.post(`${API_URL}/api/orders`, orderData, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
+            timeout: 30000 // 30 second timeout
         });
+        console.log('createOrder: Response received:', response.data);
         return response.data;
     } catch (error) {
+        console.error('createOrder: Error details:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+            statusText: error.response?.statusText
+        });
         throw error.response?.data || error.message;
     }
 };
