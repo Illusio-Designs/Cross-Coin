@@ -71,44 +71,44 @@ export default function CartStep() {
             </div>
         ) : (
             cartItems.map((item) => (
-            <div className="cart-item" key={item.id}>
-                <Image 
-                  src={forceEnvImageBase(item.image)} 
-                  alt={item.name} 
-                  width={100} 
-                  height={100} 
-                  className="cart-item-img" 
-                  onError={(e) => { e.target.src = '/placeholder.png'; }} // fallback if image fails
-                  unoptimized
-                />
-                <div className="cart-item-details">
-                <div className="cart-item-title">{item.name}</div>
-                <div className="cart-item-meta">Size: {item.size || 'N/A'}</div>
-                <div className="cart-item-meta">Color: {item.color || 'N/A'}</div>
-                <div className="cart-item-price">₹{item.price}</div>
+                <div className="cart-item" key={item.id}>
+                    <Image 
+                      src={forceEnvImageBase(item.image)} 
+                      alt={item.name} 
+                      width={100} 
+                      height={100} 
+                      className="cart-item-img" 
+                      onError={(e) => { e.target.src = '/placeholder.png'; }} // fallback if image fails
+                      unoptimized
+                    />
+                    <div className="cart-item-details">
+                    <div className="cart-item-title">{item.name}</div>
+                    <div className="cart-item-meta">Size: {item.size || 'N/A'}</div>
+                    <div className="cart-item-meta">Color: {item.color || 'N/A'}</div>
+                    <div className="cart-item-price">₹{item.price}</div>
+                    </div>
+                    <div className="cart-item-qty">
+                    <button
+                        className={`qty-btn ${item.quantity === 1 ? 'qty-btn-disabled' : ''}`}
+                        onClick={() => updateQuantity(item.id, -1)}
+                        disabled={item.quantity === 1}
+                    >-</button>
+                    <input
+                      type="number"
+                      min={0}
+                      className="qty-input improved-qty-input"
+                      value={inputValues[item.id] !== undefined ? inputValues[item.id] : item.quantity}
+                      onChange={e => handleInputChange(item.id, e.target.value)}
+                      onBlur={e => handleInputBlur(item.id, e.target.value)}
+                      style={{ width: 60, textAlign: 'center', border: '1px solid #ccc', borderRadius: 4, padding: '4px 8px', margin: '0 8px' }}
+                    />
+                    <button
+                        className="qty-btn"
+                        onClick={() => updateQuantity(item.id, 1)}
+                    >+</button>
+                    </div>
+                    <button className="cart-item-remove" onClick={() => removeFromCart(item.id)}><FiTrash2 /></button>
                 </div>
-                <div className="cart-item-qty">
-                <button
-                    className={`qty-btn ${item.quantity === 1 ? 'qty-btn-disabled' : ''}`}
-                    onClick={() => updateQuantity(item.id, -1)}
-                    disabled={item.quantity === 1}
-                >-</button>
-                <input
-                  type="number"
-                  min={0}
-                  className="qty-input improved-qty-input"
-                  value={inputValues[item.id] !== undefined ? inputValues[item.id] : item.quantity}
-                  onChange={e => handleInputChange(item.id, e.target.value)}
-                  onBlur={e => handleInputBlur(item.id, e.target.value)}
-                  style={{ width: 60, textAlign: 'center', border: '1px solid #ccc', borderRadius: 4, padding: '4px 8px', margin: '0 8px' }}
-                />
-                <button
-                    className="qty-btn"
-                    onClick={() => updateQuantity(item.id, 1)}
-                >+</button>
-                </div>
-                <button className="cart-item-remove" onClick={() => removeFromCart(item.id)}><FiTrash2 /></button>
-            </div>
             ))
         )}
         </div>

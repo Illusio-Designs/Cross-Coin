@@ -162,7 +162,7 @@ export default function UnifiedCheckout() {
         shipping_address_id: shippingAddress.id,
         items: cartItems.map(item => ({
             product_id: item.productId || item.id,
-            variation_id: item.variation?.id || item.variationId || null,
+            variation_id: item.variationId || (item.variation?.id) || null,
             quantity: item.quantity
         })),
         payment_type: shippingFee.orderType === 'cod' ? 'cod' : paymentDetails.method,
@@ -263,7 +263,7 @@ export default function UnifiedCheckout() {
         }
     } catch (error) {
         console.error('Order placement error:', error);
-        showOrderPlacedErrorToast(`Order placement failed: ${error.message || 'Unknown error'}`);
+        showOrderPlacedErrorToast("Order placement failed: " + (error.message || 'Unknown error'));
         setIsProcessing(false);
     }
   };
