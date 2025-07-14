@@ -756,11 +756,11 @@ export default function ProductDetails() {
                   )}
                   <span className="review-summary">
                     <span className="stars">{renderStars(product.avg_rating || 0)}</span>
-                    <span className="rating-value">{parseFloat(product.avg_rating || 0).toFixed(1)}</span>
-                    <span className="review-count">({product.review_count || 0} reviews)</span>
+              <span className="rating-value">{parseFloat(product.avg_rating || 0).toFixed(1)}</span>
+              <span className="review-count">({product.review_count || 0} reviews)</span>
                   </span>
-                </div>
-              </div>
+            </div>
+            </div>
               {/* Wishlist icon */}
               <button
                 className="wishlist-btn"
@@ -895,7 +895,7 @@ export default function ProductDetails() {
                       color: '#fff',
                       fontWeight: 'bold',
                     }}
-                    onClick={() => {
+                        onClick={() => {
                       setSelectedColor(color);
                       handleAttributeChange('color', color);
                     }}
@@ -909,11 +909,11 @@ export default function ProductDetails() {
             <div className="action-buttons-row">
               <button className="add-to-cart-btn" onClick={handleAddToCart}>
                 ADD TO CART
-              </button>
+                </button>
               <button className="buy-now-btn" onClick={handleBuyNow}>
                 BUY IT NOW
-              </button>
-            </div>
+                </button>
+              </div>
             {/* Description row added below */}
             <div className="details-row">
                   <div>
@@ -925,22 +925,22 @@ export default function ProductDetails() {
                         }}
                       />
                     </span>
-                  </div>
-                </div>
+            </div>
           </div>
+        </div>
           
         </div>
         {/* Review Slider and Review Form (no tabs) */}
         <div className="product-reviews-section" style={{ margin: '32px 9%' }}>
           <div className="review-header-row">
             <h2 className="customer-reviews-heading">Customer Reviews</h2>
-            <button
+              <button
               className="write-review-btn"
               onClick={() => setShowReviewForm(true)}
             >
               Write a Review
-            </button>
-          </div>
+              </button>
+            </div>
           <div className="star-breakdown-row">
             {[5,4,3,2,1].map((star, idx) => (
               <div className="star-breakdown-item" key={star}>
@@ -949,7 +949,7 @@ export default function ProductDetails() {
               </div>
             ))}
             <span className="total-reviews-label">({totalReviews} reviews)</span>
-          </div>
+                  </div>
           <div
             className="review-slider"
             style={{
@@ -980,17 +980,17 @@ export default function ProductDetails() {
                     {review.reviewerName || review.User?.username || review.guestName || 'Anonymous'}
                   </div>
                   <div className="review-stars" style={{ color: '#f59e42', marginBottom: 4 }}>
-                    {Array.from({ length: review.rating }).map((_, i) => (
+                                {Array.from({ length: review.rating }).map((_, i) => (
                       <span key={i}>★</span>
-                    ))}
-                  </div>
+                                ))}
+                              </div>
                   <div className="review-text" style={{ fontSize: 14, marginBottom: 8 }}>
                     {review.review}
-                  </div>
+                            </div>
                   <div className="review-date" style={{ fontSize: 12, color: '#888' }}>
-                    {new Date(review.createdAt).toLocaleDateString()}
-                  </div>
-                  {review.ReviewImages && review.ReviewImages.length > 0 && (
+                              {new Date(review.createdAt).toLocaleDateString()}
+                          </div>
+                            {review.ReviewImages && review.ReviewImages.length > 0 && (
                     <div className="review-images" style={{ marginTop: 8, display: 'flex', gap: 4 }}>
                       {review.ReviewImages.map((image, imgIdx) => (
                         <img
@@ -999,15 +999,15 @@ export default function ProductDetails() {
                           alt={`Review image ${imgIdx + 1}`}
                           style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }}
                         />
-                      ))}
-                    </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+              ))
+                  ) : (
+              <div style={{ color: '#888', fontSize: 14 }}>No reviews yet.</div>
                   )}
                 </div>
-              ))
-            ) : (
-              <div style={{ color: '#888', fontSize: 14 }}>No reviews yet.</div>
-            )}
-          </div>
           {showReviewForm && (
             <div className="review-form-modal">
               <div className="review-form-modal-content">
@@ -1028,11 +1028,11 @@ export default function ProductDetails() {
                 >
                   &times;
                 </button>
-                <h3>Write a Review</h3>
-                {renderReviewForm()}
+                  <h3>Write a Review</h3>
+                  {renderReviewForm()}
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
         <Footer />
       </div>

@@ -8,6 +8,7 @@ const router = express.Router();
 
 // Facebook Catalog Feed Endpoint
 router.get("/feed", async (req, res) => {
+    const baseUrl = process.env.BASE_URL || 'https://api.crosscoin.in';
     // Fetch all active products with their category and primary image
     const products = await Product.findAll({
         where: { status: 'active' },
@@ -35,12 +36,12 @@ router.get("/feed", async (req, res) => {
         if (product.images && product.images.length > 0) {
             imageUrl = product.images[0].image_url.startsWith('http')
                 ? product.images[0].image_url
-                : `https://yourdomain.com/uploads/products/${product.images[0].image_url}`;
+                : `${baseUrl}/uploads/products/${product.images[0].image_url}`;
         }
         // Get category name
         const categoryName = product.category ? product.category.name : '';
         // Build product link
-        const productLink = `https://yourdomain.com/products/${product.slug}`;
+        const productLink = `${baseUrl}/products/${product.slug}`;
         // XML item
         xml += `<item>`;
         xml += `<g:id>${product.id}</g:id>`;

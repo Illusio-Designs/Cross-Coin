@@ -486,93 +486,93 @@ const Home = () => {
         <div className="shop-by-category">
           <div className="shop-by-category__container">
             <div className="category-title">
-              <h2 className="section-title">Curate Your Collection</h2>
-              <button className="hero-btn" onClick={() => {
-                if (currentCategory.id) {
-                  window.location.href = `/Products?category=${currentCategory.id}`;
-                } else {
-                  window.location.href = '/Products';
-                }
-              }}>
-                View All Products
+            <h2 className="section-title">Curate Your Collection</h2>
+            <button className="hero-btn" onClick={() => {
+              if (currentCategory.id) {
+                window.location.href = `/Products?category=${currentCategory.id}`;
+              } else {
+                window.location.href = '/Products';
+              }
+            }}>
+              View All Products
+            </button>
+          </div>
+          <div className="category-section">
+            <div className="category-sidebar">
+              <div className="category-item" ref={categoryImageRef}>
+              <button className="slider-arrow slider-arrow-left" aria-label="Previous category" onClick={() => scrollCategoryImage('left')}>
+                <IoIosArrowBack />
               </button>
-            </div>
-            <div className="category-section">
-              <div className="category-sidebar">
-                <div className="category-item" ref={categoryImageRef}>
-                <button className="slider-arrow slider-arrow-left" aria-label="Previous category" onClick={() => scrollCategoryImage('left')}>
-                  <IoIosArrowBack />
-                </button>
-                  <Image 
-                    src={getCategoryImageSrc()} 
+                <Image 
+                  src={getCategoryImageSrc()} 
                     alt={currentCategory.name || 'Category'} 
-                    width={300}
-                    height={300}
-                    style={{ objectFit: 'cover' }}
-                    unoptimized
+                  width={300}
+                  height={300}
+                  style={{ objectFit: 'cover' }}
+                  unoptimized
                     onError={e => { e.target.src = '/assets/card1-left.webp'; }}
-                  />
-                  <h3>{currentCategory.name}</h3>
-                  <button className="slider-arrow slider-arrow-right" aria-label="Next category" onClick={() => scrollCategoryImage('right')}>
-                  <IoIosArrowForward />
-                </button>
-                </div>
+                />
+                <h3>{currentCategory.name}</h3>
+                <button className="slider-arrow slider-arrow-right" aria-label="Next category" onClick={() => scrollCategoryImage('right')}>
+                <IoIosArrowForward />
+              </button>
               </div>
-              <div className="category-products">
-                {currentCategoryProducts.length > 0 && (
-                  <>
+            </div>
+            <div className="category-products">
+              {currentCategoryProducts.length > 0 && (
+                <>
                     {showCategoryArrows && (
-                      <button className="slider-arrow slider-arrow-left" aria-label="Previous slider" onClick={() => scrollSlider('left')}>
-                        <IoIosArrowBack />
-                      </button>
-                    )}
-                    <div className="products-slider" ref={categorySliderRef}>
-                      {currentCategoryProducts.map((product) => {
-                        // Format product data to match ProductCard expectations
-                        const formattedProduct = {
-                          id: product.id,
-                          name: product.name,
-                          slug: product.slug,
-                          description: product.description,
-                          badge: product.badge || null,
-                          images: product.image ? [{
-                            image_url: product.image,
-                            is_primary: true
-                          }] : [],
-                          variations: [{
-                            price: product.price || 0,
-                            comparePrice: product.comparePrice || 0,
-                            stock: product.stock || 0
-                          }],
-                          category: {
-                            name: currentCategory.name
-                          }
-                        };
-                        
-                        return (
-                          <ProductCard
-                            key={product.id}
-                            product={formattedProduct}
-                            onProductClick={handleProductClick}
-                            onAddToCart={handleAddToCart}
-                          />
-                        );
-                      })}
-                    </div>
-                    {showCategoryArrows && (
-                      <button className="slider-arrow slider-arrow-right" aria-label="Next slider" onClick={() => scrollSlider('right')}>
-                        <IoIosArrowForward />
-                      </button>
-                    )}
-                  </>
-                )}
-                {!categoryLoading && currentCategoryProducts.length === 0 && (
-                  <div className="no-products-center">
-                    <p style={{ color: '#CE1E36', fontSize: '1.2rem', fontWeight: '500' }}>
-                      No products available in this category
-                    </p>
+                    <button className="slider-arrow slider-arrow-left" aria-label="Previous slider" onClick={() => scrollSlider('left')}>
+                      <IoIosArrowBack />
+                    </button>
+                  )}
+                  <div className="products-slider" ref={categorySliderRef}>
+                    {currentCategoryProducts.map((product) => {
+                      // Format product data to match ProductCard expectations
+                      const formattedProduct = {
+                        id: product.id,
+                        name: product.name,
+                        slug: product.slug,
+                        description: product.description,
+                        badge: product.badge || null,
+                        images: product.image ? [{
+                          image_url: product.image,
+                          is_primary: true
+                        }] : [],
+                        variations: [{
+                          price: product.price || 0,
+                          comparePrice: product.comparePrice || 0,
+                          stock: product.stock || 0
+                        }],
+                        category: {
+                          name: currentCategory.name
+                        }
+                      };
+                      
+                      return (
+                        <ProductCard
+                          key={product.id}
+                          product={formattedProduct}
+                          onProductClick={handleProductClick}
+                          onAddToCart={handleAddToCart}
+                        />
+                      );
+                    })}
                   </div>
-                )}
+                    {showCategoryArrows && (
+                    <button className="slider-arrow slider-arrow-right" aria-label="Next slider" onClick={() => scrollSlider('right')}>
+                      <IoIosArrowForward />
+                    </button>
+                  )}
+                </>
+              )}
+              {!categoryLoading && currentCategoryProducts.length === 0 && (
+                <div className="no-products-center">
+                  <p style={{ color: '#CE1E36', fontSize: '1.2rem', fontWeight: '500' }}>
+                    No products available in this category
+                  </p>
+                </div>
+              )}
               </div>
             </div>
           </div>
@@ -599,8 +599,8 @@ const Home = () => {
                 const reviewCount = exclusiveReviewCounts[index] !== undefined ? exclusiveReviewCounts[index] : 0;
                 const avgRating = exclusiveAvgRatings[index] !== undefined ? exclusiveAvgRatings[index] : 0;
                 return (
-                  <div key={product.id} className="featured-product-card">
-                    <div className="product-images">
+                <div key={product.id} className="featured-product-card">
+                  <div className="product-images">
                       <Image
                         className="main-image"
                         src={forceEnvImageBase(variationImages[state.selectedThumbnail])}
@@ -626,14 +626,14 @@ const Home = () => {
                             unoptimized
                           />
                         ))}
-                      </div>
+                  </div>
                     </div>
                     <div className="product-info">
                       {/* Title, price, review, wishlist */}
                       <div className="product-title-row">
                         <div>
                           <h1 className="product-title">{product.name}</h1>
-                          <div className="product-price-row">
+                    <div className="product-price-row">
                             <span className="current-price">₹{selectedVariation.price}</span>
                             {selectedVariation.comparePrice && (
                               <span className="original-price">₹{selectedVariation.comparePrice}</span>
@@ -709,7 +709,7 @@ const Home = () => {
                   </div>
                 );
               })}
-            </div>
+                </div>
             {exclusiveProducts.length > 0 && (
               <button className="slider-arrow slider-arrow-right" aria-label="Next exclusive product" onClick={() => scrollExclusiveSlider('right')}>
                 <IoIosArrowForward />
