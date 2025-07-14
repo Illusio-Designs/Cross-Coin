@@ -100,13 +100,13 @@ app.get('/api/health', async (req, res) => {
             .then(() => 'connected')
             .catch(() => 'disconnected');
         
-        const healthData = {
-            uptime: process.uptime(),
-            timestamp: Date.now(),
-            status: 'ok',
+    const healthData = {
+        uptime: process.uptime(),
+        timestamp: Date.now(),
+        status: 'ok',
             environment: process.env.NODE_ENV,
             version: process.env.npm_package_version || '1.0.0',
-            database: {
+        database: {
                 status: dbStatus,
                 host: process.env.DB_HOST,
                 database: process.env.DB_DATABASE
@@ -114,10 +114,10 @@ app.get('/api/health', async (req, res) => {
             memory: {
                 used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
                 total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024)
-            }
-        };
-        
-        res.status(200).json(healthData);
+        }
+    };
+    
+    res.status(200).json(healthData);
     } catch (error) {
         console.error('Health check error:', error);
         res.status(503).json({
@@ -228,7 +228,7 @@ const startServer = async () => {
         console.log('Setting up database...');
         await setupDatabase();
         console.log('✓ Database setup completed');
-        
+
         // Initialize SEO data
         console.log('Initializing SEO data...');
         await initializeSeoData();
