@@ -22,6 +22,7 @@ import '../styles/pages/Policy.css';
 import '../styles/dashboard/layout.css';
 import '../styles/dashboard/sidebar.css';
 import '../styles/pages/auth/adminlogin.css';
+import Analytics from '../components/common/Analytics';
 
 export default function App({ Component, pageProps }) {
   const [loading, setLoading] = useState(true);
@@ -83,6 +84,7 @@ export default function App({ Component, pageProps }) {
 
   return (
     <ThemeProvider attribute="class">
+      <Analytics />
       <AuthProvider>
         <CartProvider>
           <WishlistProvider>
