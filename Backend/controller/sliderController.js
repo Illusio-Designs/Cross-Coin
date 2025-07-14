@@ -168,7 +168,7 @@ const updateSlider = async (req, res) => {
         let image = slider.image;
         if (req.file) {
             try {
-                const result = await imageHandler.handleImageUpdate(
+                const updatedImagePath = await imageHandler.handleImageUpdate(
                     slider.image,
                     req.file.path,
                     {
@@ -180,7 +180,8 @@ const updateSlider = async (req, res) => {
                         type: 'slider'
                     }
                 );
-                image = result.filename; // Store only filename
+                // Extract just the filename from the returned path
+                image = updatedImagePath ? updatedImagePath.split('/').pop() : slider.image;
             } catch (error) {
                 console.error('Error handling image update:', error);
                 return res.status(500).json({ 
@@ -198,7 +199,7 @@ const updateSlider = async (req, res) => {
             buttonText,
             categoryId: categoryIdToUse,
             status,
-            image
+            image // This will only change if a new file was uploaded
         });
 
         res.status(200).json({ 

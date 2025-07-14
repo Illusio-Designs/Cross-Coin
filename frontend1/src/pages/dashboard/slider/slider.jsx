@@ -311,6 +311,9 @@ export default function Slider() {
       image: null,
       buttonText: ""
     });
+    // Reset file input value if present
+    const fileInput = document.querySelector('input[type="file"][name="image"]');
+    if (fileInput) fileInput.value = "";
   };
 
   const handleInputChange = (e) => {
@@ -325,7 +328,7 @@ export default function Slider() {
     if (type === 'file') {
       setFormData(prev => ({
         ...prev,
-        [name]: e.target.files[0]
+        [name]: e.target.files && e.target.files[0] ? e.target.files[0] : null
       }));
     } else {
       setFormData(prev => ({
@@ -348,9 +351,11 @@ export default function Slider() {
       formDataToSend.append("status", formData.status);
       formDataToSend.append("buttonText", formData.buttonText);
       
-      if (formData.image instanceof File) {
+      // Only append image if it's a File (i.e., a new image was selected)
+      if (formData.image && formData.image instanceof File) {
         formDataToSend.append("image", formData.image);
       }
+      // Do NOT append image if it's a string (old image) - backend should keep old image
 
       if (formData.id) {
         await sliderService.updateSlider(formData.id, formDataToSend);
@@ -514,15 +519,16 @@ export default function Slider() {
                 onChange={handleInputChange}
                 name="image"
                 required={!formData.id}
+                key={formData.id || 'new'} // force reset on modal open/close
               />
               {formData.image && (
                 <div style={{ width: '300px', position: 'relative', marginTop: '10px' }}>
-                  <img 
-                    src={typeof formData.image === 'string' 
+                  <img
+                    src={typeof formData.image === 'string'
                       ? getImageUrl(formData.image)
-                      : URL.createObjectURL(formData.image)} 
-                    alt="Slider Preview" 
-                    style={{ width: '100%', objectFit: 'contain', height: '400px' }}
+                      : URL.createObjectURL(formData.image)}
+                    alt="Slider Preview"
+                    style={{ width: '100%', objectFit: 'contain'}}
                   />
                 </div>
               )}
