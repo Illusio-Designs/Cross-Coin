@@ -4,6 +4,7 @@
 }
 .products-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   padding: 50px 10%;
@@ -554,6 +555,7 @@
   padding: 2rem;
   color: #555;
   min-height: 300px;
+  width: 100%;
 }
 
 @media (max-width: 500px) {

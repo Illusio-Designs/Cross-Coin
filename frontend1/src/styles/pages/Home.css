@@ -764,6 +764,7 @@
 
 .featured-product-card .thumbnail-images {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 

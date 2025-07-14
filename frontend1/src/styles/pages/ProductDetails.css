@@ -116,6 +116,7 @@
 
 .product-price-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 1em;
   margin-bottom: 1em;
@@ -1225,145 +1226,6 @@
   -ms-overflow-style: none; /* IE/Edge */
 }
 
-/* ========================= RESPONSIVE BREAKPOINTS ========================= */
-
-/* 1440px and below */
-@media (max-width: 1440px) {
-  .product-details {
-    padding: 40px 5%;
-    gap: 1.5rem;
-  }
-  .product-info h1 {
-    font-size: 2.1rem;
-  }
-}
-
-/* 1024px and below */
-@media (max-width: 1024px) {
-  .product-details {
-    padding: 32px 5%;
-    gap: 2.5rem;
-    align-items: stretch;
-  }
-  .product-tabs-section {
-    padding: 0 5% 50px;
-  }
-  .product-gallery {
-    position: static;
-    top: unset;
-    margin-bottom: 2rem;
-    flex: none;
-    width: 100%;
-  }
-  .product-info {
-    min-width: unset;
-    max-height: none;
-    overflow-y: visible;
-  }
-  .product-rating-row {
-    font-size: 1rem;
-    flex-wrap: wrap;
-  }
-}
-
-/* 768px and below */
-@media (max-width: 768px) {
-  .product-details {
-    gap: 10px;
-  }
-  .main-image {
-    margin-bottom: 1rem;
-    width: 100%;
-    height: auto;
-  }
-  .thumbnail-images img {
-    width: 70px;
-    height: 70px;
-  }
-  .product-info h1 {
-    font-size: 1.5rem;
-  }
-  .product-price-row .current-price {
-    font-size: 1.2rem;
-  }
-  .product-action-box {
-    flex-direction: column;
-    gap: 10px;
-    align-items: stretch;
-  }
-  .product-coupons-box {
-    padding: 10px;
-  }
-}
-
-/* 426px and below (mobile) */
-@media (max-width: 426px) {
-  .product-details {
-    flex-direction: column;
-    gap: 0.7rem;
-  }
-  .product-info h1 {
-    font-size: 1.1rem;
-    margin-bottom: 0.3rem;
-  }
-  .product-rating-row {
-    font-size: 0.95rem;
-    gap: 0.3rem;
-    flex-wrap: wrap;
-  }
-  .product-price-row .current-price {
-    font-size: 1rem;
-  }
-  .product-action-box {
-    padding: 10px 0;
-    gap: 6px;
-  }
-  .quantity-and-buttons {
-    gap: 6px;
-  }
-  .product-coupons-box {
-    padding: 6px;
-  }
-  .variation-scroller-title,
-  .product-coupons-title {
-    font-size: 1rem;
-  }
-  .product-tabs-container {
-    padding: 0px;
-}
-}
-
-/* 320px and below (smallest mobile) */
-@media (max-width: 320px) {
-  .product-details {
-    padding: 2px 0;
-    gap: 0.3rem;
-  }
-  .thumbnail-images img {
-    width: 32px;
-    height: 32px;
-  }
-  .product-info h1 {
-    font-size: 0.9rem;
-  }
-  .product-rating-row {
-    font-size: 0.8rem;
-  }
-  .product-price-row .current-price {
-    font-size: 0.85rem;
-  }
-  .product-action-box {
-    padding: 4px 0;
-    gap: 2px;
-  }
-  .quantity-and-buttons {
-    gap: 2px;
-  }
-  .product-coupons-box {
-    padding: 2px;
-  }
-}
-
 .product-title-row {
   display: flex;
   align-items: flex-start;
@@ -1701,6 +1563,7 @@
   justify-content: space-between;
   margin-bottom: 8px;
   gap: 16px;
+  flex-wrap: wrap;
 }
 .customer-reviews-heading {
   font-size: 2rem;
@@ -1710,6 +1573,7 @@
 }
 .star-breakdown-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 18px;
   margin-bottom: 18px;
@@ -1717,6 +1581,7 @@
 }
 .star-breakdown-item {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
   background: #fafbfc;
@@ -1737,4 +1602,162 @@
   margin-left: 12px;
   color: #888;
   font-size: 0.98rem;
+}
+
+
+/* ========================= RESPONSIVE BREAKPOINTS ========================= */
+
+/* 1440px and below */
+@media (max-width: 1440px) {
+  .product-details {
+    padding: 40px 5%;
+    gap: 1.5rem;
+  }
+  .product-info h1 {
+    font-size: 2.1rem;
+  }
+}
+
+/* 1024px and below */
+@media (max-width: 1024px) {
+  .product-details {
+    padding: 32px 5%;
+    gap: 2.5rem;
+    align-items: stretch;
+  }
+  .product-tabs-section {
+    padding: 0 5% 50px;
+  }
+  .product-gallery {
+    position: static;
+    top: unset;
+    margin-bottom: 2rem;
+    flex: none;
+  }
+  .product-info {
+    min-width: unset;
+    max-height: none;
+    overflow-y: visible;
+  }
+  .product-rating-row {
+    font-size: 1rem;
+    flex-wrap: wrap;
+  }
+}
+
+/* 768px and below */
+@media (max-width: 768px) {
+  .product-details {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .main-image {
+    margin-bottom: 1rem;
+    width: 100%;
+    height: auto;
+  }
+  .thumbnail-images img {
+    width: 70px;
+    height: 70px;
+  }
+  .product-info h1 {
+    font-size: 1.5rem;
+  }
+  .product-price-row .current-price {
+    font-size: 1.2rem;
+  }
+  .product-action-box {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  .product-coupons-box {
+    padding: 10px;
+  }
+}
+
+/* 426px and below (mobile) */
+@media (max-width: 426px) {
+  .product-details {
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .product-info h1 {
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+  }
+  .product-rating-row {
+    font-size: 0.95rem;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+  }
+  .product-price-row .current-price {
+    font-size: 1rem;
+  }
+  .product-action-box {
+    padding: 10px 0;
+    gap: 6px;
+  }
+  .quantity-and-buttons {
+    gap: 6px;
+  }
+  .product-coupons-box {
+    padding: 6px;
+  }
+  .variation-scroller-title,
+  .product-coupons-title {
+    font-size: 1rem;
+  }
+  .product-tabs-container {
+    padding: 0px;
+}
+.action-buttons-row {
+  flex-direction: column;
+  gap: 10px;
+}
+.add-to-cart-btn, .buy-now-btn {
+  padding: 10px 0;
+  font-size: 0.9rem;
+}
+.review-header-row {
+gap: 0px;
+}
+.product-reviews-section h2 {
+  margin-bottom: 0px;
+}
+.write-review-btn {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+}
+
+/* 320px and below (smallest mobile) */
+@media (max-width: 320px) {
+  .product-details {
+    padding: 2px 0;
+    gap: 0.3rem;
+  }
+  .thumbnail-images img {
+    width: 32px;
+    height: 32px;
+  }
+  .product-info h1 {
+    font-size: 0.9rem;
+  }
+  .product-rating-row {
+    font-size: 0.8rem;
+  }
+  .product-price-row .current-price {
+    font-size: 0.85rem;
+  }
+  .product-action-box {
+    padding: 4px 0;
+    gap: 2px;
+  }
+  .quantity-and-buttons {
+    gap: 2px;
+  }
+  .product-coupons-box {
+    padding: 2px;
+  }
 }
