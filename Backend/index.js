@@ -7,6 +7,8 @@ const { sequelize } = require('./config/db.js');
 const routesManager = require('./routes/routesManager.js');
 const passport = require('./config/passport.js');
 const session = require('express-session');
+const MySQLStore = require('express-mysql-session')(session);
+const dbConfig = require('./config/db');
 const { dirname, join } = require('path');
 const { fileURLToPath } = require('url');
 const { initializeSeoData } = require('./utils/initializeSeoData.js');
@@ -62,17 +64,27 @@ if (process.env.NODE_ENV === 'production') {
     app.use(morgan('dev'));
 }
 
-// Session configuration (MemoryStore only)
+// MySQL session store options
+const sessionStore = new MySQLStore({
+  host: dbConfig.host,
+  port: dbConfig.port || 3306,
+  user: dbConfig.username,
+  password: dbConfig.password,
+  database: dbConfig.database,
+  // You can add more options if needed
+});
+
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'
-    }
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  store: sessionStore,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'
+  }
 }));
 
 // Initialize Passport and restore authentication state from session
