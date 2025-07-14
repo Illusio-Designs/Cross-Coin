@@ -29,22 +29,6 @@ const Footer = () => {
 
   return (
     <footer className="footer">
-      <div className="footer__newsletter">
-        <div className="footer__newsletter-content">
-          <h3>Join our newsletter for 10% offs</h3>
-          <p>Register now to get latest updates on promotions & coupons. Don't worry, we not spam!</p>
-        </div>
-        <div className="footer__newsletter-form-container">
-        <form className="footer__newsletter-form">
-          <div style={{ position: 'relative' }}>
-            <AiOutlineMail style={{ position: 'absolute', left: '5px', top: '10px' }} />
-            <input type="email" placeholder="Enter your email address" style={{ paddingLeft: '25px' }} />
-          </div>
-          <button type="submit">SEND</button>
-        </form>
-        <p className="footer__newsletter-policy">By subscribing you agree to our <a href="#">Terms & Conditions</a> and <a href="#">Privacy & Cookies Policy</a>.</p>
-        </div>
-      </div>
       <div className="footer__main">
         <div className="footer__col footer__brand">
           <div className="footer__logo">

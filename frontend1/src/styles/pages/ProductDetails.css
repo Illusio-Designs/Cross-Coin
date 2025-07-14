@@ -299,26 +299,6 @@
   transition: border 0.2s;
 }
 
-.color-option.selected {
-  border: 2.5px solid #e60000;
-}
-
-.color-option.black {
-  background-color: black;
-}
-
-.color-option.gray {
-  background-color: gray;
-}
-
-.color-option.navy {
-  background-color: navy;
-}
-
-.color-option.active {
-  border: 2px solid #e60000;
-}
-
 .product-timer {
   margin: 1rem 0;
   color: orange;
@@ -1010,7 +990,6 @@
 .color-option-unique.selected {
   border: 3px solid #CE1E36;
   box-shadow: 0 4px 16px rgba(206,30,54,0.13);
-  transform: scale(1.08);
 }
 .color-option-unique:hover {
   border: 2.5px solid #180D3E;

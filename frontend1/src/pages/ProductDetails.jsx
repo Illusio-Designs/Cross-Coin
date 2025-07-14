@@ -806,78 +806,14 @@ export default function ProductDetails() {
                   <span className="details-label">Size:</span>
                   <span className="details-value">{attrs.size?.[0] || '-'}</span>
                   </div>
-                </div>
-                
-              </div>
-            </div>
-
-            {/* B. SKU buttons row */}
-            <div className="model-btn-row">
-              <div>
-            <span className="details-heading">Models</span>
-            </div>
-            <div className="variation-button">
-              {product.variations.map(variation => (
-                
-                <button
-                  key={variation.sku}
-                  className={`model-btn${selectedSku === variation.sku ? ' selected' : ''}`}
-                  onClick={() => setSelectedSku(variation.sku)}
-                >
-                  {variation.sku}
-                </button>
-              ))}
-              </div>
-            </div>
-            {/* Coupons Display */}
-            {coupons && coupons.length > 0 && (
-              <div className="product-coupons-box">
-                <h3 className="product-coupons-title">Available Coupons</h3>
-                <div className="product-coupons-scroller-row">
-                  {coupons.map((coupon) => (
-                    <div 
-                      key={coupon.id} 
-                      className="coupon-card-details"
-                      onClick={() => handleCopyCoupon(coupon.code)}
-                      style={{ cursor: 'pointer', position: 'relative' }}
-                    >
-                        <div className="coupon-code-details">{coupon.code}</div>
-                        <p className="coupon-description-details">
-                          {coupon.description || generateCouponDescription(coupon)}
-                        </p>
-                        {copiedCoupon === coupon.code && (
-                          <div style={{
-                            position: 'absolute',
-                            top: '-40px',
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            background: '#CE1E36',
-                            color: 'white',
-                            padding: '8px 12px',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            zIndex: 10,
-                            animation: 'fadeInOut 2s ease-in-out'
-                          }}>
-                            Copied!
-                          </div>
-                        )}
-                    </div>
-                  ))}
+                  <div>
+                  <span className="details-label">SKU:</span>
+                  <span className="details-value">{selectedSku || '-'}</span>
+                  </div>
                 </div>
               </div>
-            )}
-            {/* Quantity and Action Buttons Section */}
-            <div className="quantity-section">
-              <div className="details-heading">Quantity:</div>
-              <div className="quantity-box">
-                <button className="quantity-btn" onClick={() => setQuantity(q => Math.max(1, q - 1))}>-</button>
-                <span className="quantity-value">{quantity}</span>
-                <button className="quantity-btn" onClick={() => setQuantity(q => q + 1)}>+</button>
-              </div>
             </div>
-            {/* Color selection UI */}
+            {/* Color selection UI (now replaces Models row) */}
             {colorOptions.length > 0 && (
               <div className="color-selection-row" style={{ marginBottom: 16 }}>
                 <span className="details-label">Select Color:</span>
@@ -895,9 +831,20 @@ export default function ProductDetails() {
                       color: '#fff',
                       fontWeight: 'bold',
                     }}
-                        onClick={() => {
+                    onClick={() => {
                       setSelectedColor(color);
                       handleAttributeChange('color', color);
+                      // Update SKU to match the selected color's variation
+                      const matchingVariation = product.variations.find(variation => {
+                        const attrs = typeof variation.attributes === 'string'
+                          ? JSON.parse(variation.attributes)
+                          : variation.attributes;
+                        return attrs && attrs.color && attrs.color.includes(color);
+                      });
+                      if (matchingVariation) {
+                        setSelectedSku(matchingVariation.sku);
+                        setSelectedVariation(matchingVariation);
+                      }
                     }}
                     aria-label={color}
                   >
@@ -906,27 +853,37 @@ export default function ProductDetails() {
                 ))}
               </div>
             )}
+            {/* Quantity and Action Buttons Section */}
+            <div className="quantity-section">
+              <div className="details-heading">Quantity:</div>
+              <div className="quantity-box">
+                <button className="quantity-btn" onClick={() => setQuantity(q => Math.max(1, q - 1))}>-</button>
+                <span className="quantity-value">{quantity}</span>
+                <button className="quantity-btn" onClick={() => setQuantity(q => q + 1)}>+</button>
+              </div>
+            </div>
+            {/* Action Buttons Row */}
             <div className="action-buttons-row">
               <button className="add-to-cart-btn" onClick={handleAddToCart}>
                 ADD TO CART
-                </button>
+              </button>
               <button className="buy-now-btn" onClick={handleBuyNow}>
                 BUY IT NOW
-                </button>
-              </div>
+              </button>
+            </div>
             {/* Description row added below */}
             <div className="details-row">
-                  <div>
-                    <div className="details-heading">Description:</div>
-                    <span className="details-value">
-                      <span
-                        dangerouslySetInnerHTML={{
-                          __html: DOMPurify.sanitize(decodeHtml(product.description || "-"))
-                        }}
-                      />
-                    </span>
+              <div>
+                <div className="details-heading">Description:</div>
+                <span className="details-value">
+                  <span
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(decodeHtml(product.description || "-"))
+                    }}
+                  />
+                </span>
+              </div>
             </div>
-          </div>
         </div>
           
         </div>
