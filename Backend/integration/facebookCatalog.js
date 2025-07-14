@@ -13,8 +13,8 @@ router.get("/feed", async (req, res) => {
     const products = await Product.findAll({
         where: { status: 'active' },
         include: [
-            { model: Category, as: 'category', attributes: ['name'] },
-            { model: ProductImage, as: 'images', where: { is_primary: true }, required: false }
+            { model: Category, as: 'Category', attributes: ['name'] },
+            { model: ProductImage, as: 'ProductImages', where: { is_primary: true }, required: false }
         ]
     });
 
