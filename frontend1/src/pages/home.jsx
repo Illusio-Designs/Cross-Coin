@@ -664,28 +664,59 @@ const Home = () => {
                               <span className="details-label">Size:</span>
                               <span className="details-value">{attrs.size?.[0] || '-'}</span>
                             </div>
+                            <div>
+                              <span className="details-label">SKU:</span>
+                              <span className="details-value">{selectedSku || '-'}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                      {/* Models/SKU buttons row */}
-                      <div className="model-btn-row">
-                        <div>
-                          <div className="details-heading">Models</div>
-                        </div>
-                        <div className="variation-button">
-                          {product.variations.map(variation => (
-                            <button
-                              key={variation.sku}
-                              className={`model-btn${selectedSku === variation.sku ? ' selected' : ''}`}
-                              onClick={() => {
-                                setExclusiveSelectedSkus(prev => prev.map((sku, i) => i === index ? variation.sku : sku));
-                              }}
-                            >
-                              {variation.sku}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      {/* Color selection UI (replaces Models row) */}
+                      {product.variations && product.variations.length > 0 && (() => {
+                        // Get all unique color options
+                        const colorOptions = Array.from(new Set(product.variations.flatMap(v => {
+                          const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+                          return attrs && attrs.color ? attrs.color : [];
+                        })));
+                        return colorOptions.length > 0 ? (
+                          <div className="color-selection-row" style={{ marginBottom: 16 }}>
+                            <span className="details-label">Select Color:</span>
+                            {colorOptions.map((color) => (
+                              <button
+                                key={color}
+                                style={{
+                                  backgroundColor: color,
+                                  border: state.selectedColor === color ? '2px solid #222' : '1px solid #ccc',
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: '50%',
+                                  margin: 4,
+                                  cursor: 'pointer',
+                                  color: '#fff',
+                                  fontWeight: 'bold',
+                                }}
+                                onClick={() => {
+                                  // Find the matching variation for this color
+                                  const matchingVariation = product.variations.find(variation => {
+                                    const attrs = typeof variation.attributes === 'string'
+                                      ? JSON.parse(variation.attributes)
+                                      : variation.attributes;
+                                    return attrs && attrs.color && attrs.color.includes(color);
+                                  });
+                                  setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, selectedColor: color, selectedThumbnail: 0 } : s));
+                                  if (matchingVariation) {
+                                    setExclusiveSelectedSkus(prev => prev.map((sku, i) => i === index ? matchingVariation.sku : sku));
+                                  }
+                                }}
+                                aria-label={color}
+                              >
+                                {state.selectedColor === color ? '✓' : ''}
+                              </button>
+                            ))}
+                          </div>
+                        ) : null;
+                      })()}
+                      {/* Removed Models/SKU row, replaced by color selection above */}
                      
                       {/* Quantity and Action Buttons Section */}
                       <div className="quantity-section">
@@ -776,33 +807,6 @@ const Home = () => {
           </div>
         </div>
         <Testimonials />
-        <div className="summer-collections-section">
-        <div className="summer-collections-content">
-          <h2><span className="summer-highlight">SUMMER</span> COLLECTIONS</h2>
-          <button className="summer-shop-btn">SHOP NOW &rarr;</button>
-        </div>
-        <div className="summer-countdown">
-            <div className="summer-countdown-block">
-              <div className="summer-countdown-digit">{formatTwoDigits(days)}</div>
-              <div className="summer-countdown-label">Days</div>
-            </div>
-            <span>:</span>
-            <div className="summer-countdown-block">
-              <div className="summer-countdown-digit">{formatTwoDigits(hours)}</div>
-              <div className="summer-countdown-label">Hours</div>
-            </div>
-            <span>:</span>
-            <div className="summer-countdown-block">
-              <div className="summer-countdown-digit">{formatTwoDigits(minutes)}</div>
-              <div className="summer-countdown-label">Minutes</div>
-            </div>
-            <span>:</span>
-            <div className="summer-countdown-block">
-              <div className="summer-countdown-digit">{formatTwoDigits(seconds)}</div>
-              <div className="summer-countdown-label">Seconds</div>
-            </div>
-          </div>
-        </div>
       </div>
       <Footer />
     </SeoWrapper>
