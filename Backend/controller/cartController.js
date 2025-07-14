@@ -40,8 +40,10 @@ module.exports.getCart = async (req, res) => {
             const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
             
             let image = '/placeholder.png'; // Fallback image
-            if (product && product.ProductImages && product.ProductImages.length > 0) {
-                // The image_url from the DB already contains the path, e.g., /uploads/products/image.png
+            // Prefer variation image if available
+            if (variation && variation.VariationImages && variation.VariationImages.length > 0) {
+                image = `${baseUrl}${variation.VariationImages[0].image_url}`;
+            } else if (product && product.ProductImages && product.ProductImages.length > 0) {
                 image = `${baseUrl}${product.ProductImages[0].image_url}`;
             }
 
@@ -82,9 +84,10 @@ module.exports.addToCart = async (req, res) => {
       cart = await Cart.create({ user_id: userId });
     }
     // Check if item already exists (by product and variation)
-    let where = { cartId: cart.id, productId: productId };
-    if (variationId) where.variationId = variationId;
+    let where = { cartId: cart.id, productId: productId, variationId: variationId || null };
+    console.log('[Cart] addToCart where:', where);
     let item = await CartItem.findOne({ where });
+    console.log('[Cart] addToCart found item:', item);
     let stockAvailable = 0;
     if (variationId) {
       const variation = await ProductVariation.findByPk(variationId);

@@ -61,8 +61,8 @@ export default function ProductDetails() {
   const selectedVariationBySku = product?.variations.find(v => v.sku === selectedSku) || product?.variations[0];
 
   // Use images from selected variation if available, else fallback to product images
-  const variationImages = selectedVariationBySku?.images && selectedVariationBySku.images.length > 0
-    ? selectedVariationBySku.images
+  const variationImages = selectedVariation?.images && selectedVariation.images.length > 0
+    ? selectedVariation.images
     : product?.images || [];
 
   // Reset selectedThumbnail when SKU changes
@@ -249,6 +249,9 @@ export default function ProductDetails() {
         setSelectedVariation(matchingVariation);
         console.log('Variation selected:', matchingVariation);
       }
+      if(attributeName === 'color') {
+        console.log('Color selected:', value, 'SelectedAttributes:', newAttributes);
+      }
       return newAttributes;
     });
   };
@@ -433,10 +436,11 @@ export default function ProductDetails() {
     }
     const selectedColor = selectedAttributes.color || '';
     const selectedSize = selectedAttributes.size || '';
-    addToCart(product, selectedColor, selectedSize, quantity);
+    addToCart(product, selectedColor, selectedSize, quantity, selectedVariation.id);
     setShowAddedToCart(true);
     setTimeout(() => setShowAddedToCart(false), 2000);
-    console.log('Add to cart:', { product, selectedColor, selectedSize, quantity });
+    console.log('Add to cart:', { product, selectedColor, selectedSize, quantity, variationId: selectedVariation.id });
+    console.log('Selected Variation Object:', selectedVariation);
     fbqTrack('AddToCart', {
       content_ids: [product.id],
       content_name: product.name,
@@ -454,7 +458,7 @@ export default function ProductDetails() {
     }
     const selectedColor = selectedAttributes.color || '';
     const selectedSize = selectedAttributes.size || '';
-    addToCart(product, selectedColor, selectedSize, quantity);
+    addToCart(product, selectedColor, selectedSize, quantity, selectedVariation.id);
     router.push('/unifiedcheckout');
     fbqTrack('InitiateCheckout', {
       content_ids: [product.id],
@@ -650,6 +654,9 @@ export default function ProductDetails() {
     product.reviews ? product.reviews.filter(r => r.rating === star).length : 0
   );
   const totalReviews = product.reviews ? product.reviews.length : 0;
+
+  // Log color options and selected color for debugging
+  console.log('Color options:', colorOptions, 'Selected color:', selectedColor);
 
   return (
     <SeoWrapper
@@ -870,6 +877,35 @@ export default function ProductDetails() {
                 <button className="quantity-btn" onClick={() => setQuantity(q => q + 1)}>+</button>
               </div>
             </div>
+            {/* Color selection UI */}
+            {colorOptions.length > 0 && (
+              <div className="color-selection-row" style={{ marginBottom: 16 }}>
+                <span className="details-label">Select Color:</span>
+                {colorOptions.map((color) => (
+                  <button
+                    key={color}
+                    style={{
+                      backgroundColor: color,
+                      border: selectedColor === color ? '2px solid #222' : '1px solid #ccc',
+                      width: 32,
+                      height: 32,
+                      borderRadius: '50%',
+                      margin: 4,
+                      cursor: 'pointer',
+                      color: '#fff',
+                      fontWeight: 'bold',
+                    }}
+                    onClick={() => {
+                      setSelectedColor(color);
+                      handleAttributeChange('color', color);
+                    }}
+                    aria-label={color}
+                  >
+                    {selectedColor === color ? '✓' : ''}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="action-buttons-row">
               <button className="add-to-cart-btn" onClick={handleAddToCart}>
                 ADD TO CART
