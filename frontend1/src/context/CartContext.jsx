@@ -70,22 +70,13 @@ export const CartProvider = ({ children }) => {
     setCartCount(cartItems.reduce((total, item) => total + item.quantity, 0));
   }, [cartItems, isAuthenticated]);
 
-  const addToCart = async (product, selectedColor, selectedSize, quantity = 1) => {
-    console.log('CartContext: addToCart called with:', { product, selectedColor, selectedSize, quantity });
+  const addToCart = async (product, selectedColor, selectedSize, quantity = 1, variationId = null) => {
+    console.log('CartContext: addToCart called with:', { product, selectedColor, selectedSize, quantity, variationId });
     console.log('CartContext: isAuthenticated:', isAuthenticated);
     if (isAuthenticated) {
       try {
         console.log('CartContext: addToCart for authenticated user');
-        // Find variationId if available
-        let variationId = null;
-        if (product.variations && product.variations.length > 0) {
-          const match = product.variations.find(v => {
-            const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
-            return (!selectedColor || (attrs.color && attrs.color.includes(selectedColor))) &&
-                   (!selectedSize || (attrs.size && attrs.size.includes(selectedSize)));
-          });
-          if (match) variationId = match.id;
-        }
+        // Use variationId directly
         console.log('CartContext: calling apiAddToCart with:', { productId: product.id, variationId, quantity });
         await apiAddToCart({ productId: product.id, variationId, quantity });
         const backendCart = await apiGetCart();
