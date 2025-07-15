@@ -30,16 +30,16 @@ const SeoWrapper = ({ pageName, children, fallbackSeo = null, seo }) => {
                     response = await seoService.getSEOData(currentPageName);
                 }
 
-                if (response && response.success !== false) {
-                    setSeoData(prev => ({
-                        ...prev,
-                        meta_title: response.meta_title || prev.meta_title,
-                        meta_description: response.meta_description || prev.meta_description,
-                        meta_keywords: response.meta_keywords || prev.meta_keywords,
-                        canonical_url: response.canonical_url || (typeof window !== 'undefined' ? window.location.href : ''),
-                        meta_image: response.meta_image || prev.meta_image,
-                    }));
-                }
+                // Accept both {success, data} and direct SEO object
+                const data = response && response.data ? response.data : response;
+                setSeoData(prev => ({
+                    ...prev,
+                    meta_title: data.meta_title || data.metaTitle || prev.meta_title,
+                    meta_description: data.meta_description || data.metaDescription || prev.meta_description,
+                    meta_keywords: data.meta_keywords || data.metaKeywords || prev.meta_keywords,
+                    canonical_url: data.canonical_url || data.canonicalUrl || (typeof window !== 'undefined' ? window.location.href : ''),
+                    meta_image: data.meta_image || data.ogImage || prev.meta_image,
+                }));
             } catch (error) {
                 console.error('Error fetching SEO data:', error);
                 

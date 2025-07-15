@@ -446,10 +446,14 @@ export const updateCartItem = async (productId, quantity, variationId) => {
     }
 };
 
-export const removeFromCart = async (productId) => {
+export const removeFromCart = async (productId, variationId) => {
     try {
         const token = localStorage.getItem('token');
-        const response = await axios.delete(`${API_URL}/api/cart/item/${productId}`, {
+        let url = `${API_URL}/api/cart/item/${productId}`;
+        if (variationId) {
+            url += `/${variationId}`;
+        }
+        const response = await axios.delete(url, {
             headers: { Authorization: `Bearer ${token}` }
         });
         return response.data;

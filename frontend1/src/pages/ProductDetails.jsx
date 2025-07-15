@@ -431,16 +431,37 @@ export default function ProductDetails() {
   const handleAddToCart = () => {
     if (!selectedVariation) {
       showValidationErrorToast('Please select all required variations.');
-      console.log('Add to cart failed: No variation selected');
       return;
     }
     const selectedColor = selectedAttributes.color || '';
     const selectedSize = selectedAttributes.size || '';
-    addToCart(product, selectedColor, selectedSize, quantity, selectedVariation.id);
+    // Find the image for the selected variation by product_variation_id
+    let selectedImage = [];
+    let imagesForVariation = [];
+    if (product.images && product.images.length > 0 && selectedVariation.id) {
+      imagesForVariation = product.images.filter(img => img.product_variation_id === selectedVariation.id);
+      console.log('All product images:', product.images);
+      console.log('Selected variation id:', selectedVariation.id);
+      console.log('Images for this variation:', imagesForVariation);
+      if (imagesForVariation.length > 0) {
+        selectedImage = [imagesForVariation[0]];
+      }
+    }
+    if (selectedImage.length === 0 && selectedVariation.images && selectedVariation.images.length > 0) {
+      selectedImage = [selectedVariation.images[0]];
+      console.log('Fallback to selectedVariation.images:', selectedVariation.images);
+    }
+    console.log('Final image sent to cart:', selectedImage);
+    addToCart(
+      product,
+      selectedColor,
+      selectedSize,
+      quantity,
+      selectedVariation.id,
+      selectedImage
+    );
     setShowAddedToCart(true);
     setTimeout(() => setShowAddedToCart(false), 2000);
-    console.log('Add to cart:', { product, selectedColor, selectedSize, quantity, variationId: selectedVariation.id });
-    console.log('Selected Variation Object:', selectedVariation);
     fbqTrack('AddToCart', {
       content_ids: [product.id],
       content_name: product.name,
@@ -458,7 +479,31 @@ export default function ProductDetails() {
     }
     const selectedColor = selectedAttributes.color || '';
     const selectedSize = selectedAttributes.size || '';
-    addToCart(product, selectedColor, selectedSize, quantity, selectedVariation.id);
+    // Find the image for the selected variation by product_variation_id
+    let selectedImage = [];
+    let imagesForVariation = [];
+    if (product.images && product.images.length > 0 && selectedVariation.id) {
+      imagesForVariation = product.images.filter(img => img.product_variation_id === selectedVariation.id);
+      console.log('All product images:', product.images);
+      console.log('Selected variation id:', selectedVariation.id);
+      console.log('Images for this variation:', imagesForVariation);
+      if (imagesForVariation.length > 0) {
+        selectedImage = [imagesForVariation[0]];
+      }
+    }
+    if (selectedImage.length === 0 && selectedVariation.images && selectedVariation.images.length > 0) {
+      selectedImage = [selectedVariation.images[0]];
+      console.log('Fallback to selectedVariation.images:', selectedVariation.images);
+    }
+    console.log('Final image sent to cart:', selectedImage);
+    addToCart(
+      product,
+      selectedColor,
+      selectedSize,
+      quantity,
+      selectedVariation.id,
+      selectedImage
+    );
     router.push('/unifiedcheckout');
     fbqTrack('InitiateCheckout', {
       content_ids: [product.id],
@@ -660,15 +705,8 @@ export default function ProductDetails() {
 
   return (
     <SeoWrapper
-      pageName={product.name || "product-details"}
-      metaTitle={product.seo?.metaTitle}
-      metaDescription={product.seo?.metaDescription}
-      metaKeywords={product.seo?.metaKeywords}
-      ogTitle={product.seo?.ogTitle}
-      ogDescription={product.seo?.ogDescription}
-      ogImage={product.seo?.ogImage}
-      canonicalUrl={product.seo?.canonicalUrl}
-      structuredData={product.seo?.structuredData}
+      pageName={product?.slug || "product-details"}
+      seo={product?.seo}
     >
       <div className="product-details-container">
         <Header />
@@ -712,15 +750,15 @@ export default function ProductDetails() {
               </button>
             </div>
             {/* Thumbnails */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 16 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap' , justifyContent: 'center', gap: 16, marginTop: 16 }}>
               {variationImages.map((image, idx) => (
                 <img
                   key={image.id || idx}
                   src={forceEnvImageBase(image.image_url || image.url || image)}
                   alt={image.alt_text || `${product.name} thumbnail ${idx + 1}`}
                   style={{
-                    width: 100,
-                    height: 100,
+                    width: 80,
+                    height: 80,
                     objectFit: 'cover',
                     border: selectedThumbnail === idx ? '2px solid #222' : '1px solid #eee',
                     cursor: 'pointer'
