@@ -151,21 +151,9 @@ const Products = () => {
     router.push(`/ProductDetails?slug=${product.slug}`);
   };
 
-  const handleAddToCart = (e, product) => {
+  const handleAddToCart = (e, product, color, size, variationId) => {
     e.stopPropagation();
-    console.log('Add to Cart:', product);
-    // Get default color and size from the first variation
-    const variation = product.variations?.[0];
-    let defaultColor = '';
-    let defaultSize = '';
-    
-    if (variation && variation.attributes) {
-      const attrs = typeof variation.attributes === 'string' ? JSON.parse(variation.attributes) : variation.attributes;
-      defaultColor = attrs.color?.[0] || '';
-      defaultSize = attrs.size?.[0] || '';
-    }
-    
-    addToCart(product, defaultColor, defaultSize, 1);
+    addToCart(product, color, size, 1, variationId);
     fbqTrack('AddToCart', {
       content_ids: [product.id],
       content_name: product.name,

@@ -37,6 +37,16 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
   // Get category name
   const categoryName = product?.category?.name || '';
 
+  // Get default color and size from the first variation
+  let defaultColor = '';
+  let defaultSize = '';
+  let variationId = variation?.id || null;
+  if (variation && variation.attributes) {
+    const attrs = typeof variation.attributes === 'string' ? JSON.parse(variation.attributes) : variation.attributes;
+    defaultColor = attrs.color?.[0] || '';
+    defaultSize = attrs.size?.[0] || '';
+  }
+
   // Format badge text safely
   const formatBadge = (badge) => {
     if (!badge) return '';
@@ -79,7 +89,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
           </span>
           <button 
             className="add-to-cart"
-            onClick={(e) => onAddToCart(e, product)}
+            onClick={(e) => onAddToCart(e, product, defaultColor, defaultSize, variationId)}
             aria-label="Quick view"
           >
             Add

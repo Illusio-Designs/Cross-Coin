@@ -35,6 +35,24 @@ function forceEnvImageBase(url) {
   return `${baseUrl}${url}`;
 }
 
+// Helper to pick the best image for a cart item based on color
+function pickCartItemImage(item) {
+  // If item.images is an array (from backend), try to match color
+  if (Array.isArray(item.images) && item.color) {
+    // Try to find an image whose alt_text or filename includes the color
+    const colorLower = item.color.toString().toLowerCase();
+    const match = item.images.find(img =>
+      (img.alt_text && img.alt_text.toLowerCase().includes(colorLower)) ||
+      (img.image_url && img.image_url.toLowerCase().includes(colorLower))
+    );
+    if (match) return match.image_url;
+    // Otherwise, fallback to first image
+    if (item.images.length > 0) return item.images[0].image_url;
+  }
+  // Fallback to item.image (from backend)
+  return item.image;
+}
+
 export default function CartStep() {
   const router = useRouter();
   const { cartItems, removeFromCart, updateQuantity, setQuantity } = useCart();
@@ -71,9 +89,9 @@ export default function CartStep() {
             </div>
         ) : (
             cartItems.map((item) => (
-                <div className="cart-item" key={item.id}>
+                <div className="cart-item" key={`${item.id}-${item.productId}-${item.variationId || ''}`}>
                     <Image 
-                      src={forceEnvImageBase(item.image)} 
+                      src={forceEnvImageBase(pickCartItemImage(item))} 
                       alt={item.name} 
                       width={100} 
                       height={100} 
