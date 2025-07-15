@@ -94,6 +94,11 @@ const formatProductResponse = (product) => {
         productData.outOfStock = false;
     }
 
+    // Remove images from the product response
+    if (productData.images) {
+        delete productData.images;
+    }
+
     return productData;
 };
 
@@ -752,7 +757,7 @@ module.exports.updateProduct = async (req, res) => {
 
                 // Delete existing product-level images from database
                 await ProductImage.destroy({
-                    where: { 
+                    where: {
                         product_id: id,
                         product_variation_id: null // Only delete product-level images
                     },
@@ -773,6 +778,7 @@ module.exports.updateProduct = async (req, res) => {
                 }
             }
         }
+        // If no new images are uploaded, do NOT delete or modify existing images. They will be preserved.
 
         await transaction.commit();
 

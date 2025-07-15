@@ -14,6 +14,7 @@ import { fbqTrack } from '../components/common/Analytics';
 import { getProductImageSrc } from '../utils/imageUtils';
 import DOMPurify from 'dompurify';
 import Modal from "../components/common/Modal";
+import colorMap from '../components/products/colorMap';
 
 export default function ProductDetails() {
   const searchParams = useSearchParams();
@@ -794,11 +795,35 @@ export default function ProductDetails() {
                   )}
                   <span className="review-summary">
                     <span className="stars">{renderStars(product.avg_rating || 0)}</span>
-              <span className="rating-value">{parseFloat(product.avg_rating || 0).toFixed(1)}</span>
-              <span className="review-count">({product.review_count || 0} reviews)</span>
+                    <span className="rating-value">{parseFloat(product.avg_rating || 0).toFixed(1)}</span>
+                    <span className="review-count">({product.review_count || 0} reviews)</span>
                   </span>
-            </div>
-            </div>
+                </div>
+                {/* Included Colors UI for Packs and Singles */}
+                {Array.isArray(attrs.color) && attrs.color.length > 0 && (
+                  <div style={{ margin: '16px 0' }}>
+                    <strong>Included Colors:</strong>
+                    <div style={{ display: 'flex', gap: '1em', marginTop: '0.5em' }}>
+                      {attrs.color.map((color, idx) => (
+                        <div key={color + idx} style={{ display: 'flex', alignItems: 'center' }}>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              width: 20,
+                              height: 20,
+                              borderRadius: '50%',
+                              backgroundColor: colorMap[color.toLowerCase()] || '#ccc',
+                              marginRight: 8,
+                              border: '1px solid #888',
+                            }}
+                          />
+                          <span>{color}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               {/* Wishlist icon */}
               <button
                 className="wishlist-btn"
@@ -831,64 +856,79 @@ export default function ProductDetails() {
             <div className="product-details-section">
               <h3 className="details-heading">Details</h3>
               <div className="details-table">
-                <div className="details-row">
+                <div
+                  className="details-row"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '16px 32px',
+                    alignItems: 'start',
+                  }}
+                >
+                  {attrs && Object.keys(attrs).map((key) => (
+                    <div key={key} style={{ minWidth: 120 }}>
+                      <span className="details-label" style={{ textTransform: 'capitalize' }}>{key}:</span>
+                      <span className="details-value">{Array.isArray(attrs[key]) ? attrs[key].join(', ') : attrs[key]}</span>
+                    </div>
+                  ))}
                   <div>
-                  <span className="details-label">Type:</span>
-                  <span className="details-value">{attrs.type?.[0] || '-'}</span>
-                  </div>
-                  <div>
-                  <span className="details-label">Color:</span>
-                  <span className="details-value">{attrs.color?.[0] || '-'}</span>
-                  </div>
-                  <div>
-                  <span className="details-label">Size:</span>
-                  <span className="details-value">{attrs.size?.[0] || '-'}</span>
-                  </div>
-                  <div>
-                  <span className="details-label">SKU:</span>
-                  <span className="details-value">{selectedSku || '-'}</span>
+                    <span className="details-label">SKU:</span>
+                    <span className="details-value">{selectedSku || '-'}</span>
                   </div>
                 </div>
               </div>
             </div>
-            {/* Color selection UI (now replaces Models row) */}
-            {colorOptions.length > 0 && (
-              <div className="color-selection-row" style={{ marginBottom: 16 }}>
-                <span className="details-label">Select Color:</span>
-                {colorOptions.map((color) => (
-                  <button
-                    key={color}
-                    style={{
-                      backgroundColor: color,
-                      border: selectedColor === color ? '2px solid #222' : '1px solid #ccc',
-                      width: 32,
-                      height: 32,
-                      borderRadius: '50%',
-                      margin: 4,
-                      cursor: 'pointer',
-                      color: '#fff',
-                      fontWeight: 'bold',
-                    }}
-                    onClick={() => {
-                      setSelectedColor(color);
-                      handleAttributeChange('color', color);
-                      // Update SKU to match the selected color's variation
-                      const matchingVariation = product.variations.find(variation => {
-                        const attrs = typeof variation.attributes === 'string'
-                          ? JSON.parse(variation.attributes)
-                          : variation.attributes;
-                        return attrs && attrs.color && attrs.color.includes(color);
-                      });
-                      if (matchingVariation) {
-                        setSelectedSku(matchingVariation.sku);
-                        setSelectedVariation(matchingVariation);
-                      }
-                    }}
-                    aria-label={color}
-                  >
-                    {selectedColor === color ? '✓' : ''}
-                  </button>
-                ))}
+            {/* Pack Selection */}
+            {product.variations.length > 1 && (
+              <div style={{ margin: '16px 0' }}>
+                <strong>Select Pack:</strong>
+                <div style={{ display: 'flex', gap: '1em', marginTop: '0.5em' }}>
+                  {product.variations.map((variation, idx) => {
+                    const colors = Array.isArray(variation.attributes.color)
+                      ? variation.attributes.color
+                      : [];
+                    return (
+                      <button
+                        key={variation.sku}
+                        style={{
+                          border: selectedSku === variation.sku ? '2px solid #222' : '1px solid #ccc',
+                          padding: 8,
+                          borderRadius: 8,
+                          background: selectedSku === variation.sku ? '#f0f0f0' : '#fff',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: 8
+                        }}
+                        onClick={() => {
+                          setSelectedSku(variation.sku);
+                          setSelectedVariation(variation);
+                        }}
+                      >
+                        <span style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>{idx + 1}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          {colors.map((color, cidx) => (
+                            <span
+                              key={color + cidx}
+                              style={{
+                                display: 'inline-block',
+                                width: 16,
+                                height: 16,
+                                borderRadius: '50%',
+                                backgroundColor: colorMap[color.toLowerCase()] || '#ccc',
+                                marginRight: 4,
+                                border: '1px solid #888'
+                              }}
+                              title={color}
+                            />
+                          ))}
+                        </div>
+                        <span style={{ fontSize: 12, color: '#555' }}>{colors.join(' + ')}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
             {/* Quantity and Action Buttons Section */}
