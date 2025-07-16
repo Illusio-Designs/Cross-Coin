@@ -259,28 +259,6 @@ const Products = () => {
     return category ? category.name : categoryId;
   };
 
-  // Clear all filters
-  const clearAllFilters = () => {
-    setSelectedCategory([]);
-    setSelectedColors([]);
-    setSelectedSizes([]);
-    setSelectedGender([]);
-    setSelectedMaterial([]);
-    setPriceRange([20, 250]);
-    setCurrentPage(1);
-    // Clear URL parameters
-    router.push('/Products');
-  };
-
-  // Check if any filters are active
-  const hasActiveFilters = selectedCategory.length > 0 || 
-                          selectedColors.length > 0 || 
-                          selectedSizes.length > 0 || 
-                          selectedGender.length > 0 || 
-                          selectedMaterial.length > 0 ||
-                          priceRange[0] !== 20 || 
-                          priceRange[1] !== 250;
-
   // Compute min and max price from all products for the slider
   const getMinMaxPrice = () => {
     let min = Infinity, max = 0;
@@ -295,6 +273,14 @@ const Products = () => {
     return [Math.floor(min), Math.ceil(max)];
   };
   const [minPrice, maxPrice] = getMinMaxPrice();
+
+  // On products load, set priceRange to [minPrice, maxPrice]
+  useEffect(() => {
+    if (products.length > 0) {
+      setPriceRange([minPrice, maxPrice]);
+    }
+    // eslint-disable-next-line
+  }, [products.length]);
 
   // Add a function to filter products according to all selected filters
   const getFilteredProducts = () => {
@@ -348,14 +334,38 @@ const Products = () => {
         });
         if (!hasGender) return false;
       }
-      // Price filter (at least one variation in range)
-      const inPriceRange = (product.variations || []).some(variation => {
-        return variation.price >= priceRange[0] && variation.price <= priceRange[1];
-      });
-      if (!inPriceRange) return false;
+      // Price filter (only if user changed slider)
+      if (priceRange[0] !== minPrice || priceRange[1] !== maxPrice) {
+        const inPriceRange = (product.variations || []).some(variation => {
+          return variation.price >= priceRange[0] && variation.price <= priceRange[1];
+        });
+        if (!inPriceRange) return false;
+      }
       return true;
     });
   };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSelectedCategory([]);
+    setSelectedColors([]);
+    setSelectedSizes([]);
+    setSelectedGender([]);
+    setSelectedMaterial([]);
+    setPriceRange([minPrice, maxPrice]);
+    setCurrentPage(1);
+    // Clear URL parameters
+    router.push('/Products');
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = selectedCategory.length > 0 || 
+                          selectedColors.length > 0 || 
+                          selectedSizes.length > 0 || 
+                          selectedGender.length > 0 || 
+                          selectedMaterial.length > 0 ||
+                          priceRange[0] !== minPrice || 
+                          priceRange[1] !== maxPrice;
 
   return (
     <SeoWrapper pageName="products">
