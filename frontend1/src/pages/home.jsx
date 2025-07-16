@@ -528,17 +528,19 @@ const Home = () => {
                   )}
                   <div className="products-slider" ref={categorySliderRef}>
                     {currentCategoryProducts.map((product) => {
-                      // Format product data to match ProductCard expectations
+                      let imageUrl = product.image || '';
+                      if (!imageUrl) {
+                        imageUrl = '/assets/card1-left.webp';
+                      } else if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads/')) {
+                        imageUrl = `/uploads/products/${imageUrl}`;
+                      }
                       const formattedProduct = {
                         id: product.id,
                         name: product.name,
                         slug: product.slug,
                         description: product.description,
                         badge: product.badge || null,
-                        images: product.image ? [{
-                          image_url: product.image,
-                          is_primary: true
-                        }] : [],
+                        images: imageUrl ? [{ image_url: imageUrl, is_primary: true }] : [],
                         variations: [{
                           price: product.price || 0,
                           comparePrice: product.comparePrice || 0,
@@ -598,9 +600,20 @@ const Home = () => {
                   : selectedVariation?.attributes || {};
                 const reviewCount = exclusiveReviewCounts[index] !== undefined ? exclusiveReviewCounts[index] : 0;
                 const avgRating = exclusiveAvgRatings[index] !== undefined ? exclusiveAvgRatings[index] : 0;
+                // Collect all unique attribute keys from all variations
+                const allAttributeKeys = product.variations
+                  ? Array.from(new Set(product.variations.flatMap(v => {
+                      const a = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+                      return a ? Object.keys(a) : [];
+                    }))).sort()
+                  : [];
+                // For included colors (for color dots)
+                const includedColors = Array.isArray(attrs.color) ? attrs.color : [];
+                // For pack selection
+                const hasPacks = product.variations && product.variations.length > 1;
                 return (
-                <div key={product.id} className="featured-product-card">
-                  <div className="product-images">
+                  <div key={product.id} className="featured-product-card">
+                    <div className="product-images">
                       <Image
                         className="main-image"
                         src={forceEnvImageBase(variationImages[state.selectedThumbnail])}
@@ -626,14 +639,14 @@ const Home = () => {
                             unoptimized
                           />
                         ))}
-                  </div>
+                      </div>
                     </div>
                     <div className="product-info">
-                      {/* Title, price, review, wishlist */}
+                      {/* Title, price, review */}
                       <div className="product-title-row">
                         <div>
                           <h1 className="product-title">{product.name}</h1>
-                    <div className="product-price-row">
+                          <div className="product-price-row">
                             <span className="current-price">₹{selectedVariation.price}</span>
                             {selectedVariation.comparePrice && (
                               <span className="original-price">₹{selectedVariation.comparePrice}</span>
@@ -644,26 +657,43 @@ const Home = () => {
                               <span className="review-count">({reviewCount} reviews)</span>
                             </span>
                           </div>
+                          {/* Included Colors UI for Packs and Singles */}
+                          {includedColors.length > 0 && (
+                            <div style={{ margin: '16px 0' }}>
+                              <strong>Included Colors:</strong>
+                              <div style={{ display: 'flex', gap: '1em', marginTop: '0.5em' }}>
+                                {includedColors.map((color, idx) => (
+                                  <div key={color + idx} style={{ display: 'flex', alignItems: 'center' }}>
+                                    <span
+                                      style={{
+                                        display: 'inline-block',
+                                        width: 20,
+                                        height: 20,
+                                        borderRadius: '50%',
+                                        backgroundColor: color,
+                                        marginRight: 8,
+                                        border: '1px solid #888',
+                                      }}
+                                    />
+                                    <span>{color}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        {/* Wishlist icon (optional, if you have wishlist context on home) */}
                       </div>
                       {/* Details section */}
                       <div className="product-details-section">
                         <div className="details-heading">Details</div>
                         <div className="details-table">
-                          <div className="details-row">
-                            <div>
-                              <span className="details-label">Type:</span>
-                              <span className="details-value">{attrs.type?.[0] || '-'}</span>
-                            </div>
-                            <div>
-                              <span className="details-label">Color:</span>
-                              <span className="details-value">{attrs.color?.[0] || '-'}</span>
-                            </div>
-                            <div>
-                              <span className="details-label">Size:</span>
-                              <span className="details-value">{attrs.size?.[0] || '-'}</span>
-                            </div>
+                          <div className="details-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 32px', alignItems: 'start' }}>
+                            {allAttributeKeys.map((key) => (
+                              <div key={key} style={{ minWidth: 120 }}>
+                                <span className="details-label" style={{ textTransform: 'capitalize' }}>{key}:</span>
+                                <span className="details-value">{Array.isArray(attrs[key]) ? attrs[key].join(', ') : (attrs[key] ?? '-')}</span>
+                              </div>
+                            ))}
                             <div>
                               <span className="details-label">SKU:</span>
                               <span className="details-value">{selectedSku || '-'}</span>
@@ -671,53 +701,28 @@ const Home = () => {
                           </div>
                         </div>
                       </div>
-                      {/* Color selection UI (replaces Models row) */}
-                      {product.variations && product.variations.length > 0 && (() => {
-                        // Get all unique color options
-                        const colorOptions = Array.from(new Set(product.variations.flatMap(v => {
-                          const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
-                          return attrs && attrs.color ? attrs.color : [];
-                        })));
-                        return colorOptions.length > 0 ? (
-                          <div className="color-selection-row" style={{ marginBottom: 16 }}>
-                            <span className="details-label">Select Color:</span>
-                            {colorOptions.map((color) => (
+                      {/* Pack Selection */}
+                      {hasPacks && (
+                        <div className="select-pack-section">
+                          <strong>Select Pack:</strong>
+                          <div className="select-pack-options">
+                            {product.variations.map((variation, idx) => (
                               <button
-                                key={color}
-                                style={{
-                                  backgroundColor: color,
-                                  border: state.selectedColor === color ? '2px solid #222' : '1px solid #ccc',
-                                  width: 32,
-                                  height: 32,
-                                  borderRadius: '50%',
-                                  margin: 4,
-                                  cursor: 'pointer',
-                                  color: '#fff',
-                                  fontWeight: 'bold',
-                                }}
+                                key={variation.sku}
+                                className={`select-pack-box${selectedSku === variation.sku ? ' selected' : ''}`}
                                 onClick={() => {
-                                  // Find the matching variation for this color
-                                  const matchingVariation = product.variations.find(variation => {
-                                    const attrs = typeof variation.attributes === 'string'
-                                      ? JSON.parse(variation.attributes)
-                                      : variation.attributes;
-                                    return attrs && attrs.color && attrs.color.includes(color);
-                                  });
-                                  setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, selectedColor: color, selectedThumbnail: 0 } : s));
-                                  if (matchingVariation) {
-                                    setExclusiveSelectedSkus(prev => prev.map((sku, i) => i === index ? matchingVariation.sku : sku));
-                                  }
+                                  setExclusiveSelectedSkus(prev => prev.map((sku, i) => i === index ? variation.sku : sku));
+                                  setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, selectedThumbnail: 0 } : s));
                                 }}
-                                aria-label={color}
+                                aria-label={`Select pack ${idx + 1}`}
+                                type="button"
                               >
-                                {state.selectedColor === color ? '✓' : ''}
+                                <span className="select-pack-label">Pack {idx + 1}</span>
                               </button>
                             ))}
                           </div>
-                        ) : null;
-                      })()}
-                      {/* Removed Models/SKU row, replaced by color selection above */}
-                     
+                        </div>
+                      )}
                       {/* Quantity and Action Buttons Section */}
                       <div className="quantity-section">
                         <div className="details-heading">Quantity:</div>
@@ -735,12 +740,20 @@ const Home = () => {
                           BUY IT NOW
                         </button>
                       </div>
-                      
+                      {/* Short Description */}
+                      <div className="details-row">
+                        <div>
+                          <div className="details-heading">Description:</div>
+                          <span className="details-value">
+                            {product.description ? product.description.slice(0, 120) + (product.description.length > 120 ? '...' : '') : '-'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
               })}
-                </div>
+            </div>
             {exclusiveProducts.length > 0 && (
               <button className="slider-arrow slider-arrow-right" aria-label="Next exclusive product" onClick={() => scrollExclusiveSlider('right')}>
                 <IoIosArrowForward />
@@ -764,19 +777,38 @@ const Home = () => {
             )}
             <div className="products-slider" ref={latestSliderRef}>
               {latestProducts.slice(0, 15).map((product) => {
-                // Format product data to match ProductCard expectations
+                let imagesArr = [];
+                if (Array.isArray(product.images) && product.images.length > 0) {
+                  imagesArr = product.images.map(img => {
+                    let imageUrl = img.image_url || img.url || img;
+                    if (!imageUrl) {
+                      imageUrl = '/assets/card1-left.webp';
+                    } else if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads/')) {
+                      imageUrl = `/uploads/products/${imageUrl}`;
+                    }
+                    return {
+                      image_url: imageUrl,
+                      is_primary: img.is_primary
+                    };
+                  });
+                } else if (product.image) {
+                  let imageUrl = product.image;
+                  if (!imageUrl) {
+                    imageUrl = '/assets/card1-left.webp';
+                  } else if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads/')) {
+                    imageUrl = `/uploads/products/${imageUrl}`;
+                  }
+                  imagesArr = [{ image_url: imageUrl }];
+                } else {
+                  imagesArr = [{ image_url: '/assets/card1-left.webp' }];
+                }
                 const formattedProduct = {
                   id: product.id,
                   name: product.name,
                   slug: product.slug,
                   description: product.description,
                   badge: product.badge || null,
-                  images: Array.isArray(product.images) && product.images.length > 0
-                    ? product.images.map(img => ({
-                        image_url: img.image_url || img.url || img,
-                        is_primary: img.is_primary
-                      }))
-                    : (product.image ? [{ image_url: product.image }] : []),
+                  images: imagesArr,
                   variations: product.variations && product.variations.length > 0 ? product.variations.map(variation => ({
                     price: variation.price || 0,
                     comparePrice: variation.comparePrice || 0,

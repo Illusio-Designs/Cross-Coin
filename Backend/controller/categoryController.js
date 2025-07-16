@@ -377,7 +377,9 @@ const getPublicCategoryByName = async (req, res) => {
                 price: product.ProductVariations?.[0]?.price || 0,
                 comparePrice: product.ProductVariations?.[0]?.comparePrice || null,
                 stock: product.ProductVariations?.[0]?.stock || 0,
-                image: product.ProductImages?.find(img => img.is_primary)?.image_url || null,
+                image: product.ProductImages?.find(img => img.is_primary)?.image_url
+                  ? `/uploads/products/${product.ProductImages.find(img => img.is_primary).image_url}`
+                  : null,
                 metaTitle: product.ProductSEO?.meta_title,
                 metaDescription: product.ProductSEO?.meta_description,
                 weight: product.weight,
