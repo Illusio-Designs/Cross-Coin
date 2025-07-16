@@ -26,7 +26,12 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
   };
 
   // Get the primary image or first image from the images array
-  const imageData = product?.images?.find(img => img.is_primary) || product?.images?.[0];
+  let imageData = null;
+  if (Array.isArray(product?.images) && product.images.length > 0) {
+    imageData = product.images.find(img => img.is_primary) || product.images[0];
+  } else if (typeof product?.image === 'string') {
+    imageData = { image_url: product.image };
+  }
   const productImage = getProductImageSrc(imageData);
 
   // Get the first variation for price

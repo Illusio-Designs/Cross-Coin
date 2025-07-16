@@ -771,10 +771,12 @@ const Home = () => {
                   slug: product.slug,
                   description: product.description,
                   badge: product.badge || null,
-                  images: product.images && product.images.length > 0 ? product.images.map(img => ({
-                    image_url: img.image_url,
-                    is_primary: img.is_primary
-                  })) : [],
+                  images: Array.isArray(product.images) && product.images.length > 0
+                    ? product.images.map(img => ({
+                        image_url: img.image_url || img.url || img,
+                        is_primary: img.is_primary
+                      }))
+                    : (product.image ? [{ image_url: product.image }] : []),
                   variations: product.variations && product.variations.length > 0 ? product.variations.map(variation => ({
                     price: variation.price || 0,
                     comparePrice: variation.comparePrice || 0,
