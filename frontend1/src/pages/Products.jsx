@@ -9,6 +9,7 @@ import ProductCard, { filterOptions } from "../components/ProductCard";
 import { getAllPublicProducts, getPublicCategories } from "../services/publicindex";
 import SeoWrapper from '../console/SeoWrapper';
 import { fbqTrack } from '../components/common/Analytics';
+import colorMap from '../components/products/colorMap';
 
 const Products = () => {
   const router = useRouter();
@@ -36,6 +37,21 @@ const Products = () => {
   const [totalProducts, setTotalProducts] = useState(0);
   const [categories, setCategories] = useState([]);
   const [isMobile, setIsMobile] = useState(false);
+  const [filterOptionsDynamic, setFilterOptionsDynamic] = useState({
+    categories: [],
+    materials: [],
+    colors: [],
+    sizes: [],
+    genders: [],
+    price: [20, 250],
+    counts: {
+      categories: {},
+      materials: {},
+      colors: {},
+      sizes: {},
+      genders: {},
+    }
+  });
 
   // Debug logs
   console.log('Products Component State:', {
@@ -72,6 +88,13 @@ const Products = () => {
   useEffect(() => {
     fetchProducts();
   }, [currentPage, sortBy, selectedCategory]);
+
+  // After products and categories are loaded, compute dynamic filters
+  useEffect(() => {
+    if (products.length > 0 && categories.length > 0) {
+      setFilterOptionsDynamic(computeDynamicFilters(products, categories));
+    }
+  }, [products, categories]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -164,6 +187,72 @@ const Products = () => {
     });
   };
 
+  const computeDynamicFilters = (products, categoriesList) => {
+    const materialsSet = new Set();
+    const colorsSet = new Set();
+    const sizesSet = new Set();
+    const gendersSet = new Set();
+    let minPrice = 999999, maxPrice = 0;
+    const counts = {
+      categories: {},
+      materials: {},
+      colors: {},
+      sizes: {},
+      genders: {},
+    };
+    products.forEach(product => {
+      // Category count
+      const catId = product.category_id || (product.category && product.category.id);
+      if (catId) {
+        counts.categories[catId] = (counts.categories[catId] || 0) + 1;
+      }
+      // Variations
+      (product.variations || []).forEach(variation => {
+        // Price
+        if (variation.price < minPrice) minPrice = variation.price;
+        if (variation.price > maxPrice) maxPrice = variation.price;
+        // Attributes
+        let attrs = variation.attributes;
+        if (typeof attrs === 'string') {
+          try { attrs = JSON.parse(attrs); } catch { attrs = {}; }
+        }
+        if (attrs) {
+          (attrs.material || []).forEach(m => {
+            materialsSet.add(m);
+            counts.materials[m] = (counts.materials[m] || 0) + 1;
+          });
+          (attrs.color || []).forEach(c => {
+            colorsSet.add(c);
+            counts.colors[c] = (counts.colors[c] || 0) + 1;
+          });
+          (attrs.size || []).forEach(s => {
+            sizesSet.add(s);
+            counts.sizes[s] = (counts.sizes[s] || 0) + 1;
+          });
+          (attrs.gender || []).forEach(g => {
+            gendersSet.add(g);
+            counts.genders[g] = (counts.genders[g] || 0) + 1;
+          });
+        }
+      });
+    });
+    // Categories
+    const categories = categoriesList.map(cat => ({
+      id: cat.id,
+      name: cat.name,
+      count: counts.categories[cat.id] || 0
+    })).filter(cat => cat.count > 0);
+    return {
+      categories,
+      materials: Array.from(materialsSet),
+      colors: Array.from(colorsSet),
+      sizes: Array.from(sizesSet),
+      genders: Array.from(gendersSet),
+      price: [minPrice === 999999 ? 20 : minPrice, maxPrice === 0 ? 250 : maxPrice],
+      counts
+    };
+  };
+
   // Get category name by ID for display
   const getCategoryNameById = (categoryId) => {
     const category = categories.find(cat => cat.id.toString() === categoryId.toString());
@@ -191,6 +280,82 @@ const Products = () => {
                           selectedMaterial.length > 0 ||
                           priceRange[0] !== 20 || 
                           priceRange[1] !== 250;
+
+  // Compute min and max price from all products for the slider
+  const getMinMaxPrice = () => {
+    let min = Infinity, max = 0;
+    products.forEach(product => {
+      (product.variations || []).forEach(variation => {
+        if (variation.price < min) min = variation.price;
+        if (variation.price > max) max = variation.price;
+      });
+    });
+    if (min === Infinity) min = 20;
+    if (max === 0) max = 250;
+    return [Math.floor(min), Math.ceil(max)];
+  };
+  const [minPrice, maxPrice] = getMinMaxPrice();
+
+  // Add a function to filter products according to all selected filters
+  const getFilteredProducts = () => {
+    return products.filter(product => {
+      // Category filter
+      if (selectedCategory.length > 0) {
+        const catId = product.category_id || (product.category && product.category.id);
+        if (!selectedCategory.includes(String(catId))) return false;
+      }
+      // Material filter
+      if (selectedMaterial.length > 0) {
+        const hasMaterial = (product.variations || []).some(variation => {
+          let attrs = variation.attributes;
+          if (typeof attrs === 'string') {
+            try { attrs = JSON.parse(attrs); } catch { attrs = {}; }
+          }
+          return attrs && selectedMaterial.some(m => (attrs.material || []).includes(m));
+        });
+        if (!hasMaterial) return false;
+      }
+      // Color filter
+      if (selectedColors.length > 0) {
+        const hasColor = (product.variations || []).some(variation => {
+          let attrs = variation.attributes;
+          if (typeof attrs === 'string') {
+            try { attrs = JSON.parse(attrs); } catch { attrs = {}; }
+          }
+          return attrs && selectedColors.some(c => (attrs.color || []).includes(c));
+        });
+        if (!hasColor) return false;
+      }
+      // Size filter
+      if (selectedSizes.length > 0) {
+        const hasSize = (product.variations || []).some(variation => {
+          let attrs = variation.attributes;
+          if (typeof attrs === 'string') {
+            try { attrs = JSON.parse(attrs); } catch { attrs = {}; }
+          }
+          return attrs && selectedSizes.some(s => (attrs.size || []).includes(s));
+        });
+        if (!hasSize) return false;
+      }
+      // Gender filter
+      if (selectedGender.length > 0) {
+        const hasGender = (product.variations || []).some(variation => {
+          let attrs = variation.attributes;
+          if (typeof attrs === 'string') {
+            try { attrs = JSON.parse(attrs); } catch { attrs = {}; }
+          }
+          return attrs && selectedGender.some(g => (attrs.gender || []).includes(g));
+        });
+        if (!hasGender) return false;
+      }
+      // Price filter (at least one variation in range)
+      const inPriceRange = (product.variations || []).some(variation => {
+        return variation.price >= priceRange[0] && variation.price <= priceRange[1];
+      });
+      if (!inPriceRange) return false;
+      return true;
+    });
+  };
 
   return (
     <SeoWrapper pageName="products">
@@ -241,19 +406,23 @@ const Products = () => {
                 </h3>
                 {showCategory && (
                   <div className="category-list">
-                    {categories.map((category) => (
-                      <label key={category.id} className="checkbox-label">
-                        <div className="checkbox-group">
-                          <input
-                            type="checkbox"
-                            checked={selectedCategory.includes(category.id.toString())}
-                            onChange={() => handleFilterChange('category', category.id.toString())}
-                          />
-                          <p>{category.name}</p> 
-                        </div>
-                        <span>[{category.productCount || 0}]</span>
-                      </label>
-                    ))}
+                    {categories.map((category) => {
+                      // Count products in this category
+                      const count = products.filter(p => (p.category_id || (p.category && p.category.id)) == category.id).length;
+                      return (
+                        <label key={category.id} className="checkbox-label">
+                          <div className="checkbox-group">
+                            <input
+                              type="checkbox"
+                              checked={selectedCategory.includes(category.id.toString())}
+                              onChange={() => handleFilterChange('category', category.id.toString())}
+                            />
+                            <p>{category.name}</p> 
+                          </div>
+                          <span>[{count}]</span>
+                        </label>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -263,7 +432,7 @@ const Products = () => {
                 </h3>
                 {showMaterial && (
                   <div className="material-list">
-                    {filterOptions.materials.map((material) => (
+                    {filterOptionsDynamic.materials.map((material) => (
                       <label key={material} className="checkbox-label">
                         <div className="checkbox-group">
                           <input
@@ -273,7 +442,7 @@ const Products = () => {
                           />
                           <p>{material}</p> 
                         </div>
-                        <span>[20]</span>
+                        <span>[{filterOptionsDynamic.counts.materials[material] || 0}]</span>
                       </label>
                     ))}
                   </div>
@@ -284,23 +453,23 @@ const Products = () => {
                   By Price <FiChevronDown className={`arrow-icon ${showPrice ? 'open' : ''}`} />
                 </h3>
                 {showPrice && (
-                  <div className="price-range">
+                  <div className="price-range custom-price-range">
                     <input
                       type="range"
-                      min="20"
-                      max="250"
+                      min={minPrice}
+                      max={maxPrice}
                       value={priceRange[0]}
-                      onChange={(e) => handleFilterChange('price', [e.target.value, priceRange[1]])}
+                      onChange={(e) => handleFilterChange('price', [Number(e.target.value), priceRange[1]])}
                     />
                     <input
                       type="range"
-                      min="20"
-                      max="250"
+                      min={minPrice}
+                      max={maxPrice}
                       value={priceRange[1]}
-                      onChange={(e) => handleFilterChange('price', [priceRange[0], e.target.value])}
+                      onChange={(e) => handleFilterChange('price', [priceRange[0], Number(e.target.value)])}
                     />
                     <div className="price-inputs">
-                      <span>${priceRange[0]}</span> - <span>${priceRange[1]}</span>
+                      <span>₹{priceRange[0]}</span> - <span>₹{priceRange[1]}</span>
                     </div>
                   </div>
                 )}
@@ -311,13 +480,15 @@ const Products = () => {
                 </h3>
                 {showColors && (
                   <div className="color-options">
-                    {filterOptions.colors.map(color => (
+                    {filterOptionsDynamic.colors.map(color => (
                       <button
                         key={color}
                         className={`color-btn ${selectedColors.includes(color) ? 'active' : ''}`}
-                        style={{ backgroundColor: color }}
+                        style={{ backgroundColor: colorMap[color.toLowerCase()] || color, border: '1px solid #888' }}
                         onClick={(e) => handleFilterChange('color', color)}
-                      />
+                      >
+                        <span style={{ color: '#fff', fontSize: 10 }}>{filterOptionsDynamic.counts.colors[color] || 0}</span>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -328,7 +499,7 @@ const Products = () => {
                 </h3>
                 {showSizes && (
                   <div className="size-options">
-                    {filterOptions.sizes.map(size => (
+                    {filterOptionsDynamic.sizes.map(size => (
                       <label key={size} className="checkbox-label">
                         <div className="checkbox-group">
                           <input
@@ -338,7 +509,7 @@ const Products = () => {
                           />
                           <p>{size} </p>
                         </div>
-                        <span>[20]</span>
+                        <span>[{filterOptionsDynamic.counts.sizes[size] || 0}]</span>
                       </label>
                     ))}
                   </div>
@@ -350,7 +521,7 @@ const Products = () => {
                 </h3>
                 {showGender && (
                   <div className="gender-options">
-                    {filterOptions.genders.map(gender => (
+                    {filterOptionsDynamic.genders.map(gender => (
                       <label key={gender} className="checkbox-label">
                         <div className="checkbox-group">
                           <input
@@ -360,7 +531,7 @@ const Products = () => {
                           />
                           <p>{gender} </p>
                         </div>
-                        <span>[20]</span>
+                        <span>[{filterOptionsDynamic.counts.genders[gender] || 0}]</span>
                       </label>
                     ))}
                   </div>
@@ -385,19 +556,23 @@ const Products = () => {
                     </div>
                     {showCategory && (
                       <div className="category-list">
-                        {categories.map((category) => (
-                          <label key={category.id} className="checkbox-label">
-                            <div className="checkbox-group">
-                              <input
-                                type="checkbox"
-                                checked={selectedCategory.includes(category.id.toString())}
-                                onChange={() => handleFilterChange('category', category.id.toString())}
-                              />
-                              <p>{category.name}</p> 
-                            </div>
-                            <span>[{category.productCount || 0}]</span>
-                          </label>
-                        ))}
+                        {categories.map((category) => {
+                          // Count products in this category
+                          const count = products.filter(p => (p.category_id || (p.category && p.category.id)) == category.id).length;
+                          return (
+                            <label key={category.id} className="checkbox-label">
+                              <div className="checkbox-group">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedCategory.includes(category.id.toString())}
+                                  onChange={() => handleFilterChange('category', category.id.toString())}
+                                />
+                                <p>{category.name}</p> 
+                              </div>
+                              <span>[{count}]</span>
+                            </label>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -408,7 +583,7 @@ const Products = () => {
                     </div>
                     {showMaterial && (
                       <div className="material-list">
-                        {filterOptions.materials.map((material) => (
+                        {filterOptionsDynamic.materials.map((material) => (
                           <label key={material} className="checkbox-label">
                             <div className="checkbox-group">
                               <input
@@ -418,7 +593,7 @@ const Products = () => {
                               />
                               <p>{material}</p> 
                             </div>
-                            <span>[20]</span>
+                            <span>[{filterOptionsDynamic.counts.materials[material] || 0}]</span>
                           </label>
                         ))}
                       </div>
@@ -430,23 +605,23 @@ const Products = () => {
                       By Price <FiChevronDown className={`arrow-icon ${showPrice ? 'open' : ''}`} />
                     </div>
                     {showPrice && (
-                      <div className="price-range">
+                      <div className="price-range custom-price-range">
                         <input
                           type="range"
-                          min="20"
-                          max="250"
+                          min={minPrice}
+                          max={maxPrice}
                           value={priceRange[0]}
-                          onChange={(e) => handleFilterChange('price', [e.target.value, priceRange[1]])}
+                          onChange={(e) => handleFilterChange('price', [Number(e.target.value), priceRange[1]])}
                         />
                         <input
                           type="range"
-                          min="20"
-                          max="250"
+                          min={minPrice}
+                          max={maxPrice}
                           value={priceRange[1]}
-                          onChange={(e) => handleFilterChange('price', [priceRange[0], e.target.value])}
+                          onChange={(e) => handleFilterChange('price', [priceRange[0], Number(e.target.value)])}
                         />
                         <div className="price-inputs">
-                          <span>${priceRange[0]}</span> - <span>${priceRange[1]}</span>
+                          <span>₹{priceRange[0]}</span> - <span>₹{priceRange[1]}</span>
                         </div>
                       </div>
                     )}
@@ -458,13 +633,15 @@ const Products = () => {
                     </div>
                     {showColors && (
                       <div className="color-options">
-                        {filterOptions.colors.map(color => (
+                        {filterOptionsDynamic.colors.map(color => (
                           <button
                             key={color}
                             className={`color-btn ${selectedColors.includes(color) ? 'active' : ''}`}
-                            style={{ backgroundColor: color }}
+                            style={{ backgroundColor: colorMap[color.toLowerCase()] || color, border: '1px solid #888' }}
                             onClick={() => handleFilterChange('color', color)}
-                          />
+                          >
+                            <span style={{ color: '#fff', fontSize: 10 }}>{filterOptionsDynamic.counts.colors[color] || 0}</span>
+                          </button>
                         ))}
                       </div>
                     )}
@@ -476,7 +653,7 @@ const Products = () => {
                     </div>
                     {showSizes && (
                       <div className="size-options">
-                        {filterOptions.sizes.map(size => (
+                        {filterOptionsDynamic.sizes.map(size => (
                           <label key={size} className="checkbox-label">
                             <div className="checkbox-group">
                               <input
@@ -486,7 +663,7 @@ const Products = () => {
                               />
                               <p>{size} </p>
                             </div>
-                            <span>[20]</span>
+                            <span>[{filterOptionsDynamic.counts.sizes[size] || 0}]</span>
                           </label>
                         ))}
                       </div>
@@ -499,7 +676,7 @@ const Products = () => {
                     </div>
                     {showGender && (
                       <div className="gender-options">
-                        {filterOptions.genders.map(gender => (
+                        {filterOptionsDynamic.genders.map(gender => (
                           <label key={gender} className="checkbox-label">
                             <div className="checkbox-group">
                               <input
@@ -509,7 +686,7 @@ const Products = () => {
                               />
                               <p>{gender} </p>
                             </div>
-                            <span>[20]</span>
+                            <span>[{filterOptionsDynamic.counts.genders[gender] || 0}]</span>
                           </label>
                         ))}
                       </div>
@@ -526,7 +703,7 @@ const Products = () => {
                 <div className="loading">Loading products...</div>
               ) : error ? (
                 <div className="error">{error}</div>
-              ) : products.length === 0 ? (
+              ) : getFilteredProducts().length === 0 ? (
                 <div className="no-products">
                   {selectedCategory.length > 0 
                     ? `No products available in "${getCategoryNameById(selectedCategory[0])}" category. Try selecting a different category or clearing filters.`
@@ -534,14 +711,20 @@ const Products = () => {
                   }
                 </div>
               ) : (
-                products.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onProductClick={handleProductClick}
-                    onAddToCart={handleAddToCart}
-                  />
-                ))
+                getFilteredProducts().map((product) => {
+                  let images = Array.isArray(product.images) ? product.images : [];
+                  if (images.length === 0 && product.image) {
+                    images = [{ image_url: product.image }];
+                  }
+                  return (
+                    <ProductCard
+                      key={product.id}
+                      product={{ ...product, images }}
+                      onProductClick={handleProductClick}
+                      onAddToCart={handleAddToCart}
+                    />
+                  );
+                })
               )}
             </div>
 
