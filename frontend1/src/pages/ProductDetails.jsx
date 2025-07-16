@@ -704,6 +704,41 @@ export default function ProductDetails() {
   // Log color options and selected color for debugging
   console.log('Color options:', colorOptions, 'Selected color:', selectedColor);
 
+  // Add this function inside the ProductDetails component
+  const renderPackSelection = () => {
+    if (!product.variations || product.variations.length <= 1) return null;
+
+    return (
+      <div className="select-pack-section">
+        <strong>Select Pack:</strong>
+        <div className="select-pack-options">
+          {product.variations.map((variation, idx) => (
+            <button
+              key={variation.sku}
+              className={`select-pack-box${selectedSku === variation.sku ? ' selected' : ''}`}
+              onClick={() => {
+                setSelectedSku(variation.sku);
+                setSelectedVariation(variation);
+              }}
+              aria-label={`Select pack ${idx + 1}`}
+              type="button"
+            >
+              <span className="select-pack-label">Pack {idx + 1}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Collect all unique attribute keys from all variations
+  const allAttributeKeys = product?.variations
+    ? Array.from(new Set(product.variations.flatMap(v => {
+        const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+        return attrs ? Object.keys(attrs) : [];
+      }))).sort()
+    : [];
+
   return (
     <SeoWrapper
       pageName={product?.slug || "product-details"}
@@ -865,10 +900,10 @@ export default function ProductDetails() {
                     alignItems: 'start',
                   }}
                 >
-                  {attrs && Object.keys(attrs).map((key) => (
+                  {allAttributeKeys.map((key) => (
                     <div key={key} style={{ minWidth: 120 }}>
                       <span className="details-label" style={{ textTransform: 'capitalize' }}>{key}:</span>
-                      <span className="details-value">{Array.isArray(attrs[key]) ? attrs[key].join(', ') : attrs[key]}</span>
+                      <span className="details-value">{Array.isArray(attrs[key]) ? attrs[key].join(', ') : (attrs[key] ?? '-')}</span>
                     </div>
                   ))}
                   <div>
@@ -879,58 +914,7 @@ export default function ProductDetails() {
               </div>
             </div>
             {/* Pack Selection */}
-            {product.variations.length > 1 && (
-              <div style={{ margin: '16px 0' }}>
-                <strong>Select Pack:</strong>
-                <div style={{ display: 'flex', gap: '1em', marginTop: '0.5em' }}>
-                  {product.variations.map((variation, idx) => {
-                    const colors = Array.isArray(variation.attributes.color)
-                      ? variation.attributes.color
-                      : [];
-                    return (
-                      <button
-                        key={variation.sku}
-                        style={{
-                          border: selectedSku === variation.sku ? '2px solid #222' : '1px solid #ccc',
-                          padding: 8,
-                          borderRadius: 8,
-                          background: selectedSku === variation.sku ? '#f0f0f0' : '#fff',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: 8
-                        }}
-                        onClick={() => {
-                          setSelectedSku(variation.sku);
-                          setSelectedVariation(variation);
-                        }}
-                      >
-                        <span style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>{idx + 1}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          {colors.map((color, cidx) => (
-                            <span
-                              key={color + cidx}
-                              style={{
-                                display: 'inline-block',
-                                width: 16,
-                                height: 16,
-                                borderRadius: '50%',
-                                backgroundColor: colorMap[color.toLowerCase()] || '#ccc',
-                                marginRight: 4,
-                                border: '1px solid #888'
-                              }}
-                              title={color}
-                            />
-                          ))}
-                        </div>
-                        <span style={{ fontSize: 12, color: '#555' }}>{colors.join(' + ')}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {renderPackSelection()}
             {/* Quantity and Action Buttons Section */}
             <div className="quantity-section">
               <div className="details-heading">Quantity:</div>

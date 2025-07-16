@@ -1,6 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
-import { FiHeart } from 'react-icons/fi';
+import { FiHeart, FiShoppingCart } from 'react-icons/fi';
 import { useWishlist } from '../context/WishlistContext';
 import { getProductImageSrc } from '../utils/imageUtils';
 
@@ -86,7 +86,9 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
         </button>
       </div>
       <div className="product-info">
-        <h3>{product?.name}</h3>
+        <div className="product-main-info">
+          <h3>{product?.name}</h3>
+        </div>
         <div className="product-meta">
           <span className="product-price">
             ₹{price}
@@ -95,9 +97,9 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
           <button 
             className="add-to-cart"
             onClick={(e) => onAddToCart(e, product, defaultColor, defaultSize, variationId)}
-            aria-label="Quick view"
+            aria-label="Add to cart"
           >
-            Add
+            <FiShoppingCart />
           </button>
         </div>
       </div>
