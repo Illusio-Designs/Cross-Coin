@@ -71,6 +71,11 @@ const Header = () => {
               </Link>
             </li>
             <li>
+              <Link href="/Collections" className={activePage === '/Collections' ? 'active' : ''}>
+                Collections
+              </Link>
+            </li>
+            <li>
               <Link href="/About" className={activePage === '/About' ? 'active' : ''}>
                 About Us
               </Link>
@@ -128,6 +133,11 @@ const Header = () => {
             <li>
               <Link href="/Products" className={activePage === '/Products' ? 'active' : ''} onClick={() => setIsMobileMenuOpen(false)}>
                 Products
+              </Link>
+            </li>
+            <li>
+              <Link href="/Collections" className={activePage === '/Collections' ? 'active' : ''} onClick={() => setIsMobileMenuOpen(false)}>
+                Collections
               </Link>
             </li>
             <li>

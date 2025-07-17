@@ -726,6 +726,10 @@ const Products = () => {
                   if (images.length === 0 && product.image) {
                     images = [{ image_url: product.image }];
                   }
+                  // Ensure at least one valid image
+                  if (!images.length || !images[0].image_url) {
+                    images = [{ image_url: '/assets/card1-left.webp' }];
+                  }
                   return (
                     <ProductCard
                       key={product.id}
