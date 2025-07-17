@@ -185,25 +185,6 @@ module.exports.createProduct = async (req, res) => {
             mimetype: f.mimetype,
             size: f.size
         })) : 'No files');
-        
-        // Debug: Show which images are variation images
-        if (req.files && req.files.length > 0) {
-            console.log('\n=== IMAGE ANALYSIS ===');
-            const variationImages = req.files.filter(f => f.fieldname.match(/^variation_(\d+)_image$/));
-            const productImages = req.files.filter(f => !f.fieldname.match(/^variation_(\d+)_image$/));
-            
-            console.log(`Total images: ${req.files.length}`);
-            console.log(`Variation images: ${variationImages.length}`);
-            console.log(`Product-level images: ${productImages.length}`);
-            
-            if (variationImages.length > 0) {
-                console.log('Variation images found:');
-                variationImages.forEach(img => {
-                    const match = img.fieldname.match(/^variation_(\d+)_image$/);
-                    console.log(`  - ${img.filename} (${img.fieldname}) -> variation ${match[1]}`);
-                });
-            }
-        }
 
         // Parse form data
         const name = req.body.name?.trim();
@@ -214,32 +195,39 @@ module.exports.createProduct = async (req, res) => {
         const seo = JSON.parse(req.body.seo || '{}');
         const images = req.files;
 
-        console.log('\n=== PARSED DATA ===');
+        console.log('--- After parsing form data ---');
         console.log('Name:', name);
         console.log('Description:', description);
         console.log('Category ID:', categoryId);
         console.log('Status:', status);
-        console.log('Variations (parsed from req.body):', JSON.stringify(variations, null, 2));
-        console.log('SEO (parsed from req.body):', JSON.stringify(seo, null, 2));
-        console.log('Images Count:', images?.length || 0);
+        console.log('Variations:', JSON.stringify(variations));
+        console.log('SEO:', JSON.stringify(seo));
+        console.log('Images:', images?.length || 0);
 
         // Validate required fields
         if (!name) {
-            throw new Error('Product name is required');
+            const errMsg = 'Product name is required';
+            console.error(errMsg);
+            throw new Error(errMsg);
         }
-
         if (!categoryId) {
-            throw new Error('Category is required');
+            const errMsg = 'Category is required';
+            console.error(errMsg);
+            throw new Error(errMsg);
         }
 
         // Validate category
+        console.log('--- Before Category.findByPk ---');
         const category = await Category.findByPk(categoryId);
+        console.log('--- After Category.findByPk ---');
         if (!category) {
-            throw new Error('Invalid category');
+            const errMsg = 'Invalid category';
+            console.error(errMsg);
+            throw new Error(errMsg);
         }
 
-        console.log('\n=== CREATING PRODUCT ===');
         // Create product with basic info
+        console.log('--- Before Product.create ---');
         const product = await Product.create({
             name,
             description,
@@ -251,35 +239,11 @@ module.exports.createProduct = async (req, res) => {
             dimensions: req.body.dimensions ? JSON.parse(req.body.dimensions) : null,
             dimensionUnit: req.body.dimensionUnit || 'cm'
         }, { transaction });
+        console.log('--- After Product.create ---');
         console.log('Product created with ID:', product.id);
 
-        console.log('\n=== CREATING SEO ===');
-        // Create SEO record with proper data
-        console.log('\n=== SEO DATA BEFORE CREATION ===');
-        console.log('SEO Data:', {
-            product_id: product.id,
-            metaTitle: seo.metaTitle || name,
-            metaDescription: seo.metaDescription || description,
-            metaKeywords: seo.metaKeywords || '',
-            ogTitle: seo.ogTitle || name,
-            ogDescription: seo.ogDescription || description,
-            ogImage: seo.ogImage || null,
-            canonicalUrl: seo.canonicalUrl || `${process.env.FRONTEND_URL}/products/${product.slug}`,
-            structuredData: seo.structuredData || JSON.stringify({
-                "@context": "https://schema.org",
-                "@type": "Product",
-                "name": name,
-                "description": description,
-                "image": images?.[0] ? `/uploads/products/${images[0].filename}` : null,
-                "offers": {
-                    "@type": "Offer",
-                    "price": variations[0]?.price || 0,
-                    "priceCurrency": "INR",
-                    "availability": variations[0]?.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
-                }
-            })
-        });
-
+        // Create SEO record
+        console.log('--- Before ProductSEO.create ---');
         const seoRecord = await ProductSEO.create({
             product_id: product.id,
             metaTitle: seo.metaTitle || name,
@@ -303,57 +267,43 @@ module.exports.createProduct = async (req, res) => {
                 }
             })
         }, { transaction });
+        console.log('--- After ProductSEO.create ---');
         console.log('SEO record created with ID:', seoRecord.id);
 
         // Handle variations with attributes
         if (variations && variations.length > 0) {
-            console.log('\n=== CREATING VARIATIONS ===');
-            console.log(`Total variations to create: ${variations.length}`);
-            console.log('Variations data:', JSON.stringify(variations.map((v, idx) => ({ index: idx, sku: v.sku })), null, 2));
-            
+            console.log('--- Before creating variations ---');
             for (let i = 0; i < variations.length; i++) {
                 const variation = variations[i];
-                console.log(`\n--- Processing Variation ${i + 1}/${variations.length} ---`);
-                console.log(`Variation index: ${i}, SKU: ${variation.sku}`);
+                console.log(`--- Before validation of variation ${i} ---`);
                 if (!variation.price || isNaN(variation.price) || variation.price <= 0) {
-                    throw new Error('Invalid price for variation');
+                    const errMsg = `Invalid price for variation at index ${i}: ${JSON.stringify(variation)}`;
+                    console.error(errMsg);
+                    throw new Error(errMsg);
                 }
-
+                console.log(`--- Before ProductVariation.create for variation ${i} ---`);
                 const timestamp = Date.now();
                 const randomString = Math.random().toString(36).substring(2, 8);
                 const uniqueSku = variation.sku || `SKU-${product.id}-${timestamp}-${randomString}`;
-
-                console.log('Creating variation with SKU:', uniqueSku);
-                // Create variation
                 const variationRecord = await ProductVariation.create({
                     productId: product.id,
                     sku: uniqueSku,
                     price: Number(variation.price),
                     comparePrice: variation.comparePrice ? Number(variation.comparePrice) : null,
                     stock: Number(variation.stock || 0),
-                    // Removed weight, weightUnit, dimensions, dimensionUnit from here
                     attributes: variation.attributes || {}
                 }, { transaction });
-                console.log('Variation created with ID:', variationRecord.id);
-
-                // Handle attributes for this variation
+                console.log(`--- After ProductVariation.create for variation ${i}, ID: ${variationRecord.id} ---`);
                 await handleProductAttributes(variation, transaction);
-
+                console.log(`--- After handleProductAttributes for variation ${i} ---`);
                 // Associate images with the variation if provided
                 if (images && images.length > 0) {
-                    console.log(`\n=== PROCESSING IMAGES FOR VARIATION ${variation.sku} (index ${i}) ===`);
-                    
                     for (const image of images) {
-                        // Check if this image is for a variation
                         const match = image.fieldname.match(/^variation_(\d+)_image$/);
                         if (match) {
                             const variationIdx = parseInt(match[1], 10);
-                            
-                            console.log(`Image ${image.filename}: fieldname=${image.fieldname}, variationIdx=${variationIdx}, currentVariationIndex=${i}`);
-                            
-                            // Check if this image belongs to the current variation by index
                             if (variationIdx === i) {
-                                console.log(`✓ ASSIGNING image ${image.filename} to variation ${variation.sku} (index ${variationIdx})`);
+                                console.log(`--- Before ProductImage.create for variation image (variationIdx: ${variationIdx}, i: ${i}) ---`);
                                 await ProductImage.create({
                                     product_id: product.id,
                                     product_variation_id: variationRecord.id,
@@ -363,58 +313,47 @@ module.exports.createProduct = async (req, res) => {
                                     is_primary: false,
                                     status: 'active'
                                 }, { transaction });
-                                console.log(`✓ SUCCESS: Image ${image.filename} assigned to variation ${variation.sku} with variation_id=${variationRecord.id}`);
-                            } else {
-                                console.log(`✗ SKIPPING image ${image.filename} - belongs to variation ${variationIdx}, but processing variation ${i}`);
+                                console.log(`--- After ProductImage.create for variation image (variationIdx: ${variationIdx}, i: ${i}) ---`);
                             }
                         }
                     }
                 }
             }
+            console.log('--- After creating all variations ---');
         }
 
         // Calculate and set initial badge
+        console.log('--- Before calculateProductBadge ---');
         const badge = await calculateProductBadge(product, transaction);
         await product.update({ badge }, { transaction });
+        console.log('--- After calculateProductBadge and product.update ---');
 
-        // Handle product-level images (only images that are NOT variation images)
+        // Handle product-level images
         if (images && images.length > 0) {
-            console.log('\n=== PROCESSING PRODUCT-LEVEL IMAGES ===');
-            
-            // Filter out variation images - only process images that don't match variation_*_image pattern
             const productLevelImages = images.filter(image => !image.fieldname.match(/^variation_(\d+)_image$/));
-            
-            console.log('Total product-level images to process:', productLevelImages.length);
-            
             if (productLevelImages.length > 0) {
-                // Create an array of image creation promises
-                const imagePromises = productLevelImages.map(async (image, index) => {
-                    console.log(`Processing product-level image ${index + 1}:`, image.originalname);
-                    const imageRecord = await ProductImage.create({
+                for (const [index, image] of productLevelImages.entries()) {
+                    console.log(`--- Before ProductImage.create for product-level image ${index} ---`);
+                    await ProductImage.create({
                         product_id: product.id,
-                        product_variation_id: null, // Explicitly set to null for product-level images
+                        product_variation_id: null,
                         image_url: `/uploads/products/${image.filename}`,
                         alt_text: name,
                         display_order: index,
                         is_primary: index === 0,
                         status: 'active'
                     }, { transaction });
-                    console.log(`Product-level image ${index + 1} created with ID:`, imageRecord.id);
-                    return imageRecord;
-                });
-
-                // Wait for all product-level images to be created
-                await Promise.all(imagePromises);
-                console.log('All product-level images processed successfully');
-            } else {
-                console.log('No product-level images to process');
+                    console.log(`--- After ProductImage.create for product-level image ${index} ---`);
+                }
+                console.log('--- After creating all product-level images ---');
             }
         }
 
         await transaction.commit();
-        console.log('\n=== TRANSACTION COMMITTED ===');
-        
+        console.log('--- After transaction.commit ---');
+
         // Fetch the complete product with all relations
+        console.log('--- Before Product.findByPk for response ---');
         const completeProduct = await Product.findByPk(product.id, {
             include: [
                 { model: Category },
@@ -429,9 +368,7 @@ module.exports.createProduct = async (req, res) => {
                 { model: ProductSEO, as: 'ProductSEO' }
             ]
         });
-
-        console.log('\n=== PRODUCT CREATION COMPLETE ===');
-        console.log('Final product data:', JSON.stringify(formatProductResponse(completeProduct), null, 2));
+        console.log('--- After Product.findByPk for response ---');
 
         res.status(201).json({
             success: true,
@@ -442,7 +379,12 @@ module.exports.createProduct = async (req, res) => {
         await transaction.rollback();
         console.error('\n=== ERROR IN PRODUCT CREATION ===');
         console.error('Error details:', error);
-        res.status(500).json({
+        const isValidationError = error.message && (
+            error.message.includes('Invalid price') ||
+            error.message.includes('required') ||
+            error.message.includes('Invalid category')
+        );
+        res.status(isValidationError ? 400 : 500).json({
             success: false,
             message: 'Failed to create product',
             error: error.message

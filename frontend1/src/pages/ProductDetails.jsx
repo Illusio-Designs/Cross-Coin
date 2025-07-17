@@ -15,6 +15,7 @@ import { getProductImageSrc } from '../utils/imageUtils';
 import DOMPurify from 'dompurify';
 import Modal from "../components/common/Modal";
 import colorMap from '../components/products/colorMap';
+// Add image loaded state
 
 export default function ProductDetails() {
   const searchParams = useSearchParams();
@@ -49,6 +50,7 @@ export default function ProductDetails() {
   const [copiedCoupon, setCopiedCoupon] = useState(null);
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState({});
 
   // Add color selection by name
   const [selectedColor, setSelectedColor] = useState(null);
@@ -749,6 +751,18 @@ export default function ProductDetails() {
         <div className="product-details">
           <div className="product-gallery" style={{ textAlign: 'center' }}>
             <div style={{ position: 'relative', display: 'inline-block' }}>
+              {/* Skeleton placeholder for main image */}
+              {!imageLoaded[selectedThumbnail] && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    background: '#eee',
+                    borderRadius: 8,
+                    zIndex: 1
+                  }}
+                />
+              )}
               <img
                 src={forceEnvImageBase(
                   variationImages[selectedThumbnail]?.image_url ||
@@ -756,7 +770,14 @@ export default function ProductDetails() {
                   variationImages[selectedThumbnail]
                 )}
                 alt={variationImages[selectedThumbnail]?.alt_text || product.name}
-                style={{ width: '100%', height: '400px', objectFit: 'contain', boxShadow: '0 2px 8px #eee' }}
+                style={{
+                  width: '100%',
+                  height: '400px',
+                  objectFit: 'contain',
+                  boxShadow: '0 2px 8px #eee'
+                }}
+                onLoad={() => setImageLoaded(prev => ({ ...prev, [selectedThumbnail]: true }))}
+                onError={() => setImageLoaded(prev => ({ ...prev, [selectedThumbnail]: true }))}
                 onClick={() => setIsZoomOpen(true)}
               />
               {/* Zoom button overlay */}
@@ -788,8 +809,20 @@ export default function ProductDetails() {
             {/* Thumbnails */}
             <div style={{ display: 'flex', flexWrap: 'wrap' , justifyContent: 'center', gap: 16, marginTop: 16 }}>
               {variationImages.map((image, idx) => (
-                <img
-                  key={image.id || idx}
+                <div key={image.id || idx} style={{ position: 'relative', width: 80, height: 80 }}>
+                  {/* Skeleton placeholder for thumbnail */}
+                  {!imageLoaded[idx] && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        background: '#eee',
+                        borderRadius: 4,
+                        zIndex: 1
+                      }}
+                    />
+                  )}
+                  <img
                   src={forceEnvImageBase(image.image_url || image.url || image)}
                   alt={image.alt_text || `${product.name} thumbnail ${idx + 1}`}
                   style={{
@@ -797,10 +830,15 @@ export default function ProductDetails() {
                     height: 80,
                     objectFit: 'cover',
                     border: selectedThumbnail === idx ? '2px solid #222' : '1px solid #eee',
-                    cursor: 'pointer'
+                      cursor: 'pointer',
+                      opacity: imageLoaded[idx] ? 1 : 0,
+                      transition: 'opacity 0.3s'
                   }}
+                    onLoad={() => setImageLoaded(prev => ({ ...prev, [idx]: true }))}
+                    onError={() => setImageLoaded(prev => ({ ...prev, [idx]: true }))}
                   onClick={() => setSelectedThumbnail(idx)}
                 />
+                </div>
               ))}
             </div>
             {/* Zoom Modal */}
