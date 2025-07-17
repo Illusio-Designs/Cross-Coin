@@ -529,11 +529,30 @@ const Home = () => {
                   )}
                   <div className="products-slider" ref={categorySliderRef}>
                     {currentCategoryProducts.map((product) => {
-                      let imageUrl = product.image || '';
-                      if (!imageUrl) {
-                        imageUrl = '/assets/card1-left.webp';
-                      } else if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads/')) {
-                        imageUrl = `/uploads/products/${imageUrl}`;
+                      let imagesArr = [];
+                      if (Array.isArray(product.images) && product.images.length > 0) {
+                        imagesArr = product.images.map(img => {
+                          let imageUrl = img.image_url || img.url || img;
+                          if (!imageUrl) {
+                            imageUrl = '/assets/card1-left.webp';
+                          } else if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads/')) {
+                            imageUrl = `/uploads/products/${imageUrl}`;
+                          }
+                          return {
+                            image_url: imageUrl,
+                            is_primary: img.is_primary
+                          };
+                        });
+                      } else if (product.mainImage) {
+                        let imageUrl = product.mainImage;
+                        if (!imageUrl) {
+                          imageUrl = '/assets/card1-left.webp';
+                        } else if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads/')) {
+                          imageUrl = `/uploads/products/${imageUrl}`;
+                        }
+                        imagesArr = [{ image_url: imageUrl }];
+                      } else {
+                        imagesArr = [{ image_url: '/assets/card1-left.webp' }];
                       }
                       const formattedProduct = {
                         id: product.id,
@@ -541,7 +560,7 @@ const Home = () => {
                         slug: product.slug,
                         description: product.description,
                         badge: product.badge || null,
-                        images: imageUrl ? [{ image_url: imageUrl, is_primary: true }] : [],
+                        images: imagesArr,
                         variations: [{
                           price: product.price || 0,
                           comparePrice: product.comparePrice || 0,

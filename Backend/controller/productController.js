@@ -77,6 +77,18 @@ const formatProductResponse = (product) => {
         productData.images = [];
     }
 
+    // Add mainImage property
+    if (productData.images && productData.images.length > 0) {
+        const primary = productData.images.find(img => img.is_primary);
+        let mainImageFile = primary ? primary.image_url : productData.images[0].image_url;
+        if (mainImageFile && !mainImageFile.startsWith('http') && !mainImageFile.startsWith('/uploads/')) {
+            mainImageFile = `/uploads/products/${mainImageFile}`;
+        }
+        productData.mainImage = mainImageFile;
+    } else {
+        productData.mainImage = '/assets/card1-left.webp'; // Use your placeholder image path
+    }
+
     // Format category
     if (productData.Category) {
         productData.category = {
@@ -94,10 +106,10 @@ const formatProductResponse = (product) => {
         productData.outOfStock = false;
     }
 
-    // Remove images from the product response
-    if (productData.images) {
-        delete productData.images;
-    }
+    // Do NOT delete images from the product response
+    // if (productData.images) {
+    //     delete productData.images;
+    // }
 
     return productData;
 };

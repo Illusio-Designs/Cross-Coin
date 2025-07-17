@@ -368,25 +368,32 @@ const getPublicCategoryByName = async (req, res) => {
             parentName: category.parent ? category.parent.name : null,
             image: category.image ? `/uploads/categories/${category.image}` : null,
             slug: category.slug,
-            products: category.products ? category.products.map(product => ({
-                id: product.id,
-                name: product.name,
-                description: product.description,
-                slug: product.slug,
-                status: product.status,
-                price: product.ProductVariations?.[0]?.price || 0,
-                comparePrice: product.ProductVariations?.[0]?.comparePrice || null,
-                stock: product.ProductVariations?.[0]?.stock || 0,
-                image: product.ProductImages?.find(img => img.is_primary)?.image_url
-                  ? `/uploads/products/${product.ProductImages.find(img => img.is_primary).image_url}`
-                  : null,
-                metaTitle: product.ProductSEO?.meta_title,
-                metaDescription: product.ProductSEO?.meta_description,
-                weight: product.weight,
-                weightUnit: product.weightUnit,
-                dimensions: product.dimensions,
-                dimensionUnit: product.dimensionUnit
-            })) : []
+            products: category.products ? category.products.map(product => {
+                let image = null;
+                const primaryImage = product.ProductImages?.find(img => img.is_primary);
+                if (primaryImage && primaryImage.image_url) {
+                    image = primaryImage.image_url.startsWith('http') || primaryImage.image_url.startsWith('/uploads/')
+                        ? primaryImage.image_url
+                        : `/uploads/products/${primaryImage.image_url}`;
+                }
+                return {
+                    id: product.id,
+                    name: product.name,
+                    description: product.description,
+                    slug: product.slug,
+                    status: product.status,
+                    price: product.ProductVariations?.[0]?.price || 0,
+                    comparePrice: product.ProductVariations?.[0]?.comparePrice || null,
+                    stock: product.ProductVariations?.[0]?.stock || 0,
+                    image,
+                    metaTitle: product.ProductSEO?.meta_title,
+                    metaDescription: product.ProductSEO?.meta_description,
+                    weight: product.weight,
+                    weightUnit: product.weightUnit,
+                    dimensions: product.dimensions,
+                    dimensionUnit: product.dimensionUnit
+                };
+            }) : []
         };
 
         res.status(200).json(categoryResponse);
