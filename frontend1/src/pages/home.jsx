@@ -11,6 +11,7 @@ import { getPublicSliders, getPublicCategories, getPublicCategoryByName, getPubl
 import SeoWrapper from '../console/SeoWrapper';
 import { useRouter } from 'next/navigation';
 import { fbqTrack } from '../components/common/Analytics';
+import DOMPurify from 'dompurify';
 
 const formatTwoDigits = (num) => num.toString().padStart(2, '0');
 
@@ -744,9 +745,12 @@ const Home = () => {
                       <div className="details-row">
                         <div>
                           <div className="details-heading">Description:</div>
-                          <span className="details-value">
-                            {product.description ? product.description.slice(0, 120) + (product.description.length > 120 ? '...' : '') : '-'}
-                          </span>
+                          <span className="details-value" dangerouslySetInnerHTML={{
+                            __html: product.description
+                              ? DOMPurify.sanitize(product.description.slice(0, 120) + (product.description.length > 120 ? '...' : ''))
+                              : '-'
+                          }} />
+                          
                         </div>
                       </div>
                     </div>

@@ -664,6 +664,21 @@ const ProductsPage = () => {
             };
         });
 
+        // === VALIDATION ADDED ===
+        for (const v of variationsWithAttributes) {
+          if (!v.price || isNaN(v.price) || Number(v.price) <= 0) {
+            setError("Each variation must have a valid price.");
+            setLoading(false);
+            return;
+          }
+        }
+        if (!formData.categoryId) {
+          setError("Category is required.");
+          setLoading(false);
+          return;
+        }
+        // === END VALIDATION ===
+
         // Handle SEO data
         const seoData = {
             metaTitle: formData.seo.metaTitle || formData.name,
