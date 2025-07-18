@@ -450,7 +450,8 @@ export const removeFromCart = async (productId, variationId) => {
     try {
         const token = localStorage.getItem('token');
         let url = `${API_URL}/api/cart/item/${productId}`;
-        if (variationId) {
+        // Only append variationId if it is not null or undefined
+        if (variationId !== null && variationId !== undefined) {
             url += `/${variationId}`;
         }
         const response = await axios.delete(url, {

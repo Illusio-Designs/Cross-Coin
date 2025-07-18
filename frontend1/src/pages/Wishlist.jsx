@@ -9,6 +9,7 @@ import { FiHeart, FiShoppingCart, FiTrash2 } from 'react-icons/fi';
 import { AiFillHeart } from 'react-icons/ai';
 import '../styles/pages/Wishlist.css';
 import SeoWrapper from '../console/SeoWrapper';
+import { getProductImageSrc } from '../utils/imageUtils';
 
 const Wishlist = () => {
   const { wishlist, removeFromWishlist, clearWishlist, isInWishlist, addToWishlist } = useWishlist();
@@ -120,7 +121,7 @@ const Wishlist = () => {
                   }}
                 >
                   <Image 
-                    src={item.image} 
+                    src={getProductImageSrc({ image_url: item.image })}
                     alt={item.name}
                     width={300}
                     height={250}

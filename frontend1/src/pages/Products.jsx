@@ -411,6 +411,21 @@ const Products = () => {
                           priceRange[0] !== minPrice || 
                           priceRange[1] !== maxPrice;
 
+  // Add this function inside the Products component
+  const sortProducts = (products) => {
+    switch (sortBy) {
+      case "price-low":
+        return [...products].sort((a, b) => (a.variations?.[0]?.price || 0) - (b.variations?.[0]?.price || 0));
+      case "price-high":
+        return [...products].sort((a, b) => (b.variations?.[0]?.price || 0) - (a.variations?.[0]?.price || 0));
+      case "rating":
+        return [...products].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      case "featured":
+      default:
+        return products; // Default order or implement your own featured logic
+    }
+  };
+
   return (
     <SeoWrapper pageName="products">
       <Header />
@@ -765,7 +780,8 @@ const Products = () => {
                   }
                 </div>
               ) : (
-                getFilteredProducts().map((product) => (
+                // Apply sorting to filtered products before rendering
+                sortProducts(getFilteredProducts()).map((product) => (
                   <ProductCard
                     key={product.id}
                     product={product}

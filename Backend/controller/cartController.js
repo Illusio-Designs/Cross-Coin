@@ -183,12 +183,15 @@ module.exports.removeFromCart = async (req, res) => {
     let cart = await Cart.findOne({ where: { user_id: userId } });
     if (!cart) return res.status(404).json({ message: 'Cart not found' });
     const whereClause = { cartId: cart.id, productId: productId };
-    if (variationId && variationId !== 'null') {
+    // Treat both null and 0 as 'no variation'
+    if (variationId && variationId !== 'null' && variationId !== '0' && variationId !== 0) {
       whereClause.variationId = variationId;
     } else {
       whereClause.variationId = null; // Explicitly match main product (no variation)
     }
+    console.log('Remove from cart whereClause:', whereClause);
     const deleted = await CartItem.destroy({ where: whereClause });
+    console.log('Deleted count:', deleted);
     res.json({ success: true, deleted });
   } catch (error) {
     res.status(500).json({ message: 'Failed to remove cart item', error: error.message });

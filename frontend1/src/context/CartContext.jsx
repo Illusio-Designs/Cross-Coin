@@ -143,8 +143,11 @@ export const CartProvider = ({ children }) => {
     if (isAuthenticated) {
       try {
         console.log('CartContext: removing from backend with productId and variationId:', itemToRemove.productId, itemToRemove.variationId);
-        // Pass productId and variationId to the API. If variationId is undefined/null, pass 'null' string.
-        await apiRemoveFromCart(itemToRemove.productId, itemToRemove.variationId != null ? itemToRemove.variationId : 'null');
+        // Always pass null for variationId if it is null or undefined
+        await apiRemoveFromCart(
+          itemToRemove.productId,
+          itemToRemove.variationId == null ? null : itemToRemove.variationId
+        );
         const backendCart = await apiGetCart();
         console.log('CartContext: backend cart after removal:', backendCart);
         setCartItems(backendCart);
