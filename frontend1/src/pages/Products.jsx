@@ -6,7 +6,8 @@ import { FiFilter, FiChevronDown, FiChevronLeft, FiChevronRight } from "react-ic
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCart } from '../context/CartContext';
 import ProductCard, { filterOptions } from "../components/ProductCard";
-import { getAllPublicProducts, getPublicCategories } from "../services/publicindex";
+import { getAllPublicProducts, getPublicCategories, getPublicCategoryByName } from "../services/publicindex";
+import { getProductImageSrc } from '../utils/imageUtils';
 import SeoWrapper from '../console/SeoWrapper';
 import { fbqTrack } from '../components/common/Analytics';
 import colorMap from '../components/products/colorMap';
@@ -77,17 +78,60 @@ const Products = () => {
     fetchCategories();
   }, []);
 
-  // On mount, check for category in query params
+  // On mount and when searchParams change, fetch products by category name if present
   useEffect(() => {
     const categoryFromQuery = searchParams.get('category');
     if (categoryFromQuery) {
-      setSelectedCategory([categoryFromQuery]);
+      setLoading(true);
+      // Find the category object by name (case-insensitive)
+      const matchedCategory = categories.find(
+        cat => cat.name.toLowerCase() === categoryFromQuery.toLowerCase()
+      );
+      const categoryId = matchedCategory ? matchedCategory.id : null;
+      getPublicCategoryByName(categoryFromQuery)
+        .then(data => {
+          // Attach category_id and transform product structure for ProductCard
+          const productsWithCategory = (data.products || []).map(p => {
+            let imageUrl = '/assets/card1-left.webp';
+            if (p.image) {
+              if (p.image.startsWith('http')) {
+                imageUrl = p.image;
+              } else if (p.image.startsWith('/uploads/')) {
+                const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+                imageUrl = `${baseUrl}${p.image}`;
+              } else {
+                const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+                imageUrl = `${baseUrl}/uploads/products/${p.image}`;
+              }
+            }
+            return {
+              ...p,
+              category_id: categoryId,
+              category: { ...(p.category || {}), id: categoryId, name: categoryFromQuery },
+              images: [{ image_url: imageUrl }],
+              variations: [{ price: p.price || 0, comparePrice: p.comparePrice || 0, stock: p.stock || 0 }]
+            };
+          });
+          setProducts(productsWithCategory);
+          setSelectedCategory(categoryId ? [String(categoryId)] : []);
+          setTotalPages(1);
+          setTotalProducts(productsWithCategory.length);
+          setError(null);
+          setLoading(false);
+        })
+        .catch(err => {
+          setError('Failed to fetch products for this category');
+          setProducts([]);
+          setSelectedCategory([]);
+          setTotalPages(1);
+          setTotalProducts(0);
+          setLoading(false);
+        });
+    } else {
+      fetchProducts();
     }
-  }, [searchParams]);
-
-  useEffect(() => {
-    fetchProducts();
-  }, [currentPage, sortBy, selectedCategory]);
+    // eslint-disable-next-line
+  }, [searchParams, currentPage, sortBy, categories]);
 
   // After products and categories are loaded, compute dynamic filters
   useEffect(() => {
@@ -721,24 +765,14 @@ const Products = () => {
                   }
                 </div>
               ) : (
-                getFilteredProducts().map((product) => {
-                  let images = Array.isArray(product.images) ? product.images : [];
-                  if (images.length === 0 && product.image) {
-                    images = [{ image_url: product.image }];
-                  }
-                  // Ensure at least one valid image
-                  if (!images.length || !images[0].image_url) {
-                    images = [{ image_url: '/assets/card1-left.webp' }];
-                  }
-                  return (
-                    <ProductCard
-                      key={product.id}
-                      product={{ ...product, images }}
-                      onProductClick={handleProductClick}
-                      onAddToCart={handleAddToCart}
-                    />
-                  );
-                })
+                getFilteredProducts().map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onProductClick={handleProductClick}
+                    onAddToCart={handleAddToCart}
+                  />
+                ))
               )}
             </div>
 

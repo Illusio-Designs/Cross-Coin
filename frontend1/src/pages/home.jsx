@@ -12,6 +12,7 @@ import SeoWrapper from '../console/SeoWrapper';
 import { useRouter } from 'next/navigation';
 import { fbqTrack } from '../components/common/Analytics';
 import DOMPurify from 'dompurify';
+import colorMap from '../components/products/colorMap';
 
 const formatTwoDigits = (num) => num.toString().padStart(2, '0');
 
@@ -489,8 +490,8 @@ const Home = () => {
             <div className="category-title">
             <h2 className="section-title">Curate Your Collection</h2>
             <button className="hero-btn" onClick={() => {
-              if (currentCategory.id) {
-                window.location.href = `/Products?category=${currentCategory.id}`;
+              if (currentCategory.name) {
+                window.location.href = `/Products?category=${encodeURIComponent(currentCategory.name)}`;
               } else {
                 window.location.href = '/Products';
               }
@@ -543,8 +544,8 @@ const Home = () => {
                             is_primary: img.is_primary
                           };
                         });
-                      } else if (product.mainImage) {
-                        let imageUrl = product.mainImage;
+                      } else if (product.image) {
+                        let imageUrl = product.image;
                         if (!imageUrl) {
                           imageUrl = '/assets/card1-left.webp';
                         } else if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads/')) {
@@ -690,7 +691,7 @@ const Home = () => {
                                         width: 20,
                                         height: 20,
                                         borderRadius: '50%',
-                                        backgroundColor: color,
+                                        backgroundColor: colorMap[color?.toLowerCase?.()] || color,
                                         marginRight: 8,
                                         border: '1px solid #888',
                                       }}
