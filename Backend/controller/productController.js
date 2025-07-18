@@ -500,25 +500,6 @@ module.exports.updateProduct = async (req, res) => {
             size: f.size
         })) : 'No files');
         
-        // Debug: Show which images are variation images
-        if (req.files && req.files.length > 0) {
-            console.log('\n=== IMAGE ANALYSIS FOR UPDATE ===');
-            const variationImages = req.files.filter(f => f.fieldname.match(/^variation_(\d+)_image$/));
-            const productImages = req.files.filter(f => !f.fieldname.match(/^variation_(\d+)_image$/));
-            
-            console.log(`Total images: ${req.files.length}`);
-            console.log(`Variation images: ${variationImages.length}`);
-            console.log(`Product-level images: ${productImages.length}`);
-            
-            if (variationImages.length > 0) {
-                console.log('Variation images found:');
-                variationImages.forEach(img => {
-                    const match = img.fieldname.match(/^variation_(\d+)_image$/);
-                    console.log(`  - ${img.filename} (${img.fieldname}) -> variation ${match[1]}`);
-                });
-            }
-        }
-
         // Parse form data
         const name = req.body.name?.trim();
         const description = req.body.description?.trim();
@@ -527,16 +508,13 @@ module.exports.updateProduct = async (req, res) => {
         const variations = JSON.parse(req.body.variations || '[]');
         const seo = JSON.parse(req.body.seo || '{}');
         const images = req.files;
-
-        console.log('\n=== PARSED SEO DATA ===');
-        console.log('Received SEO data:', req.body.seo);
-        console.log('Parsed SEO data:', seo);
+        const imagesToDelete = JSON.parse(req.body.imagesToDelete || '[]');
+        const variationImagesToDelete = JSON.parse(req.body.variationImagesToDelete || '[]');
 
         // Validate required fields
         if (!name) {
             throw new Error('Product name is required');
         }
-
         if (!categoryId) {
             throw new Error('Category is required');
         }
@@ -561,9 +539,29 @@ module.exports.updateProduct = async (req, res) => {
             throw new Error('Product not found');
         }
 
-        console.log('\n=== EXISTING PRODUCT DATA ===');
-        console.log('Product:', product.toJSON());
-        console.log('Existing SEO:', product.ProductSEO?.toJSON());
+        // --- Delete product-level images marked for deletion ---
+        if (Array.isArray(imagesToDelete) && imagesToDelete.length > 0) {
+          for (const imgId of imagesToDelete) {
+            const img = await ProductImage.findByPk(imgId, { transaction });
+            if (img) {
+              // Remove file from storage
+              const imagePath = path.join(__dirname, '../uploads/products', img.image_url.split('/').pop());
+              try { await fs.unlink(imagePath); } catch (e) { /* ignore */ }
+              await img.destroy({ transaction });
+            }
+          }
+        }
+        // --- Delete variation images marked for deletion ---
+        if (Array.isArray(variationImagesToDelete) && variationImagesToDelete.length > 0) {
+          for (const imgId of variationImagesToDelete) {
+            const img = await ProductImage.findByPk(imgId, { transaction });
+            if (img) {
+              const imagePath = path.join(__dirname, '../uploads/products', img.image_url.split('/').pop());
+              try { await fs.unlink(imagePath); } catch (e) { /* ignore */ }
+              await img.destroy({ transaction });
+            }
+          }
+        }
 
         // Update basic product info
         await product.update({
@@ -602,102 +600,88 @@ module.exports.updateProduct = async (req, res) => {
             })
         };
 
-        console.log('\n=== SEO DATA TO BE SAVED ===');
-        console.log('SEO Data:', seoData);
-
         if (product.ProductSEO) {
-            console.log('\n=== UPDATING EXISTING SEO ===');
             await product.ProductSEO.update(seoData, { transaction });
-            console.log('SEO updated successfully');
         } else {
-            console.log('\n=== CREATING NEW SEO ===');
-            const seoRecord = await ProductSEO.create({
+            await ProductSEO.create({
                 product_id: product.id,
                 ...seoData
             }, { transaction });
-            console.log('New SEO record created with ID:', seoRecord.id);
         }
 
-        // Handle variations with attributes
-        if (variations && variations.length > 0) {
-            // Delete existing variations
-            await ProductVariation.destroy({
-                where: { productId: id },
-                transaction
-            });
+        // --- Optimized Variation Update Logic ---
+        // 1. Get existing variations from DB
+        const existingVariations = product.ProductVariations || [];
+        const existingVariationMap = new Map(existingVariations.map(v => [v.sku, v]));
+        const incomingVariationSkus = new Set(variations.map(v => v.sku));
 
-            // Create new variations
-            for (let i = 0; i < variations.length; i++) {
-                const variation = variations[i];
-                console.log(`\n--- Processing Variation ${i + 1}/${variations.length} for UPDATE ---`);
-                console.log(`Variation index: ${i}, SKU: ${variation.sku}`);
-                
-                if (!variation.price || isNaN(variation.price) || variation.price <= 0) {
-                    throw new Error('Invalid price for variation');
-                }
-
+        // 2. Update or create incoming variations
+        for (const variation of variations) {
+            let dbVariation = existingVariationMap.get(variation.sku);
+            if (dbVariation) {
+                // Update existing variation
+                await dbVariation.update({
+                    price: Number(variation.price),
+                    comparePrice: variation.comparePrice ? Number(variation.comparePrice) : null,
+                    stock: Number(variation.stock || 0),
+                    attributes: variation.attributes || {}
+                }, { transaction });
+                await handleProductAttributes(variation, transaction);
+            } else {
+                // Create new variation
                 const timestamp = Date.now();
                 const randomString = Math.random().toString(36).substring(2, 8);
                 const uniqueSku = variation.sku || `SKU-${product.id}-${timestamp}-${randomString}`;
-
-                const variationRecord = await ProductVariation.create({
+                dbVariation = await ProductVariation.create({
                     productId: product.id,
                     sku: uniqueSku,
                     price: Number(variation.price),
                     comparePrice: variation.comparePrice ? Number(variation.comparePrice) : null,
                     stock: Number(variation.stock || 0),
-                    // Removed weight, weightUnit, dimensions, dimensionUnit from here
                     attributes: variation.attributes || {}
                 }, { transaction });
-
-                // Handle attributes for this variation
                 await handleProductAttributes(variation, transaction);
-
-                // Associate images with the variation if provided
-                if (images && images.length > 0) {
-                    console.log(`\n=== PROCESSING IMAGES FOR VARIATION ${variation.sku} (index ${i}) ===`);
-                    
-                    for (const image of images) {
-                        // Check if this image is for a variation
-                        const match = image.fieldname.match(/^variation_(\d+)_image$/);
-                        if (match) {
-                            const variationIdx = parseInt(match[1], 10);
-                            
-                            console.log(`Image ${image.filename}: fieldname=${image.fieldname}, variationIdx=${variationIdx}, currentVariationIndex=${i}`);
-                            
-                            // Check if this image belongs to the current variation by index
-                            if (variationIdx === i) {
-                                console.log(`✓ ASSIGNING image ${image.filename} to variation ${variation.sku} (index ${variationIdx})`);
-                                await ProductImage.create({
-                                    product_id: product.id,
-                                    product_variation_id: variationRecord.id, // Associate with specific variation
-                                    image_url: `/uploads/products/${image.filename}`,
-                                    alt_text: name, // Use product name as alt text for variations
-                                    display_order: 0,
-                                    is_primary: false, // Variation images are not primary
-                                    status: 'active'
-                                }, { transaction });
-                                console.log(`✓ SUCCESS: Image ${image.filename} assigned to variation ${variation.sku} with variation_id=${variationRecord.id}`);
-                            } else {
-                                console.log(`✗ SKIPPING image ${image.filename} - belongs to variation ${variationIdx}, but processing variation ${i}`);
-                            }
+            }
+            // Handle images for this variation (add new only)
+            if (images && images.length > 0) {
+                for (const image of images) {
+                    const match = image.fieldname.match(/^variation_(\d+)_image$/);
+                    if (match) {
+                        const variationIdx = parseInt(match[1], 10);
+                        if (variations[variationIdx] && variations[variationIdx].sku === variation.sku) {
+                            await ProductImage.create({
+                                product_id: product.id,
+                                product_variation_id: dbVariation.id,
+                                image_url: `/uploads/products/${image.filename}`,
+                                alt_text: name,
+                                display_order: 0,
+                                is_primary: false,
+                                status: 'active'
+                            }, { transaction });
                         }
                     }
                 }
             }
         }
 
-        // Recalculate and update badge
-        const badge = await calculateProductBadge(product, transaction);
-        await product.update({ badge }, { transaction });
+        // 3. Delete variations that are not in the incoming list
+        for (const dbVariation of existingVariations) {
+            if (!incomingVariationSkus.has(dbVariation.sku)) {
+                // Delete associated images
+                await ProductImage.destroy({
+                    where: { product_variation_id: dbVariation.id },
+                    transaction
+                });
+                await dbVariation.destroy({ transaction });
+            }
+        }
 
-        // Handle product-level images (only images that are NOT variation images)
+        // --- Optimized Product Image Update Logic ---
+        // Only add new product-level images, do not delete existing unless new ones are uploaded
         if (images && images.length > 0) {
-            // Filter out variation images - only process images that don't match variation_*_image pattern
             const productLevelImages = images.filter(image => !image.fieldname.match(/^variation_(\d+)_image$/));
-            
             if (productLevelImages.length > 0) {
-                // Delete existing product-level images from storage
+                // Delete existing product-level images from storage and DB
                 if (product.ProductImages && product.ProductImages.length > 0) {
                     for (const image of product.ProductImages) {
                         const imagePath = path.join(__dirname, '../uploads/products', image.image_url.split('/').pop());
@@ -708,21 +692,17 @@ module.exports.updateProduct = async (req, res) => {
                         }
                     }
                 }
-
-                // Delete existing product-level images from database
                 await ProductImage.destroy({
                     where: {
                         product_id: id,
-                        product_variation_id: null // Only delete product-level images
+                        product_variation_id: null
                     },
                     transaction
                 });
-
-                // Create new product-level images
                 for (const [index, image] of productLevelImages.entries()) {
                     await ProductImage.create({
                         product_id: product.id,
-                        product_variation_id: null, // Explicitly set to null for product-level images
+                        product_variation_id: null,
                         image_url: `/uploads/products/${image.filename}`,
                         alt_text: name,
                         display_order: index,
@@ -732,7 +712,11 @@ module.exports.updateProduct = async (req, res) => {
                 }
             }
         }
-        // If no new images are uploaded, do NOT delete or modify existing images. They will be preserved.
+        // If no new images are uploaded, existing images are preserved
+
+        // Recalculate and update badge
+        const badge = await calculateProductBadge(product, transaction);
+        await product.update({ badge }, { transaction });
 
         await transaction.commit();
 

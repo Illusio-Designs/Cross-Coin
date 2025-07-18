@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getPublicCategories } from '../services/publicindex';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+import '../styles/pages/Collections.css';
 
 const Collections = () => {
   const [categories, setCategories] = useState([]);
@@ -21,36 +24,49 @@ const Collections = () => {
     fetchCategories();
   }, []);
 
-  if (loading) return <div style={{ textAlign: 'center', marginTop: 40 }}>Loading categories...</div>;
-  if (error) return <div style={{ color: 'red', textAlign: 'center', marginTop: 40 }}>{error}</div>;
-
   return (
-    <div style={{ maxWidth: 900, margin: '40px auto', padding: 20 }}>
-      <h1 style={{ textAlign: 'center', marginBottom: 30 }}>Collections</h1>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 24 }}>
-        {categories.map((cat) => (
-          <Link key={cat.id || cat._id} href={`/category/${cat.slug || cat.name}`}
-            style={{
-              display: 'block',
-              border: '1px solid #eee',
-              borderRadius: 12,
-              padding: 20,
-              textAlign: 'center',
-              textDecoration: 'none',
-              color: '#222',
-              background: '#fafbfc',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
-            }}
-          >
-            {cat.image && (
-              <img src={cat.image.startsWith('http') ? cat.image : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${cat.image}`}
-                alt={cat.name} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: '50%', marginBottom: 12 }} />
-            )}
-            <div style={{ fontWeight: 600, fontSize: 18 }}>{cat.name}</div>
-          </Link>
-        ))}
+    <>
+      <Header />
+      <div className="collections-container">
+        <h1 className="section-title">Collections</h1>
+        <div className="collections-grid">
+          {categories.map((cat) => {
+            // Home page logic for image URL
+            let img = cat.image;
+            let imageUrl = '/assets/card1-left.webp';
+            if (img) {
+              if (img.startsWith('http')) {
+                imageUrl = img;
+              } else {
+                // Remove duplicate /uploads/categories/
+                const cleanedPath = img.replace(/(\/uploads\/categories\/)+/g, '/uploads/categories/');
+                let baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+                if (cleanedPath.startsWith('/')) {
+                  imageUrl = `${baseUrl}${cleanedPath}`;
+                } else {
+                  imageUrl = `${baseUrl}/${cleanedPath}`;
+                }
+              }
+            }
+            return (
+              <Link
+                key={cat.id || cat._id}
+                href={`/Products?category=${encodeURIComponent(cat.name)}`}
+                className="category-card"
+              >
+                <img
+                  src={imageUrl}
+                  alt={cat.name}
+                  className="category-card-image"
+                />
+                <div className="category-card-name">{cat.name}</div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
-    </div>
+      <Footer />
+    </>
   );
 };
 

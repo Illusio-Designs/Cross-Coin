@@ -5,7 +5,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 // Create axios instance
 const api = axios.create({
     baseURL: API_BASE_URL,
-    timeout: 10000, // 10 second timeout
+    timeout: 0, // 0 = no timeout for all API calls
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
@@ -558,8 +558,8 @@ export const productService = {
             const response = await api.post('/api/products', productData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
-                },
-                timeout: 30000 // 30 seconds
+                }
+                // No timeout here
             });
             return response.data;
         } catch (error) {
@@ -599,8 +599,8 @@ export const productService = {
             const response = await api.put(`/api/products/${id}`, productData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
-                },
-                timeout: 30000 // 30 seconds
+                }
+                // No timeout here
             });
             return response.data;
         } catch (error) {

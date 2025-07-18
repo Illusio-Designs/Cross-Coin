@@ -370,11 +370,25 @@ const getPublicCategoryByName = async (req, res) => {
             slug: category.slug,
             products: category.products ? category.products.map(product => {
                 let image = null;
+                // Try primary image
                 const primaryImage = product.ProductImages?.find(img => img.is_primary);
                 if (primaryImage && primaryImage.image_url) {
                     image = primaryImage.image_url.startsWith('http') || primaryImage.image_url.startsWith('/uploads/')
                         ? primaryImage.image_url
                         : `/uploads/products/${primaryImage.image_url}`;
+                }
+                // Fallback to first image if no primary
+                if (!image && product.ProductImages && product.ProductImages.length > 0) {
+                    const firstImage = product.ProductImages[0];
+                    if (firstImage.image_url) {
+                        image = firstImage.image_url.startsWith('http') || firstImage.image_url.startsWith('/uploads/')
+                            ? firstImage.image_url
+                            : `/uploads/products/${firstImage.image_url}`;
+                    }
+                }
+                // Fallback to default image if still null
+                if (!image) {
+                    image = '/assets/card1-left.webp';
                 }
                 return {
                     id: product.id,
