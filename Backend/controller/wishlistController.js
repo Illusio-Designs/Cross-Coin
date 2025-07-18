@@ -77,27 +77,46 @@ module.exports.getWishlist = async (req, res) => {
                             attributes: ['id', 'price', 'comparePrice', 'sku', 'stock', 'status'],
                             required: false
                         }
-                    ],
-                    // Add product-level physical fields
-                    weight: Product.weight,
-                    weightUnit: Product.weightUnit,
-                    dimensions: Product.dimensions,
-                    dimensionUnit: Product.dimensionUnit
+                    ]
                 }
             ],
             order: [['createdAt', 'DESC']]
         });
 
-        console.log('Wishlist Items from DB:', JSON.stringify(wishlistItems, null, 2));
+        // Map to always provide an image
+        const mappedWishlist = wishlistItems.map(item => {
+            const plainItem = item.get({ plain: true });
+            const product = plainItem.Product;
+            let image = null;
+            // 1. Try ProductImages
+            if (product?.ProductImages && product.ProductImages.length > 0 && product.ProductImages[0].image_url) {
+                image = product.ProductImages[0].image_url;
+            }
+            // 2. Fallback to product.image (if exists and not already set)
+            else if (product?.image) {
+                image = product.image;
+            }
+            // 3. Fallback to default
+            else {
+                image = '/assets/card1-left.webp';
+            }
+            return {
+                ...plainItem,
+                Product: {
+                    ...product,
+                    image, // always set image
+                }
+            };
+        });
 
         res.status(200).json({
-            count: wishlistItems.length,
-            wishlist: wishlistItems
+            count: mappedWishlist.length,
+            wishlist: mappedWishlist
         });
 
         console.log('Wishlist Response Sent:', {
-            count: wishlistItems.length,
-            wishlist: wishlistItems
+            count: mappedWishlist.length,
+            wishlist: mappedWishlist
         });
     } catch (error) {
         console.error('Error fetching wishlist:', error);
