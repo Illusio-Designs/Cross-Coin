@@ -31,14 +31,12 @@ const Collections = () => {
         <h1 className="section-title">Collections</h1>
         <div className="collections-grid">
           {categories.map((cat) => {
-            // Home page logic for image URL
             let img = cat.image;
-            let imageUrl = '/assets/card1-left.webp';
+            let imageUrl = null;
             if (img) {
               if (img.startsWith('http')) {
                 imageUrl = img;
               } else {
-                // Remove duplicate /uploads/categories/
                 const cleanedPath = img.replace(/(\/uploads\/categories\/)+/g, '/uploads/categories/');
                 let baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
                 if (cleanedPath.startsWith('/')) {
@@ -48,17 +46,37 @@ const Collections = () => {
                 }
               }
             }
+            const [imageLoaded, setImageLoaded] = React.useState(false);
             return (
               <Link
                 key={cat.id || cat._id}
                 href={`/Products?category=${encodeURIComponent(cat.name)}`}
                 className="category-card"
               >
-                <img
-                  src={imageUrl}
-                  alt={cat.name}
-                  className="category-card-image"
-                />
+                <div style={{ position: 'relative', width: 200, height: 200 }}>
+                  {imageUrl ? (
+                    <>
+                      <img
+                        src={imageUrl}
+                        alt={cat.name}
+                        className="category-card-image"
+                        style={{
+                          width: 200,
+                          height: 200,
+                          background: '#eee',
+                          display: 'block'
+                        }}
+                        onLoad={() => setImageLoaded(true)}
+                        onError={() => setImageLoaded(true)}
+                      />
+                      {!imageLoaded && (
+                        <div className="shimmer-placeholder" style={{ width: 200, height: 200, position: 'absolute', top: 0, left: 0 }} />
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ width: 200, height: 200, background: '#eee', borderRadius: 8 }} />
+                  )}
+                </div>
                 <div className="category-card-name">{cat.name}</div>
               </Link>
             );

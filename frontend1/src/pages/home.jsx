@@ -52,6 +52,7 @@ const Home = () => {
   const [exclusiveReviewCounts, setExclusiveReviewCounts] = useState([]);
   const [exclusiveAvgRatings, setExclusiveAvgRatings] = useState([]);
   const [exclusiveSelectedSkus, setExclusiveSelectedSkus] = useState([]);
+  const [categoryImageLoaded, setCategoryImageLoaded] = useState(false);
   
   const categorySliderRef = useRef(null);
   const latestSliderRef = useRef(null);
@@ -502,22 +503,37 @@ const Home = () => {
           <div className="category-section">
             <div className="category-sidebar">
               <div className="category-item" ref={categoryImageRef}>
-              <button className="slider-arrow slider-arrow-left" aria-label="Previous category" onClick={() => scrollCategoryImage('left')}>
-                <IoIosArrowBack />
-              </button>
-                <Image 
-                  src={getCategoryImageSrc()} 
-                    alt={currentCategory.name || 'Category'} 
-                  width={300}
-                  height={300}
-                  style={{ objectFit: 'cover' }}
-                  unoptimized
-                    onError={e => { e.target.src = '/assets/card1-left.webp'; }}
-                />
+                <button className="slider-arrow slider-arrow-left" aria-label="Previous category" onClick={() => scrollCategoryImage('left')}>
+                  <IoIosArrowBack />
+                </button>
+                <div style={{ position: 'relative', width: 350, height: 400 }}>
+                  {getCategoryImageSrc() ? (
+                    <>
+                      <img
+                        src={getCategoryImageSrc()}
+                        alt={currentCategory.name || 'Category'}
+                        width={350}
+                        height={400}
+                        style={{
+                          background: '#eee',
+                          display: 'block',
+                          filter: categoryImageLoaded ? 'none' : 'grayscale(1)'
+                        }}
+                        onLoad={() => setCategoryImageLoaded(true)}
+                        onError={() => setCategoryImageLoaded(true)}
+                      />
+                      {!categoryImageLoaded && (
+                        <div className="shimmer-placeholder" style={{ width: 350, height: 400, position: 'absolute', top: 0, left: 0 }}></div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ width: 300, height: 300, background: '#eee', borderRadius: 8 }}></div>
+                  )}
+                </div>
                 <h3>{currentCategory.name}</h3>
                 <button className="slider-arrow slider-arrow-right" aria-label="Next category" onClick={() => scrollCategoryImage('right')}>
-                <IoIosArrowForward />
-              </button>
+                  <IoIosArrowForward />
+                </button>
               </div>
             </div>
             <div className="category-products">
@@ -535,7 +551,7 @@ const Home = () => {
                         imagesArr = product.images.map(img => {
                           let imageUrl = img.image_url || img.url || img;
                           if (!imageUrl) {
-                            imageUrl = '/assets/card1-left.webp';
+                            imageUrl = 'null';
                           } else if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads/')) {
                             imageUrl = `/uploads/products/${imageUrl}`;
                           }
@@ -547,13 +563,13 @@ const Home = () => {
                       } else if (product.image) {
                         let imageUrl = product.image;
                         if (!imageUrl) {
-                          imageUrl = '/assets/card1-left.webp';
+                          imageUrl = 'null';
                         } else if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads/')) {
                           imageUrl = `/uploads/products/${imageUrl}`;
                         }
                         imagesArr = [{ image_url: imageUrl }];
                       } else {
-                        imagesArr = [{ image_url: '/assets/card1-left.webp' }];
+                        imagesArr = [{ image_url: 'null' }];
                       }
                       const formattedProduct = {
                         id: product.id,

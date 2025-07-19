@@ -92,7 +92,7 @@ const Products = () => {
         .then(data => {
           // Attach category_id and transform product structure for ProductCard
           const productsWithCategory = (data.products || []).map(p => {
-            let imageUrl = '/assets/card1-left.webp';
+            let imageUrl = null;
             if (p.image) {
               if (p.image.startsWith('http')) {
                 imageUrl = p.image;
@@ -108,7 +108,7 @@ const Products = () => {
               ...p,
               category_id: categoryId,
               category: { ...(p.category || {}), id: categoryId, name: categoryFromQuery },
-              images: [{ image_url: imageUrl }],
+              images: imageUrl ? [{ image_url: imageUrl }] : [],
               variations: [{ price: p.price || 0, comparePrice: p.comparePrice || 0, stock: p.stock || 0 }]
             };
           });

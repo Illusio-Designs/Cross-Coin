@@ -454,11 +454,15 @@ export const removeFromCart = async (productId, variationId) => {
         if (variationId !== null && variationId !== undefined) {
             url += `/${variationId}`;
         }
+        console.log('publicindex: removeFromCart URL:', url);
+        console.log('publicindex: removeFromCart params:', { productId, variationId });
         const response = await axios.delete(url, {
             headers: { Authorization: `Bearer ${token}` }
         });
+        console.log('publicindex: removeFromCart response:', response.data);
         return response.data;
     } catch (error) {
+        console.error('publicindex: removeFromCart error:', error.response?.data || error.message);
         throw error.response?.data || error.message;
     }
 };
