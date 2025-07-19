@@ -1001,7 +1001,7 @@ export default function ProductDetails() {
               >
                 <svg
                   className="wishlist-icon"
-                  width="32"
+                  width="32" 
                   height="32"
                   viewBox="0 0 24 24"
                   fill={wishlist.some(item => item.id === product.id) ? '#e60000' : 'none'}

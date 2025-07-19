@@ -648,6 +648,17 @@ const Home = () => {
                 const includedColors = Array.isArray(attrs.color) ? attrs.color : [];
                 // For pack selection
                 const hasPacks = product.variations && product.variations.length > 1;
+                // Size selection logic
+                const selectedSizeForPack = state.selectedSize || (Array.isArray(attrs.size) ? attrs.size[0] : '');
+                // Color selection logic
+                const colorOptions = product.variations
+                  ? Array.from(new Set(product.variations.flatMap(v => {
+                      const a = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+                      return a && a.color ? a.color : [];
+                    })))
+                  : [];
+                // Size options for current variation
+                const sizeOptions = Array.isArray(attrs.size) ? attrs.size : [];
                 return (
                   <div key={product.id} className="featured-product-card">
                     <div className="product-images">
@@ -694,30 +705,6 @@ const Home = () => {
                               <span className="review-count">({reviewCount} reviews)</span>
                             </span>
                           </div>
-                          {/* Included Colors UI for Packs and Singles */}
-                          {includedColors.length > 0 && (
-                            <div style={{ margin: '16px 0' }}>
-                              <strong>Included Colors:</strong>
-                              <div style={{ display: 'flex', gap: '1em', marginTop: '0.5em' }}>
-                                {includedColors.map((color, idx) => (
-                                  <div key={color + idx} style={{ display: 'flex', alignItems: 'center' }}>
-                                    <span
-                                      style={{
-                                        display: 'inline-block',
-                                        width: 20,
-                                        height: 20,
-                                        borderRadius: '50%',
-                                        backgroundColor: colorMap[color?.toLowerCase?.()] || color,
-                                        marginRight: 8,
-                                        border: '1px solid #888',
-                                      }}
-                                    />
-                                    <span>{color}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       </div>
                       {/* Details section */}
@@ -728,7 +715,7 @@ const Home = () => {
                             {allAttributeKeys.map((key) => (
                               <div key={key} style={{ minWidth: 120 }}>
                                 <span className="details-label" style={{ textTransform: 'capitalize' }}>{key}:</span>
-                                <span className="details-value">{Array.isArray(attrs[key]) ? attrs[key].join(', ') : (attrs[key] ?? '-')}</span>
+                                <span className="details-value">{key === 'size' ? selectedSizeForPack : (Array.isArray(attrs[key]) ? attrs[key].join(', ') : (attrs[key] ?? '-'))}</span>
                               </div>
                             ))}
                             <div>
@@ -738,23 +725,56 @@ const Home = () => {
                           </div>
                         </div>
                       </div>
-                      {/* Pack Selection */}
-                      {hasPacks && (
-                        <div className="select-pack-section">
-                          <strong>Select Pack:</strong>
-                          <div className="select-pack-options">
-                            {product.variations.map((variation, idx) => (
+                      {/* Color selection */}
+                      {product.variations && product.variations.length > 1 && colorOptions.length > 0 && (
+                        <div className="select-color-section">
+                          <strong>Select Color:</strong>
+                          <div className="select-color-options">
+                            {product.variations.map((variation) => {
+                              const attrs = typeof variation.attributes === 'string' ? JSON.parse(variation.attributes) : variation.attributes;
+                              const colors = Array.isArray(attrs?.color) ? attrs.color : [];
+                              return (
+                                <button
+                                  key={variation.sku}
+                                  className={`color-swatch-btn color-pack-btn${selectedSku === variation.sku ? ' selected' : ''}`}
+                                  onClick={() => {
+                                    setExclusiveSelectedSkus(prev => prev.map((sku, i) => i === index ? variation.sku : sku));
+                                    setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, selectedThumbnail: 0 } : s));
+                                  }}
+                                  aria-label={`Select pack with colors: ${colors.join(', ')}`}
+                                  type="button"
+                                >
+                                  <div className="color-pack-swatch-row">
+                                    {colors.map((color, cidx) => (
+                                      <span
+                                        key={color + cidx}
+                                        className="color-swatch"
+                                        style={{ backgroundColor: colorMap[color.toLowerCase()] || '#ccc' }}
+                                        title={color}
+                                      />
+                                    ))}
+                                  </div>
+                                  <span className="color-pack-count">{colors.length > 1 ? `Pack of ${colors.length}` : colors[0]}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      {/* Size selection */}
+                      {sizeOptions.length > 1 && (
+                        <div className="select-size-section">
+                          <strong>Select Size:</strong>
+                          <div className="select-size-options">
+                            {sizeOptions.map((size) => (
                               <button
-                                key={variation.sku}
-                                className={`select-pack-box${selectedSku === variation.sku ? ' selected' : ''}`}
-                                onClick={() => {
-                                  setExclusiveSelectedSkus(prev => prev.map((sku, i) => i === index ? variation.sku : sku));
-                                  setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, selectedThumbnail: 0 } : s));
-                                }}
-                                aria-label={`Select pack ${idx + 1}`}
+                                key={size}
+                                className={`size-swatch-btn${selectedSizeForPack === size ? ' selected' : ''}`}
+                                onClick={() => setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, selectedSize: size } : s))}
                                 type="button"
+                                aria-label={`Select size ${size}`}
                               >
-                                <span className="select-pack-label">Pack {idx + 1}</span>
+                                {size}
                               </button>
                             ))}
                           </div>
@@ -777,16 +797,13 @@ const Home = () => {
                           BUY IT NOW
                         </button>
                       </div>
-                      {/* Short Description */}
+                      {/* Full Description */}
                       <div className="details-row">
                         <div>
                           <div className="details-heading">Description:</div>
                           <span className="details-value" dangerouslySetInnerHTML={{
-                            __html: product.description
-                              ? DOMPurify.sanitize(product.description.slice(0, 120) + (product.description.length > 120 ? '...' : ''))
-                              : '-'
+                            __html: product.description ? DOMPurify.sanitize(product.description) : '-'
                           }} />
-                          
                         </div>
                       </div>
                     </div>
