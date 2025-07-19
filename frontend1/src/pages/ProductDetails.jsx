@@ -54,6 +54,8 @@ export default function ProductDetails() {
   const [imageLoaded, setImageLoaded] = useState({});
   const [tooltipStyle, setTooltipStyle] = useState({});
   const couponRefs = useRef({});
+  // Store selected size per pack/variation
+  const [selectedSizes, setSelectedSizes] = useState({});
 
   // Add color selection by name
   const [selectedColor, setSelectedColor] = useState(null);
@@ -476,13 +478,22 @@ export default function ProductDetails() {
     return `${baseUrl}${url}`;
   }
 
+  // When a pack is selected, show its size options and highlight the selected size for that pack
+  const handleSizeSelect = (sku, size) => {
+    setSelectedSizes(prev => ({ ...prev, [sku]: size }));
+  };
+
+  // Get the selected size for the current pack
+  const selectedSizeForPack = selectedSizes[selectedSku] || (Array.isArray(attrs.size) ? attrs.size[0] : '');
+
+  // Update addToCart and buyNow to use selectedSizeForPack
   const handleAddToCart = () => {
     if (!selectedVariation) {
       showValidationErrorToast('Please select all required variations.');
       return;
     }
     const selectedColor = selectedAttributes.color || '';
-    const selectedSize = selectedAttributes.size || '';
+    const selectedSize = selectedSizeForPack || '';
     // Find the image for the selected variation by product_variation_id
     let selectedImage = [];
     let imagesForVariation = [];
@@ -526,7 +537,7 @@ export default function ProductDetails() {
       return;
     }
     const selectedColor = selectedAttributes.color || '';
-    const selectedSize = selectedAttributes.size || '';
+    const selectedSize = selectedSizeForPack || '';
     // Find the image for the selected variation by product_variation_id
     let selectedImage = [];
     let imagesForVariation = [];
@@ -752,25 +763,62 @@ export default function ProductDetails() {
   console.log('Color options:', colorOptions, 'Selected color:', selectedColor);
 
   // Add this function inside the ProductDetails component
-  const renderPackSelection = () => {
+  const renderColorSelection = () => {
     if (!product.variations || product.variations.length <= 1) return null;
-
     return (
-      <div className="select-pack-section">
-        <strong>Select Pack:</strong>
-        <div className="select-pack-options">
-          {product.variations.map((variation, idx) => (
+      <div className="select-color-section">
+        <strong>Select Color:</strong>
+        <div className="select-color-options">
+          {product.variations.map((variation) => {
+            const attrs = typeof variation.attributes === 'string' ? JSON.parse(variation.attributes) : variation.attributes;
+            const colors = Array.isArray(attrs?.color) ? attrs.color : [];
+            return (
+              <button
+                key={variation.sku}
+                className={`color-swatch-btn color-pack-btn${selectedSku === variation.sku ? ' selected' : ''}`}
+                onClick={() => {
+                  setSelectedSku(variation.sku);
+                  setSelectedVariation(variation);
+                }}
+                aria-label={`Select pack with colors: ${colors.join(', ')}`}
+                type="button"
+              >
+                <div className="color-pack-swatch-row">
+                  {colors.map((color, cidx) => (
+                    <span
+                      key={color + cidx}
+                      className="color-swatch"
+                      style={{ backgroundColor: colorMap[color.toLowerCase()] || '#ccc' }}
+                      title={color}
+                    />
+                  ))}
+                </div>
+                <span className="color-pack-count">{colors.length > 1 ? `Pack of ${colors.length}` : colors[0]}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  // Update renderSizeSelection to use per-pack size selection
+  const renderSizeSelection = () => {
+    const sizes = Array.isArray(attrs.size) ? attrs.size : [];
+    if (sizes.length <= 1) return null;
+    return (
+      <div className="select-size-section">
+        <strong>Select Size:</strong>
+        <div className="select-size-options">
+          {sizes.map((size) => (
             <button
-              key={variation.sku}
-              className={`select-pack-box${selectedSku === variation.sku ? ' selected' : ''}`}
-              onClick={() => {
-                setSelectedSku(variation.sku);
-                setSelectedVariation(variation);
-              }}
-              aria-label={`Select pack ${idx + 1}`}
+              key={size}
+              className={`size-swatch-btn${selectedSizeForPack === size ? ' selected' : ''}`}
+              onClick={() => handleSizeSelect(selectedSku, size)}
               type="button"
+              aria-label={`Select size ${size}`}
             >
-              <span className="select-pack-label">Pack {idx + 1}</span>
+              {size}
             </button>
           ))}
         </div>
@@ -937,29 +985,7 @@ export default function ProductDetails() {
                   </span>
                 </div>
                 {/* Included Colors UI for Packs and Singles */}
-                {Array.isArray(attrs.color) && attrs.color.length > 0 && (
-                  <div style={{ margin: '16px 0' }}>
-                    <strong>Included Colors:</strong>
-                    <div style={{ display: 'flex', gap: '1em', marginTop: '0.5em' }}>
-                      {attrs.color.map((color, idx) => (
-                        <div key={color + idx} style={{ display: 'flex', alignItems: 'center' }}>
-                          <span
-                            style={{
-                              display: 'inline-block',
-                              width: 20,
-                              height: 20,
-                              borderRadius: '50%',
-                              backgroundColor: colorMap[color.toLowerCase()] || '#ccc',
-                              marginRight: 8,
-                              border: '1px solid #888',
-                            }}
-                          />
-                          <span>{color}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* Removed Included Colors section as per request */}
               </div>
               {/* Wishlist icon */}
               <button
@@ -1003,7 +1029,7 @@ export default function ProductDetails() {
                   {allAttributeKeys.map((key) => (
                     <div key={key} style={{ minWidth: 120 }}>
                       <span className="details-label" style={{ textTransform: 'capitalize' }}>{key}:</span>
-                      <span className="details-value">{Array.isArray(attrs[key]) ? attrs[key].join(', ') : (attrs[key] ?? '-')}</span>
+                      <span className="details-value">{key === 'size' ? selectedSizeForPack : (Array.isArray(attrs[key]) ? attrs[key].join(', ') : (attrs[key] ?? '-'))}</span>
                     </div>
                   ))}
                   <div>
@@ -1012,6 +1038,8 @@ export default function ProductDetails() {
                   </div>
                 </div>
             </div>
+            {renderColorSelection()}
+            {renderSizeSelection()}
             {/* Coupon Box Section (moved after details) */}
             {coupons && coupons.length > 0 && (
               <div className="product-coupons-box">
@@ -1040,8 +1068,6 @@ export default function ProductDetails() {
                 </div>
               </div>
             )}
-            {/* Pack Selection */}
-            {renderPackSelection()}
             {/* Quantity and Action Buttons Section */}
             <div className="quantity-section">
               <div className="details-heading">Quantity:</div>
