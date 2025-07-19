@@ -15,6 +15,7 @@ import { getProductImageSrc } from '../utils/imageUtils';
 import DOMPurify from 'dompurify';
 import Modal from "../components/common/Modal";
 import colorMap from '../components/products/colorMap';
+import { useRef } from "react";
 // Add image loaded state
 
 export default function ProductDetails() {
@@ -51,6 +52,8 @@ export default function ProductDetails() {
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [imageLoaded, setImageLoaded] = useState({});
+  const [tooltipStyle, setTooltipStyle] = useState({});
+  const couponRefs = useRef({});
 
   // Add color selection by name
   const [selectedColor, setSelectedColor] = useState(null);
@@ -219,8 +222,54 @@ export default function ProductDetails() {
   const handleCopyCoupon = async (couponCode) => {
     try {
       await navigator.clipboard.writeText(couponCode);
-      setCopiedCoupon(couponCode);
-      setTimeout(() => setCopiedCoupon(null), 2000); // Hide tooltip after 2 seconds
+
+      // If clicking the same coupon, reset state first to force re-render
+      if (copiedCoupon === couponCode) {
+        setCopiedCoupon(null);
+        setTooltipStyle({});
+        setTimeout(() => {
+          setCopiedCoupon(couponCode);
+          setTooltipStyle({
+            '--tooltip-top': `20px`,
+            '--tooltip-left': `50vw`
+          });
+          requestAnimationFrame(() => {
+            if (couponRefs.current[couponCode]) {
+              const rect = couponRefs.current[couponCode].getBoundingClientRect();
+              const top = rect.top - 44;
+              const left = rect.left + rect.width / 2;
+              setTooltipStyle({
+                '--tooltip-top': `${top}px`,
+                '--tooltip-left': `${left}px`,
+                '--tooltip-arrow-left': `${left}px`
+              });
+            }
+          });
+        }, 0);
+      } else {
+        setCopiedCoupon(couponCode);
+        setTooltipStyle({
+          '--tooltip-top': `20px`,
+          '--tooltip-left': `50vw`
+        });
+        requestAnimationFrame(() => {
+          if (couponRefs.current[couponCode]) {
+            const rect = couponRefs.current[couponCode].getBoundingClientRect();
+            const top = rect.top - 44;
+            const left = rect.left + rect.width / 2;
+            setTooltipStyle({
+              '--tooltip-top': `${top}px`,
+              '--tooltip-left': `${left}px`,
+              '--tooltip-arrow-left': `${left}px`
+            });
+          }
+        });
+      }
+
+      setTimeout(() => {
+        setCopiedCoupon(null);
+        setTooltipStyle({});
+      }, 2000);
     } catch (err) {
       console.error('Failed to copy coupon code:', err);
     }
@@ -387,14 +436,10 @@ export default function ProductDetails() {
     return html;
   }
 
+  // Remove useEffect for tooltip position
+
   if (error || !product) {
-    return (
-      <div className="error-container">
-        <Header />
-        <div className="error">Error: {error || 'Product not found'}</div>
-        <Footer />
-      </div>
-    );
+    return null;
   }
 
   // Log product description and image URL
@@ -763,23 +808,34 @@ export default function ProductDetails() {
                   }}
                 />
               )}
-              <img
-                src={forceEnvImageBase(
-                  variationImages[selectedThumbnail]?.image_url ||
-                  variationImages[selectedThumbnail]?.url ||
-                  variationImages[selectedThumbnail]
-                )}
-                alt={variationImages[selectedThumbnail]?.alt_text || product.name}
-                style={{
-                  width: '100%',
-                  height: '400px',
-                  objectFit: 'contain',
-                  boxShadow: '0 2px 8px #eee'
-                }}
-                onLoad={() => setImageLoaded(prev => ({ ...prev, [selectedThumbnail]: true }))}
-                onError={() => setImageLoaded(prev => ({ ...prev, [selectedThumbnail]: true }))}
-                onClick={() => setIsZoomOpen(true)}
-              />
+              {variationImages[selectedThumbnail] && (variationImages[selectedThumbnail].image_url || variationImages[selectedThumbnail].url || variationImages[selectedThumbnail]) ? (
+                <>
+                  <img
+                    src={forceEnvImageBase(
+                      variationImages[selectedThumbnail]?.image_url ||
+                      variationImages[selectedThumbnail]?.url ||
+                      variationImages[selectedThumbnail]
+                    )}
+                    alt={variationImages[selectedThumbnail]?.alt_text || product.name}
+                    style={{
+                      width: '100%',
+                      height: '400px',
+                      objectFit: 'contain',
+                      boxShadow: '0 2px 8px #eee',
+                      background: '#eee',
+                      display: 'block'
+                    }}
+                    onLoad={() => setImageLoaded(prev => ({ ...prev, [selectedThumbnail]: true }))}
+                    onError={() => setImageLoaded(prev => ({ ...prev, [selectedThumbnail]: true }))}
+                    onClick={() => setIsZoomOpen(true)}
+                  />
+                  {!imageLoaded[selectedThumbnail] && (
+                    <div className="shimmer-placeholder" style={{ width: 400, height: 400, position: 'absolute', top: 0, left: 0 }} />
+                  )}
+                </>
+              ) : (
+                <div style={{ width: 400, height: 400, background: '#eee', borderRadius: 8 }} />
+              )}
               {/* Zoom button overlay */}
               <button
                 onClick={() => setIsZoomOpen(true)}
@@ -809,36 +865,44 @@ export default function ProductDetails() {
             {/* Thumbnails */}
             <div style={{ display: 'flex', flexWrap: 'wrap' , justifyContent: 'center', gap: 16, marginTop: 16 }}>
               {variationImages.map((image, idx) => (
-                <div key={image.id || idx} style={{ position: 'relative', width: 80, height: 80 }}>
-                  {/* Skeleton placeholder for thumbnail */}
-                  {!imageLoaded[idx] && (
-                    <div
+                (image && (image.image_url || image.url || image)) ? (
+                  <div key={image.id || idx} style={{ position: 'relative', width: 80, height: 80 }}>
+                    {/* Skeleton placeholder for thumbnail */}
+                    {!imageLoaded[idx] && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0, left: 0, right: 0, bottom: 0,
+                          background: '#eee',
+                          borderRadius: 4,
+                          zIndex: 1
+                        }}
+                      />
+                    )}
+                    <img
+                      src={forceEnvImageBase(image.image_url || image.url || image)}
+                      alt={image.alt_text || `${product.name} thumbnail ${idx + 1}`}
                       style={{
-                        position: 'absolute',
-                        top: 0, left: 0, right: 0, bottom: 0,
+                        width: 80,
+                        height: 80,
+                        objectFit: 'cover',
+                        border: selectedThumbnail === idx ? '2px solid #222' : '1px solid #eee',
+                        cursor: 'pointer',
                         background: '#eee',
                         borderRadius: 4,
-                        zIndex: 1
+                        display: 'block'
                       }}
+                      onLoad={() => setImageLoaded(prev => ({ ...prev, [idx]: true }))}
+                      onError={() => setImageLoaded(prev => ({ ...prev, [idx]: true }))}
+                      onClick={() => setSelectedThumbnail(idx)}
                     />
-                  )}
-                  <img
-                  src={forceEnvImageBase(image.image_url || image.url || image)}
-                  alt={image.alt_text || `${product.name} thumbnail ${idx + 1}`}
-                  style={{
-                    width: 80,
-                    height: 80,
-                    objectFit: 'cover',
-                    border: selectedThumbnail === idx ? '2px solid #222' : '1px solid #eee',
-                      cursor: 'pointer',
-                      opacity: imageLoaded[idx] ? 1 : 0,
-                      transition: 'opacity 0.3s'
-                  }}
-                    onLoad={() => setImageLoaded(prev => ({ ...prev, [idx]: true }))}
-                    onError={() => setImageLoaded(prev => ({ ...prev, [idx]: true }))}
-                  onClick={() => setSelectedThumbnail(idx)}
-                />
-                </div>
+                    {!imageLoaded[idx] && (
+                      <div className="shimmer-placeholder" style={{ width: 80, height: 80, position: 'absolute', top: 0, left: 0 }} />
+                    )}
+                  </div>
+                ) : (
+                  <div key={image.id || idx} style={{ width: 80, height: 80, background: '#eee', borderRadius: 4 }} />
+                )
               ))}
             </div>
             {/* Zoom Modal */}
@@ -924,12 +988,10 @@ export default function ProductDetails() {
                 </svg>
               </button>
             </div>
-
             {/* D. Details section */}
             <div className="product-details-section">
               <h3 className="details-heading">Details</h3>
-              <div className="details-table">
-                <div
+              <div
                   className="details-row"
                   style={{
                     display: 'grid',
@@ -949,8 +1011,35 @@ export default function ProductDetails() {
                     <span className="details-value">{selectedSku || '-'}</span>
                   </div>
                 </div>
-              </div>
             </div>
+            {/* Coupon Box Section (moved after details) */}
+            {coupons && coupons.length > 0 && (
+              <div className="product-coupons-box">
+                <h3 className="product-coupons-title">Available Coupons</h3>
+                <div className="product-coupons-scroller-row">
+                  {coupons.map((coupon) => (
+                    <div 
+                      key={coupon.id || coupon.code} 
+                      className="coupon-card-details"
+                      onClick={() => handleCopyCoupon(coupon.code)}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Copy coupon code ${coupon.code}`}
+                      onKeyPress={e => { if (e.key === 'Enter' || e.key === ' ') handleCopyCoupon(coupon.code); }}
+                      ref={el => couponRefs.current[coupon.code] = el}
+                    >
+                      <div className="coupon-code-details">{coupon.code}</div>
+                      <p className="coupon-description-details">
+                        {coupon.description || generateCouponDescription(coupon)}
+                      </p>
+                      {copiedCoupon === coupon.code && tooltipStyle['--tooltip-top'] && tooltipStyle['--tooltip-left'] && (
+                        <span className="coupon-copied-tooltip fixed" style={tooltipStyle}>Copied!</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {/* Pack Selection */}
             {renderPackSelection()}
             {/* Quantity and Action Buttons Section */}

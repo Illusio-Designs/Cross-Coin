@@ -17,16 +17,52 @@ module.exports.getCart = async (req, res) => {
                             { model: ProductVariation, as: 'ProductVariations' }
                         ]
                     },
-                    { model: ProductVariation }
+                    { 
+                        model: ProductVariation,
+                        include: [
+                            { model: ProductImage, as: 'VariationImages' }
+                        ]
+                    }
                 ]
             }]
         });
 
         if (!cart) {
-            return res.json({ cart: [] });
+            return res.json({ cart: [], summary: { subtotal: 0, shipping: 0, discount: 0, total: 0 } });
         }
 
+        // Calculate subtotal
+        let subtotal = 0;
+        cart.CartItems.forEach(item => {
+            subtotal += (item.price || 0) * (item.quantity || 1);
+        });
+
+        // Calculate shipping fee (simple example, you may want to use your real logic)
+        let shipping = 0;
+        if (subtotal > 0) {
+            shipping = 0; // Free shipping logic, or set your fee
+        }
+
+        // Calculate discount if coupon is provided
+        let discount = 0;
+        let couponCode = req.query.coupon || req.body?.coupon || null;
+        if (couponCode) {
+            // You may want to use your coupon validation logic here
+            // For now, just a placeholder: 10% off for any coupon
+            discount = subtotal * 0.1;
+        }
+
+        // Final total
+        const total = Math.max(0, subtotal - discount + shipping);
+
         const formattedCart = cart.CartItems.map(item => {
+            console.log('Processing cart item:', { 
+                itemId: item.id, 
+                productId: item.productId, 
+                variationId: item.variationId,
+                quantity: item.quantity 
+            });
+            
             const product = item.Product;
             let variation = item.ProductVariation;
             
@@ -40,11 +76,47 @@ module.exports.getCart = async (req, res) => {
             const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
             
             let image = '/placeholder.png'; // Fallback image
-            // Prefer variation image if available
+            let images = []; // Array to store all images for this variation
+            
+            // First, try to get variation-specific images
             if (variation && variation.VariationImages && variation.VariationImages.length > 0) {
                 image = `${baseUrl}${variation.VariationImages[0].image_url}`;
+                images = variation.VariationImages.map(img => ({
+                    image_url: `${baseUrl}${img.image_url}`,
+                    alt_text: img.alt_text
+                }));
             } else if (product && product.ProductImages && product.ProductImages.length > 0) {
-                image = `${baseUrl}${product.ProductImages[0].image_url}`;
+                // If no variation-specific images, try to find product images that match the variation's color
+                const color = attributes.color;
+                if (color && Array.isArray(color) && color.length > 0) {
+                    const colorLower = color[0].toLowerCase();
+                    const matchingImages = product.ProductImages.filter(img => 
+                        (img.alt_text && img.alt_text.toLowerCase().includes(colorLower)) ||
+                        (img.image_url && img.image_url.toLowerCase().includes(colorLower))
+                    );
+                    
+                    if (matchingImages.length > 0) {
+                        image = `${baseUrl}${matchingImages[0].image_url}`;
+                        images = matchingImages.map(img => ({
+                            image_url: `${baseUrl}${img.image_url}`,
+                            alt_text: img.alt_text
+                        }));
+                    } else {
+                        // Fallback to first product image
+                        image = `${baseUrl}${product.ProductImages[0].image_url}`;
+                        images = product.ProductImages.map(img => ({
+                            image_url: `${baseUrl}${img.image_url}`,
+                            alt_text: img.alt_text
+                        }));
+                    }
+                } else {
+                    // No color info, use first product image
+                    image = `${baseUrl}${product.ProductImages[0].image_url}`;
+                    images = product.ProductImages.map(img => ({
+                        image_url: `${baseUrl}${img.image_url}`,
+                        alt_text: img.alt_text
+                    }));
+                }
             }
 
             const price = variation ? variation.price : (product ? product.price : 0);
@@ -55,6 +127,7 @@ module.exports.getCart = async (req, res) => {
                 variationId: variation ? variation.id : null,
                 name: product ? product.name : 'Product not found',
                 image: image,
+                images: images,
                 price: price,
                 quantity: item.quantity,
                 size: attributes.size || null,
@@ -67,7 +140,15 @@ module.exports.getCart = async (req, res) => {
             };
         });
 
-        res.json({ cart: formattedCart });
+        res.json({
+            cart: formattedCart,
+            summary: {
+                subtotal,
+                shipping,
+                discount,
+                total
+            }
+        });
     } catch (error) {
         console.error('Error fetching cart:', error);
         res.status(500).json({ message: 'Failed to fetch cart', error: error.message });
@@ -121,7 +202,13 @@ module.exports.addToCart = async (req, res) => {
         quantity,
         price
       });
-      console.log('[Cart] Created new CartItem:', item.id, 'product:', productId, 'variation:', variationId, 'quantity:', quantity);
+      console.log('[Cart] Created new CartItem:', {
+        id: item.id, 
+        productId: productId, 
+        variationId: variationId || null, 
+        quantity: quantity,
+        price: price
+      });
     }
     res.json({ success: true, item });
   } catch (error) {
@@ -182,18 +269,46 @@ module.exports.removeFromCart = async (req, res) => {
     const { productId, variationId } = req.params;
     let cart = await Cart.findOne({ where: { user_id: userId } });
     if (!cart) return res.status(404).json({ message: 'Cart not found' });
+    
+    console.log('Remove from cart params:', { productId, variationId });
+    
     const whereClause = { cartId: cart.id, productId: productId };
-    // Treat both null and 0 as 'no variation'
+    
+    // Handle variationId parameter
     if (variationId && variationId !== 'null' && variationId !== '0' && variationId !== 0) {
-      whereClause.variationId = variationId;
+      whereClause.variationId = parseInt(variationId);
     } else {
-      whereClause.variationId = null; // Explicitly match main product (no variation)
+      whereClause.variationId = null;
     }
+    
     console.log('Remove from cart whereClause:', whereClause);
-    const deleted = await CartItem.destroy({ where: whereClause });
-    console.log('Deleted count:', deleted);
-    res.json({ success: true, deleted });
+    
+    // First, try to find the exact item to make sure it exists
+    const cartItem = await CartItem.findOne({ where: whereClause });
+    if (!cartItem) {
+      console.log('Cart item not found with exact criteria, trying alternative search');
+      
+      // If not found with exact criteria, try to find by productId only
+      const alternativeItem = await CartItem.findOne({ 
+        where: { cartId: cart.id, productId: productId } 
+      });
+      
+      if (!alternativeItem) {
+        return res.status(404).json({ message: 'Cart item not found' });
+      }
+      
+      // Delete the alternative item
+      await alternativeItem.destroy();
+      console.log('Deleted alternative cart item:', alternativeItem.id);
+    } else {
+      // Delete the exact item
+      await cartItem.destroy();
+      console.log('Deleted exact cart item:', cartItem.id);
+    }
+    
+    res.json({ success: true, deleted: 1 });
   } catch (error) {
+    console.error('Error removing from cart:', error);
     res.status(500).json({ message: 'Failed to remove cart item', error: error.message });
   }
 };

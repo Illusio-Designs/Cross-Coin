@@ -63,16 +63,21 @@ const Footer = () => {
         </div>
       </div>
       <div className="footer__bottom">
-        <div className="footer__copyright">
-          Copyright 2025 &copy; crosscoin Manage by OBZUS INDIA PRIVATE LIMITED. All right reserved
-        </div>
-       
-        <div className="footer__links">
-          <a href="/policy?name=terms-and-conditions">Terms and Conditions</a>
-          <a href="/policy?name=privacy-policy">Privacy Policy</a>
-          <a href="/policy?name=shipping-policy">Shipping Policy</a>
-          <a href="/policy?name=cancellation-and-refund">Cancellation & Refund</a>
-        </div>
+        <span className="footer__copyright">
+          Copyright 2025 &copy; CrossCoin Manage by OBZUS INDIA PRIVATE LIMITED. All right reserved
+        </span>
+        <span className="footer__credit">
+          Design & Develop with <span role="img" aria-label="love">❤️️</span> by - 
+          <a href="https://illusiodesigns.agency/" target="_blank" rel="noopener noreferrer">
+            Illusio Designs
+          </a>
+        </span>
+      </div>
+      <div className="footer__links">
+        <a href="/policy?name=terms-and-conditions">Terms and Conditions</a>
+        <a href="/policy?name=privacy-policy">Privacy Policy</a>
+        <a href="/policy?name=shipping-policy">Shipping Policy</a>
+        <a href="/policy?name=cancellation-and-refund">Cancellation & Refund</a>
       </div>
     </footer>
   );

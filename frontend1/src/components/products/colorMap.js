@@ -86,6 +86,9 @@ const colorMap = {
   "sand": "#C2B280",
   "stone": "#837060",
   "off white": "#FAF9F6",
+  "teal blue": "#008080",
+  "lemon yellow": "#FFF700",
+  "ocean teal": "#006994",
   // Add more as needed
 };
 
