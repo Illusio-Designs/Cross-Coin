@@ -876,7 +876,7 @@
 }
 
 /* Eye (view-details) button styles for product card */
-.products-page .view-details {
+.view-details {
   background: #fff;
   border: 1px solid #e0e0e0;
   border-radius: 50%;
@@ -892,7 +892,7 @@
   color: #180D3E;
   box-shadow: 0 2px 8px rgba(24, 13, 62, 0.04);
 }
-.products-page .view-details:hover {
+.view-details:hover {
   background: #f5f5f5;
   border-color: #CE1E36;
   color: #CE1E36;
