@@ -506,7 +506,7 @@ const Home = () => {
                 <button className="slider-arrow slider-arrow-left" aria-label="Previous category" onClick={() => scrollCategoryImage('left')}>
                   <IoIosArrowBack />
                 </button>
-                <div style={{ position: 'relative', width: 350, height: 400 }}>
+                <div style={{ position: 'relative', width: 350 }}>
                   {getCategoryImageSrc() ? (
                     <>
                       <img
