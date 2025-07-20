@@ -69,6 +69,11 @@
 }
 
 .wishlist-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  box-sizing: border-box;
   background: white;
   box-shadow: 0 4px 6px rgba(24, 13, 62, 0.1);
   overflow: hidden;
@@ -96,10 +101,14 @@
 }
 
 .wishlist-item:hover .wishlist-item-image img {
-  transform: scale(1.1);
+  transform: scale(1.01);
 }
 
 .wishlist-item-details {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
   padding: 1.5rem;
   background: linear-gradient(to bottom, white, #f8f9fa);
 }
@@ -131,8 +140,11 @@
 }
 
 .wishlist-item-actions {
+  margin-top: auto;
   display: flex;
-  gap: 1rem;
+  gap: 10px;
+  justify-content: flex-start;
+  align-items: center;
 }
 
 .move-to-cart-btn,

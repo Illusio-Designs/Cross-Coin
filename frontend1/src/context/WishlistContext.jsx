@@ -43,11 +43,16 @@ export const WishlistProvider = ({ children }) => {
       if (isAuthenticated) {
         try {
           const backendWishlist = await getWishlist();
+          console.log('Backend wishlist:', backendWishlist); // Debug log
           setWishlist(backendWishlist.map(item => {
             const product = item.Product;
-            let primaryImage = product?.ProductImages?.[0]?.image_url || '';
-            if (primaryImage) {
-              primaryImage = forceEnvImageBase(primaryImage);
+            let primaryImage = '';
+            if (product?.ProductImages && product.ProductImages.length > 0 && product.ProductImages[0].image_url) {
+              primaryImage = forceEnvImageBase(product.ProductImages[0].image_url);
+            } else if (product?.image) {
+              primaryImage = forceEnvImageBase(product.image);
+            } else {
+              primaryImage = '/assets/card1-left.webp';
             }
             // Get price and comparePrice from the first variation
             const firstVariation = product?.ProductVariations?.[0] || {};
@@ -117,15 +122,23 @@ export const WishlistProvider = ({ children }) => {
       setWishlist(prevWishlist => {
         const exists = prevWishlist.some(item => item.id === product.id);
         if (!exists) {
-          showAddToWishlistSuccessToast(product.name);
-          fbqTrack('AddToWishlist', {
-            content_ids: [product.id],
-            content_name: product.name,
-            content_type: 'product',
-            value: product.price,
-            currency: 'INR',
-          });
-          return [...prevWishlist, { ...product, addedAt: new Date().toISOString() }];
+          // Ensure product has images array for consistency with ProductCard
+          let images = [];
+          if (Array.isArray(product.images) && product.images.length > 0) {
+            images = product.images;
+          } else if (product.image) {
+            images = [{ image_url: product.image, is_primary: true }];
+          } else if (product.ProductImages && product.ProductImages.length > 0) {
+            images = product.ProductImages;
+          }
+          return [
+            ...prevWishlist,
+            {
+              ...product,
+              images,
+              addedAt: new Date().toISOString()
+            }
+          ];
         }
         return prevWishlist;
       });
