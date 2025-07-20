@@ -470,38 +470,12 @@ const Products = () => {
           {!isMobile && showFilters && (
             <div className="filters-sidebar">
               <div className="filter-section">
-                <h3 onClick={() => setShowCategory(!showCategory)} className={`clickable-heading ${showCategory ? 'open' : ''}`}>
-                  Product Category <FiChevronDown className={`arrow-icon ${showCategory ? 'open' : ''}`} />
-                </h3>
-                {showCategory && (
-                  <div className="category-list">
-                    {categories.map((category) => {
-                      // Count products in this category
-                      const count = products.filter(p => (p.category_id || (p.category && p.category.id)) == category.id).length;
-                      return (
-                        <label key={category.id} className="checkbox-label">
-                          <div className="checkbox-group">
-                            <input
-                              type="checkbox"
-                              checked={selectedCategory.includes(category.id.toString())}
-                              onChange={() => handleFilterChange('category', category.id.toString())}
-                            />
-                            <p>{category.name}</p> 
-                          </div>
-                          <span>[{count}]</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-              <div className="filter-section">
                 <h3 onClick={() => setShowMaterial(!showMaterial)} className={`clickable-heading ${showMaterial ? 'open' : ''}`}>
                   Material <FiChevronDown className={`arrow-icon ${showMaterial ? 'open' : ''}`} />
                 </h3>
                 {showMaterial && (
                   <div className="material-list">
-                    {filterOptionsDynamic.materials.map((material) => (
+                    {['Cotton'].map((material) => (
                       <label key={material} className="checkbox-label">
                         <div className="checkbox-group">
                           <input
@@ -511,7 +485,7 @@ const Products = () => {
                           />
                           <p>{material}</p> 
                         </div>
-                        <span>[{filterOptionsDynamic.counts.materials[material] || 0}]</span>
+                        {/* No count needed for single material */}
                       </label>
                     ))}
                   </div>
@@ -522,24 +496,23 @@ const Products = () => {
                   By Price <FiChevronDown className={`arrow-icon ${showPrice ? 'open' : ''}`} />
                 </h3>
                 {showPrice && (
-                  <div className="price-range custom-price-range">
-                    <input
-                      type="range"
-                      min={minPrice}
-                      max={maxPrice}
-                      value={priceRange[0]}
-                      onChange={(e) => handleFilterChange('price', [Number(e.target.value), priceRange[1]])}
-                    />
-                    <input
-                      type="range"
-                      min={minPrice}
-                      max={maxPrice}
-                      value={priceRange[1]}
-                      onChange={(e) => handleFilterChange('price', [priceRange[0], Number(e.target.value)])}
-                    />
-                    <div className="price-inputs">
-                      <span>₹{priceRange[0]}</span> - <span>₹{priceRange[1]}</span>
+                  <div className="price-range custom-price-range enhanced-price-range">
+                    <div className="price-slider-labels">
+                      <span>Min: ₹{minPrice}</span>
+                      <span>Max: ₹{maxPrice}</span>
                     </div>
+                    <div className="slider-wrapper">
+                      <input
+                        type="range"
+                        min={minPrice}
+                        max={maxPrice}
+                        value={priceRange[0]}
+                        onChange={(e) => handleFilterChange('price', [Number(e.target.value), priceRange[1]])}
+                        className="price-slider min-slider"
+                        style={{ zIndex: priceRange[0] === priceRange[1] ? 5 : 3 }}
+                      />
+                    </div>
+                  
                   </div>
                 )}
               </div>
@@ -555,9 +528,7 @@ const Products = () => {
                         className={`color-btn ${selectedColors.includes(color) ? 'active' : ''}`}
                         style={{ backgroundColor: colorMap[color.toLowerCase()] || color, border: '1px solid #888' }}
                         onClick={(e) => handleFilterChange('color', color)}
-                      >
-                        <span style={{ color: '#fff', fontSize: 10 }}>{filterOptionsDynamic.counts.colors[color] || 0}</span>
-                      </button>
+                      />
                     ))}
                   </div>
                 )}
@@ -618,33 +589,6 @@ const Products = () => {
                   <button className="modal-clear" onClick={clearAllFilters}>Clear All</button>
                 </div>
                 <div className="mobile-filter-modal-body">
-                  {/* Product Category */}
-                  <div className="modal-filter-section">
-                    <div className="modal-filter-label" onClick={() => setShowCategory(!showCategory)}>
-                      Product Category <FiChevronDown className={`arrow-icon ${showCategory ? 'open' : ''}`} />
-                    </div>
-                    {showCategory && (
-                      <div className="category-list">
-                        {categories.map((category) => {
-                          // Count products in this category
-                          const count = products.filter(p => (p.category_id || (p.category && p.category.id)) == category.id).length;
-                          return (
-                            <label key={category.id} className="checkbox-label">
-                              <div className="checkbox-group">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedCategory.includes(category.id.toString())}
-                                  onChange={() => handleFilterChange('category', category.id.toString())}
-                                />
-                                <p>{category.name}</p> 
-                              </div>
-                              <span>[{count}]</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
                   {/* Material */}
                   <div className="modal-filter-section">
                     <div className="modal-filter-label" onClick={() => setShowMaterial(!showMaterial)}>
@@ -652,7 +596,7 @@ const Products = () => {
                     </div>
                     {showMaterial && (
                       <div className="material-list">
-                        {filterOptionsDynamic.materials.map((material) => (
+                        {['Cotton'].map((material) => (
                           <label key={material} className="checkbox-label">
                             <div className="checkbox-group">
                               <input
@@ -662,7 +606,7 @@ const Products = () => {
                               />
                               <p>{material}</p> 
                             </div>
-                            <span>[{filterOptionsDynamic.counts.materials[material] || 0}]</span>
+                            {/* No count needed for single material */}
                           </label>
                         ))}
                       </div>
@@ -674,21 +618,36 @@ const Products = () => {
                       By Price <FiChevronDown className={`arrow-icon ${showPrice ? 'open' : ''}`} />
                     </div>
                     {showPrice && (
-                      <div className="price-range custom-price-range">
-                        <input
-                          type="range"
-                          min={minPrice}
-                          max={maxPrice}
-                          value={priceRange[0]}
-                          onChange={(e) => handleFilterChange('price', [Number(e.target.value), priceRange[1]])}
-                        />
-                        <input
-                          type="range"
-                          min={minPrice}
-                          max={maxPrice}
-                          value={priceRange[1]}
-                          onChange={(e) => handleFilterChange('price', [priceRange[0], Number(e.target.value)])}
-                        />
+                      <div className="price-range custom-price-range enhanced-price-range">
+                        <div className="price-slider-labels">
+                          <span>Min: ₹{minPrice}</span>
+                          <span>Max: ₹{maxPrice}</span>
+                        </div>
+                        <div className="slider-wrapper">
+                          <input
+                            type="range"
+                            min={minPrice}
+                            max={maxPrice}
+                            value={priceRange[0]}
+                            onChange={(e) => handleFilterChange('price', [Number(e.target.value), priceRange[1]])}
+                            className="price-slider min-slider"
+                            style={{ zIndex: priceRange[0] === priceRange[1] ? 5 : 3 }}
+                          />
+                          <input
+                            type="range"
+                            min={minPrice}
+                            max={maxPrice}
+                            value={priceRange[1]}
+                            onChange={(e) => handleFilterChange('price', [priceRange[0], Number(e.target.value)])}
+                            className="price-slider max-slider"
+                            style={{
+                              zIndex: priceRange[0] === priceRange[1] ? 4 : 2,
+                              '--hide-max-thumb': priceRange[0] === priceRange[1] ? 0 : 1
+                            }}
+                          />
+                          {/* Colored track between thumbs */}
+                          <div className="slider-track-highlight" style={{ left: ((priceRange[0] - minPrice) / (maxPrice - minPrice)) * 100 + '%', right: (100 - (priceRange[1] - minPrice) / (maxPrice - minPrice) * 100) + '%' }} />
+                        </div>
                         <div className="price-inputs">
                           <span>₹{priceRange[0]}</span> - <span>₹{priceRange[1]}</span>
                         </div>
@@ -708,9 +667,7 @@ const Products = () => {
                             className={`color-btn ${selectedColors.includes(color) ? 'active' : ''}`}
                             style={{ backgroundColor: colorMap[color.toLowerCase()] || color, border: '1px solid #888' }}
                             onClick={() => handleFilterChange('color', color)}
-                          >
-                            <span style={{ color: '#fff', fontSize: 10 }}>{filterOptionsDynamic.counts.colors[color] || 0}</span>
-                          </button>
+                          />
                         ))}
                       </div>
                     )}

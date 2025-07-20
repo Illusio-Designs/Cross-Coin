@@ -12,7 +12,20 @@ module.exports.addToWishlist = async (req, res) => {
         const userId = req.user.id; // From auth middleware
 
         // Check if product exists
-        const product = await Product.findByPk(productId);
+        const product = await Product.findByPk(productId, {
+            include: [
+                {
+                    model: ProductImage,
+                    as: 'ProductImages',
+                    attributes: ['id', 'image_url', 'alt_text', 'is_primary']
+                },
+                {
+                    model: ProductVariation,
+                    as: 'ProductVariations',
+                    attributes: ['id', 'price', 'comparePrice', 'sku', 'stock', 'status']
+                }
+            ]
+        });
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }
@@ -38,9 +51,30 @@ module.exports.addToWishlist = async (req, res) => {
             addedAt: new Date()
         });
 
+        // Prepare images array for frontend
+        let images = [];
+        if (product.ProductImages && product.ProductImages.length > 0) {
+            images = product.ProductImages.map(img => ({
+                image_url: img.image_url,
+                is_primary: img.is_primary,
+                alt_text: img.alt_text,
+                id: img.id
+            }));
+        } else if (product.image) {
+            images = [{ image_url: product.image, is_primary: true }];
+        } else {
+            images = [{ image_url: '/assets/demo-product.jpg', is_primary: true }];
+        }
+
         res.status(201).json({
             message: 'Product added to wishlist',
-            wishlistItem
+            wishlistItem: {
+                ...wishlistItem.get({ plain: true }),
+                Product: {
+                    ...product.get({ plain: true }),
+                    images
+                }
+            }
         });
     } catch (error) {
         console.error('Error adding to wishlist:', error);
@@ -88,23 +122,33 @@ module.exports.getWishlist = async (req, res) => {
             const plainItem = item.get({ plain: true });
             const product = plainItem.Product;
             let image = null;
+            let images = [];
             // 1. Try ProductImages
-            if (product?.ProductImages && product.ProductImages.length > 0 && product.ProductImages[0].image_url) {
+            if (product?.ProductImages && product.ProductImages.length > 0) {
+                images = product.ProductImages.map(img => ({
+                    image_url: img.image_url,
+                    is_primary: img.is_primary,
+                    alt_text: img.alt_text,
+                    id: img.id
+                }));
                 image = product.ProductImages[0].image_url;
             }
             // 2. Fallback to product.image (if exists and not already set)
             else if (product?.image) {
+                images = [{ image_url: product.image, is_primary: true }];
                 image = product.image;
             }
-            // 3. Fallback to default
+            // 3. Fallback to demo image
             else {
-                image = '/assets/card1-left.webp';
+                images = [{ image_url: '/assets/demo-product.jpg', is_primary: true }];
+                image = '/assets/demo-product.jpg';
             }
             return {
                 ...plainItem,
                 Product: {
                     ...product,
                     image, // always set image
+                    images // new: always set images array
                 }
             };
         });

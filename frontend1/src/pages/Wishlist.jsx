@@ -127,6 +127,10 @@ const Wishlist = () => {
                     height={250}
                     style={{ objectFit: 'cover' }}
                   />
+                  {/* Debug: Show raw image URL */}
+                  <div style={{ fontSize: '12px', color: 'red', wordBreak: 'break-all' }}>
+                    Debug image: {item.image}
+                  </div>
                   <button
                     className="wishlist-icon-btn"
                     onClick={e => {

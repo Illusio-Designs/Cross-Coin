@@ -972,7 +972,7 @@ const ProductsPage = () => {
                   />
                   <AttributeSelector
                     variationIndex={index}
-                    attributes={attributes}
+                    attributes={{ ...attributes, material: ["Cotton"] }}
                     selectedAttributes={variation.attributes || {}}
                     onChange={handleAttributeChange}
                   />

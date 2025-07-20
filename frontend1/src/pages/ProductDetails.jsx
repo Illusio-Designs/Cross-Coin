@@ -878,7 +878,7 @@ export default function ProductDetails() {
                     onClick={() => setIsZoomOpen(true)}
                   />
                   {!imageLoaded[selectedThumbnail] && (
-                    <div className="shimmer-placeholder" style={{ width: 400, height: 400, position: 'absolute', top: 0, left: 0 }} />
+                    <div className="shimmer-placeholder" />
                   )}
                 </>
               ) : (
@@ -922,7 +922,6 @@ export default function ProductDetails() {
                           position: 'absolute',
                           top: 0, left: 0, right: 0, bottom: 0,
                           background: '#eee',
-                          borderRadius: 4,
                           zIndex: 1
                         }}
                       />
@@ -937,7 +936,6 @@ export default function ProductDetails() {
                         border: selectedThumbnail === idx ? '2px solid #222' : '1px solid #eee',
                         cursor: 'pointer',
                         background: '#eee',
-                        borderRadius: 4,
                         display: 'block'
                       }}
                       onLoad={() => setImageLoaded(prev => ({ ...prev, [idx]: true }))}

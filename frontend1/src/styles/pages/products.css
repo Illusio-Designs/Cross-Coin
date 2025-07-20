@@ -1007,3 +1007,105 @@
 .size-swatch-btn:focus {
   border: 2px solid #0070f3;
 }
+
+.enhanced-price-range {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(24, 13, 62, 0.06);
+  padding: 1rem 1.2rem 1.2rem 1.2rem;
+  margin-bottom: 1.2rem;
+  position: relative;
+}
+.price-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.98rem;
+  margin-bottom: 0.5rem;
+}
+.slider-wrapper {
+  position: relative;
+  width: 100%;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.price-slider {
+  position: absolute;
+  width: 100%;
+  pointer-events: auto;
+  background: none;
+  height: 32px;
+  margin: 0;
+  z-index: 2;
+}
+.slider-track-highlight {
+  position: absolute;
+  height: 6px;
+  background: linear-gradient(90deg, #CE1E36 0%, #F59E42 100%);
+  border-radius: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+.price-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #CE1E36;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(206, 30, 54, 0.15);
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.price-slider:focus::-webkit-slider-thumb {
+  outline: 2px solid #F59E42;
+}
+.price-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #CE1E36;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(206, 30, 54, 0.15);
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.price-slider:focus::-moz-range-thumb {
+  outline: 2px solid #F59E42;
+}
+.price-slider::-ms-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #CE1E36;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(206, 30, 54, 0.15);
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.price-slider.max-slider::-webkit-slider-thumb {
+  opacity: var(--hide-max-thumb, 1);
+}
+.price-slider.max-slider::-moz-range-thumb {
+  opacity: var(--hide-max-thumb, 1);
+}
+.price-slider.max-slider::-ms-thumb {
+  opacity: var(--hide-max-thumb, 1);
+}
+@media (max-width: 600px) {
+  .enhanced-price-range {
+    padding: 0.7rem 0.5rem 1rem 0.5rem;
+  }
+  .slider-wrapper {
+    height: 28px;
+  }
+  .price-slider::-webkit-slider-thumb,
+  .price-slider::-moz-range-thumb,
+  .price-slider::-ms-thumb {
+    width: 18px;
+    height: 18px;
+  }
+}
