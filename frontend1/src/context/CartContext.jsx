@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
   getCart as apiGetCart,
   addToCart as apiAddToCart,
@@ -22,6 +22,7 @@ export const CartProvider = ({ children }) => {
   const [cartCount, setCartCount] = useState(0);
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
   const [isCartLoading, setIsCartLoading] = useState(true);
+  const apiCalledRef = useRef(false);
 
   // Sync isAuthenticated on token change
   useEffect(() => {
@@ -35,6 +36,9 @@ export const CartProvider = ({ children }) => {
 
   // Load cart from backend or localStorage on initial render or auth change
   useEffect(() => {
+    if (apiCalledRef.current) return; // Prevent multiple calls
+    apiCalledRef.current = true;
+    console.log('API BEING CALLED: Cart data fetch');
     const fetchCart = async () => {
       console.log('CartContext: useEffect fetchCart, isAuthenticated:', isAuthenticated);
       setIsCartLoading(true);

@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import { fbqTrack } from '../components/common/Analytics';
 import DOMPurify from 'dompurify';
 import colorMap from '../components/products/colorMap';
+import { seoService } from '../services/index';
 
 const formatTwoDigits = (num) => num.toString().padStart(2, '0');
 
@@ -53,6 +54,7 @@ const Home = () => {
   const [exclusiveAvgRatings, setExclusiveAvgRatings] = useState([]);
   const [exclusiveSelectedSkus, setExclusiveSelectedSkus] = useState([]);
   const [categoryImageLoaded, setCategoryImageLoaded] = useState(false);
+  const [seoData, setSeoData] = useState(null);
   
   const categorySliderRef = useRef(null);
   const latestSliderRef = useRef(null);
@@ -61,6 +63,9 @@ const Home = () => {
 
   const [showCategoryArrows, setShowCategoryArrows] = useState(false);
   const [showLatestArrows, setShowLatestArrows] = useState(false);
+
+  const apiCalledRef = useRef(false); // Add a ref to guard API calls
+  const seoApiCalledRef = useRef(false);
 
   // Helper to check if slider is scrollable (even if partially hidden)
   const checkSliderScrollable = (ref, setShow) => {
@@ -89,6 +94,9 @@ const Home = () => {
   }, [exclusiveSelectedSkus]);
 
   useEffect(() => {
+    if (apiCalledRef.current) return; // Prevent multiple calls
+    apiCalledRef.current = true;
+    console.log('API BEING CALLED: home page data fetch');
     const fetchSliders = async () => {
       try {
         const data = await getPublicSliders();
@@ -201,6 +209,13 @@ const Home = () => {
     fetchCategories();
     fetchLatestProducts();
     fetchExclusiveProducts();
+    // Fetch SEO data only once
+    if (!seoApiCalledRef.current) {
+      seoApiCalledRef.current = true;
+      seoService.getSEOData('home').then(res => {
+        setSeoData(res.data || res);
+      });
+    }
   }, []);
 
   const fetchCategoryProducts = async (categoryName) => {
@@ -414,7 +429,7 @@ const Home = () => {
   };
 
   return (
-    <SeoWrapper pageName="home">
+    <SeoWrapper pageName="home" seoData={seoData}>
       <Header />
       <div className="home-page">
         <div className="hero-slider">
@@ -899,7 +914,7 @@ const Home = () => {
         </div>
         <Testimonials />
       </div>
-      <Footer />
+      <Footer collections={categories} />
     </SeoWrapper>
   );
 };

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { userService, authService } from '../services';
 import { loginUser, registerUser, getCurrentUser as getPublicCurrentUser, logout as publicLogout } from '../services/publicindex';
 import { useContext as useReactContext } from 'react';
@@ -17,6 +17,7 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const { setIsAuthenticated } = useContext(WishlistContext) || {};
+    const apiCalledRef = useRef(false);
 
     const checkAuth = useCallback(async () => {
         try {
@@ -41,6 +42,9 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     useEffect(() => {
+        if (apiCalledRef.current) return; // Prevent multiple calls
+        apiCalledRef.current = true;
+        console.log('API BEING CALLED: Auth data fetch');
         checkAuth();
     }, [checkAuth]);
 

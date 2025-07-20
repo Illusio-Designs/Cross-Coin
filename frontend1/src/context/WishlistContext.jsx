@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { getWishlist, addToWishlist as apiAddToWishlist, removeFromWishlist as apiRemoveFromWishlist, clearWishlist as apiClearWishlist } from '../services/publicindex';
 import { fbqTrack } from '../components/common/Analytics';
 import { 
@@ -36,9 +36,13 @@ export const WishlistProvider = ({ children }) => {
   const [wishlist, setWishlist] = useState([]);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
+  const apiCalledRef = useRef(false);
 
   // Load wishlist from backend or localStorage on initial render
   useEffect(() => {
+    if (apiCalledRef.current) return; // Prevent multiple calls
+    apiCalledRef.current = true;
+    console.log('API BEING CALLED: Wishlist data fetch');
     const fetchWishlist = async () => {
       if (isAuthenticated) {
         try {
