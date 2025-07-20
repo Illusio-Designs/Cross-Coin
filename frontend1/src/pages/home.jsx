@@ -65,7 +65,6 @@ const Home = () => {
   const [showLatestArrows, setShowLatestArrows] = useState(false);
 
   const apiCalledRef = useRef(false); // Add a ref to guard API calls
-  const seoApiCalledRef = useRef(false);
 
   // Helper to check if slider is scrollable (even if partially hidden)
   const checkSliderScrollable = (ref, setShow) => {
@@ -209,13 +208,6 @@ const Home = () => {
     fetchCategories();
     fetchLatestProducts();
     fetchExclusiveProducts();
-    // Fetch SEO data only once
-    if (!seoApiCalledRef.current) {
-      seoApiCalledRef.current = true;
-      seoService.getSEOData('home').then(res => {
-        setSeoData(res.data || res);
-      });
-    }
   }, []);
 
   const fetchCategoryProducts = async (categoryName) => {

@@ -17,17 +17,17 @@ const Wishlist = () => {
   const { addToCart } = useCart();
   const router = useRouter();
   const [sortOrder, setSortOrder] = useState('newest');
-  const [seoData, setSeoData] = useState(null);
-  const seoApiCalledRef = useRef(false);
+  // const [seoData, setSeoData] = useState(null); // REMOVE
+  // const seoApiCalledRef = useRef(false); // REMOVE
 
-  useEffect(() => {
-    if (!seoApiCalledRef.current) {
-      seoApiCalledRef.current = true;
-      seoService.getSEOData('wishlist').then(res => {
-        setSeoData(res.data || res);
-      });
-    }
-  }, []);
+  // useEffect(() => { // REMOVE
+  //   if (!seoApiCalledRef.current) {
+  //     seoApiCalledRef.current = true;
+  //     seoService.getSEOData('wishlist').then(res => {
+  //       setSeoData(res.data || res);
+  //     });
+  //   }
+  // }, []);
 
   const handleMoveToCart = (product) => {
     // Add default color and size for quick add
@@ -67,7 +67,7 @@ const Wishlist = () => {
 
   if (wishlist.length === 0) {
     return (
-      <SeoWrapper pageName="wishlist" seoData={seoData}>
+      <SeoWrapper pageName="wishlist">
         <div className="wishlist-page">
           <Header />
           <main className="wishlist-main">
@@ -90,7 +90,7 @@ const Wishlist = () => {
   }
 
   return (
-    <SeoWrapper pageName="wishlist" seoData={seoData}>
+    <SeoWrapper pageName="wishlist">
       <div className="wishlist-page">
         <Header />
         <main className="wishlist-main">
