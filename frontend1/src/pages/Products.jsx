@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { FiFilter, FiChevronDown, FiChevronLeft, FiChevronRight } from "react-icons/fi";
@@ -78,19 +78,45 @@ const Products = () => {
     fetchCategories();
   }, []);
 
-  // On mount and when searchParams change, fetch products by category name if present
+  // Memoized fetchProducts to avoid re-creation on every render
+  const fetchProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = {
+        page: currentPage,
+        limit: 20,
+        sort: sortBy,
+        category: selectedCategory.length > 0 ? selectedCategory.join(',') : undefined
+      };
+      const response = await getAllPublicProducts(params);
+      if (response?.success) {
+        setProducts(response.data?.products || []);
+        setTotalPages(response.data?.totalPages || 1);
+        setTotalProducts(response.data?.totalProducts || 0);
+        setError(null);
+      } else {
+        setError(response?.message || 'Failed to fetch products');
+        setProducts([]);
+      }
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.message || 'An error occurred while fetching products');
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, sortBy, selectedCategory]);
+
+  // Fetch products by category name from query, only after categories are loaded
   useEffect(() => {
     const categoryFromQuery = searchParams.get('category');
-    if (categoryFromQuery) {
+    if (categoryFromQuery && categories.length > 0) {
       setLoading(true);
-      // Find the category object by name (case-insensitive)
       const matchedCategory = categories.find(
         cat => cat.name.toLowerCase() === categoryFromQuery.toLowerCase()
       );
       const categoryId = matchedCategory ? matchedCategory.id : null;
       getPublicCategoryByName(categoryFromQuery)
         .then(data => {
-          // Attach category_id and transform product structure for ProductCard
           const productsWithCategory = (data.products || []).map(p => {
             let imageUrl = null;
             if (p.image) {
@@ -127,11 +153,11 @@ const Products = () => {
           setTotalProducts(0);
           setLoading(false);
         });
-    } else {
+    } else if (!categoryFromQuery) {
       fetchProducts();
     }
-    // eslint-disable-next-line
-  }, [searchParams, currentPage, sortBy, categories]);
+    // Only run when categories are loaded or query changes
+  }, [searchParams, categories, fetchProducts]);
 
   // After products and categories are loaded, compute dynamic filters
   useEffect(() => {
@@ -148,44 +174,6 @@ const Products = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      console.log('Fetching products with params:', {
-        page: currentPage,
-        limit: 20,
-        sort: sortBy,
-        category: selectedCategory.length > 0 ? selectedCategory.join(',') : undefined
-      });
-
-      const params = {
-        page: currentPage,
-        limit: 20,
-        sort: sortBy,
-        category: selectedCategory.length > 0 ? selectedCategory.join(',') : undefined
-      };
-
-      const response = await getAllPublicProducts(params);
-      console.log('API Response:', response);
-
-      if (response?.success) {
-        setProducts(response.data?.products || []);
-        setTotalPages(response.data?.totalPages || 1);
-        setTotalProducts(response.data?.totalProducts || 0);
-      } else {
-        console.error('API Error Response:', response);
-        setError(response?.message || 'Failed to fetch products');
-        setProducts([]);
-      }
-    } catch (err) {
-      console.error('Error fetching products:', err);
-      setError(err?.response?.data?.message || err?.message || 'An error occurred while fetching products');
-      setProducts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleFilterChange = (filterType, value) => {
     console.log('Filter Change:', { filterType, value });
