@@ -429,7 +429,7 @@ const Home = () => {
   };
 
   return (
-    <SeoWrapper pageName="home" seoData={seoData}>
+    <>
       <Header />
       <div className="home-page">
         <div className="hero-slider">
@@ -915,7 +915,7 @@ const Home = () => {
         <Testimonials />
       </div>
       <Footer collections={categories} />
-    </SeoWrapper>
+    </>
   );
 };
 
