@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { useWishlist } from '../context/WishlistContext';
@@ -10,12 +10,24 @@ import { AiFillHeart } from 'react-icons/ai';
 import '../styles/pages/Wishlist.css';
 import SeoWrapper from '../console/SeoWrapper';
 import { getProductImageSrc } from '../utils/imageUtils';
+import { seoService } from '../services/index';
 
 const Wishlist = () => {
   const { wishlist, removeFromWishlist, clearWishlist, isInWishlist, addToWishlist } = useWishlist();
   const { addToCart } = useCart();
   const router = useRouter();
   const [sortOrder, setSortOrder] = useState('newest');
+  const [seoData, setSeoData] = useState(null);
+  const seoApiCalledRef = useRef(false);
+
+  useEffect(() => {
+    if (!seoApiCalledRef.current) {
+      seoApiCalledRef.current = true;
+      seoService.getSEOData('wishlist').then(res => {
+        setSeoData(res.data || res);
+      });
+    }
+  }, []);
 
   const handleMoveToCart = (product) => {
     // Add default color and size for quick add
@@ -55,7 +67,7 @@ const Wishlist = () => {
 
   if (wishlist.length === 0) {
     return (
-      <SeoWrapper pageName="wishlist">
+      <SeoWrapper pageName="wishlist" seoData={seoData}>
         <div className="wishlist-page">
           <Header />
           <main className="wishlist-main">
@@ -78,7 +90,7 @@ const Wishlist = () => {
   }
 
   return (
-    <SeoWrapper pageName="wishlist">
+    <SeoWrapper pageName="wishlist" seoData={seoData}>
       <div className="wishlist-page">
         <Header />
         <main className="wishlist-main">

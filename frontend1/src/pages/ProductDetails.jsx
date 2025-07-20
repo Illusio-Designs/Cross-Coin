@@ -83,7 +83,13 @@ export default function ProductDetails() {
     ? JSON.parse(selectedVariationBySku.attributes)
     : selectedVariationBySku?.attributes || {};
 
+  const productApiCalledRef = useRef(false);
+  const couponApiCalledRef = useRef(false);
+
   useEffect(() => {
+    if (productApiCalledRef.current) return; // Prevent multiple calls
+    productApiCalledRef.current = true;
+    console.log('API BEING CALLED: ProductDetails product fetch');
     const fetchProduct = async () => {
       try {
         setLoading(true);
@@ -117,12 +123,14 @@ export default function ProductDetails() {
         setLoading(false);
       }
     };
-
     fetchProduct();
   }, [productSlug]);
 
   // Fetch coupons for display
   useEffect(() => {
+    if (couponApiCalledRef.current) return; // Prevent multiple calls
+    couponApiCalledRef.current = true;
+    console.log('API BEING CALLED: ProductDetails coupon fetch');
     const fetchCoupons = async () => {
       try {
         const data = await getPublicCoupons();
