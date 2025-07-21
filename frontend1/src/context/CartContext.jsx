@@ -81,8 +81,8 @@ export const CartProvider = ({ children }) => {
       try {
         console.log('CartContext: addToCart for authenticated user');
         // Use variationId directly
-        console.log('CartContext: calling apiAddToCart with:', { productId: product.id, variationId, quantity });
-        await apiAddToCart({ productId: product.id, variationId, quantity });
+        console.log('CartContext: calling apiAddToCart with:', { productId: product.id, variationId, quantity, size: selectedSize });
+        await apiAddToCart({ productId: product.id, variationId, quantity, size: selectedSize });
         const backendCart = await apiGetCart();
         setCartItems(backendCart);
         console.log('CartContext: cart updated from backend after adding item');
