@@ -492,7 +492,13 @@ export default function ProductDetails() {
   };
 
   // Get the selected size for the current pack
-  const selectedSizeForPack = selectedSizes[selectedSku] || (Array.isArray(attrs.size) ? attrs.size[0] : '');
+  let defaultSize = '';
+    if (Array.isArray(attrs.size) && attrs.size.length > 0) {
+        defaultSize = attrs.size[0];
+    } else if (typeof attrs.size === 'string' && attrs.size) {
+        defaultSize = attrs.size;
+    }
+  const selectedSizeForPack = selectedSizes[selectedSku] || defaultSize;
 
   // Update addToCart and buyNow to use selectedSizeForPack
   const handleAddToCart = () => {
@@ -812,8 +818,18 @@ export default function ProductDetails() {
 
   // Update renderSizeSelection to use per-pack size selection
   const renderSizeSelection = () => {
-    const sizes = Array.isArray(attrs.size) ? attrs.size : [];
-    if (sizes.length <= 1) return null;
+    const sizes = Array.isArray(attrs.size) ? attrs.size : (typeof attrs.size === 'string' && attrs.size ? [attrs.size] : []);
+    if (sizes.length === 0) return null;
+
+    if (sizes.length === 1) {
+      return (
+        <div className="select-size-section">
+          <strong>Size:</strong>
+          <span className="details-value" style={{ marginLeft: '8px' }}>{sizes[0]}</span>
+        </div>
+      );
+    }
+
     return (
       <div className="select-size-section">
         <strong>Select Size:</strong>

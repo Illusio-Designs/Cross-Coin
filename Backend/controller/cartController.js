@@ -60,7 +60,8 @@ module.exports.getCart = async (req, res) => {
                 itemId: item.id, 
                 productId: item.productId, 
                 variationId: item.variationId,
-                quantity: item.quantity 
+                quantity: item.quantity,
+                selected_size: item.selected_size,
             });
             
             const product = item.Product;
@@ -130,7 +131,7 @@ module.exports.getCart = async (req, res) => {
                 images: images,
                 price: price,
                 quantity: item.quantity,
-                size: attributes.size || null,
+                size: item.selected_size || null,
                 color: attributes.color || null,
                 stock: variation ? variation.stock : (product ? product.stock_quantity : 0),
                 weight: product ? product.weight : null,
@@ -159,13 +160,13 @@ module.exports.getCart = async (req, res) => {
 module.exports.addToCart = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { productId, variationId, quantity } = req.body;
+    const { productId, variationId, quantity, size } = req.body;
     let cart = await Cart.findOne({ where: { user_id: userId } });
     if (!cart) {
       cart = await Cart.create({ user_id: userId });
     }
     // Check if item already exists (by product and variation)
-    let where = { cartId: cart.id, productId: productId, variationId: variationId || null };
+    let where = { cartId: cart.id, productId: productId, variationId: variationId || null, selected_size: size || null };
     console.log('[Cart] addToCart where:', where);
     let item = await CartItem.findOne({ where });
     console.log('[Cart] addToCart found item:', item);
@@ -200,14 +201,16 @@ module.exports.addToCart = async (req, res) => {
         productId: productId,
         variationId: variationId || null,
         quantity,
-        price
+        price,
+        selected_size: size || null
       });
       console.log('[Cart] Created new CartItem:', {
         id: item.id, 
         productId: productId, 
         variationId: variationId || null, 
         quantity: quantity,
-        price: price
+        price: price,
+        size: size || null
       });
     }
     res.json({ success: true, item });

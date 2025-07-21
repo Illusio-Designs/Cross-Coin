@@ -417,11 +417,11 @@ export const getCart = async () => {
     }
 };
 
-export const addToCart = async ({ productId, variationId, quantity }) => {
+export const addToCart = async ({ productId, variationId, quantity, size }) => {
     try {
-        console.log('publicindex: addToCart called with:', { productId, variationId, quantity });
+        console.log('publicindex: addToCart called with:', { productId, variationId, quantity, size });
         const token = localStorage.getItem('token');
-        const payload = { productId, variationId, quantity };
+        const payload = { productId, variationId, quantity, size };
         const response = await axios.post(`${API_URL}/api/cart/add`, payload, {
             headers: { Authorization: `Bearer ${token}` }
         });
