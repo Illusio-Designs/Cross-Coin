@@ -84,30 +84,36 @@ export const WishlistProvider = ({ children }) => {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    localStorage.setItem('wishlist', JSON.stringify(wishlist));
+    if (!isAuthenticated) {
+      localStorage.setItem('wishlist', JSON.stringify(wishlist));
+    }
     setWishlistCount(wishlist.length);
-  }, [wishlist]);
+  }, [wishlist, isAuthenticated]);
 
   const addToWishlist = async (product) => {
     if (isAuthenticated) {
       try {
-        await apiAddToWishlist(product.id);
+        await apiAddToWishlist(product.id, product.selectedVariation?.id);
         const backendWishlist = await getWishlist();
         setWishlist(backendWishlist.map(item => {
           const product = item.Product;
-          let primaryImage = product?.ProductImages?.[0]?.image_url || '';
-          if (primaryImage) {
-            primaryImage = forceEnvImageBase(primaryImage);
+          let primaryImage = '';
+          if (product?.ProductImages && product.ProductImages.length > 0 && product.ProductImages[0].image_url) {
+            primaryImage = forceEnvImageBase(product.ProductImages[0].image_url);
+          } else if (product?.image) {
+            primaryImage = forceEnvImageBase(product.image);
+          } else {
+            primaryImage = '/assets/card1-left.webp';
           }
-          // Get price and comparePrice from the first variation
-          const firstVariation = product?.ProductVariations?.[0] || {};
+          const variation = item.Variation || product?.ProductVariations?.[0] || {};
           return {
             ...product,
             id: product.id,
             image: primaryImage,
-            price: firstVariation.price || 0,
-            comparePrice: firstVariation.comparePrice || 0,
-            addedAt: item.addedAt || new Date().toISOString()
+            price: variation.price || 0,
+            comparePrice: variation.comparePrice || 0,
+            addedAt: item.addedAt || new Date().toISOString(),
+            selectedVariation: variation,
           };
         }));
         showAddToWishlistSuccessToast(product.name);
@@ -126,26 +132,47 @@ export const WishlistProvider = ({ children }) => {
       setWishlist(prevWishlist => {
         const exists = prevWishlist.some(item => item.id === product.id);
         if (!exists) {
-          // Ensure product has images array for consistency with ProductCard
+          let primaryImage = '';
+          if (product.selectedVariation?.images && product.selectedVariation.images.length > 0) {
+            primaryImage = product.selectedVariation.images[0].image_url;
+          } else if (product.variationImages && product.variationImages.length > 0) {
+            primaryImage = product.variationImages[0];
+          } else if (Array.isArray(product.images) && product.images.length > 0) {
+            primaryImage = product.images[0].image_url;
+          } else if (product.image) {
+            primaryImage = product.image;
+          }
+          
           let images = [];
-          if (Array.isArray(product.images) && product.images.length > 0) {
+          if (product.selectedVariation?.images && product.selectedVariation.images.length > 0) {
+            images = product.selectedVariation.images;
+          } else if (product.variationImages && product.variationImages.length > 0) {
+            images = product.variationImages.map(img => ({ image_url: img, is_primary: false }));
+            if(images.length > 0) images[0].is_primary = true;
+          } else if (Array.isArray(product.images) && product.images.length > 0) {
             images = product.images;
           } else if (product.image) {
             images = [{ image_url: product.image, is_primary: true }];
           } else if (product.ProductImages && product.ProductImages.length > 0) {
             images = product.ProductImages;
           }
-          return [
-            ...prevWishlist,
-            {
-              ...product,
-              images,
-              addedAt: new Date().toISOString()
-            }
-          ];
+          
+          const newWishlistItem = {
+            ...product,
+            image: primaryImage,
+            images,
+            addedAt: new Date().toISOString(),
+            selectedVariation: product.selectedVariation,
+            selectedSize: product.selectedSize,
+            price: product.selectedVariation?.price || product.price,
+            comparePrice: product.selectedVariation?.comparePrice || product.comparePrice,
+          };
+          
+          return [...prevWishlist, newWishlistItem];
         }
         return prevWishlist;
       });
+      showAddToWishlistSuccessToast(product.name);
     }
   };
 
