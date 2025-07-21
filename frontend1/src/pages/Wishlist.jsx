@@ -12,6 +12,19 @@ import SeoWrapper from '../console/SeoWrapper';
 import { getProductImageSrc } from '../utils/imageUtils';
 import { seoService } from '../services/index';
 
+// Helper to pick the best image for a wishlist item
+function pickWishlistItemImage(item) {
+  if (item.variationImages && item.variationImages.length > 0) {
+    return item.variationImages[0];
+  }
+  if (Array.isArray(item.images) && item.images.length > 0) {
+    const primary = item.images.find(img => img.is_primary);
+    return primary ? primary.image_url : item.images[0].image_url;
+  }
+  return item.image || '/assets/card1-left.webp';
+}
+
+
 const Wishlist = () => {
   const { wishlist, removeFromWishlist, clearWishlist, isInWishlist, addToWishlist } = useWishlist();
   const { addToCart } = useCart();
@@ -29,12 +42,13 @@ const Wishlist = () => {
   //   }
   // }, []);
 
-  const handleMoveToCart = (product) => {
-    // Add default color and size for quick add
-    const defaultColor = product.colors?.[0] || 'black';
-    const defaultSize = product.sizes?.[0] || 'M';
-    addToCart(product, defaultColor, defaultSize, 1);
-    removeFromWishlist(product.id);
+  const handleMoveToCart = (item) => {
+    const productToAdd = { ...item };
+    const color = item.selectedVariation?.attributes?.color?.join(', ') || item.color;
+    const size = item.selectedSize || item.selectedVariation?.attributes?.size?.join(', ');
+
+    addToCart(productToAdd, color, size, 1, item.selectedVariation?.id);
+    removeFromWishlist(item.id);
   };
 
   const handleRemove = (productId) => {
@@ -120,66 +134,75 @@ const Wishlist = () => {
           </div>
 
           <div className="wishlist-items">
-            {sortedWishlist.map((item) => (
-              <div key={item.id} className="wishlist-item">
-                <div 
-                  className="wishlist-item-image"
-                  onClick={() => {
-                    if (item.slug) {
-                      router.push(`/ProductDetails?slug=${item.slug}`);
-                    } else {
-                      console.error('Product slug not found:', item);
-                    }
-                  }}
-                >
-                  <Image 
-                    src={getProductImageSrc({ image_url: item.image })}
-                    alt={item.name}
-                    width={300}
-                    height={250}
-                    style={{ objectFit: 'cover' }}
-                  />
-                  {/* Debug: Show raw image URL */}
-                  <div style={{ fontSize: '12px', color: 'red', wordBreak: 'break-all' }}>
-                    Debug image: {item.image}
-                  </div>
-                  <button
-                    className="wishlist-icon-btn"
-                    onClick={e => {
-                      e.stopPropagation();
-                      isInWishlist(item.id) ? removeFromWishlist(item.id) : addToWishlist(item);
+            {sortedWishlist.map((item) => {
+              const imageUrl = pickWishlistItemImage(item);
+              return (
+                <div key={item.id} className="wishlist-item">
+                  <div
+                    className="wishlist-item-image"
+                    onClick={() => {
+                      if (item.slug) {
+                        router.push(`/ProductDetails?slug=${item.slug}`);
+                      } else {
+                        console.error('Product slug not found:', item);
+                      }
                     }}
-                    aria-label={isInWishlist(item.id) ? 'Remove from wishlist' : 'Add to wishlist'}
                   >
-                    {isInWishlist(item.id) ? <AiFillHeart color="#e11d48" size={24} /> : <FiHeart size={24} />}
-                  </button>
-                </div>
-                <div className="wishlist-item-details">
-                  <h3>{item.name}</h3>
-                  <div className="wishlist-item-price">
-                    <span className="current-price">₹{item.price}</span>
-                    {item.comparePrice > item.price && (
-                      <span className="original-price">₹{item.comparePrice}</span>
+                    <Image
+                      src={getProductImageSrc({ image_url: imageUrl })}
+                      alt={item.name}
+                      width={300}
+                      height={250}
+                      style={{ objectFit: 'cover' }}
+                    />
+                    <button
+                      className="wishlist-icon-btn"
+                      onClick={e => {
+                        e.stopPropagation();
+                        isInWishlist(item.id) ? removeFromWishlist(item.id) : addToWishlist(item);
+                      }}
+                      aria-label={isInWishlist(item.id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                    >
+                      {isInWishlist(item.id) ? <AiFillHeart color="#e11d48" size={24} /> : <FiHeart size={24} />}
+                    </button>
+                  </div>
+                  <div className="wishlist-item-details">
+                    <h3>{item.name}</h3>
+                    {item.selectedVariation?.attributes?.color && (
+                      <p className="wishlist-item-color">
+                        Color: {item.selectedVariation.attributes.color.join(', ')}
+                      </p>
                     )}
-                    
-                  </div>
-                  <div className="wishlist-item-actions">
-                    <button 
-                      className="move-to-cart-btn"
-                      onClick={() => handleMoveToCart(item)}
-                    >
-                      <FiShoppingCart /> Move to Cart
-                    </button>
-                    <button 
-                      className="remove-btn"
-                      onClick={() => handleRemove(item.id)}
-                    >
-                      <FiTrash2 /> Remove
-                    </button>
+                    {item.selectedSize && (
+                      <p className="wishlist-item-size">
+                        Size: {item.selectedSize}
+                      </p>
+                    )}
+                    <div className="wishlist-item-price">
+                      <span className="current-price">₹{item.price}</span>
+                      {item.comparePrice > item.price && (
+                        <span className="original-price">₹{item.comparePrice}</span>
+                      )}
+                      
+                    </div>
+                    <div className="wishlist-item-actions">
+                      <button 
+                        className="move-to-cart-btn"
+                        onClick={() => handleMoveToCart(item)}
+                      >
+                        <FiShoppingCart /> Move to Cart
+                      </button>
+                      <button 
+                        className="remove-btn"
+                        onClick={() => handleRemove(item.id)}
+                      >
+                        <FiTrash2 /> Remove
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </main>
         <Footer />

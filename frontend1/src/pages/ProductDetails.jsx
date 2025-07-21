@@ -589,7 +589,13 @@ export default function ProductDetails() {
   };
 
   const handleAddToWishlist = () => {
-    addToWishlist(product);
+    const productToSend = {
+      ...product,
+      variationImages: variationImages.map(img => img.image_url || img.url || img),
+      selectedVariation: selectedVariationBySku,
+      selectedSize: selectedSizeForPack,
+    };
+    addToWishlist(productToSend);
     fbqTrack('AddToWishlist', {
       content_ids: [product.id],
       content_name: product.name,
@@ -1014,9 +1020,9 @@ export default function ProductDetails() {
                 className="wishlist-btn"
                 onClick={() => {
                   if (wishlist.some(item => item.id === product.id)) {
-                    removeFromWishlist(product.id);
+                    handleRemoveFromWishlist()
                   } else {
-                    addToWishlist(product);
+                    handleAddToWishlist()
                   }
                 }}
                 aria-label={wishlist.some(item => item.id === product.id) ? 'Remove from wishlist' : 'Add to wishlist'}

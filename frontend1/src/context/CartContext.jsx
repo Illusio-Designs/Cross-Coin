@@ -245,10 +245,16 @@ export const CartProvider = ({ children }) => {
     }
   };
 
+  const cartTotal = cartItems.reduce((total, item) => {
+    const price = item.variation?.price || item.price || 0;
+    return total + price * item.quantity;
+  }, 0);
+
   return (
     <CartContext.Provider value={{
       cartItems,
       cartCount,
+      cartTotal,
       addToCart,
       removeFromCart,
       updateQuantity,

@@ -33,12 +33,20 @@ export default function UnifiedCheckout() {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-        router.push('/login?redirect=/UnifiedCheckout');
-    }
     const savedCoupon = sessionStorage.getItem('appliedCoupon');
     if (savedCoupon) {
-      setAppliedCoupon(JSON.parse(savedCoupon));
+      try {
+        setAppliedCoupon(JSON.parse(savedCoupon));
+      } catch (e) {
+        console.error("Failed to parse applied coupon from session storage", e);
+        sessionStorage.removeItem('appliedCoupon');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+        router.push('/login?redirect=/UnifiedCheckout');
     }
   }, [isAuthenticated, router]);
 
@@ -303,8 +311,13 @@ export default function UnifiedCheckout() {
     };
   }, [step, orderPlaced]);
 
-  const handleCouponApplied = (couponData) => {
-    setAppliedCoupon(couponData.coupon);
+  const handleCouponApplied = (coupon) => {
+    setAppliedCoupon(coupon);
+  };
+
+  const handleCouponRemoved = () => {
+    setAppliedCoupon(null);
+    sessionStorage.removeItem('appliedCoupon');
   };
 
   const renderStep = () => {
@@ -349,7 +362,10 @@ export default function UnifiedCheckout() {
                 shippingAddress={shippingAddress}
                 shippingFee={shippingFee}
                 isProcessing={isProcessing}
+                isCartLoading={isCartLoading}
+                appliedCoupon={appliedCoupon}
                 onCouponApplied={handleCouponApplied}
+                onCouponRemoved={handleCouponRemoved}
               />
             </div>
           )}

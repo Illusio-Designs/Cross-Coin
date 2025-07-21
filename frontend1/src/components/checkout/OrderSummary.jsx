@@ -4,15 +4,13 @@ import { useAuth } from "../../context/AuthContext";
 import { validateCoupon, getPublicCoupons } from "../../services/publicindex";
 import { useRouter } from "next/router";
 
-export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddress, shippingFee, isProcessing, onCouponApplied }) {
+export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddress, shippingFee, isProcessing, isCartLoading, appliedCoupon, onCouponApplied, onCouponRemoved }) {
   const router = useRouter();
   const { user } = useAuth();
-  const { cartItems } = useCart();
+  const { cartItems, cartTotal } = useCart();
   const [promoCode, setPromoCode] = useState("");
-  const [discount, setDiscount] = useState(0);
   const [couponError, setCouponError] = useState("");
   const [couponSuccess, setCouponSuccess] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [availableCoupons, setAvailableCoupons] = useState([]);
 
   useEffect(() => {
@@ -30,38 +28,19 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
   }, []);
 
   useEffect(() => {
-    const savedCoupon = sessionStorage.getItem('appliedCoupon');
-    if (savedCoupon) {
-      const { coupon, discountAmount } = JSON.parse(savedCoupon);
-      setAppliedCoupon(coupon);
-      setDiscount(discountAmount);
-      setPromoCode(coupon.code);
+    if (appliedCoupon) {
+      setPromoCode(appliedCoupon.code);
       setCouponSuccess("Coupon applied!");
-    }
-  }, []);
-
-  const subtotal = cartItems.reduce((sum, item) => {
-    const itemPrice = parseFloat(item.price) || 0;
-    const itemQuantity = parseInt(item.quantity) || 0;
-    return sum + (itemPrice * itemQuantity);
-  }, 0);
-  
-  const deliveryFee = shippingFee ? parseFloat(shippingFee.fee || 0) : 0;
-  const discountAmount = parseFloat(discount) || 0;
-  
-  // Ensure discount doesn't exceed subtotal and handle edge cases
-  const finalDiscount = Math.min(discountAmount, subtotal);
-  const total = Math.max(0, subtotal - finalDiscount + deliveryFee);
-
-  // Reset discount if subtotal becomes 0
-  useEffect(() => {
-    if (subtotal === 0 && discount > 0) {
-      setDiscount(0);
-      setAppliedCoupon(null);
+    } else {
+      setPromoCode("");
       setCouponSuccess("");
-      sessionStorage.removeItem('appliedCoupon');
     }
-  }, [subtotal, discount]);
+  }, [appliedCoupon]);
+
+  const deliveryFee = shippingFee ? parseFloat(shippingFee.fee || 0) : 0;
+  const discountAmount = appliedCoupon ? parseFloat(appliedCoupon.discount || 0) : 0;
+  
+  const total = cartTotal !== undefined ? Math.max(0, cartTotal - discountAmount + deliveryFee) : 0;
 
   const handleApplyCoupon = async () => {
     if (!promoCode) {
@@ -75,31 +54,15 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
     }
     try {
       const response = await validateCoupon(promoCode);
-      const discountAmount = parseFloat(response.discountAmount);
+      const discount = parseFloat(response.discountAmount);
       
-      // Validate that discount doesn't exceed subtotal
-      if (discountAmount > subtotal) {
-        setCouponError("Discount cannot exceed subtotal amount.");
-        return;
-      }
+      const newCouponData = { ...response.coupon, discount };
+      onCouponApplied(newCouponData);
       
-      setDiscount(discountAmount);
-      setAppliedCoupon(response.coupon);
       setCouponError("");
-      setCouponSuccess(response.message || "Coupon applied successfully!");
-      
-      const newCouponData = { coupon: response.coupon, discountAmount };
-      sessionStorage.setItem('appliedCoupon', JSON.stringify(newCouponData));
-      
-      if (onCouponApplied) {
-        onCouponApplied(newCouponData);
-      }
     } catch (error) {
       setCouponError(error.message || "An error occurred.");
-      setDiscount(0);
-      setAppliedCoupon(null);
-      setCouponSuccess("");
-      sessionStorage.removeItem('appliedCoupon');
+      onCouponRemoved();
     }
   };
 
@@ -158,35 +121,45 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
     return 'A special discount on your order.';
   };
 
-  // Helper function to format currency
   const formatCurrency = (amount) => {
     return `₹${parseFloat(amount || 0).toFixed(2)}`;
   };
 
-  // Helper function to calculate order total
-  const calculateOrderTotal = (subtotal, discount, deliveryFee) => {
-    const finalDiscount = Math.min(parseFloat(discount) || 0, subtotal);
-    return Math.max(0, subtotal - finalDiscount + parseFloat(deliveryFee) || 0);
-  };
+  if (isCartLoading || cartTotal === undefined) {
+    return (
+      <div className="order-summary-box">
+        <div className="order-summary-title">Order Summary</div>
+        <div className="order-summary-row">
+          <span>Subtotal</span>
+          <span>Loading...</span>
+        </div>
+        <div className="order-summary-row">
+          <span>Discount</span>
+          <span>-₹0.00</span>
+        </div>
+        <div className="order-summary-row">
+          <span>Delivery Fee</span>
+          <span>Loading...</span>
+        </div>
+        <div className="order-summary-total">
+          <span>Total</span>
+          <span>Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="order-summary-box">
       <div className="order-summary-title">Order Summary</div>
       <div className="order-summary-row">
         <span>Subtotal</span>
-        <span>{formatCurrency(subtotal)}</span>
+        <span>{formatCurrency(cartTotal)}</span>
       </div>
-      {appliedCoupon ? (
-        <div className="order-summary-row">
-          <span>Discount ({appliedCoupon.code})</span>
-          <span className="discount">-{formatCurrency(finalDiscount)}</span>
-        </div>
-      ) : (
-        <div className="order-summary-row">
-          <span>Discount</span>
-          <span className="discount">-{formatCurrency(finalDiscount)}</span>
-        </div>
-      )}
+      <div className="order-summary-row">
+        <span>Discount</span>
+        <span className="discount">-{formatCurrency(discountAmount)}</span>
+      </div>
       <div className="order-summary-row">
         <span>Delivery Fee</span>
         <span>{shippingFee ? formatCurrency(deliveryFee) : 'Free'}</span>

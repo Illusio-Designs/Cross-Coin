@@ -19,18 +19,27 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
   const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
   const router = useRouter();
 
+  const variation = product?.variations?.[0];
+  
   const handleWishlistClick = (e) => {
     e.stopPropagation(); // Prevent triggering product click
     if (isInWishlist(product.id)) {
       removeFromWishlist(product.id);
     } else {
-      addToWishlist(product);
+      const productToSend = {
+        ...product,
+        variationImages: variation?.images?.map(img => img.image_url || img.url || img) || [],
+      };
+      addToWishlist(productToSend);
     }
   };
 
   // Get the primary image or first image from the images array
   let imageData = null;
-  if (Array.isArray(product?.images) && product.images.length > 0) {
+  if (variation?.images && variation.images.length > 0) {
+    imageData = variation.images[0];
+  }
+  else if (Array.isArray(product?.images) && product.images.length > 0) {
     imageData = product.images.find(img => img.is_primary) || product.images[0];
   } else if (typeof product?.image === 'string') {
     imageData = { image_url: product.image };
@@ -39,7 +48,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
 
   // Get the first variation for price
-  const variation = product?.variations?.[0];
   const price = variation?.price || 0;
   const comparePrice = variation?.comparePrice || 0;
 
