@@ -3,21 +3,18 @@ import Image from "next/image";
 import { FiTrash2 } from "react-icons/fi";
 import { FaBoxOpen } from "react-icons/fa";
 import { useCart } from "../../context/CartContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // Utility function to normalize image URLs (same logic as ProductCard.jsx)
 function getNormalizedImageUrl(imageUrl) {
   if (!imageUrl || typeof imageUrl !== 'string') return '/placeholder.png';
-  // If it's a full URL, use as is
   if (/^https?:\/\//.test(imageUrl)) {
     return imageUrl;
   }
-  // If it's a relative path, prepend the base URL from env
   const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
   if (imageUrl.startsWith('/')) {
     return `${baseUrl}${imageUrl}`;
   }
-  // If it's just a filename, construct the path
   return `${baseUrl}/uploads/products/${imageUrl}`;
 }
 
@@ -37,22 +34,17 @@ function forceEnvImageBase(url) {
 
 // Helper to pick the best image for a cart item based on color
 function pickCartItemImage(item) {
-  // If item.images is an array (from backend), try to match color
   if (Array.isArray(item.images) && item.color) {
-    // If color is an array, use the first color
     const colorValue = Array.isArray(item.color) ? item.color[0] : item.color;
     const colorLower = colorValue.toString().toLowerCase();
     
-    // Try to find an image whose alt_text or filename includes the color
     const match = item.images.find(img =>
       (img.alt_text && img.alt_text.toLowerCase().includes(colorLower)) ||
       (img.image_url && img.image_url.toLowerCase().includes(colorLower))
     );
     if (match) return match.image_url;
-    // Otherwise, fallback to first image
     if (item.images.length > 0) return item.images[0].image_url;
   }
-  // Fallback to item.image (from backend)
   return item.image;
 }
 
@@ -60,6 +52,16 @@ export default function CartStep() {
   const router = useRouter();
   const { cartItems, removeFromCart, updateQuantity, setQuantity } = useCart();
   const [inputValues, setInputValues] = useState({});
+  const [imageLoaded, setImageLoaded] = useState({});
+
+  useEffect(() => {
+    const initialInputValues = {};
+    cartItems.forEach(item => {
+      initialInputValues[item.id] = item.quantity.toString();
+    });
+    setInputValues(initialInputValues);
+  }, [cartItems]);
+
 
   // Debug logging
   console.log('CartStep: cartItems:', cartItems);
@@ -79,8 +81,14 @@ export default function CartStep() {
     } else if (num === 0) {
       removeFromCart(itemId);
     } else {
-      setQuantity(itemId, num);
+      if (num !== cartItems.find(item => item.id === itemId)?.quantity) {
+          setQuantity(itemId, num);
+      }
     }
+  };
+
+  const handleImageLoad = (itemId) => {
+    setImageLoaded(prev => ({ ...prev, [itemId]: true }));
   };
 
   return (
@@ -96,7 +104,8 @@ export default function CartStep() {
         ) : (
             cartItems.map((item) => {
               const imageUrl = pickCartItemImage(item);
-              const [imageLoaded, setImageLoaded] = useState(false);
+              // Debug log for size
+              console.log('CartStep: item.size:', item.size, typeof item.size);
               return (
                 <div className="cart-item" key={item.id}>
                   <div style={{ position: 'relative', width: 100, height: 100 }}>
@@ -113,10 +122,10 @@ export default function CartStep() {
                             background: '#eee',
                             display: 'block'
                           }}
-                          onLoad={() => setImageLoaded(true)}
-                          onError={() => setImageLoaded(true)}
+                          onLoad={() => handleImageLoad(item.id)}
+                          onError={() => handleImageLoad(item.id)}
                         />
-                        {!imageLoaded && (
+                        {!imageLoaded[item.id] && (
                           <div className="shimmer-placeholder" style={{ width: 100, height: 100, position: 'absolute', top: 0, left: 0 }} />
                         )}
                       </>
@@ -140,7 +149,7 @@ export default function CartStep() {
                       type="number"
                       min={0}
                       className="qty-input improved-qty-input"
-                      value={inputValues[item.id] !== undefined ? inputValues[item.id] : item.quantity}
+                      value={inputValues[item.id] || ''}
                       onChange={e => handleInputChange(item.id, e.target.value)}
                       onBlur={e => handleInputBlur(item.id, e.target.value)}
                       style={{ width: 60, textAlign: 'center', border: '1px solid #ccc', borderRadius: 4, padding: '4px 8px', margin: '0 8px' }}

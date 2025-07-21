@@ -39,6 +39,10 @@ const CartItem = sequelize.define('CartItem', {
     price: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false
+    },
+    selected_size: {
+        type: DataTypes.STRING,
+        allowNull: true
     }
 }, {
     tableName: 'cart_items',

@@ -419,7 +419,7 @@
 
 .category-title {
   display: flex;
-  justify-content: end;
+  justify-content: flex-end;
   align-items: center;
   margin-bottom: 3rem;
   gap: 17rem;
@@ -923,7 +923,7 @@
 /* Latest Products Section */
 .latest-title{
     display: flex;
-    justify-content: end;
+    justify-content: flex-end;
     align-items: center;
     margin-bottom: 3rem;
     gap: 20rem;
