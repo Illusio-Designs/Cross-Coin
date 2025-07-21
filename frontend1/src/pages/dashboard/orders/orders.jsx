@@ -8,7 +8,6 @@ import Button from "@/components/common/Button";
 import '../../../styles/dashboard/orders.css';
 import "../../../styles/dashboard/seo.css"; // Reusing styles for consistency
 import { toast } from 'react-hot-toast';
-import { apiService } from '../../../services';
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -59,7 +58,7 @@ const Orders = () => {
         setLoading(true);
         try {
             console.log('=== Testing Shiprocket Credentials ===');
-            const result = await apiService.testShiprocketCredentials();
+            const result = await orderService.testShiprocketCredentials();
             console.log('Credentials test result:', result);
             toast.success(result.message);
         } catch (error) {
