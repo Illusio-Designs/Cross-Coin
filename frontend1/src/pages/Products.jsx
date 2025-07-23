@@ -83,16 +83,16 @@ const Products = () => {
     try {
       setLoading(true);
       const params = {
-        page: currentPage,
-        limit: 20,
+        // Force a high limit to get all products
+        limit: 1000,
         sort: sortBy,
         category: selectedCategory.length > 0 ? selectedCategory.join(',') : undefined
       };
       const response = await getAllPublicProducts(params);
       if (response?.success) {
         setProducts(response.data?.products || []);
-        setTotalPages(response.data?.totalPages || 1);
-        setTotalProducts(response.data?.totalProducts || 0);
+        setTotalPages(1); // No pagination
+        setTotalProducts(response.data?.totalProducts || (response.data?.products?.length || 0));
         setError(null);
       } else {
         setError(response?.message || 'Failed to fetch products');
@@ -104,7 +104,7 @@ const Products = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, sortBy, selectedCategory]);
+  }, [sortBy, selectedCategory]);
 
   // Fetch products by category name from query, only after categories are loaded
   useEffect(() => {
@@ -385,7 +385,7 @@ const Products = () => {
     setSelectedGender([]);
     setSelectedMaterial([]);
     setPriceRange([minPrice, maxPrice]);
-    setCurrentPage(1);
+    // Removed setCurrentPage(1);
     // Clear URL parameters
     router.push('/Products');
   };
@@ -737,23 +737,7 @@ const Products = () => {
               )}
             </div>
 
-            {totalProducts > 20 && totalPages > 1 && (
-              <div className="pagination">
-                <button 
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                >
-                  <FiChevronLeft />
-                </button>
-                <span>Page {currentPage} of {totalPages}</span>
-                <button 
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                >
-                  <FiChevronRight />
-                </button>
-              </div>
-            )}
+            {/* Pagination removed: all products shown on one page */}
           </div>
         </div>
       </div>

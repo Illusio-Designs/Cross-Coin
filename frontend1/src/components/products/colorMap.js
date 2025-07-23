@@ -72,6 +72,7 @@ const colorMap = {
   "mustard yellow": "#FFCE1B",
   "forest green": "#228B22",
   "charcoal": "#36454F",
+  "charcoal grey": "#36454F",
   "ivory": "#FFFFF0",
   "peach": "#FFE5B4",
   "coral": "#FF7F50",
