@@ -733,60 +733,74 @@ const Home = () => {
                         </div>
                       </div>
                       {/* Color selection */}
-                      {product.variations && product.variations.length > 1 && colorOptions.length > 0 && (
-                        <div className="select-color-section">
-                          <strong>Select Color:</strong>
-                          <div className="select-color-options">
-                            {product.variations.map((variation) => {
-                              const attrs = typeof variation.attributes === 'string' ? JSON.parse(variation.attributes) : variation.attributes;
-                              const colors = Array.isArray(attrs?.color) ? attrs.color : [];
-                              return (
-                                <button
-                                  key={variation.sku}
-                                  className={`color-swatch-btn color-pack-btn${selectedSku === variation.sku ? ' selected' : ''}`}
-                                  onClick={() => {
-                                    setExclusiveSelectedSkus(prev => prev.map((sku, i) => i === index ? variation.sku : sku));
-                                    setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, selectedThumbnail: 0 } : s));
-                                  }}
-                                  aria-label={`Select pack with colors: ${colors.join(', ')}`}
-                                  type="button"
-                                >
-                                  <div className="color-pack-swatch-row">
-                                    {colors.map((color, cidx) => (
-                                      <span
-                                        key={color + cidx}
-                                        className="color-swatch"
-                                        style={{ backgroundColor: colorMap[color.toLowerCase()] || '#ccc' }}
-                                        title={color}
-                                      />
-                                    ))}
-                                  </div>
-                                  <span className="color-pack-count">{colors.length > 1 ? `Pack of ${colors.length}` : colors[0]}</span>
-                                </button>
-                              );
-                            })}
+                      {(() => {
+                        // Always show color selection if at least one variation has a color attribute
+                        const hasColor = product.variations && product.variations.some(v => {
+                          const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+                          return attrs && attrs.color && Array.isArray(attrs.color) && attrs.color.length > 0;
+                        });
+                        if (!hasColor) return null;
+                        return (
+                          <div className="select-color-section">
+                            <strong>Select Color:</strong>
+                            <div className="select-color-options">
+                              {product.variations.map((variation) => {
+                                const attrs = typeof variation.attributes === 'string' ? JSON.parse(variation.attributes) : variation.attributes;
+                                const colors = Array.isArray(attrs?.color) ? attrs.color : [];
+                                return (
+                                  <button
+                                    key={variation.sku}
+                                    className={`color-swatch-btn color-pack-btn${selectedSku === variation.sku ? ' selected' : ''}`}
+                                    onClick={() => {
+                                      setExclusiveSelectedSkus(prev => prev.map((sku, i) => i === index ? variation.sku : sku));
+                                      setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, selectedThumbnail: 0 } : s));
+                                    }}
+                                    aria-label={`Select pack with colors: ${colors.join(', ')}`}
+                                    type="button"
+                                  >
+                                    <div className="color-pack-swatch-row">
+                                      {colors.map((color, cidx) => (
+                                        <span
+                                          key={color + cidx}
+                                          className="color-swatch"
+                                          style={{ backgroundColor: colorMap[color.toLowerCase()] || '#ccc' }}
+                                          title={color}
+                                        />
+                                      ))}
+                                    </div>
+                                    <span className="color-pack-count">{colors.length > 1 ? `Pack of ${colors.length}` : colors[0]}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
                       {/* Size selection */}
-                      {sizeOptions.length > 1 && (
-                        <div className="select-size-section">
-                          <strong>Select Size:</strong>
-                          <div className="select-size-options">
-                            {sizeOptions.map((size) => (
-                              <button
-                                key={size}
-                                className={`size-swatch-btn${selectedSizeForPack === size ? ' selected' : ''}`}
-                                onClick={() => setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, selectedSize: size } : s))}
-                                type="button"
-                                aria-label={`Select size ${size}`}
-                              >
-                                {size}
-                              </button>
-                            ))}
+                      {(() => {
+                        let sizes = Array.isArray(attrs.size) ? attrs.size : (typeof attrs.size === 'string' && attrs.size ? [attrs.size] : []);
+                        sizes = sizes.filter(s => !!s && typeof s === 'string');
+                        if (sizes.length === 1 && sizes[0].toLowerCase().includes('free')) return null;
+                        if (sizes.length < 2) return null;
+                        return (
+                          <div className="select-size-section">
+                            <strong>Select Size:</strong>
+                            <div className="select-size-options">
+                              {sizes.map((size) => (
+                                <button
+                                  key={size}
+                                  className={`size-swatch-btn${selectedSizeForPack === size ? ' selected' : ''}`}
+                                  onClick={() => setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, selectedSize: size } : s))}
+                                  type="button"
+                                  aria-label={`Select size ${size}`}
+                                >
+                                  {size}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
                       {/* Quantity and Action Buttons Section */}
                       <div className="quantity-section">
                         <div className="details-heading">Quantity:</div>
