@@ -784,7 +784,12 @@ export default function ProductDetails() {
 
   // Add this function inside the ProductDetails component
   const renderColorSelection = () => {
-    if (!product.variations || product.variations.length <= 1) return null;
+    // Always show color selection if at least one variation has a color attribute
+    const hasColor = product?.variations && product.variations.some(v => {
+      const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+      return attrs && attrs.color && Array.isArray(attrs.color) && attrs.color.length > 0;
+    });
+    if (!hasColor) return null;
     return (
       <div className="select-color-section">
         <strong>Select Color:</strong>
@@ -822,20 +827,15 @@ export default function ProductDetails() {
     );
   };
 
-  // Update renderSizeSelection to use per-pack size selection
+  // Update renderSizeSelection to only show if there are 2+ sizes and not if size is 'Free Size'
   const renderSizeSelection = () => {
-    const sizes = Array.isArray(attrs.size) ? attrs.size : (typeof attrs.size === 'string' && attrs.size ? [attrs.size] : []);
-    if (sizes.length === 0) return null;
-
-    if (sizes.length === 1) {
-      return (
-        <div className="select-size-section">
-          <strong>Size:</strong>
-          <span className="details-value" style={{ marginLeft: '8px' }}>{sizes[0]}</span>
-        </div>
-      );
-    }
-
+    let sizes = Array.isArray(attrs.size) ? attrs.size : (typeof attrs.size === 'string' && attrs.size ? [attrs.size] : []);
+    // Remove empty/undefined/null values
+    sizes = sizes.filter(s => !!s && typeof s === 'string');
+    // Hide if only one size and it's 'Free Size' (case-insensitive)
+    if (sizes.length === 1 && sizes[0].toLowerCase().includes('free')) return null;
+    // Only show size selection if there are 2 or more sizes
+    if (sizes.length < 2) return null;
     return (
       <div className="select-size-section">
         <strong>Select Size:</strong>
