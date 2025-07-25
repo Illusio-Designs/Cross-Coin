@@ -90,6 +90,29 @@ const colorMap = {
   "teal blue": "#008080",
   "lemon yellow": "#FFF700",
   "ocean teal": "#006994",
+  "steel grey": "#43464B", // Steel Grey
+  "charcoal black": "#222222", // Charcoal Black
+  "light grey": "#D3D3D3", // Light Grey
+  "dark grey": "#2E2E2E", // Dark Grey
+  "teal green": "#008080", // Teal Green
+  "steel blue": "#4682B4", // Steel Blue
+  "classic black": "#0A0A0A", // Classic Black
+  "ivory beige": "#F6E2B3", // Ivory Beige
+  "jet black": "#0A0A0A", // Jet Black
+  "cloud grey": "#BFC9CA", // Cloud Grey
+  "ash grey": "#B2BEB5", // Ash Grey
+  "graphite grey": "#474A51", // Graphite Grey
+  "midnight black": "#191970", // Midnight Black (note: often used for blue, but here as a very dark black)
+  "storm grey": "#71797E", // Storm Grey
+  "deep navy": "#0B0C10", // Deep Navy
+  "dark green": "#013220", // Dark Green
+  "blush pink": "#F9C6C3", // Blush Pink
+  "aqua teal": "#00BFAE", // Aqua Teal
+  "vanilla cream": "#F3E5AB", // Vanilla Cream
+  "biscoff": "#C68642", // Biscoff (cookie brown)
+  "olive green": "#708238", // Olive Green
+  "crimson red": "#DC143C", // Crimson Red
+  "slate blue": "#6A5ACD", // Slate Blue
   // Add more as needed
 };
 
