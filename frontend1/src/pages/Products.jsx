@@ -11,6 +11,7 @@ import { getProductImageSrc } from '../utils/imageUtils';
 import SeoWrapper from '../console/SeoWrapper';
 import { fbqTrack } from '../components/common/Analytics';
 import colorMap from '../components/products/colorMap';
+import '../styles/common/TableControls.css';
 
 const Products = () => {
   const router = useRouter();
@@ -34,7 +35,7 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 20;
   const [totalProducts, setTotalProducts] = useState(0);
   const [categories, setCategories] = useState([]);
   const [isMobile, setIsMobile] = useState(false);
@@ -52,17 +53,6 @@ const Products = () => {
       sizes: {},
       genders: {},
     }
-  });
-
-  // Debug logs
-  console.log('Products Component State:', {
-    selectedCategory,
-    sortBy,
-    priceRange,
-    currentPage,
-    totalPages,
-    loading,
-    error
   });
 
   // Fetch categories on mount
@@ -91,7 +81,6 @@ const Products = () => {
       const response = await getAllPublicProducts(params);
       if (response?.success) {
         setProducts(response.data?.products || []);
-        setTotalPages(1); // No pagination
         setTotalProducts(response.data?.totalProducts || (response.data?.products?.length || 0));
         setError(null);
       } else {
@@ -140,7 +129,6 @@ const Products = () => {
           });
           setProducts(productsWithCategory);
           setSelectedCategory(categoryId ? [String(categoryId)] : []);
-          setTotalPages(1);
           setTotalProducts(productsWithCategory.length);
           setError(null);
           setLoading(false);
@@ -149,7 +137,6 @@ const Products = () => {
           setError('Failed to fetch products for this category');
           setProducts([]);
           setSelectedCategory([]);
-          setTotalPages(1);
           setTotalProducts(0);
           setLoading(false);
         });
@@ -376,6 +363,33 @@ const Products = () => {
       return true;
     });
   };
+
+  // Paginate filtered and sorted products
+  const getPaginatedProducts = () => {
+    const filtered = sortProducts(getFilteredProducts());
+    const startIdx = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(startIdx, startIdx + itemsPerPage);
+  };
+
+  // Compute total pages based on filtered products
+  const filteredProducts = getFilteredProducts();
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
+
+  // Debug logs (moved after totalPages is defined)
+  console.log('Products Component State:', {
+    selectedCategory,
+    sortBy,
+    priceRange,
+    currentPage,
+    totalPages,
+    loading,
+    error
+  });
+
+  // Reset to page 1 when filters or sorting change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, selectedColors, selectedSizes, selectedGender, selectedMaterial, priceRange, sortBy]);
 
   // Clear all filters
   const clearAllFilters = () => {
@@ -717,7 +731,7 @@ const Products = () => {
                 <div className="loading">Loading products...</div>
               ) : error ? (
                 <div className="error">{error}</div>
-              ) : getFilteredProducts().length === 0 ? (
+              ) : filteredProducts.length === 0 ? (
                 <div className="no-products">
                   {selectedCategory.length > 0 
                     ? `No products available in "${getCategoryNameById(selectedCategory[0])}" category. Try selecting a different category or clearing filters.`
@@ -725,8 +739,8 @@ const Products = () => {
                   }
                 </div>
               ) : (
-                // Apply sorting to filtered products before rendering
-                sortProducts(getFilteredProducts()).map((product) => (
+                // Apply sorting to filtered products before rendering, then paginate
+                getPaginatedProducts().map((product) => (
                   <ProductCard
                     key={product.id}
                     product={product}
@@ -737,7 +751,38 @@ const Products = () => {
               )}
             </div>
 
-            {/* Pagination removed: all products shown on one page */}
+            {/* Pagination controls */}
+            {filteredProducts.length > itemsPerPage && (
+              <div className="pagination">
+                <button
+                  className="pagination-btn"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  aria-label="Previous page"
+                >
+                  <FiChevronLeft />
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    className={`pagination-btn${page === currentPage ? ' active' : ''}`}
+                    onClick={() => setCurrentPage(page)}
+                    aria-label={`Page ${page}`}
+                    aria-current={page === currentPage ? 'page' : undefined}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  className="pagination-btn"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  aria-label="Next page"
+                >
+                  <FiChevronRight />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
