@@ -15,7 +15,9 @@ const Orders = () => {
     const [error, setError] = useState(null);
     const [filterValue, setFilterValue] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage] = useState(10);
+    const [itemsPerPage] = useState(20); // Increased from 10 to 20
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalOrders, setTotalOrders] = useState(0);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [paymentTypeFilter, setPaymentTypeFilter] = useState("all");
@@ -27,13 +29,25 @@ const Orders = () => {
     const [loadingShiprocket, setLoadingShiprocket] = useState(false);
     const [shiprocketError, setShiprocketError] = useState(null);
     const [notification, setNotification] = useState(null);
+    const [isSyncing, setIsSyncing] = useState(false);
 
-    const fetchOrders = async () => {
+    const fetchOrders = async (page = currentPage) => {
         setLoading(true);
         setError(null);
         try {
-            const data = await orderService.getAllOrders({ limit: 1000 });
-            setOrders(data.orders);
+            const params = {
+                page,
+                limit: itemsPerPage,
+                status: statusFilter !== 'all' ? statusFilter : undefined,
+                payment_status: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
+                sort: sortBy,
+                order: sortOrder
+            };
+            
+            const data = await orderService.getAllOrders(params);
+            setOrders(data.orders || data.data || []);
+            setTotalPages(data.totalPages || Math.ceil((data.total || 0) / itemsPerPage));
+            setTotalOrders(data.total || 0);
         } catch (err) {
             setError(err.message || 'Failed to fetch orders');
         } finally {
@@ -45,12 +59,39 @@ const Orders = () => {
         setLoadingShiprocket(true);
         setShiprocketError(null);
         try {
-            const data = await orderService.getAllShiprocketOrders({ limit: 1000 });
+            const data = await orderService.getAllShiprocketOrders({ 
+                page: 1, 
+                limit: 50 // Reduced from 1000 to 50 for better performance
+            });
             setShiprocketOrders(data.data || data || []);
         } catch (err) {
             setShiprocketError(err.message || 'Failed to fetch Shiprocket orders');
         } finally {
             setLoadingShiprocket(false);
+        }
+    };
+
+    const syncOrdersWithShiprocket = async () => {
+        setIsSyncing(true);
+        try {
+            await orderService.syncOrdersWithShiprocket();
+            setNotification({
+                type: 'success',
+                message: 'Orders synced with Shiprocket successfully'
+            });
+            // Refresh local orders after sync
+            await fetchOrders();
+            // Clear notification after 5 seconds
+            setTimeout(() => setNotification(null), 5000);
+        } catch (err) {
+            setNotification({
+                type: 'error',
+                message: err.message || 'Failed to sync orders with Shiprocket'
+            });
+            // Clear notification after 5 seconds
+            setTimeout(() => setNotification(null), 5000);
+        } finally {
+            setIsSyncing(false);
         }
     };
 
@@ -113,15 +154,30 @@ const Orders = () => {
         }
     };
 
+    // Initial load
     useEffect(() => {
-        fetchOrders();
+        fetchOrders(1);
     }, []);
 
+    // Load Shiprocket orders when tab is switched
     useEffect(() => {
         if (activeTab === "shiprocket") {
             fetchShiprocketOrders();
         }
     }, [activeTab]);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+        fetchOrders(1);
+    }, [filterValue, paymentTypeFilter, statusFilter, sortBy, sortOrder]);
+
+    // Load orders when page changes
+    useEffect(() => {
+        if (currentPage > 1) {
+            fetchOrders(currentPage);
+        }
+    }, [currentPage]);
 
     const debouncedSearch = useCallback(debounce((searchTerm) => setFilterValue(searchTerm), 300), []);
     const handleSearchChange = (e) => debouncedSearch(e.target.value);
@@ -338,7 +394,6 @@ const Orders = () => {
         }
     });
 
-    const totalPages = Math.ceil(sortedData.length / itemsPerPage);
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentItems = sortedData.slice(indexOfFirstItem, indexOfLastItem);
@@ -511,11 +566,36 @@ const Orders = () => {
                     </button>
                 </div>
 
-                <div style={{ marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <div style={{ marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '14px', color: '#888' }}>
-                        This will sync all unsynced orders to Shiprocket.
+                        Sync orders with Shiprocket for better tracking and management.
                     </span>
+                    <Button
+                        onClick={syncOrdersWithShiprocket}
+                        disabled={isSyncing}
+                        style={{ 
+                            backgroundColor: '#10b981', 
+                            color: 'white',
+                            padding: '8px 16px',
+                            fontSize: '14px'
+                        }}
+                    >
+                        {isSyncing ? 'Syncing...' : 'Sync with Shiprocket'}
+                    </Button>
                 </div>
+
+                {notification && (
+                    <div style={{
+                        marginBottom: '16px',
+                        padding: '12px',
+                        borderRadius: '6px',
+                        backgroundColor: notification.type === 'success' ? '#d1fae5' : '#fee2e2',
+                        color: notification.type === 'success' ? '#065f46' : '#dc2626',
+                        border: `1px solid ${notification.type === 'success' ? '#a7f3d0' : '#fecaca'}`
+                    }}>
+                        {notification.message}
+                    </div>
+                )}
 
                 <div className="seo-table-container">
                     {activeTab === 'local' ? (
@@ -604,11 +684,11 @@ const Orders = () => {
                                         striped={true} 
                                         hoverable={true} 
                                     />
-                                    {sortedData.length > itemsPerPage && (
+                                    {totalPages > 1 && (
                                         <div className="seo-pagination-container">
                                             <Pagination 
                                                 currentPage={currentPage} 
-                                                totalItems={sortedData.length} 
+                                                totalItems={totalOrders} 
                                                 itemsPerPage={itemsPerPage} 
                                                 onPageChange={setCurrentPage} 
                                             />

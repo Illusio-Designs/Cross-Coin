@@ -7,13 +7,15 @@ const {
     createOrder,
     createGuestOrder,
     getGuestOrder,
+    trackOrderByAWB,
     cancelOrder,
     getOrderStats,
     getShiprocketTrackingForOrder,
     getShiprocketLabelForOrder,
     getAllShiprocketOrders,
     syncOrdersWithShiprocket,
-    testShiprocketCredentials
+    testShiprocketCredentials,
+    handleShiprocketWebhook
 } = require('../controller/orderController.js');
 const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
 
@@ -40,6 +42,12 @@ router.get('/shiprocket/test-credentials', isAuthenticated, authorize(['admin'])
 // Guest checkout route (no authentication required)
 router.post('/guest', createGuestOrder);
 router.get('/guest/track', getGuestOrder);
+
+// Public order tracking by AWB (no authentication required)
+router.get('/track/awb', trackOrderByAWB);
+
+// Shiprocket webhook (no authentication required)
+router.post('/shiprocket/webhook', handleShiprocketWebhook);
 
 // Protected routes (parameter routes last)
 router.post('/', isAuthenticated, createOrder);

@@ -568,3 +568,16 @@ export const getGuestOrder = async (email, orderNumber) => {
         throw error.response?.data || error.message;
     }
 };
+
+// Track Order by AWB Number (works for both registered and guest orders)
+export const trackOrderByAWB = async (awbNumber) => {
+    try {
+        console.log('AWB TRACKING API CALL: Tracking order by AWB:', awbNumber);
+        const response = await axios.get(`${API_URL}/api/orders/track/awb?awb_number=${encodeURIComponent(awbNumber)}`);
+        console.log('AWB TRACKING API RESPONSE:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('AWB TRACKING API ERROR:', error);
+        throw error.response?.data || error.message;
+    }
+};

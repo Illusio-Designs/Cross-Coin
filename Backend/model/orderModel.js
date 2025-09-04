@@ -82,6 +82,18 @@ const Order = sequelize.define('Order', {
     shiprocket_shipment_id: {
         type: DataTypes.STRING,
         allowNull: true
+    },
+    tracking_number: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    courier_name: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    tracking_url: {
+        type: DataTypes.TEXT,
+        allowNull: true
     }
 }, {
     tableName: 'orders',

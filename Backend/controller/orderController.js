@@ -602,6 +602,84 @@ module.exports.createGuestOrder = async (req, res) => {
             console.error('createGuestOrder: Facebook event error (non-critical):', fbError);
         }
 
+        // Create Shiprocket order automatically for guest orders
+        setImmediate(async () => {
+            try {
+                console.log('createGuestOrder: Creating Shiprocket order for guest order:', order.order_number);
+                
+                // Prepare Shiprocket payload for guest order
+                const shiprocketPayload = {
+                    order_id: order.order_number,
+                    order_date: order.created_at.toISOString().split('T')[0],
+                    pickup_location: "Default", // You can make this configurable
+                    billing_customer_name: `${guestUser.firstName} ${guestUser.lastName}`,
+                    billing_address: guestShippingAddress.address,
+                    billing_city: guestShippingAddress.city,
+                    billing_pincode: guestShippingAddress.pincode,
+                    billing_state: guestShippingAddress.state,
+                    billing_country: "India",
+                    billing_email: guestUser.email,
+                    billing_phone: guestShippingAddress.phone || guestUser.phone || "0000000000",
+                    shipping_customer_name: `${guestUser.firstName} ${guestUser.lastName}`,
+                    shipping_address: guestShippingAddress.address,
+                    shipping_city: guestShippingAddress.city,
+                    shipping_pincode: guestShippingAddress.pincode,
+                    shipping_state: guestShippingAddress.state,
+                    shipping_country: "India",
+                    shipping_email: guestUser.email,
+                    shipping_phone: guestShippingAddress.phone || guestUser.phone || "0000000000",
+                    order_items: validatedItems.map(item => ({
+                        name: item.product.name,
+                        sku: item.product.sku || `PROD-${item.product.id}`,
+                        units: item.quantity,
+                        selling_price: item.price,
+                        discount: 0,
+                        tax: 0,
+                        hsn: item.product.hsn_code || "9999"
+                    })),
+                    payment_method: payment_type === 'cod' ? 'COD' : 'Prepaid',
+                    sub_total: totalAmount,
+                    length: 10,
+                    breadth: 10,
+                    height: 5,
+                    weight: Math.max(0.1, validatedItems.reduce((sum, item) => sum + (item.quantity * 0.1), 0)) // Default 0.1kg per item
+                };
+
+                console.log('createGuestOrder: Shiprocket payload prepared:', shiprocketPayload);
+
+                const shiprocketResponse = await createShiprocketOrder(shiprocketPayload);
+                
+                // Update order with Shiprocket IDs
+                await order.update({
+                    shiprocket_order_id: shiprocketResponse.order_id || null,
+                    shiprocket_shipment_id: (shiprocketResponse.shipments && shiprocketResponse.shipments[0]?.shipment_id) || null
+                });
+
+                console.log('createGuestOrder: ✅ Shiprocket Order Created for guest:', {
+                    order_number: order.order_number,
+                    shiprocket_order_id: shiprocketResponse.order_id,
+                    shipment_id: shiprocketResponse.shipments?.[0]?.shipment_id
+                });
+
+                // Request pickup if shipment ID exists
+                if (shiprocketResponse.shipments && shiprocketResponse.shipments[0]?.shipment_id) {
+                    try {
+                        const pickupResponse = await requestShiprocketPickup([shiprocketResponse.shipments[0].shipment_id]);
+                        console.log('createGuestOrder: ✅ Shiprocket Pickup Requested:', pickupResponse);
+                    } catch (pickupError) {
+                        console.error('createGuestOrder: ❌ Failed to request Shiprocket pickup:', pickupError.message);
+                    }
+                }
+
+            } catch (shiprocketError) {
+                console.error('createGuestOrder: ❌ Failed to create Shiprocket order for guest:', {
+                    order_number: order.order_number,
+                    error: shiprocketError.message,
+                    response: shiprocketError.response?.data
+                });
+            }
+        });
+
         // Return success response
         res.status(201).json({
             success: true,
@@ -794,6 +872,225 @@ module.exports.getGuestOrder = async (req, res) => {
     }
 };
 
+// Track order by AWB number (works for both registered and guest orders)
+module.exports.trackOrderByAWB = async (req, res) => {
+    try {
+        const { awb_number } = req.query;
+        
+        if (!awb_number) {
+            return res.status(400).json({
+                success: false,
+                message: 'AWB number is required'
+            });
+        }
+
+        // Find order by tracking number (AWB)
+        const order = await Order.findOne({
+            where: { tracking_number: awb_number },
+            include: [
+                {
+                    model: User,
+                    as: 'User',
+                    attributes: ['id', 'email', 'firstName', 'lastName']
+                },
+                {
+                    model: GuestUser,
+                    as: 'GuestUser',
+                    attributes: ['id', 'email', 'firstName', 'lastName']
+                },
+                {
+                    model: ShippingAddress,
+                    as: 'ShippingAddress',
+                    attributes: ['id', 'full_name', 'address', 'city', 'state', 'pincode', 'phone']
+                },
+                {
+                    model: OrderItem,
+                    as: 'OrderItems',
+                    include: [
+                        {
+                            model: Product,
+                            as: 'Product',
+                            attributes: ['id', 'name', 'slug'],
+                            include: [
+                                {
+                                    model: ProductImage,
+                                    as: 'ProductImages',
+                                    attributes: ['image_url'],
+                                    limit: 1
+                                }
+                            ]
+                        },
+                        {
+                            model: ProductVariation,
+                            as: 'ProductVariation',
+                            attributes: ['id', 'name', 'price']
+                        }
+                    ]
+                },
+                {
+                    model: OrderStatusHistory,
+                    as: 'OrderStatusHistories',
+                    order: [['created_at', 'DESC']]
+                }
+            ]
+        });
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found with this AWB number'
+            });
+        }
+
+        // Determine if it's a guest order or registered user order
+        const isGuestOrder = !!order.guest_user_id;
+        const customerInfo = isGuestOrder ? order.GuestUser : order.User;
+
+        res.json({
+            success: true,
+            data: {
+                order: {
+                    id: order.id,
+                    order_number: order.order_number,
+                    total_amount: order.total_amount,
+                    shipping_fee: order.shipping_fee,
+                    discount_amount: order.discount_amount,
+                    final_amount: order.final_amount,
+                    payment_type: order.payment_type,
+                    status: order.status,
+                    payment_status: order.payment_status,
+                    tracking_number: order.tracking_number,
+                    courier_name: order.courier_name,
+                    tracking_url: order.tracking_url,
+                    created_at: order.created_at,
+                    updated_at: order.updated_at
+                },
+                customer: {
+                    type: isGuestOrder ? 'guest' : 'registered',
+                    info: customerInfo
+                },
+                shipping_address: order.ShippingAddress,
+                items: order.OrderItems.map(item => ({
+                    id: item.id,
+                    product: {
+                        id: item.Product.id,
+                        name: item.Product.name,
+                        slug: item.Product.slug,
+                        image: item.Product.ProductImages?.[0]?.image_url || null
+                    },
+                    variation: item.ProductVariation ? {
+                        id: item.ProductVariation.id,
+                        name: item.ProductVariation.name,
+                        price: item.ProductVariation.price
+                    } : null,
+                    quantity: item.quantity,
+                    price: item.price,
+                    total_price: item.total_price
+                })),
+                status_history: order.OrderStatusHistories.map(history => ({
+                    id: history.id,
+                    status: history.status,
+                    notes: history.notes,
+                    created_at: history.created_at,
+                    created_by: history.created_by
+                }))
+            }
+        });
+
+    } catch (error) {
+        console.error('Error tracking order by AWB:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to track order',
+            error: error.message
+        });
+    }
+};
+
+// Handle Shiprocket webhook for order updates
+module.exports.handleShiprocketWebhook = async (req, res) => {
+    try {
+        const webhookData = req.body;
+        console.log('Shiprocket Webhook received:', webhookData);
+
+        const { order_id, shipment_id, status, awb_code, courier_name, tracking_url } = webhookData;
+
+        if (!order_id) {
+            return res.status(400).json({ message: 'Order ID is required' });
+        }
+
+        // Find order by Shiprocket order ID (which matches our order_number)
+        const order = await Order.findOne({
+            where: { shiprocket_order_id: order_id },
+            include: [
+                { model: User, as: 'User', attributes: ['id', 'email'] },
+                { model: GuestUser, as: 'GuestUser', attributes: ['id', 'email', 'firstName', 'lastName'] }
+            ]
+        });
+
+        if (!order) {
+            console.log('Order not found for Shiprocket order ID:', order_id);
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // Update order with Shiprocket tracking information
+        const updateData = {};
+        if (shipment_id) updateData.shiprocket_shipment_id = shipment_id;
+        if (awb_code) updateData.tracking_number = awb_code;
+        if (courier_name) updateData.courier_name = courier_name;
+        if (tracking_url) updateData.tracking_url = tracking_url;
+
+        // Map Shiprocket status to our order status
+        let orderStatus = order.status;
+        if (status) {
+            switch (status.toLowerCase()) {
+                case 'shipped':
+                case 'in_transit':
+                    orderStatus = 'shipped';
+                    break;
+                case 'delivered':
+                    orderStatus = 'delivered';
+                    break;
+                case 'cancelled':
+                case 'rto':
+                    orderStatus = 'cancelled';
+                    break;
+                case 'returned':
+                    orderStatus = 'returned';
+                    break;
+                default:
+                    orderStatus = 'processing';
+            }
+            updateData.status = orderStatus;
+        }
+
+        if (Object.keys(updateData).length > 0) {
+            await order.update(updateData);
+
+            // Add status history entry
+            await OrderStatusHistory.create({
+                order_id: order.id,
+                status: orderStatus,
+                notes: `Shiprocket webhook: ${status}${awb_code ? ` - AWB: ${awb_code}` : ''}${courier_name ? ` - Courier: ${courier_name}` : ''}`,
+                created_by: 'shiprocket_webhook'
+            });
+
+            console.log('Order updated via Shiprocket webhook:', {
+                order_number: order.order_number,
+                status: orderStatus,
+                tracking_number: awb_code,
+                courier: courier_name
+            });
+        }
+
+        res.json({ message: 'Webhook processed successfully' });
+
+    } catch (error) {
+        console.error('Error processing Shiprocket webhook:', error);
+        res.status(500).json({ message: 'Failed to process webhook', error: error.message });
+    }
+};
+
 // Get all orders (admin)
 module.exports.getAllOrders = async (req, res) => {
     try {
@@ -819,15 +1116,33 @@ module.exports.getAllOrders = async (req, res) => {
         // Pagination
         const offset = (page - 1) * limit;
         
+        // Add sorting support
+        const sortField = req.query.sort || 'createdAt';
+        const sortOrder = req.query.order || 'DESC';
+        const orderClause = [[sortField, sortOrder]];
+
         const orders = await Order.findAndCountAll({
             where: filter,
             include: [
-                { model: User, attributes: ['id', 'username', 'email'] },
+                { 
+                    model: User, 
+                    as: 'User',
+                    attributes: ['id', 'username', 'email'],
+                    required: false
+                },
+                { 
+                    model: GuestUser, 
+                    as: 'GuestUser',
+                    attributes: ['id', 'email', 'firstName', 'lastName'],
+                    required: false
+                },
                 { 
                     model: OrderItem, 
+                    as: 'OrderItems',
                     include: [
                         {
                             model: Product,
+                            as: 'Product',
                             include: [
                                 { model: ProductImage, as: 'ProductImages' }
                             ]
@@ -835,7 +1150,7 @@ module.exports.getAllOrders = async (req, res) => {
                     ] 
                 }
             ],
-            order: [['createdAt', 'DESC']],
+            order: orderClause,
             limit: parseInt(limit),
             offset: parseInt(offset)
         });
@@ -844,6 +1159,8 @@ module.exports.getAllOrders = async (req, res) => {
 
         res.json({
             orders: orders.rows,
+            total: orders.count,
+            totalPages: totalPages,
             pagination: {
                 total: orders.count,
                 page: parseInt(page),

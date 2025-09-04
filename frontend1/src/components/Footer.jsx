@@ -41,7 +41,7 @@ const Footer = () => {
             <h2>Follow us on social media:</h2>
             <div className="footer__social-icons">
             <a href="#" className="facebook" aria-label="Facebook"><FaFacebookF /></a>
-            <a href="#" className="instagram" aria-label="Instagram"><FaInstagram /></a>
+            <a href="https://www.instagram.com/crosscoin99/?igsh=d2FiY29iemhtb2Nl#" className="instagram" aria-label="Instagram"><FaInstagram /></a>
             </div>
           </div>
         </div>
