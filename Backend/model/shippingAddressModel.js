@@ -9,11 +9,27 @@ const ShippingAddress = sequelize.define('ShippingAddress', {
     },
     user_id: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true, // Allow null for guest users
         references: {
             model: 'users',
             key: 'id'
-        }
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    },
+    guest_user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true, // Allow null for registered users
+        references: {
+            model: 'guest_users',
+            key: 'id'
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    },
+    full_name: {
+        type: DataTypes.STRING(255),
+        allowNull: false
     },
     address: {
         type: DataTypes.TEXT,
@@ -27,17 +43,18 @@ const ShippingAddress = sequelize.define('ShippingAddress', {
         type: DataTypes.STRING(100),
         allowNull: false
     },
-    postal_code: {
+    pincode: {
+        type: DataTypes.STRING(20),
+        allowNull: false
+    },
+    phone: {
         type: DataTypes.STRING(20),
         allowNull: false
     },
     country: {
         type: DataTypes.STRING(100),
-        allowNull: false
-    },
-    phone_number: {
-        type: DataTypes.STRING(20),
-        allowNull: false
+        allowNull: true,
+        defaultValue: 'India'
     },
     is_default: {
         type: DataTypes.BOOLEAN,
@@ -51,6 +68,9 @@ const ShippingAddress = sequelize.define('ShippingAddress', {
     indexes: [
         {
             fields: ['user_id']
+        },
+        {
+            fields: ['guest_user_id']
         }
     ]
 });

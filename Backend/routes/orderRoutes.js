@@ -5,6 +5,8 @@ const {
     getOrder,
     updateOrderStatus,
     createOrder,
+    createGuestOrder,
+    getGuestOrder,
     cancelOrder,
     getOrderStats,
     getShiprocketTrackingForOrder,
@@ -34,6 +36,10 @@ router.get('/stats/overview', isAuthenticated, authorize(['admin']), getOrderSta
 router.get('/shiprocket/all', isAuthenticated, authorize(['admin']), getAllShiprocketOrders);
 router.post('/shiprocket/sync', isAuthenticated, authorize(['admin']), syncOrdersWithShiprocket);
 router.get('/shiprocket/test-credentials', isAuthenticated, authorize(['admin']), testShiprocketCredentials);
+
+// Guest checkout route (no authentication required)
+router.post('/guest', createGuestOrder);
+router.get('/guest/track', getGuestOrder);
 
 // Protected routes (parameter routes last)
 router.post('/', isAuthenticated, createOrder);

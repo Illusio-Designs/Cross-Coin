@@ -542,3 +542,29 @@ export const getPublicPolicyByName = async (name) => {
         throw error.response?.data || error.message;
     }
 };
+
+// Guest Checkout API
+export const createGuestOrder = async (orderData) => {
+    try {
+        console.log('GUEST CHECKOUT API CALL: Creating guest order:', orderData);
+        const response = await axios.post(`${API_URL}/api/orders/guest`, orderData);
+        console.log('GUEST CHECKOUT API RESPONSE:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('GUEST CHECKOUT API ERROR:', error);
+        throw error.response?.data || error.message;
+    }
+};
+
+// Guest Order Tracking API
+export const getGuestOrder = async (email, orderNumber) => {
+    try {
+        console.log('GUEST ORDER TRACKING API CALL: Tracking order:', { email, orderNumber });
+        const response = await axios.get(`${API_URL}/api/orders/guest/track?email=${encodeURIComponent(email)}&orderNumber=${encodeURIComponent(orderNumber)}`);
+        console.log('GUEST ORDER TRACKING API RESPONSE:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('GUEST ORDER TRACKING API ERROR:', error);
+        throw error.response?.data || error.message;
+    }
+};

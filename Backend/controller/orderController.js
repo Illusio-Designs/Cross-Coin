@@ -7,6 +7,7 @@ const { ShippingAddress } = require('../model/shippingAddressModel.js');
 const { ShippingFee } = require('../model/shippingFeeModel.js');
 const { Payment } = require('../model/paymentModel.js');
 const { User } = require('../model/userModel.js');
+const { GuestUser } = require('../model/guestUserModel.js');
 const { ProductImage } = require('../model/productImageModel.js');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/db.js');
@@ -330,6 +331,466 @@ module.exports.createOrder = async (req, res) => {
         await transaction.rollback();
         console.error('Error creating order:', error);
         res.status(500).json({ message: 'Failed to create order', error: error.message });
+    }
+};
+
+// Create guest checkout order
+module.exports.createGuestOrder = async (req, res) => {
+    console.log('createGuestOrder: Starting guest order creation...');
+    const transaction = await sequelize.transaction();
+    
+    try {
+        const { 
+            guest_info, 
+            shipping_address, 
+            items, 
+            payment_type, 
+            notes, 
+            coupon_id, 
+            discount_amount,
+            session_id,
+            ip_address,
+            user_agent
+        } = req.body;
+
+        console.log('createGuestOrder: Request data:', { 
+            guest_info, 
+            shipping_address, 
+            items, 
+            payment_type, 
+            notes, 
+            coupon_id, 
+            discount_amount 
+        });
+
+        // Validate required fields
+        if (!guest_info || !shipping_address || !items || !payment_type) {
+            await transaction.rollback();
+            return res.status(400).json({ 
+                success: false,
+                message: 'Guest info, shipping address, items, and payment type are required' 
+            });
+        }
+
+        // Validate guest info
+        const { email, firstName, lastName, phone } = guest_info;
+        if (!email || !firstName || !lastName) {
+            await transaction.rollback();
+            return res.status(400).json({ 
+                success: false,
+                message: 'Email, first name, and last name are required' 
+            });
+        }
+
+        // Validate shipping address
+        const { 
+            fullName, 
+            address, 
+            city, 
+            state, 
+            pincode, 
+            phone: shippingPhone 
+        } = shipping_address;
+        
+        if (!fullName || !address || !city || !state || !pincode) {
+            await transaction.rollback();
+            return res.status(400).json({ 
+                success: false,
+                message: 'Complete shipping address is required' 
+            });
+        }
+
+        console.log('createGuestOrder: Creating guest user...');
+        // Create or find guest user
+        let guestUser = await GuestUser.findOne({
+            where: { email: email.toLowerCase() },
+            transaction
+        });
+
+        if (!guestUser) {
+            guestUser = await GuestUser.create({
+                email: email.toLowerCase(),
+                firstName,
+                lastName,
+                phone,
+                sessionId: session_id,
+                ipAddress: ip_address,
+                userAgent: user_agent,
+                status: 'active'
+            }, { transaction });
+        } else {
+            // Update existing guest user info
+            await guestUser.update({
+                firstName,
+                lastName,
+                phone,
+                sessionId: session_id,
+                ipAddress: ip_address,
+                userAgent: user_agent
+            }, { transaction });
+        }
+
+        console.log('createGuestOrder: Guest user created/found:', guestUser.id);
+
+        // Calculate total amount and validate items
+        let totalAmount = 0;
+        const validatedItems = [];
+
+        console.log('createGuestOrder: Starting item validation for', items.length, 'items');
+        for (const item of items) {
+            const { product_id, quantity } = item;
+            let { variation_id } = item;
+
+            if (!product_id || !quantity) {
+                await transaction.rollback();
+                return res.status(400).json({ 
+                    success: false,
+                    message: 'Product ID and quantity are required for each item' 
+                });
+            }
+
+            const product = await Product.findByPk(product_id, {
+                include: [
+                    { model: ProductVariation, as: 'ProductVariations' },
+                    { model: ProductImage, as: 'ProductImages' }
+                ],
+                transaction
+            });
+
+            if (!product) {
+                await transaction.rollback();
+                return res.status(404).json({ 
+                    success: false,
+                    message: `Product with ID ${product_id} not found` 
+                });
+            }
+
+            // If no variation_id provided, use the first available variation
+            if (!variation_id && product.ProductVariations && product.ProductVariations.length > 0) {
+                variation_id = product.ProductVariations[0].id;
+            }
+
+            let variation = null;
+            if (variation_id) {
+                variation = await ProductVariation.findByPk(variation_id, { transaction });
+                if (!variation || variation.productId !== product_id) {
+                    await transaction.rollback();
+                    return res.status(404).json({ 
+                        success: false,
+                        message: `Product variation with ID ${variation_id} not found for product ${product_id}` 
+                    });
+                }
+            }
+
+            const price = variation ? variation.price : product.price;
+            const itemTotal = price * quantity;
+            totalAmount += itemTotal;
+
+            validatedItems.push({
+                product,
+                variation,
+                quantity,
+                price,
+                itemTotal
+            });
+        }
+
+        console.log('createGuestOrder: Items validated. Total amount:', totalAmount);
+
+        // Calculate shipping fee
+        const shippingFee = await calculateShippingFee(payment_type);
+        console.log('createGuestOrder: Shipping fee calculated:', shippingFee);
+
+        // Apply discount if provided
+        let finalDiscountAmount = 0;
+        if (discount_amount && discount_amount > 0) {
+            finalDiscountAmount = Math.min(discount_amount, totalAmount);
+        }
+
+        const finalAmount = totalAmount + shippingFee - finalDiscountAmount;
+        console.log('createGuestOrder: Final amount calculated:', finalAmount);
+
+        // Generate order number
+        const orderNumber = generateOrderNumber();
+        console.log('createGuestOrder: Order number generated:', orderNumber);
+
+        // Create order
+        const order = await Order.create({
+            guest_user_id: guestUser.id,
+            order_number: orderNumber,
+            total_amount: totalAmount,
+            discount_amount: finalDiscountAmount,
+            shipping_fee: shippingFee,
+            final_amount: finalAmount,
+            payment_type: payment_type,
+            coupon_id: coupon_id || null,
+            status: 'pending',
+            payment_status: payment_type === 'cod' ? 'pending' : 'pending',
+            notes: notes || null
+        }, { transaction });
+
+        console.log('createGuestOrder: Order created with ID:', order.id);
+
+        // Create order items
+        for (const item of validatedItems) {
+            await OrderItem.create({
+                order_id: order.id,
+                product_id: item.product.id,
+                variation_id: item.variation ? item.variation.id : null,
+                quantity: item.quantity,
+                price: item.price,
+                total_price: item.itemTotal
+            }, { transaction });
+        }
+
+        console.log('createGuestOrder: Order items created');
+
+        // Create shipping address for guest
+        const guestShippingAddress = await ShippingAddress.create({
+            guest_user_id: guestUser.id,
+            full_name: fullName,
+            address: address,
+            city: city,
+            state: state,
+            pincode: pincode,
+            phone: shippingPhone,
+            is_default: true
+        }, { transaction });
+
+        // Update order with shipping address
+        await order.update({
+            shipping_address_id: guestShippingAddress.id
+        }, { transaction });
+
+        console.log('createGuestOrder: Shipping address created and linked to order');
+
+        // Create initial order status history
+        await OrderStatusHistory.create({
+            order_id: order.id,
+            status: 'pending',
+            notes: 'Order created via guest checkout',
+            created_by: 'system'
+        }, { transaction });
+
+        console.log('createGuestOrder: Order status history created');
+
+        // Create payment record
+        await Payment.create({
+            order_id: order.id,
+            amount: finalAmount,
+            payment_method: payment_type,
+            status: payment_type === 'cod' ? 'pending' : 'pending',
+            transaction_id: null
+        }, { transaction });
+
+        console.log('createGuestOrder: Payment record created');
+
+        // Commit transaction
+        await transaction.commit();
+        console.log('createGuestOrder: Transaction committed successfully');
+
+        // Send Facebook event for guest checkout
+        try {
+            await sendFacebookEvent('InitiateCheckout', {
+                value: finalAmount,
+                currency: 'INR',
+                content_ids: validatedItems.map(item => item.product.id.toString()),
+                content_type: 'product',
+                num_items: validatedItems.reduce((sum, item) => sum + item.quantity, 0)
+            });
+        } catch (fbError) {
+            console.error('createGuestOrder: Facebook event error (non-critical):', fbError);
+        }
+
+        // Return success response
+        res.status(201).json({
+            success: true,
+            message: 'Guest order created successfully',
+            data: {
+                order: {
+                    id: order.id,
+                    order_number: order.order_number,
+                    total_amount: order.total_amount,
+                    shipping_fee: order.shipping_fee,
+                    discount_amount: order.discount_amount,
+                    final_amount: order.final_amount,
+                    payment_type: order.payment_type,
+                    status: order.status,
+                    payment_status: order.payment_status,
+                    created_at: order.created_at
+                },
+                guest_user: {
+                    id: guestUser.id,
+                    email: guestUser.email,
+                    firstName: guestUser.firstName,
+                    lastName: guestUser.lastName,
+                    phone: guestUser.phone
+                },
+                shipping_address: {
+                    id: guestShippingAddress.id,
+                    full_name: guestShippingAddress.full_name,
+                    address: guestShippingAddress.address,
+                    city: guestShippingAddress.city,
+                    state: guestShippingAddress.state,
+                    pincode: guestShippingAddress.pincode,
+                    phone: guestShippingAddress.phone
+                },
+                items: validatedItems.map(item => ({
+                    product_id: item.product.id,
+                    product_name: item.product.name,
+                    variation_id: item.variation ? item.variation.id : null,
+                    quantity: item.quantity,
+                    price: item.price,
+                    total_price: item.itemTotal
+                }))
+            }
+        });
+
+    } catch (error) {
+        console.error('createGuestOrder: Error caught:', error.message);
+        console.error('createGuestOrder: Error stack:', error.stack);
+        await transaction.rollback();
+        console.error('Error creating guest order:', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Failed to create guest order', 
+            error: error.message 
+        });
+    }
+};
+
+// Get guest order by email and order number
+module.exports.getGuestOrder = async (req, res) => {
+    try {
+        const { email, orderNumber } = req.query;
+        
+        if (!email || !orderNumber) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email and order number are required'
+            });
+        }
+
+        // Find guest user by email
+        const guestUser = await GuestUser.findOne({
+            where: { email: email.toLowerCase() }
+        });
+
+        if (!guestUser) {
+            return res.status(404).json({
+                success: false,
+                message: 'Guest order not found'
+            });
+        }
+
+        // Find order by order number and guest user
+        const order = await Order.findOne({
+            where: {
+                order_number: orderNumber,
+                guest_user_id: guestUser.id
+            },
+            include: [
+                {
+                    model: GuestUser,
+                    as: 'GuestUser',
+                    attributes: ['id', 'email', 'firstName', 'lastName', 'phone']
+                },
+                {
+                    model: ShippingAddress,
+                    as: 'ShippingAddress',
+                    attributes: ['id', 'full_name', 'address', 'city', 'state', 'pincode', 'phone']
+                },
+                {
+                    model: OrderItem,
+                    as: 'OrderItems',
+                    include: [
+                        {
+                            model: Product,
+                            as: 'Product',
+                            attributes: ['id', 'name', 'slug'],
+                            include: [
+                                {
+                                    model: ProductImage,
+                                    as: 'ProductImages',
+                                    attributes: ['image_url'],
+                                    limit: 1
+                                }
+                            ]
+                        },
+                        {
+                            model: ProductVariation,
+                            as: 'ProductVariation',
+                            attributes: ['id', 'name', 'price']
+                        }
+                    ]
+                },
+                {
+                    model: OrderStatusHistory,
+                    as: 'OrderStatusHistories',
+                    order: [['created_at', 'DESC']]
+                }
+            ]
+        });
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Guest order not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: {
+                order: {
+                    id: order.id,
+                    order_number: order.order_number,
+                    total_amount: order.total_amount,
+                    shipping_fee: order.shipping_fee,
+                    discount_amount: order.discount_amount,
+                    final_amount: order.final_amount,
+                    payment_type: order.payment_type,
+                    status: order.status,
+                    payment_status: order.payment_status,
+                    created_at: order.created_at,
+                    updated_at: order.updated_at
+                },
+                guest_user: order.GuestUser,
+                shipping_address: order.ShippingAddress,
+                items: order.OrderItems.map(item => ({
+                    id: item.id,
+                    product: {
+                        id: item.Product.id,
+                        name: item.Product.name,
+                        slug: item.Product.slug,
+                        image: item.Product.ProductImages?.[0]?.image_url || null
+                    },
+                    variation: item.ProductVariation ? {
+                        id: item.ProductVariation.id,
+                        name: item.ProductVariation.name,
+                        price: item.ProductVariation.price
+                    } : null,
+                    quantity: item.quantity,
+                    price: item.price,
+                    total_price: item.total_price
+                })),
+                status_history: order.OrderStatusHistories.map(history => ({
+                    id: history.id,
+                    status: history.status,
+                    notes: history.notes,
+                    created_at: history.created_at,
+                    created_by: history.created_by
+                }))
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching guest order:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch guest order',
+            error: error.message
+        });
     }
 };
 

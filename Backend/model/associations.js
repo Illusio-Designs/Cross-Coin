@@ -225,12 +225,22 @@ Wishlist.belongsTo(Product, { foreignKey: 'productId' });
 Product.hasMany(Wishlist, { foreignKey: 'productId' });
 
 // GuestUser Associations
-GuestUser.hasMany(Order, { 
+GuestUser.hasMany(Order, {
     foreignKey: 'guest_user_id',
     onDelete: 'CASCADE',
     as: 'GuestOrders'
 });
-Order.belongsTo(GuestUser, { 
+Order.belongsTo(GuestUser, {
+    foreignKey: 'guest_user_id',
+    as: 'GuestUser'
+});
+
+GuestUser.hasMany(ShippingAddress, {
+    foreignKey: 'guest_user_id',
+    onDelete: 'CASCADE',
+    as: 'GuestShippingAddresses'
+});
+ShippingAddress.belongsTo(GuestUser, {
     foreignKey: 'guest_user_id',
     as: 'GuestUser'
 });
