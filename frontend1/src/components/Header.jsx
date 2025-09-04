@@ -152,6 +152,11 @@ const Header = () => {
                 Contact Us
               </Link>
             </li>
+            <li>
+              <Link href="/OrderTracking" className={activePage === '/OrderTracking' ? 'active' : ''}>
+                Track Order
+              </Link>
+            </li>
           </ul>
         </nav>
         <div className="header__actions"> 
@@ -215,6 +220,11 @@ const Header = () => {
             <li>
               <Link href="/Contact" className={activePage === '/Contact' ? 'active' : ''} onClick={() => setIsMobileMenuOpen(false)}>
                 Contact Us
+              </Link>
+            </li>
+            <li>
+              <Link href="/OrderTracking" className={activePage === '/OrderTracking' ? 'active' : ''} onClick={() => setIsMobileMenuOpen(false)}>
+                Track Order
               </Link>
             </li>
           </ul>

@@ -81,4 +81,4 @@ const GuestUser = sequelize.define('GuestUser', {
     ]
 });
 
-module.exports = GuestUser;
+module.exports = { GuestUser };
