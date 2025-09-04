@@ -22,6 +22,7 @@ const { Review } = require('./reviewModel.js');
 const { ReviewImage } = require('./reviewImageModel.js');
 const { SeoMetadata } = require('./seoMetadataModel.js');
 const { CouponUsage } = require('./couponUsageModel.js');
+const { GuestUser } = require('./guestUserModel.js');
 
 // Export all models
 module.exports = {
@@ -47,7 +48,8 @@ module.exports = {
     Review,
     ReviewImage,
     SeoMetadata,
-    CouponUsage
+    CouponUsage,
+    GuestUser
 };
 
 // User Associations
@@ -221,6 +223,17 @@ CouponUsage.belongsTo(User, { foreignKey: 'userId' });
 // Wishlist <-> Product association
 Wishlist.belongsTo(Product, { foreignKey: 'productId' });
 Product.hasMany(Wishlist, { foreignKey: 'productId' });
+
+// GuestUser Associations
+GuestUser.hasMany(Order, { 
+    foreignKey: 'guest_user_id',
+    onDelete: 'CASCADE',
+    as: 'GuestOrders'
+});
+Order.belongsTo(GuestUser, { 
+    foreignKey: 'guest_user_id',
+    as: 'GuestUser'
+});
 
 // OrderItem -> Product / ProductVariation
 OrderItem.belongsTo(Product, { foreignKey: 'product_id' });

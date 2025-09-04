@@ -9,9 +9,19 @@ const Order = sequelize.define('Order', {
     },
     user_id: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true, // Allow null for guest users
         references: {
             model: 'users',
+            key: 'id'
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    },
+    guest_user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true, // Allow null for registered users
+        references: {
+            model: 'guest_users',
             key: 'id'
         },
         onDelete: 'CASCADE',
