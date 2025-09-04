@@ -3,6 +3,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
+const compression = require('compression');
 const { sequelize } = require('./config/db.js');
 const routesManager = require('./routes/routesManager.js');
 const passport = require('./config/passport.js');
@@ -45,6 +46,9 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 // Body parsing middleware with increased limits for production
+// Compression middleware
+app.use(compression());
+
 app.use(express.json({ 
     limit: process.env.MAX_FILE_SIZE || '5mb',
     verify: (req, res, buf) => {

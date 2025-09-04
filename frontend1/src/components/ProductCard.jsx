@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { FiHeart, FiShoppingCart } from 'react-icons/fi';
 import { HiOutlineEye } from "react-icons/hi2";
@@ -46,6 +46,27 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
   }
   const productImage = imageData && imageData.image_url ? getProductImageSrc(imageData) : null;
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+  const cardRef = useRef(null);
+
+  // Intersection Observer for lazy loading
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+
+    if (cardRef.current) {
+      observer.observe(cardRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   // Get the first variation for price
   const price = variation?.price || 0;
@@ -75,6 +96,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
       className="product-card"
       onClick={() => onProductClick(product)}
       style={{ cursor: 'pointer' }}
+      ref={cardRef}
     >
       <div className="product-image" style={{ position: 'relative' }}>
         {product?.badge && (
@@ -82,7 +104,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
             {formatBadge(product.badge)}
           </span>
         )}
-        {productImage ? (
+        {productImage && isInView ? (
           <>
             <img
               src={productImage}
@@ -96,6 +118,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
               }}
               onLoad={() => setImageLoaded(true)}
               onError={() => setImageLoaded(true)}
+              loading="lazy"
             />
             {!imageLoaded && (
               <div className="shimmer-placeholder" style={{ width: 300, height: 300 }} />
