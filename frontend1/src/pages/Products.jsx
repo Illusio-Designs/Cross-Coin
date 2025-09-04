@@ -73,15 +73,15 @@ const Products = () => {
     try {
       setLoading(true);
       const params = {
-        // Force a high limit to get all products
-        limit: 1000,
+        page: currentPage,
+        limit: itemsPerPage,
         sort: sortBy,
         category: selectedCategory.length > 0 ? selectedCategory.join(',') : undefined
       };
       const response = await getAllPublicProducts(params);
       if (response?.success) {
         setProducts(response.data?.products || []);
-        setTotalProducts(response.data?.totalProducts || (response.data?.products?.length || 0));
+        setTotalProducts(response.data?.total || response.data?.totalProducts || 0);
         setError(null);
       } else {
         setError(response?.message || 'Failed to fetch products');
@@ -93,7 +93,7 @@ const Products = () => {
     } finally {
       setLoading(false);
     }
-  }, [sortBy, selectedCategory]);
+  }, [sortBy, selectedCategory, currentPage, itemsPerPage]);
 
   // Fetch products by category name from query, only after categories are loaded
   useEffect(() => {

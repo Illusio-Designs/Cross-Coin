@@ -415,8 +415,8 @@ module.exports.getAllProducts = async (req, res) => {
         const whereOptions = {};
         if (search) {
             whereOptions[Op.or] = [
-                { name: { [Op.iLike]: `%${search}%` } },
-                { description: { [Op.iLike]: `%${search}%` } }
+                { name: { [Op.like]: `%${search.toLowerCase()}%` } },
+                { description: { [Op.like]: `%${search.toLowerCase()}%` } }
             ];
         }
 
@@ -898,27 +898,65 @@ module.exports.searchProducts = async (req, res) => {
     try {
         const { query } = req.query;
 
-        const products = await Product.findAll({
-            where: {
-                name: {
-                    [Op.iLike]: `%${query}%`
-                }
-            },
-            include: [
-                { model: ProductVariation },
-                { model: ProductImage },
-                { model: ProductSEO }
-            ]
-        });
-
-        if (!products.length) {
-            return res.status(404).json({ message: 'No products found matching your search' });
+        if (!query || query.trim() === '') {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Search query is required' 
+            });
         }
 
-        res.json(products.map(formatProductResponse));
+        const products = await Product.findAll({
+            where: {
+                [Op.and]: [
+                    { status: 'active' }, // Only search active products
+                    {
+                        [Op.or]: [
+                            { name: { [Op.like]: `%${query.toLowerCase()}%` } },
+                            { description: { [Op.like]: `%${query.toLowerCase()}%` } }
+                        ]
+                    }
+                ]
+            },
+            include: [
+                { model: Category },
+                { model: ProductVariation, as: 'ProductVariations' },
+                { model: ProductImage, as: 'ProductImages' },
+                { model: ProductSEO, as: 'ProductSEO' }
+            ],
+            order: [['createdAt', 'DESC']]
+        });
+
+        // Format products with proper image URLs
+        const formattedProducts = products.map(product => {
+            const formattedProduct = formatProductResponse(product);
+            if (formattedProduct.images) {
+                formattedProduct.images = formattedProduct.images.map(image => ({
+                    ...image,
+                    image_url: image.image_url.startsWith('http')
+                      ? image.image_url
+                      : `${process.env.BACKEND_URL || 'http://localhost:5000'}${image.image_url.startsWith('/uploads/') ? '' : '/uploads/products/'}${image.image_url}`
+                }));
+            }
+            return formattedProduct;
+        });
+
+        res.json({
+            success: true,
+            data: {
+                products: formattedProducts,
+                total: formattedProducts.length
+            },
+            message: formattedProducts.length > 0 
+                ? `Found ${formattedProducts.length} products matching "${query}"`
+                : `No products found matching "${query}"`
+        });
     } catch (error) {
         console.error('Error searching products:', error);
-        res.status(500).json({ message: 'Failed to search products', error: error.message });
+        res.status(500).json({ 
+            success: false,
+            message: 'Failed to search products', 
+            error: error.message 
+        });
     }
 };
 
@@ -1062,8 +1100,8 @@ module.exports.getAllPublicProducts = async (req, res) => {
         }
         if (search) {
             filter[Op.or] = [
-                { name: { [Op.iLike]: `%${search}%` } },
-                { description: { [Op.iLike]: `%${search}%` } }
+                { name: { [Op.like]: `%${search.toLowerCase()}%` } },
+                { description: { [Op.like]: `%${search.toLowerCase()}%` } }
             ];
         }
 
@@ -1118,6 +1156,12 @@ module.exports.getAllPublicProducts = async (req, res) => {
                 }));
             }
             return formattedProduct;
+        });
+
+        // Set caching headers
+        res.set({
+            'Cache-Control': 'public, max-age=300', // 5 minutes cache
+            'ETag': `"products-${page}-${limit}-${Date.now()}"`
         });
 
         res.json({

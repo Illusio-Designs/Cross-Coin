@@ -20,7 +20,11 @@ import { useRef } from "react";
 
 export default function ProductDetails() {
   const searchParams = useSearchParams();
-  const productSlug = searchParams.get('slug');
+  const rawSlug = searchParams.get('slug');
+  
+  // Decode the slug to handle URL-encoded characters like %28 and %29
+  const productSlug = rawSlug ? decodeURIComponent(rawSlug) : null;
+  
   const { addToCart, removeFromCart } = useCart();
   const { addToWishlist, removeFromWishlist } = useWishlist();
   const router = useRouter();
@@ -33,6 +37,15 @@ export default function ProductDetails() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Debug logging for slug processing
+  console.log('=== FRONTEND SLUG DEBUG ===');
+  console.log('Raw slug from URL:', rawSlug);
+  console.log('Decoded slug:', productSlug);
+  console.log('Loading state:', loading);
+  console.log('Error state:', error);
+  console.log('Product state:', product);
+  console.log('==========================');
   const [showAddedToCart, setShowAddedToCart] = useState(false);
   const [reviewForm, setReviewForm] = useState({
     rating: 5,
@@ -448,8 +461,92 @@ export default function ProductDetails() {
 
   // Remove useEffect for tooltip position
 
-  if (error || !product) {
-    return null;
+  // Show loading state
+  if (loading) {
+    return (
+      <SeoWrapper
+        pageName="product-details"
+        seo={null}
+      >
+        <div className="product-details-container">
+          <Header />
+          <div className="product-details">
+            <div style={{ textAlign: 'center', padding: '50px' }}>
+              <Loader />
+              <p>Loading product details...</p>
+            </div>
+          </div>
+        </div>
+      </SeoWrapper>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <SeoWrapper
+        pageName="product-details"
+        seo={null}
+      >
+        <div className="product-details-container">
+          <Header />
+          <div className="product-details">
+            <div style={{ textAlign: 'center', padding: '50px' }}>
+              <h2>Product Not Found</h2>
+              <p>The product you're looking for doesn't exist or has been removed.</p>
+              <button 
+                onClick={() => window.history.back()}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  marginTop: '20px'
+                }}
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+      </SeoWrapper>
+    );
+  }
+
+  // Show error if no product found
+  if (!product) {
+    return (
+      <SeoWrapper
+        pageName="product-details"
+        seo={null}
+      >
+        <div className="product-details-container">
+          <Header />
+          <div className="product-details">
+            <div style={{ textAlign: 'center', padding: '50px' }}>
+              <h2>Product Not Found</h2>
+              <p>No product found with the given slug.</p>
+              <button 
+                onClick={() => window.history.back()}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  marginTop: '20px'
+                }}
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+      </SeoWrapper>
+    );
   }
 
   // Log product description and image URL

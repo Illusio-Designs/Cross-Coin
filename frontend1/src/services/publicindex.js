@@ -74,9 +74,15 @@ export const getPublicSliders = async () => {
 // Get public product by slug
 export const getPublicProductBySlug = async (slug) => {
     try {
+        console.log('API CALL: Fetching product with slug:', slug);
+        console.log('API URL:', `${API_URL}/api/products/public/${slug}`);
         const response = await axios.get(`${API_URL}/api/products/public/${slug}`);
+        console.log('API RESPONSE:', response.data);
         return response.data;
     } catch (error) {
+        console.error('API ERROR:', error);
+        console.error('Error response:', error.response?.data);
+        console.error('Error status:', error.response?.status);
         throw error.response?.data || error.message;
     }
 };
@@ -94,6 +100,26 @@ export const getAllPublicProducts = async (params = {}) => {
         const response = await axios.get(`${API_URL}/api/products/public?${queryParams.toString()}`);
         return response.data;
     } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+// Search products
+export const searchProducts = async (query, params = {}) => {
+    try {
+        console.log('SEARCH API CALL: Searching for:', query);
+        const queryParams = new URLSearchParams();
+        queryParams.append('query', query);
+        if (params.category) queryParams.append('category', params.category);
+        if (params.sort) queryParams.append('sort', params.sort);
+        if (params.page) queryParams.append('page', params.page);
+        if (params.limit) queryParams.append('limit', params.limit);
+
+        const response = await axios.get(`${API_URL}/api/products/search?${queryParams.toString()}`);
+        console.log('SEARCH API RESPONSE:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('SEARCH API ERROR:', error);
         throw error.response?.data || error.message;
     }
 };
