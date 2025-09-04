@@ -7,7 +7,7 @@ import CartStep from '../components/checkout/CartStep';
 import ShippingStep from '../components/checkout/ShippingStep';
 import OrderSummary from '../components/checkout/OrderSummary';
 import { useAuth } from "../context/AuthContext";
-import { createOrder, createRazorpayOrder } from "../services/publicindex";
+import { createOrder, createRazorpayOrder, createGuestOrder } from "../services/publicindex";
 import { showOrderPlacedSuccessToast, showOrderPlacedErrorToast, showValidationErrorToast } from "../utils/toast";
 import { fbqTrack } from '../components/common/Analytics';
 
@@ -31,6 +31,15 @@ export default function UnifiedCheckout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
+  
+  // Guest checkout state
+  const [isGuestCheckout, setIsGuestCheckout] = useState(false);
+  const [guestInfo, setGuestInfo] = useState({
+    email: '',
+    firstName: '',
+    lastName: '',
+    phone: ''
+  });
 
   useEffect(() => {
     const savedCoupon = sessionStorage.getItem('appliedCoupon');
@@ -45,10 +54,17 @@ export default function UnifiedCheckout() {
   }, []);
 
   useEffect(() => {
+    // Check if user wants to proceed as guest
     if (!isAuthenticated) {
-        router.push('/login?redirect=/UnifiedCheckout');
+      const guestCheckout = sessionStorage.getItem('guestCheckout');
+      if (guestCheckout === 'true') {
+        setIsGuestCheckout(true);
+      } else {
+        // Show guest checkout option instead of redirecting
+        console.log('UnifiedCheckout: User not authenticated, showing guest checkout option');
+      }
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (cartItems.length === 0 && !isProcessing && !orderPlaced && !isCartLoading) {
@@ -140,9 +156,9 @@ export default function UnifiedCheckout() {
   };
 
   const handlePlaceOrder = async () => {
-    if (!isAuthenticated) {
-        showValidationErrorToast('Please login to place an order.');
-        router.push('/login?redirect=/UnifiedCheckout');
+    // Check authentication or guest checkout
+    if (!isAuthenticated && !isGuestCheckout) {
+        showValidationErrorToast('Please login or proceed as guest to place an order.');
         return;
     }
     
@@ -155,6 +171,14 @@ export default function UnifiedCheckout() {
         showValidationErrorToast('Your cart is empty.');
         return;
     }
+
+    // Validate guest info if guest checkout
+    if (isGuestCheckout) {
+        if (!guestInfo.email || !guestInfo.firstName || !guestInfo.lastName) {
+            showValidationErrorToast('Please fill in all required guest information.');
+            return;
+        }
+    }
     
     setIsProcessing(true);
 
@@ -163,26 +187,61 @@ export default function UnifiedCheckout() {
         shippingFee,
         cartItems,
         user: user?.id,
-        isAuthenticated
+        isAuthenticated,
+        isGuestCheckout,
+        guestInfo
     });
 
-    const orderData = {
-        shipping_address_id: shippingAddress.id,
-        items: cartItems.map(item => ({
-            product_id: item.productId || item.id,
-            variation_id: item.variationId || (item.variation?.id) || null,
-            quantity: item.quantity
-        })),
-        payment_type: shippingFee.orderType === 'cod' ? 'cod' : paymentDetails.method,
-        notes: '',
-        discount_amount: appliedCoupon?.discount || 0,
-        coupon_id: appliedCoupon?.id || null
-    };
+    // Prepare order data based on checkout type
+    let orderData;
+    if (isGuestCheckout) {
+        orderData = {
+            guest_info: {
+                email: guestInfo.email,
+                firstName: guestInfo.firstName,
+                lastName: guestInfo.lastName,
+                phone: guestInfo.phone || ''
+            },
+            shipping_address: {
+                fullName: shippingAddress.full_name || shippingAddress.fullName,
+                address: shippingAddress.address,
+                city: shippingAddress.city,
+                state: shippingAddress.state,
+                pincode: shippingAddress.pincode || shippingAddress.postal_code,
+                phone: shippingAddress.phone || shippingAddress.phone_number
+            },
+            items: cartItems.map(item => ({
+                product_id: item.productId || item.id,
+                variation_id: item.variationId || (item.variation?.id) || null,
+                quantity: item.quantity
+            })),
+            payment_type: shippingFee.orderType === 'cod' ? 'cod' : paymentDetails.method,
+            notes: '',
+            discount_amount: appliedCoupon?.discount || 0,
+            coupon_id: appliedCoupon?.id || null,
+            session_id: typeof window !== 'undefined' ? sessionStorage.getItem('sessionId') || 'guest-' + Date.now() : 'guest-' + Date.now(),
+            ip_address: typeof window !== 'undefined' ? window.location.hostname : 'localhost',
+            user_agent: typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown'
+        };
+    } else {
+        orderData = {
+            shipping_address_id: shippingAddress.id,
+            items: cartItems.map(item => ({
+                product_id: item.productId || item.id,
+                variation_id: item.variationId || (item.variation?.id) || null,
+                quantity: item.quantity
+            })),
+            payment_type: shippingFee.orderType === 'cod' ? 'cod' : paymentDetails.method,
+            notes: '',
+            discount_amount: appliedCoupon?.discount || 0,
+            coupon_id: appliedCoupon?.id || null
+        };
+    }
 
     console.log('Order data being sent:', orderData);
 
     try {
-        const orderResult = await createOrder(orderData);
+        const orderResult = isGuestCheckout ? await createGuestOrder(orderData) : await createOrder(orderData);
         console.log('Order creation response:', orderResult);
         
         if (!orderResult?.order) {
@@ -336,6 +395,81 @@ export default function UnifiedCheckout() {
     }
   };
 
+  // Guest checkout option component
+  const renderGuestCheckoutOption = () => (
+    <div className="guest-checkout-option">
+      <div className="guest-checkout-card">
+        <h2>Continue as Guest</h2>
+        <p>Complete your purchase without creating an account</p>
+        <div className="guest-info-form">
+          <div className="form-group">
+            <label>Email Address *</label>
+            <input
+              type="email"
+              value={guestInfo.email}
+              onChange={(e) => setGuestInfo({...guestInfo, email: e.target.value})}
+              placeholder="Enter your email"
+              required
+            />
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>First Name *</label>
+              <input
+                type="text"
+                value={guestInfo.firstName}
+                onChange={(e) => setGuestInfo({...guestInfo, firstName: e.target.value})}
+                placeholder="First name"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Last Name *</label>
+              <input
+                type="text"
+                value={guestInfo.lastName}
+                onChange={(e) => setGuestInfo({...guestInfo, lastName: e.target.value})}
+                placeholder="Last name"
+                required
+              />
+            </div>
+          </div>
+          <div className="form-group">
+            <label>Phone Number (Optional)</label>
+            <input
+              type="tel"
+              value={guestInfo.phone}
+              onChange={(e) => setGuestInfo({...guestInfo, phone: e.target.value})}
+              placeholder="Phone number"
+            />
+          </div>
+          <div className="guest-checkout-actions">
+            <button 
+              className="btn btn-primary"
+              onClick={() => {
+                if (guestInfo.email && guestInfo.firstName && guestInfo.lastName) {
+                  setIsGuestCheckout(true);
+                  sessionStorage.setItem('guestCheckout', 'true');
+                  setStep('shipping');
+                } else {
+                  showValidationErrorToast('Please fill in all required fields.');
+                }
+              }}
+            >
+              Continue as Guest
+            </button>
+            <button 
+              className="btn btn-secondary"
+              onClick={() => router.push('/login?redirect=/UnifiedCheckout')}
+            >
+              Login Instead
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <Header />
@@ -346,6 +480,12 @@ export default function UnifiedCheckout() {
               <div className="loader"></div>
               <p>Loading your cart...</p>
             </div>
+          </div>
+        </div>
+      ) : !isAuthenticated && !isGuestCheckout ? (
+        <div className="cart-main checkout-container">
+          <div className="cart-section">
+            {renderGuestCheckoutOption()}
           </div>
         </div>
       ) : (
@@ -366,6 +506,8 @@ export default function UnifiedCheckout() {
                 appliedCoupon={appliedCoupon}
                 onCouponApplied={handleCouponApplied}
                 onCouponRemoved={handleCouponRemoved}
+                isGuestCheckout={isGuestCheckout}
+                guestInfo={guestInfo}
               />
             </div>
           )}
