@@ -1176,6 +1176,9 @@ module.exports.getAllOrders = async (req, res) => {
     try {
         const { status, payment_status, start_date, end_date, page = 1, limit = 10 } = req.query;
         
+        console.log('=== GET ALL ORDERS DEBUG ===');
+        console.log('Query parameters:', { status, payment_status, start_date, end_date, page, limit });
+        
         // Build filter based on query parameters
         const filter = {};
         if (status) filter.status = status;
@@ -1231,6 +1234,14 @@ module.exports.getAllOrders = async (req, res) => {
         });
 
         const totalPages = Math.ceil(orders.count / limit);
+
+        console.log('Query results:', {
+            totalCount: orders.count,
+            returnedRows: orders.rows.length,
+            limit: parseInt(limit),
+            page: parseInt(page),
+            totalPages
+        });
 
         res.json({
             orders: orders.rows,
