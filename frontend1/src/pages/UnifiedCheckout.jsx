@@ -225,17 +225,17 @@ export default function UnifiedCheckout() {
         };
     } else {
         orderData = {
-            shipping_address_id: shippingAddress.id,
-            items: cartItems.map(item => ({
-                product_id: item.productId || item.id,
-                variation_id: item.variationId || (item.variation?.id) || null,
-                quantity: item.quantity
-            })),
-            payment_type: shippingFee.orderType === 'cod' ? 'cod' : paymentDetails.method,
-            notes: '',
-            discount_amount: appliedCoupon?.discount || 0,
-            coupon_id: appliedCoupon?.id || null
-        };
+        shipping_address_id: shippingAddress.id,
+        items: cartItems.map(item => ({
+            product_id: item.productId || item.id,
+            variation_id: item.variationId || (item.variation?.id) || null,
+            quantity: item.quantity
+        })),
+        payment_type: shippingFee.orderType === 'cod' ? 'cod' : paymentDetails.method,
+        notes: '',
+        discount_amount: appliedCoupon?.discount || 0,
+        coupon_id: appliedCoupon?.id || null
+    };
     }
 
     console.log('Order data being sent:', orderData);

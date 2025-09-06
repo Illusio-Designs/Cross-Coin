@@ -9,6 +9,7 @@ const {
     getGuestOrder,
     trackOrderByAWB,
     cancelOrder,
+    cancelOrdersInShiprocket,
     getOrderStats,
     getShiprocketTrackingForOrder,
     getShiprocketLabelForOrder,
@@ -37,6 +38,7 @@ router.get('/', isAuthenticated, authorize(['admin']), getAllOrders);
 router.get('/stats/overview', isAuthenticated, authorize(['admin']), getOrderStats);
 router.get('/shiprocket/all', isAuthenticated, authorize(['admin']), getAllShiprocketOrders);
 router.post('/shiprocket/sync', isAuthenticated, authorize(['admin']), syncOrdersWithShiprocket);
+router.post('/shiprocket/cancel', isAuthenticated, authorize(['admin']), cancelOrdersInShiprocket);
 router.get('/shiprocket/test-credentials', isAuthenticated, authorize(['admin']), testShiprocketCredentials);
 
 // Guest checkout route (no authentication required)

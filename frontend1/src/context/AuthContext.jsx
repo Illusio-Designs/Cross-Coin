@@ -28,8 +28,14 @@ export const AuthProvider = ({ children }) => {
                     const userData = await userService.getCurrentUser();
                     setUser(userData);
                 } catch {
-                    const userData = await getPublicCurrentUser();
-                    setUser(userData);
+                    try {
+                        const userData = await getPublicCurrentUser();
+                        setUser(userData);
+                    } catch {
+                        // If both fail, clear token but don't redirect
+                        localStorage.removeItem('token');
+                        setUser(null);
+                    }
                 }
             }
         } catch (error) {
