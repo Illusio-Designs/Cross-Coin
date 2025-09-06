@@ -24,12 +24,7 @@ const Orders = () => {
     const [statusFilter, setStatusFilter] = useState("all");
     const [sortBy, setSortBy] = useState("createdAt");
     const [sortOrder, setSortOrder] = useState("desc");
-    const [activeTab, setActiveTab] = useState("local"); // "local" or "shiprocket"
-    const [shiprocketOrders, setShiprocketOrders] = useState([]);
-    const [loadingShiprocket, setLoadingShiprocket] = useState(false);
-    const [shiprocketError, setShiprocketError] = useState(null);
     const [notification, setNotification] = useState(null);
-    const [isSyncing, setIsSyncing] = useState(false);
 
     const fetchOrders = async (page = currentPage) => {
         setLoading(true);
@@ -55,52 +50,12 @@ const Orders = () => {
         }
     };
 
-    const fetchShiprocketOrders = async () => {
-        setLoadingShiprocket(true);
-        setShiprocketError(null);
-        try {
-            const data = await orderService.getAllShiprocketOrders({ 
-                page: 1, 
-                limit: 50 // Reduced from 1000 to 50 for better performance
-            });
-            setShiprocketOrders(data.data || data || []);
-        } catch (err) {
-            setShiprocketError(err.message || 'Failed to fetch Shiprocket orders');
-        } finally {
-            setLoadingShiprocket(false);
-        }
-    };
 
-    const syncOrdersWithShiprocket = async () => {
-        setIsSyncing(true);
-        try {
-            await orderService.syncOrdersWithShiprocket();
-            setNotification({
-                type: 'success',
-                message: 'Orders synced with Shiprocket successfully'
-            });
-            // Refresh local orders after sync
-            await fetchOrders();
-            // Clear notification after 5 seconds
-            setTimeout(() => setNotification(null), 5000);
-        } catch (err) {
-            setNotification({
-                type: 'error',
-                message: err.message || 'Failed to sync orders with Shiprocket'
-            });
-            // Clear notification after 5 seconds
-            setTimeout(() => setNotification(null), 5000);
-        } finally {
-            setIsSyncing(false);
-        }
-    };
 
     const testCredentials = async () => {
         setLoading(true);
         try {
-            console.log('=== Testing Shiprocket Credentials ===');
             const result = await orderService.testShiprocketCredentials();
-            console.log('Credentials test result:', result);
             toast.success(result.message);
         } catch (error) {
             console.error('Credentials test failed:', error);
@@ -118,11 +73,7 @@ const Orders = () => {
     const syncOrders = async () => {
         setLoading(true);
         try {
-            console.log('=== Starting Order Sync with Shiprocket ===');
-            console.log('Current orders state:', orders);
-            
             const result = await orderService.syncOrdersWithShiprocket();
-            console.log('Sync result:', result);
             
             if (result.results.successful > 0) {
                 toast.success(`Successfully synced ${result.results.successful} orders`);
@@ -159,12 +110,6 @@ const Orders = () => {
         fetchOrders(1);
     }, []);
 
-    // Load Shiprocket orders when tab is switched
-    useEffect(() => {
-        if (activeTab === "shiprocket") {
-            fetchShiprocketOrders();
-        }
-    }, [activeTab]);
 
     // Reset to page 1 when filters change
     useEffect(() => {
@@ -550,38 +495,11 @@ const Orders = () => {
                     </div>
                 </div>
 
-                {/* Tab Navigation */}
-                <div className="orders-tab-navigation">
-                    <button 
-                        className={`tab-button ${activeTab === 'local' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('local')}
-                    >
-                        Local Orders
-                    </button>
-                    <button 
-                        className={`tab-button ${activeTab === 'shiprocket' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('shiprocket')}
-                    >
-                        Shiprocket Orders
-                    </button>
-                </div>
 
                 <div style={{ marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '14px', color: '#888' }}>
                         Sync orders with Shiprocket for better tracking and management.
                     </span>
-                    <Button
-                        onClick={syncOrdersWithShiprocket}
-                        disabled={isSyncing}
-                        style={{ 
-                            backgroundColor: '#10b981', 
-                            color: 'white',
-                            padding: '8px 16px',
-                            fontSize: '14px'
-                        }}
-                    >
-                        {isSyncing ? 'Syncing...' : 'Sync with Shiprocket'}
-                    </Button>
                 </div>
 
                 {notification && (
@@ -598,180 +516,103 @@ const Orders = () => {
                 )}
 
                 <div className="seo-table-container">
-                    {activeTab === 'local' ? (
-                        // Local Orders Section
+                    {loading ? <div className="seo-loading">Loading...</div> :
                         <>
-                            {loading ? <div className="seo-loading">Loading...</div> :
+                            {filteredData.length === 0 ? <div className="seo-empty-state">No orders found.</div> :
                                 <>
-                                    {filteredData.length === 0 ? <div className="seo-empty-state">No orders found.</div> :
-                                <>
-                                    {/* Payment Statistics */}
-                                    <div className="payment-stats">
-                                        {(() => {
-                                            const stats = getPaymentStats();
-                                            return (
-                                                <>
-                                                    <div className="stat-item">
-                                                        <span className="stat-label">Total Orders:</span>
-                                                        <span className="stat-badge total">{stats.total}</span>
-                                                    </div>
-                                                    <div className="stat-item">
-                                                        <span className="stat-label">Prepaid:</span>
-                                                        <span className="stat-badge prepaid">{stats.prepaid}</span>
-                                                    </div>
-                                                    <div className="stat-item">
-                                                        <span className="stat-label">COD:</span>
-                                                        <span className="stat-badge cod">{stats.cod}</span>
-                                                    </div>
-                                                    <div className="stat-item">
-                                                        <span className="stat-label">Paid:</span>
-                                                        <span className="stat-badge paid">{stats.paid}</span>
-                                                    </div>
-                                                    <div className="stat-item">
-                                                        <span className="stat-label">Pending:</span>
-                                                        <span className="stat-badge pending">{stats.pending}</span>
-                                                    </div>
-                                                    <div className="stat-item revenue">
-                                                        <span className="stat-label">Total Revenue:</span>
-                                                        <span className="stat-badge revenue">{formatCurrency(stats.totalRevenue)}</span>
-                                                    </div>
-                                                    <div className="stat-item avg">
-                                                        <span className="stat-label">Avg Order:</span>
-                                                        <span className="stat-badge avg">{formatCurrency(stats.averageOrderValue)}</span>
-                                                    </div>
-                                                </>
-                                            );
-                                        })()}
-                                    </div>
+                            {/* Payment Statistics */}
+                            <div className="payment-stats">
+                                {(() => {
+                                    const stats = getPaymentStats();
+                                    return (
+                                        <>
+                                            <div className="stat-item">
+                                                <span className="stat-label">Total Orders:</span>
+                                                <span className="stat-badge total">{stats.total}</span>
+                                            </div>
+                                            <div className="stat-item">
+                                                <span className="stat-label">Prepaid:</span>
+                                                <span className="stat-badge prepaid">{stats.prepaid}</span>
+                                            </div>
+                                            <div className="stat-item">
+                                                <span className="stat-label">COD:</span>
+                                                <span className="stat-badge cod">{stats.cod}</span>
+                                            </div>
+                                            <div className="stat-item">
+                                                <span className="stat-label">Paid:</span>
+                                                <span className="stat-badge paid">{stats.paid}</span>
+                                            </div>
+                                            <div className="stat-item">
+                                                <span className="stat-label">Pending:</span>
+                                                <span className="stat-badge pending">{stats.pending}</span>
+                                            </div>
+                                            <div className="stat-item revenue">
+                                                <span className="stat-label">Total Revenue:</span>
+                                                <span className="stat-badge revenue">{formatCurrency(stats.totalRevenue)}</span>
+                                            </div>
+                                            <div className="stat-item avg">
+                                                <span className="stat-label">Avg Order:</span>
+                                                <span className="stat-badge avg">{formatCurrency(stats.averageOrderValue)}</span>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
+                            </div>
 
-                                    {/* Sort Controls */}
-                                    <div className="sort-controls">
-                                        <div className="sort-group">
-                                            <label>Sort by:</label>
-                                            <select 
-                                                value={sortBy} 
-                                                onChange={(e) => setSortBy(e.target.value)}
-                                                className="sort-select"
-                                            >
-                                                <option value="createdAt">Date</option>
-                                                <option value="order_number">Order ID</option>
-                                                <option value="total">Total Amount</option>
-                                                <option value="status">Order Status</option>
-                                                <option value="payment_status">Payment Status</option>
-                                            </select>
-                                        </div>
-                                        <div className="sort-group">
-                                            <label>Order:</label>
-                                            <select 
-                                                value={sortOrder} 
-                                                onChange={(e) => setSortOrder(e.target.value)}
-                                                className="sort-select"
-                                            >
-                                                <option value="desc">Newest First</option>
-                                                <option value="asc">Oldest First</option>
-                                            </select>
-                                        </div>
-                                    </div>
+                            {/* Sort Controls */}
+                            <div className="sort-controls">
+                                <div className="sort-group">
+                                    <label>Sort by:</label>
+                                    <select 
+                                        value={sortBy} 
+                                        onChange={(e) => setSortBy(e.target.value)}
+                                        className="sort-select"
+                                    >
+                                        <option value="createdAt">Date</option>
+                                        <option value="order_number">Order ID</option>
+                                        <option value="total">Total Amount</option>
+                                        <option value="status">Order Status</option>
+                                        <option value="payment_status">Payment Status</option>
+                                    </select>
+                                </div>
+                                <div className="sort-group">
+                                    <label>Order:</label>
+                                    <select 
+                                        value={sortOrder} 
+                                        onChange={(e) => setSortOrder(e.target.value)}
+                                        className="sort-select"
+                                    >
+                                        <option value="desc">Newest First</option>
+                                        <option value="asc">Oldest First</option>
+                                    </select>
+                                </div>
+                            </div>
 
-                                    <div className="info-note">
-                                        <strong>Note:</strong> Pre-paid orders (Card/UPI/Wallet) automatically show as "Paid". COD orders show actual payment status (Paid/Pending).
-                                    </div>
+                            <div className="info-note">
+                                <strong>Note:</strong> Pre-paid orders (Card/UPI/Wallet) automatically show as "Paid". COD orders show actual payment status (Paid/Pending).
+                            </div>
 
-                                    <Table 
-                                        columns={columns} 
-                                        data={currentItemsWithSN} 
-                                        className="w-full" 
-                                        striped={true} 
-                                        hoverable={true} 
+                            <Table 
+                                columns={columns} 
+                                data={currentItemsWithSN} 
+                                className="w-full" 
+                                striped={true} 
+                                hoverable={true} 
+                            />
+                            {totalPages > 1 && (
+                                <div className="seo-pagination-container">
+                                    <Pagination 
+                                        currentPage={currentPage} 
+                                        totalItems={totalOrders} 
+                                        itemsPerPage={itemsPerPage} 
+                                        onPageChange={setCurrentPage} 
                                     />
-                                    {totalPages > 1 && (
-                                        <div className="seo-pagination-container">
-                                            <Pagination 
-                                                currentPage={currentPage} 
-                                                totalItems={totalOrders} 
-                                                itemsPerPage={itemsPerPage} 
-                                                onPageChange={setCurrentPage} 
-                                            />
-                                        </div>
-                                    )}
+                                </div>
+                            )}
                                 </>
                             }
                         </>
                     }
-                        </>
-                    ) : (
-                        // Shiprocket Orders Section
-                        <>
-                            {loadingShiprocket ? <div className="seo-loading">Loading Shiprocket orders...</div> :
-                                <>
-                                    {shiprocketError ? <div className="seo-error-state">Error: {shiprocketError}</div> :
-                                        shiprocketOrders.length === 0 ? <div className="seo-empty-state">No Shiprocket orders found.</div> :
-                                        <>
-                                            <div className="shiprocket-stats">
-                                                <div className="stat-item">
-                                                    <span className="stat-label">Total Shiprocket Orders:</span>
-                                                    <span className="stat-badge total">{shiprocketOrders.length}</span>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="shiprocket-orders-table">
-                                                <table className="w-full border-collapse border border-gray-300">
-                                                    <thead>
-                                                        <tr className="bg-gray-100">
-                                                            <th className="border border-gray-300 px-4 py-2">Order ID</th>
-                                                            <th className="border border-gray-300 px-4 py-2">Customer</th>
-                                                            <th className="border border-gray-300 px-4 py-2">Status</th>
-                                                            <th className="border border-gray-300 px-4 py-2">Payment Method</th>
-                                                            <th className="border border-gray-300 px-4 py-2">Amount</th>
-                                                            <th className="border border-gray-300 px-4 py-2">Shipment ID</th>
-                                                            <th className="border border-gray-300 px-4 py-2">Actions</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {shiprocketOrders.map((order, index) => (
-                                                            <tr key={order.order_id || index} className="hover:bg-gray-50">
-                                                                <td className="border border-gray-300 px-4 py-2">{order.order_id}</td>
-                                                                <td className="border border-gray-300 px-4 py-2">
-                                                                    <div>
-                                                                        <div className="font-medium">{order.billing_customer_name}</div>
-                                                                        <div className="text-sm text-gray-600">{order.billing_email}</div>
-                                                                        <div className="text-sm text-gray-600">{order.billing_phone}</div>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="border border-gray-300 px-4 py-2">
-                                                                    <span className={`status-badge status-${order.status?.toLowerCase() || 'unknown'}`}>
-                                                                        {order.status || 'Unknown'}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="border border-gray-300 px-4 py-2">{order.payment_method || 'N/A'}</td>
-                                                                <td className="border border-gray-300 px-4 py-2">{formatCurrency(order.sub_total || 0)}</td>
-                                                                <td className="border border-gray-300 px-4 py-2">
-                                                                    {order.shipments && order.shipments[0]?.shipment_id || 'N/A'}
-                                                                </td>
-                                                                <td className="border border-gray-300 px-4 py-2">
-                                                                    <div className="flex gap-2">
-                                                                        <button 
-                                                                            className="action-btn edit"
-                                                                            onClick={() => {
-                                                                                // View Shiprocket order details
-                                                                                console.log('Shiprocket order details:', order);
-                                                                            }}
-                                                                        >
-                                                                            View
-                                                                        </button>
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </>
-                                    }
-                                </>
-                            }
-                        </>
-                    )}
                 </div>
             </div>
 

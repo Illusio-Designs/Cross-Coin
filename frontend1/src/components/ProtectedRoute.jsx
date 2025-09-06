@@ -9,12 +9,16 @@ export default function ProtectedRoute({ children, requireAdmin = false }) {
   useEffect(() => {
     if (loading) return;
 
-    if (!user) {
-      router.replace("/auth/adminlogin");
+    // Only redirect if we're sure the user is not authenticated
+    if (!user && !loading) {
+      // Check if we're already on the login page to avoid infinite redirects
+      if (router.pathname !== "/auth/adminlogin") {
+        router.replace("/auth/adminlogin");
+      }
       return;
     }
 
-    if (requireAdmin && user.role !== 'admin') {
+    if (requireAdmin && user && user.role !== 'admin') {
       router.replace("/");
       return;
     }
