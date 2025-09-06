@@ -1179,6 +1179,33 @@ module.exports.getAllOrders = async (req, res) => {
         console.log('=== GET ALL ORDERS DEBUG ===');
         console.log('Query parameters:', { status, payment_status, start_date, end_date, page, limit });
         
+        // First, let's check the total count without any filters
+        const totalCount = await Order.count();
+        console.log('TOTAL ORDERS IN DATABASE (no filters):', totalCount);
+        
+        // Check for suspicious patterns
+        const recentOrders = await Order.findAll({
+            attributes: ['id', 'order_number', 'createdAt'],
+            order: [['createdAt', 'DESC']],
+            limit: 10
+        });
+        console.log('=== RECENT 10 ORDERS ===');
+        recentOrders.forEach(order => {
+            console.log(`ID: ${order.id}, Order: ${order.order_number}, Created: ${order.createdAt}`);
+        });
+        
+        // Check for orders created today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayOrders = await Order.count({
+            where: {
+                createdAt: {
+                    [Op.gte]: today
+                }
+            }
+        });
+        console.log('ORDERS CREATED TODAY:', todayOrders);
+        
         // Build filter based on query parameters
         const filter = {};
         if (status) filter.status = status;
@@ -1201,6 +1228,8 @@ module.exports.getAllOrders = async (req, res) => {
         
         const orders = await Order.findAndCountAll({
             where: filter,
+            distinct: true,
+            col: 'id',
             include: [
                 { 
                     model: User, 
@@ -1242,6 +1271,26 @@ module.exports.getAllOrders = async (req, res) => {
             page: parseInt(page),
             totalPages
         });
+        
+        // Log all order IDs and details
+        console.log('=== ALL ORDER IDs AND DETAILS ===');
+        orders.rows.forEach((order, index) => {
+            console.log(`${index + 1}. ID: ${order.id}, Order: ${order.order_number}, Amount: ${order.total_amount}, Status: ${order.status}, Created: ${order.createdAt}`);
+        });
+        
+        // Check for duplicate order numbers
+        const orderNumbers = orders.rows.map(order => order.order_number);
+        const uniqueOrderNumbers = [...new Set(orderNumbers)];
+        console.log('=== DUPLICATE CHECK ===');
+        console.log('Total orders returned:', orderNumbers.length);
+        console.log('Unique order numbers:', uniqueOrderNumbers.length);
+        if (orderNumbers.length !== uniqueOrderNumbers.length) {
+            console.log('❌ DUPLICATE ORDER NUMBERS FOUND!');
+            const duplicates = orderNumbers.filter((item, index) => orderNumbers.indexOf(item) !== index);
+            console.log('Duplicate order numbers:', [...new Set(duplicates)]);
+        } else {
+            console.log('✅ No duplicate order numbers');
+        }
 
         res.json({
             orders: orders.rows,

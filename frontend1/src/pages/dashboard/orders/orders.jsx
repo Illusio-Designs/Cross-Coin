@@ -40,6 +40,15 @@ const Orders = () => {
             };
             
             const data = await orderService.getAllOrders(params);
+            
+            console.log('=== FRONTEND ORDERS DEBUG ===');
+            console.log('API Response:', data);
+            console.log('Orders received:', data.orders?.length || 0);
+            console.log('Total orders:', data.total);
+            console.log('Total pages:', data.totalPages);
+            console.log('Current page:', page);
+            console.log('Items per page:', itemsPerPage);
+            
             setOrders(data.orders || data.data || []);
             setTotalPages(data.totalPages || Math.ceil((data.total || 0) / itemsPerPage));
             setTotalOrders(data.total || 0);
@@ -438,6 +447,25 @@ const Orders = () => {
 
                 <div className="seo-header-container">
                     <h1 className="seo-title">Manage Orders</h1>
+                    <div className="orders-summary" style={{
+                        display: 'flex',
+                        gap: '20px',
+                        marginBottom: '20px',
+                        padding: '10px',
+                        backgroundColor: '#f8f9fa',
+                        borderRadius: '8px',
+                        fontSize: '14px'
+                    }}>
+                        <span className="total-orders" style={{color: '#007bff', fontWeight: 'bold'}}>
+                            Total Orders: <strong>{totalOrders}</strong>
+                        </span>
+                        <span className="page-info" style={{color: '#6c757d'}}>
+                            Page {currentPage} of {totalPages}
+                        </span>
+                        <span className="showing-info" style={{color: '#28a745'}}>
+                            Showing {orders.length} orders
+                        </span>
+                    </div>
                     <div className="adding-button">
                         <button 
                             className="test-credentials-button"
