@@ -633,7 +633,10 @@ const Orders = () => {
                                         currentPage={currentPage} 
                                         totalItems={totalOrders} 
                                         itemsPerPage={itemsPerPage} 
-                                        onPageChange={setCurrentPage} 
+                                        onPageChange={(page) => {
+                                            setCurrentPage(page);
+                                            fetchOrders(page);
+                                        }} 
                                     />
                                 </div>
                             )}

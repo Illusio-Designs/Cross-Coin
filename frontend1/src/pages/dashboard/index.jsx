@@ -94,11 +94,11 @@ function DashboardFooter({ isCollapsed }) {
 }
 
 export default function Dashboard() {
+  const router = useRouter();
   const [currentView, setCurrentView] = useState('main');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     if (isLoading) {
