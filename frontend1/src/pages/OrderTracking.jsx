@@ -40,13 +40,13 @@ export default function OrderTracking() {
 
     const getStatusColor = (status) => {
         switch (status) {
-            case 'pending': return '#f59e0b';
-            case 'processing': return '#3b82f6';
-            case 'shipped': return '#8b5cf6';
-            case 'delivered': return '#10b981';
-            case 'cancelled': return '#ef4444';
-            case 'returned': return '#6b7280';
-            default: return '#6b7280';
+            case 'pending': return '#F59E0B';
+            case 'processing': return '#180D3E';
+            case 'shipped': return '#CE1E36';
+            case 'delivered': return '#10B981';
+            case 'cancelled': return '#EF4444';
+            case 'returned': return '#6B7280';
+            default: return '#6B7280';
         }
     };
 

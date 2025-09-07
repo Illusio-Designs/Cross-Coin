@@ -304,9 +304,15 @@
   color: #d32f2f;
 }
 
+@media (max-width: 1440px) {
+  .footer {
+    padding: 30px 4%;
+}
+}
+
 @media (max-width: 1024px) {
   .footer {
-    padding: 30px 5%;
+    padding: 30px 3%;
   }
   .footer__main {
     align-items: flex-start;
