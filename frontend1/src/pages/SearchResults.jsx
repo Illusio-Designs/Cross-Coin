@@ -111,9 +111,45 @@ const SearchResults = () => {
 
   // Initial search when component mounts or query changes
   useEffect(() => {
-    if (query && query !== searchQuery) {
+    if (query) {
       setSearchQuery(query);
-      debouncedSearch(query, category, sort);
+      // Trigger search immediately on mount
+      const searchTerm = query;
+      const categoryFilter = category || '';
+      const sortOption = sort || 'featured';
+      
+      if (searchTerm.trim()) {
+        setLoading(true);
+        setError(null);
+        
+        const params = {
+          page: currentPage,
+          limit: itemsPerPage,
+          sort: sortOption,
+          category: categoryFilter
+        };
+
+        searchProducts(searchTerm, params)
+          .then(response => {
+            if (response.success) {
+              setProducts(response.data?.products || response.products || []);
+              setTotalProducts(response.data?.total || response.total || 0);
+            } else {
+              setProducts([]);
+              setTotalProducts(0);
+              setError(response.message || 'No products found');
+            }
+          })
+          .catch(err => {
+            console.error('Search error:', err);
+            setError(err.message || 'Failed to search products');
+            setProducts([]);
+            setTotalProducts(0);
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      }
     }
   }, [query, category, sort]);
 
