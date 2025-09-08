@@ -11,6 +11,7 @@ import { getProductImageSrc } from '../utils/imageUtils';
 import SeoWrapper from '../console/SeoWrapper';
 import { fbqTrack } from '../components/common/Analytics';
 import colorMap from '../components/products/colorMap';
+import Pagination from '../components/common/Pagination';
 import '../styles/common/TableControls.css';
 
 const Products = () => {
@@ -72,9 +73,10 @@ const Products = () => {
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
+      // Fetch all products for client-side filtering and pagination
       const params = {
-        page: currentPage,
-        limit: itemsPerPage,
+        page: 1,
+        limit: 1000, // Fetch all products for client-side filtering
         sort: sortBy,
         category: selectedCategory.length > 0 ? selectedCategory.join(',') : undefined
       };
@@ -93,7 +95,7 @@ const Products = () => {
     } finally {
       setLoading(false);
     }
-  }, [sortBy, selectedCategory, currentPage, itemsPerPage]);
+  }, [sortBy, selectedCategory]);
 
   // Fetch products by category name from query, only after categories are loaded
   useEffect(() => {
@@ -204,6 +206,11 @@ const Products = () => {
       currency: 'INR',
       quantity: 1,
     });
+  };
+
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
   };
 
   const computeDynamicFilters = (products, categoriesList) => {
@@ -364,15 +371,32 @@ const Products = () => {
     });
   };
 
+  // Add this function inside the Products component
+  const sortProducts = (products) => {
+    switch (sortBy) {
+      case "price-low":
+        return [...products].sort((a, b) => (a.variations?.[0]?.price || 0) - (b.variations?.[0]?.price || 0));
+      case "price-high":
+        return [...products].sort((a, b) => (b.variations?.[0]?.price || 0) - (a.variations?.[0]?.price || 0));
+      case "rating":
+        return [...products].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      case "featured":
+      default:
+        return products; // Default order or implement your own featured logic
+    }
+  };
+
+  // Get filtered products
+  const filteredProducts = getFilteredProducts();
+  
   // Paginate filtered and sorted products
   const getPaginatedProducts = () => {
-    const filtered = sortProducts(getFilteredProducts());
+    const filtered = sortProducts(filteredProducts);
     const startIdx = (currentPage - 1) * itemsPerPage;
     return filtered.slice(startIdx, startIdx + itemsPerPage);
   };
 
   // Compute total pages based on filtered products
-  const filteredProducts = getFilteredProducts();
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
 
   // Debug logs (moved after totalPages is defined)
@@ -382,6 +406,10 @@ const Products = () => {
     priceRange,
     currentPage,
     totalPages,
+    totalProducts: products.length,
+    filteredProducts: filteredProducts.length,
+    paginatedProducts: getPaginatedProducts().length,
+    itemsPerPage,
     loading,
     error
   });
@@ -412,21 +440,6 @@ const Products = () => {
                           selectedMaterial.length > 0 ||
                           priceRange[0] !== minPrice || 
                           priceRange[1] !== maxPrice;
-
-  // Add this function inside the Products component
-  const sortProducts = (products) => {
-    switch (sortBy) {
-      case "price-low":
-        return [...products].sort((a, b) => (a.variations?.[0]?.price || 0) - (b.variations?.[0]?.price || 0));
-      case "price-high":
-        return [...products].sort((a, b) => (b.variations?.[0]?.price || 0) - (a.variations?.[0]?.price || 0));
-      case "rating":
-        return [...products].sort((a, b) => (b.rating || 0) - (a.rating || 0));
-      case "featured":
-      default:
-        return products; // Default order or implement your own featured logic
-    }
-  };
 
   return (
     <SeoWrapper pageName="products">
@@ -752,36 +765,12 @@ const Products = () => {
             </div>
 
             {/* Pagination controls */}
-            {filteredProducts.length > itemsPerPage && (
-              <div className="pagination">
-                <button
-                  className="pagination-btn"
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  aria-label="Previous page"
-                >
-                  <FiChevronLeft />
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    className={`pagination-btn${page === currentPage ? ' active' : ''}`}
-                    onClick={() => setCurrentPage(page)}
-                    aria-label={`Page ${page}`}
-                    aria-current={page === currentPage ? 'page' : undefined}
-                  >
-                    {page}
-                  </button>
-                ))}
-                <button
-                  className="pagination-btn"
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  aria-label="Next page"
-                >
-                  <FiChevronRight />
-                </button>
-              </div>
+            {filteredProducts.length > itemsPerPage && totalPages > 1 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
             )}
           </div>
         </div>

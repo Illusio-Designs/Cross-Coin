@@ -45,7 +45,6 @@
 
 .product-info {
   flex: 1;
-  min-width: 300px;
   max-height: 85vh;
   overflow-y: auto;
   scrollbar-width: none; /* Firefox */
