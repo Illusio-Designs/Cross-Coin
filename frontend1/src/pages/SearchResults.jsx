@@ -7,6 +7,7 @@ import Footer from '../components/Footer';
 import Loader from '../components/Loader';
 import Pagination from '../components/common/Pagination';
 import '../styles/pages/SearchResults.css';
+import '../styles/common/TableControls.css';
 
 const SearchResults = () => {
   const router = useRouter();
@@ -34,9 +35,10 @@ const SearchResults = () => {
         setLoading(true);
         setError(null);
         
+        // Fetch all products for client-side pagination
         const params = {
-          page: currentPage,
-          limit: itemsPerPage,
+          page: 1,
+          limit: 1000, // Fetch all products for client-side filtering
           sort: sortOption,
           category: categoryFilter
         };
@@ -60,7 +62,7 @@ const SearchResults = () => {
         setLoading(false);
       }
     }, 500),
-    [currentPage]
+    []
   );
 
   // Update URL when search parameters change
@@ -74,17 +76,45 @@ const SearchResults = () => {
     router.push(newURL, undefined, { shallow: true });
   };
 
+  // Sort products function
+  const sortProducts = (products) => {
+    switch (sortBy) {
+      case "price:asc":
+        return [...products].sort((a, b) => (a.variations?.[0]?.price || 0) - (b.variations?.[0]?.price || 0));
+      case "price:desc":
+        return [...products].sort((a, b) => (b.variations?.[0]?.price || 0) - (a.variations?.[0]?.price || 0));
+      case "newest":
+        return [...products].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      case "featured":
+      default:
+        return products; // Default order
+    }
+  };
+
+  // Get paginated products
+  const getPaginatedProducts = () => {
+    const sorted = sortProducts(products);
+    const startIdx = (currentPage - 1) * itemsPerPage;
+    return sorted.slice(startIdx, startIdx + itemsPerPage);
+  };
+
+  // Calculate total pages
+  const totalPages = Math.ceil(products.length / itemsPerPage) || 1;
+
   // Handle page change
   const handlePageChange = (page) => {
     setCurrentPage(page);
-    debouncedSearch(searchQuery, selectedCategory, sortBy);
   };
+
+  // Reset to page 1 when search parameters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory, sortBy]);
 
   // Handle search input change
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
-    setCurrentPage(1);
     updateURL(value, selectedCategory, sortBy);
     debouncedSearch(value, selectedCategory, sortBy);
   };
@@ -93,7 +123,6 @@ const SearchResults = () => {
   const handleSortChange = (e) => {
     const value = e.target.value;
     setSortBy(value);
-    setCurrentPage(1);
     updateURL(searchQuery, selectedCategory, value);
     debouncedSearch(searchQuery, selectedCategory, value);
   };
@@ -102,7 +131,6 @@ const SearchResults = () => {
   const handleCategoryChange = (e) => {
     const value = e.target.value;
     setSelectedCategory(value);
-    setCurrentPage(1);
     updateURL(searchQuery, value, sortBy);
     debouncedSearch(searchQuery, value, sortBy);
   };
@@ -129,9 +157,10 @@ const SearchResults = () => {
         setLoading(true);
         setError(null);
         
+        // Fetch all products for client-side pagination
         const params = {
-          page: currentPage,
-          limit: itemsPerPage,
+          page: 1,
+          limit: 1000, // Fetch all products for client-side filtering
           sort: sortOption,
           category: categoryFilter
         };
@@ -256,17 +285,17 @@ const SearchResults = () => {
             </div>
           ) : (
             <div className="products-grid">
-              {products.map((product) => (
+              {getPaginatedProducts().map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
           )}
         </div>
 
-        {totalProducts > itemsPerPage && (
+        {products.length > itemsPerPage && totalPages > 1 && (
           <Pagination
             currentPage={currentPage}
-            totalPages={Math.ceil(totalProducts / itemsPerPage)}
+            totalPages={totalPages}
             onPageChange={handlePageChange}
           />
         )}
