@@ -5,6 +5,7 @@ import ProductCard from '../components/ProductCard';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Loader from '../components/Loader';
+import Pagination from '../components/common/Pagination';
 import '../styles/pages/SearchResults.css';
 
 const SearchResults = () => {
@@ -71,6 +72,12 @@ const SearchResults = () => {
     
     const newURL = `/SearchResults?${params.toString()}`;
     router.push(newURL, undefined, { shallow: true });
+  };
+
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    debouncedSearch(searchQuery, selectedCategory, sortBy);
   };
 
   // Handle search input change
@@ -257,31 +264,11 @@ const SearchResults = () => {
         </div>
 
         {totalProducts > itemsPerPage && (
-          <div className="pagination-container">
-            <button
-              className="pagination-btn"
-              disabled={currentPage === 1}
-              onClick={() => {
-                setCurrentPage(prev => prev - 1);
-                debouncedSearch(searchQuery, selectedCategory, sortBy);
-              }}
-            >
-              Previous
-            </button>
-            <span className="pagination-info">
-              Page {currentPage} of {Math.ceil(totalProducts / itemsPerPage)}
-            </span>
-            <button
-              className="pagination-btn"
-              disabled={currentPage >= Math.ceil(totalProducts / itemsPerPage)}
-              onClick={() => {
-                setCurrentPage(prev => prev + 1);
-                debouncedSearch(searchQuery, selectedCategory, sortBy);
-              }}
-            >
-              Next
-            </button>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(totalProducts / itemsPerPage)}
+            onPageChange={handlePageChange}
+          />
         )}
       </div>
 
