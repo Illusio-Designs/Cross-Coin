@@ -54,6 +54,7 @@ const Home = () => {
   const [exclusiveAvgRatings, setExclusiveAvgRatings] = useState([]);
   const [exclusiveSelectedSkus, setExclusiveSelectedSkus] = useState([]);
   const [categoryImageLoaded, setCategoryImageLoaded] = useState(false);
+  const [latestProductsImageLoaded, setLatestProductsImageLoaded] = useState(false);
   const [seoData, setSeoData] = useState(null);
   
   const categorySliderRef = useRef(null);
