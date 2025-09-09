@@ -3,13 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbo",
     "build": "next build",
-    "start": "node server.js",
+    "start": "NODE_ENV=production node server.js",
     "lint": "next lint",
     "analyze": "ANALYZE=true next build",
     "clean": "rimraf .next out",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "optimize": "node scripts/optimize.js",
+    "optimize:analyze": "node scripts/optimize.js --analyze",
+    "build:optimized": "npm run clean && npm run build && npm run optimize",
+    "build:fast": "npm run clean && next build --experimental-build-mode=compile",
+    "start:fast": "NODE_ENV=production node server.js --max-old-space-size=4096",
+    "super-fast": "node scripts/super-fast.js",
+    "build:super-fast": "npm run super-fast"
   },
   "dependencies": {
     "@lottiefiles/dotlottie-react": "^0.14.1",
@@ -19,6 +26,7 @@
     "@tiptap/react": "^2.25.0",
     "@tiptap/starter-kit": "^2.25.0",
     "axios": "^1.6.7",
+    "compression": "^1.7.4",
     "dompurify": "^3.2.6",
     "gsap": "^3.13.0",
     "lodash": "^4.17.21",
@@ -40,6 +48,7 @@
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^14.1.0",
+    "@types/compression": "^1.7.5",
     "@types/node": "^20.11.19",
     "@types/react": "^18.2.57",
     "@types/react-dom": "^18.2.19",
@@ -49,6 +58,7 @@
     "postcss": "^8.4.35",
     "rimraf": "^5.0.5",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "webpack-bundle-analyzer": "^4.10.1"
   }
 }

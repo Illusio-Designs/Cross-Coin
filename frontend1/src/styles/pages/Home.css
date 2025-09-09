@@ -526,7 +526,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 2;
+  z-index: 10;
   transition: all 0.3s ease;
   color: #180d3e;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);

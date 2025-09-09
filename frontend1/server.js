@@ -1,6 +1,8 @@
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
+const compression = require('compression');
+const { promisify } = require('util');
 
 const dev = process.env.NODE_ENV !== 'production';
 const port = process.env.PORT || 3000;
@@ -19,11 +21,46 @@ app.prepare().then(() => {
       const parsedUrl = parse(req.url, true);
       const { pathname, query } = parsedUrl;
 
-      // Add security headers
+      // Add aggressive compression middleware
+      const compress = compression({
+        level: 6,
+        threshold: 1024,
+        filter: (req, res) => {
+          if (req.headers['x-no-compression']) {
+            return false;
+          }
+          return compression.filter(req, res);
+        }
+      });
+      
+      if (process.env.NODE_ENV === 'production') {
+        await promisify(compress)(req, res);
+      }
+
+      // Add performance and security headers
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.setHeader('X-Frame-Options', 'DENY');
       res.setHeader('X-XSS-Protection', '1; mode=block');
       res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+      res.setHeader('X-DNS-Prefetch-Control', 'on');
+      
+      // Add aggressive caching headers for static assets
+      if (pathname.startsWith('/_next/static/') || pathname.startsWith('/assets/')) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        res.setHeader('Expires', new Date(Date.now() + 31536000000).toUTCString());
+        res.setHeader('ETag', `"${Date.now()}"`);
+      } else if (pathname.match(/\.(jpg|jpeg|png|gif|ico|svg|webp|avif)$/)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        res.setHeader('Expires', new Date(Date.now() + 31536000000).toUTCString());
+        res.setHeader('ETag', `"${Date.now()}"`);
+      } else if (pathname.match(/\.(css|js)$/)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        res.setHeader('Expires', new Date(Date.now() + 31536000000).toUTCString());
+        res.setHeader('ETag', `"${Date.now()}"`);
+      } else {
+        // Cache HTML pages for 1 hour
+        res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600');
+      }
       
       if (process.env.NODE_ENV === 'production') {
         res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
