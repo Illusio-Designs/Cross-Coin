@@ -397,55 +397,198 @@ export default function UnifiedCheckout() {
 
   // Guest checkout option component
   const renderGuestCheckoutOption = () => (
-    <div className="guest-checkout-option">
-      <div className="guest-checkout-card">
-        <h2>Continue as Guest</h2>
-        <p>Complete your purchase without creating an account</p>
-        <div className="guest-info-form">
-          <div className="form-group">
-            <label>Email Address *</label>
+    <div className="guest-checkout-option" style={{ background: '#fff', padding: '2rem' }}>
+      <div className="guest-checkout-card" style={{
+        background: '#fff',
+        border: '1px solid #0000001A',
+        padding: '2rem',
+        maxWidth: '500px',
+        width: '100%',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+        borderRadius: '0'
+      }}>
+        <h2 style={{
+          fontSize: '1.5rem',
+          fontWeight: '600',
+          color: '#222',
+          marginBottom: '0.5rem',
+          textAlign: 'center'
+        }}>Continue as Guest</h2>
+        <p style={{
+          color: '#888',
+          textAlign: 'center',
+          marginBottom: '2rem',
+          fontSize: '0.95rem'
+        }}>Complete your purchase without creating an account</p>
+        <div className="guest-info-form" style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1.5rem'
+        }}>
+          <div className="form-group" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.3rem'
+          }}>
+            <label style={{
+              fontWeight: '500',
+              color: '#222',
+              fontSize: '0.98rem'
+            }}>Email Address *</label>
             <input
               type="email"
               value={guestInfo.email}
               onChange={(e) => setGuestInfo({...guestInfo, email: e.target.value})}
               placeholder="Enter your email"
               required
+              style={{
+                padding: '0.7rem 0.9rem',
+                border: '1px solid #e0e0e0',
+                fontSize: '1rem',
+                background: '#fafbfc',
+                transition: 'border-color 0.2s ease-in-out'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#180D3E';
+                e.target.style.background = '#fff';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#e0e0e0';
+                e.target.style.background = '#fafbfc';
+              }}
             />
           </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>First Name *</label>
+          <div className="form-row" style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '1.2rem'
+          }}>
+            <div className="form-group" style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.3rem'
+            }}>
+              <label style={{
+                fontWeight: '500',
+                color: '#222',
+                fontSize: '0.98rem'
+              }}>First Name *</label>
               <input
                 type="text"
                 value={guestInfo.firstName}
                 onChange={(e) => setGuestInfo({...guestInfo, firstName: e.target.value})}
                 placeholder="First name"
                 required
+                style={{
+                  padding: '0.7rem 0.9rem',
+                  border: '1px solid #e0e0e0',
+                  fontSize: '1rem',
+                  background: '#fafbfc',
+                  transition: 'border-color 0.2s ease-in-out'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#180D3E';
+                  e.target.style.background = '#fff';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e0e0e0';
+                  e.target.style.background = '#fafbfc';
+                }}
               />
             </div>
-            <div className="form-group">
-              <label>Last Name *</label>
+            <div className="form-group" style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.3rem'
+            }}>
+              <label style={{
+                fontWeight: '500',
+                color: '#222',
+                fontSize: '0.98rem'
+              }}>Last Name *</label>
               <input
                 type="text"
                 value={guestInfo.lastName}
                 onChange={(e) => setGuestInfo({...guestInfo, lastName: e.target.value})}
                 placeholder="Last name"
                 required
+                style={{
+                  padding: '0.7rem 0.9rem',
+                  border: '1px solid #e0e0e0',
+                  fontSize: '1rem',
+                  background: '#fafbfc',
+                  transition: 'border-color 0.2s ease-in-out'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#180D3E';
+                  e.target.style.background = '#fff';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e0e0e0';
+                  e.target.style.background = '#fafbfc';
+                }}
               />
             </div>
           </div>
-          <div className="form-group">
-            <label>Phone Number (Optional)</label>
+          <div className="form-group" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.3rem'
+          }}>
+            <label style={{
+              fontWeight: '500',
+              color: '#222',
+              fontSize: '0.98rem'
+            }}>Phone Number (Optional)</label>
             <input
               type="tel"
               value={guestInfo.phone}
               onChange={(e) => setGuestInfo({...guestInfo, phone: e.target.value})}
               placeholder="Phone number"
+              style={{
+                padding: '0.7rem 0.9rem',
+                border: '1px solid #e0e0e0',
+                fontSize: '1rem',
+                background: '#fafbfc',
+                transition: 'border-color 0.2s ease-in-out'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#180D3E';
+                e.target.style.background = '#fff';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#e0e0e0';
+                e.target.style.background = '#fafbfc';
+              }}
             />
           </div>
-          <div className="guest-checkout-actions">
+          <div className="guest-checkout-actions" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem',
+            marginTop: '1.2rem'
+          }}>
             <button 
               className="btn btn-primary"
+              style={{
+                background: '#180D3E',
+                backgroundColor: '#180D3E',
+                color: '#fff',
+                border: 'none',
+                padding: '0.9rem 0',
+                fontWeight: '600',
+                fontSize: '1.08rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                textAlign: 'center',
+                width: '100%'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#CE1E36';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = '#180D3E';
+              }}
               onClick={() => {
                 if (guestInfo.email && guestInfo.firstName && guestInfo.lastName) {
                   setIsGuestCheckout(true);
@@ -460,6 +603,28 @@ export default function UnifiedCheckout() {
             </button>
             <button 
               className="btn btn-secondary"
+              style={{
+                background: '#e0e0e0',
+                backgroundColor: '#e0e0e0',
+                color: '#222',
+                border: '1px solid #e0e0e0',
+                padding: '0.9rem 0',
+                fontWeight: '600',
+                fontSize: '1.08rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                textAlign: 'center',
+                width: '100%',
+                marginTop: '0.5rem'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#d0d0d0';
+                e.target.style.borderColor = '#c0c0c0';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = '#e0e0e0';
+                e.target.style.borderColor = '#e0e0e0';
+              }}
               onClick={() => router.push('/login?redirect=/UnifiedCheckout')}
             >
               Login Instead
