@@ -46,7 +46,7 @@ function forceEnvImageBase(url) {
 export default function Profile() {
   const [selectedTab, setSelectedTab] = useState(0);
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout: authLogout } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -57,6 +57,7 @@ export default function Profile() {
   const [profileImageUrl, setProfileImageUrl] = useState("");
   const [addresses, setAddresses] = useState([]);
   const [loadingAddresses, setLoadingAddresses] = useState(true);
+  const [addressError, setAddressError] = useState("");
   const [addressForm, setAddressForm] = useState({
     address: '',
     city: '',
@@ -121,12 +122,10 @@ export default function Profile() {
   // Handle Logout
   const handleLogout = async () => {
     try {
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/users/logout`);
+      await authLogout();
       sessionStorage.removeItem('isLoggedIn');
       localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      showLogoutSuccessToast();
-      router.push('/login');
+      router.push('/');
     } catch (err) {
       showProfileUpdateErrorToast('Logout failed. Please try again.');
     }
