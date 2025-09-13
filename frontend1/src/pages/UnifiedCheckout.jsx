@@ -57,16 +57,43 @@ export default function UnifiedCheckout() {
     // Check if user wants to proceed as guest
     if (!isAuthenticated) {
       const guestCheckout = sessionStorage.getItem('guestCheckout');
+      console.log('UnifiedCheckout: User not authenticated, guestCheckout flag:', guestCheckout);
       if (guestCheckout === 'true') {
+        console.log('UnifiedCheckout: Guest checkout flag found, setting isGuestCheckout to true');
         setIsGuestCheckout(true);
       } else {
         // Show guest checkout option instead of redirecting
         console.log('UnifiedCheckout: User not authenticated, showing guest checkout option');
       }
+    } else {
+      console.log('UnifiedCheckout: User is authenticated, clearing guest flags');
+      // Clear any guest checkout flag for authenticated users
+      sessionStorage.removeItem('guestCheckout');
+      setIsGuestCheckout(false);
     }
   }, [isAuthenticated]);
 
+  // Separate useEffect to ensure authenticated users see cart step
   useEffect(() => {
+    if (isAuthenticated && !isCartLoading) {
+      console.log('UnifiedCheckout: Ensuring authenticated user sees cart step, current step:', step);
+      if (step !== 'cart') {
+        console.log('UnifiedCheckout: Setting step to cart for authenticated user');
+        setStep('cart');
+        sessionStorage.setItem('checkoutStep', 'cart');
+      }
+    }
+  }, [isAuthenticated, isCartLoading, step]);
+
+  useEffect(() => {
+    console.log('UnifiedCheckout: Cart state changed:', {
+      cartItemsLength: cartItems.length,
+      isProcessing,
+      orderPlaced,
+      isCartLoading,
+      cartItems: cartItems
+    });
+    
     if (cartItems.length === 0 && !isProcessing && !orderPlaced && !isCartLoading) {
       // Don't redirect, let the CartStep component show the empty cart message
       console.log('UnifiedCheckout: Cart is empty, showing empty cart message');
@@ -380,10 +407,13 @@ export default function UnifiedCheckout() {
   };
 
   const renderStep = () => {
+    console.log('UnifiedCheckout: renderStep called with step:', step, 'isAuthenticated:', isAuthenticated);
     switch (step) {
       case 'cart':
+        console.log('UnifiedCheckout: Rendering CartStep');
         return <CartStep />;
       case 'shipping':
+        console.log('UnifiedCheckout: Rendering ShippingStep');
         return <ShippingStep 
                     onSelectAddress={handleSelectAddress} 
                     selectedAddress={shippingAddress}
@@ -391,6 +421,7 @@ export default function UnifiedCheckout() {
                     selectedFee={shippingFee}
                 />;
       default:
+        console.log('UnifiedCheckout: Rendering CartStep (default)');
         return <CartStep />;
     }
   };
@@ -419,7 +450,12 @@ export default function UnifiedCheckout() {
           textAlign: 'center',
           marginBottom: '2rem',
           fontSize: '0.95rem'
-        }}>Complete your purchase without creating an account</p>
+        }}>
+          {sessionStorage.getItem('guestCheckout') === 'true' 
+            ? 'Please provide your details to complete your purchase' 
+            : 'Complete your purchase without creating an account'
+          }
+        </p>
         <div className="guest-info-form" style={{
           display: 'flex',
           flexDirection: 'column',
@@ -635,6 +671,15 @@ export default function UnifiedCheckout() {
     </div>
   );
 
+  // Debug logging for rendering decision
+  console.log('UnifiedCheckout: Rendering decision:', {
+    isCartLoading,
+    isAuthenticated,
+    step,
+    cartItemsLength: cartItems.length,
+    isGuestCheckout
+  });
+
   return (
     <>
       <Header />
@@ -647,7 +692,7 @@ export default function UnifiedCheckout() {
             </div>
           </div>
         </div>
-      ) : !isAuthenticated && !isGuestCheckout ? (
+      ) : !isAuthenticated ? (
         <div className="cart-main checkout-container">
           <div className="cart-section">
             {renderGuestCheckoutOption()}

@@ -32,20 +32,49 @@ function forceEnvImageBase(url) {
   return `${baseUrl}${url}`;
 }
 
-// Helper to pick the best image for a cart item based on color
+// Helper to pick the best image for a cart item based on variation
 function pickCartItemImage(item) {
-  if (Array.isArray(item.images) && item.color) {
-    const colorValue = Array.isArray(item.color) ? item.color[0] : item.color;
-    const colorLower = colorValue.toString().toLowerCase();
-    
-    const match = item.images.find(img =>
-      (img.alt_text && img.alt_text.toLowerCase().includes(colorLower)) ||
-      (img.image_url && img.image_url.toLowerCase().includes(colorLower))
-    );
-    if (match) return match.image_url;
-    if (item.images.length > 0) return item.images[0].image_url;
+  // If item has images array (from variation), use the first one
+  if (Array.isArray(item.images) && item.images.length > 0) {
+    return item.images[0].image_url || item.images[0];
   }
-  return item.image;
+  
+  // Fallback to single image
+  if (item.image) {
+    return item.image;
+  }
+  
+  // Last fallback
+  return '/assets/card1-left.webp';
+}
+
+// Helper to get variation-specific price
+function getCartItemPrice(item) {
+  // If item has variation data, use variation price
+  if (item.variation && item.variation.price) {
+    return item.variation.price;
+  }
+  
+  // Fallback to item price
+  return item.price || 0;
+}
+
+// Helper to format color display
+function formatColorDisplay(color) {
+  if (!color) return 'N/A';
+  if (Array.isArray(color)) {
+    return color.join(', ');
+  }
+  return color;
+}
+
+// Helper to format size display
+function formatSizeDisplay(size) {
+  if (!size) return 'N/A';
+  if (Array.isArray(size)) {
+    return size.join(', ');
+  }
+  return size;
 }
 
 export default function CartStep() {
@@ -104,8 +133,24 @@ export default function CartStep() {
         ) : (
             cartItems.map((item) => {
               const imageUrl = pickCartItemImage(item);
-              // Debug log for size
-              console.log('CartStep: item.size:', item.size, typeof item.size);
+              const itemPrice = getCartItemPrice(item);
+              const formattedColor = formatColorDisplay(item.color);
+              const formattedSize = formatSizeDisplay(item.size);
+              
+              // Debug logging
+              console.log('CartStep: Processing item:', {
+                id: item.id,
+                name: item.name,
+                price: itemPrice,
+                color: item.color,
+                size: item.size,
+                variation: item.variation,
+                images: item.images,
+                formattedColor: formattedColor,
+                formattedSize: formattedSize,
+                fullItem: item
+              });
+              
               return (
                 <div className="cart-item" key={item.id}>
                   <div style={{ position: 'relative', width: 100, height: 100 }}>
@@ -135,9 +180,21 @@ export default function CartStep() {
                   </div>
                     <div className="cart-item-details">
                     <div className="cart-item-title">{item.name}</div>
-                    <div className="cart-item-meta">Size: {Array.isArray(item.size) ? item.size.join(', ') : (item.size || 'N/A')}</div>
-                    <div className="cart-item-meta">Color: {Array.isArray(item.color) ? item.color.join(', ') : (item.color || 'N/A')}</div>
-                    <div className="cart-item-price">₹{item.price}</div>
+                    {item.variation && item.variation.name && (
+                      <div className="cart-item-meta">Variation: {item.variation.name}</div>
+                    )}
+                    {formattedSize !== 'N/A' && (
+                      <div className="cart-item-meta">Size: {formattedSize}</div>
+                    )}
+                    {formattedColor !== 'N/A' && (
+                      <div className="cart-item-meta">Color: {formattedColor}</div>
+                    )}
+                    <div className="cart-item-price">
+                      <span>₹{itemPrice}</span>
+                      {item.quantity > 1 && (
+                        <span className="cart-item-total"> × {item.quantity} = ₹{(itemPrice * item.quantity).toFixed(2)}</span>
+                      )}
+                    </div>
                     </div>
                     <div className="cart-item-qty">
                     <button

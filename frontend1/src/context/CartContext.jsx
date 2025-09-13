@@ -75,7 +75,15 @@ export const CartProvider = ({ children }) => {
   }, [cartItems, isAuthenticated]);
 
   const addToCart = async (product, selectedColor, selectedSize, quantity = 1, variationId = null, variationImages = null) => {
-    console.log('CartContext: addToCart called with:', { product, selectedColor, selectedSize, quantity, variationId, variationImages });
+    console.log('CartContext: addToCart called with:', { 
+      productName: product.name, 
+      selectedColor, 
+      selectedSize, 
+      quantity, 
+      variationId, 
+      variationImages,
+      productVariations: product.variations
+    });
     console.log('CartContext: isAuthenticated:', isAuthenticated);
     if (isAuthenticated) {
       try {
@@ -93,41 +101,74 @@ export const CartProvider = ({ children }) => {
       }
     } else {
       console.log('CartContext: addToCart for guest user');
-      setCartItems(prevItems => {
-        const existingItem = prevItems.find(
-          item =>
-            item.productId === product.id &&
-            item.color === selectedColor &&
-            item.size === selectedSize
-        );
+      return new Promise((resolve) => {
+        setCartItems(prevItems => {
+          const existingItem = prevItems.find(
+            item =>
+              item.productId === product.id &&
+              item.color === selectedColor &&
+              item.size === selectedSize
+          );
         if (existingItem) {
+          // Get variation price if available
+          const variationPrice = variationId && product.variations ? 
+            product.variations.find(v => v.id === variationId)?.price || product.price : 
+            product.price;
+            
           const newItems = prevItems.map(item =>
             item.productId === product.id && item.color === selectedColor && item.size === selectedSize
-              ? { ...item, quantity: item.quantity + quantity }
+              ? { 
+                  ...item, 
+                  quantity: item.quantity + quantity,
+                  price: variationPrice, // Update price to variation price
+                  variation: variationId && product.variations ? 
+                    product.variations.find(v => v.id === variationId) : item.variation
+                }
               : item
           );
           console.log('CartContext: updated existing item in guest cart', newItems);
           showAddToCartSuccessToast(product.name);
+          resolve(newItems);
           return newItems;
         }
-        const newItems = [
-          ...prevItems,
-          {
-            id: Date.now() + Math.random(), // Generate unique ID for guest cart items
-            productId: product.id,
-            name: product.name,
-            image: variationImages && variationImages.length > 0 ? variationImages[0] : product.images[0],
-            images: variationImages && variationImages.length > 0 ? variationImages : product.images,
-            price: product.price,
-            color: selectedColor,
-            size: selectedSize,
-            quantity: quantity,
-            variationId: variationId // Store variationId for guest cart items
-          }
-        ];
-        console.log('CartContext: added new item to guest cart', newItems);
-        showAddToCartSuccessToast(product.name);
-        return newItems;
+          // Get variation price if available
+          const selectedVariation = variationId && product.variations ? 
+            product.variations.find(v => v.id === variationId) : null;
+          const variationPrice = selectedVariation?.price || product.price;
+          
+          console.log('CartContext: Variation data for new guest cart item:', {
+            variationId,
+            selectedVariation,
+            variationPrice,
+            productPrice: product.price,
+            selectedColor,
+            selectedSize
+          });
+          
+          const newItems = [
+            ...prevItems,
+            {
+              id: Date.now() + Math.random(), // Generate unique ID for guest cart items
+              productId: product.id,
+              name: product.name,
+              image: variationImages && variationImages.length > 0 ? variationImages[0] : product.images[0],
+              images: variationImages && variationImages.length > 0 ? variationImages : product.images,
+              price: variationPrice, // Use variation price if available
+              color: selectedColor,
+              size: selectedSize,
+              quantity: quantity,
+              variationId: variationId, // Store variationId for guest cart items
+              variation: selectedVariation // Store full variation data
+            }
+          ];
+          console.log('CartContext: added new item to guest cart with final data:', {
+            newItem: newItems[newItems.length - 1],
+            allItems: newItems
+          });
+          showAddToCartSuccessToast(product.name);
+          resolve(newItems);
+          return newItems;
+        });
       });
     }
   };
@@ -246,8 +287,9 @@ export const CartProvider = ({ children }) => {
   };
 
   const cartTotal = cartItems.reduce((total, item) => {
+    // Use variation price if available, otherwise fallback to item price
     const price = item.variation?.price || item.price || 0;
-    return total + price * item.quantity;
+    return total + (parseFloat(price) || 0) * (item.quantity || 1);
   }, 0);
 
   return (

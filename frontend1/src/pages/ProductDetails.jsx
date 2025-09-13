@@ -5,6 +5,7 @@ import Header from "../components/Header";
 import Image from "next/image";
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useAuth } from '../context/AuthContext';
 import { useRouter } from "next/navigation";
 import { getPublicProductBySlug, createPublicReview, getPublicCoupons } from '../services/publicindex';
 import SeoWrapper from '../console/SeoWrapper';
@@ -27,6 +28,7 @@ export default function ProductDetails() {
   
   const { addToCart, removeFromCart } = useCart();
   const { addToWishlist, removeFromWishlist } = useWishlist();
+  const { isAuthenticated, user } = useAuth();
   const router = useRouter();
   
   const [selectedThumbnail, setSelectedThumbnail] = useState(0);
@@ -66,6 +68,7 @@ export default function ProductDetails() {
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [imageLoaded, setImageLoaded] = useState({});
   const [tooltipStyle, setTooltipStyle] = useState({});
+  const [isBuyNowLoading, setIsBuyNowLoading] = useState(false);
   const couponRefs = useRef({});
   // Store selected size per pack/variation
   const [selectedSizes, setSelectedSizes] = useState({});
@@ -599,10 +602,7 @@ export default function ProductDetails() {
 
   // Update addToCart and buyNow to use selectedSizeForPack
   const handleAddToCart = () => {
-    if (!selectedVariation) {
-      showValidationErrorToast('Please select all required variations.');
-      return;
-    }
+    // No validation required - use defaults automatically
     const selectedColor = selectedAttributes.color || '';
     const selectedSize = selectedSizeForPack || '';
     // Find the image for the selected variation by product_variation_id
@@ -642,47 +642,114 @@ export default function ProductDetails() {
     });
   };
 
-  const handleBuyNow = () => {
-    if (!selectedVariation) {
-      showValidationErrorToast('Please select all variations');
-      return;
-    }
-    const selectedColor = selectedAttributes.color || '';
-    const selectedSize = selectedSizeForPack || '';
-    // Find the image for the selected variation by product_variation_id
-    let selectedImage = [];
-    let imagesForVariation = [];
-    if (product.images && product.images.length > 0 && selectedVariation.id) {
-      imagesForVariation = product.images.filter(img => img.product_variation_id === selectedVariation.id);
-      console.log('All product images:', product.images);
-      console.log('Selected variation id:', selectedVariation.id);
-      console.log('Images for this variation:', imagesForVariation);
-      if (imagesForVariation.length > 0) {
-        selectedImage = [imagesForVariation[0]];
+  const handleBuyNow = async () => {
+    console.log('=== BUY NOW CLICKED ===');
+    console.log('Product:', product);
+    console.log('Selected variation:', selectedVariation);
+    console.log('Selected attributes:', selectedAttributes);
+    console.log('Selected size for pack:', selectedSizeForPack);
+    console.log('User authenticated:', isAuthenticated);
+    
+    setIsBuyNowLoading(true);
+
+    try {
+      // Use default values automatically - no validation required
+      const selectedColor = selectedAttributes.color || '';
+      const selectedSize = selectedSizeForPack || '';
+      
+      // Find the image for the selected variation by product_variation_id
+      let selectedImage = [];
+      let imagesForVariation = [];
+      if (product.images && product.images.length > 0 && selectedVariation.id) {
+        imagesForVariation = product.images.filter(img => img.product_variation_id === selectedVariation.id);
+        console.log('All product images:', product.images);
+        console.log('Selected variation id:', selectedVariation.id);
+        console.log('Images for this variation:', imagesForVariation);
+        if (imagesForVariation.length > 0) {
+          selectedImage = [imagesForVariation[0]];
+        }
       }
+      if (selectedImage.length === 0 && selectedVariation.images && selectedVariation.images.length > 0) {
+        selectedImage = [selectedVariation.images[0]];
+        console.log('Fallback to selectedVariation.images:', selectedVariation.images);
+      }
+      console.log('Final image sent to cart:', selectedImage);
+      
+      // Add product to cart
+      console.log('ProductDetails Buy Now: Adding product to cart with variation data:', {
+        productName: product.name,
+        selectedColor,
+        selectedSize,
+        quantity,
+        selectedVariationId: selectedVariation.id,
+        selectedVariation,
+        selectedImage
+      });
+      await addToCart(
+        product,
+        selectedColor,
+        selectedSize,
+        quantity,
+        selectedVariation.id,
+        selectedImage
+      );
+      console.log('Product added to cart successfully');
+
+      // Track the event (non-blocking)
+      console.log('Tracking checkout event...');
+      try {
+        fbqTrack('InitiateCheckout', {
+          content_ids: [product.id],
+          content_name: product.name,
+          content_type: 'product',
+          value: product.price,
+          currency: 'INR',
+          quantity,
+        });
+      } catch (trackingError) {
+        console.warn('Tracking error (non-blocking):', trackingError);
+      }
+
+      // Set guest checkout flag for non-authenticated users
+      if (!isAuthenticated) {
+        console.log('ProductDetails Buy Now: User not authenticated - setting guest checkout flag');
+        sessionStorage.setItem('guestCheckout', 'true');
+      } else {
+        console.log('ProductDetails Buy Now: User authenticated - clearing guest checkout flag');
+        sessionStorage.removeItem('guestCheckout');
+        // Also clear any existing step to ensure we start fresh
+        sessionStorage.removeItem('checkoutStep');
+      }
+
+      // Wait for cart to update, then redirect
+      console.log('Waiting for cart to update...');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Reduced to 1 second
+      
+      // Redirect to unified checkout
+      console.log('Redirecting to unified checkout...');
+      console.log('Current URL before redirect:', window.location.href);
+      
+      // Use router.push for better navigation
+      try {
+        router.push('/UnifiedCheckout');
+        console.log('Router push executed');
+      } catch (e) {
+        console.error('Router push failed:', e);
+        // Fallback to window.location
+        try {
+          window.location.replace('/UnifiedCheckout');
+          console.log('Fallback redirect method executed');
+        } catch (e2) {
+          console.error('Fallback redirect failed:', e2);
+          window.location.href = '/UnifiedCheckout';
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error in buy now process:', error);
+      showValidationErrorToast('Something went wrong. Please try again.');
+      setIsBuyNowLoading(false);
     }
-    if (selectedImage.length === 0 && selectedVariation.images && selectedVariation.images.length > 0) {
-      selectedImage = [selectedVariation.images[0]];
-      console.log('Fallback to selectedVariation.images:', selectedVariation.images);
-    }
-    console.log('Final image sent to cart:', selectedImage);
-    addToCart(
-      product,
-      selectedColor,
-      selectedSize,
-      quantity,
-      selectedVariation.id,
-      selectedImage
-    );
-    router.push('/unifiedcheckout');
-    fbqTrack('InitiateCheckout', {
-      content_ids: [product.id],
-      content_name: product.name,
-      content_type: 'product',
-      value: product.price,
-      currency: 'INR',
-      quantity,
-    });
   };
 
   const handleAddToWishlist = () => {
@@ -1207,8 +1274,25 @@ export default function ProductDetails() {
               <button className="add-to-cart-btn" onClick={handleAddToCart}>
                 ADD TO CART
               </button>
-              <button className="buy-now-btn" onClick={handleBuyNow}>
-                BUY IT NOW
+              <button 
+                className="buy-now-btn" 
+                onClick={handleBuyNow}
+                disabled={isBuyNowLoading}
+                style={{
+                  opacity: isBuyNowLoading ? 0.7 : 1,
+                  cursor: isBuyNowLoading ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {isBuyNowLoading ? (
+                  <>
+                    <svg className="loading-spinner" viewBox="0 0 24 24" style={{ width: '16px', height: '16px', marginRight: '8px' }}>
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
+                    </svg>
+                    PROCESSING...
+                  </>
+                ) : (
+                  'BUY IT NOW'
+                )}
               </button>
             </div>
             {/* Description row added below */}
