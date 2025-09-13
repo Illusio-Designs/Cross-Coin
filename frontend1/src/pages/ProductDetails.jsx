@@ -476,7 +476,6 @@ export default function ProductDetails() {
           <div className="product-details">
             <div style={{ textAlign: 'center', padding: '50px' }}>
               <Loader />
-              <p>Loading product details...</p>
             </div>
           </div>
         </div>
@@ -710,21 +709,19 @@ export default function ProductDetails() {
         console.warn('Tracking error (non-blocking):', trackingError);
       }
 
-      // Set guest checkout flag for non-authenticated users
+      // Handle different flows for authenticated vs guest users
       if (!isAuthenticated) {
         console.log('ProductDetails Buy Now: User not authenticated - setting guest checkout flag');
         sessionStorage.setItem('guestCheckout', 'true');
+        // Clear any existing step to ensure guest form is shown first
+        sessionStorage.removeItem('checkoutStep');
       } else {
         console.log('ProductDetails Buy Now: User authenticated - clearing guest checkout flag');
         sessionStorage.removeItem('guestCheckout');
-        // Also clear any existing step to ensure we start fresh
-        sessionStorage.removeItem('checkoutStep');
+        // Set step to cart for authenticated users
+        sessionStorage.setItem('checkoutStep', 'cart');
       }
 
-      // Wait for cart to update, then redirect
-      console.log('Waiting for cart to update...');
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Reduced to 1 second
-      
       // Redirect to unified checkout
       console.log('Redirecting to unified checkout...');
       console.log('Current URL before redirect:', window.location.href);

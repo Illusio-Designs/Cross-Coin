@@ -58,13 +58,9 @@ export default function UnifiedCheckout() {
     if (!isAuthenticated) {
       const guestCheckout = sessionStorage.getItem('guestCheckout');
       console.log('UnifiedCheckout: User not authenticated, guestCheckout flag:', guestCheckout);
-      if (guestCheckout === 'true') {
-        console.log('UnifiedCheckout: Guest checkout flag found, setting isGuestCheckout to true');
-        setIsGuestCheckout(true);
-      } else {
-        // Show guest checkout option instead of redirecting
-        console.log('UnifiedCheckout: User not authenticated, showing guest checkout option');
-      }
+      // Always show guest form for non-authenticated users initially
+      console.log('UnifiedCheckout: User not authenticated, showing guest checkout option');
+      setIsGuestCheckout(false); // This ensures guest form is shown
     } else {
       console.log('UnifiedCheckout: User is authenticated, clearing guest flags');
       // Clear any guest checkout flag for authenticated users
@@ -629,7 +625,8 @@ export default function UnifiedCheckout() {
                 if (guestInfo.email && guestInfo.firstName && guestInfo.lastName) {
                   setIsGuestCheckout(true);
                   sessionStorage.setItem('guestCheckout', 'true');
-                  setStep('shipping');
+                  setStep('cart');
+                  sessionStorage.setItem('checkoutStep', 'cart');
                 } else {
                   showValidationErrorToast('Please fill in all required fields.');
                 }
@@ -677,13 +674,15 @@ export default function UnifiedCheckout() {
     isAuthenticated,
     step,
     cartItemsLength: cartItems.length,
-    isGuestCheckout
+    isGuestCheckout,
+    willShowGuestForm: !isAuthenticated && !isGuestCheckout,
+    willShowCheckout: isAuthenticated || isGuestCheckout
   });
 
   return (
     <>
       <Header />
-      {isCartLoading ? (
+      {isCartLoading && isAuthenticated ? (
         <div className="cart-main checkout-container">
           <div className="cart-section">
             <div className="loading-container">
@@ -692,7 +691,7 @@ export default function UnifiedCheckout() {
             </div>
           </div>
         </div>
-      ) : !isAuthenticated ? (
+      ) : !isAuthenticated && !isGuestCheckout ? (
         <div className="cart-main checkout-container">
           <div className="cart-section">
             {renderGuestCheckoutOption()}
