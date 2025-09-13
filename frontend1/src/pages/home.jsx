@@ -7,10 +7,12 @@ import ProductCard from "../components/ProductCard";
 import Image from "next/image";
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { getPublicSliders, getPublicCategories, getPublicCategoryByName, getPublicProductReviews } from '../services/publicindex';
 import SeoWrapper from '../console/SeoWrapper';
 import { useRouter } from 'next/navigation';
 import { fbqTrack } from '../components/common/Analytics';
+import { showValidationErrorToast } from '../utils/toast';
 import DOMPurify from 'dompurify';
 import colorMap from '../components/products/colorMap';
 import { seoService } from '../services/index';
@@ -37,6 +39,7 @@ const Home = () => {
   const [slides, setSlides] = useState([]);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const { addToCart } = useCart();
+  const { isAuthenticated, user } = useAuth();
   const [selectedThumbnail, setSelectedThumbnail] = useState(0);
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
@@ -56,6 +59,7 @@ const Home = () => {
   const [categoryImageLoaded, setCategoryImageLoaded] = useState(false);
   const [latestProductsImageLoaded, setLatestProductsImageLoaded] = useState(false);
   const [seoData, setSeoData] = useState(null);
+  const [buyNowLoadingStates, setBuyNowLoadingStates] = useState({});
   
   const categorySliderRef = useRef(null);
   const latestSliderRef = useRef(null);
@@ -357,21 +361,119 @@ const Home = () => {
     });
   };
 
-  const handleBuyNow = (product, state) => {
-    if (!state.selectedColor || !state.selectedSize) {
-      alert('Please select both color and size');
-      return;
-    }
-    addToCart(product, state.selectedColor, state.selectedSize, state.quantity);
-    router.push('/checkout');
-    fbqTrack('InitiateCheckout', {
-      content_ids: [product.id],
-      content_name: product.name,
-      content_type: 'product',
-      value: product.price,
-      currency: 'INR',
-      quantity: state.quantity,
+  const handleBuyNow = async (product, state, productIndex) => {
+    console.log('=== HOME PAGE BUY NOW CLICKED ===');
+    console.log('Product:', product);
+    console.log('State:', state);
+    console.log('Product index:', productIndex);
+    console.log('User authenticated:', isAuthenticated);
+    
+    // Get the selected variation and attributes
+    const selectedSku = exclusiveSelectedSkus[productIndex] || '';
+    const selectedVariation = product.variations?.find(v => v.sku === selectedSku) || product.variations?.[0];
+    const attrs = selectedVariation && typeof selectedVariation.attributes === 'string'
+      ? JSON.parse(selectedVariation.attributes)
+      : selectedVariation?.attributes || {};
+    
+    // Get the actual selected size (from state or default)
+    const selectedSizeForPack = state.selectedSize || (Array.isArray(attrs.size) ? attrs.size[0] : '');
+    
+    // Use default values if not explicitly selected
+    const finalSelectedSize = selectedSizeForPack || (Array.isArray(attrs.size) ? attrs.size[0] : 'Free Size');
+    const finalSelectedColor = attrs.color ? (Array.isArray(attrs.color) ? attrs.color[0] : attrs.color) : '';
+
+    console.log('Selected data:', {
+      selectedSku,
+      selectedVariation,
+      attrs,
+      finalSelectedSize,
+      finalSelectedColor
     });
+
+    // No validation at all - use defaults automatically
+    console.log('Skipping all validation - using defaults automatically');
+
+    setBuyNowLoadingStates(prev => ({ ...prev, [productIndex]: true }));
+
+    try {
+      // Get variation images and price
+      const variationImages = selectedVariation?.images || [];
+      const variationPrice = selectedVariation?.price || product.price;
+      
+      console.log('Variation data:', {
+        variationImages,
+        variationPrice,
+        selectedVariation
+      });
+      
+      // Add product to cart
+      console.log('Home Buy Now: Adding product to cart with variation data:', {
+        productName: product.name,
+        finalSelectedColor,
+        finalSelectedSize,
+        quantity: state.quantity,
+        selectedVariationId: selectedVariation.id,
+        selectedVariation,
+        variationImages
+      });
+      await addToCart(product, finalSelectedColor, finalSelectedSize, state.quantity, selectedVariation.id, variationImages);
+      console.log('Product added to cart successfully');
+
+      // Track the event (non-blocking)
+      console.log('Tracking checkout event...');
+      try {
+        fbqTrack('InitiateCheckout', {
+          content_ids: [product.id],
+          content_name: product.name,
+          content_type: 'product',
+          value: variationPrice, // Use variation price for tracking
+          currency: 'INR',
+          quantity: state.quantity,
+        });
+      } catch (trackingError) {
+        console.warn('Tracking error (non-blocking):', trackingError);
+      }
+
+      // Set guest checkout flag for non-authenticated users
+      if (!isAuthenticated) {
+        console.log('Home Buy Now: User not authenticated - setting guest checkout flag');
+        sessionStorage.setItem('guestCheckout', 'true');
+      } else {
+        console.log('Home Buy Now: User authenticated - clearing guest checkout flag');
+        sessionStorage.removeItem('guestCheckout');
+        // Also clear any existing step to ensure we start fresh
+        sessionStorage.removeItem('checkoutStep');
+      }
+
+      // Wait for cart to update, then redirect
+      console.log('Waiting for cart to update...');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Reduced to 1 second
+      
+      // Redirect to unified checkout
+      console.log('Redirecting to unified checkout...');
+      console.log('Current URL before redirect:', window.location.href);
+      
+      // Use router.push for better navigation
+      try {
+        router.push('/UnifiedCheckout');
+        console.log('Router push executed');
+      } catch (e) {
+        console.error('Router push failed:', e);
+        // Fallback to window.location
+        try {
+          window.location.replace('/UnifiedCheckout');
+          console.log('Fallback redirect method executed');
+        } catch (e2) {
+          console.error('Fallback redirect failed:', e2);
+          window.location.href = '/UnifiedCheckout';
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error in buy now process:', error);
+      showValidationErrorToast('Something went wrong. Please try again.');
+      setBuyNowLoadingStates(prev => ({ ...prev, [productIndex]: false }));
+    }
   };
 
   const currentCategory = categories[currentCategoryIndex] || {
@@ -815,8 +917,25 @@ const Home = () => {
                         <button className="add-to-cart-btn" onClick={e => handleAddToCart(e, product)}>
                           ADD TO CART
                         </button>
-                        <button className="buy-now-btn" onClick={() => handleBuyNow(product, state)}>
-                          BUY IT NOW
+                        <button 
+                          className="buy-now-btn" 
+                          onClick={() => handleBuyNow(product, state, index)}
+                          disabled={buyNowLoadingStates[index]}
+                          style={{
+                            opacity: buyNowLoadingStates[index] ? 0.7 : 1,
+                            cursor: buyNowLoadingStates[index] ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          {buyNowLoadingStates[index] ? (
+                            <>
+                              <svg className="loading-spinner" viewBox="0 0 24 24" style={{ width: '16px', height: '16px', marginRight: '8px' }}>
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
+                              </svg>
+                              PROCESSING...
+                            </>
+                          ) : (
+                            'BUY IT NOW'
+                          )}
                         </button>
                       </div>
                       {/* Full Description */}

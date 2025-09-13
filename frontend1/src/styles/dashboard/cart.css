@@ -52,6 +52,12 @@
   font-size: 1.1rem;
 }
 
+.cart-item-total {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-left: 0.5rem;
+}
+
 .item-quantity {
   display: flex;
   align-items: center;
