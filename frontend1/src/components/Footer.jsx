@@ -7,6 +7,7 @@ import { getPublicCategories } from "../services/publicindex";
 
 const Footer = () => {
   const [collections, setCollections] = useState([]);
+  const [hoveredLink, setHoveredLink] = useState(null);
 
   useEffect(() => {
     const fetchCollections = async () => {
@@ -57,8 +58,58 @@ const Footer = () => {
           <h4>Do You Need Help ?</h4>
           <p>It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.</p>
           <div className="footer__contact">
-            <div className="contact-item"><MdOutlinePhoneInTalk /> <span className="gap">Monday - Friday: 8:00 AM - 9:00 PM<br /><b className="bold">+91 9712891700 </b></span></div> 
-            <div className="contact-item"><AiOutlineMail /> <span className="gap">Need help with your order?<br /><b className="bold">Crosscoinindia@gmail.com</b></span></div>
+            <div className="contact-item">
+              <MdOutlinePhoneInTalk /> 
+              <span className="gap">
+                Monday - Friday: 8:00 AM - 9:00 PM<br />
+                <a 
+                  href="tel:+919712891700" 
+                  className="contact-link"
+                  title="Click to call +91 9712891700"
+                  onMouseEnter={() => setHoveredLink('phone')}
+                  onMouseLeave={() => setHoveredLink(null)}
+                  style={{
+                    textDecoration: 'none',
+                    color: hoveredLink === 'phone' ? '#d32f2f' : '#111827',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'inline-block',
+                    padding: '2px 4px',
+                    borderRadius: '3px',
+                    backgroundColor: hoveredLink === 'phone' ? 'rgba(211, 47, 47, 0.1)' : 'transparent',
+                    transform: hoveredLink === 'phone' ? 'translateY(-1px)' : 'translateY(0)'
+                  }}
+                >
+                  <b className="bold" style={{ color: hoveredLink === 'phone' ? '#d32f2f' : 'inherit' }}>+91 9712891700</b>
+                </a>
+              </span>
+            </div> 
+            <div className="contact-item">
+              <AiOutlineMail /> 
+              <span className="gap">
+                Need help with your order?<br />
+                <a 
+                  href="mailto:Crosscoinindia@gmail.com" 
+                  className="contact-link"
+                  title="Click to send email to Crosscoinindia@gmail.com"
+                  onMouseEnter={() => setHoveredLink('email')}
+                  onMouseLeave={() => setHoveredLink(null)}
+                  style={{
+                    textDecoration: 'none',
+                    color: hoveredLink === 'email' ? '#d32f2f' : '#111827',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'inline-block',
+                    padding: '2px 4px',
+                    borderRadius: '3px',
+                    backgroundColor: hoveredLink === 'email' ? 'rgba(211, 47, 47, 0.1)' : 'transparent',
+                    transform: hoveredLink === 'email' ? 'translateY(-1px)' : 'translateY(0)'
+                  }}
+                >
+                  <b className="bold" style={{ color: hoveredLink === 'email' ? '#d32f2f' : 'inherit' }}>Crosscoinindia@gmail.com</b>
+                </a>
+              </span>
+            </div>
           </div>
         </div>
       </div>
