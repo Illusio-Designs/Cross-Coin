@@ -207,6 +207,33 @@
   font-size: 20px;
 }
 
+.footer__contact .contact-link {
+  text-decoration: none !important;
+  color: inherit !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease;
+  display: inline-block;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.footer__contact .contact-link:hover {
+  color: #d32f2f !important;
+  text-decoration: underline !important;
+  text-underline-offset: 3px;
+  background-color: rgba(211, 47, 47, 0.1);
+  transform: translateY(-1px);
+}
+
+.footer__contact .contact-link .bold {
+  transition: all 0.2s ease;
+  color: inherit;
+}
+
+.footer__contact .contact-link:hover .bold {
+  color: #d32f2f !important;
+}
+
 .footer__bottom {
   display: flex;
   flex-direction: row;
