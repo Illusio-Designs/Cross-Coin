@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import Script from 'next/script';
+import Script from "next/script";
 
-const FB_PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID || '1386995345678287'; // Facebook Pixel ID
+const FB_PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID || "1313610943804396"; // Facebook Pixel ID
 
 const FacebookPixel = () => {
   return (
@@ -25,7 +25,7 @@ const FacebookPixel = () => {
         <img
           height="1"
           width="1"
-          style={{ display: 'none' }}
+          style={{ display: "none" }}
           src={`https://www.facebook.com/tr?id=${FB_PIXEL_ID}&ev=PageView&noscript=1`}
         />
       </noscript>
@@ -35,27 +35,27 @@ const FacebookPixel = () => {
 
 // Helper to track custom Facebook Pixel events
 export function fbqTrack(event, params = {}) {
-  if (typeof window !== 'undefined' && window.fbq) {
-    window.fbq('track', event, params);
+  if (typeof window !== "undefined" && window.fbq) {
+    window.fbq("track", event, params);
   }
 }
 
-const GA_ID = process.env.NEXT_PUBLIC_GA_ID || 'G-XXXXXXXXXX'; // Google Analytics Measurement ID
-const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID || 'lzy55n7g8h'; // Microsoft Clarity Project ID
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID || "G-XXXXXXXXXX"; // Google Analytics Measurement ID
+const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID || "lzy55n7g8h"; // Microsoft Clarity Project ID
 
 const Clarity = () => {
-    return (
-        <Script id="microsoft-clarity" strategy="afterInteractive">
-            {`
+  return (
+    <Script id="microsoft-clarity" strategy="afterInteractive">
+      {`
                 (function(c,l,a,r,i,t,y){
                     c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
                     t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
                     y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
                 })(window, document, "clarity", "script", "${CLARITY_ID}");
             `}
-        </Script>
-    )
-}
+    </Script>
+  );
+};
 
 const Analytics = () => {
   return (
@@ -79,4 +79,4 @@ const Analytics = () => {
   );
 };
 
-export default Analytics; 
+export default Analytics;
