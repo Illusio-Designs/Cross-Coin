@@ -32,8 +32,6 @@ const nextConfig = {
   poweredByHeader: false,
   // Enable output file tracing for better optimization
   output: 'standalone',
-  // Enable faster refresh
-  fastRefresh: true,
   // Configure headers for better security and performance
   async headers() {
     return [
