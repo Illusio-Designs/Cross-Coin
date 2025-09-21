@@ -102,11 +102,21 @@ const Products = () => {
     const categoryFromQuery = searchParams.get('category');
     if (categoryFromQuery && categories.length > 0) {
       setLoading(true);
+      setError(null); // Clear any previous errors
+      
+      // Decode the category name from URL
+      const decodedCategoryName = decodeURIComponent(categoryFromQuery);
+      console.log('Original category from query:', categoryFromQuery);
+      console.log('Decoded category name:', decodedCategoryName);
+      
       const matchedCategory = categories.find(
-        cat => cat.name.toLowerCase() === categoryFromQuery.toLowerCase()
+        cat => cat.name.toLowerCase() === decodedCategoryName.toLowerCase()
       );
       const categoryId = matchedCategory ? matchedCategory.id : null;
-      getPublicCategoryByName(categoryFromQuery)
+      
+      // Add a small delay to prevent rapid successive calls
+      const timeoutId = setTimeout(() => {
+        getPublicCategoryByName(decodedCategoryName)
         .then(data => {
           const productsWithCategory = (data.products || []).map(p => {
             let imageUrl = null;
@@ -136,12 +146,16 @@ const Products = () => {
           setLoading(false);
         })
         .catch(err => {
-          setError('Failed to fetch products for this category');
+          console.error('Error fetching category products:', err);
+          setError(`Failed to fetch products for category "${decodedCategoryName}". Please try again or select a different category.`);
           setProducts([]);
           setSelectedCategory([]);
           setTotalProducts(0);
           setLoading(false);
         });
+      }, 100); // 100ms delay to prevent rapid calls
+      
+      return () => clearTimeout(timeoutId);
     } else if (!categoryFromQuery) {
       fetchProducts();
     }

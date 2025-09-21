@@ -53,6 +53,7 @@ const Collections = () => {
                 key={cat.id || cat._id}
                 href={`/Products?category=${encodeURIComponent(cat.name)}`}
                 className="category-card"
+                onClick={() => console.log('Navigating to category:', cat.name)}
               >
                 <img
                   src={imageUrl}
