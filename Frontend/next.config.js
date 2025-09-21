@@ -1,9 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Image configuration - keeping unoptimized for compatibility
+  // Image configuration - optimized for performance
   images: {
-    unoptimized: true,
-    domains: ['api.crosscoin.in', 'localhost'],
+    unoptimized: false, // Enable Next.js image optimization
+    domains: ["api.crosscoin.in", "localhost"],
+    formats: ["image/webp", "image/avif"],
+    minimumCacheTTL: 60,
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   // Enable React strict mode for better development experience
   reactStrictMode: true,
@@ -13,16 +17,18 @@ const nextConfig = {
   compress: true,
   // Enable experimental features for better performance
   experimental: {
-    optimizePackageImports: ['lucide-react', 'react-icons'],
+    optimizePackageImports: ["lucide-react", "react-icons", "axios", "lodash"],
     // Enable faster builds
     turbo: {
       rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
+        "*.svg": {
+          loaders: ["@svgr/webpack"],
+          as: "*.js",
         },
       },
     },
+    // Enable server components
+    serverComponentsExternalPackages: ["axios"],
   },
   // Enable SWC minification for better performance
   swcMinify: true,
@@ -31,86 +37,87 @@ const nextConfig = {
   // Enable powered by header removal
   poweredByHeader: false,
   // Enable output file tracing for better optimization
-  output: 'standalone',
+  output: "standalone",
   // Configure headers for better security and performance
   async headers() {
     return [
       {
-        source: '/:path*',
+        source: "/:path*",
         headers: [
           {
-            key: 'X-DNS-Prefetch-Control',
-            value: 'on'
+            key: "X-DNS-Prefetch-Control",
+            value: "on",
           },
           {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=63072000; includeSubDomains; preload'
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
           },
           {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block'
+            key: "X-XSS-Protection",
+            value: "1; mode=block",
           },
           {
-            key: 'X-Frame-Options',
-            value: 'SAMEORIGIN'
+            key: "X-Frame-Options",
+            value: "SAMEORIGIN",
           },
           {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff'
+            key: "X-Content-Type-Options",
+            value: "nosniff",
           },
           {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin'
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
           },
           {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()'
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
           },
           {
-            key: 'Link',
-            value: '</assets/crosscoin_logo.webp>; rel=preload; as=image, </assets/hero-bg.webp>; rel=preload; as=image'
-          }
-        ]
+            key: "Link",
+            value:
+              "</assets/crosscoin_logo.webp>; rel=preload; as=image, </assets/hero-bg.webp>; rel=preload; as=image",
+          },
+        ],
       },
       {
-        source: '/assets/:path*',
+        source: "/assets/:path*",
         headers: [
           {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable'
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
           },
           {
-            key: 'Expires',
-            value: new Date(Date.now() + 31536000000).toUTCString()
-          }
-        ]
+            key: "Expires",
+            value: new Date(Date.now() + 31536000000).toUTCString(),
+          },
+        ],
       },
       {
-        source: '/_next/static/:path*',
+        source: "/_next/static/:path*",
         headers: [
           {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable'
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
           },
           {
-            key: 'Expires',
-            value: new Date(Date.now() + 31536000000).toUTCString()
-          }
-        ]
+            key: "Expires",
+            value: new Date(Date.now() + 31536000000).toUTCString(),
+          },
+        ],
       },
       {
-        source: '/:path*.(jpg|jpeg|png|gif|ico|svg|webp|avif)',
+        source: "/:path*.(jpg|jpeg|png|gif|ico|svg|webp|avif)",
         headers: [
           {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable'
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
           },
           {
-            key: 'Expires',
-            value: new Date(Date.now() + 31536000000).toUTCString()
-          }
-        ]
-      }
+            key: "Expires",
+            value: new Date(Date.now() + 31536000000).toUTCString(),
+          },
+        ],
+      },
     ];
   },
   // Optimize webpack configuration for maximum speed
@@ -120,7 +127,7 @@ const nextConfig = {
       config.optimization = {
         ...config.optimization,
         splitChunks: {
-          chunks: 'all',
+          chunks: "all",
           minSize: 10000,
           maxSize: 200000,
           minChunks: 1,
@@ -129,13 +136,13 @@ const nextConfig = {
           cacheGroups: {
             vendor: {
               test: /[\\/]node_modules[\\/]/,
-              name: 'vendors',
+              name: "vendors",
               priority: 10,
               reuseExistingChunk: true,
               enforce: true,
             },
             common: {
-              name: 'common',
+              name: "common",
               minChunks: 2,
               priority: 5,
               reuseExistingChunk: true,
@@ -143,14 +150,14 @@ const nextConfig = {
             },
             react: {
               test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
-              name: 'react',
+              name: "react",
               priority: 20,
               reuseExistingChunk: true,
               enforce: true,
             },
             icons: {
               test: /[\\/]node_modules[\\/](lucide-react|react-icons)[\\/]/,
-              name: 'icons',
+              name: "icons",
               priority: 15,
               reuseExistingChunk: true,
               enforce: true,
@@ -163,38 +170,38 @@ const nextConfig = {
         sideEffects: false,
       };
     }
-    
+
     // Optimize for faster builds
     config.resolve = {
       ...config.resolve,
       alias: {
         ...config.resolve.alias,
         // Add aliases for faster resolution
-        '@': require('path').resolve(__dirname, 'src'),
+        "@": require("path").resolve(__dirname, "src"),
       },
     };
-    
+
     // Optimize bundle analyzer
-    if (process.env.ANALYZE === 'true') {
-      const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+    if (process.env.ANALYZE === "true") {
+      const { BundleAnalyzerPlugin } = require("webpack-bundle-analyzer");
       config.plugins.push(
         new BundleAnalyzerPlugin({
-          analyzerMode: 'static',
+          analyzerMode: "static",
           openAnalyzer: false,
         })
       );
     }
-    
+
     return config;
   },
   async rewrites() {
     return [
       {
-        source: '/dashboard/products',
-        destination: '/dashboard/products/products',
+        source: "/dashboard/products",
+        destination: "/dashboard/products/products",
       },
     ];
   },
 };
 
-module.exports = nextConfig; 
+module.exports = nextConfig;

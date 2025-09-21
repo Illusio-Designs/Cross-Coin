@@ -10,13 +10,12 @@
     "analyze": "ANALYZE=true next build",
     "clean": "rimraf .next out",
     "type-check": "tsc --noEmit",
-    "optimize": "node scripts/optimize.js",
-    "optimize:analyze": "node scripts/optimize.js --analyze",
-    "build:optimized": "npm run clean && npm run build && npm run optimize",
-    "build:fast": "npm run clean && next build --experimental-build-mode=compile",
-    "start:fast": "NODE_ENV=production node server.js --max-old-space-size=4096",
-    "super-fast": "node scripts/super-fast.js",
-    "build:super-fast": "npm run super-fast"
+    "optimize:performance": "node scripts/performance-optimize.js",
+    "optimize:pre-build": "node scripts/pre-build-optimize.js",
+    "build:optimized": "npm run optimize:pre-build && npm run build && npm run optimize:performance",
+    "build:production": "npm run clean && npm run optimize:pre-build && npm run build && npm run optimize:performance",
+    "deploy": "node scripts/deploy-build.js",
+    "deploy:build": "npm run build:production"
   },
   "dependencies": {
     "@lottiefiles/dotlottie-react": "^0.14.1",

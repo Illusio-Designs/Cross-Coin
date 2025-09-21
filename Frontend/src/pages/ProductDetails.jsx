@@ -27,7 +27,7 @@ export default function ProductDetails() {
   const productSlug = rawSlug ? decodeURIComponent(rawSlug) : null;
   
   const { addToCart, removeFromCart } = useCart();
-  const { addToWishlist, removeFromWishlist } = useWishlist();
+  const { addToWishlist, removeFromWishlist, wishlist } = useWishlist();
   const { isAuthenticated, user } = useAuth();
   const router = useRouter();
   
@@ -931,8 +931,6 @@ export default function ProductDetails() {
       )}
     </div>
   );
-
-  const { wishlist } = useWishlist();
 
   // Calculate star counts for 5-1 stars
   const starCounts = [5, 4, 3, 2, 1].map(star =>
