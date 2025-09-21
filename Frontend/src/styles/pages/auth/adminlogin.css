@@ -1,11 +1,11 @@
 /* Unique Admin Auth Page Styles - Only specified colors */
 .login-bg {
   min-height: 100vh;
-  background-image: url("../../../assets/hero-bg.webp");
+  background-image: url("/assets/hero-bg.webp");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-color: #1C2333;
+  background-color: #1c2333;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13,14 +13,14 @@
 .login-card {
   background: #fff;
   border-radius: 32px 32px 24px 24px;
-  box-shadow: 0 12px 40px rgba(31,41,55,0.18);
+  box-shadow: 0 12px 40px rgba(31, 41, 55, 0.18);
   padding: 3.5rem 2.5rem 2.5rem 2.5rem;
   width: 100%;
   max-width: 440px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  border-top: 8px solid #CE1E36;
+  border-top: 8px solid #ce1e36;
   position: relative;
 }
 .login-title {
@@ -28,19 +28,19 @@
   font-weight: 800;
   text-align: center;
   margin-bottom: 0.25rem;
-  color: #180D3E;
+  color: #180d3e;
   letter-spacing: 1px;
 }
 .login-subtitle {
-  color: #1F2937;
+  color: #1f2937;
   text-align: center;
   margin-bottom: 2.2rem;
   font-size: 1.13rem;
   font-weight: 500;
 }
 .login-input {
-  border: 2px solid #1F2937;
-  background: #F3F4F6;
+  border: 2px solid #1f2937;
+  background: #f3f4f6;
   border-radius: 12px;
   padding: 1.15rem 1.5rem;
   margin-bottom: 1.5rem;
@@ -48,13 +48,13 @@
   outline: none;
   width: 88%;
   transition: box-shadow 0.2s, border 0.2s;
-  box-shadow: 0 2px 6px rgba(31,41,55,0.07);
-  color: #180D3E;
+  box-shadow: 0 2px 6px rgba(31, 41, 55, 0.07);
+  color: #180d3e;
   font-weight: 500;
 }
 .login-input:focus {
-  box-shadow: 0 0 0 3px #CE1E36;
-  border: 2px solid #CE1E36;
+  box-shadow: 0 0 0 3px #ce1e36;
+  border: 2px solid #ce1e36;
   background: #fff;
 }
 .login-password-wrapper {
@@ -79,7 +79,7 @@
   z-index: 2;
 }
 .login-btn {
-  background: linear-gradient(90deg, #CE1E36 60%, #DC2626 100%);
+  background: linear-gradient(90deg, #ce1e36 60%, #dc2626 100%);
   color: #fff;
   border: none;
   border-radius: 12px;
@@ -91,11 +91,11 @@
   transition: background 0.2s, box-shadow 0.2s;
   width: 100%;
   letter-spacing: 0.7px;
-  box-shadow: 0 2px 8px rgba(220,38,38,0.10);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.1);
 }
 .login-btn:hover {
-  background: linear-gradient(90deg, #951518 60%, #DC2626 100%);
-  box-shadow: 0 4px 16px rgba(220,38,38,0.18);
+  background: linear-gradient(90deg, #951518 60%, #dc2626 100%);
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.18);
 }
 .login-oauth {
   display: flex;
@@ -108,7 +108,7 @@
   align-items: center;
   justify-content: center;
   background: #fff;
-  border: 2px solid #1F2937;
+  border: 2px solid #1f2937;
   border-radius: 12px;
   padding: 0.9rem 0.5rem;
   font-size: 1.05rem;
@@ -118,11 +118,11 @@
   width: 100%;
   font-weight: 600;
   gap: 0.7rem;
-  box-shadow: 0 1px 4px rgba(31,41,55,0.07);
+  box-shadow: 0 1px 4px rgba(31, 41, 55, 0.07);
 }
 .login-google-btn:hover {
-  border-color: #CE1E36;
-  box-shadow: 0 2px 8px rgba(206,30,54,0.10);
+  border-color: #ce1e36;
+  box-shadow: 0 2px 8px rgba(206, 30, 54, 0.1);
 }
 .login-google-icon {
   width: 22px;
@@ -133,7 +133,7 @@
   margin-bottom: 0.7rem;
 }
 .login-link {
-  color: #CE1E36;
+  color: #ce1e36;
   text-decoration: none;
   font-weight: 600;
   font-size: 1.05rem;
@@ -145,13 +145,13 @@
 }
 .login-signup {
   text-align: center;
-  color: #1F2937;
+  color: #1f2937;
   font-size: 1.05rem;
   margin-top: 0.7rem;
   font-weight: 500;
 }
 .login-error {
-  color: #DC2626;
+  color: #dc2626;
   margin-bottom: 1.2rem;
   text-align: center;
   font-weight: 600;
@@ -159,4 +159,4 @@
 .login-back-link {
   text-align: center;
   margin-top: 1.2rem;
-} 
+}
