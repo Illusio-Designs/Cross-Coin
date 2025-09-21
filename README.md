@@ -33,6 +33,7 @@
 Cross-Coin is a modern, full-stack e-commerce platform specializing in fashion accessories, particularly socks. Built with cutting-edge technologies, it provides a seamless shopping experience with advanced features like real-time inventory management, multi-payment gateways, and comprehensive admin dashboard.
 
 ### Key Highlights
+
 - 🛍️ **Modern E-Commerce**: Complete shopping experience with cart, wishlist, and checkout
 - 🎨 **Responsive Design**: Mobile-first approach with Tailwind CSS
 - ⚡ **High Performance**: Optimized for speed with Next.js and advanced caching
@@ -43,6 +44,7 @@ Cross-Coin is a modern, full-stack e-commerce platform specializing in fashion a
 ## ✨ Features
 
 ### 🛒 Customer Features
+
 - **Product Catalog**: Browse products with advanced filtering and search
 - **Shopping Cart**: Add/remove items with real-time updates
 - **Wishlist**: Save favorite products for later
@@ -53,6 +55,7 @@ Cross-Coin is a modern, full-stack e-commerce platform specializing in fashion a
 - **Shipping Management**: Multiple shipping addresses and fee calculation
 
 ### 🎛️ Admin Dashboard
+
 - **Product Management**: CRUD operations for products, categories, and attributes
 - **Order Management**: Process orders with status tracking
 - **Customer Management**: View and manage customer accounts
@@ -63,6 +66,7 @@ Cross-Coin is a modern, full-stack e-commerce platform specializing in fashion a
 - **Content Management**: Slider images and promotional content
 
 ### 🔧 Technical Features
+
 - **RESTful API**: Well-documented API endpoints
 - **Image Optimization**: Automatic image compression and optimization
 - **Database Optimization**: Efficient queries with Sequelize ORM
@@ -73,6 +77,7 @@ Cross-Coin is a modern, full-stack e-commerce platform specializing in fashion a
 ## 🛠️ Tech Stack
 
 ### Frontend
+
 - **Framework**: Next.js 14.1.0 with React 18.2.0
 - **Styling**: Tailwind CSS 3.4.1
 - **State Management**: React Context API + Redux Toolkit
@@ -82,6 +87,7 @@ Cross-Coin is a modern, full-stack e-commerce platform specializing in fashion a
 - **Notifications**: React Hot Toast + React Toastify
 
 ### Backend
+
 - **Runtime**: Node.js with Express.js 4.18.2
 - **Database**: MySQL 8.0+ with Sequelize ORM
 - **Authentication**: JWT + Passport.js with Google OAuth
@@ -91,6 +97,7 @@ Cross-Coin is a modern, full-stack e-commerce platform specializing in fashion a
 - **Security**: bcrypt, helmet, CORS
 
 ### DevOps & Tools
+
 - **Version Control**: Git
 - **Package Manager**: npm
 - **Development**: Nodemon for auto-restart
@@ -147,30 +154,35 @@ Before you begin, ensure you have the following installed:
 - **Git** (for version control)
 
 ### Optional but Recommended
+
 - **Redis** (for session storage and caching)
 - **PM2** (for process management in production)
 
 ## 🚀 Installation
 
 ### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/yourusername/cross-coin.git
 cd cross-coin
 ```
 
 ### 2. Backend Setup
+
 ```bash
 cd Backend
 npm install
 ```
 
 ### 3. Frontend Setup
+
 ```bash
 cd ../Frontend
 npm install
 ```
 
 ### 4. Database Setup
+
 ```bash
 # Create MySQL database
 mysql -u root -p
@@ -183,9 +195,11 @@ npm run db:setup
 ```
 
 ### 5. Environment Configuration
+
 Create `.env` files in both Backend and Frontend directories:
 
 #### Backend/.env
+
 ```env
 NODE_ENV=development
 PORT=5000
@@ -205,6 +219,7 @@ EMAIL_PASS=your_app_password
 ```
 
 #### Frontend/.env.local
+
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:5000
 NEXT_PUBLIC_BACKEND_URL=http://localhost:5000
@@ -214,19 +229,23 @@ NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
 ## ⚙️ Configuration
 
 ### Database Configuration
+
 The application uses Sequelize ORM with MySQL. Database models are defined in `Backend/model/` directory with proper associations.
 
 ### Authentication Setup
+
 1. **Google OAuth**: Set up Google Cloud Console project
 2. **JWT**: Configure JWT secret in environment variables
 3. **Passport**: Configured for Google OAuth and local authentication
 
 ### Payment Integration
+
 - **Razorpay**: Primary payment gateway
 - **PayPal**: Alternative payment option
 - **Skrill**: International payment support
 
 ### File Upload Configuration
+
 - **Multer**: Handles file uploads
 - **Sharp**: Image processing and optimization
 - **Storage**: Local storage in `Backend/uploads/`
@@ -234,6 +253,7 @@ The application uses Sequelize ORM with MySQL. Database models are defined in `B
 ## 📚 API Documentation
 
 ### Authentication Endpoints
+
 ```
 POST /api/users/register     # User registration
 POST /api/users/login        # User login
@@ -243,6 +263,7 @@ PUT  /api/users/profile      # Update user profile
 ```
 
 ### Product Endpoints
+
 ```
 GET    /api/products              # Get all products
 GET    /api/products/:id          # Get single product
@@ -254,6 +275,7 @@ GET    /api/products/filter       # Filter products
 ```
 
 ### Order Endpoints
+
 ```
 GET    /api/orders               # Get user orders
 POST   /api/orders               # Create new order
@@ -263,6 +285,7 @@ GET    /api/orders/track/:id     # Track order
 ```
 
 ### Cart & Wishlist Endpoints
+
 ```
 GET    /api/cart                 # Get cart items
 POST   /api/cart/add             # Add item to cart
@@ -274,6 +297,7 @@ DELETE /api/wishlist/remove      # Remove from wishlist
 ```
 
 ### Admin Endpoints
+
 ```
 GET    /api/admin/dashboard      # Dashboard statistics
 GET    /api/admin/users          # Get all users
@@ -286,6 +310,7 @@ POST   /api/admin/sliders        # Upload slider image
 ## 🎨 Frontend Features
 
 ### Pages & Components
+
 - **Home Page**: Hero section with featured products
 - **Product Catalog**: Grid/list view with filters
 - **Product Details**: Detailed product view with variations
@@ -295,6 +320,7 @@ POST   /api/admin/sliders        # Upload slider image
 - **Admin Dashboard**: Complete admin interface
 
 ### UI/UX Features
+
 - **Responsive Design**: Mobile-first approach
 - **Dark/Light Theme**: Theme switching capability
 - **Loading States**: Skeleton loaders and spinners
@@ -304,6 +330,7 @@ POST   /api/admin/sliders        # Upload slider image
 - **Pagination**: Efficient data loading
 
 ### Performance Features
+
 - **Image Optimization**: Next.js Image component
 - **Code Splitting**: Automatic route-based splitting
 - **Lazy Loading**: Component and image lazy loading
@@ -313,6 +340,7 @@ POST   /api/admin/sliders        # Upload slider image
 ## 🔧 Backend Features
 
 ### Database Models
+
 - **User**: User accounts and authentication
 - **Product**: Product catalog with variations
 - **Order**: Order management and tracking
@@ -323,6 +351,7 @@ POST   /api/admin/sliders        # Upload slider image
 - **Coupon**: Discount code management
 
 ### Business Logic
+
 - **Order Processing**: Complete order workflow
 - **Payment Integration**: Multiple payment gateways
 - **Inventory Management**: Stock tracking and updates
@@ -331,6 +360,7 @@ POST   /api/admin/sliders        # Upload slider image
 - **Search & Filtering**: Advanced product search
 
 ### Security Features
+
 - **Authentication**: JWT and OAuth integration
 - **Authorization**: Role-based access control
 - **Input Validation**: Request validation middleware
@@ -343,6 +373,7 @@ POST   /api/admin/sliders        # Upload slider image
 ### Production Deployment
 
 #### 1. Environment Setup
+
 ```bash
 # Set production environment variables
 NODE_ENV=production
@@ -351,6 +382,7 @@ DB_HOST=your_production_db_host
 ```
 
 #### 2. Backend Deployment
+
 ```bash
 cd Backend
 npm install --production
@@ -359,6 +391,7 @@ npm start
 ```
 
 #### 3. Frontend Deployment
+
 ```bash
 cd Frontend
 npm install
@@ -367,6 +400,7 @@ npm start
 ```
 
 #### 4. Using Deployment Scripts
+
 ```bash
 # Windows
 cd optimize
@@ -379,6 +413,7 @@ chmod +x optimize-site.sh
 ```
 
 ### Docker Deployment (Optional)
+
 ```dockerfile
 # Dockerfile example
 FROM node:18-alpine
@@ -394,6 +429,7 @@ CMD ["npm", "start"]
 ## ⚡ Performance Optimization
 
 ### Built-in Optimizations
+
 - **Next.js Optimization**: Automatic code splitting and optimization
 - **Image Optimization**: Sharp-based image processing
 - **Bundle Analysis**: Webpack bundle analyzer
@@ -401,6 +437,7 @@ CMD ["npm", "start"]
 - **Compression**: Gzip compression enabled
 
 ### Optimization Scripts
+
 The `optimize/` directory contains several optimization scripts:
 
 - **optimize-site.bat/sh**: Standard optimization
@@ -412,6 +449,7 @@ The `optimize/` directory contains several optimization scripts:
   - Critical CSS inlined for instant rendering
 
 ### Performance Metrics
+
 - **Page Load**: < 2 seconds
 - **Image Load**: < 1 second
 - **Cache Hit Rate**: 95%+
@@ -428,6 +466,7 @@ We welcome contributions! Please follow these steps:
 5. **Open a Pull Request**
 
 ### Development Guidelines
+
 - Follow the existing code style
 - Add tests for new features
 - Update documentation as needed
@@ -440,6 +479,7 @@ This project is licensed under the ISC License - see the [LICENSE](LICENSE) file
 ## 📞 Contact
 
 **Cross-Coin Development Team**
+
 - **Author**: Riya Lunagariya
 - **Email**: info@illusiodesigns.agency
 - **Website**: https://www.illusiodesigns.agency
