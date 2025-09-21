@@ -317,9 +317,14 @@ const getPublicCategoryByName = async (req, res) => {
     try {
         const { name } = req.params;
         
+        // Decode URL-encoded category name
+        const decodedName = decodeURIComponent(name);
+        console.log('Original name:', name);
+        console.log('Decoded name:', decodedName);
+        
         const category = await Category.findOne({
             where: {
-                name: name,
+                name: decodedName,
                 status: 'active'
             },
             include: [

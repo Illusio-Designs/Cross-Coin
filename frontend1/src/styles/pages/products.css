@@ -12,7 +12,7 @@
 
 .products-header h1 {
   font-size: 2.5rem;
-  color: #180D3E;
+  color: #180d3e;
 }
 
 .products-count {
@@ -32,7 +32,7 @@
 
 .clear-filters-btn {
   padding: 0.75rem 1.5rem;
-  background-color: #CE1E36;
+  background-color: #ce1e36;
   color: white;
   border: none;
   border-radius: 4px;
@@ -77,8 +77,8 @@
 
 .filters-sidebar {
   width: 250px;
-  background-color: #F3F4F6;
-  border: 1px solid #E6E6E6;
+  background-color: #f3f4f6;
+  border: 1px solid #e6e6e6;
   padding: 1rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   position: sticky;
@@ -98,7 +98,7 @@
 }
 
 .filter-section {
- padding-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
 }
 
 .filter-section:last-child {
@@ -129,7 +129,7 @@
   transition: border-bottom 0.3s ease;
 }
 .clickable-heading.open {
-  border-bottom: 2px solid #E9E9E9;
+  border-bottom: 2px solid #e9e9e9;
 }
 
 .category-list {
@@ -175,7 +175,7 @@
   height: 16px;
 }
 
-.checkbox-group{
+.checkbox-group {
   display: flex;
   gap: 10px;
 }
@@ -262,9 +262,8 @@
   display: flex;
   overflow: hidden;
   flex-direction: column;
-  height: 470px;
-  border: 1px solid #E6E6E6;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+  border: 1px solid #e6e6e6;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
 }
 
 .product-card:hover {
@@ -374,15 +373,15 @@
 
 .products-page .add-to-cart {
   cursor: pointer;
-  border: 1px solid #E6E6E6;
+  border: 1px solid #e6e6e6;
   background: none;
   font-size: 15px;
   padding: 5px 10px;
-  color: #180D3E;
+  color: #180d3e;
 }
 
 .products-page .add-to-cart:hover {
-  background-color: #180D3E !important;
+  background-color: #180d3e !important;
   color: #fff;
 }
 
@@ -405,8 +404,12 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .error-container {
@@ -476,20 +479,20 @@
 }
 
 .wishlist-btn:hover svg {
-  fill: #CE1E36;
-  stroke: #CE1E36;
+  fill: #ce1e36;
+  stroke: #ce1e36;
 }
 
 .wishlist-btn.active svg {
-  fill: #CE1E36;
-  stroke: #CE1E36;
+  fill: #ce1e36;
+  stroke: #ce1e36;
 }
 
 .product-badge {
   position: absolute;
   top: 10px;
   left: 10px;
-  background-color: #CE1E36;
+  background-color: #ce1e36;
   color: white;
   padding: 5px 10px;
   border-radius: 4px;
@@ -524,26 +527,28 @@
   }
   @media (max-width: 500px) {
     .filter-toggle.mobile-fixed {
-        position: fixed;
-        bottom: 24px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 1002;
-        border-radius: 32px;
-        font-size: 1.2rem;
-        background: #111;
-        color: #fff;
-        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
-        padding: 10px 20px;
-        justify-content: center;
-        display: flex
-;
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1002;
+      border-radius: 32px;
+      font-size: 1.2rem;
+      background: #111;
+      color: #fff;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+      padding: 10px 20px;
+      justify-content: center;
+      display: flex;
     }
-}
+  }
   .mobile-filter-modal-overlay {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.45);
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
     z-index: 1003;
     display: flex;
     justify-content: flex-start;
@@ -556,15 +561,19 @@
     width: 75vw;
     max-width: 350px;
     height: 100vh;
-    box-shadow: 2px 0 24px rgba(0,0,0,0.12);
+    box-shadow: 2px 0 24px rgba(0, 0, 0, 0.12);
     display: flex;
     flex-direction: column;
-    animation: slideInLeft 0.3s cubic-bezier(.4,0,.2,1);
+    animation: slideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
   }
   @keyframes slideInLeft {
-    from { transform: translateX(-100%); }
-    to { transform: translateX(0); }
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
   }
   .mobile-filter-modal-header {
     display: flex;
@@ -588,7 +597,7 @@
   .mobile-filter-modal-header .modal-clear {
     background: none;
     border: none;
-    color: #CE1E36;
+    color: #ce1e36;
     font-weight: 500;
     font-size: 1rem;
     cursor: pointer;
@@ -625,7 +634,10 @@
     padding-bottom: 0.5rem;
     border-bottom: 1px solid #f0f0f0;
   }
-  .category-list, .material-list, .color-options, .price-range {
+  .category-list,
+  .material-list,
+  .color-options,
+  .price-range {
     margin-top: 0.75rem;
   }
   .color-options {
@@ -684,10 +696,10 @@
     grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
     grid-gap: 1rem;
     margin: 0 2% 0 0;
-}
-.products-page .product-card {
-  height: 420px;
-}
+  }
+  .products-page .product-card {
+    height: auto;
+  }
   .products-page .product-image {
     height: 200px;
     overflow: hidden;
@@ -742,12 +754,12 @@
     right: 2px !important;
     height: 30px;
     width: 30px;
-}
-.wishlist-btn svg {
-  width: 16px;
-  height: 16px;
-  stroke: #666;
-}
+  }
+  .wishlist-btn svg {
+    width: 16px;
+    height: 16px;
+    stroke: #666;
+  }
   .product-badge {
     top: 8px !important;
     left: 8px !important;
@@ -760,7 +772,7 @@
 @media (max-width: 1024px) {
   .products-page .products-grid {
     grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-}
+  }
 }
 
 /* Add or improve the custom-price-range slider styles */
@@ -786,9 +798,9 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #CE1E36;
+  background: #ce1e36;
   border: 2px solid #fff;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   transition: background 0.3s;
 }
@@ -799,9 +811,9 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #CE1E36;
+  background: #ce1e36;
   border: 2px solid #fff;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   transition: background 0.3s;
 }
@@ -812,9 +824,9 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #CE1E36;
+  background: #ce1e36;
   border: 2px solid #fff;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   transition: background 0.3s;
 }
@@ -826,7 +838,7 @@
   display: flex;
   justify-content: space-between;
   font-weight: 500;
-  color: #180D3E;
+  color: #180d3e;
   font-size: 1rem;
   margin-top: 0.25rem;
 }
@@ -845,14 +857,14 @@
   transition: box-shadow 0.2s, border-color 0.2s, background 0.2s;
   margin-left: 8px;
   font-size: 1.3rem;
-  color: #180D3E;
+  color: #180d3e;
   box-shadow: 0 2px 8px rgba(24, 13, 62, 0.04);
 }
 .view-details:hover {
   background: #f5f5f5;
-  border-color: #CE1E36;
-  color: #CE1E36;
-  box-shadow: 0 4px 16px rgba(206, 30, 54, 0.10);
+  border-color: #ce1e36;
+  color: #ce1e36;
+  box-shadow: 0 4px 16px rgba(206, 30, 54, 0.1);
 }
 
 /* Product Details Color Selection */
@@ -998,7 +1010,7 @@
 .slider-track-highlight {
   position: absolute;
   height: 6px;
-  background: linear-gradient(90deg, #CE1E36 0%, #F59E42 100%);
+  background: linear-gradient(90deg, #ce1e36 0%, #f59e42 100%);
   border-radius: 3px;
   top: 50%;
   transform: translateY(-50%);
@@ -1010,33 +1022,33 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #CE1E36;
+  background: #ce1e36;
   border: 3px solid #fff;
   box-shadow: 0 2px 8px rgba(206, 30, 54, 0.15);
   cursor: pointer;
   transition: background 0.3s;
 }
 .price-slider:focus::-webkit-slider-thumb {
-  outline: 2px solid #F59E42;
+  outline: 2px solid #f59e42;
 }
 .price-slider::-moz-range-thumb {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #CE1E36;
+  background: #ce1e36;
   border: 3px solid #fff;
   box-shadow: 0 2px 8px rgba(206, 30, 54, 0.15);
   cursor: pointer;
   transition: background 0.3s;
 }
 .price-slider:focus::-moz-range-thumb {
-  outline: 2px solid #F59E42;
+  outline: 2px solid #f59e42;
 }
 .price-slider::-ms-thumb {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #CE1E36;
+  background: #ce1e36;
   border: 3px solid #fff;
   box-shadow: 0 2px 8px rgba(206, 30, 54, 0.15);
   cursor: pointer;
