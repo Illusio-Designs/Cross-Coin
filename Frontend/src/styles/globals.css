@@ -1,6 +1,22 @@
 :root {
   --theme-color: #180D3E;
 }
+
+/* Force light mode - disable dark mode */
+html {
+  color-scheme: light !important;
+}
+
+html, body {
+  background-color: #ffffff !important;
+  color: #180D3E !important;
+}
+
+/* Prevent any dark mode classes */
+.dark, .dark-mode, [data-theme="dark"] {
+  background-color: #ffffff !important;
+  color: #180D3E !important;
+}
 *{
   margin: 0;
   padding: 0;
