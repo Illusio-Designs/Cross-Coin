@@ -628,16 +628,66 @@ export const createRazorpayOrder = async ({
   amount,
   currency = "INR",
   receipt,
+  isGuest = false,
 }) => {
   try {
-    const token = localStorage.getItem("token");
+    const endpoint = isGuest 
+      ? `${API_URL}/api/payments/guest/razorpay-order`
+      : `${API_URL}/api/payments/razorpay-order`;
+    
+    const headers = {};
+    
+    // Only add authorization header for authenticated users
+    if (!isGuest) {
+      const token = localStorage.getItem("token");
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    
+    console.log("Creating Razorpay order:", { endpoint, isGuest, amount, currency, receipt });
+    
     const response = await axios.post(
-      `${API_URL}/api/payments/razorpay-order`,
+      endpoint,
       { amount, currency, receipt },
-      { headers: { Authorization: `Bearer ${token}` } }
+      { headers }
     );
     return response.data.order;
   } catch (error) {
+    console.error("Razorpay order creation error:", error);
+    throw error.response?.data || error.message;
+  }
+};
+
+// Update order with payment details after successful payment
+export const updateOrderPayment = async ({
+  orderId,
+  razorpayPaymentId,
+  razorpayOrderId,
+  razorpaySignature
+}) => {
+  try {
+    console.log("Updating order payment details:", {
+      orderId,
+      razorpayPaymentId,
+      razorpayOrderId,
+      razorpaySignature
+    });
+    
+    const response = await axios.post(
+      `${API_URL}/api/payments/update-order-payment`,
+      {
+        orderId,
+        razorpayPaymentId,
+        razorpayOrderId,
+        razorpaySignature
+      }
+    );
+    
+    console.log("Order payment update response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating order payment:", error);
     throw error.response?.data || error.message;
   }
 };

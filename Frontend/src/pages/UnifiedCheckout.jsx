@@ -11,6 +11,7 @@ import {
   createOrder,
   createRazorpayOrder,
   createGuestOrder,
+  updateOrderPayment,
 } from "../services/publicindex";
 import {
   showOrderPlacedSuccessToast,
@@ -319,53 +320,64 @@ export default function UnifiedCheckout() {
     console.log("Order data being sent:", orderData);
 
     try {
-      const orderResult = isGuestCheckout
-        ? await createGuestOrder(orderData)
-        : await createOrder(orderData);
-      console.log("Order creation response:", orderResult);
-
-      if (!orderResult?.order) {
-        throw new Error("Order creation failed to return an order.");
-      }
-
-      // --- Facebook Pixel: Track Purchase Event ---
-      const fbOrder = orderResult.order;
-      fbqTrack("Purchase", {
-        value: fbOrder.final_amount,
-        currency: "INR",
-        contents:
-          fbOrder.OrderItems?.map((item) => ({
-            id: item.product_id?.toString(),
-            quantity: item.quantity,
-          })) || [],
-      });
-      // Optionally, send to backend for server-side sync (if not already done)
-      fetch("/api/facebook-pixel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          event: "Purchase",
-          order: {
-            ...fbOrder,
-            ip_address:
-              typeof window !== "undefined" ? window.location.hostname : "",
-            user_agent:
-              typeof window !== "undefined" ? window.navigator.userAgent : "",
-          },
-        }),
-      });
-
       if (shippingFee.orderType === "cod") {
+        // COD: Create order immediately since payment is on delivery
+        const orderResult = isGuestCheckout
+          ? await createGuestOrder(orderData)
+          : await createOrder(orderData);
+        console.log("COD Order creation response:", orderResult);
+
+        if (!orderResult?.data?.order) {
+          throw new Error("Order creation failed to return an order.");
+        }
+
         // COD: Order placed, now redirect
+        console.log("COD Order placed successfully, redirecting to ThankYou page...");
         setOrderPlaced(true);
         clearCart();
         sessionStorage.removeItem("shippingAddress");
         sessionStorage.removeItem("appliedCoupon");
         sessionStorage.removeItem("checkoutStep");
-        showOrderPlacedSuccessToast(orderResult.order.order_number);
-        router.push(`/ThankYou?order_number=${orderResult.order.order_number}`);
+        showOrderPlacedSuccessToast(orderResult.data.order.order_number);
+        
+        // For guest orders, pass additional info for tracking
+        const redirectUrl = isGuestCheckout 
+          ? `/ThankYou?order_number=${orderResult.data.order.order_number}&guest_email=${encodeURIComponent(guestInfo.email)}&is_guest=true`
+          : `/ThankYou?order_number=${orderResult.data.order.order_number}`;
+        
+        console.log("Redirecting to:", redirectUrl);
+        router.push(redirectUrl);
       } else {
-        // Prepaid: Continue to Razorpay
+        // Prepaid: Store order data and proceed to payment first
+        console.log("Prepaid order: Storing order data and proceeding to payment...");
+        
+        // Store order data in sessionStorage for later use
+        sessionStorage.setItem("pendingOrderData", JSON.stringify(orderData));
+        sessionStorage.setItem("isGuestCheckout", JSON.stringify(isGuestCheckout));
+        if (isGuestCheckout) {
+          sessionStorage.setItem("guestInfo", JSON.stringify(guestInfo));
+        }
+
+        // Calculate amount for Razorpay
+        const totalAmount = cartItems.reduce((sum, item) => {
+          const price = parseFloat(item.price || 0);
+          return sum + (price * item.quantity);
+        }, 0);
+        
+        const shippingFeeAmount = parseFloat(shippingFee.fee || 0);
+        const discountAmount = appliedCoupon?.discount || 0;
+        const finalAmount = totalAmount + shippingFeeAmount - discountAmount;
+        const amountInPaisa = Math.round(finalAmount * 100);
+        
+        console.log("Prepaid order amounts:", {
+          totalAmount,
+          shippingFeeAmount,
+          discountAmount,
+          finalAmount,
+          amountInPaisa
+        });
+
+        // Load Razorpay script
         const scriptLoaded = await loadRazorpayScript();
         if (!scriptLoaded || !window.Razorpay) {
           showOrderPlacedErrorToast(
@@ -374,48 +386,82 @@ export default function UnifiedCheckout() {
           setIsProcessing(false);
           return;
         }
-        // DETAILED LOGGING FOR DEBUGGING
-        console.log("--- Razorpay Debug ---");
-        console.log("orderResult:", orderResult);
-        console.log("orderResult.order:", orderResult.order);
-        console.log(
-          "orderResult.order.final_amount:",
-          orderResult.order.final_amount
-        );
-        const amountInPaisa = Math.round(orderResult.order.final_amount * 100);
-        console.log(
-          "Calculated amountInPaisa (should be sent to Razorpay):",
-          amountInPaisa
-        );
-        // Create Razorpay order from backend, passing amount in the smallest currency unit (paisa)
+
+        // Create Razorpay order (without creating backend order yet)
         const razorpayOrder = await createRazorpayOrder({
           amount: amountInPaisa,
           currency: "INR",
-          receipt: orderResult.order.order_number,
-          notes: {
-            order_id: orderResult.order.id, // Pass internal order ID
-          },
+          receipt: `rcpt_${Date.now()}`, // Temporary receipt until order is created
+          isGuest: isGuestCheckout,
         });
+        
         console.log("Razorpay order response:", razorpayOrder);
+        
         const options = {
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-          amount: amountInPaisa, // Use the calculated amount in paise directly
+          amount: amountInPaisa,
           currency: razorpayOrder.currency,
           name: "Cross Coin",
-          description: `Order #${orderResult.order.order_number}`,
+          description: `Payment for Cross Coin Order`,
           order_id: razorpayOrder.id,
           prefill: {
-            name: user?.name || "",
-            email: user?.email || "",
+            name: isGuestCheckout ? `${guestInfo.firstName} ${guestInfo.lastName}` : user?.name || "",
+            email: isGuestCheckout ? guestInfo.email : user?.email || "",
             contact: shippingAddress?.phone || "",
           },
           theme: {
             color: "#3399cc",
           },
-          redirect: true,
-          callback_url: `https://api.crosscoin.in/api/payment/razorpay-callback?order_id=${orderResult.order.id}`,
+          handler: async function (response) {
+            console.log("Payment successful:", response);
+            
+            // Now create the order after successful payment
+            try {
+              const orderResult = isGuestCheckout
+                ? await createGuestOrder(orderData)
+                : await createOrder(orderData);
+              
+              console.log("Order created after payment:", orderResult);
+              
+              // Update the order with payment details
+              await updateOrderPayment({
+                orderId: orderResult.data.order.id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpaySignature: response.razorpay_signature
+              });
+              
+              // Clear session storage
+              sessionStorage.removeItem("pendingOrderData");
+              sessionStorage.removeItem("isGuestCheckout");
+              sessionStorage.removeItem("guestInfo");
+              
+              // Redirect to success page
+              setOrderPlaced(true);
+              clearCart();
+              sessionStorage.removeItem("shippingAddress");
+              sessionStorage.removeItem("appliedCoupon");
+              sessionStorage.removeItem("checkoutStep");
+              
+              const redirectUrl = isGuestCheckout 
+                ? `/ThankYou?order_number=${orderResult.data.order.order_number}&guest_email=${encodeURIComponent(guestInfo.email)}&is_guest=true`
+                : `/ThankYou?order_number=${orderResult.data.order.order_number}`;
+              
+              router.push(redirectUrl);
+            } catch (error) {
+              console.error("Error creating order after payment:", error);
+              showOrderPlacedErrorToast("Payment successful but order creation failed. Please contact support.");
+            }
+          },
+          modal: {
+            ondismiss: function() {
+              console.log("Payment cancelled");
+              setIsProcessing(false);
+            }
+          }
         };
-        console.log("Razorpay options passed to window.Razorpay:", options);
+        
+        console.log("Razorpay options:", options);
         const rzp = new window.Razorpay(options);
         rzp.open();
       }
