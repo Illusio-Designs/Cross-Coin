@@ -367,8 +367,22 @@ const Orders = () => {
             header: "Customer", 
             cell: (row) => (
                 <div className="customer-info">
-                    <div className="customer-name">{row.User?.username || 'N/A'}</div>
-                    <div className="customer-email">{row.User?.email || ''}</div>
+                    <div className="customer-name">
+                        {row.User?.username || 
+                         (row.GuestUser ? `${row.GuestUser.firstName} ${row.GuestUser.lastName}` : 'N/A')}
+                    </div>
+                    <div className="customer-email">
+                        {row.User?.email || row.GuestUser?.email || ''}
+                        {row.GuestUser && <span className="guest-badge" style={{
+                          background: '#e3f2fd',
+                          color: '#1976d2',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          fontSize: '10px',
+                          fontWeight: '500',
+                          marginLeft: '4px'
+                        }}>(Guest)</span>}
+                    </div>
                 </div>
             )
         },
@@ -651,8 +665,20 @@ const Orders = () => {
                 {selectedOrder && (
                     <div className="order-details-modal">
                         <div className="order-info-grid">
-                            <div><strong>Customer:</strong> {selectedOrder.User?.username}</div>
-                            <div><strong>Email:</strong> {selectedOrder.User?.email}</div>
+                            <div><strong>Customer:</strong> {
+                                selectedOrder.User?.username || 
+                                (selectedOrder.GuestUser ? `${selectedOrder.GuestUser.firstName} ${selectedOrder.GuestUser.lastName}` : 'N/A')
+                            } {selectedOrder.GuestUser && <span className="guest-badge" style={{
+                              background: '#e3f2fd',
+                              color: '#1976d2',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontSize: '10px',
+                              fontWeight: '500',
+                              marginLeft: '4px'
+                            }}>(Guest)</span>}</div>
+                            <div><strong>Email:</strong> {selectedOrder.User?.email || selectedOrder.GuestUser?.email || 'N/A'}</div>
+                            {selectedOrder.GuestUser && <div><strong>Phone:</strong> {selectedOrder.GuestUser.phone || 'N/A'}</div>}
                             <div><strong>Date:</strong> {formatDate(selectedOrder.createdAt)}</div>
                             <div><strong>Payment Type:</strong> {formatPaymentType(selectedOrder.payment_type)}</div>
                             <div><strong>Payment Status:</strong> <span className={`status-badge status-${getPaymentStatusClass(selectedOrder)}`}>{getPaymentStatusDisplay(selectedOrder)}</span></div>

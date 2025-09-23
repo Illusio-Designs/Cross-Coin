@@ -66,6 +66,36 @@ export default function UnifiedCheckout() {
         sessionStorage.removeItem("appliedCoupon");
       }
     }
+
+    // Check for successful payment that might have been blocked from redirecting
+    const paymentSuccess = sessionStorage.getItem("paymentSuccess");
+    if (paymentSuccess && !orderPlaced) {
+      try {
+        const paymentData = JSON.parse(paymentSuccess);
+        const timeDiff = Date.now() - paymentData.timestamp;
+        
+        // Only redirect if payment was recent (within 5 minutes)
+        if (timeDiff < 5 * 60 * 1000) {
+          console.log("Found recent successful payment, redirecting...", paymentData);
+          
+          const redirectUrl = paymentData.isGuest 
+            ? `/ThankYou?order_number=${paymentData.orderNumber}&guest_email=${encodeURIComponent(paymentData.guestEmail)}&is_guest=true`
+            : `/ThankYou?order_number=${paymentData.orderNumber}`;
+          
+          // Clear the payment success data
+          sessionStorage.removeItem("paymentSuccess");
+          
+          // Redirect to thank you page
+          router.push(redirectUrl);
+        } else {
+          // Clear old payment success data
+          sessionStorage.removeItem("paymentSuccess");
+        }
+      } catch (e) {
+        console.error("Failed to parse payment success data", e);
+        sessionStorage.removeItem("paymentSuccess");
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -436,18 +466,64 @@ export default function UnifiedCheckout() {
               sessionStorage.removeItem("isGuestCheckout");
               sessionStorage.removeItem("guestInfo");
               
-              // Redirect to success page
+              // Clear session storage and cart
               setOrderPlaced(true);
               clearCart();
               sessionStorage.removeItem("shippingAddress");
               sessionStorage.removeItem("appliedCoupon");
               sessionStorage.removeItem("checkoutStep");
               
+              // Store order details for fallback redirect
+              const orderDetails = {
+                orderNumber: orderResult.data.order.order_number,
+                isGuest: isGuestCheckout,
+                guestEmail: isGuestCheckout ? guestInfo.email : null,
+                paymentId: response.razorpay_payment_id,
+                timestamp: Date.now()
+              };
+              sessionStorage.setItem("paymentSuccess", JSON.stringify(orderDetails));
+              
+              // Try multiple redirect methods for better compatibility
               const redirectUrl = isGuestCheckout 
                 ? `/ThankYou?order_number=${orderResult.data.order.order_number}&guest_email=${encodeURIComponent(guestInfo.email)}&is_guest=true`
                 : `/ThankYou?order_number=${orderResult.data.order.order_number}`;
               
-              router.push(redirectUrl);
+              console.log("Attempting redirect to:", redirectUrl);
+              
+              // Method 1: Try router.push (Next.js router)
+              try {
+                router.push(redirectUrl);
+              } catch (error) {
+                console.warn("Router.push failed, trying window.location:", error);
+                
+                // Method 2: Try window.location.href
+                try {
+                  window.location.href = redirectUrl;
+                } catch (error) {
+                  console.warn("window.location.href failed, trying window.open:", error);
+                  
+                  // Method 3: Try window.open as fallback
+                  try {
+                    window.open(redirectUrl, '_self');
+                  } catch (error) {
+                    console.error("All redirect methods failed:", error);
+                    // Method 4: Show success message and manual redirect instructions
+                    showOrderPlacedSuccessToast(
+                      `Order ${orderResult.data.order.order_number} placed successfully! Please click here to view details.`
+                    );
+                    
+                    // Create a clickable link for manual navigation
+                    setTimeout(() => {
+                      const confirmRedirect = confirm(
+                        `Order placed successfully! Click OK to go to the order confirmation page.`
+                      );
+                      if (confirmRedirect) {
+                        window.location.href = redirectUrl;
+                      }
+                    }, 2000);
+                  }
+                }
+              }
             } catch (error) {
               console.error("Error creating order after payment:", error);
               showOrderPlacedErrorToast("Payment successful but order creation failed. Please contact support.");
