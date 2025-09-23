@@ -482,6 +482,63 @@ module.exports.createRazorpayOrder = async (req, res) => {
     }
 };
 
+// Update order with payment details after successful payment
+module.exports.updateOrderPayment = async (req, res) => {
+  try {
+    const { orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
+    
+    console.log('Updating order payment:', { orderId, razorpayPaymentId, razorpayOrderId });
+
+    if (!orderId || !razorpayPaymentId || !razorpayOrderId || !razorpaySignature) {
+      return res.status(400).json({ message: 'All payment fields are required' });
+    }
+
+    // Verify signature
+    const generated_signature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(razorpayOrderId + '|' + razorpayPaymentId)
+      .digest('hex');
+
+    if (generated_signature !== razorpaySignature) {
+      return res.status(400).json({ message: 'Invalid payment signature' });
+    }
+
+    // Find the order
+    const order = await Order.findByPk(orderId);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Update order status
+    order.payment_status = 'paid';
+    order.status = 'processing';
+    await order.save();
+
+    // Update or create payment record
+    await Payment.upsert({
+      order_id: order.id,
+      user_id: order.user_id || null,
+      guest_user_id: order.guest_user_id || null,
+      payment_type: 'razorpay',
+      amount_paid: order.final_amount,
+      status: 'successful',
+      transaction_id: razorpayPaymentId,
+      razorpay_order_id: razorpayOrderId,
+      razorpay_signature: razorpaySignature,
+    });
+
+    res.json({ 
+      success: true, 
+      message: 'Order payment updated successfully',
+      order: order 
+    });
+
+  } catch (error) {
+    console.error('Error updating order payment:', error);
+    res.status(500).json({ message: 'Failed to update order payment', error: error.message });
+  }
+};
+
 module.exports.razorpayCallback = async (req, res) => {
   const { razorpay_payment_id, razorpay_order_id, razorpay_signature, order_number } = req.body;
 

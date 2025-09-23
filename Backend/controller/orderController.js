@@ -40,7 +40,7 @@ const calculateShippingFee = async (paymentType) => {
   try {
     const orderType = paymentType === "cod" ? "cod" : "prepaid";
     const shippingFee = await ShippingFee.findOne({ where: { orderType } });
-    return shippingFee ? shippingFee.fee : orderType === "cod" ? 5.99 : 0.0;
+    return shippingFee ? Number(shippingFee.fee) : orderType === "cod" ? 5.99 : 0.0;
   } catch (error) {
     console.error("Error calculating shipping fee:", error);
     return orderType === "cod" ? 5.99 : 0.0; // Default values if calculation fails
@@ -645,7 +645,7 @@ module.exports.createGuestOrder = async (req, res) => {
       finalDiscountAmount = Math.min(discount_amount, totalAmount);
     }
 
-    const finalAmount = totalAmount + shippingFee - finalDiscountAmount;
+    const finalAmount = Number(totalAmount) + Number(shippingFee) - Number(finalDiscountAmount);
     console.log("createGuestOrder: Final amount calculated:", finalAmount);
 
     // Generate order number
