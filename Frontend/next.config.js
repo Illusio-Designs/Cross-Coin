@@ -1,14 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Force webpack bundling and disable Turbopack completely
+  // Force webpack bundling
   webpack5: true,
-  turbo: false,
-  // Explicitly disable Turbopack in experimental features
+  // Experimental features
   experimental: {
-    turbo: false,
     optimizePackageImports: ["lucide-react", "react-icons", "lodash"],
     // Enable server components
     serverComponentsExternalPackages: ["axios"],
+    // Disable turbopack for now to fix the error
+    turbo: false,
   },
   // Image configuration - optimized for performance
   images: {
@@ -187,14 +187,7 @@ const nextConfig = {
 
     return config;
   },
-  async rewrites() {
-    return [
-      {
-        source: "/dashboard/products",
-        destination: "/dashboard/products/products",
-      },
-    ];
-  },
+  // Removed rewrites - using dynamic routing instead
 };
 
 module.exports = nextConfig;

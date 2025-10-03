@@ -63,6 +63,12 @@ export default function App({ Component, pageProps }) {
     link.rel = "icon";
     link.href = "/crosscoin icon.png";
     document.head.appendChild(link);
+    
+    // Fix for turbopack error
+    if (typeof window !== 'undefined' && !window.__turbopack_load_page_chunks__) {
+      window.__turbopack_load_page_chunks__ = () => {};
+    }
+    
     return () => {
       document.head.removeChild(link);
     };

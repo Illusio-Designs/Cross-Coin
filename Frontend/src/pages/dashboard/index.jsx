@@ -22,8 +22,30 @@ import SEO from "./seo/seo";
 import Slider from "./slider/slider";
 import Policies from "./policies";
 
-function DashboardHeader({ isCollapsed, isFullscreen, onToggleFullscreen }) {
+function DashboardHeader({ isCollapsed, isFullscreen, onToggleFullscreen, currentView }) {
   const sidebarWidth = isCollapsed ? 72 : 260;
+  
+  // Convert view name to display title
+  const getPageTitle = (view) => {
+    const titles = {
+      'main': 'Dashboard',
+      'products': 'Products',
+      'categories': 'Categories',
+      'attributes': 'Attributes',
+      'orders': 'Orders',
+      'orderStatus': 'Order Status',
+      'consumers': 'Consumers',
+      'shippingFees': 'Shipping Fees',
+      'payments': 'Payments',
+      'coupons': 'Coupons',
+      'reviews': 'Reviews',
+      'seo': 'SEO',
+      'policies': 'Policies',
+      'slider': 'Slider'
+    };
+    return titles[view] || 'Dashboard';
+  };
+
   return (
     <header
       className="dashboard-header"
@@ -46,7 +68,9 @@ function DashboardHeader({ isCollapsed, isFullscreen, onToggleFullscreen }) {
     >
       {/* Left group: Title only */}
       <div style={{ display: 'flex', alignItems: 'center', marginLeft: 20 }}>
-        <div className="header-title" style={{ fontWeight: 700, fontSize: '1.7rem', color: '#180D3E', letterSpacing: 0.2 }}>Dashboard</div>
+        <div className="header-title" style={{ fontWeight: 700, fontSize: '1.7rem', color: '#180D3E', letterSpacing: 0.2 }}>
+          {getPageTitle(currentView)}
+        </div>
       </div>
       {/* Right group: Fullscreen button + Profile icon + Admin label */}
       <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: 14, marginRight: 40, minWidth: 120, justifyContent: 'flex-end' }}>
@@ -100,6 +124,33 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Handle URL-based routing on page load
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path === '/dashboard') {
+      setCurrentView('main');
+    } else if (path.startsWith('/dashboard/')) {
+      const page = path.split('/dashboard/')[1];
+      setCurrentView(page);
+    }
+  }, []);
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path === '/dashboard') {
+        setCurrentView('main');
+      } else if (path.startsWith('/dashboard/')) {
+        const page = path.split('/dashboard/')[1];
+        setCurrentView(page);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   useEffect(() => {
     if (isLoading) {
       const timer = setTimeout(() => {
@@ -113,8 +164,10 @@ export default function Dashboard() {
     if (view === 'logout') {
       window.location.href = '/auth/adminlogin';
     } else {
-      setIsLoading(true);
       setCurrentView(view);
+      // Update URL without page reload using browser history API
+      const newUrl = view === 'main' ? '/dashboard' : `/dashboard/${view}`;
+      window.history.pushState({}, '', newUrl);
     }
   };
 
@@ -198,7 +251,7 @@ export default function Dashboard() {
           onViewChange={handleViewChange}
           currentView={currentView}
         />
-        <DashboardHeader isCollapsed={isCollapsed} isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} />
+        <DashboardHeader isCollapsed={isCollapsed} isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} currentView={currentView} />
         <DashboardFooter isCollapsed={isCollapsed} />
         <div
           className="dashboard-main"
