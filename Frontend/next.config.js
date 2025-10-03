@@ -1,5 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Force webpack bundling and disable Turbopack completely
+  webpack5: true,
+  turbo: false,
+  // Explicitly disable Turbopack in experimental features
+  experimental: {
+    turbo: false,
+    optimizePackageImports: ["lucide-react", "react-icons", "lodash"],
+    // Enable server components
+    serverComponentsExternalPackages: ["axios"],
+  },
   // Image configuration - optimized for performance
   images: {
     unoptimized: false, // Enable Next.js image optimization
@@ -15,21 +25,6 @@ const nextConfig = {
   productionBrowserSourceMaps: false,
   // Enable compression
   compress: true,
-  // Enable experimental features for better performance
-  experimental: {
-    optimizePackageImports: ["lucide-react", "react-icons", "axios", "lodash"],
-    // Enable faster builds
-    turbo: {
-      rules: {
-        "*.svg": {
-          loaders: ["@svgr/webpack"],
-          as: "*.js",
-        },
-      },
-    },
-    // Enable server components
-    serverComponentsExternalPackages: ["axios"],
-  },
   // Enable SWC minification for better performance
   swcMinify: true,
   // Enable static optimization
@@ -72,11 +67,7 @@ const nextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
-          {
-            key: "Link",
-            value:
-              "</assets/crosscoin_logo.webp>; rel=preload; as=image, </assets/hero-bg.webp>; rel=preload; as=image",
-          },
+          // Removed preload headers to avoid browser warnings
         ],
       },
       {
@@ -122,6 +113,8 @@ const nextConfig = {
   },
   // Optimize webpack configuration for maximum speed
   webpack: (config, { dev, isServer }) => {
+    // Ensure we're using webpack and not Turbopack
+    config.mode = dev ? 'development' : 'production';
     // Optimize production builds
     if (!dev && !isServer) {
       config.optimization = {

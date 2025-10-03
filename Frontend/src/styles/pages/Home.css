@@ -572,7 +572,6 @@
   max-width: 300px;
   flex: 0 0 auto;
   background: white;
-  height: 100%;
   border: 1px solid #e6e6e6;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
