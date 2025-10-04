@@ -58,7 +58,9 @@ export const getPublicCategories = async () => {
   // Check if request is already pending
   if (apiCache.isPending(cacheKey)) {
     console.log("Categories API call already in progress, waiting...");
-    return apiCache.pendingRequests.get(cacheKey);
+    const pendingPromise = apiCache.pendingRequests.get(cacheKey);
+    const response = await pendingPromise;
+    return response.data;
   }
 
   // Check cache first

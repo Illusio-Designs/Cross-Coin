@@ -14,9 +14,26 @@ const Collections = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const data = await getPublicCategories();
+        const response = await getPublicCategories();
+        console.log('Categories response received:', response);
+        
+        // Handle both direct data and response object formats
+        let data;
+        if (response && response.data && Array.isArray(response.data)) {
+          // Response object format: {data: [...], status: 200, ...}
+          data = response.data;
+        } else if (Array.isArray(response)) {
+          // Direct array format
+          data = response;
+        } else {
+          console.error('Categories data is not in expected format:', response);
+          setError('Invalid data format received from server');
+          return;
+        }
+        
         setCategories(data);
       } catch (err) {
+        console.error('Error fetching categories:', err);
         setError(err.message || 'Failed to fetch categories');
       } finally {
         setLoading(false);
@@ -25,13 +42,45 @@ const Collections = () => {
     fetchCategories();
   }, []);
 
+  if (loading) {
+    return (
+      <SeoWrapper pageName="categories">
+        <Header />
+        <div className="collections-container">
+          <h1 className="section-title">Collections</h1>
+          <div className="loading-state">
+            <p>Loading collections...</p>
+          </div>
+        </div>
+        <Footer />
+      </SeoWrapper>
+    );
+  }
+
+  if (error) {
+    return (
+      <SeoWrapper pageName="categories">
+        <Header />
+        <div className="collections-container">
+          <h1 className="section-title">Collections</h1>
+          <div className="error-state">
+            <p>Error: {error}</p>
+            <button onClick={() => window.location.reload()}>Retry</button>
+          </div>
+        </div>
+        <Footer />
+      </SeoWrapper>
+    );
+  }
+
   return (
     <SeoWrapper pageName="categories">
       <Header />
       <div className="collections-container">
         <h1 className="section-title">Collections</h1>
         <div className="collections-grid">
-          {categories.map((cat) => {
+          {categories && Array.isArray(categories) && categories.length > 0 ? (
+            categories.map((cat) => {
             // Home page logic for image URL
             let img = cat.image;
             let imageUrl = '/assets/card1-left.webp';
@@ -64,7 +113,12 @@ const Collections = () => {
                 <div className="category-card-name">{cat.name}</div>
               </Link>
             );
-          })}
+          })
+          ) : (
+            <div className="no-categories-state">
+              <p>No collections available at the moment.</p>
+            </div>
+          )}
         </div>
       </div>
       <Footer />
