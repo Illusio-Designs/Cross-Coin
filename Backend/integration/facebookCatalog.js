@@ -190,8 +190,8 @@ router.get("/feed", async (req, res) => {
     }
 
     // Generate items for each variation (if multiple variations exist)
+    let hasIncludedVariation = false;
     if (product.ProductVariations && product.ProductVariations.length > 0) {
-      let hasIncludedVariation = false;
       for (const variation of product.ProductVariations) {
         // Include all variations, regardless of stock status
 
