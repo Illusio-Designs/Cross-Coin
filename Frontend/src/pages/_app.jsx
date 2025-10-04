@@ -31,18 +31,18 @@ export default function App({ Component, pageProps }) {
   const progressRef = useRef();
 
   useEffect(() => {
-    // Set initial loading state
+    // Set initial loading state - reduced time for better UX
     setLoading(true);
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 2000);
+    }, 1000);
 
     // Handle route changes
     const handleStart = () => setLoading(true);
     const handleComplete = () => {
       setTimeout(() => {
         setLoading(false);
-      }, 500);
+      }, 200);
     };
 
     router.events.on("routeChangeStart", handleStart);

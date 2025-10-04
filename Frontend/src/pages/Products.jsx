@@ -1,4 +1,3 @@
-"use client";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -8,7 +7,7 @@ import {
   FiChevronLeft,
   FiChevronRight,
 } from "react-icons/fi";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/router";
 import { useCart } from "../context/CartContext";
 import ProductCard, { filterOptions } from "../components/ProductCard";
 import {
@@ -25,7 +24,6 @@ import "../styles/common/TableControls.css";
 
 const Products = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { addToCart } = useCart();
 
   // UI State
@@ -77,6 +75,7 @@ const Products = () => {
   const isLoadingRef = useRef(false);
   const initialLoadRef = useRef(true);
   const categoriesLoadedRef = useRef(false);
+  const productsLoadedRef = useRef(false);
 
   // Fetch categories on mount (only once)
   useEffect(() => {
@@ -85,12 +84,17 @@ const Products = () => {
 
       try {
         console.log("Fetching categories...");
+        console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
         const data = await getPublicCategories();
+        console.log("Categories API response:", data);
         setCategories(data);
         categoriesLoadedRef.current = true;
         console.log("Categories loaded:", data.length);
       } catch (error) {
         console.error("Error fetching categories:", error);
+        console.error("Categories error details:", error.response?.data || error.message);
+        setError("Failed to load categories. Please refresh the page.");
+        setLoading(false);
       }
     };
     fetchCategories();
@@ -105,6 +109,12 @@ const Products = () => {
         return;
       }
 
+      // Prevent loading products if already loaded for general products
+      if (!isCategorySpecific && productsLoadedRef.current) {
+        console.log("Products already loaded, skipping...");
+        return;
+      }
+
       try {
         isLoadingRef.current = true;
         setLoading(true);
@@ -115,6 +125,7 @@ const Products = () => {
         if (isCategorySpecific && categoryName) {
           // Fetch products by category name
           console.log("Fetching products for category:", categoryName);
+          console.log("API URL for category:", process.env.NEXT_PUBLIC_API_URL);
           response = await getPublicCategoryByName(categoryName);
           console.log("Category API Response:", response);
 
@@ -157,6 +168,9 @@ const Products = () => {
             setProducts(transformedProducts);
             setTotalProducts(transformedProducts.length);
             setLoading(false); // Ensure loading is set to false
+            if (isCategorySpecific) {
+              productsLoadedRef.current = false; // Reset for category-specific loads
+            }
           } else {
             throw new Error(
               response?.message || "Failed to fetch category products"
@@ -165,6 +179,7 @@ const Products = () => {
         } else {
           // Fetch all products
           console.log("Fetching all products");
+          console.log("API URL for all products:", process.env.NEXT_PUBLIC_API_URL);
           const params = {
             page: 1,
             limit: 1000, // Fetch all for client-side filtering
@@ -178,6 +193,7 @@ const Products = () => {
               response.data?.total || response.data?.totalProducts || 0
             );
             setLoading(false); // Ensure loading is set to false
+            productsLoadedRef.current = true; // Mark as loaded
           } else if (response?.data?.products) {
             // Handle case where response structure is different
             setProducts(response.data.products || []);
@@ -185,6 +201,7 @@ const Products = () => {
               response.data.total || response.data.totalProducts || 0
             );
             setLoading(false); // Ensure loading is set to false
+            productsLoadedRef.current = true; // Mark as loaded
           } else {
             throw new Error(response?.message || "Failed to fetch products");
           }
@@ -208,10 +225,10 @@ const Products = () => {
 
   // Handle category from URL query - only run once when categories are loaded
   useEffect(() => {
-    const categoryFromQuery = searchParams.get("category");
+    const categoryFromQuery = router.query.category;
 
     // Only proceed if we have categories loaded and this is the initial load
-    if (categories.length > 0 && initialLoadRef.current) {
+    if (categories.length > 0 && initialLoadRef.current && !isLoadingRef.current) {
       initialLoadRef.current = false;
 
       if (categoryFromQuery) {
@@ -270,7 +287,7 @@ const Products = () => {
         fetchProductsData();
       }
     }
-  }, [categories, searchParams]); // Remove fetchProductsData from dependencies to prevent loops
+  }, [categories, router.query.category]); // Use specific query parameter to prevent infinite loops
 
   // After products and categories are loaded, compute dynamic filters
   useEffect(() => {
@@ -454,7 +471,7 @@ const Products = () => {
 
   // Get category name from URL for display (fallback)
   const getCategoryNameFromUrl = () => {
-    const categoryFromQuery = searchParams.get("category");
+    const categoryFromQuery = router.query.category;
     if (categoryFromQuery) {
       return decodeURIComponent(categoryFromQuery);
     }
@@ -663,7 +680,7 @@ const Products = () => {
     }
   }, [sortBy]);
 
-  // Safety check: ensure loading is false when products are available
+  // Safety check: ensure loading is false when products are available or after timeout
   useEffect(() => {
     if (products.length > 0 && loading) {
       console.log(
@@ -671,6 +688,19 @@ const Products = () => {
       );
       setLoading(false);
     }
+    
+    // Add timeout to prevent infinite loading
+    const loadingTimeout = setTimeout(() => {
+      if (loading) {
+        console.log("Loading timeout reached, setting loading to false");
+        setLoading(false);
+        if (products.length === 0) {
+          setError("Loading timeout - please refresh the page");
+        }
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(loadingTimeout);
   }, [products, loading]);
 
   // Clear all filters
@@ -681,7 +711,7 @@ const Products = () => {
     setSelectedGender([]);
     setSelectedMaterial([]);
     setPriceRange([minPrice, maxPrice]);
-    router.push("/Products");
+    router.push("/products");
   };
 
   // Check if any filters are active
