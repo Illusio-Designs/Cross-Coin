@@ -1,4 +1,5 @@
 import axios from "axios";
+import apiCache from "../utils/apiCache";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
 
@@ -52,10 +53,38 @@ export const resetPassword = async (resetData) => {
 
 // Get public categories
 export const getPublicCategories = async () => {
+  const cacheKey = apiCache.getCacheKey(`${API_URL}/api/categories/public`);
+  
+  // Check if request is already pending
+  if (apiCache.isPending(cacheKey)) {
+    console.log("Categories API call already in progress, waiting...");
+    return apiCache.pendingRequests.get(cacheKey);
+  }
+
+  // Check cache first
+  if (apiCache.isValid(cacheKey)) {
+    console.log("Categories data loaded from cache");
+    return apiCache.get(cacheKey).data;
+  }
+
   try {
-    const response = await axios.get(`${API_URL}/api/categories/public`);
-    return response.data;
+    console.log("Fetching categories from API...");
+    const promise = axios.get(`${API_URL}/api/categories/public`);
+    
+    // Add to pending requests
+    const cachedPromise = apiCache.addPending(cacheKey, promise);
+    
+    const response = await cachedPromise;
+    const data = response.data;
+    
+    // Cache the result
+    apiCache.set(cacheKey, data);
+    apiCache.removePending(cacheKey);
+    
+    console.log("Categories data cached successfully");
+    return data;
   } catch (error) {
+    apiCache.removePending(cacheKey);
     throw error.response?.data || error.message;
   }
 };
@@ -102,19 +131,48 @@ export const getPublicProductBySlug = async (slug) => {
 
 // Get all public products
 export const getAllPublicProducts = async (params = {}) => {
-  try {
-    const queryParams = new URLSearchParams();
-    if (params.category) queryParams.append("category", params.category);
-    if (params.search) queryParams.append("search", params.search);
-    if (params.sort) queryParams.append("sort", params.sort);
-    if (params.page) queryParams.append("page", params.page);
-    if (params.limit) queryParams.append("limit", params.limit);
+  const queryParams = new URLSearchParams();
+  if (params.category) queryParams.append("category", params.category);
+  if (params.search) queryParams.append("search", params.search);
+  if (params.sort) queryParams.append("sort", params.sort);
+  if (params.page) queryParams.append("page", params.page);
+  if (params.limit) queryParams.append("limit", params.limit);
 
-    const response = await axios.get(
-      `${API_URL}/api/products/public?${queryParams.toString()}`
-    );
-    return response.data;
+  const url = `${API_URL}/api/products/public?${queryParams.toString()}`;
+  const cacheKey = apiCache.getCacheKey(url, params);
+
+  // Check if request is already pending
+  if (apiCache.isPending(cacheKey)) {
+    console.log("Products API call already in progress, waiting...");
+    return apiCache.pendingRequests.get(cacheKey);
+  }
+
+  // Check cache first (only for general products, not category-specific)
+  if (!params.category && apiCache.isValid(cacheKey)) {
+    console.log("Products data loaded from cache");
+    return apiCache.get(cacheKey).data;
+  }
+
+  try {
+    console.log("Fetching products from API...");
+    const promise = axios.get(url);
+    
+    // Add to pending requests
+    const cachedPromise = apiCache.addPending(cacheKey, promise);
+    
+    const response = await cachedPromise;
+    const data = response.data;
+    
+    // Cache the result (only for general products)
+    if (!params.category) {
+      apiCache.set(cacheKey, data);
+      console.log("Products data cached successfully");
+    }
+    
+    apiCache.removePending(cacheKey);
+    return data;
   } catch (error) {
+    apiCache.removePending(cacheKey);
     throw error.response?.data || error.message;
   }
 };
@@ -444,10 +502,43 @@ export const getShippingFees = async () => {
 
 // SEO
 export const getSeoByPageName = async (pageName) => {
+  const url = `${API_URL}/api/seo?page_name=${encodeURIComponent(pageName)}`;
+  const cacheKey = apiCache.getCacheKey(url, { page_name: pageName });
+  
+  // Check if request is already pending
+  if (apiCache.isPending(cacheKey)) {
+    console.log(`SEO API call for ${pageName} already in progress, waiting...`);
+    return apiCache.pendingRequests.get(cacheKey);
+  }
+
+  // Check cache first
+  if (apiCache.isValid(cacheKey)) {
+    console.log(`SEO data for ${pageName} loaded from cache`);
+    return apiCache.get(cacheKey).data;
+  }
+
   try {
-    const response = await axios.get(`${API_URL}/api/seo/${pageName}`);
-    return response.data;
+    console.log(`Fetching SEO data for page: ${pageName}`);
+    const promise = axios.get(url);
+    
+    // Add to pending requests
+    const cachedPromise = apiCache.addPending(cacheKey, promise);
+    
+    const response = await cachedPromise;
+    const data = response.data;
+    
+    // Handle the response structure - backend returns { success: true, data: seoData }
+    const seoData = data.success ? data.data : data;
+    
+    // Cache the result
+    apiCache.set(cacheKey, seoData);
+    apiCache.removePending(cacheKey);
+    
+    console.log(`SEO data for ${pageName} cached successfully:`, seoData);
+    return seoData;
   } catch (error) {
+    apiCache.removePending(cacheKey);
+    console.error(`SEO API error for ${pageName}:`, error.response?.data || error.message);
     throw error.response?.data || error.message;
   }
 };

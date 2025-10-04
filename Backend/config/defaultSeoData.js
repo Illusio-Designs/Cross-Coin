@@ -2,7 +2,7 @@ const defaultSeoData = [
     {
         page_name: 'home',
         slug: '/',
-        meta_title: 'Welcome to Our Store - Your One-Stop Shopping Destination',
+        meta_title: 'Cross Coin - Your Trusted Shopping Partner',
         meta_description: 'Discover a wide range of products at competitive prices. Shop the latest trends in fashion, electronics, home goods, and more.',
         meta_keywords: 'online shopping, ecommerce, retail, fashion, electronics, home goods',
         canonical_url: '/',
@@ -29,7 +29,7 @@ const defaultSeoData = [
     {
         page_name: 'about',
         slug: '/about',
-        meta_title: 'About Us - Your Trusted Shopping Partner',
+        meta_title: 'About Us - Your One-Stop Shopping Destination',
         meta_description: 'Learn about our company, our mission, and our commitment to providing the best shopping experience.',
         meta_keywords: 'about us, company info, our story, shopping partner',
         canonical_url: '/about',

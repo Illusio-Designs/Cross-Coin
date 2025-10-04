@@ -1,11 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
-import { usePathname } from 'next/navigation';
-import { seoService } from '../services/index';
+import { useRouter } from 'next/router';
+import { getSeoByPageName } from '../services/publicindex';
 import Head from 'next/head';
 
 const SeoWrapper = ({ pageName, children, seoData }) => {
-    // Use seoData directly, do not fetch inside this component
+    const router = useRouter();
+    const [seoDataState, setSeoDataState] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const hasFetchedRef = useRef(false);
+
     const defaultSeoData = {
         meta_title: 'Cross-Coin - Your Trusted Shopping Partner',
         meta_description: 'Discover amazing products at Cross-Coin, your one-stop shop for all your needs.',
@@ -13,7 +17,39 @@ const SeoWrapper = ({ pageName, children, seoData }) => {
         canonical_url: typeof window !== 'undefined' ? window.location.href : '',
         meta_image: null,
     };
-    const data = seoData || defaultSeoData;
+
+    // Fetch SEO data automatically if not provided
+    useEffect(() => {
+        const fetchSeoData = async () => {
+            if (seoData || hasFetchedRef.current || !pageName) {
+                return;
+            }
+
+            try {
+                setIsLoading(true);
+                hasFetchedRef.current = true;
+                console.log(`Fetching SEO data for page: ${pageName}`);
+                const data = await getSeoByPageName(pageName);
+                console.log(`SEO data for ${pageName}:`, data);
+                setSeoDataState(data);
+            } catch (error) {
+                console.error(`Error fetching SEO data for ${pageName}:`, error);
+                // Check if it's a 404 (SEO data not found) - this is normal
+                if (error.message && error.message.includes('not found')) {
+                    console.log(`No SEO data found for ${pageName}, using default`);
+                }
+                // Use default data on error (including 404)
+                setSeoDataState(defaultSeoData);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchSeoData();
+    }, [pageName, seoData]);
+
+    // Use provided seoData, fetched seoData, or default
+    const data = seoData || seoDataState || defaultSeoData;
     // Generate full image URL if meta_image exists
     const getFullImageUrl = (imagePath) => {
         if (!imagePath) return null;

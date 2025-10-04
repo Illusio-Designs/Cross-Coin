@@ -600,9 +600,9 @@ const Home = () => {
             <h2 className="section-title">Curate Your Collection</h2>
             <button className="hero-btn" onClick={() => {
               if (currentCategory.name) {
-                window.location.href = `/Products?category=${encodeURIComponent(currentCategory.name)}`;
+                window.location.href = `/products?category=${encodeURIComponent(currentCategory.name)}`;
               } else {
-                window.location.href = '/Products';
+                window.location.href = '/products';
               }
             }}>
               View All Products
@@ -961,7 +961,7 @@ const Home = () => {
         <div className="shop-by-category">
           <div className="latest-title">
             <h2 className="section-title">Latest Products</h2>
-            <button className="hero-btn" onClick={() => window.location.href = '/Products'}>
+            <button className="hero-btn" onClick={() => window.location.href = '/products'}>
               View All Products
             </button>
           </div>

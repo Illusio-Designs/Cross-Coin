@@ -6,6 +6,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Loader from '../components/Loader';
 import Pagination from '../components/common/Pagination';
+import SeoWrapper from '../console/SeoWrapper';
 import '../styles/pages/SearchResults.css';
 import '../styles/common/TableControls.css';
 
@@ -203,8 +204,9 @@ const SearchResults = () => {
   }
 
   return (
-    <div className="search-results-page">
-      <Header />
+    <SeoWrapper pageName="search">
+      <div className="search-results-page">
+        <Header />
       
       <div className="search-results-container">
         <div className="search-results-header">
@@ -301,8 +303,9 @@ const SearchResults = () => {
         )}
       </div>
 
-      <Footer />
-    </div>
+        <Footer />
+      </div>
+    </SeoWrapper>
   );
 };
 

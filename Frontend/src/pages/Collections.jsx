@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getPublicCategories } from '../services/publicindex';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import SeoWrapper from '../console/SeoWrapper';
 import '../styles/pages/Collections.css';
 
 const Collections = () => {
@@ -25,7 +26,7 @@ const Collections = () => {
   }, []);
 
   return (
-    <>
+    <SeoWrapper pageName="categories">
       <Header />
       <div className="collections-container">
         <h1 className="section-title">Collections</h1>
@@ -51,7 +52,7 @@ const Collections = () => {
             return (
               <Link
                 key={cat.id || cat._id}
-                href={`/Products?category=${encodeURIComponent(cat.name)}`}
+                href={`/products?category=${encodeURIComponent(cat.name)}`}
                 className="category-card"
                 onClick={() => console.log('Navigating to category:', cat.name)}
               >
@@ -67,7 +68,7 @@ const Collections = () => {
         </div>
       </div>
       <Footer />
-    </>
+    </SeoWrapper>
   );
 };
 
