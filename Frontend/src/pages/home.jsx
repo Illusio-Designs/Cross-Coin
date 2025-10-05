@@ -60,6 +60,7 @@ const Home = () => {
   const [latestProductsImageLoaded, setLatestProductsImageLoaded] = useState(false);
   const [seoData, setSeoData] = useState(null);
   const [buyNowLoadingStates, setBuyNowLoadingStates] = useState({});
+  const [expandedCards, setExpandedCards] = useState({});
   
   const categorySliderRef = useRef(null);
   const latestSliderRef = useRef(null);
@@ -521,6 +522,14 @@ const Home = () => {
     return stars.join(' ');
   };
 
+  // Toggle card expansion for mobile
+  const toggleCardExpansion = (productIndex) => {
+    setExpandedCards(prev => ({
+      ...prev,
+      [productIndex]: !prev[productIndex]
+    }));
+  };
+
   return (
     <>
       <Header />
@@ -768,7 +777,7 @@ const Home = () => {
                 // Size options for current variation
                 const sizeOptions = Array.isArray(attrs.size) ? attrs.size : [];
                 return (
-                  <div key={product.id} className="featured-product-card">
+                  <div key={product.id} className={`featured-product-card ${expandedCards[index] ? 'expanded' : ''}`}>
                     <div className="product-images">
                       <Image
                         className="main-image"
@@ -936,6 +945,14 @@ const Home = () => {
                           )}
                         </button>
                       </div>
+                      {/* View More Details Button - Mobile Only */}
+                      <button 
+                        className="view-more-btn"
+                        onClick={() => toggleCardExpansion(index)}
+                      >
+                        {expandedCards[index] ? 'View Less Details' : 'View More Details'}
+                      </button>
+
                       {/* Full Description */}
                       <div className="details-row">
                         <div>

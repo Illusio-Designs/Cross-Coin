@@ -21,6 +21,8 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {
     setActivePage(router.pathname);
@@ -115,7 +117,22 @@ const Header = () => {
   const handleScroll = useCallback(() => {
     const scrollPosition = window.scrollY;
     setIsSticky(scrollPosition > 100);
-  }, []);
+    
+    // Hide header on scroll down, show on scroll up (mobile only)
+    if (window.innerWidth <= 768) {
+      if (scrollPosition > lastScrollY && scrollPosition > 100) {
+        // Scrolling down
+        setIsHeaderVisible(false);
+      } else {
+        // Scrolling up
+        setIsHeaderVisible(true);
+      }
+      setLastScrollY(scrollPosition);
+    } else {
+      // Always show header on desktop
+      setIsHeaderVisible(true);
+    }
+  }, [lastScrollY]);
 
   useEffect(() => {
     let ticking = false;
@@ -136,7 +153,7 @@ const Header = () => {
   }, [handleScroll]);
 
   return (
-    <header className={`header ${isSticky ? "header--sticky" : ""}`}>
+    <header className={`header ${isSticky ? "header--sticky" : ""} ${!isHeaderVisible ? "header--hidden" : ""}`}>
       <div className="header__top">
         <div className="header__logo">
           <Link href="/">

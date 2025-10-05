@@ -1,4 +1,4 @@
-import ProtectedRoute from "@/components/ProtectedRoute.jsx";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Sidebar from "@/components/Sidebar/Sidebar.jsx";
 import CardGrid from '@/components/Dashboard/Card';
 import { useState, useEffect } from "react";

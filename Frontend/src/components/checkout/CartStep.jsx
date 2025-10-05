@@ -60,21 +60,57 @@ function getCartItemPrice(item) {
 }
 
 // Helper to format color display
-function formatColorDisplay(color) {
-  if (!color) return 'N/A';
-  if (Array.isArray(color)) {
-    return color.join(', ');
+function formatColorDisplay(item) {
+  // Try to get color from variation first
+  if (item.variation && item.variation.attributes) {
+    const attrs = typeof item.variation.attributes === 'string' 
+      ? JSON.parse(item.variation.attributes) 
+      : item.variation.attributes;
+    
+    if (attrs.color) {
+      if (Array.isArray(attrs.color)) {
+        return attrs.color.join(', ');
+      }
+      return attrs.color;
+    }
   }
-  return color;
+  
+  // Fallback to item.color
+  if (item.color) {
+    if (Array.isArray(item.color)) {
+      return item.color.join(', ');
+    }
+    return item.color;
+  }
+  
+  return 'N/A';
 }
 
 // Helper to format size display
-function formatSizeDisplay(size) {
-  if (!size) return 'N/A';
-  if (Array.isArray(size)) {
-    return size.join(', ');
+function formatSizeDisplay(item) {
+  // Try to get size from variation first
+  if (item.variation && item.variation.attributes) {
+    const attrs = typeof item.variation.attributes === 'string' 
+      ? JSON.parse(item.variation.attributes) 
+      : item.variation.attributes;
+    
+    if (attrs.size) {
+      if (Array.isArray(attrs.size)) {
+        return attrs.size.join(', ');
+      }
+      return attrs.size;
+    }
   }
-  return size;
+  
+  // Fallback to item.size
+  if (item.size) {
+    if (Array.isArray(item.size)) {
+      return item.size.join(', ');
+    }
+    return item.size;
+  }
+  
+  return 'N/A';
 }
 
 export default function CartStep() {
@@ -134,8 +170,8 @@ export default function CartStep() {
             cartItems.map((item) => {
               const imageUrl = pickCartItemImage(item);
               const itemPrice = getCartItemPrice(item);
-              const formattedColor = formatColorDisplay(item.color);
-              const formattedSize = formatSizeDisplay(item.size);
+              const formattedColor = formatColorDisplay(item);
+              const formattedSize = formatSizeDisplay(item);
               
               // Debug logging
               console.log('CartStep: Processing item:', {
@@ -145,6 +181,7 @@ export default function CartStep() {
                 color: item.color,
                 size: item.size,
                 variation: item.variation,
+                variationAttributes: item.variation?.attributes,
                 images: item.images,
                 formattedColor: formattedColor,
                 formattedSize: formattedSize,
