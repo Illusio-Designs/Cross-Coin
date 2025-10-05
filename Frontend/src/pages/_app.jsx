@@ -9,6 +9,7 @@ import { useRouter } from "next/router";
 import Loader from "../components/Loader";
 import "../styles/globals.css";
 import "../styles/responsive.css";
+import "../styles/mobile-utilities.css";
 import "../styles/components/Footer.css";
 import "../styles/components/Header.css";
 import "../styles/components/Testimonials.css";

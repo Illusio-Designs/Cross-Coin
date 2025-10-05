@@ -121,22 +121,8 @@ export default function UnifiedCheckout() {
     }
   }, [isAuthenticated]);
 
-  // Separate useEffect to ensure authenticated users see cart step
-  useEffect(() => {
-    if (isAuthenticated && !isCartLoading) {
-      console.log(
-        "UnifiedCheckout: Ensuring authenticated user sees cart step, current step:",
-        step
-      );
-      if (step !== "cart") {
-        console.log(
-          "UnifiedCheckout: Setting step to cart for authenticated user"
-        );
-        setStep("cart");
-        sessionStorage.setItem("checkoutStep", "cart");
-      }
-    }
-  }, [isAuthenticated, isCartLoading, step]);
+  // Removed problematic useEffect that was forcing authenticated users to stay on cart step
+  // This was preventing navigation to shipping step
 
   useEffect(() => {
     console.log("UnifiedCheckout: Cart state changed:", {

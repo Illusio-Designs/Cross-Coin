@@ -103,15 +103,26 @@ export default function ProductDetails() {
   const couponApiCalledRef = useRef(false);
 
   useEffect(() => {
-    if (productApiCalledRef.current) return; // Prevent multiple calls
-    productApiCalledRef.current = true;
+    // Reset states when slug changes
+    if (productApiCalledRef.current && productApiCalledRef.current !== productSlug) {
+      productApiCalledRef.current = null;
+    }
+    
+    if (productApiCalledRef.current === productSlug) return; // Prevent multiple calls for same slug
+    productApiCalledRef.current = productSlug;
+    
     console.log('API BEING CALLED: ProductDetails product fetch');
     const fetchProduct = async () => {
       try {
         setLoading(true);
+        setError(null); // Reset error state
+        setProduct(null); // Reset product state
+        
         if (productSlug) {
           const response = await getPublicProductBySlug(productSlug);
-          if (response.success) {
+          console.log('API Response:', response);
+          
+          if (response && response.success && response.data) {
             setProduct(response.data);
             // Set default variation if available
             if (response.data.variations && response.data.variations.length > 0) {
@@ -130,7 +141,13 @@ export default function ProductDetails() {
                 setSelectedAttributes(initialAttributes);
               }
             }
+          } else {
+            // Handle case where API returns success: false or no data
+            setError('Product not found or no data returned');
+            console.error('API returned no product data:', response);
           }
+        } else {
+          setError('No product slug provided');
         }
       } catch (err) {
         setError(err.message || 'Failed to fetch product');
@@ -152,7 +169,9 @@ export default function ProductDetails() {
         const data = await getPublicCoupons();
         setCoupons(Array.isArray(data) ? data : data.coupons || []);
       } catch (err) {
-        // Optionally handle error
+        console.error('Error fetching coupons:', err);
+        // Optionally handle error - set empty array as fallback
+        setCoupons([]);
       }
     };
     fetchCoupons();
@@ -1056,7 +1075,7 @@ export default function ProductDetails() {
                     alt={variationImages[selectedThumbnail]?.alt_text || product.name}
                     style={{
                       width: '100%',
-                      height: '400px',
+                      height: 'auto',
                       objectFit: 'contain',
                       boxShadow: '0 2px 8px #eee',
                       background: '#eee',
@@ -1385,30 +1404,33 @@ export default function ProductDetails() {
                   )}
                 </div>
           {showReviewForm && (
-            <div className="review-form-modal">
+            <div 
+              className="review-form-modal"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setShowReviewForm(false);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setShowReviewForm(false);
+                }
+              }}
+              tabIndex={-1}
+            >
               <div className="review-form-modal-content">
                 <button
                   className="close-modal-btn"
                   onClick={() => setShowReviewForm(false)}
-                  style={{
-                    position: 'absolute',
-                    top: 12,
-                    right: 16,
-                    background: 'none',
-                    border: 'none',
-                    fontSize: 24,
-                    cursor: 'pointer',
-                    color: '#888'
-                  }}
-                  aria-label="Close"
+                  aria-label="Close review form"
                 >
                   &times;
                 </button>
-                  <h3>Write a Review</h3>
-                  {renderReviewForm()}
-                </div>
+                <h3>Write a Review</h3>
+                {renderReviewForm()}
               </div>
-            )}
+            </div>
+          )}
         </div>
         <Footer />
       </div>

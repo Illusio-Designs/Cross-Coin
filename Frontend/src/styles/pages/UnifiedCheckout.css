@@ -606,20 +606,114 @@
 @media (max-width: 768px) {
   .cart-main {
     flex-direction: column;
+    padding: 20px 2%;
+    margin: 0 auto;
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
   }
+  
+  .cart-section {
+    width: 100%;
+  }
+  
   .order-summary-section {
-    min-width: 567px;
+    min-width: unset;
+    max-width: 690px;
+    width: 100%;
+    margin-top: 1rem;
+  }
+  
+  /* Mobile cart items */
+  
+  .cart-item-img {
+    width: 80px;
+    height: 80px;
+    align-self: center;
+  }
+  
+  .cart-item-details {
+    width: 100%;
+  }
+  
+  .cart-item-price {
+    margin-top: 0.5rem;
+  }
+  
+  .cart-item-qty {
+    margin-top: 0.5rem;
+  }
 }
-}
-@media (max-width: 426px){
+@media (max-width: 480px) {
+  .cart-main {
+    padding: 15px 3%;
+    max-width: 600px;
+  }
+  
   .order-summary-section {
-    min-width: 260px;
-    max-width: 297px;
+    min-width: unset;
+    max-width: 360px;
+    padding: 1.5rem 1rem;
+  }
+  
+  /* Mobile shipping form */
+  .shipping-form-container {
+    padding: 1rem;
+  }
+  
+  .form-row-2col {
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  
+  /* Mobile delivery methods */
+  .delivery-methods {
+    gap: 1rem;
+  }
+  
+  .delivery-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.8rem;
+    padding: 1rem;
+  }
+  
+  .delivery-fee {
+    margin-left: 0;
+    margin-top: 0.5rem;
+  }
+  
+  /* Mobile payment methods */
+  .payment-method {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.8rem;
+  }
+  
+  .upi-input-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  /* Mobile order summary */
+  .order-summary-title {
+    font-size: 1.1rem;
+  }
+  
+  .order-summary-row {
+    font-size: 0.9rem;
+  }
+  
+  .order-summary-total {
+    font-size: 1.05rem;
+  }
 }
-}
-@media (max-width: 390px){
+@media (max-width: 376px){
   .promo-row {
     flex-direction: column;
+}
+.order-summary-section {
+  max-width: 320px;
 }
 }
 
@@ -749,10 +843,13 @@
 @media (max-width: 640px) {
   .guest-checkout-option {
     padding: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
   }
   
   .guest-checkout-card {
     padding: 1.5rem;
+    max-width: 600px;
   }
   
   .form-row {
@@ -760,8 +857,74 @@
     gap: 1rem;
   }
   
+  /* Force single column layout for guest checkout form fields */
+  .guest-checkout-card .form-row {
+    grid-template-columns: 1fr !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
   .guest-checkout-actions {
     gap: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .guest-checkout-option {
+    padding: 0.5rem;
+    max-width: 600px;
+    overflow-x: hidden;
+  }
+  
+  .guest-checkout-card {
+    padding: 1rem;
+    max-width: 600px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .guest-checkout-card h2 {
+    font-size: 1.3rem !important;
+  }
+  
+  .guest-checkout-card p {
+    font-size: 0.9rem !important;
+  }
+  
+  .guest-info-form {
+    gap: 1rem;
+    width: 100%;
+    overflow-x: hidden;
+  }
+  
+  /* Ensure all form elements stay within bounds */
+  .guest-checkout-card .form-group {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .guest-checkout-card .form-group input {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.95rem;
+    width: 100%;
+    box-sizing: border-box;
+    max-width: 100%;
+  }
+  
+  .guest-checkout-actions .btn {
+    padding: 0.8rem 0;
+    font-size: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* Force single column for all form rows on small mobile */
+  .guest-checkout-card .form-row {
+    grid-template-columns: 1fr !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100%;
+    gap: 0.8rem;
   }
 }
 

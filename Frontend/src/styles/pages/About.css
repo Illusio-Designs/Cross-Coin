@@ -283,17 +283,175 @@
 
 @media (max-width: 768px) {
   .about-hero {
-    padding: 5rem 0 4rem;
-}
-} 
-@media (max-width: 426px) {
+    padding: 4rem 0 3rem;
+  }
+  
+  .about-hero h1 {
+    font-size: 3rem;
+  }
+  
+  .subtitle {
+    font-size: 1.2rem;
+  }
+  
+  .hero-stats {
+    flex-direction: column;
+    gap: 2rem;
+    margin-top: 2rem;
+  }
+  
   .mission-section {
     padding: 4rem 5%;
+  }
+  
+  .mission-content h2 {
+    font-size: 2rem;
+  }
+  
+  .mission-content p {
+    font-size: 1.1rem;
+  }
+  
+  .features-section {
+    padding: 40px 5%;
+  }
+  
+  .features-section h2 {
+    font-size: 2rem;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .feature-card {
+    padding: 2rem 1.5rem;
+  }
+  
+  .process-section {
+    padding: 4rem 5%;
+  }
+  
+  .process-section h2 {
+    font-size: 2rem;
+  }
+  
+  .process-steps {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+  
+  .team-section {
+    padding: 4rem 5%;
+  }
+  
+  .team-section h2 {
+    font-size: 2rem;
+  }
+  
+  .team-values {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
 }
-.features-section {
-  padding: 50px 5%;
+
+@media (max-width: 600px) {
+  .about-hero h1 {
+    font-size: 2.5rem;
+  }
+  
+  .subtitle {
+    font-size: 1.1rem;
+  }
+  
+  .stat-number {
+    font-size: 2rem;
+  }
+  
+  .stat-label {
+    font-size: 1rem;
+  }
+  
+  .mission-content h2 {
+    font-size: 1.8rem;
+  }
+  
+  .mission-content p {
+    font-size: 1rem;
+  }
+  
+  .features-section h2 {
+    font-size: 1.8rem;
+  }
+  
+  .feature-card h3 {
+    font-size: 1.3rem;
+  }
+  
+  .process-steps {
+    grid-template-columns: 1fr;
+  }
+  
+  .process-step h3 {
+    font-size: 1.2rem;
+  }
+  
+  .team-section h2 {
+    font-size: 1.8rem;
+  }
 }
-.team-section {
-  padding: 4rem 5%;
-}
+
+@media (max-width: 426px) {
+  .about-hero {
+    padding: 3rem 0 2rem;
+  }
+  
+  .about-hero h1 {
+    font-size: 2rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .mission-section {
+    padding: 3rem 4%;
+  }
+  
+  .mission-content h2 {
+    font-size: 1.6rem;
+  }
+  
+  .features-section {
+    padding: 30px 4%;
+  }
+  
+  .features-section h2 {
+    font-size: 1.6rem;
+  }
+  
+  .feature-card {
+    padding: 1.5rem 1rem;
+  }
+  
+  .feature-card h3 {
+    font-size: 1.2rem;
+  }
+  
+  .process-section {
+    padding: 3rem 4%;
+  }
+  
+  .process-section h2 {
+    font-size: 1.6rem;
+  }
+  
+  .team-section {
+    padding: 3rem 4%;
+  }
+  
+  .team-section h2 {
+    font-size: 1.6rem;
+  }
 }
