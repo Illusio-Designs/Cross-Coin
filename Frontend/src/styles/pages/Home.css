@@ -918,6 +918,11 @@
   background: #a0182b;
 }
 
+/* Hide view more button on desktop screens */
+.featured-product-card .view-more-btn {
+  display: none;
+}
+
 /* Latest Products Section */
 .latest-title{
     display: flex;
@@ -1219,8 +1224,9 @@
     display: none;
   }
 
-  /* View More Details Button */
+  /* View More Details Button - Mobile Only */
   .featured-product-card .view-more-btn {
+    display: block; /* Override desktop hide rule */
     width: 100%;
     padding: 0.6rem;
     background: #f8f9fa;
