@@ -1,14 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Force webpack bundling
-  webpack5: true,
   // Experimental features
   experimental: {
     optimizePackageImports: ["lucide-react", "react-icons", "lodash"],
     // Enable server components
     serverComponentsExternalPackages: ["axios"],
-    // Disable turbopack for now to fix the error
-    turbo: false,
   },
   // Image configuration - optimized for performance
   images: {
