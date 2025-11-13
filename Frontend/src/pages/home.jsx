@@ -21,16 +21,24 @@ const formatTwoDigits = (num) => num.toString().padStart(2, '0');
 
 function forceEnvImageBase(url) {
   if (!url || typeof url !== 'string') return '/assets/card1-left.webp';
+  
+  // Use live backend URL
+  const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://api.crosscoin.in';
+  
   if (url.startsWith('http')) {
-    if (url.includes('localhost:5000')) {
-      const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+    // Replace localhost with live URL
+    if (url.includes('localhost:5000') || url.includes('localhost')) {
       const path = url.replace(/^https?:\/\/[^/]+/, '');
       return `${baseUrl}${path}`;
     }
     return url;
   }
-  const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
-  return `${baseUrl}${url}`;
+  
+  // Ensure proper path formatting
+  if (url.startsWith('/')) {
+    return `${baseUrl}${url}`;
+  }
+  return `${baseUrl}/${url}`;
 }
 
 const Home = () => {
@@ -485,13 +493,27 @@ const Home = () => {
   const getCategoryImageSrc = () => {
     if (currentCategory && currentCategory.image) {
       const img = currentCategory.image;
+      
+      // If already a full URL, return it
       if (img.startsWith('http')) {
         return img;
       }
-      // Remove any duplicate '/uploads/categories/' in the middle of the path
-      const cleanedPath = img.replace(/(\/uploads\/categories\/)+/g, '/uploads/categories/');
-      // Ensure only one slash between base URL and path
-      let baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+      
+      // Use live backend URL
+      const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://api.crosscoin.in';
+      
+      // Clean up the path
+      let cleanedPath = img;
+      
+      // Remove duplicate '/uploads/categories/'
+      cleanedPath = cleanedPath.replace(/(\/uploads\/categories\/)+/g, '/uploads/categories/');
+      
+      // Ensure path starts with /uploads/categories/
+      if (!cleanedPath.startsWith('/uploads/categories/') && !cleanedPath.startsWith('uploads/categories/')) {
+        cleanedPath = `/uploads/categories/${cleanedPath}`;
+      }
+      
+      // Remove leading slash if present for concatenation
       if (cleanedPath.startsWith('/')) {
         return `${baseUrl}${cleanedPath}`;
       }
