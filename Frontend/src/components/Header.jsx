@@ -176,8 +176,8 @@ const Header = () => {
             </li>
             <li>
               <Link
-                href="/products"
-                className={activePage === "/products" ? "active" : ""}
+                href="/Products"
+                className={activePage === "/Products" ? "active" : ""}
               >
                 Products
               </Link>
@@ -277,8 +277,8 @@ const Header = () => {
             </li>
             <li>
               <Link
-                href="/products"
-                className={activePage === "/products" ? "active" : ""}
+                href="/Products"
+                className={activePage === "/Products" ? "active" : ""}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Products

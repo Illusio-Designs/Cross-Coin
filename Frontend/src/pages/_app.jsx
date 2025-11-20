@@ -1,4 +1,5 @@
 // import { ThemeProvider } from 'next-themes'; // Disabled dark mode
+import Head from "next/head";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AuthProvider } from "../context/AuthContext";
@@ -33,10 +34,9 @@ export default function App({ Component, pageProps }) {
 
   useEffect(() => {
     // Set initial loading state - reduced time for better UX
-    setLoading(true);
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 1000);
+    }, 500);
 
     // Handle route changes
     const handleStart = () => setLoading(true);
@@ -56,23 +56,13 @@ export default function App({ Component, pageProps }) {
       router.events.off("routeChangeComplete", handleComplete);
       router.events.off("routeChangeError", handleComplete);
     };
-  }, [router]);
+  }, [router.events]);
 
   useEffect(() => {
-    document.title = "Cross Coin";
-    const link = document.createElement("link");
-    link.rel = "icon";
-    link.href = "/crosscoin icon.png";
-    document.head.appendChild(link);
-    
     // Fix for turbopack error
     if (typeof window !== 'undefined' && !window.__turbopack_load_page_chunks__) {
       window.__turbopack_load_page_chunks__ = () => {};
     }
-    
-    return () => {
-      document.head.removeChild(link);
-    };
   }, []);
 
   useEffect(() => {
@@ -93,6 +83,14 @@ export default function App({ Component, pageProps }) {
 
   return (
     <>
+      <Head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes"
+        />
+        <title>Cross Coin</title>
+        <link rel="icon" href="/crosscoin icon.png" />
+      </Head>
       <Analytics />
       <AuthProvider>
         <CartProvider>
