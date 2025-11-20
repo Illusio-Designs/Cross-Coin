@@ -277,17 +277,6 @@ const Home = () => {
     return () => clearInterval(timerInterval);
   }, []);
 
-  useEffect(() => {
-    document.title = 'Cross Coin';
-    const link = document.createElement('link');
-    link.rel = 'icon';
-    link.href = '/crosscoin icon.png';
-    document.head.appendChild(link);
-    return () => {
-      document.head.removeChild(link);
-    };
-  }, []);
-
   const { days, hours, minutes, seconds } = timeLeft;
 
   const scrollSlider = (direction) => {
@@ -631,9 +620,9 @@ const Home = () => {
             <h2 className="section-title">Curate Your Collection</h2>
             <button className="hero-btn" onClick={() => {
               if (currentCategory.name) {
-                window.location.href = `/products?category=${encodeURIComponent(currentCategory.name)}`;
+                window.location.href = `/Products?category=${encodeURIComponent(currentCategory.name)}`;
               } else {
-                window.location.href = '/products';
+                window.location.href = '/Products';
               }
             }}>
               View All Products
@@ -1000,7 +989,7 @@ const Home = () => {
         <div className="shop-by-category">
           <div className="latest-title">
             <h2 className="section-title">Latest Products</h2>
-            <button className="hero-btn" onClick={() => window.location.href = '/products'}>
+            <button className="hero-btn" onClick={() => window.location.href = '/Products'}>
               View All Products
             </button>
           </div>

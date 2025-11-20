@@ -711,7 +711,7 @@ const Products = () => {
     setSelectedGender([]);
     setSelectedMaterial([]);
     setPriceRange([minPrice, maxPrice]);
-    router.push("/products");
+    router.push("/Products");
   };
 
   // Check if any filters are active
