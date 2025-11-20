@@ -37,7 +37,7 @@ const Footer = () => {
             <Image src="/assets/crosscoin_logo.webp" alt="logo" width={120} height={40} unoptimized />
             </span>
           </div>
-          <p>Register now to get latest updates on promotions & coupons. Don't worry, we not spam!</p>
+          <p>Discover premium quality socks designed for comfort and style. Join our community for exclusive deals, new arrivals, and special offers on your favorite Cross Coin collections!</p>
           <div className="footer__social">
             <h2>Follow us on social media:</h2>
             <div className="footer__social-icons">
@@ -56,7 +56,7 @@ const Footer = () => {
         </div>
         <div className="footer__col footer__help">
           <h4>Do You Need Help ?</h4>
-          <p>It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.</p>
+          <p>Our customer support team is here to assist you with orders, product inquiries, and any questions about our premium sock collections. Reach out anytime!</p>
           <div className="footer__contact">
             <div className="contact-item">
               <MdOutlinePhoneInTalk /> 
