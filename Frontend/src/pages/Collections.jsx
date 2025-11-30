@@ -101,7 +101,7 @@ const Collections = () => {
             return (
               <Link
                 key={cat.id || cat._id}
-                href={`/products?category=${encodeURIComponent(cat.name)}`}
+                href={`/Products?category=${encodeURIComponent(cat.name)}`}
                 className="category-card"
                 onClick={() => console.log('Navigating to category:', cat.name)}
               >
