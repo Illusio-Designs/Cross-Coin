@@ -28,22 +28,28 @@ import "../styles/pages/auth/adminlogin.css";
 import Analytics from "../components/common/Analytics";
 
 export default function App({ Component, pageProps }) {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start with false to allow immediate paint
   const router = useRouter();
   const progressRef = useRef();
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
-    // Set initial loading state - reduced time for better UX
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 500);
+    // Skip initial loading overlay to allow First Contentful Paint
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      // Don't show loader on initial mount - let content paint immediately
+      return;
+    }
 
-    // Handle route changes
+    // Handle route changes only (not initial load)
     const handleStart = () => setLoading(true);
     const handleComplete = () => {
-      setTimeout(() => {
-        setLoading(false);
-      }, 200);
+      // Use requestAnimationFrame to ensure smooth transition
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          setLoading(false);
+        }, 100);
+      });
     };
 
     router.events.on("routeChangeStart", handleStart);
@@ -51,7 +57,6 @@ export default function App({ Component, pageProps }) {
     router.events.on("routeChangeError", handleComplete);
 
     return () => {
-      clearTimeout(timer);
       router.events.off("routeChangeStart", handleStart);
       router.events.off("routeChangeComplete", handleComplete);
       router.events.off("routeChangeError", handleComplete);
@@ -111,12 +116,13 @@ export default function App({ Component, pageProps }) {
                   left: 0,
                   width: "100%",
                   height: "100%",
-                  backgroundColor: "white",
+                  backgroundColor: "rgba(255, 255, 255, 0.9)",
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
                   zIndex: 9999,
                   backdropFilter: "blur(5px)",
+                  pointerEvents: "auto",
                 }}
               >
                 <Loader />
