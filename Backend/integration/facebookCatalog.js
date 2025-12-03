@@ -244,6 +244,7 @@ router.get("/feed", async (req, res) => {
         xml += `<g:brand>Cross Coin</g:brand>`;
         xml += `<g:product_type><![CDATA[${categoryName}]]></g:product_type>`;
         xml += `<g:sku>${variation.sku}</g:sku>`;
+        xml += `<g:condition>New</g:condition>`;
 
         // Add variation attributes as custom fields
         if (variation.attributes && typeof variation.attributes === "object") {
@@ -302,6 +303,7 @@ router.get("/feed", async (req, res) => {
       xml += `<g:brand>Cross Coin</g:brand>`;
       xml += `<g:product_type><![CDATA[${categoryName}]]></g:product_type>`;
       xml += `<g:sku>${firstVariation.sku}</g:sku>`;
+      xml += `<g:condition>New</g:condition>`;
       xml += `</item>`;
     } else if (
       !product.ProductVariations ||
@@ -322,6 +324,7 @@ router.get("/feed", async (req, res) => {
       xml += `<g:availability>${availability}</g:availability>`;
       xml += `<g:brand>Cross Coin</g:brand>`;
       xml += `<g:product_type><![CDATA[${categoryName}]]></g:product_type>`;
+      xml += `<g:condition>New</g:condition>`;
       xml += `</item>`;
     }
   }
