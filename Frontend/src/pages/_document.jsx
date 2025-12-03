@@ -26,6 +26,14 @@ export default function Document() {
         <meta name="supported-color-schemes" content="light" />
       </Head>
       <body>
+        <noscript>
+          <div style={{ padding: '20px', textAlign: 'center', backgroundColor: '#f5f5f5', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div>
+              <h1>Cross Coin</h1>
+              <p>Please enable JavaScript to view this website.</p>
+            </div>
+          </div>
+        </noscript>
         <Main />
         <NextScript />
       </body>

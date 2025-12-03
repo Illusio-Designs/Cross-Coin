@@ -116,7 +116,7 @@ export default function App({ Component, pageProps }) {
                   left: 0,
                   width: "100%",
                   height: "100%",
-                  backgroundColor: "rgba(255, 255, 255, 0.9)",
+                  backgroundColor: "rgba(255, 255, 255, 1)",
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
