@@ -1,13 +1,16 @@
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { useRouter } from "next/router";
-import { useState } from "react";
-import { getGuestOrder } from "../services/publicindex";
+import { useState, useEffect } from "react";
+import { getGuestOrder, getUserOrders } from "../services/publicindex";
+import { useAuth } from "../context/AuthContext";
+import { fbqTrack } from "../components/common/Analytics";
 import "../styles/pages/ThankYou.css"; // Import new stylesheet
 
 export default function ThankYou() {
   const router = useRouter();
   const { order_number, guest_email, is_guest } = router.query;
+  const { isAuthenticated } = useAuth();
   const [showGuestTracking, setShowGuestTracking] = useState(false);
   const [guestEmail, setGuestEmail] = useState(guest_email || "");
   const [trackingResult, setTrackingResult] = useState(null);
@@ -59,6 +62,99 @@ export default function ThankYou() {
       setTrackingLoading(false);
     }
   };
+
+  // Track Facebook Purchase Event
+  useEffect(() => {
+    const trackPurchaseEvent = async () => {
+      // Check if we've already tracked this order
+      const trackingKey = `fb_purchase_tracked_${order_number}`;
+      if (!order_number || sessionStorage.getItem(trackingKey)) {
+        return;
+      }
+
+      try {
+        let orderData = null;
+
+        // Fetch order data based on user type
+        if (is_guest === 'true' && guest_email) {
+          // For guest users
+          try {
+            const result = await getGuestOrder(guest_email, order_number);
+            if (result.success && result.data) {
+              orderData = result.data;
+            }
+          } catch (error) {
+            console.error('Error fetching guest order for tracking:', error);
+            return;
+          }
+        } else if (isAuthenticated) {
+          // For authenticated users
+          try {
+            const result = await getUserOrders({ limit: 100 }); // Get enough orders to find the one we need
+            if (result.orders && Array.isArray(result.orders)) {
+              const order = result.orders.find(
+                (o) => o.order_number === order_number
+              );
+              if (order) {
+                // Transform the order data to match the expected format
+                orderData = {
+                  order: {
+                    final_amount: order.final_amount,
+                    payment_type: order.payment_type,
+                  },
+                  items: order.OrderItems && Array.isArray(order.OrderItems)
+                    ? order.OrderItems.map((item) => ({
+                        product: {
+                          id: item.Product ? item.Product.id : item.product_id,
+                        },
+                        quantity: item.quantity || 1,
+                        price: item.price,
+                      }))
+                    : [],
+                };
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching user orders for tracking:', error);
+            return;
+          }
+        }
+
+        // Track purchase event if we have order data
+        if (orderData && orderData.order && orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0) {
+          const purchaseData = {
+            value: parseFloat(orderData.order.final_amount) || 0,
+            currency: 'INR',
+            contents: orderData.items
+              .filter((item) => item.product?.id || item.product_id) // Filter out items without product ID
+              .map((item) => ({
+                id: (item.product?.id || item.product_id)?.toString(),
+                quantity: item.quantity || 1,
+              })),
+          };
+
+          // Only track if we have valid purchase data
+          if (purchaseData.value > 0 && purchaseData.contents.length > 0) {
+            // Track the purchase event
+            fbqTrack('Purchase', purchaseData);
+            console.log('Facebook Purchase event tracked:', purchaseData);
+
+            // Mark as tracked to prevent duplicate tracking
+            sessionStorage.setItem(trackingKey, 'true');
+          } else {
+            console.warn('Invalid purchase data, skipping tracking:', purchaseData);
+          }
+        }
+      } catch (error) {
+        console.error('Error tracking purchase event:', error);
+      }
+    };
+
+    // Only track when router is ready and we have order_number
+    if (router.isReady && order_number) {
+      trackPurchaseEvent();
+    }
+  }, [router.isReady, order_number, is_guest, guest_email, isAuthenticated]);
 
   return (
     <>
