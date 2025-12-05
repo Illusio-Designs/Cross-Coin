@@ -19,6 +19,40 @@ const FacebookPixel = () => {
           'https://connect.facebook.net/en_US/fbevents.js');
           fbq('init', '${FB_PIXEL_ID}');
           fbq('track', 'PageView');
+          
+          // Block unwanted events after fbq is loaded
+          (function() {
+            setTimeout(function() {
+              if (window.fbq && typeof window.fbq === 'function') {
+                var originalFbq = window.fbq;
+                var blockedEvents = ['SubscribedButtonClick'];
+                
+                window.fbq = function() {
+                  var args = Array.prototype.slice.call(arguments);
+                  // Check if this is a 'track' call with a blocked event
+                  if (args.length >= 2 && args[0] === 'track') {
+                    var eventName = args[1];
+                    if (blockedEvents.indexOf(eventName) !== -1) {
+                      console.warn('Blocked unwanted Facebook Pixel event: ' + eventName);
+                      return;
+                    }
+                  }
+                  // Call original fbq for all other events
+                  return originalFbq.apply(this, arguments);
+                };
+                
+                // Copy all properties and methods from original fbq
+                Object.keys(originalFbq).forEach(function(key) {
+                  window.fbq[key] = originalFbq[key];
+                });
+                
+                // Preserve the queue if it exists
+                if (originalFbq.queue) {
+                  window.fbq.queue = originalFbq.queue;
+                }
+              }
+            }, 100);
+          })();
         `}
       </Script>
       <noscript>
@@ -36,7 +70,21 @@ const FacebookPixel = () => {
 // Helper to track custom Facebook Pixel events
 export function fbqTrack(event, params = {}) {
   if (typeof window !== "undefined" && window.fbq) {
-    window.fbq("track", event, params);
+    try {
+      // Block unwanted events from browser extensions or third-party scripts
+      const blockedEvents = ['SubscribedButtonClick'];
+      if (blockedEvents.includes(event)) {
+        console.warn(`Blocked unwanted Facebook Pixel event: ${event}`);
+        return;
+      }
+      
+      window.fbq("track", event, params);
+      console.log(`Facebook Pixel event tracked: ${event}`, params);
+    } catch (error) {
+      console.error(`Error tracking Facebook Pixel event ${event}:`, error);
+    }
+  } else {
+    console.warn('Facebook Pixel (fbq) not available yet');
   }
 }
 
