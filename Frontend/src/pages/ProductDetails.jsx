@@ -40,14 +40,7 @@ export default function ProductDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Debug logging for slug processing
-  console.log('=== FRONTEND SLUG DEBUG ===');
-  console.log('Raw slug from URL:', rawSlug);
-  console.log('Decoded slug:', productSlug);
-  console.log('Loading state:', loading);
-  console.log('Error state:', error);
-  console.log('Product state:', product);
-  console.log('==========================');
+  // Note: avoid heavy debug logging here (hurts mobile performance)
   const [showAddedToCart, setShowAddedToCart] = useState(false);
   const [reviewForm, setReviewForm] = useState({
     rating: 5,
@@ -1066,23 +1059,37 @@ export default function ProductDetails() {
               )}
               {variationImages[selectedThumbnail] && (variationImages[selectedThumbnail].image_url || variationImages[selectedThumbnail].url || variationImages[selectedThumbnail]) ? (
                 <>
-                  <img
+                  <Image
                     src={forceEnvImageBase(
                       variationImages[selectedThumbnail]?.image_url ||
-                      variationImages[selectedThumbnail]?.url ||
-                      variationImages[selectedThumbnail]
+                        variationImages[selectedThumbnail]?.url ||
+                        variationImages[selectedThumbnail]
                     )}
                     alt={variationImages[selectedThumbnail]?.alt_text || product.name}
+                    width={900}
+                    height={900}
+                    priority
+                    sizes="(max-width: 768px) 100vw, 600px"
                     style={{
-                      width: '100%',
-                      height: 'auto',
-                      objectFit: 'contain',
-                      boxShadow: '0 2px 8px #eee',
-                      background: '#eee',
-                      display: 'block'
+                      width: "100%",
+                      height: "auto",
+                      objectFit: "contain",
+                      boxShadow: "0 2px 8px #eee",
+                      background: "#eee",
+                      display: "block",
                     }}
-                    onLoad={() => setImageLoaded(prev => ({ ...prev, [selectedThumbnail]: true }))}
-                    onError={() => setImageLoaded(prev => ({ ...prev, [selectedThumbnail]: true }))}
+                    onLoad={() =>
+                      setImageLoaded((prev) => ({
+                        ...prev,
+                        [selectedThumbnail]: true,
+                      }))
+                    }
+                    onError={() =>
+                      setImageLoaded((prev) => ({
+                        ...prev,
+                        [selectedThumbnail]: true,
+                      }))
+                    }
                     onClick={() => setIsZoomOpen(true)}
                   />
                   {!imageLoaded[selectedThumbnail] && (
@@ -1134,20 +1141,28 @@ export default function ProductDetails() {
                         }}
                       />
                     )}
-                    <img
+                    <Image
                       src={forceEnvImageBase(image.image_url || image.url || image)}
                       alt={image.alt_text || `${product.name} thumbnail ${idx + 1}`}
+                      width={80}
+                      height={80}
+                      sizes="80px"
                       style={{
-                        width: 80,
-                        height: 80,
-                        objectFit: 'cover',
-                        border: selectedThumbnail === idx ? '2px solid #222' : '1px solid #eee',
-                        cursor: 'pointer',
-                        background: '#eee',
-                        display: 'block'
+                        objectFit: "cover",
+                        border:
+                          selectedThumbnail === idx
+                            ? "2px solid #222"
+                            : "1px solid #eee",
+                        cursor: "pointer",
+                        background: "#eee",
+                        display: "block",
                       }}
-                      onLoad={() => setImageLoaded(prev => ({ ...prev, [idx]: true }))}
-                      onError={() => setImageLoaded(prev => ({ ...prev, [idx]: true }))}
+                      onLoad={() =>
+                        setImageLoaded((prev) => ({ ...prev, [idx]: true }))
+                      }
+                      onError={() =>
+                        setImageLoaded((prev) => ({ ...prev, [idx]: true }))
+                      }
                       onClick={() => setSelectedThumbnail(idx)}
                     />
                     {!imageLoaded[idx] && (

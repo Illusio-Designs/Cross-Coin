@@ -9,7 +9,7 @@ const nextConfig = {
   // Image configuration - optimized for performance
   images: {
     unoptimized: false, // Enable Next.js image optimization
-    domains: ["api.crosscoin.in", "localhost"],
+    domains: ["api.crosscoin.in", "crosscoin.in", "www.crosscoin.in", "localhost"],
     formats: ["image/webp", "image/avif"],
     minimumCacheTTL: 60,
     dangerouslyAllowSVG: true,
