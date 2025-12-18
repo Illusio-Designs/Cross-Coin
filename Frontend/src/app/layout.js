@@ -1,4 +1,6 @@
 import Analytics from "@/components/common/Analytics";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 
 export const metadata = {
   title: 'Next.js',
@@ -11,6 +13,8 @@ export default function RootLayout({ children }) {
       <body>
         {children}
         <Analytics />
+        <SpeedInsights />
+        <VercelAnalytics />
       </body>
     </html>
   )
