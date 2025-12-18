@@ -1,13 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
+import React from "react";
 import Image from "next/image";
 import { FiHeart, FiShoppingCart } from "react-icons/fi";
 import { HiOutlineEye } from "react-icons/hi2";
 import { useRouter } from "next/router";
 import { useWishlist } from "../context/WishlistContext";
 import {
-  getProductImageSrc,
   getOptimizedImageSrc,
-  preloadImage,
 } from "../utils/imageUtils";
 
 // Filter options data - This should come from API in real implementation
@@ -62,42 +60,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
     imageData && imageData.image_url
       ? getOptimizedImageSrc(imageData, 300, 300)
       : null;
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [isInView, setIsInView] = useState(false);
-  const cardRef = useRef(null);
-
-  // Intersection Observer for lazy loading
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1, rootMargin: "50px" }
-    );
-
-    if (cardRef.current) {
-      observer.observe(cardRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, []);
-
-  // Preload image when in view
-  useEffect(() => {
-    if (isInView && productImage && !imageLoaded) {
-      preloadImage(productImage)
-        .then(() => {
-          setImageLoaded(true);
-        })
-        .catch((error) => {
-          console.error("Image preload failed:", error);
-          setImageLoaded(true); // Still set to true to show placeholder
-        });
-    }
-  }, [isInView, productImage, imageLoaded]);
 
   // Get the first variation for price
   const price = variation?.price || 0;
@@ -130,58 +92,21 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
       className="product-card"
       onClick={() => onProductClick(product)}
       style={{ cursor: "pointer" }}
-      ref={cardRef}
     >
       <div className="product-image" style={{ position: "relative" }}>
         {product?.badge && (
           <span className="product-badge">{formatBadge(product.badge)}</span>
         )}
-        {productImage && isInView ? (
-          <>
-            <img
-              src={productImage}
-              alt={product?.name || "Product Image"}
-              width={300}
-              height={300}
-              style={{
-                objectFit: "cover",
-                background: "#f5f5f5",
-                display: imageLoaded ? "block" : "none",
-                transition: "opacity 0.3s ease-in-out",
-                opacity: imageLoaded ? 1 : 0,
-              }}
-              onLoad={() => {
-                setImageLoaded(true);
-                console.log("Image loaded successfully:", productImage);
-              }}
-              onError={(e) => {
-                console.error("Image failed to load:", productImage, e);
-                setImageLoaded(true);
-              }}
-              loading="lazy"
-              decoding="async"
-            />
-            {!imageLoaded && (
-              <div
-                className="image-placeholder"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  background:
-                    "linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)",
-                  backgroundSize: "200% 100%",
-                  animation: "shimmer 1.5s infinite",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#999",
-                  fontSize: "14px",
-                }}
-              >
-                Loading...
-              </div>
-            )}
-          </>
+        {productImage ? (
+          <Image
+            src={productImage}
+            alt={product?.name || "Product Image"}
+            width={300}
+            height={300}
+            sizes="(max-width: 500px) 50vw, (max-width: 768px) 33vw, 300px"
+            style={{ objectFit: "cover", background: "#f5f5f5" }}
+            loading="lazy"
+          />
         ) : (
           <div
             style={{
@@ -195,7 +120,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
               fontSize: "14px",
             }}
           >
-            {isInView ? "Loading..." : ""}
+            {" "}
           </div>
         )}
         <button
