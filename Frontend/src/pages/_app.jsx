@@ -26,6 +26,7 @@ import "../styles/dashboard/layout.css";
 import "../styles/dashboard/sidebar.css";
 import "../styles/pages/auth/adminlogin.css";
 import Analytics from "../components/common/Analytics";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export default function App({ Component, pageProps }) {
   const [loading, setLoading] = useState(false); // Start with false to allow immediate paint
@@ -97,6 +98,7 @@ export default function App({ Component, pageProps }) {
         <link rel="icon" href="/crosscoin icon.png" />
       </Head>
       <Analytics />
+      <SpeedInsights />
       <AuthProvider>
         <CartProvider>
           <WishlistProvider>
