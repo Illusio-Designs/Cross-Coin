@@ -1,33 +1,55 @@
-import React from 'react';
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import React from "react";
 
-const Loader = ({ className = '' }) => {
+/**
+ * Lightweight loader (no remote assets).
+ * This avoids long FCP/LCP on slow mobile connections where the previous
+ * remote Lottie animation could delay the first contentful paint.
+ */
+const Loader = ({ className = "" }) => {
   return (
-    <div 
-      className={`flex items-center justify-center ${className}`}
+    <div
+      className={className}
       style={{
-        position: 'absolute',
+        position: "absolute",
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        gap: 12,
+        zIndex: 9999,
       }}
     >
-      <DotLottieReact
-        src="https://lottie.host/c27ada6a-8b32-448d-9ae2-5f811587fe57/zpIvP1MWDg.lottie"
-        loop
-        autoplay
-        style={{ 
-          width: '50%', 
-          height: '50%'
+      <div
+        aria-label="Loading"
+        role="status"
+        style={{
+          width: 42,
+          height: 42,
+          borderRadius: "50%",
+          border: "3px solid rgba(24, 13, 62, 0.12)",
+          borderTopColor: "#180D3E",
+          animation: "cc-spin 0.9s linear infinite",
         }}
       />
+      <div style={{ fontSize: 14, color: "#180D3E", fontWeight: 500 }}>
+        Loading…
+      </div>
+      <style jsx>{`
+        @keyframes cc-spin {
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
     </div>
   );
 };
 
-export default Loader; 
+export default Loader;
