@@ -27,6 +27,7 @@ import "../styles/dashboard/sidebar.css";
 import "../styles/pages/auth/adminlogin.css";
 import Analytics from "../components/common/Analytics";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 
 export default function App({ Component, pageProps }) {
   const [loading, setLoading] = useState(false); // Start with false to allow immediate paint
@@ -99,6 +100,7 @@ export default function App({ Component, pageProps }) {
       </Head>
       <Analytics />
       <SpeedInsights />
+      <VercelAnalytics />
       <AuthProvider>
         <CartProvider>
           <WishlistProvider>
