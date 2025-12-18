@@ -130,7 +130,7 @@ export default function ThankYou() {
             const result = await getUserOrders({ limit: 100 }); // Get enough orders to find the one we need
             if (result.orders && Array.isArray(result.orders)) {
               const order = result.orders.find(
-                (o) => o.order_number === order_number
+                (o) => String(o.order_number) === String(order_number)
               );
               if (order) {
                 // Transform the order data to match the expected format
@@ -167,6 +167,7 @@ export default function ThankYou() {
           const purchaseData = {
             value: parseFloat(orderData.order.final_amount) || 0,
             currency: 'INR',
+            content_type: 'product',
             contents: orderData.items
               .filter((item) => item.product?.id || item.product_id) // Filter out items without product ID
               .map((item) => ({
@@ -175,8 +176,8 @@ export default function ThankYou() {
               })),
           };
 
-          // Only track if we have valid purchase data
-          if (purchaseData.value > 0 && purchaseData.contents.length > 0) {
+          // Track even if contents is unavailable (Meta only requires value+currency for Purchase)
+          if (purchaseData.value > 0) {
             console.log('Purchase tracking: Tracking purchase event with data:', purchaseData);
             
             // Track the purchase event

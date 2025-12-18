@@ -350,6 +350,38 @@ export default function UnifiedCheckout() {
         // COD: Order placed, now redirect
         console.log("COD Order placed successfully, redirecting to ThankYou page...");
         setOrderPlaced(true);
+
+        // Fire Purchase immediately (more reliable than waiting for ThankYou)
+        try {
+          const totalAmount = cartItems.reduce((sum, item) => {
+            const price = parseFloat(item.price || 0);
+            return sum + price * (item.quantity || 1);
+          }, 0);
+          const shippingFeeAmount = parseFloat(shippingFee.fee || 0);
+          const discountAmount = appliedCoupon?.discount || 0;
+          const finalAmount = totalAmount + shippingFeeAmount - discountAmount;
+
+          const orderNumber = orderResult?.data?.order?.order_number;
+          const purchaseTracked = fbqTrack("Purchase", {
+            value: Number(finalAmount.toFixed(2)),
+            currency: "INR",
+            content_type: "product",
+            contents: cartItems
+              .filter((item) => item.productId || item.id)
+              .map((item) => ({
+                id: String(item.productId || item.id),
+                quantity: item.quantity || 1,
+              })),
+          });
+
+          // Prevent duplicate Purchase on ThankYou if we successfully tracked here
+          if (purchaseTracked && orderNumber) {
+            sessionStorage.setItem(`fb_purchase_tracked_${orderNumber}`, "true");
+          }
+        } catch (e) {
+          console.warn("Purchase tracking (COD): failed to send fbq Purchase", e);
+        }
+
         clearCart();
         sessionStorage.removeItem("shippingAddress");
         sessionStorage.removeItem("appliedCoupon");
@@ -446,6 +478,29 @@ export default function UnifiedCheckout() {
                 razorpayOrderId: response.razorpay_order_id,
                 razorpaySignature: response.razorpay_signature
               });
+
+              // Fire Purchase immediately after order creation
+              try {
+                const orderNumber = orderResult?.data?.order?.order_number;
+                const purchaseTracked = fbqTrack("Purchase", {
+                  value: Number((finalAmount || 0).toFixed(2)),
+                  currency: "INR",
+                  content_type: "product",
+                  contents: cartItems
+                    .filter((item) => item.productId || item.id)
+                    .map((item) => ({
+                      id: String(item.productId || item.id),
+                      quantity: item.quantity || 1,
+                    })),
+                });
+
+                // Prevent duplicate Purchase on ThankYou if we successfully tracked here
+                if (purchaseTracked && orderNumber) {
+                  sessionStorage.setItem(`fb_purchase_tracked_${orderNumber}`, "true");
+                }
+              } catch (e) {
+                console.warn("Purchase tracking (prepaid): failed to send fbq Purchase", e);
+              }
               
               // Clear session storage
               sessionStorage.removeItem("pendingOrderData");
