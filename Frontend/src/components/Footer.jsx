@@ -8,6 +8,9 @@ import { getPublicCategories } from "../services/publicindex";
 const Footer = () => {
   const [collections, setCollections] = useState([]);
   const [hoveredLink, setHoveredLink] = useState(null);
+  const placeholderCollections = Array.from({ length: 5 }, (_, idx) => ({
+    id: `placeholder-${idx}`,
+  }));
 
   useEffect(() => {
     const fetchCollections = async () => {
@@ -48,9 +51,15 @@ const Footer = () => {
         </div>
         <div className="footer__col">
           <h4>Popular Collections</h4>
-          <ul>
-            {collections.map((col) => (
-              <li key={col.id}>{col.name}</li>
+          <ul className="footer__collections">
+            {(collections.length > 0 ? collections : placeholderCollections).map((col) => (
+              <li
+                key={col.id}
+                className={collections.length > 0 ? "" : "footer__collection-placeholder"}
+                aria-hidden={collections.length === 0}
+              >
+                {collections.length > 0 ? col.name : "\u00A0"}
+              </li>
             ))}
           </ul>
         </div>

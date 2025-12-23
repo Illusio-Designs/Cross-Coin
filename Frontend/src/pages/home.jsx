@@ -634,7 +634,7 @@ const Home = () => {
                 <button className="slider-arrow slider-arrow-left" aria-label="Previous category" onClick={() => scrollCategoryImage('left')}>
                   <IoIosArrowBack />
                 </button>
-                <div style={{ position: 'relative', width: 350 }}>
+                <div className="category-image-frame">
                   {getCategoryImageSrc() ? (
                     <>
                       <img
@@ -651,11 +651,11 @@ const Home = () => {
                         onError={() => setCategoryImageLoaded(true)}
                       />
                       {!categoryImageLoaded && (
-                        <div className="shimmer-placeholder" style={{ width: 350, height: 400, position: 'absolute', top: 0, left: 0 }}></div>
+                        <div className="shimmer-placeholder category-image-shimmer"></div>
                       )}
                     </>
                   ) : (
-                    <div style={{ width: 300, height: 300, background: '#eee', borderRadius: 8 }}></div>
+                    <div className="category-image-placeholder" aria-hidden="true"></div>
                   )}
                 </div>
                 <h3>{currentCategory.name}</h3>
