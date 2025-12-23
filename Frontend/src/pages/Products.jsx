@@ -737,11 +737,16 @@ const Products = () => {
               : "Our Products"}
           </h1>
           <div className="products-controls">
-            {hasActiveFilters && (
-              <button className="clear-filters-btn" onClick={clearAllFilters}>
-                Clear Filters
-              </button>
-            )}
+            <button
+              className={`clear-filters-btn${hasActiveFilters ? "" : " clear-filters-btn--placeholder"}`}
+              onClick={hasActiveFilters ? clearAllFilters : undefined}
+              disabled={!hasActiveFilters}
+              aria-hidden={!hasActiveFilters}
+              tabIndex={hasActiveFilters ? 0 : -1}
+              type="button"
+            >
+              Clear Filters
+            </button>
             <button
               className={`filter-toggle${isMobile ? " mobile-fixed" : ""}`}
               onClick={() => setShowFilters(!showFilters)}

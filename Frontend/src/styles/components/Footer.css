@@ -150,6 +150,11 @@
   margin: 0;
 }
 
+.footer__collection-placeholder {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .footer__col ul li {
   font-size: 14px;
   color: #4B5563;

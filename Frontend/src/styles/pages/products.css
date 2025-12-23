@@ -45,6 +45,18 @@
   background-color: #b91c31;
 }
 
+.clear-filters-btn:disabled {
+  cursor: default;
+}
+
+/* Reserve the "Clear Filters" button space on desktop to avoid CLS after hydration */
+@media (min-width: 769px) {
+  .clear-filters-btn--placeholder {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
 .filter-toggle {
   display: flex;
   align-items: center;
