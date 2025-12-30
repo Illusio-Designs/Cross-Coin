@@ -1,8 +1,4 @@
-const { Product } = require("../model/productModel.js");
-const { Order } = require("../model/orderModel.js");
-const { User } = require("../model/userModel.js");
-const { Payment } = require("../model/paymentModel.js");
-const { Review } = require("../model/reviewModel.js");
+const { Product, Order, User, Payment, Review } = require("../model/associations.js");
 const { sequelize } = require("../config/db.js");
 const { Op } = require("sequelize");
 
