@@ -1029,4 +1029,16 @@ export const policyService = {
 export const testShiprocketCredentials = () =>
   api.get("/api/shiprocket/test-credentials");
 
+// Dashboard Services
+export const dashboardService = {
+  getDashboardStats: async () => {
+    try {
+      const response = await api.get("/api/dashboard/stats");
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+};
+
 export default api;
