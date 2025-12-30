@@ -2376,16 +2376,32 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
 // Test Shiprocket credentials
 module.exports.testShiprocketCredentials = async (req, res) => {
   try {
-    await authenticateShiprocket();
+    console.log('=== Testing Shiprocket Credentials ===');
+    const token = await authenticateShiprocket();
+    
     res.json({
-      message: "Shiprocket credentials are valid",
+      success: true,
+      message: "Shiprocket credentials are valid and working!",
       status: "success",
+      token_received: token ? true : false,
     });
   } catch (error) {
+    console.error('=== Shiprocket Test Failed ===');
+    console.error('Error:', error.message);
+    
     res.status(400).json({
-      message: "Shiprocket credentials are invalid",
+      success: false,
+      message: "Shiprocket authentication failed",
       error: error.message,
       status: "error",
+      troubleshooting: {
+        step1: "Verify SHIPROCKET_EMAIL is set in environment variables",
+        step2: "Verify SHIPROCKET_PASSWORD is set in environment variables",
+        step3: "Check if your Shiprocket account is active",
+        step4: "Ensure API access is enabled in Shiprocket dashboard (Settings > API)",
+        step5: "Check if your server IP is whitelisted in Shiprocket",
+        step6: "Verify credentials by logging into https://app.shiprocket.in"
+      }
     });
   }
 };

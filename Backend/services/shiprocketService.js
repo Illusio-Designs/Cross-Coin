@@ -46,13 +46,45 @@ function formatPhoneNumber(phone) {
 }
 
 async function authenticateShiprocket() {
-    const res = await axios.post(`${BASE_URL}/auth/login`, {
-        email: SHIPROCKET_EMAIL,
-        password: SHIPROCKET_PASSWORD
-    });
-    token = res.data.token;
-    tokenExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
-    return token;
+    try {
+        console.log('=== SHIPROCKET AUTHENTICATION ATTEMPT ===');
+        console.log('Email:', SHIPROCKET_EMAIL);
+        console.log('Password:', SHIPROCKET_PASSWORD ? 'Present (length: ' + SHIPROCKET_PASSWORD.length + ')' : 'Missing');
+        console.log('API URL:', `${BASE_URL}/auth/login`);
+        
+        if (!SHIPROCKET_EMAIL || !SHIPROCKET_PASSWORD) {
+            throw new Error('Shiprocket credentials are not configured. Please set SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD in environment variables.');
+        }
+        
+        const res = await axios.post(`${BASE_URL}/auth/login`, {
+            email: SHIPROCKET_EMAIL,
+            password: SHIPROCKET_PASSWORD
+        });
+        
+        token = res.data.token;
+        tokenExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+        
+        console.log('=== SHIPROCKET AUTHENTICATION SUCCESS ===');
+        console.log('Token received:', token ? 'Yes' : 'No');
+        
+        return token;
+    } catch (error) {
+        console.error('=== SHIPROCKET AUTHENTICATION FAILED ===');
+        console.error('Status:', error.response?.status);
+        console.error('Status Text:', error.response?.statusText);
+        console.error('Error Data:', JSON.stringify(error.response?.data, null, 2));
+        console.error('Error Message:', error.message);
+        
+        if (error.response?.status === 403) {
+            throw new Error('Shiprocket authentication failed: Invalid credentials or account not active. Please check your SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD.');
+        } else if (error.response?.status === 401) {
+            throw new Error('Shiprocket authentication failed: Unauthorized. Please verify your credentials.');
+        } else if (!error.response) {
+            throw new Error('Shiprocket authentication failed: Network error. Unable to reach Shiprocket API.');
+        } else {
+            throw new Error(`Shiprocket authentication failed: ${error.response?.data?.message || error.message}`);
+        }
+    }
 }
 
 async function ensureValidToken() {
