@@ -694,10 +694,9 @@ const Orders = () => {
                                     Shipping Address
                                 </h4>
                                 <div style={{ padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '6px', lineHeight: '1.6' }}>
-                                    <div><strong>{selectedOrder.ShippingAddress.firstName} {selectedOrder.ShippingAddress.lastName}</strong></div>
-                                    <div>{selectedOrder.ShippingAddress.addressLine1}</div>
-                                    {selectedOrder.ShippingAddress.addressLine2 && <div>{selectedOrder.ShippingAddress.addressLine2}</div>}
-                                    <div>{selectedOrder.ShippingAddress.city}, {selectedOrder.ShippingAddress.state} - {selectedOrder.ShippingAddress.postalCode}</div>
+                                    <div><strong>{selectedOrder.ShippingAddress.full_name}</strong></div>
+                                    <div>{selectedOrder.ShippingAddress.address}</div>
+                                    <div>{selectedOrder.ShippingAddress.city}, {selectedOrder.ShippingAddress.state} - {selectedOrder.ShippingAddress.pincode}</div>
                                     <div>{selectedOrder.ShippingAddress.country || 'India'}</div>
                                     <div><strong>Phone:</strong> {selectedOrder.ShippingAddress.phone}</div>
                                 </div>
