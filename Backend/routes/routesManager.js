@@ -19,6 +19,7 @@ const attributeRoutes = require('./attributeRoutes.js');
 const reviewRoutes = require('./reviewRoutes.js');
 const cartRoutes = require('./cartRoutes.js');
 const policyRoutes = require('./policyRoutes.js');
+const dashboardRoutes = require('./dashboardRoutes.js');
 
 // Core Routes
 router.use('/users', userRoutes); // This now includes both auth and user routes
@@ -46,6 +47,9 @@ router.use('/cart', cartRoutes);
 
 // Policy routes
 router.use('/policies', policyRoutes);
+
+// Dashboard routes
+router.use('/dashboard', dashboardRoutes);
 
 // Health Check Route
 router.get('/health', (req, res) => {
