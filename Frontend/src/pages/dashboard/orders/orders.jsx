@@ -664,61 +664,152 @@ const Orders = () => {
             <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title={`Order Details: #${selectedOrder?.order_number}`}>
                 {selectedOrder && (
                     <div className="order-details-modal">
-                        <div className="order-info-grid">
-                            <div><strong>Customer:</strong> {
-                                selectedOrder.User?.username || 
-                                (selectedOrder.GuestUser ? `${selectedOrder.GuestUser.firstName} ${selectedOrder.GuestUser.lastName}` : 'N/A')
-                            } {selectedOrder.GuestUser && <span className="guest-badge" style={{
-                              background: '#e3f2fd',
-                              color: '#1976d2',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              fontSize: '10px',
-                              fontWeight: '500',
-                              marginLeft: '4px'
-                            }}>(Guest)</span>}</div>
-                            <div><strong>Email:</strong> {selectedOrder.User?.email || selectedOrder.GuestUser?.email || 'N/A'}</div>
-                            {selectedOrder.GuestUser && <div><strong>Phone:</strong> {selectedOrder.GuestUser.phone || 'N/A'}</div>}
-                            <div><strong>Date:</strong> {formatDate(selectedOrder.createdAt)}</div>
-                            <div><strong>Payment Type:</strong> {formatPaymentType(selectedOrder.payment_type)}</div>
-                            <div><strong>Payment Status:</strong> <span className={`status-badge status-${getPaymentStatusClass(selectedOrder)}`}>{getPaymentStatusDisplay(selectedOrder)}</span></div>
-                            <div><strong>Order Status:</strong> <span className={`status-badge status-${selectedOrder.status}`}>{selectedOrder.status}</span></div>
-                            {/* Shiprocket Information */}
-                            {(selectedOrder.shiprocket_order_id || selectedOrder.shiprocket_shipment_id) && (
-                                <>
-                                    <div><strong>Shiprocket Order ID:</strong> {selectedOrder.shiprocket_order_id || 'N/A'}</div>
-                                    <div><strong>Shiprocket Shipment ID:</strong> {selectedOrder.shiprocket_shipment_id || 'N/A'}</div>
-                                </>
-                            )}
+                        {/* Customer Information Section */}
+                        <div className="order-section">
+                            <h4 style={{ marginBottom: '12px', color: '#333', borderBottom: '2px solid #007bff', paddingBottom: '8px' }}>
+                                Customer Information
+                            </h4>
+                            <div className="order-info-grid">
+                                <div><strong>Name:</strong> {
+                                    selectedOrder.User?.username || 
+                                    (selectedOrder.GuestUser ? `${selectedOrder.GuestUser.firstName} ${selectedOrder.GuestUser.lastName}` : 'N/A')
+                                } {selectedOrder.GuestUser && <span className="guest-badge" style={{
+                                  background: '#e3f2fd',
+                                  color: '#1976d2',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  fontSize: '10px',
+                                  fontWeight: '500',
+                                  marginLeft: '4px'
+                                }}>(Guest)</span>}</div>
+                                <div><strong>Email:</strong> {selectedOrder.User?.email || selectedOrder.GuestUser?.email || 'N/A'}</div>
+                                <div><strong>Phone:</strong> {selectedOrder.ShippingAddress?.phone || selectedOrder.GuestUser?.phone || 'N/A'}</div>
+                            </div>
                         </div>
-                        <h4>Items Ordered</h4>
-                        <table className="items-table">
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Quantity</th>
-                                    <th>Price</th>
-                                    <th>Subtotal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {selectedOrder.OrderItems.map(item => (
-                                    <tr key={item.id}>
-                                        <td>{item.Product?.name || 'N/A'}</td>
-                                        <td>{item.quantity}</td>
-                                        <td>{formatCurrency(item.price)}</td>
-                                        <td>{formatCurrency(item.subtotal)}</td>
+
+                        {/* Shipping Address Section */}
+                        {selectedOrder.ShippingAddress && (
+                            <div className="order-section" style={{ marginTop: '20px' }}>
+                                <h4 style={{ marginBottom: '12px', color: '#333', borderBottom: '2px solid #28a745', paddingBottom: '8px' }}>
+                                    Shipping Address
+                                </h4>
+                                <div style={{ padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '6px', lineHeight: '1.6' }}>
+                                    <div><strong>{selectedOrder.ShippingAddress.firstName} {selectedOrder.ShippingAddress.lastName}</strong></div>
+                                    <div>{selectedOrder.ShippingAddress.addressLine1}</div>
+                                    {selectedOrder.ShippingAddress.addressLine2 && <div>{selectedOrder.ShippingAddress.addressLine2}</div>}
+                                    <div>{selectedOrder.ShippingAddress.city}, {selectedOrder.ShippingAddress.state} - {selectedOrder.ShippingAddress.postalCode}</div>
+                                    <div>{selectedOrder.ShippingAddress.country || 'India'}</div>
+                                    <div><strong>Phone:</strong> {selectedOrder.ShippingAddress.phone}</div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Order Information Section */}
+                        <div className="order-section" style={{ marginTop: '20px' }}>
+                            <h4 style={{ marginBottom: '12px', color: '#333', borderBottom: '2px solid #ff9800', paddingBottom: '8px' }}>
+                                Order Information
+                            </h4>
+                            <div className="order-info-grid">
+                                <div><strong>Order Date:</strong> {formatDate(selectedOrder.createdAt)}</div>
+                                <div><strong>Payment Type:</strong> <span style={{ 
+                                    padding: '4px 8px', 
+                                    backgroundColor: selectedOrder.payment_type?.toLowerCase() === 'cod' ? '#fff3cd' : '#d1ecf1',
+                                    color: selectedOrder.payment_type?.toLowerCase() === 'cod' ? '#856404' : '#0c5460',
+                                    borderRadius: '4px',
+                                    fontWeight: '500'
+                                }}>{formatPaymentType(selectedOrder.payment_type)}</span></div>
+                                <div><strong>Payment Status:</strong> <span className={`status-badge status-${getPaymentStatusClass(selectedOrder)}`}>{getPaymentStatusDisplay(selectedOrder)}</span></div>
+                                <div><strong>Order Status:</strong> <span className={`status-badge status-${selectedOrder.status}`}>{selectedOrder.status}</span></div>
+                                {selectedOrder.notes && <div style={{ gridColumn: '1 / -1' }}><strong>Order Notes:</strong> {selectedOrder.notes}</div>}
+                                {/* Shiprocket Information */}
+                                {(selectedOrder.shiprocket_order_id || selectedOrder.shiprocket_shipment_id) && (
+                                    <>
+                                        <div><strong>Shiprocket Order ID:</strong> {selectedOrder.shiprocket_order_id || 'N/A'}</div>
+                                        <div><strong>Shiprocket Shipment ID:</strong> {selectedOrder.shiprocket_shipment_id || 'N/A'}</div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Products Ordered Section */}
+                        <div className="order-section" style={{ marginTop: '20px' }}>
+                            <h4 style={{ marginBottom: '12px', color: '#333', borderBottom: '2px solid #6f42c1', paddingBottom: '8px' }}>
+                                Products Ordered
+                            </h4>
+                            <table className="items-table">
+                                <thead>
+                                    <tr>
+                                        <th>Product Name</th>
+                                        <th>SKU</th>
+                                        <th>Quantity</th>
+                                        <th>Price</th>
+                                        <th>Subtotal</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                        <div className="order-summary-grid">
-                            <div><strong>Subtotal:</strong> {formatCurrency(calculateOrderSubtotal(selectedOrder.OrderItems))}</div>
-                            <div><strong>Shipping:</strong> {formatCurrency(selectedOrder.shipping_fee || 0)}</div>
-                            <div><strong>Discount:</strong> - {formatCurrency(selectedOrder.discount_amount || 0)}</div>
-                            <div><strong>Total:</strong> {formatCurrency(getOrderTotal(selectedOrder))}</div>
+                                </thead>
+                                <tbody>
+                                    {selectedOrder.OrderItems.map(item => (
+                                        <tr key={item.id}>
+                                            <td>
+                                                <div style={{ fontWeight: '500' }}>{item.Product?.name || 'N/A'}</div>
+                                                {item.Product?.brand && <div style={{ fontSize: '12px', color: '#666' }}>Brand: {item.Product.brand}</div>}
+                                            </td>
+                                            <td style={{ fontSize: '12px', color: '#666' }}>{item.Product?.sku || 'N/A'}</td>
+                                            <td><span style={{ 
+                                                padding: '4px 12px', 
+                                                backgroundColor: '#e9ecef',
+                                                borderRadius: '12px',
+                                                fontWeight: '500'
+                                            }}>{item.quantity}</span></td>
+                                            <td>{formatCurrency(item.price)}</td>
+                                            <td style={{ fontWeight: '500' }}>{formatCurrency(item.subtotal)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                         <div className="modal-footer">
+
+                        {/* Order Summary Section */}
+                        <div className="order-section" style={{ marginTop: '20px' }}>
+                            <h4 style={{ marginBottom: '12px', color: '#333', borderBottom: '2px solid #dc3545', paddingBottom: '8px' }}>
+                                Order Summary
+                            </h4>
+                            <div className="order-summary-grid" style={{ 
+                                backgroundColor: '#f8f9fa', 
+                                padding: '16px', 
+                                borderRadius: '6px',
+                                display: 'grid',
+                                gap: '8px'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <strong>Subtotal:</strong> 
+                                    <span>{formatCurrency(calculateOrderSubtotal(selectedOrder.OrderItems))}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <strong>Shipping Fee:</strong> 
+                                    <span>{formatCurrency(selectedOrder.shipping_fee || 0)}</span>
+                                </div>
+                                {selectedOrder.discount_amount > 0 && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#28a745' }}>
+                                        <strong>Discount:</strong> 
+                                        <span>- {formatCurrency(selectedOrder.discount_amount || 0)}</span>
+                                    </div>
+                                )}
+                                <div style={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between', 
+                                    paddingTop: '12px', 
+                                    borderTop: '2px solid #dee2e6',
+                                    fontSize: '18px',
+                                    fontWeight: 'bold',
+                                    color: '#007bff'
+                                }}>
+                                    <strong>Total Amount:</strong> 
+                                    <span>{formatCurrency(getOrderTotal(selectedOrder))}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="modal-footer" style={{ marginTop: '24px' }}>
                             <Button variant="secondary" onClick={() => setIsViewModalOpen(false)}>Close</Button>
                         </div>
                     </div>

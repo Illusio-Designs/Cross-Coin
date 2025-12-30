@@ -1449,7 +1449,24 @@ module.exports.getAllOrders = async (req, res) => {
         {
           model: GuestUser,
           as: "GuestUser",
-          attributes: ["id", "email", "firstName", "lastName"],
+          attributes: ["id", "email", "firstName", "lastName", "phone"],
+          required: false,
+        },
+        {
+          model: ShippingAddress,
+          as: "ShippingAddress",
+          attributes: [
+            "id",
+            "firstName",
+            "lastName",
+            "phone",
+            "addressLine1",
+            "addressLine2",
+            "city",
+            "state",
+            "postalCode",
+            "country",
+          ],
           required: false,
         },
         {
