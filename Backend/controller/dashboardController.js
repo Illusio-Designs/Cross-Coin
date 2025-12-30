@@ -51,7 +51,7 @@ const getDashboardStats = async (req, res) => {
     const recentCustomers = await User.count({
       where: {
         role: "user",
-        created_at: {
+        createdAt: {
           [Op.gte]: thirtyDaysAgo,
         },
       },
@@ -68,7 +68,7 @@ const getDashboardStats = async (req, res) => {
     // Get recent orders (last 30 days)
     const recentOrders = await Order.count({
       where: {
-        created_at: {
+        createdAt: {
           [Op.gte]: thirtyDaysAgo,
         },
       },
@@ -87,7 +87,7 @@ const getDashboardStats = async (req, res) => {
         status: {
           [Op.in]: ["delivered", "completed"],
         },
-        created_at: {
+        createdAt: {
           [Op.gte]: firstDayOfMonth,
         },
       },
