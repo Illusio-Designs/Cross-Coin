@@ -1141,12 +1141,14 @@ module.exports.trackOrderByAWB = async (req, res) => {
         {
           model: User,
           as: "User",
-          attributes: ["id", "email", "firstName", "lastName"],
+          attributes: ["id", "email", "username"],
+          required: false,
         },
         {
           model: GuestUser,
           as: "GuestUser",
-          attributes: ["id", "email", "firstName", "lastName"],
+          attributes: ["id", "email", "firstName", "lastName", "phone"],
+          required: false,
         },
         {
           model: ShippingAddress,
