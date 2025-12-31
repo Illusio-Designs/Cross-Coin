@@ -28,9 +28,7 @@ const menu = [
   {
     label: "Orders",
     icon: <FaClipboardList />,
-    submenu: [
-      { label: "Order Management", view: "orders" },
-    ]
+    view: "orders"
   },
   {
     label: "Payments",
