@@ -135,15 +135,17 @@ export default function OrderTracking() {
                                 </div>
                             </div>
 
-                            <div className="shipping-address">
-                                <h3>Shipping Address</h3>
-                                <div className="address-details">
-                                    <p><strong>{orderData.shipping_address.full_name}</strong></p>
-                                    <p>{orderData.shipping_address.address}</p>
-                                    <p>{orderData.shipping_address.city}, {orderData.shipping_address.state} - {orderData.shipping_address.pincode}</p>
-                                    <p>Phone: {orderData.shipping_address.phone}</p>
+                            {orderData.shipping_address && (
+                                <div className="shipping-address">
+                                    <h3>Shipping Address</h3>
+                                    <div className="address-details">
+                                        <p><strong>{orderData.shipping_address.full_name}</strong></p>
+                                        <p>{orderData.shipping_address.address}</p>
+                                        <p>{orderData.shipping_address.city}, {orderData.shipping_address.state} - {orderData.shipping_address.pincode}</p>
+                                        <p>Phone: {orderData.shipping_address.phone}</p>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
                             <div className="order-items">
                                 <h3>Order Items</h3>
@@ -160,7 +162,14 @@ export default function OrderTracking() {
                                             <div className="item-details">
                                                 <h4>{item.product.name}</h4>
                                                 {item.variation && (
-                                                    <p className="variation">Variant: {item.variation.name}</p>
+                                                    <p className="variation">
+                                                        Variant: {item.variation.sku || 
+                                                        (item.variation.attributes ? 
+                                                            Object.entries(item.variation.attributes)
+                                                                .map(([key, value]) => `${key}: ${value}`)
+                                                                .join(', ') 
+                                                            : 'N/A')}
+                                                    </p>
                                                 )}
                                                 <p>Quantity: {item.quantity}</p>
                                                 <p>Price: ₹{item.price} each</p>
