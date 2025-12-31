@@ -2025,7 +2025,8 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
       },
       include: [
         { model: OrderItem, include: [Product] },
-        { model: User, attributes: ["id", "username", "email"] },
+        { model: User, attributes: ["id", "username", "email"], required: false },
+        { model: GuestUser, attributes: ["id", "email", "firstName", "lastName", "phone"], required: false },
         { model: ShippingAddress },
       ],
     });
@@ -2066,7 +2067,7 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
         }
 
         console.log(
-          `Processing order ${order.order_number} for user ${order.user_id}:`
+          `Processing order ${order.order_number} for user ${order.user_id} / guest ${order.guest_user_id}:`
         );
 
         // Try multiple ways to get shipping address
@@ -2076,22 +2077,39 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
         if (order.ShippingAddress) {
           shippingAddress = order.ShippingAddress;
           console.log("Found shipping address from order include");
-        } else {
-          // If not included, try to find by user_id
+        } else if (order.user_id) {
+          // If registered user, try to find by user_id
           shippingAddress = await ShippingAddress.findOne({
             where: { user_id: order.user_id },
           });
           console.log("Found shipping address by user_id query");
+        } else if (order.guest_user_id) {
+          // If guest user, try to find by guest_user_id
+          shippingAddress = await ShippingAddress.findOne({
+            where: { guest_user_id: order.guest_user_id },
+          });
+          console.log("Found shipping address by guest_user_id query");
         }
 
         // If still not found, try to find any address for this user
-        if (!shippingAddress) {
+        if (!shippingAddress && order.user_id) {
           const userAddresses = await ShippingAddress.findAll({
             where: { user_id: order.user_id },
           });
           if (userAddresses.length > 0) {
             shippingAddress = userAddresses[0];
             console.log("Found shipping address from user addresses list");
+          }
+        }
+
+        // If still not found and guest user, try guest addresses
+        if (!shippingAddress && order.guest_user_id) {
+          const guestAddresses = await ShippingAddress.findAll({
+            where: { guest_user_id: order.guest_user_id },
+          });
+          if (guestAddresses.length > 0) {
+            shippingAddress = guestAddresses[0];
+            console.log("Found shipping address from guest addresses list");
           }
         }
 
@@ -2111,9 +2129,15 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
 
         if (!shippingAddress) {
           syncResults.failed++;
+          const userIdentifier = order.user_id 
+            ? `user ${order.user_id}` 
+            : order.guest_user_id 
+              ? `guest ${order.guest_user_id}` 
+              : 'unknown user';
           syncResults.errors.push(
-            `Order ${order.order_number}: No shipping address found for user ${order.user_id}`
+            `Order ${order.order_number}: No shipping address found for ${userIdentifier}`
           );
+          console.error(`❌ No shipping address found for order ${order.order_number}`);
           continue;
         }
 
@@ -2162,6 +2186,29 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
           billingState,
         });
 
+        // Get customer information (handle both registered users and guests)
+        const isGuestOrder = !order.User && order.GuestUser;
+        const customerName = isGuestOrder 
+          ? `${order.GuestUser.firstName} ${order.GuestUser.lastName}`.trim() 
+          : (order.User?.username || "Customer");
+        const customerEmail = isGuestOrder 
+          ? order.GuestUser.email 
+          : (order.User?.email || "customer@example.com");
+        const customerFirstName = isGuestOrder 
+          ? order.GuestUser.firstName 
+          : (order.User?.username || "Customer");
+        const customerLastName = isGuestOrder 
+          ? (order.GuestUser.lastName || "") 
+          : "";
+
+        console.log("Customer information:", {
+          isGuestOrder,
+          customerName,
+          customerEmail,
+          customerFirstName,
+          customerLastName
+        });
+
         // Map order data to Shiprocket's required format
         const shiprocketOrderPayload = {
           order_id: String(order.order_number),
@@ -2171,27 +2218,27 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
             .replace("T", " "),
           pickup_location: "warehouse",
           channel_id: "7361105",
-          comment: `Order from Cross-Coin: ${order.order_number}`,
-          billing_customer_name: String(order.User.username),
-          billing_last_name: "",
+          comment: `Order from Cross-Coin: ${order.order_number}${isGuestOrder ? ' (Guest)' : ''}`,
+          billing_customer_name: String(customerFirstName),
+          billing_last_name: String(customerLastName),
           billing_address: String(billingAddress),
           billing_address_2: "",
           billing_city: String(billingCity),
           billing_pincode: parseInt(billingPincode) || 400001,
           billing_state: String(billingState),
           billing_country: String(shippingAddress.country || "India"),
-          billing_email: String(order.User.email),
+          billing_email: String(customerEmail),
           billing_phone: billingPhone,
           shipping_is_billing: true,
-          shipping_customer_name: String(order.User.username),
-          shipping_last_name: "",
+          shipping_customer_name: String(customerFirstName),
+          shipping_last_name: String(customerLastName),
           shipping_address: String(billingAddress),
           shipping_address_2: "",
           shipping_city: String(billingCity),
           shipping_pincode: parseInt(billingPincode) || 400001,
           shipping_state: String(billingState),
           shipping_country: String(shippingAddress.country || "India"),
-          shipping_email: String(order.User.email),
+          shipping_email: String(customerEmail),
           shipping_phone: billingPhone,
           order_items: order.OrderItems.map((item, index) => ({
             name: String(item.Product.name),
