@@ -2024,10 +2024,10 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
         ],
       },
       include: [
-        { model: OrderItem, include: [Product] },
-        { model: User, attributes: ["id", "username", "email"], required: false },
-        { model: GuestUser, attributes: ["id", "email", "firstName", "lastName", "phone"], required: false },
-        { model: ShippingAddress },
+        { model: OrderItem, as: "OrderItems", include: [{ model: Product, as: "Product" }] },
+        { model: User, as: "User", attributes: ["id", "username", "email"], required: false },
+        { model: GuestUser, as: "GuestUser", attributes: ["id", "email", "firstName", "lastName", "phone"], required: false },
+        { model: ShippingAddress, as: "ShippingAddress" },
       ],
     });
 
