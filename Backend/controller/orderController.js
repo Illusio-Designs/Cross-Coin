@@ -1095,8 +1095,9 @@ module.exports.getGuestOrder = async (req, res) => {
           variation: item.ProductVariation
             ? {
                 id: item.ProductVariation.id,
-                name: item.ProductVariation.name,
+                sku: item.ProductVariation.sku,
                 price: item.ProductVariation.price,
+                attributes: item.ProductVariation.attributes,
               }
             : null,
           quantity: item.quantity,
@@ -1183,7 +1184,8 @@ module.exports.trackOrderByAWB = async (req, res) => {
             {
               model: ProductVariation,
               as: "ProductVariation",
-              attributes: ["id", "name", "price"],
+              attributes: ["id", "sku", "price", "attributes"],
+              required: false,
             },
           ],
         },
@@ -1191,6 +1193,7 @@ module.exports.trackOrderByAWB = async (req, res) => {
           model: OrderStatusHistory,
           as: "OrderStatusHistories",
           order: [["created_at", "DESC"]],
+          required: false,
         },
       ],
     });
@@ -1241,8 +1244,9 @@ module.exports.trackOrderByAWB = async (req, res) => {
           variation: item.ProductVariation
             ? {
                 id: item.ProductVariation.id,
-                name: item.ProductVariation.name,
+                sku: item.ProductVariation.sku,
                 price: item.ProductVariation.price,
+                attributes: item.ProductVariation.attributes,
               }
             : null,
           quantity: item.quantity,
