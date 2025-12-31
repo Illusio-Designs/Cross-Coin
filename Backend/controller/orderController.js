@@ -2252,11 +2252,11 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
             hsn: 441122,
           })),
           payment_method: order.payment_type === "cod" ? "COD" : "Prepaid",
-          shipping_charges: 0,
+          shipping_charges: parseFloat(order.shipping_fee || 0),
           giftwrap_charges: 0,
           transaction_charges: 0,
-          total_discount: 0,
-          sub_total: parseFloat(order.total_amount),
+          total_discount: parseFloat(order.discount_amount || 0),
+          sub_total: parseFloat(order.total_amount || 0),
           length: 10,
           breadth: 15,
           height: 20,
@@ -2265,6 +2265,12 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
 
         console.log("=== SHIPROCKET ORDER SYNC DEBUG ===");
         console.log("Order:", order.order_number);
+        console.log("Order Financial Details:", {
+          total_amount: order.total_amount,
+          shipping_fee: order.shipping_fee,
+          discount_amount: order.discount_amount,
+          payment_type: order.payment_type
+        });
         console.log(
           "Full Shiprocket payload:",
           JSON.stringify(shiprocketOrderPayload, null, 2)
