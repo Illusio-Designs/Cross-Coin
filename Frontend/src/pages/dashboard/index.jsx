@@ -12,7 +12,6 @@ import Products from "./products/products";
 import Categories from "./products/categories";
 import Attributes from "./products/attributes";
 import Orders from "./orders/orders";
-import OrderStatus from "./orders/orderStatus";
 import Consumers from "./consumers/consumers";
 import ShippingFees from "./shipping/shippingFees";
 import Payments from "./payments/payments";
@@ -33,7 +32,6 @@ function DashboardHeader({ isCollapsed, isFullscreen, onToggleFullscreen, curren
       'categories': 'Categories',
       'attributes': 'Attributes',
       'orders': 'Orders',
-      'orderStatus': 'Order Status',
       'consumers': 'Consumers',
       'shippingFees': 'Shipping Fees',
       'payments': 'Payments',
@@ -219,8 +217,6 @@ export default function Dashboard() {
         return <Attributes />;
       case 'orders':
         return <Orders />;
-      case 'orderStatus':
-        return <OrderStatus />;
       case 'consumers':
         return <Consumers />;
       case 'shippingFees':

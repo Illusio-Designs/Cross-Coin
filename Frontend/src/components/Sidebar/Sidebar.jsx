@@ -30,7 +30,6 @@ const menu = [
     icon: <FaClipboardList />,
     submenu: [
       { label: "Order Management", view: "orders" },
-      { label: "Order Status", view: "orderStatus" },
     ]
   },
   {
