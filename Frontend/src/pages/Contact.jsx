@@ -7,7 +7,6 @@ import {
   FaMapMarkerAlt,
   FaClock,
   FaFacebook,
-  FaTwitter,
   FaInstagram,
   FaWhatsapp,
 } from "react-icons/fa";
@@ -101,16 +100,13 @@ const Contact = () => {
               <div className="social-links">
                 <h3>Connect With Us</h3>
                 <div className="social-icons">
-                  <a href="#" className="social-icon">
+                  <a href="https://www.facebook.com/people/Cross-Coin/61577195743730/" className="social-icon" target="_blank" rel="noopener noreferrer">
                     <FaFacebook />
                   </a>
-                  <a href="#" className="social-icon">
-                    <FaTwitter />
-                  </a>
-                  <a href="#" className="social-icon">
+                  <a href="https://www.instagram.com/crosscoin99/?igsh=d2FiY29iemhtb2Nl" className="social-icon" target="_blank" rel="noopener noreferrer">
                     <FaInstagram />
                   </a>
-                  <a href="#" className="social-icon">
+                  <a href="https://wa.me/919712891700" className="social-icon" target="_blank" rel="noopener noreferrer">
                     <FaWhatsapp />
                   </a>
                 </div>
