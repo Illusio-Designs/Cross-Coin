@@ -43,8 +43,22 @@
   margin-top: 3rem;
 }
 
+.hero-stats .stat-item {
+  text-align: center;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
 .stat-item {
   text-align: center;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
 }
 
 .stat-number {
