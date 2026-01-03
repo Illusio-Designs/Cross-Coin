@@ -90,8 +90,12 @@ const Collections = () => {
               } else {
                 // Remove duplicate /uploads/categories/
                 const cleanedPath = img.replace(/(\/uploads\/categories\/)+/g, '/uploads/categories/');
-                let baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
-                if (cleanedPath.startsWith('/')) {
+                let baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://api.crosscoin.in';
+                
+                // Ensure proper path formatting
+                if (!cleanedPath.startsWith('/uploads/categories/') && !cleanedPath.startsWith('uploads/categories/')) {
+                  imageUrl = `${baseUrl}/uploads/categories/${cleanedPath}`;
+                } else if (cleanedPath.startsWith('/')) {
                   imageUrl = `${baseUrl}${cleanedPath}`;
                 } else {
                   imageUrl = `${baseUrl}/${cleanedPath}`;
