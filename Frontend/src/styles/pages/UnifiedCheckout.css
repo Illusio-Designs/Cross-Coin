@@ -647,14 +647,201 @@
 .coupons-list::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
 .coupons-list::-webkit-scrollbar-thumb:hover { background: #555; }
 
-/* Loading State */
-.loading-container {
+/* Buy Now Section Styles */
+.buy-now-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
+  border: 2px solid #180D3E;
+  border-radius: 8px;
+  position: relative;
+}
+
+.buy-now-header {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.buy-now-header h3 {
+  color: #180D3E;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Existing Cart Section Styles */
+.existing-cart-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+}
+
+.existing-cart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.existing-cart-header h3 {
+  color: #495057;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.cart-count {
+  background: #6c757d;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.existing-cart-item {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+.existing-cart-item:last-child {
+  margin-bottom: 0;
+}
+
+.clear-buy-now-btn {
+  background: #ff4757;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4rem 2rem;
-  text-align: center;
+  transition: background 0.2s;
+}
+
+.clear-buy-now-btn:hover {
+  background: #ff3742;
+}
+
+.buy-now-item {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background: white;
+  padding: 1rem;
+  border-radius: 6px;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(24, 13, 62, 0.1);
+}
+
+.buy-now-qty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #eee;
+  padding: 0.2rem;
+  border-radius: 4px;
+  background: #f8fafc;
+}
+
+.buy-now-badge {
+  position: absolute;
+  top: -8px;
+  right: 10px;
+  background: #180D3E;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.move-to-buy-now-btn {
+  background: #180D3E;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-left: 8px;
+}
+
+.move-to-buy-now-btn.primary {
+  background: #28a745;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-left: 0;
+  margin-right: 8px;
+}
+
+.move-to-buy-now-btn:hover {
+  background: #2a1a4d;
+}
+
+.move-to-buy-now-btn.primary:hover {
+  background: #218838;
+}
+
+/* Pack Indicator Styling */
+.pack-indicator {
+  background: #180D3E;
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 12px;
+  margin-left: 8px;
+  font-weight: 500;
+  display: inline-block;
+}
+
+/* Cart Item Actions Layout */
+.cart-item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.cart-item-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.cart-item-remove {
+  background: none;
+  border: none;
+  color: #e74c3c;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cart-item-remove:hover {
+  color: #b71c1c;
 }
 
 .loading-container .loader {
@@ -715,8 +902,20 @@
     margin-top: 0.5rem;
   }
   
-  .cart-item-qty {
-    margin-top: 0.5rem;
+  .cart-item-actions {
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .cart-item-buttons {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .move-to-buy-now-btn {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    margin-left: 0;
   }
   
   /* Mobile address cards */

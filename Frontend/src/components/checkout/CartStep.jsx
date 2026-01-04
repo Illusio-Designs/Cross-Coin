@@ -69,7 +69,11 @@ function formatColorDisplay(item) {
     
     if (attrs.color) {
       if (Array.isArray(attrs.color)) {
-        return attrs.color.join(', ');
+        // If it's a pack with multiple colors, format it nicely
+        if (attrs.color.length > 1) {
+          return `Pack Colors: ${attrs.color.join(', ')}`;
+        }
+        return attrs.color[0];
       }
       return attrs.color;
     }
@@ -78,7 +82,10 @@ function formatColorDisplay(item) {
   // Fallback to item.color
   if (item.color) {
     if (Array.isArray(item.color)) {
-      return item.color.join(', ');
+      if (item.color.length > 1) {
+        return `Pack Colors: ${item.color.join(', ')}`;
+      }
+      return item.color[0];
     }
     return item.color;
   }
@@ -115,7 +122,18 @@ function formatSizeDisplay(item) {
 
 export default function CartStep() {
   const router = useRouter();
-  const { cartItems, removeFromCart, updateQuantity, setQuantity, isCartLoading } = useCart();
+  const { 
+    cartItems, 
+    removeFromCart, 
+    updateQuantity, 
+    setQuantity, 
+    isCartLoading,
+    buyNowItem,
+    moveCartItemToBuyNow,
+    clearBuyNow,
+    updateBuyNowQuantity,
+    setBuyNowQuantity
+  } = useCart();
   const [inputValues, setInputValues] = useState({});
   const [imageLoaded, setImageLoaded] = useState({});
 
@@ -127,9 +145,8 @@ export default function CartStep() {
     setInputValues(initialInputValues);
   }, [cartItems]);
 
-
   // Debug logging
-  console.log('CartStep: cartItems:', cartItems, 'isCartLoading:', isCartLoading);
+  console.log('CartStep: cartItems:', cartItems, 'isCartLoading:', isCartLoading, 'buyNowItem:', buyNowItem);
 
   const handleInputChange = (itemId, value) => {
     // Allow only numbers
@@ -159,114 +176,211 @@ export default function CartStep() {
   return (
     <div className="cart-items-list-container">
         <h2>Shopping Cart</h2>
-        <div className={`cart-items-list${cartItems.length === 0 ? ' empty' : ''}`}>
-        {isCartLoading ? (
-            <div className="loading-container">
-              <div className="loader"></div>
-              <p>Loading your cart...</p>
+        
+        {/* Buy Now Item Section - Always show at top if exists */}
+        {buyNowItem && (
+          <div className="buy-now-section">
+            <div className="buy-now-header">
+              <h3>🛒 Buy Now Item</h3>
             </div>
-        ) : cartItems.length === 0 ? (
-            <div className="empty-cart">
-            <div className="empty-cart-icon"><FaBoxOpen /></div>
-            <div className="empty-cart-text">YOUR CART IS CURRENTLY EMPTY.</div>
-            <button className="checkout-btn" onClick={() => router.push('/Products')}>Shop Now</button>
+            <div className="buy-now-item">
+              <div style={{ position: 'relative', width: 100, height: 100 }}>
+                <img
+                  src={forceEnvImageBase(pickCartItemImage(buyNowItem))}
+                  alt={buyNowItem.name}
+                  width={100}
+                  height={100}
+                  className="cart-item-img"
+                  style={{
+                    objectFit: 'cover',
+                    background: '#eee',
+                    display: 'block'
+                  }}
+                />
+              </div>
+              <div className="cart-item-details">
+                <div className="cart-item-title">
+                  {buyNowItem.name}
+                  {/* Add pack indicator if multiple colors */}
+                  {(buyNowItem.variation?.attributes?.color?.length > 1 || 
+                    (Array.isArray(buyNowItem.color) && buyNowItem.color.length > 1)) && (
+                    <span className="pack-indicator">📦 Pack</span>
+                  )}
+                </div>
+                {buyNowItem.variation && buyNowItem.variation.name && (
+                  <div className="cart-item-meta">Variation: {buyNowItem.variation.name}</div>
+                )}
+                {formatSizeDisplay(buyNowItem) !== 'N/A' && (
+                  <div className="cart-item-meta">Size: {formatSizeDisplay(buyNowItem)}</div>
+                )}
+                {formatColorDisplay(buyNowItem) !== 'N/A' && (
+                  <div className="cart-item-meta">Color: {formatColorDisplay(buyNowItem)}</div>
+                )}
+                <div className="cart-item-price">
+                  <span>₹{getCartItemPrice(buyNowItem)}</span>
+                  {buyNowItem.quantity > 1 && (
+                    <span className="cart-item-total"> × {buyNowItem.quantity} = ₹{(getCartItemPrice(buyNowItem) * buyNowItem.quantity).toFixed(2)}</span>
+                  )}
+                </div>
+              </div>
+              
+              {/* Buy Now Quantity Selector */}
+              <div className="buy-now-qty">
+                <button
+                    className={`qty-btn ${buyNowItem.quantity === 1 ? 'qty-btn-disabled' : ''}`}
+                    onClick={() => updateBuyNowQuantity(-1)}
+                    disabled={buyNowItem.quantity === 1}
+                >-</button>
+                <input
+                  type="number"
+                  min={1}
+                  className="qty-input improved-qty-input"
+                  value={buyNowItem.quantity}
+                  onChange={(e) => setBuyNowQuantity(parseInt(e.target.value) || 1)}
+                  style={{ width: 60, textAlign: 'center', border: '1px solid #ccc', borderRadius: 4, padding: '4px 8px', margin: '0 8px' }}
+                />
+                <button
+                    className="qty-btn"
+                    onClick={() => updateBuyNowQuantity(1)}
+                >+</button>
+              </div>
+              
+              <div className="buy-now-badge">
+                <span>Buy Now</span>
+              </div>
             </div>
-        ) : (
-            cartItems.map((item) => {
-              const imageUrl = pickCartItemImage(item);
-              const itemPrice = getCartItemPrice(item);
-              const formattedColor = formatColorDisplay(item);
-              const formattedSize = formatSizeDisplay(item);
-              
-              // Debug logging
-              console.log('CartStep: Processing item:', {
-                id: item.id,
-                name: item.name,
-                price: itemPrice,
-                color: item.color,
-                size: item.size,
-                variation: item.variation,
-                variationAttributes: item.variation?.attributes,
-                images: item.images,
-                formattedColor: formattedColor,
-                formattedSize: formattedSize,
-                fullItem: item
-              });
-              
-              return (
-                <div className="cart-item" key={item.id}>
-                  <div style={{ position: 'relative', width: 100, height: 100 }}>
-                    {imageUrl ? (
-                      <>
-                        <img
-                          src={forceEnvImageBase(imageUrl)}
-                          alt={item.name}
-                          width={100}
-                          height={100}
-                          className="cart-item-img"
-                          style={{
-                            objectFit: 'cover',
-                            background: '#eee',
-                            display: 'block'
-                          }}
-                          onLoad={() => handleImageLoad(item.id)}
-                          onError={() => handleImageLoad(item.id)}
-                        />
-                        {!imageLoaded[item.id] && (
-                          <div className="shimmer-placeholder" style={{ width: 100, height: 100, position: 'absolute', top: 0, left: 0 }} />
-                        )}
-                      </>
-                    ) : (
-                      <div style={{ width: 100, height: 100, background: '#eee', borderRadius: 8 }} />
-                    )}
-                  </div>
-                    <div className="cart-item-details">
-                    <div className="cart-item-title">{item.name}</div>
-                    {item.variation && item.variation.name && (
-                      <div className="cart-item-meta">Variation: {item.variation.name}</div>
-                    )}
-                    {formattedSize !== 'N/A' && (
-                      <div className="cart-item-meta">Size: {formattedSize}</div>
-                    )}
-                    {formattedColor !== 'N/A' && (
-                      <div className="cart-item-meta">Color: {formattedColor}</div>
-                    )}
-                    <div className="cart-item-price">
-                      <span>₹{itemPrice}</span>
-                      {item.quantity > 1 && (
-                        <span className="cart-item-total"> × {item.quantity} = ₹{(itemPrice * item.quantity).toFixed(2)}</span>
+          </div>
+        )}
+
+        {/* Cart Items Section - Show existing cart items */}
+        {cartItems.length > 0 && (
+          <div className="existing-cart-section">
+            <div className="existing-cart-header">
+              <h3>🛍️ Items Already in Your Cart</h3>
+              <span className="cart-count">{cartItems.length} item{cartItems.length > 1 ? 's' : ''}</span>
+            </div>
+            
+            <div className="cart-items-list">
+              {cartItems.map((item) => {
+                const imageUrl = pickCartItemImage(item);
+                const itemPrice = getCartItemPrice(item);
+                const formattedColor = formatColorDisplay(item);
+                const formattedSize = formatSizeDisplay(item);
+                
+                return (
+                  <div className="cart-item existing-cart-item" key={item.id}>
+                    <div style={{ position: 'relative', width: 100, height: 100 }}>
+                      {imageUrl ? (
+                        <>
+                          <img
+                            src={forceEnvImageBase(imageUrl)}
+                            alt={item.name}
+                            width={100}
+                            height={100}
+                            className="cart-item-img"
+                            style={{
+                              objectFit: 'cover',
+                              background: '#eee',
+                              display: 'block'
+                            }}
+                            onLoad={() => handleImageLoad(item.id)}
+                            onError={() => handleImageLoad(item.id)}
+                          />
+                          {!imageLoaded[item.id] && (
+                            <div className="shimmer-placeholder" style={{ width: 100, height: 100, position: 'absolute', top: 0, left: 0 }} />
+                          )}
+                        </>
+                      ) : (
+                        <div style={{ width: 100, height: 100, background: '#eee', borderRadius: 8 }} />
                       )}
                     </div>
+                    <div className="cart-item-details">
+                      <div className="cart-item-title">
+                        {item.name}
+                        {/* Add pack indicator if multiple colors */}
+                        {(item.variation?.attributes?.color?.length > 1 || 
+                          (Array.isArray(item.color) && item.color.length > 1)) && (
+                          <span className="pack-indicator">📦 Pack</span>
+                        )}
+                      </div>
+                      {item.variation && item.variation.name && (
+                        <div className="cart-item-meta">Variation: {item.variation.name}</div>
+                      )}
+                      {formattedSize !== 'N/A' && (
+                        <div className="cart-item-meta">Size: {formattedSize}</div>
+                      )}
+                      {formattedColor !== 'N/A' && (
+                        <div className="cart-item-meta">{formattedColor}</div>
+                      )}
+                      <div className="cart-item-price">
+                        <span>₹{itemPrice}</span>
+                        {item.quantity > 1 && (
+                          <span className="cart-item-total"> × {item.quantity} = ₹{(itemPrice * item.quantity).toFixed(2)}</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="cart-item-qty">
-                    <button
-                        className={`qty-btn ${item.quantity === 1 ? 'qty-btn-disabled' : ''}`}
-                        onClick={() => updateQuantity(item.id, -1)}
-                        disabled={item.quantity === 1}
-                    >-</button>
-                    <input
-                      type="number"
-                      min={0}
-                      className="qty-input improved-qty-input"
-                      value={inputValues[item.id] || ''}
-                      onChange={e => handleInputChange(item.id, e.target.value)}
-                      onBlur={e => handleInputBlur(item.id, e.target.value)}
-                      style={{ width: 60, textAlign: 'center', border: '1px solid #ccc', borderRadius: 4, padding: '4px 8px', margin: '0 8px' }}
-                    />
-                    <button
-                        className="qty-btn"
-                        onClick={() => updateQuantity(item.id, 1)}
-                    >+</button>
+                    <div className="cart-item-actions">
+                      <div className="cart-item-qty">
+                        <button
+                            className={`qty-btn ${item.quantity === 1 ? 'qty-btn-disabled' : ''}`}
+                            onClick={() => updateQuantity(item.id, -1)}
+                            disabled={item.quantity === 1}
+                        >-</button>
+                        <input
+                          type="number"
+                          min={0}
+                          className="qty-input improved-qty-input"
+                          value={inputValues[item.id] || ''}
+                          onChange={e => handleInputChange(item.id, e.target.value)}
+                          onBlur={e => handleInputBlur(item.id, e.target.value)}
+                          style={{ width: 60, textAlign: 'center', border: '1px solid #ccc', borderRadius: 4, padding: '4px 8px', margin: '0 8px' }}
+                        />
+                        <button
+                            className="qty-btn"
+                            onClick={() => updateQuantity(item.id, 1)}
+                        >+</button>
+                      </div>
+                      
+                      <div className="cart-item-buttons">
+                        {/* Move to Buy Now Button - Prominent */}
+                        <button 
+                          className="move-to-buy-now-btn primary"
+                          onClick={() => moveCartItemToBuyNow(item.id)}
+                          title="Move to Buy Now"
+                        >
+                          Move to Buy Now
+                        </button>
+                        
+                        <button className="cart-item-remove" onClick={() => {
+                          console.log('CartStep: Remove button clicked for item:', item);
+                          removeFromCart(item.id);
+                        }}><FiTrash2 /></button>
+                      </div>
                     </div>
-                    <button className="cart-item-remove" onClick={() => {
-                      console.log('CartStep: Remove button clicked for item:', item);
-                      removeFromCart(item.id);
-                    }}><FiTrash2 /></button>
-                </div>
-              );
-            })
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
-        </div>
+
+        {/* Empty Cart State - Only show if no Buy Now item and no cart items */}
+        {!buyNowItem && cartItems.length === 0 && (
+          <div className={`cart-items-list empty`}>
+            {isCartLoading ? (
+              <div className="loading-container">
+                <div className="loader"></div>
+                <p>Loading your cart...</p>
+              </div>
+            ) : (
+              <div className="empty-cart">
+                <div className="empty-cart-icon"><FaBoxOpen /></div>
+                <div className="empty-cart-text">YOUR CART IS CURRENTLY EMPTY.</div>
+                <button className="checkout-btn" onClick={() => router.push('/Products')}>Shop Now</button>
+              </div>
+            )}
+          </div>
+        )}
     </div>
   );
 } 

@@ -25,7 +25,7 @@ import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 
 export default function UnifiedCheckout() {
   const { user, isAuthenticated } = useAuth();
-  const { cartItems, clearCart, isCartLoading } = useCart();
+  const { cartItems, clearCart, isCartLoading, buyNowItem, buyNowTotal, clearBuyNow } = useCart();
   const router = useRouter();
 
   const [shippingAddress, setShippingAddress] = useState(null);
@@ -281,8 +281,10 @@ export default function UnifiedCheckout() {
     }
 
     if (!cartItems || cartItems.length === 0) {
-      showValidationErrorToast("Your cart is empty.");
-      return;
+      if (!buyNowItem) {
+        showValidationErrorToast("Your cart is empty and no Buy Now item selected.");
+        return;
+      }
     }
 
     setIsProcessing(true);
@@ -300,11 +302,20 @@ export default function UnifiedCheckout() {
           pincode: shippingAddress.postal_code || shippingAddress.postalCode,
           phone: shippingAddress.phone_number || shippingAddress.phoneNumber,
         },
-        items: cartItems.map((item) => ({
-          product_id: item.productId || item.id,
-          variation_id: item.variationId || item.variation?.id || null,
-          quantity: item.quantity,
-        })),
+        items: [
+          // Include Buy Now item if exists
+          ...(buyNowItem ? [{
+            product_id: buyNowItem.productId || buyNowItem.id,
+            variation_id: buyNowItem.variationId || buyNowItem.variation?.id || null,
+            quantity: buyNowItem.quantity,
+          }] : []),
+          // Include cart items
+          ...cartItems.map((item) => ({
+            product_id: item.productId || item.id,
+            variation_id: item.variationId || item.variation?.id || null,
+            quantity: item.quantity,
+          }))
+        ],
         payment_type: shippingFee.orderType === "cod" ? "cod" : "upi",
         notes: "",
         discount_amount: appliedCoupon?.discount || 0,
@@ -316,11 +327,20 @@ export default function UnifiedCheckout() {
     } else {
       orderData = {
         shipping_address_id: shippingAddress.id,
-        items: cartItems.map((item) => ({
-          product_id: item.productId || item.id,
-          variation_id: item.variationId || item.variation?.id || null,
-          quantity: item.quantity,
-        })),
+        items: [
+          // Include Buy Now item if exists
+          ...(buyNowItem ? [{
+            product_id: buyNowItem.productId || buyNowItem.id,
+            variation_id: buyNowItem.variationId || buyNowItem.variation?.id || null,
+            quantity: buyNowItem.quantity,
+          }] : []),
+          // Include cart items
+          ...cartItems.map((item) => ({
+            product_id: item.productId || item.id,
+            variation_id: item.variationId || item.variation?.id || null,
+            quantity: item.quantity,
+          }))
+        ],
         payment_type: shippingFee.orderType === "cod" ? "cod" : "upi",
         notes: "",
         discount_amount: appliedCoupon?.discount || 0,
@@ -366,6 +386,7 @@ export default function UnifiedCheckout() {
         }
 
         clearCart();
+        clearBuyNow();
         sessionStorage.removeItem("shippingAddress");
         sessionStorage.removeItem("appliedCoupon");
         showOrderPlacedSuccessToast(orderResult.data.order.order_number);
@@ -449,6 +470,7 @@ export default function UnifiedCheckout() {
               
               setOrderPlaced(true);
               clearCart();
+              clearBuyNow();
               sessionStorage.removeItem("shippingAddress");
               sessionStorage.removeItem("appliedCoupon");
               
@@ -1041,7 +1063,7 @@ export default function UnifiedCheckout() {
         </div>
         
         {/* Order Summary */}
-        {cartItems.length > 0 && (
+        {(cartItems.length > 0 || buyNowItem) && (
           <div className="order-summary-section">
             <OrderSummary
               step="checkout"
@@ -1056,6 +1078,8 @@ export default function UnifiedCheckout() {
               onCouponRemoved={handleCouponRemoved}
               isGuestCheckout={!isAuthenticated}
               guestInfo={guestInfo}
+              buyNowItem={buyNowItem}
+              buyNowTotal={buyNowTotal}
             />
           </div>
         )}

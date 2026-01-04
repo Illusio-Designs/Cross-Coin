@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   getCart as apiGetCart,
   addToCart as apiAddToCart,
@@ -20,14 +20,8 @@ const CartContext = createContext();
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [cartCount, setCartCount] = useState(0);
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // Start as false
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
   const [isCartLoading, setIsCartLoading] = useState(true);
-  const apiCalledRef = useRef(false);
-
-  // Initialize authentication state on client side only
-  useEffect(() => {
-    setIsAuthenticated(!!localStorage.getItem('token'));
-  }, []);
 
   // Sync isAuthenticated on token change
   useEffect(() => {
@@ -109,6 +103,7 @@ export const CartProvider = ({ children }) => {
           const existingItem = prevItems.find(
             item =>
               item.productId === product.id &&
+              item.variationId === variationId &&
               item.color === selectedColor &&
               item.size === selectedSize
           );
@@ -119,7 +114,10 @@ export const CartProvider = ({ children }) => {
             product.price;
             
           const newItems = prevItems.map(item =>
-            item.productId === product.id && item.color === selectedColor && item.size === selectedSize
+            item.productId === product.id && 
+            item.variationId === variationId &&
+            item.color === selectedColor && 
+            item.size === selectedSize
               ? { 
                   ...item, 
                   quantity: item.quantity + quantity,
@@ -289,6 +287,11 @@ export const CartProvider = ({ children }) => {
     }
   };
 
+  const buyNow = async (product, selectedColor, selectedSize, quantity = 1, variationId = null, variationImages = null) => {
+    // For now, just add to cart and redirect to checkout
+    await addToCart(product, selectedColor, selectedSize, quantity, variationId, variationImages);
+  };
+
   const cartTotal = cartItems.reduce((total, item) => {
     // Use variation price if available, otherwise fallback to item price
     const price = item.variation?.price || item.price || 0;
@@ -306,7 +309,8 @@ export const CartProvider = ({ children }) => {
       clearCart,
       setIsAuthenticated,
       isCartLoading,
-      setQuantity
+      setQuantity,
+      buyNow
     }}>
       {children}
     </CartContext.Provider>
