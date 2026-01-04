@@ -424,7 +424,7 @@ const Home = () => {
           content_ids: [product.id],
           content_name: product.name,
           content_type: 'product',
-          value: variationPrice, // Use variation price for tracking
+          value: variationPrice,
           currency: 'INR',
           quantity: state.quantity,
         });
@@ -432,38 +432,11 @@ const Home = () => {
         console.warn('Tracking error (non-blocking):', trackingError);
       }
 
-      // Handle different flows for authenticated vs guest users
-      if (!isAuthenticated) {
-        console.log('Home Buy Now: User not authenticated - setting guest checkout flag');
-        sessionStorage.setItem('guestCheckout', 'true');
-        // Clear any existing step to ensure guest form is shown first
-        sessionStorage.removeItem('checkoutStep');
-      } else {
-        console.log('Home Buy Now: User authenticated - clearing guest checkout flag');
-        sessionStorage.removeItem('guestCheckout');
-        // Set step to cart for authenticated users
-        sessionStorage.setItem('checkoutStep', 'cart');
-      }
-
-      // Redirect to unified checkout
-      console.log('Redirecting to unified checkout...');
-      console.log('Current URL before redirect:', window.location.href);
+      // Direct redirect to UnifiedCheckout
+      console.log('Redirecting to UnifiedCheckout...');
       
-      // Use router.push for better navigation
-      try {
-        router.push('/UnifiedCheckout');
-        console.log('Router push executed');
-      } catch (e) {
-        console.error('Router push failed:', e);
-        // Fallback to window.location
-        try {
-          window.location.replace('/UnifiedCheckout');
-          console.log('Fallback redirect method executed');
-        } catch (e2) {
-          console.error('Fallback redirect failed:', e2);
-          window.location.href = '/UnifiedCheckout';
-        }
-      }
+      // Force direct navigation
+      window.location.href = '/UnifiedCheckout';
       
     } catch (error) {
       console.error('Error in buy now process:', error);

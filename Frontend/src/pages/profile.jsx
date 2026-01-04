@@ -27,6 +27,7 @@ import {
   showValidationErrorToast,
   showLogoutSuccessToast,
 } from "../utils/toast";
+import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 
 const tabs = [
   { label: "My Orders" },
@@ -424,7 +425,7 @@ export default function Profile() {
                   setShowAddressModal(true);
                 }}
               >
-                Add Address
+                <FaPlus /> Add Address
               </button>
               <div className="shipping-address-list">
                 {loadingAddresses ? (
@@ -458,33 +459,41 @@ export default function Profile() {
                         <b>Phone Number:</b> {address.phone_number}
                       </div>
                       <div className="address-actions">
-                        {address.is_default ? (
-                          <span style={{ color: "green", fontWeight: "bold" }}>
-                            Default
-                          </span>
-                        ) : (
+                        <div className="left-actions">
+                          {address.is_default ? (
+                            <span className="default-badge">
+                              Default
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleSetDefaultAddress(address.id)}
+                            >
+                              Set Default
+                            </button>
+                          )}
+                        </div>
+                        <div className="right-actions">
                           <button
-                            onClick={() => handleSetDefaultAddress(address.id)}
+                            onClick={() => {
+                              handleEditAddress({
+                                ...address,
+                                postalCode: address.postal_code,
+                                phoneNumber: address.phone_number,
+                                isDefault: address.is_default,
+                              });
+                              setShowAddressModal(true);
+                            }}
+                            title="Edit Address"
                           >
-                            Set Default
+                            <FaEdit />
                           </button>
-                        )}
-                        <button
-                          onClick={() => {
-                            handleEditAddress({
-                              ...address,
-                              postalCode: address.postal_code,
-                              phoneNumber: address.phone_number,
-                              isDefault: address.is_default,
-                            });
-                            setShowAddressModal(true);
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button onClick={() => handleDeleteAddress(address.id)}>
-                          Delete
-                        </button>
+                          <button 
+                            onClick={() => handleDeleteAddress(address.id)}
+                            title="Delete Address"
+                          >
+                            <FaTrash />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -499,7 +508,7 @@ export default function Profile() {
                     className="modal-content"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <h4>{editingId ? "Edit Address" : "Add Address"}</h4>
+                    <h4>{editingId ? "Edit Address" : "Add New Address"}</h4>
                     <form
                       onSubmit={async (e) => {
                         await handleAddressSubmit(e);
@@ -508,62 +517,68 @@ export default function Profile() {
                       className="shipping-address-form"
                     >
                       <div className="form-group">
-                        <label>Address</label>
-                        <input
-                          type="text"
-                          name="address"
-                          value={addressForm.address}
-                          onChange={handleAddressInputChange}
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>City</label>
-                        <input
-                          type="text"
-                          name="city"
-                          value={addressForm.city}
-                          onChange={handleAddressInputChange}
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>State</label>
-                        <input
-                          type="text"
-                          name="state"
-                          value={addressForm.state}
-                          onChange={handleAddressInputChange}
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Postal Code</label>
-                        <input
-                          type="text"
-                          name="postalCode"
-                          value={addressForm.postalCode}
-                          onChange={handleAddressInputChange}
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Country</label>
-                        <input
-                          type="text"
-                          name="country"
-                          value={addressForm.country}
-                          onChange={handleAddressInputChange}
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Phone Number</label>
+                        <label>Phone Number *</label>
                         <input
                           type="text"
                           name="phoneNumber"
                           value={addressForm.phoneNumber}
                           onChange={handleAddressInputChange}
+                          placeholder="Enter your phone number"
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Address *</label>
+                        <input
+                          type="text"
+                          name="address"
+                          value={addressForm.address}
+                          onChange={handleAddressInputChange}
+                          placeholder="Street address, apartment, suite, etc."
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>City *</label>
+                        <input
+                          type="text"
+                          name="city"
+                          value={addressForm.city}
+                          onChange={handleAddressInputChange}
+                          placeholder="Enter city"
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>State *</label>
+                        <input
+                          type="text"
+                          name="state"
+                          value={addressForm.state}
+                          onChange={handleAddressInputChange}
+                          placeholder="Enter state"
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Postal Code *</label>
+                        <input
+                          type="text"
+                          name="postalCode"
+                          value={addressForm.postalCode}
+                          onChange={handleAddressInputChange}
+                          placeholder="Enter postal code"
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Country *</label>
+                        <input
+                          type="text"
+                          name="country"
+                          value={addressForm.country}
+                          onChange={handleAddressInputChange}
+                          placeholder="Enter country"
                           required
                         />
                       </div>
@@ -575,19 +590,22 @@ export default function Profile() {
                             checked={addressForm.isDefault}
                             onChange={handleAddressInputChange}
                           />
-                          Set as default
+                          Set as default address
                         </label>
                       </div>
-                      <button type="submit">
-                        {editingId ? "Update Address" : "Add Address"}
-                      </button>
+                      <div className="button-row">
+                        <button type="submit">
+                          {editingId ? "Update Address" : "Save Address"}
+                        </button>
+                        <button
+                          type="button"
+                          className="cancel-btn"
+                          onClick={() => setShowAddressModal(false)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </form>
-                    <button
-                      onClick={() => setShowAddressModal(false)}
-                      style={{ marginTop: 10 }}
-                    >
-                      Close
-                    </button>
                   </div>
                 </div>
               )}
