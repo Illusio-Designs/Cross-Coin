@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { validateCoupon, getPublicCoupons } from "../../services/publicindex";
 import { useRouter } from "next/router";
 
-export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddress, shippingFee, isProcessing, isCartLoading, appliedCoupon, onCouponApplied, onCouponRemoved }) {
+export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddress, shippingFee, isProcessing, isCartLoading, appliedCoupon, onCouponApplied, onCouponRemoved, buyNowItem, buyNowTotal }) {
   const router = useRouter();
   const { user } = useAuth();
   const { cartItems, cartTotal } = useCart();
@@ -40,7 +40,9 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
   const deliveryFee = shippingFee ? parseFloat(shippingFee.fee || 0) : 0;
   const discountAmount = appliedCoupon ? parseFloat(appliedCoupon.discount || 0) : 0;
   
-  const total = cartTotal !== undefined ? Math.max(0, cartTotal - discountAmount + deliveryFee) : 0;
+  // Calculate total including Buy Now items
+  const subtotal = (cartTotal || 0) + (buyNowTotal || 0);
+  const total = subtotal !== undefined ? Math.max(0, subtotal - discountAmount + deliveryFee) : 0;
 
   const handleApplyCoupon = async () => {
     if (!promoCode) {
@@ -79,7 +81,7 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
 
   const isButtonDisabled = () => {
     if (isProcessing) return true;
-    if (cartItems.length === 0) return true;
+    if (cartItems.length === 0 && !buyNowItem) return true;
     if (!shippingAddress || !shippingFee) return true;
     return false;
   };
@@ -119,7 +121,7 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
     return `₹${parseFloat(amount || 0).toFixed(2)}`;
   };
 
-  if (isCartLoading || cartTotal === undefined) {
+  if (isCartLoading || (cartTotal === undefined && buyNowTotal === undefined)) {
     return (
       <div className="order-summary-box">
         <div className="order-summary-title">Order Summary</div>
@@ -148,7 +150,7 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
       <div className="order-summary-title">Order Summary</div>
       <div className="order-summary-row">
         <span>Subtotal</span>
-        <span>{formatCurrency(cartTotal)}</span>
+        <span>{formatCurrency(subtotal)}</span>
       </div>
       <div className="order-summary-row">
         <span>Discount</span>

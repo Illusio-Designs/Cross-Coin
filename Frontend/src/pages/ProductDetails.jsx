@@ -26,7 +26,7 @@ export default function ProductDetails() {
   // Decode the slug to handle URL-encoded characters like %28 and %29
   const productSlug = rawSlug ? decodeURIComponent(rawSlug) : null;
   
-  const { addToCart, removeFromCart } = useCart();
+  const { addToCart, removeFromCart, buyNow } = useCart();
   const { addToWishlist, removeFromWishlist, wishlist } = useWishlist();
   const { isAuthenticated, user } = useAuth();
   const router = useRouter();
@@ -684,10 +684,10 @@ export default function ProductDetails() {
         selectedImage = [selectedVariation.images[0]];
         console.log('Fallback to selectedVariation.images:', selectedVariation.images);
       }
-      console.log('Final image sent to cart:', selectedImage);
+      console.log('Final image sent to buy now:', selectedImage);
       
-      // Add product to cart
-      console.log('ProductDetails Buy Now: Adding product to cart with variation data:', {
+      // Use Buy Now function instead of Add to Cart
+      console.log('ProductDetails Buy Now: Setting buy now item with variation data:', {
         productName: product.name,
         selectedColor,
         selectedSize,
@@ -696,7 +696,7 @@ export default function ProductDetails() {
         selectedVariation,
         selectedImage
       });
-      await addToCart(
+      await buyNow(
         product,
         selectedColor,
         selectedSize,
@@ -704,7 +704,7 @@ export default function ProductDetails() {
         selectedVariation.id,
         selectedImage
       );
-      console.log('Product added to cart successfully');
+      console.log('Buy now item set successfully');
 
       // Track the event (non-blocking)
       console.log('Tracking checkout event...');
