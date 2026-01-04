@@ -20,9 +20,14 @@ const CartContext = createContext();
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [cartCount, setCartCount] = useState(0);
-  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
+  const [isAuthenticated, setIsAuthenticated] = useState(false); // Start as false
   const [isCartLoading, setIsCartLoading] = useState(true);
   const apiCalledRef = useRef(false);
+
+  // Initialize authentication state on client side only
+  useEffect(() => {
+    setIsAuthenticated(!!localStorage.getItem('token'));
+  }, []);
 
   // Sync isAuthenticated on token change
   useEffect(() => {
@@ -36,8 +41,6 @@ export const CartProvider = ({ children }) => {
 
   // Load cart from backend or localStorage on initial render or auth change
   useEffect(() => {
-    if (apiCalledRef.current) return; // Prevent multiple calls
-    apiCalledRef.current = true;
     console.log('API BEING CALLED: Cart data fetch');
     const fetchCart = async () => {
       console.log('CartContext: useEffect fetchCart, isAuthenticated:', isAuthenticated);

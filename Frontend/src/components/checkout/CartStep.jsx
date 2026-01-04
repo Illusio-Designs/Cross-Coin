@@ -115,7 +115,7 @@ function formatSizeDisplay(item) {
 
 export default function CartStep() {
   const router = useRouter();
-  const { cartItems, removeFromCart, updateQuantity, setQuantity } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, setQuantity, isCartLoading } = useCart();
   const [inputValues, setInputValues] = useState({});
   const [imageLoaded, setImageLoaded] = useState({});
 
@@ -129,7 +129,7 @@ export default function CartStep() {
 
 
   // Debug logging
-  console.log('CartStep: cartItems:', cartItems);
+  console.log('CartStep: cartItems:', cartItems, 'isCartLoading:', isCartLoading);
 
   const handleInputChange = (itemId, value) => {
     // Allow only numbers
@@ -160,7 +160,12 @@ export default function CartStep() {
     <div className="cart-items-list-container">
         <h2>Shopping Cart</h2>
         <div className={`cart-items-list${cartItems.length === 0 ? ' empty' : ''}`}>
-        {cartItems.length === 0 ? (
+        {isCartLoading ? (
+            <div className="loading-container">
+              <div className="loader"></div>
+              <p>Loading your cart...</p>
+            </div>
+        ) : cartItems.length === 0 ? (
             <div className="empty-cart">
             <div className="empty-cart-icon"><FaBoxOpen /></div>
             <div className="empty-cart-text">YOUR CART IS CURRENTLY EMPTY.</div>

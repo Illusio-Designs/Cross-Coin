@@ -67,26 +67,20 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
   };
 
   const handleNextClick = () => {
-    if (step === 'payment') {
-      onPlaceOrder();
-    } else {
-      onNext();
-    }
+    // Always place order - no more "Next" steps
+    onPlaceOrder();
   };
 
   const getButtonText = () => {
-    if (step === 'cart') return 'Proceed to Shipping';
-    if (step === 'shipping') {
-        return shippingFee?.orderType === 'cod' ? 'Place Order' : 'Proceed to Payment';
-    }
-    if (step === 'payment') return isProcessing ? 'Processing...' : 'Place Order';
-    return 'Next';
+    if (isProcessing) return 'Processing...';
+    if (shippingFee?.orderType === 'prepaid') return 'Pay Now';
+    return 'Place Order';
   };
 
   const isButtonDisabled = () => {
     if (isProcessing) return true;
     if (cartItems.length === 0) return true;
-    if (step === 'shipping' && !shippingAddress) return true;
+    if (!shippingAddress || !shippingFee) return true;
     return false;
   };
   
