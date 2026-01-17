@@ -288,7 +288,7 @@ const ProductsPage = () => {
         total_sold: product.total_sold || 0,
         images: product.images?.map(img => ({
           name: img.image_url.split('/').pop(),
-          url: `${process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in'}${img.image_url}`,
+          url: `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}${img.image_url}`,
           type: 'image/jpeg'
         })) || [],
         weight: product.weight || '',
@@ -327,14 +327,14 @@ const ProductsPage = () => {
           metaKeywords: product.seo?.metaKeywords || '',
           ogTitle: product.seo?.ogTitle || product.name,
           ogDescription: product.seo?.ogDescription || product.description,
-          ogImage: product.seo?.ogImage || (product.images?.[0] ? `${process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in'}${product.images[0].image_url}` : null),
+          ogImage: product.seo?.ogImage || (product.images?.[0] ? `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}${product.images[0].image_url}` : null),
           canonicalUrl: product.seo?.canonicalUrl || `${window.location.origin}/products/${product.slug}`,
           structuredData: product.seo?.structuredData || JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Product",
             "name": product.name,
             "description": product.description,
-            "image": product.images?.[0] ? `${process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in'}${product.images[0].image_url}` : null,
+            "image": product.images?.[0] ? `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}${product.images[0].image_url}` : null,
             "offers": {
               "@type": "Offer",
               "price": product.variations?.[0]?.price || 0,
@@ -345,7 +345,7 @@ const ProductsPage = () => {
         },
         variationImages: product.variations?.map(variation => variation.images?.map(img => ({
           name: img.image_url.split('/').pop(),
-          url: `${process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in'}${img.image_url}`,
+          url: `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}${img.image_url}`,
           type: 'image/jpeg'
         }))) || []
       };
@@ -794,6 +794,75 @@ const ProductsPage = () => {
               ]}
               required
             />
+            <InputField
+              label="Badge"
+              type="select"
+              name="badge"
+              value={formData.badge}
+              onChange={handleInputChange}
+              options={[
+                { value: 'none', label: 'No Badge' },
+                { value: 'new_arrival', label: 'New Arrival' },
+                { value: 'hot_selling', label: 'Hot Selling' },
+                { value: 'low_stock', label: 'Low Stock' }
+              ]}
+            />
+            {/* Product Images Upload */}
+            <div className="product-images-section">
+              <label>Product Images</label>
+              <input
+                type="file"
+                name="images"
+                multiple
+                accept="image/*"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files);
+                  setFormData(prev => ({
+                    ...prev,
+                    images: [...(prev.images || []), ...files]
+                  }));
+                }}
+              />
+              <div className="images-preview" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 8 }}>
+                {formData.images && formData.images.map((img, imgIdx) => (
+                  <div key={imgIdx} style={{ position: 'relative' }}>
+                    <img
+                      src={img instanceof File ? URL.createObjectURL(img) : img.url}
+                      alt={`Product Image ${imgIdx + 1}`}
+                      style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          images: prev.images.filter((_, index) => index !== imgIdx)
+                        }));
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: '-8px',
+                        right: '-8px',
+                        background: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="weight-dimensions-section">
               <div className="weight-section">
                 <InputField
