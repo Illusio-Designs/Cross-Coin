@@ -28,6 +28,27 @@ const imageHandler = new ImageHandler(
 const formatProductResponse = (product) => {
   const productData = product.toJSON();
 
+  // Format dimensions - handle JSON string conversion
+  if (productData.dimensions) {
+    if (typeof productData.dimensions === 'string') {
+      try {
+        productData.dimensions = JSON.parse(productData.dimensions);
+      } catch (e) {
+        console.error('Error parsing dimensions JSON:', e);
+        productData.dimensions = { length: '', width: '', height: '' };
+      }
+    }
+  } else {
+    productData.dimensions = { length: '', width: '', height: '' };
+  }
+
+  // Ensure weight is properly formatted
+  if (productData.weight !== null && productData.weight !== undefined) {
+    productData.weight = String(productData.weight);
+  } else {
+    productData.weight = '';
+  }
+
   // Format SEO data
   if (productData.ProductSEO) {
     productData.seo = {
@@ -561,20 +582,7 @@ module.exports.getProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    console.log('=== GET PRODUCT DEBUG ===');
-    console.log('Raw product weight:', product.weight);
-    console.log('Raw product weightUnit:', product.weightUnit);
-    console.log('Raw product dimensions:', product.dimensions);
-    console.log('Raw product dimensionUnit:', product.dimensionUnit);
-    console.log('Dimensions type:', typeof product.dimensions);
-
     const formattedProduct = formatProductResponse(product);
-    
-    console.log('=== FORMATTED PRODUCT DEBUG ===');
-    console.log('Formatted product weight:', formattedProduct.weight);
-    console.log('Formatted product weightUnit:', formattedProduct.weightUnit);
-    console.log('Formatted product dimensions:', formattedProduct.dimensions);
-    console.log('Formatted product dimensionUnit:', formattedProduct.dimensionUnit);
 
     res.json(formattedProduct);
   } catch (error) {

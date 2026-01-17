@@ -277,14 +277,6 @@ const ProductsPage = () => {
       const response = await productService.getProduct(id);
       const product = response;
       
-      console.log('=== PRODUCT EDIT DEBUG ===');
-      console.log('Raw product data:', product);
-      console.log('Product weight:', product.weight);
-      console.log('Product weightUnit:', product.weightUnit);
-      console.log('Product dimensions:', product.dimensions);
-      console.log('Product dimensionUnit:', product.dimensionUnit);
-      console.log('Dimensions type:', typeof product.dimensions);
-      
       // Format the data for the form
       const formData = {
         id: product.id,
@@ -301,11 +293,7 @@ const ProductsPage = () => {
         })) || [],
         weight: product.weight || '',
         weightUnit: product.weightUnit || 'g',
-        dimensions: {
-          length: product.dimensions?.length || '',
-          width: product.dimensions?.width || '',
-          height: product.dimensions?.height || ''
-        },
+        dimensions: product.dimensions || { length: '', width: '', height: '' },
         dimensionUnit: product.dimensionUnit || 'cm',
         variations: product.variations?.map(variation => {
           // Parse attributes if it's a string and ensure proper object structure
@@ -361,12 +349,6 @@ const ProductsPage = () => {
           type: 'image/jpeg'
         }))) || []
       };
-
-      console.log('=== FORMATTED FORM DATA ===');
-      console.log('FormData weight:', formData.weight);
-      console.log('FormData weightUnit:', formData.weightUnit);
-      console.log('FormData dimensions:', formData.dimensions);
-      console.log('FormData dimensionUnit:', formData.dimensionUnit);
 
       setFormData(formData);
       setIsModalOpen(true);
@@ -466,19 +448,8 @@ const ProductsPage = () => {
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
 
-    console.log('=== handleInputChange DEBUG ===');
-    console.log('Event details:', { name, value, type, target: e.target });
-
     if (!name) {
-      console.log('No name provided, returning');
       return;
-    }
-    
-    // Debug category selection
-    if (name === 'categoryId') {
-      console.log('=== CATEGORY ID UPDATE DEBUG ===');
-      console.log('Category selection event:', { name, value, type });
-      console.log('Previous formData.categoryId:', formData.categoryId);
     }
     
     if (name.startsWith('seo.')) {
@@ -562,17 +533,9 @@ const ProductsPage = () => {
     } else {
       setFormData(prev => {
         const updated = { ...prev, [name]: value };
-        // Debug categoryId updates
-        if (name === 'categoryId') {
-          console.log('=== CATEGORY ID UPDATED ===');
-          console.log('Updated formData with categoryId:', updated.categoryId);
-          console.log('Full updated formData:', updated);
-        }
         return updated;
       });
     }
-    
-    console.log('=== END handleInputChange DEBUG ===');
   };
 
   // New handler for AttributeSelector changes
@@ -623,22 +586,10 @@ const ProductsPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('=== FORM SUBMISSION STARTED ===');
     setLoading(true);
     setError(null);
 
     try {
-        // Debug form data
-        console.log('=== FORM DATA DEBUG ===');
-        console.log('Complete formData:', formData);
-        console.log('Categories available:', categories);
-        console.log('Selected categoryId:', formData.categoryId);
-        console.log('CategoryId type:', typeof formData.categoryId);
-        console.log('CategoryId is empty:', formData.categoryId === '');
-        console.log('CategoryId is null:', formData.categoryId === null);
-        console.log('CategoryId is undefined:', formData.categoryId === undefined);
-        console.log('Category options:', categories.map(cat => ({ value: cat.id, label: cat.name })));
-
         // Get the first image URL for SEO
         let firstImageUrl = null;
         if (formData.images && formData.images.length > 0) {
@@ -682,7 +633,7 @@ const ProductsPage = () => {
             };
         });
 
-        // === VALIDATION ADDED ===
+        // === VALIDATION ===
         for (const v of variationsWithAttributes) {
           if (!v.price || isNaN(v.price) || Number(v.price) <= 0) {
             setError("Each variation must have a valid price.");
@@ -695,7 +646,6 @@ const ProductsPage = () => {
           setLoading(false);
           return;
         }
-        // === END VALIDATION ===
 
         // Handle SEO data
         const seoData = {
@@ -742,15 +692,6 @@ const ProductsPage = () => {
         // Add SEO data
         formDataToSend.append('seo', JSON.stringify(seoData));
 
-        // Debug FormData contents
-        console.log('=== FORMDATA DEBUG ===');
-        console.log('FormData entries:');
-        for (let [key, value] of formDataToSend.entries()) {
-            console.log(`${key}:`, value);
-        }
-        console.log('CategoryId in FormData:', formDataToSend.get('categoryId'));
-        console.log('CategoryId type in FormData:', typeof formDataToSend.get('categoryId'));
-
         // Add images
         if (formData.images && formData.images.length > 0) {
             formData.images.forEach((image, index) => {
@@ -775,33 +716,20 @@ const ProductsPage = () => {
 
         let response;
         if (formData.id) {
-            console.log('=== UPDATING EXISTING PRODUCT ===');
             response = await productService.updateProduct(formData.id, formDataToSend);
         } else {
-            console.log('=== CREATING NEW PRODUCT ===');
             response = await productService.createProduct(formDataToSend);
         }
 
-        console.log('=== API RESPONSE ===');
-        console.log('Response:', response);
-
         if (response.success) {
-            console.log('=== PRODUCT CREATED/UPDATED SUCCESSFULLY ===');
             setIsModalOpen(false);
             await fetchProducts();
         } else {
-            console.log('=== API RETURNED ERROR ===');
-            console.log('Response message:', response.message);
             throw new Error(response.message || 'Failed to save product');
         }
     } catch (err) {
-        console.log('=== ERROR IN HANDLESUBMIT ===');
-        console.log('Error object:', err);
-        console.log('Error message:', err.message);
-        console.log('Error response data:', err.response?.data);
         setError(err.message || err.response?.data?.message || "Error saving product");
     } finally {
-        console.log('=== FORM SUBMISSION ENDED ===');
         setLoading(false);
     }
   };
