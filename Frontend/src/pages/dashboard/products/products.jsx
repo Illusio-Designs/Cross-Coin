@@ -277,6 +277,14 @@ const ProductsPage = () => {
       const response = await productService.getProduct(id);
       const product = response;
       
+      console.log('=== PRODUCT EDIT DEBUG ===');
+      console.log('Raw product data:', product);
+      console.log('Product weight:', product.weight);
+      console.log('Product weightUnit:', product.weightUnit);
+      console.log('Product dimensions:', product.dimensions);
+      console.log('Product dimensionUnit:', product.dimensionUnit);
+      console.log('Dimensions type:', typeof product.dimensions);
+      
       // Format the data for the form
       const formData = {
         id: product.id,
@@ -293,7 +301,11 @@ const ProductsPage = () => {
         })) || [],
         weight: product.weight || '',
         weightUnit: product.weightUnit || 'g',
-        dimensions: product.dimensions || { length: '', width: '', height: '' },
+        dimensions: {
+          length: product.dimensions?.length || '',
+          width: product.dimensions?.width || '',
+          height: product.dimensions?.height || ''
+        },
         dimensionUnit: product.dimensionUnit || 'cm',
         variations: product.variations?.map(variation => {
           // Parse attributes if it's a string and ensure proper object structure
@@ -349,6 +361,12 @@ const ProductsPage = () => {
           type: 'image/jpeg'
         }))) || []
       };
+
+      console.log('=== FORMATTED FORM DATA ===');
+      console.log('FormData weight:', formData.weight);
+      console.log('FormData weightUnit:', formData.weightUnit);
+      console.log('FormData dimensions:', formData.dimensions);
+      console.log('FormData dimensionUnit:', formData.dimensionUnit);
 
       setFormData(formData);
       setIsModalOpen(true);
@@ -880,6 +898,9 @@ const ProductsPage = () => {
                     type="number"
                     name="dimensions.length"
                     value={formData.dimensions.length}
+                    onChange={handleInputChange}
+                    placeholder="Length"
+                  />Data.dimensions.length}
                     onChange={handleInputChange}
                     placeholder="Length"
                   />
