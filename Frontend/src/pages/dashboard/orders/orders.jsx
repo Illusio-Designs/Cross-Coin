@@ -238,9 +238,24 @@ const Orders = () => {
         orders.forEach(order => {
             const paymentType = order.payment_type?.toLowerCase();
             const paymentStatus = order.payment_status?.toLowerCase();
-            const orderTotal = getOrderTotal(order);
+            const orderStatus = order.status?.toLowerCase();
             
-            stats.totalRevenue += orderTotal;
+            // Only include revenue from delivered orders with proper payment status
+            let includeInRevenue = false;
+            if (orderStatus === 'delivered') {
+                if (paymentType === 'cod') {
+                    // COD orders: include if delivered (payment collected on delivery)
+                    includeInRevenue = true;
+                } else if (['credit_card', 'debit_card', 'upi', 'wallet'].includes(paymentType)) {
+                    // Prepaid orders: include only if paid
+                    includeInRevenue = paymentStatus === 'paid';
+                }
+            }
+            
+            if (includeInRevenue) {
+                const orderTotal = parseFloat(order.final_amount || 0);
+                stats.totalRevenue += orderTotal;
+            }
             
             if (['credit_card', 'debit_card', 'upi', 'wallet'].includes(paymentType)) {
                 stats.prepaid++;
@@ -773,31 +788,28 @@ const Orders = () => {
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <div style={{ fontWeight: '500' }}>{item.Product?.name || 'N/A'}</div>
-                                                    {item.Product?.brand && <div style={{ fontSize: '12px', color: '#666' }}>Brand: {item.Product.brand}</div>}
-                                                    {item.ProductVariation?.attributes && (
-                                                        <div className="product-attributes">
-                                                            {getAttributeComponents(item.ProductVariation.attributes).map(({ key, value }) => (
-                                                                <span key={key} className="attribute-item">
-                                                                    {key}: {value}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    )}
+                                                    <div className="product-details-cell">
+                                                        <div className="product-name">{item.Product?.name || 'N/A'}</div>
+                                                        {item.Product?.brand && <div className="product-brand">Brand: {item.Product.brand}</div>}
+                                                        {item.ProductVariation?.attributes && (
+                                                            <div className="product-attributes">
+                                                                {getAttributeComponents(item.ProductVariation.attributes).map(({ key, value }) => (
+                                                                    <span key={key} className="attribute-item">
+                                                                        {key}: {value}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td>
                                                     <div className="product-sku">
                                                         {sku}
                                                     </div>
                                                 </td>
-                                                <td><span style={{ 
-                                                    padding: '4px 12px', 
-                                                    backgroundColor: '#e9ecef',
-                                                    borderRadius: '12px',
-                                                    fontWeight: '500'
-                                                }}>{item.quantity}</span></td>
-                                                <td>{formatCurrency(item.price)}</td>
-                                                <td style={{ fontWeight: '500' }}>{formatCurrency(item.subtotal)}</td>
+                                                <td><span className="quantity-badge">{item.quantity}</span></td>
+                                                <td className="price-cell">{formatCurrency(item.price)}</td>
+                                                <td className="subtotal-cell">{formatCurrency(item.subtotal)}</td>
                                             </tr>
                                         );
                                     })}

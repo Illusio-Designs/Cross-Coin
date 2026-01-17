@@ -25,37 +25,115 @@ const getDashboardStats = async (req, res) => {
       },
     });
 
-    // Get completed orders count
-    const completedOrders = await Order.count({
-      where: { status: "delivered" },
+    // Get all orders to calculate revenue the same way as orders page
+    const allOrders = await Order.findAll({
+      attributes: ['id', 'status', 'payment_type', 'payment_status', 'final_amount', 'createdAt'],
+      order: [['createdAt', 'DESC']]
     });
 
-    // Get total revenue from completed/delivered orders
-    const revenueResult = await Order.sum("total_amount", {
+    console.log('=== DASHBOARD CALCULATION DEBUG ===');
+    console.log('Total orders found:', allOrders.length);
+
+    // Calculate revenue using the same logic as orders page
+    let totalRevenue = 0;
+    let completedOrdersCount = 0;
+    let monthlyRevenue = 0;
+    
+    // Get current month boundaries
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    
+    allOrders.forEach(order => {
+      const paymentType = order.payment_type?.toLowerCase();
+      const paymentStatus = order.payment_status?.toLowerCase();
+      const orderStatus = order.status?.toLowerCase();
+      
+      // Only include revenue from delivered orders with proper payment status
+      let includeInRevenue = false;
+      if (orderStatus === 'delivered') {
+        if (paymentType === 'cod') {
+          // COD orders: include if delivered (payment collected on delivery)
+          includeInRevenue = true;
+        } else if (['credit_card', 'debit_card', 'upi', 'wallet'].includes(paymentType)) {
+          // Prepaid orders: include only if paid
+          includeInRevenue = paymentStatus === 'paid';
+        }
+      }
+      
+      if (includeInRevenue) {
+        const orderTotal = parseFloat(order.final_amount || 0);
+        totalRevenue += orderTotal;
+        completedOrdersCount++;
+        
+        // Check if order is from current month
+        const orderDate = new Date(order.createdAt);
+        if (orderDate >= firstDayOfMonth && orderDate <= lastDayOfMonth) {
+          monthlyRevenue += orderTotal;
+        }
+      }
+    });
+
+    // Calculate average order value based on completed orders
+    const avgOrderValue = completedOrdersCount > 0 ? totalRevenue / completedOrdersCount : 0;
+
+    console.log('=== REVENUE CALCULATION RESULTS ===');
+    console.log('Total revenue:', totalRevenue);
+    console.log('Monthly revenue:', monthlyRevenue);
+    console.log('Completed orders count:', completedOrdersCount);
+    console.log('Average order value:', avgOrderValue);
+
+    // Get total customers (registered users + unique guest users)
+    const totalRegisteredCustomers = await User.count({
+      where: { role: "consumer" },
+    });
+
+    // Get unique guest customers (count distinct guest users who have placed orders)
+    const totalGuestCustomers = await Order.count({
       where: {
-        status: {
-          [Op.in]: ["delivered", "completed"],
-        },
+        guest_user_id: {
+          [Op.not]: null
+        }
       },
-    });
-    const totalRevenue = revenueResult || 0;
-
-    // Get total customers (users with role 'user')
-    const totalCustomers = await User.count({
-      where: { role: "user" },
+      distinct: true,
+      col: 'guest_user_id'
     });
 
-    // Get recent customers (last 30 days)
+    const totalCustomers = totalRegisteredCustomers + totalGuestCustomers;
+
+    // Get recent customers (last 30 days) - both registered and guest
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const recentCustomers = await User.count({
+    
+    const recentRegisteredCustomers = await User.count({
       where: {
-        role: "user",
+        role: "consumer",
         createdAt: {
           [Op.gte]: thirtyDaysAgo,
         },
       },
     });
+
+    const recentGuestCustomers = await Order.count({
+      where: {
+        guest_user_id: {
+          [Op.not]: null
+        },
+        createdAt: {
+          [Op.gte]: thirtyDaysAgo,
+        },
+      },
+      distinct: true,
+      col: 'guest_user_id'
+    });
+
+    const recentCustomers = recentRegisteredCustomers + recentGuestCustomers;
+
+    console.log('=== CUSTOMER CALCULATION ===');
+    console.log('Total registered customers:', totalRegisteredCustomers);
+    console.log('Total guest customers:', totalGuestCustomers);
+    console.log('Total customers:', totalCustomers);
+    console.log('Recent customers (30 days):', recentCustomers);
 
     // Get total reviews count
     const totalReviews = await Review.count();
@@ -74,26 +152,6 @@ const getDashboardStats = async (req, res) => {
       },
     });
 
-    // Calculate average order value
-    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-
-    // Get monthly revenue for current month
-    const firstDayOfMonth = new Date();
-    firstDayOfMonth.setDate(1);
-    firstDayOfMonth.setHours(0, 0, 0, 0);
-
-    const monthlyRevenueResult = await Order.sum("total_amount", {
-      where: {
-        status: {
-          [Op.in]: ["delivered", "completed"],
-        },
-        createdAt: {
-          [Op.gte]: firstDayOfMonth,
-        },
-      },
-    });
-    const monthlyRevenue = monthlyRevenueResult || 0;
-
     res.status(200).json({
       success: true,
       stats: {
@@ -105,7 +163,7 @@ const getDashboardStats = async (req, res) => {
         orders: {
           total: totalOrders,
           pending: pendingOrders,
-          completed: completedOrders,
+          completed: completedOrdersCount,
           recent: recentOrders,
         },
         revenue: {
