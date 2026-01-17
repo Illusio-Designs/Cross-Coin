@@ -8,6 +8,7 @@ import Button from "@/components/common/Button";
 import '../../../styles/dashboard/orders.css';
 import "../../../styles/dashboard/seo.css"; // Reusing styles for consistency
 import { toast } from 'react-hot-toast';
+import { getProductImageSrc } from '../../../utils/imageUtils';
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -738,6 +739,7 @@ const Orders = () => {
                             <table className="items-table">
                                 <thead>
                                     <tr>
+                                        <th>Image</th>
                                         <th>Product Name</th>
                                         <th>SKU</th>
                                         <th>Quantity</th>
@@ -746,23 +748,42 @@ const Orders = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {selectedOrder.OrderItems.map(item => (
-                                        <tr key={item.id}>
-                                            <td>
-                                                <div style={{ fontWeight: '500' }}>{item.Product?.name || 'N/A'}</div>
-                                                {item.Product?.brand && <div style={{ fontSize: '12px', color: '#666' }}>Brand: {item.Product.brand}</div>}
-                                            </td>
-                                            <td style={{ fontSize: '12px', color: '#666' }}>{item.Product?.sku || 'N/A'}</td>
-                                            <td><span style={{ 
-                                                padding: '4px 12px', 
-                                                backgroundColor: '#e9ecef',
-                                                borderRadius: '12px',
-                                                fontWeight: '500'
-                                            }}>{item.quantity}</span></td>
-                                            <td>{formatCurrency(item.price)}</td>
-                                            <td style={{ fontWeight: '500' }}>{formatCurrency(item.subtotal)}</td>
-                                        </tr>
-                                    ))}
+                                    {selectedOrder.OrderItems.map(item => {
+                                        // Get the primary product image
+                                        const primaryImage = item.Product?.ProductImages?.find(img => img.is_primary) || 
+                                                           item.Product?.ProductImages?.[0];
+                                        const imageUrl = getProductImageSrc(primaryImage);
+                                        
+                                        return (
+                                            <tr key={item.id}>
+                                                <td>
+                                                    <div className="product-image-container">
+                                                        <img 
+                                                            src={imageUrl} 
+                                                            alt={item.Product?.name || 'Product'} 
+                                                            className="product-image"
+                                                            onError={(e) => {
+                                                                e.target.src = '/assets/card1-left.webp';
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div style={{ fontWeight: '500' }}>{item.Product?.name || 'N/A'}</div>
+                                                    {item.Product?.brand && <div style={{ fontSize: '12px', color: '#666' }}>Brand: {item.Product.brand}</div>}
+                                                </td>
+                                                <td style={{ fontSize: '12px', color: '#666' }}>{item.Product?.sku || 'N/A'}</td>
+                                                <td><span style={{ 
+                                                    padding: '4px 12px', 
+                                                    backgroundColor: '#e9ecef',
+                                                    borderRadius: '12px',
+                                                    fontWeight: '500'
+                                                }}>{item.quantity}</span></td>
+                                                <td>{formatCurrency(item.price)}</td>
+                                                <td style={{ fontWeight: '500' }}>{formatCurrency(item.subtotal)}</td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
