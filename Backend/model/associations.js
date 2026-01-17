@@ -139,10 +139,12 @@ Attribute.belongsToMany(ProductVariation, {
 // Order Associations
 Order.hasMany(OrderItem, {
   foreignKey: "order_id",
+  as: "OrderItems",
   onDelete: "CASCADE",
 });
 OrderItem.belongsTo(Order, {
   foreignKey: "order_id",
+  as: "Order",
   onDelete: "CASCADE",
 });
 
@@ -164,13 +166,15 @@ Payment.belongsTo(Order, {
   onDelete: "CASCADE",
 });
 
-Order.hasOne(ShippingAddress, {
-  foreignKey: "order_id",
-  onDelete: "CASCADE",
+Order.belongsTo(ShippingAddress, {
+  foreignKey: "shipping_address_id",
+  as: "ShippingAddress",
+  onDelete: "SET NULL",
 });
-ShippingAddress.belongsTo(Order, {
-  foreignKey: "order_id",
-  onDelete: "CASCADE",
+ShippingAddress.hasMany(Order, {
+  foreignKey: "shipping_address_id",
+  as: "Orders",
+  onDelete: "SET NULL",
 });
 
 // Cart Associations
@@ -265,11 +269,23 @@ Payment.belongsTo(GuestUser, {
 });
 
 // OrderItem -> Product / ProductVariation
-OrderItem.belongsTo(Product, { foreignKey: "product_id" });
-Product.hasMany(OrderItem, { foreignKey: "product_id" });
+OrderItem.belongsTo(Product, { 
+  foreignKey: "product_id",
+  as: "Product"
+});
+Product.hasMany(OrderItem, { 
+  foreignKey: "product_id",
+  as: "OrderItems"
+});
 
-OrderItem.belongsTo(ProductVariation, { foreignKey: "variation_id" });
-ProductVariation.hasMany(OrderItem, { foreignKey: "variation_id" });
+OrderItem.belongsTo(ProductVariation, { 
+  foreignKey: "variation_id",
+  as: "ProductVariation"
+});
+ProductVariation.hasMany(OrderItem, { 
+  foreignKey: "variation_id",
+  as: "OrderItems"
+});
 
 // OrderStatusHistory -> User (removed due to guest orders - updated_by can be NULL)
 // OrderStatusHistory.belongsTo(User, { as: 'UpdatedBy', foreignKey: 'updated_by' });
