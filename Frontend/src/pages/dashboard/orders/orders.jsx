@@ -9,6 +9,7 @@ import '../../../styles/dashboard/orders.css';
 import "../../../styles/dashboard/seo.css"; // Reusing styles for consistency
 import { toast } from 'react-hot-toast';
 import { getProductImageSrc } from '../../../utils/imageUtils';
+import { getAttributeComponents } from '../../../utils/productAttributeFormatter';
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -776,8 +777,8 @@ const Orders = () => {
                                                     {item.Product?.brand && <div style={{ fontSize: '12px', color: '#666' }}>Brand: {item.Product.brand}</div>}
                                                     {item.ProductVariation?.attributes && (
                                                         <div className="product-attributes">
-                                                            {Object.entries(item.ProductVariation.attributes).map(([key, value]) => (
-                                                                <span key={key}>
+                                                            {getAttributeComponents(item.ProductVariation.attributes).map(({ key, value }) => (
+                                                                <span key={key} className="attribute-item">
                                                                     {key}: {value}
                                                                 </span>
                                                             ))}

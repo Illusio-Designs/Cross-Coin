@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { trackOrderByAWB } from '../services/publicindex';
+import { formatAttributesForDisplay } from '../utils/productAttributeFormatter';
 import styles from '../styles/pages/OrderTracking.css';
 
 export default function OrderTracking() {
@@ -165,9 +166,7 @@ export default function OrderTracking() {
                                                     <p className="variation">
                                                         Variant: {item.variation.sku || 
                                                         (item.variation.attributes ? 
-                                                            Object.entries(item.variation.attributes)
-                                                                .map(([key, value]) => `${key}: ${value}`)
-                                                                .join(', ') 
+                                                            formatAttributesForDisplay(item.variation.attributes)
                                                             : 'N/A')}
                                                     </p>
                                                 )}
