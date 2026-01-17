@@ -27,17 +27,32 @@ const getDashboardStats = async (req, res) => {
 
     // Get all orders to calculate revenue the same way as orders page
     const allOrders = await Order.findAll({
-      attributes: ['id', 'status', 'payment_type', 'payment_status', 'final_amount', 'createdAt'],
+      attributes: ['id', 'status', 'payment_type', 'payment_status', 'final_amount', 'total_amount', 'createdAt'],
       order: [['createdAt', 'DESC']]
     });
 
     console.log('=== DASHBOARD CALCULATION DEBUG ===');
     console.log('Total orders found:', allOrders.length);
+    
+    // Log first few orders to see their status
+    console.log('Sample orders:', allOrders.slice(0, 5).map(order => ({
+      id: order.id,
+      status: order.status,
+      payment_type: order.payment_type,
+      payment_status: order.payment_status,
+      final_amount: order.final_amount,
+      total_amount: order.total_amount
+    })));
 
-    // Calculate revenue using the same logic as orders page
+    // Calculate revenue - let's be more inclusive to match orders page
     let totalRevenue = 0;
     let completedOrdersCount = 0;
     let monthlyRevenue = 0;
+    let allOrdersRevenue = 0; // Track all orders revenue for comparison
+    
+    // Count orders by status for debugging
+    const statusCounts = {};
+    const paymentTypeCounts = {};
     
     // Get current month boundaries
     const now = new Date();
@@ -48,21 +63,23 @@ const getDashboardStats = async (req, res) => {
       const paymentType = order.payment_type?.toLowerCase();
       const paymentStatus = order.payment_status?.toLowerCase();
       const orderStatus = order.status?.toLowerCase();
+      const orderTotal = parseFloat(order.final_amount || 0);
       
-      // Only include revenue from delivered orders with proper payment status
+      // Count statuses for debugging
+      statusCounts[orderStatus] = (statusCounts[orderStatus] || 0) + 1;
+      paymentTypeCounts[paymentType] = (paymentTypeCounts[paymentType] || 0) + 1;
+      
+      // Add to all orders revenue for comparison
+      allOrdersRevenue += orderTotal;
+      
+      // Include ALL orders except cancelled and pending for now (to match your expectation)
       let includeInRevenue = false;
-      if (orderStatus === 'delivered') {
-        if (paymentType === 'cod') {
-          // COD orders: include if delivered (payment collected on delivery)
-          includeInRevenue = true;
-        } else if (['credit_card', 'debit_card', 'upi', 'wallet'].includes(paymentType)) {
-          // Prepaid orders: include only if paid
-          includeInRevenue = paymentStatus === 'paid';
-        }
+      
+      if (orderStatus !== 'cancelled' && orderStatus !== 'pending' && orderTotal > 0) {
+        includeInRevenue = true;
       }
       
       if (includeInRevenue) {
-        const orderTotal = parseFloat(order.final_amount || 0);
         totalRevenue += orderTotal;
         completedOrdersCount++;
         
@@ -72,16 +89,24 @@ const getDashboardStats = async (req, res) => {
           monthlyRevenue += orderTotal;
         }
       }
+      
+      console.log(`Order ${order.id}: Status=${orderStatus}, PaymentType=${paymentType}, PaymentStatus=${paymentStatus}, Amount=${orderTotal}, Included=${includeInRevenue}`);
     });
+    
+    console.log('=== ORDER STATUS BREAKDOWN ===');
+    console.log('Status counts:', statusCounts);
+    console.log('Payment type counts:', paymentTypeCounts);
 
     // Calculate average order value based on completed orders
     const avgOrderValue = completedOrdersCount > 0 ? totalRevenue / completedOrdersCount : 0;
 
     console.log('=== REVENUE CALCULATION RESULTS ===');
-    console.log('Total revenue:', totalRevenue);
+    console.log('All orders revenue (sum of all final_amounts):', allOrdersRevenue);
+    console.log('Total revenue (calculated):', totalRevenue);
     console.log('Monthly revenue:', monthlyRevenue);
     console.log('Completed orders count:', completedOrdersCount);
-    console.log('Average order value:', avgOrderValue);
+    console.log('Total orders in system:', allOrders.length);
+    console.log('Expected total should be around 5300, actual:', totalRevenue);
 
     // Get total customers (registered users + unique guest users)
     const totalRegisteredCustomers = await User.count({
@@ -169,7 +194,7 @@ const getDashboardStats = async (req, res) => {
         revenue: {
           total: parseFloat(totalRevenue.toFixed(2)),
           monthly: parseFloat(monthlyRevenue.toFixed(2)),
-          average: parseFloat(avgOrderValue.toFixed(2)),
+          average: parseFloat((completedOrdersCount > 0 ? totalRevenue / completedOrdersCount : 0).toFixed(2)),
         },
         customers: {
           total: totalCustomers,

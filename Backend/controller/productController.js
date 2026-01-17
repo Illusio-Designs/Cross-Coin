@@ -561,7 +561,22 @@ module.exports.getProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    res.json(formatProductResponse(product));
+    console.log('=== GET PRODUCT DEBUG ===');
+    console.log('Raw product weight:', product.weight);
+    console.log('Raw product weightUnit:', product.weightUnit);
+    console.log('Raw product dimensions:', product.dimensions);
+    console.log('Raw product dimensionUnit:', product.dimensionUnit);
+    console.log('Dimensions type:', typeof product.dimensions);
+
+    const formattedProduct = formatProductResponse(product);
+    
+    console.log('=== FORMATTED PRODUCT DEBUG ===');
+    console.log('Formatted product weight:', formattedProduct.weight);
+    console.log('Formatted product weightUnit:', formattedProduct.weightUnit);
+    console.log('Formatted product dimensions:', formattedProduct.dimensions);
+    console.log('Formatted product dimensionUnit:', formattedProduct.dimensionUnit);
+
+    res.json(formattedProduct);
   } catch (error) {
     console.error("Error getting product:", error);
     res
