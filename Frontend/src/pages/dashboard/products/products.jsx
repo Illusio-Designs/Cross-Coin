@@ -900,9 +900,6 @@ const ProductsPage = () => {
                     value={formData.dimensions.length}
                     onChange={handleInputChange}
                     placeholder="Length"
-                  />Data.dimensions.length}
-                    onChange={handleInputChange}
-                    placeholder="Length"
                   />
                   <InputField
                     label="Width"
