@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../../styles/dashboard/Card.css';
-import { FaBox, FaShoppingCart, FaDollarSign, FaUsers, FaStar, FaClock } from "react-icons/fa";
+import { FaBox, FaShoppingCart, FaDollarSign, FaUsers, FaStar, FaClock, FaRupeeSign } from "react-icons/fa";
 import { dashboardService } from '../../services';
 
 export default function CardGrid() {
@@ -111,19 +111,19 @@ export default function CardGrid() {
       title: "Total Revenue",
       value: `₹${stats.revenue.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       description: "All time revenue",
-      icon: <FaDollarSign className="dashboard-card-icon" />
+      icon: <FaRupeeSign className="dashboard-card-icon" />
     },
     {
       title: "Monthly Revenue",
       value: `₹${stats.revenue.monthly.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       description: "Current month",
-      icon: <FaDollarSign className="dashboard-card-icon" />
+      icon: <FaRupeeSign className="dashboard-card-icon" />
     },
     {
       title: "Average Order Value",
       value: `₹${stats.revenue.average.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       description: "Per order",
-      icon: <FaDollarSign className="dashboard-card-icon" />
+      icon: <FaRupeeSign className="dashboard-card-icon" />
     },
     {
       title: "Total Customers",
@@ -171,7 +171,7 @@ export default function CardGrid() {
 
       <div className="dashboard-section">
         <div className="dashboard-section-title">
-          <FaDollarSign style={{marginRight: 8}} />
+          <FaRupeeSign style={{marginRight: 8}} />
           Revenue & Customer Statistics
         </div>
         <div className="dashboard-card-grid">
