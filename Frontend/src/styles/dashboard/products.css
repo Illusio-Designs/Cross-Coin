@@ -175,3 +175,187 @@
 .variation-images-upload input[type="file"]::file-selector-button:hover {
   background: #b91c31;
 }
+/* Product Images Upload Styling - Matching InputField.css */
+.product-images-section {
+  position: relative;
+  margin: 1.5rem 0;
+}
+
+.product-images-section label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #180D3E;
+}
+
+.product-images-section input[type="file"] {
+  padding: 0.75rem 1rem;
+  border: 1px solid #180D3E;
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  background-color: #ffffff;
+  width: -webkit-fill-available;
+  cursor: pointer;
+}
+
+.product-images-section input[type="file"]:focus {
+  outline: none;
+  border-color: #CE1E36;
+  box-shadow: 0 0 0 2px rgba(206, 30, 54, 0.1);
+}
+
+.product-images-section input[type="file"]:hover {
+  border-color: #CE1E36;
+}
+
+.images-preview {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px dashed #d1d5db;
+  border-radius: 0.375rem;
+  min-height: 100px;
+  align-items: flex-start;
+}
+
+.images-preview > div {
+  position: relative;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  border: 1px solid #d1d5db;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.images-preview img {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 0.375rem;
+  display: block;
+}
+
+.images-preview button {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.2s ease;
+}
+
+.images-preview button:hover {
+  background: #dc2626;
+}
+
+/* Empty state styling */
+.images-preview:empty::after {
+  content: "No images uploaded yet. Click 'Choose Files' to add product images.";
+  color: #6B7280;
+  font-size: 0.875rem;
+  font-style: italic;
+  width: 100%;
+  text-align: center;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* File input button styling to match theme */
+.product-images-section input[type="file"]::-webkit-file-upload-button {
+  background: #CE1E36;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-right: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.product-images-section input[type="file"]::-webkit-file-upload-button:hover {
+  background: #b91c31;
+}
+
+.product-images-section input[type="file"]::file-selector-button {
+  background: #CE1E36;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-right: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.product-images-section input[type="file"]::file-selector-button:hover {
+  background: #b91c31;
+}
+
+/* Weight and Dimensions Section Styling */
+.weight-dimensions-section {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 2rem;
+  margin: 1.5rem 0;
+  padding: 1.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background-color: #f9fafb;
+}
+
+.weight-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dimensions-section h6 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #180D3E;
+}
+
+.dimensions-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.dimensions-inputs > div:last-child {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 768px) {
+  .weight-dimensions-section {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .dimensions-inputs {
+    grid-template-columns: 1fr;
+  }
+  
+  .dimensions-inputs > div:last-child {
+    grid-column: 1;
+  }
+}
