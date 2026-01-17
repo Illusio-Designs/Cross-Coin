@@ -1482,6 +1482,12 @@ module.exports.getAllOrders = async (req, res) => {
               as: "Product",
               include: [{ model: ProductImage, as: "ProductImages" }],
             },
+            {
+              model: ProductVariation,
+              as: "ProductVariation",
+              attributes: ["id", "sku", "price", "attributes"],
+              required: false,
+            },
           ],
         },
       ],
@@ -1569,10 +1575,18 @@ module.exports.getUserOrders = async (req, res) => {
       include: [
         {
           model: OrderItem,
+          as: "OrderItems",
           include: [
             {
               model: Product,
+              as: "Product",
               include: [{ model: ProductImage, as: "ProductImages" }],
+            },
+            {
+              model: ProductVariation,
+              as: "ProductVariation",
+              attributes: ["id", "sku", "price", "attributes"],
+              required: false,
             },
           ],
         },
@@ -1607,7 +1621,52 @@ module.exports.getOrder = async (req, res) => {
     const { id } = req.params; // Assuming the order ID is passed as a URL parameter
 
     const order = await Order.findByPk(id, {
-      include: [{ model: OrderItem }, { model: User }],
+      include: [
+        {
+          model: OrderItem,
+          as: "OrderItems",
+          include: [
+            {
+              model: Product,
+              as: "Product",
+              include: [{ model: ProductImage, as: "ProductImages" }],
+            },
+            {
+              model: ProductVariation,
+              as: "ProductVariation",
+              attributes: ["id", "sku", "price", "attributes"],
+              required: false,
+            },
+          ],
+        },
+        {
+          model: User,
+          as: "User",
+          attributes: ["id", "username", "email"],
+          required: false,
+        },
+        {
+          model: GuestUser,
+          as: "GuestUser",
+          attributes: ["id", "email", "firstName", "lastName", "phone"],
+          required: false,
+        },
+        {
+          model: ShippingAddress,
+          as: "ShippingAddress",
+          attributes: [
+            "id",
+            "full_name",
+            "phone",
+            "address",
+            "city",
+            "state",
+            "pincode",
+            "country",
+          ],
+          required: false,
+        },
+      ],
     });
 
     if (!order) {

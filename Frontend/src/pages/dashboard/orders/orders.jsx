@@ -754,6 +754,9 @@ const Orders = () => {
                                                            item.Product?.ProductImages?.[0];
                                         const imageUrl = getProductImageSrc(primaryImage);
                                         
+                                        // Get SKU from ProductVariation if available, otherwise show 'N/A'
+                                        const sku = item.ProductVariation?.sku || 'N/A';
+                                        
                                         return (
                                             <tr key={item.id}>
                                                 <td>
@@ -771,8 +774,21 @@ const Orders = () => {
                                                 <td>
                                                     <div style={{ fontWeight: '500' }}>{item.Product?.name || 'N/A'}</div>
                                                     {item.Product?.brand && <div style={{ fontSize: '12px', color: '#666' }}>Brand: {item.Product.brand}</div>}
+                                                    {item.ProductVariation?.attributes && (
+                                                        <div className="product-attributes">
+                                                            {Object.entries(item.ProductVariation.attributes).map(([key, value]) => (
+                                                                <span key={key}>
+                                                                    {key}: {value}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </td>
-                                                <td style={{ fontSize: '12px', color: '#666' }}>{item.Product?.sku || 'N/A'}</td>
+                                                <td>
+                                                    <div className="product-sku">
+                                                        {sku}
+                                                    </div>
+                                                </td>
                                                 <td><span style={{ 
                                                     padding: '4px 12px', 
                                                     backgroundColor: '#e9ecef',

@@ -293,6 +293,34 @@
   transform: scale(1.05);
 }
 
+/* Product SKU Styles */
+.product-sku {
+  font-size: 12px;
+  color: #666;
+  font-family: 'Courier New', monospace;
+  background-color: #f8f9fa;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+  display: inline-block;
+  font-weight: 500;
+}
+
+/* Product Variation Attributes */
+.product-attributes {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.product-attributes span {
+  margin-right: 8px;
+  padding: 2px 6px;
+  background-color: #e9ecef;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
 /* Order Summary Grid */
 .order-summary-grid {
   display: grid;
