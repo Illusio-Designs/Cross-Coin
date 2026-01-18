@@ -97,6 +97,33 @@ async function ensureValidToken() {
 async function createShiprocketOrder(orderData) {
     await ensureValidToken();
 
+    // First, check if order already exists in Shiprocket to prevent duplicates
+    try {
+        console.log(`=== CHECKING FOR EXISTING SHIPROCKET ORDER: ${orderData.order_id} ===`);
+        const existingOrders = await getAllShiprocketOrders({
+            order_id: orderData.order_id
+        });
+        
+        if (existingOrders && existingOrders.data && existingOrders.data.length > 0) {
+            const existingOrder = existingOrders.data[0];
+            console.log(`=== ORDER ALREADY EXISTS IN SHIPROCKET ===`);
+            console.log('Existing order:', existingOrder);
+            
+            // Return the existing order data instead of creating duplicate
+            return {
+                order_id: existingOrder.id,
+                shipments: existingOrder.shipments || [],
+                message: 'Order already exists in Shiprocket',
+                is_duplicate: true
+            };
+        }
+        console.log(`=== NO EXISTING ORDER FOUND, PROCEEDING WITH CREATION ===`);
+    } catch (checkError) {
+        console.log(`=== ERROR CHECKING EXISTING ORDER (proceeding with creation): ${checkError.message} ===`);
+        // If we can't check for existing orders, proceed with creation
+        // This ensures the sync doesn't fail if the check API has issues
+    }
+
     // Validate required fields according to Shiprocket API
     const required = [
         "order_id", "order_date", "pickup_location", "billing_customer_name",
@@ -324,6 +351,195 @@ async function getAllShiprocketOrders(params = {}) {
     }
 }
 
+// Check if order exists in Shiprocket by order_id
+async function checkShiprocketOrderExists(orderId) {
+    try {
+        await ensureValidToken();
+        console.log(`=== CHECKING SHIPROCKET ORDER EXISTS: ${orderId} ===`);
+        
+        const response = await axios.get(
+            `${BASE_URL}/orders`,
+            { 
+                params: { order_id: orderId },
+                headers: { Authorization: `Bearer ${token}` } 
+            }
+        );
+        
+        const orders = response.data?.data || [];
+        const existingOrder = orders.find(order => 
+            order.channel_order_id === orderId || 
+            order.order_id === orderId ||
+            String(order.id) === String(orderId)
+        );
+        
+        if (existingOrder) {
+            console.log(`=== ORDER EXISTS IN SHIPROCKET ===`);
+            console.log('Existing order details:', {
+                id: existingOrder.id,
+                channel_order_id: existingOrder.channel_order_id,
+                order_id: existingOrder.order_id,
+                status: existingOrder.status
+            });
+            return {
+                exists: true,
+                order: existingOrder
+            };
+        }
+        
+        console.log(`=== ORDER NOT FOUND IN SHIPROCKET ===`);
+        return {
+            exists: false,
+            order: null
+        };
+    } catch (error) {
+        console.error('Error checking if Shiprocket order exists:', error.response?.data || error.message);
+        // Return false if we can't check, so sync can proceed
+        return {
+            exists: false,
+            order: null,
+            error: error.message
+        };
+    }
+}
+
+// Get detailed order information from Shiprocket including status and tracking
+async function getShiprocketOrderDetails(shiprocketOrderId) {
+    try {
+        await ensureValidToken();
+        console.log(`=== GETTING SHIPROCKET ORDER DETAILS: ${shiprocketOrderId} ===`);
+        
+        const response = await axios.get(
+            `${BASE_URL}/orders/show/${shiprocketOrderId}`,
+            { 
+                headers: { Authorization: `Bearer ${token}` } 
+            }
+        );
+        
+        const orderData = response.data?.data;
+        if (orderData) {
+            console.log('Order details retrieved:', {
+                id: orderData.id,
+                status: orderData.status,
+                shipments: orderData.shipments?.length || 0
+            });
+            
+            return {
+                success: true,
+                order: orderData
+            };
+        }
+        
+        return {
+            success: false,
+            error: 'Order not found'
+        };
+    } catch (error) {
+        console.error('Error getting Shiprocket order details:', error.response?.data || error.message);
+        return {
+            success: false,
+            error: error.message,
+            response: error.response?.data
+        };
+    }
+}
+
+// Map Shiprocket status to local order status
+function mapShiprocketStatusToLocal(shiprocketStatus, shipmentStatus = null) {
+    console.log(`=== MAPPING SHIPROCKET STATUS ===`);
+    console.log('Shiprocket Status:', shiprocketStatus);
+    console.log('Shipment Status:', shipmentStatus);
+    
+    // Shiprocket order statuses and their mappings
+    const statusMapping = {
+        // Order level statuses
+        'NEW': 'processing',
+        'READY_TO_SHIP': 'processing', 
+        'SHIPPED': 'shipped',
+        'DELIVERED': 'delivered',
+        'CANCELLED': 'cancelled',
+        'RTO': 'cancelled', // Return to Origin
+        'LOST': 'cancelled',
+        
+        // Shipment level statuses (more detailed)
+        'PICKUP_SCHEDULED': 'processing',
+        'PICKUP_GENERATED': 'processing',
+        'PICKUP_QUEUED': 'processing',
+        'PICKUP_COMPLETED': 'shipped',
+        'IN_TRANSIT': 'shipped',
+        'OUT_FOR_DELIVERY': 'shipped',
+        'DELIVERED': 'delivered',
+        'CANCELLED': 'cancelled',
+        'RTO_INITIATED': 'cancelled',
+        'RTO_DELIVERED': 'cancelled',
+        'LOST': 'cancelled',
+        'DAMAGED': 'cancelled'
+    };
+    
+    // Prioritize shipment status if available (more accurate)
+    const statusToMap = shipmentStatus || shiprocketStatus;
+    const mappedStatus = statusMapping[statusToMap?.toUpperCase()] || 'processing';
+    
+    console.log('Mapped Status:', mappedStatus);
+    return mappedStatus;
+}
+
+// Get comprehensive tracking information for an order
+async function getShiprocketOrderTracking(shiprocketOrderId) {
+    try {
+        await ensureValidToken();
+        console.log(`=== GETTING SHIPROCKET ORDER TRACKING: ${shiprocketOrderId} ===`);
+        
+        // Get order details first
+        const orderDetails = await getShiprocketOrderDetails(shiprocketOrderId);
+        if (!orderDetails.success) {
+            return orderDetails;
+        }
+        
+        const order = orderDetails.order;
+        const shipments = order.shipments || [];
+        
+        let trackingInfo = {
+            order_status: order.status,
+            shipments: []
+        };
+        
+        // Get tracking for each shipment
+        for (const shipment of shipments) {
+            try {
+                const trackingResponse = await getShiprocketTracking(shipment.id);
+                trackingInfo.shipments.push({
+                    shipment_id: shipment.id,
+                    status: shipment.status,
+                    courier_name: shipment.courier_name,
+                    awb: shipment.awb,
+                    tracking_url: trackingResponse?.tracking_data?.track_url || null,
+                    tracking_details: trackingResponse?.tracking_data || null
+                });
+            } catch (trackingError) {
+                console.error(`Error getting tracking for shipment ${shipment.id}:`, trackingError.message);
+                trackingInfo.shipments.push({
+                    shipment_id: shipment.id,
+                    status: shipment.status,
+                    courier_name: shipment.courier_name,
+                    awb: shipment.awb,
+                    error: trackingError.message
+                });
+            }
+        }
+        
+        return {
+            success: true,
+            tracking: trackingInfo
+        };
+    } catch (error) {
+        console.error('Error getting Shiprocket order tracking:', error.response?.data || error.message);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
 // Cancel order in Shiprocket
 async function cancelShiprocketOrder(orderId) {
     try {
@@ -374,6 +590,10 @@ module.exports = {
     requestShiprocketPickup,
     cancelShiprocketShipment,
     getAllShiprocketOrders,
+    checkShiprocketOrderExists,
+    getShiprocketOrderDetails,
+    getShiprocketOrderTracking,
+    mapShiprocketStatusToLocal,
     getPickupLocations,
     createPickupLocation,
     cancelShiprocketOrder

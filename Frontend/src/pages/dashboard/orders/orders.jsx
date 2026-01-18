@@ -86,31 +86,51 @@ const Orders = () => {
         try {
             const result = await orderService.syncOrdersWithShiprocket();
             
-            if (result.results.successful > 0) {
-                toast.success(`Successfully synced ${result.results.successful} orders`);
+            // Show detailed results
+            const { results } = result;
+            let message = `Sync completed! `;
+            
+            if (results.total_orders_processed > 0) {
+                message += `Processed ${results.total_orders_processed} orders. `;
             }
             
-            if (result.results.failed > 0) {
-                console.error('Failed orders:', result.results.errors);
-                toast.error(`Failed to sync ${result.results.failed} orders. Check console for details.`);
+            if (results.new_orders_synced > 0) {
+                message += `${results.new_orders_synced} new orders synced. `;
             }
+            
+            if (results.existing_orders_updated > 0) {
+                message += `${results.existing_orders_updated} existing orders updated. `;
+            }
+            
+            if (results.status_updates > 0) {
+                message += `${results.status_updates} status updates. `;
+            }
+            
+            if (results.tracking_updates > 0) {
+                message += `${results.tracking_updates} tracking updates. `;
+            }
+            
+            if (results.failed > 0) {
+                message += `${results.failed} orders failed. `;
+                console.error('Failed orders:', results.errors);
+            }
+            
+            toast.success(message);
             
             // Refresh orders after sync
             fetchOrders();
         } catch (error) {
             console.error('=== Order Sync Failed ===');
             console.error('Error object:', error);
-            console.error('Error message:', error.message);
-            console.error('Error status:', error.status);
-            console.error('Error data:', error.data);
-            console.error('Full error details:', {
-                name: error.name,
-                stack: error.stack,
-                response: error.response,
-                request: error.request
-            });
             
-            toast.error(error.message || 'Failed to sync orders');
+            let errorMessage = 'Failed to sync orders';
+            if (error.message) {
+                errorMessage = error.message;
+            } else if (error.error) {
+                errorMessage = error.error;
+            }
+            
+            toast.error(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -138,14 +158,15 @@ const Orders = () => {
     const debouncedSearch = useCallback(debounce((searchTerm) => setFilterValue(searchTerm), 300), []);
     const handleSearchChange = (e) => debouncedSearch(e.target.value);
 
-    const handleStatusChange = async (orderId, newStatus) => {
-        try {
-            await orderService.updateOrderStatus(orderId, { status: newStatus });
-            fetchOrders();
-        } catch (err) {
-            alert(`Failed to update status: ${err.message || 'Unknown error'}`);
-        }
-    };
+    // Remove manual status change - now handled automatically by Shiprocket sync
+    // const handleStatusChange = async (orderId, newStatus) => {
+    //     try {
+    //         await orderService.updateOrderStatus(orderId, { status: newStatus });
+    //         fetchOrders();
+    //     } catch (err) {
+    //         alert(`Failed to update status: ${err.message || 'Unknown error'}`);
+    //     }
+    // };
 
     const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
@@ -436,17 +457,14 @@ const Orders = () => {
                         </svg>
                         View
                     </button>
-                    <select 
-                        value={row.status} 
-                        onChange={(e) => handleStatusChange(row.id, e.target.value)} 
-                        className="action-btn status-select-action"
-                    >
-                        <option value="pending">Pending</option>
-                        <option value="processing">Processing</option>
-                        <option value="shipped">Shipped</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
+                    <div className="status-info" style={{
+                        fontSize: '11px',
+                        color: '#666',
+                        marginTop: '4px',
+                        fontStyle: 'italic'
+                    }}>
+                        Status auto-synced
+                    </div>
                 </div>
             )
         }
@@ -512,13 +530,13 @@ const Orders = () => {
                         <button 
                             className="sync-button"
                             onClick={syncOrders}
-                            title="Sync orders with Shiprocket"
+                            title="Comprehensive Shiprocket sync - Tests credentials, syncs new orders, and updates statuses"
                             disabled={loading}
                         >
                             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
-                            {loading ? 'Syncing...' : 'Sync Orders'}
+                            {loading ? 'Syncing...' : 'Comprehensive Sync'}
                         </button>
                         <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
                             <div className="modern-searchbar-group">
@@ -557,7 +575,7 @@ const Orders = () => {
 
                 <div style={{ marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '14px', color: '#888' }}>
-                        Sync orders with Shiprocket for better tracking and management.
+                        Comprehensive Shiprocket sync: Tests credentials, syncs new orders, and updates existing order statuses automatically.
                     </span>
                 </div>
 
@@ -648,7 +666,7 @@ const Orders = () => {
                             </div>
 
                             <div className="info-note">
-                                <strong>Note:</strong> Pre-paid orders (Card/UPI/Wallet) automatically show as "Paid". COD orders show actual payment status (Paid/Pending).
+                                <strong>Note:</strong> Order statuses are automatically synchronized with Shiprocket. Use "Comprehensive Sync" to update all orders at once. Manual status changes have been disabled to maintain sync integrity.
                             </div>
 
                             <Table 
@@ -738,10 +756,18 @@ const Orders = () => {
                                 <div><strong>Order Status:</strong> <span className={`status-badge status-${selectedOrder.status}`}>{selectedOrder.status}</span></div>
                                 {selectedOrder.notes && <div style={{ gridColumn: '1 / -1' }}><strong>Order Notes:</strong> {selectedOrder.notes}</div>}
                                 {/* Shiprocket Information */}
-                                {(selectedOrder.shiprocket_order_id || selectedOrder.shiprocket_shipment_id) && (
+                                {(selectedOrder.shiprocket_order_id || selectedOrder.shiprocket_shipment_id || selectedOrder.tracking_number) && (
                                     <>
-                                        <div><strong>Shiprocket Order ID:</strong> {selectedOrder.shiprocket_order_id || 'N/A'}</div>
-                                        <div><strong>Shiprocket Shipment ID:</strong> {selectedOrder.shiprocket_shipment_id || 'N/A'}</div>
+                                        <div style={{ gridColumn: '1 / -1', marginTop: '12px', padding: '12px', backgroundColor: '#e8f5e9', borderRadius: '6px' }}>
+                                            <h5 style={{ margin: '0 0 8px 0', color: '#2e7d32' }}>Shiprocket Tracking Information</h5>
+                                            {selectedOrder.shiprocket_order_id && <div><strong>Shiprocket Order ID:</strong> {selectedOrder.shiprocket_order_id}</div>}
+                                            {selectedOrder.shiprocket_shipment_id && <div><strong>Shipment ID:</strong> {selectedOrder.shiprocket_shipment_id}</div>}
+                                            {selectedOrder.tracking_number && <div><strong>AWB Number:</strong> {selectedOrder.tracking_number}</div>}
+                                            {selectedOrder.courier_name && <div><strong>Courier:</strong> {selectedOrder.courier_name}</div>}
+                                            {selectedOrder.tracking_url && (
+                                                <div><strong>Track Package:</strong> <a href={selectedOrder.tracking_url} target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2' }}>Click to track</a></div>
+                                            )}
+                                        </div>
                                     </>
                                 )}
                             </div>
