@@ -44,7 +44,7 @@ const getDashboardStats = async (req, res) => {
       total_amount: order.total_amount
     })));
 
-    // Calculate revenue - let's be more inclusive to match orders page
+    // Calculate revenue - Include ALL orders regardless of status to show total business value
     let totalRevenue = 0;
     let completedOrdersCount = 0;
     let monthlyRevenue = 0;
@@ -69,44 +69,42 @@ const getDashboardStats = async (req, res) => {
       statusCounts[orderStatus] = (statusCounts[orderStatus] || 0) + 1;
       paymentTypeCounts[paymentType] = (paymentTypeCounts[paymentType] || 0) + 1;
       
-      // Add to all orders revenue for comparison
-      allOrdersRevenue += orderTotal;
-      
-      // Include ALL orders except cancelled and pending for now (to match your expectation)
-      let includeInRevenue = false;
-      
-      if (orderStatus !== 'cancelled' && orderStatus !== 'pending' && orderTotal > 0) {
-        includeInRevenue = true;
-      }
-      
-      if (includeInRevenue) {
+      // Include ALL orders EXCEPT cancelled orders in revenue calculation
+      if (orderStatus !== 'cancelled') {
         totalRevenue += orderTotal;
-        completedOrdersCount++;
-        
-        // Check if order is from current month
-        const orderDate = new Date(order.createdAt);
-        if (orderDate >= firstDayOfMonth && orderDate <= lastDayOfMonth) {
-          monthlyRevenue += orderTotal;
-        }
+        allOrdersRevenue += orderTotal;
       }
       
-      console.log(`Order ${order.id}: Status=${orderStatus}, PaymentType=${paymentType}, PaymentStatus=${paymentStatus}, Amount=${orderTotal}, Included=${includeInRevenue}`);
+      // Count completed orders for average calculation
+      if (orderStatus === 'delivered' || orderStatus === 'completed') {
+        completedOrdersCount++;
+      }
+      
+      // Check if order is from current month (exclude cancelled from monthly revenue too)
+      const orderDate = new Date(order.createdAt);
+      if (orderDate >= firstDayOfMonth && orderDate <= lastDayOfMonth && orderStatus !== 'cancelled') {
+        monthlyRevenue += orderTotal;
+      }
+      
+      console.log(`Order ${order.id}: Status=${orderStatus}, PaymentType=${paymentType}, PaymentStatus=${paymentStatus}, Amount=${orderTotal}, Included=${orderStatus !== 'cancelled'}`);
     });
     
     console.log('=== ORDER STATUS BREAKDOWN ===');
     console.log('Status counts:', statusCounts);
     console.log('Payment type counts:', paymentTypeCounts);
 
-    // Calculate average order value based on completed orders
-    const avgOrderValue = completedOrdersCount > 0 ? totalRevenue / completedOrdersCount : 0;
+    // Calculate average order value based on non-cancelled orders
+    const nonCancelledOrdersCount = allOrders.filter(order => order.status?.toLowerCase() !== 'cancelled').length;
+    const avgOrderValue = nonCancelledOrdersCount > 0 ? totalRevenue / nonCancelledOrdersCount : 0;
 
     console.log('=== REVENUE CALCULATION RESULTS ===');
     console.log('All orders revenue (sum of all final_amounts):', allOrdersRevenue);
-    console.log('Total revenue (calculated):', totalRevenue);
+    console.log('Total revenue (calculated - EXCLUDING CANCELLED):', totalRevenue);
     console.log('Monthly revenue:', monthlyRevenue);
     console.log('Completed orders count:', completedOrdersCount);
     console.log('Total orders in system:', allOrders.length);
-    console.log('Expected total should be around 5300, actual:', totalRevenue);
+    console.log('Non-cancelled orders:', nonCancelledOrdersCount);
+    console.log('Revenue calculation excludes cancelled orders');
 
     // Get total customers (registered users + unique guest users)
     const totalRegisteredCustomers = await User.count({
@@ -194,7 +192,7 @@ const getDashboardStats = async (req, res) => {
         revenue: {
           total: parseFloat(totalRevenue.toFixed(2)),
           monthly: parseFloat(monthlyRevenue.toFixed(2)),
-          average: parseFloat((completedOrdersCount > 0 ? totalRevenue / completedOrdersCount : 0).toFixed(2)),
+          average: parseFloat((nonCancelledOrdersCount > 0 ? totalRevenue / nonCancelledOrdersCount : 0).toFixed(2)),
         },
         customers: {
           total: totalCustomers,

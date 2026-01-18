@@ -1927,7 +1927,16 @@ module.exports.cancelOrder = async (req, res) => {
 module.exports.getOrderStats = async (req, res) => {
   try {
     const totalOrders = await Order.count();
-    const totalRevenue = await Order.sum("final_amount");
+    
+    // Calculate total revenue excluding cancelled orders
+    const totalRevenue = await Order.sum("final_amount", {
+      where: {
+        status: {
+          [Op.ne]: 'cancelled'
+        }
+      }
+    });
+    
     const totalPendingOrders = await Order.count({
       where: { status: "pending" },
     });
@@ -1940,7 +1949,7 @@ module.exports.getOrderStats = async (req, res) => {
 
     res.json({
       totalOrders,
-      totalRevenue,
+      totalRevenue: totalRevenue || 0,
       totalPendingOrders,
       totalDeliveredOrders,
       totalCancelledOrders,
