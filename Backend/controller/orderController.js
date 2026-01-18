@@ -401,7 +401,7 @@ module.exports.createOrder = async (req, res) => {
             if (duplicateCheck.exists && duplicateCheck.order) {
               console.log(`🔄 Order ${createdOrder.order_number} already exists in Shiprocket - updating local record`);
               const existingOrder = duplicateCheck.order;
-              const shipments = existingOrder.shipments || [];
+              const shipments = Array.isArray(existingOrder.shipments) ? existingOrder.shipments : [];
               
               await createdOrder.update({
                 shiprocket_order_id: existingOrder.id,
@@ -435,7 +435,7 @@ module.exports.createOrder = async (req, res) => {
                 const existingCheck = await checkShiprocketOrderExists(createdOrder.order_number);
                 if (existingCheck.exists && existingCheck.order) {
                   const existingOrder = existingCheck.order;
-                  const shipments = existingOrder.shipments || [];
+                  const shipments = Array.isArray(existingOrder.shipments) ? existingOrder.shipments : [];
                   
                   await createdOrder.update({
                     shiprocket_order_id: existingOrder.id,
@@ -923,7 +923,7 @@ module.exports.createGuestOrder = async (req, res) => {
           if (duplicateCheck.exists && duplicateCheck.order) {
             console.log(`🔄 Guest order ${order.order_number} already exists in Shiprocket - updating local record`);
             const existingOrder = duplicateCheck.order;
-            const shipments = existingOrder.shipments || [];
+            const shipments = Array.isArray(existingOrder.shipments) ? existingOrder.shipments : [];
             
             await order.update({
               shiprocket_order_id: existingOrder.id,
@@ -996,7 +996,7 @@ module.exports.createGuestOrder = async (req, res) => {
             const existingCheck = await checkShiprocketOrderExists(order.order_number);
             if (existingCheck.exists && existingCheck.order) {
               const existingOrder = existingCheck.order;
-              const shipments = existingOrder.shipments || [];
+              const shipments = Array.isArray(existingOrder.shipments) ? existingOrder.shipments : [];
               
               await order.update({
                 shiprocket_order_id: existingOrder.id,
@@ -2568,7 +2568,7 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
             const existingCheck = await checkShiprocketOrderExists(order.order_number);
             if (existingCheck.exists && existingCheck.order) {
               const existingOrder = existingCheck.order;
-              const shipments = existingOrder.shipments || [];
+              const shipments = Array.isArray(existingOrder.shipments) ? existingOrder.shipments : [];
               
               await order.update({
                 shiprocket_order_id: existingOrder.id,
@@ -2694,17 +2694,29 @@ async function updateOrderStatusFromShiprocket(order, transaction = null) {
     }
 
     const shiprocketOrder = shiprocketDetails.order;
-    const shipments = shiprocketOrder.shipments || [];
+    
+    // Ensure shipments is always an array with additional safety checks
+    let shipments = [];
+    if (shiprocketOrder.shipments) {
+      if (Array.isArray(shiprocketOrder.shipments)) {
+        shipments = shiprocketOrder.shipments;
+      } else {
+        console.log(`⚠️  Shipments is not an array for order ${order.order_number}:`, typeof shiprocketOrder.shipments, shiprocketOrder.shipments);
+        shipments = [];
+      }
+    }
     
     console.log(`📦 Shiprocket order details for ${order.order_number}:`, {
       order_status: shiprocketOrder.status,
       shipments_count: shipments.length,
-      shipments: shipments.map(s => ({
-        id: s.id,
-        status: s.status,
-        awb: s.awb,
-        courier: s.courier_name
-      }))
+      shipments_type: typeof shiprocketOrder.shipments,
+      shipments_is_array: Array.isArray(shiprocketOrder.shipments),
+      shipments: shipments.length > 0 ? shipments.map(s => ({
+        id: s?.id || 'N/A',
+        status: s?.status || 'N/A',
+        awb: s?.awb || 'N/A',
+        courier: s?.courier_name || 'N/A'
+      })) : 'No shipments'
     });
     
     // Determine the most current status
@@ -2730,7 +2742,7 @@ async function updateOrderStatusFromShiprocket(order, transaction = null) {
       // Get tracking URL if available
       try {
         const trackingInfo = await getShiprocketOrderTracking(order.shiprocket_order_id);
-        if (trackingInfo.success && trackingInfo.tracking.shipments.length > 0) {
+        if (trackingInfo.success && trackingInfo.tracking && trackingInfo.tracking.shipments && Array.isArray(trackingInfo.tracking.shipments) && trackingInfo.tracking.shipments.length > 0) {
           const shipmentTracking = trackingInfo.tracking.shipments.find(s => s.shipment_id == latestShipment.id);
           if (shipmentTracking && shipmentTracking.tracking_url) {
             trackingUrl = shipmentTracking.tracking_url;
