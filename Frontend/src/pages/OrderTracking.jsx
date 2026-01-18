@@ -311,7 +311,7 @@ export default function OrderTracking() {
                                             <span>Shiprocket Status:</span>
                                             <span>{orderData.shiprocket_data.order_status}</span>
                                         </div>
-                                        {orderData.shiprocket_data.shipments && orderData.shiprocket_data.shipments.length > 0 && (
+                                        {orderData.shiprocket_data.shipments && Array.isArray(orderData.shiprocket_data.shipments) && orderData.shiprocket_data.shipments.length > 0 && (
                                             <div className="shipments-info">
                                                 <h4>Shipment Details:</h4>
                                                 {orderData.shiprocket_data.shipments.map((shipment, index) => (

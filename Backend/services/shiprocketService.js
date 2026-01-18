@@ -417,10 +417,20 @@ async function getShiprocketOrderDetails(shiprocketOrderId) {
         
         const orderData = response.data?.data;
         if (orderData) {
+            // Ensure shipments is always an array
+            if (orderData.shipments && !Array.isArray(orderData.shipments)) {
+                console.log('⚠️  Shipments is not an array, converting:', typeof orderData.shipments, orderData.shipments);
+                orderData.shipments = [];
+            } else if (!orderData.shipments) {
+                orderData.shipments = [];
+            }
+            
             console.log('Order details retrieved:', {
                 id: orderData.id,
                 status: orderData.status,
-                shipments: orderData.shipments?.length || 0
+                shipments: orderData.shipments?.length || 0,
+                shipments_type: typeof orderData.shipments,
+                shipments_is_array: Array.isArray(orderData.shipments)
             });
             
             return {
