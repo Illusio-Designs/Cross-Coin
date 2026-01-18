@@ -176,7 +176,7 @@ const OrderStatus = () => {
                                     })()}
                                 </div>
                                 <div className="info-note">
-                                    <strong>Note:</strong> This shows the complete history of order status changes. Each row represents a status update for an order.
+                                    <strong>Note:</strong> This shows the complete history of order status changes. Status updates are now automatically synchronized with Shiprocket. Manual status changes have been disabled to maintain sync integrity.
                                 </div>
                                 <Table columns={columns} data={currentItems} className="w-full" striped={true} hoverable={true} style={{ fontSize: '14px' }} />
                                 {filteredData.length > itemsPerPage && (
