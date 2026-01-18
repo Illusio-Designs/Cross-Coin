@@ -79,7 +79,7 @@ const formatProductResponse = (product) => {
       if (variation.VariationImages && variation.VariationImages.length > 0) {
         variationObj.images = variation.VariationImages.map((image) => ({
           id: image.id,
-          image_url: image.image_url.split("/").pop(),
+          image_url: image.image_url, // Keep the full path
           alt_text: image.alt_text,
           display_order: image.display_order,
           is_primary: image.is_primary,
@@ -94,16 +94,14 @@ const formatProductResponse = (product) => {
   // Format images
   if (productData.ProductImages) {
     productData.images = productData.ProductImages.map((image) => {
-      // Extract just the filename from the path
-      const filename = image.image_url.split("/").pop();
       return {
         id: image.id,
-        image_url: filename, // Store just the filename
+        image_url: image.image_url, // Keep the full path
         alt_text: image.alt_text,
         display_order: image.display_order,
         is_primary: image.is_primary,
         status: image.status,
-        product_variation_id: image.product_variation_id, // <-- Add this line
+        product_variation_id: image.product_variation_id,
       };
     });
     delete productData.ProductImages;
@@ -1243,10 +1241,8 @@ module.exports.getPublicProductBySlug = async (req, res) => {
               image_url: image.image_url.startsWith("http")
                 ? image.image_url
                 : `${process.env.BACKEND_URL || "http://localhost:5000"}${
-                    image.image_url.startsWith("/uploads/")
-                      ? ""
-                      : "/uploads/products/"
-                  }${image.image_url}`,
+                    image.image_url.startsWith("/") ? image.image_url : `/uploads/products/${image.image_url}`
+                  }`,
             }));
           } else if (formattedProduct.images) {
             // Only if no variation images, use product-level images
@@ -1255,10 +1251,8 @@ module.exports.getPublicProductBySlug = async (req, res) => {
               image_url: image.image_url.startsWith("http")
                 ? image.image_url
                 : `${process.env.BACKEND_URL || "http://localhost:5000"}${
-                    image.image_url.startsWith("/uploads/")
-                      ? ""
-                      : "/uploads/products/"
-                  }${image.image_url}`,
+                    image.image_url.startsWith("/") ? image.image_url : `/uploads/products/${image.image_url}`
+                  }`,
             }));
           }
           return {

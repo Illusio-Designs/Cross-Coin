@@ -101,10 +101,52 @@ export default function Coupons() {
   const columns = [
     { header: "S/N", accessor: "serial_number" },
     { header: "Code", accessor: "code" },
-    { header: "Description", accessor: "description" },
-    { header: "Type", accessor: "type" },
-    { header: "Value", accessor: "value" },
-    { header: "Status", accessor: "status" },
+    { header: "Description", accessor: row => (
+      <div style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {row.description || 'No description'}
+      </div>
+    )},
+    { header: "Type", accessor: row => (
+      <span style={{
+        backgroundColor: row.type === 'percentage' ? '#E3F2FD' : '#FFF3E0',
+        color: row.type === 'percentage' ? '#1976D2' : '#F57C00',
+        padding: '4px 8px',
+        borderRadius: '4px',
+        fontSize: '12px',
+        fontWeight: '500'
+      }}>
+        {row.type === 'percentage' ? `${row.value}%` : `₹${row.value}`}
+      </span>
+    )},
+    { header: "Min Purchase", accessor: row => row.minPurchase ? `₹${row.minPurchase}` : 'No minimum' },
+    { header: "Usage", accessor: row => (
+      <span>
+        {row.usageCount || 0} / {row.usageLimit || '∞'}
+      </span>
+    )},
+    { header: "Status", accessor: row => (
+      <span style={{
+        backgroundColor: row.status === 'active' ? '#E8F5E8' : '#FFEBEE',
+        color: row.status === 'active' ? '#2E7D32' : '#C62828',
+        padding: '4px 8px',
+        borderRadius: '4px',
+        fontSize: '12px',
+        fontWeight: '500'
+      }}>
+        {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
+      </span>
+    )},
+    { header: "Valid Until", accessor: row => {
+      if (!row.endDate) return 'No expiry';
+      const endDate = new Date(row.endDate);
+      const now = new Date();
+      const isExpired = endDate < now;
+      return (
+        <span style={{ color: isExpired ? '#C62828' : '#2E7D32' }}>
+          {endDate.toLocaleDateString()}
+        </span>
+      );
+    }},
     {
       header: "Actions",
       accessor: "actions",
@@ -139,6 +181,14 @@ export default function Coupons() {
     try {
       setLoading(true);
       const data = await couponService.getCouponById(id);
+      
+      // Format dates properly for date inputs
+      const formatDateForInput = (dateString) => {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+        return date.toISOString().split('T')[0];
+      };
+      
       setFormData({
         id: data.id,
         code: data.code || "",
@@ -153,8 +203,8 @@ export default function Coupons() {
         status: data.status || "active",
         applicableCategories: data.applicableCategories || [],
         applicableProducts: data.applicableProducts || [],
-        startDate: data.startDate ? data.startDate.slice(0, 10) : "",
-        endDate: data.endDate ? data.endDate.slice(0, 10) : ""
+        startDate: formatDateForInput(data.startDate),
+        endDate: formatDateForInput(data.endDate)
       });
       setIsModalOpen(true);
     } catch (err) {
@@ -228,6 +278,48 @@ export default function Coupons() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null); // Clear previous errors
+    
+    // Validation
+    if (!formData.code.trim()) {
+      setError("Coupon code is required");
+      return;
+    }
+    
+    if (!formData.description.trim()) {
+      setError("Description is required");
+      return;
+    }
+    
+    if (!formData.value || formData.value <= 0) {
+      setError("Discount value must be greater than 0");
+      return;
+    }
+    
+    if (formData.type === 'percentage' && formData.value > 100) {
+      setError("Percentage discount cannot exceed 100%");
+      return;
+    }
+    
+    if (formData.minPurchase && formData.minPurchase < 0) {
+      setError("Minimum purchase amount cannot be negative");
+      return;
+    }
+    
+    if (formData.maxDiscount && formData.maxDiscount < 0) {
+      setError("Maximum discount amount cannot be negative");
+      return;
+    }
+    
+    if (!formData.startDate || !formData.endDate) {
+      setError("Start date and end date are required");
+      return;
+    }
+    
+    if (new Date(formData.endDate) <= new Date(formData.startDate)) {
+      setError("End date must be after start date");
+      return;
+    }
+    
     try {
       setLoading(true);
       const couponData = { ...formData };

@@ -1,13 +1,33 @@
+// Normalize image URL to ensure consistent formatting
+export function normalizeImageUrl(imageUrl) {
+  if (!imageUrl || typeof imageUrl !== 'string') {
+    return "/assets/card1-left.webp";
+  }
+  
+  // If it's already a full HTTP URL, return as-is
+  if (imageUrl.startsWith("http")) {
+    return imageUrl;
+  }
+  
+  // If it's an asset path, return as-is
+  if (imageUrl.startsWith("/assets/")) {
+    return imageUrl;
+  }
+  
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
+  
+  // If it already starts with /uploads/, just prepend the base URL
+  if (imageUrl.startsWith("/uploads/")) {
+    return `${baseUrl}${imageUrl}`;
+  }
+  
+  // If it's just a filename, add the full uploads/products path
+  return `${baseUrl}/uploads/products/${imageUrl}`;
+}
+
 export function getProductImageSrc(imageData) {
   if (!imageData || !imageData.image_url) return "/assets/card1-left.webp";
-  const url = imageData.image_url;
-  if (url.startsWith("http")) return url;
-  if (url.startsWith("/assets/")) return url; // Return asset path as-is
-  const baseUrl =
-    process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
-  if (url.startsWith("/uploads/")) return `${baseUrl}${url}`;
-  // If just a filename, add /uploads/products/
-  return `${baseUrl}/uploads/products/${url}`;
+  return normalizeImageUrl(imageData.image_url);
 }
 
 // Optimized image loading with preloading
