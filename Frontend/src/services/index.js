@@ -247,7 +247,7 @@ export const orderService = {
     }
   },
 
-  // Sync orders with Shiprocket
+  // Sync orders with Shiprocket - Comprehensive sync includes credential testing
   syncOrdersWithShiprocket: async () => {
     try {
       const response = await api.post(
@@ -258,16 +258,6 @@ export const orderService = {
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
-    }
-  },
-
-  // Test Shiprocket credentials
-  testShiprocketCredentials: async () => {
-    try {
-      const response = await api.get("/api/orders/shiprocket/test-credentials");
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
     }
   },
 };

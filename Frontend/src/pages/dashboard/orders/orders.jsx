@@ -63,24 +63,6 @@ const Orders = () => {
 
 
 
-    const testCredentials = async () => {
-        setLoading(true);
-        try {
-            const result = await orderService.testShiprocketCredentials();
-            toast.success(result.message);
-        } catch (error) {
-            console.error('Credentials test failed:', error);
-            console.error('Error details:', {
-                message: error.message,
-                status: error.status,
-                data: error.data
-            });
-            toast.error(error.message || 'Failed to test credentials');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const syncOrders = async () => {
         setLoading(true);
         try {
@@ -253,7 +235,8 @@ const Orders = () => {
             paid: 0,
             pending: 0,
             totalRevenue: 0,
-            averageOrderValue: 0
+            averageOrderValue: 0,
+            deliveredOrders: 0
         };
 
         orders.forEach(order => {
@@ -261,34 +244,49 @@ const Orders = () => {
             const paymentStatus = order.payment_status?.toLowerCase();
             const orderStatus = order.status?.toLowerCase();
             
-            // Only include revenue from delivered orders with proper payment status
+            // Calculate revenue from all orders (not just delivered)
+            // For better business insights, include all paid orders
             let includeInRevenue = false;
-            if (orderStatus === 'delivered') {
-                if (paymentType === 'cod') {
-                    // COD orders: include if delivered (payment collected on delivery)
+            const orderTotal = parseFloat(order.final_amount || 0);
+            
+            if (paymentType === 'cod') {
+                // COD orders: include revenue only if delivered (payment collected on delivery)
+                if (orderStatus === 'delivered') {
                     includeInRevenue = true;
-                } else if (['credit_card', 'debit_card', 'upi', 'wallet'].includes(paymentType)) {
-                    // Prepaid orders: include only if paid
-                    includeInRevenue = paymentStatus === 'paid';
+                    stats.deliveredOrders++;
+                }
+            } else if (['credit_card', 'debit_card', 'upi', 'wallet'].includes(paymentType)) {
+                // Prepaid orders: include revenue if paid (regardless of delivery status)
+                if (paymentStatus === 'paid') {
+                    includeInRevenue = true;
+                }
+                // Count delivered prepaid orders
+                if (orderStatus === 'delivered') {
+                    stats.deliveredOrders++;
                 }
             }
             
             if (includeInRevenue) {
-                const orderTotal = parseFloat(order.final_amount || 0);
                 stats.totalRevenue += orderTotal;
             }
             
+            // Count payment types and statuses
             if (['credit_card', 'debit_card', 'upi', 'wallet'].includes(paymentType)) {
                 stats.prepaid++;
-                stats.paid++;
-            } else if (paymentType === 'cod') {
-                stats.cod++;
                 if (paymentStatus === 'paid') {
                     stats.paid++;
                 } else {
                     stats.pending++;
                 }
+            } else if (paymentType === 'cod') {
+                stats.cod++;
+                if (orderStatus === 'delivered' || paymentStatus === 'paid') {
+                    stats.paid++;
+                } else {
+                    stats.pending++;
+                }
             } else {
+                // Handle other payment types
                 if (paymentStatus === 'paid') {
                     stats.paid++;
                 } else {
@@ -297,6 +295,7 @@ const Orders = () => {
             }
         });
 
+        // Calculate average order value based on total orders (not just delivered)
         stats.averageOrderValue = stats.total > 0 ? stats.totalRevenue / stats.total : 0;
         return stats;
     };
@@ -517,17 +516,6 @@ const Orders = () => {
                     </div>
                     <div className="adding-button">
                         <button 
-                            className="test-credentials-button"
-                            onClick={testCredentials}
-                            title="Test Shiprocket credentials"
-                            disabled={loading}
-                        >
-                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            {loading ? 'Testing...' : 'Test Credentials'}
-                        </button>
-                        <button 
                             className="sync-button"
                             onClick={syncOrders}
                             title="Comprehensive Shiprocket sync - Tests credentials, syncs new orders, and updates statuses"
@@ -575,7 +563,7 @@ const Orders = () => {
 
                 <div style={{ marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '14px', color: '#888' }}>
-                        Comprehensive Shiprocket sync: Tests credentials, syncs new orders, and updates existing order statuses automatically.
+                        Comprehensive Shiprocket sync: Automatically tests credentials, syncs new orders, and updates existing order statuses.
                     </span>
                 </div>
 
