@@ -135,8 +135,8 @@ SHIPROCKET_PASSWORD=your_shiprocket_password
 
 #### API Endpoints
 
-- `POST /api/orders/shiprocket/sync` - Comprehensive sync (replaces multiple calls)
-- `GET /api/orders/shiprocket/test-credentials` - Test credentials
+- `POST /api/orders/shiprocket/sync` - Comprehensive sync (includes credential testing, order sync, and status updates)
+- `GET /api/orders/shiprocket/test-credentials` - Test credentials (available for debugging, not used in UI)
 
 #### Status Mapping
 
