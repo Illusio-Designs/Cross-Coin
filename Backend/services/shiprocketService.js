@@ -459,27 +459,46 @@ function mapShiprocketStatusToLocal(shiprocketStatus, shipmentStatus = null) {
         'CANCELLED': 'cancelled',
         'RTO': 'cancelled', // Return to Origin
         'LOST': 'cancelled',
+        'PENDING': 'pending',
+        'PROCESSING': 'processing',
         
-        // Shipment level statuses (more detailed)
+        // Shipment level statuses (more detailed and accurate)
         'PICKUP_SCHEDULED': 'processing',
         'PICKUP_GENERATED': 'processing',
         'PICKUP_QUEUED': 'processing',
         'PICKUP_COMPLETED': 'shipped',
+        'MANIFESTED': 'shipped',
         'IN_TRANSIT': 'shipped',
         'OUT_FOR_DELIVERY': 'shipped',
         'DELIVERED': 'delivered',
         'CANCELLED': 'cancelled',
         'RTO_INITIATED': 'cancelled',
         'RTO_DELIVERED': 'cancelled',
+        'RTO_IN_TRANSIT': 'cancelled',
         'LOST': 'cancelled',
-        'DAMAGED': 'cancelled'
+        'DAMAGED': 'cancelled',
+        'UNDELIVERED': 'shipped', // Still in transit, not delivered yet
+        'EXCEPTION': 'shipped', // Issue but still in process
+        'DELAYED': 'shipped'
     };
     
-    // Prioritize shipment status if available (more accurate)
-    const statusToMap = shipmentStatus || shiprocketStatus;
-    const mappedStatus = statusMapping[statusToMap?.toUpperCase()] || 'processing';
+    // Prioritize shipment status if available (more accurate and detailed)
+    let statusToMap = shipmentStatus || shiprocketStatus;
     
-    console.log('Mapped Status:', mappedStatus);
+    // Clean up the status string
+    if (statusToMap) {
+        statusToMap = statusToMap.toString().toUpperCase().trim();
+    }
+    
+    const mappedStatus = statusMapping[statusToMap] || 'processing';
+    
+    console.log('Final Status Mapping:', {
+        input_order_status: shiprocketStatus,
+        input_shipment_status: shipmentStatus,
+        status_used_for_mapping: statusToMap,
+        mapped_local_status: mappedStatus
+    });
+    
     return mappedStatus;
 }
 

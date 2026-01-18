@@ -843,6 +843,21 @@ export const getGuestOrder = async (email, orderNumber) => {
   }
 };
 
+// Track Order by Order Number (works for both registered and guest orders)
+export const trackOrderByOrderNumber = async (orderNumber) => {
+  try {
+    console.log("ORDER NUMBER TRACKING API CALL: Tracking order by order number:", orderNumber);
+    const response = await axios.get(
+      `${API_URL}/api/orders/track/${encodeURIComponent(orderNumber)}`
+    );
+    console.log("ORDER NUMBER TRACKING API RESPONSE:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("ORDER NUMBER TRACKING API ERROR:", error);
+    throw error.response?.data || error.message;
+  }
+};
+
 // Track Order by AWB Number (works for both registered and guest orders)
 export const trackOrderByAWB = async (awbNumber) => {
   try {
