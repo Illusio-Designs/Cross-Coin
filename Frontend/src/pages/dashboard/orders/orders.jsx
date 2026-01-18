@@ -244,30 +244,18 @@ const Orders = () => {
             const paymentStatus = order.payment_status?.toLowerCase();
             const orderStatus = order.status?.toLowerCase();
             
-            // Calculate revenue from all orders (not just delivered)
-            // For better business insights, include all paid orders
-            let includeInRevenue = false;
+            // Calculate revenue from ALL orders EXCEPT cancelled orders
+            // This gives the total business value of valid orders
             const orderTotal = parseFloat(order.final_amount || 0);
             
-            if (paymentType === 'cod') {
-                // COD orders: include revenue only if delivered (payment collected on delivery)
-                if (orderStatus === 'delivered') {
-                    includeInRevenue = true;
-                    stats.deliveredOrders++;
-                }
-            } else if (['credit_card', 'debit_card', 'upi', 'wallet'].includes(paymentType)) {
-                // Prepaid orders: include revenue if paid (regardless of delivery status)
-                if (paymentStatus === 'paid') {
-                    includeInRevenue = true;
-                }
-                // Count delivered prepaid orders
-                if (orderStatus === 'delivered') {
-                    stats.deliveredOrders++;
-                }
+            // Include all orders except cancelled ones
+            if (orderStatus !== 'cancelled') {
+                stats.totalRevenue += orderTotal;
             }
             
-            if (includeInRevenue) {
-                stats.totalRevenue += orderTotal;
+            // Count delivered orders separately for tracking
+            if (orderStatus === 'delivered') {
+                stats.deliveredOrders++;
             }
             
             // Count payment types and statuses
@@ -295,8 +283,9 @@ const Orders = () => {
             }
         });
 
-        // Calculate average order value based on total orders (not just delivered)
-        stats.averageOrderValue = stats.total > 0 ? stats.totalRevenue / stats.total : 0;
+        // Calculate average order value based on non-cancelled orders
+        const nonCancelledOrders = orders.filter(order => order.status?.toLowerCase() !== 'cancelled');
+        stats.averageOrderValue = nonCancelledOrders.length > 0 ? stats.totalRevenue / nonCancelledOrders.length : 0;
         return stats;
     };
 
