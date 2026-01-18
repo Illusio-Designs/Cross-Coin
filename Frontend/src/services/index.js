@@ -260,6 +260,44 @@ export const orderService = {
       throw error.response?.data || error.message;
     }
   },
+
+  // Bulk update all orders from Shiprocket
+  bulkUpdateOrdersFromShiprocket: async () => {
+    try {
+      const response = await api.post(
+        "/api/orders/shiprocket/bulk-update",
+        {},
+        { timeout: 60000 }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Update single order from Shiprocket
+  updateSingleOrderFromShiprocket: async (orderId) => {
+    try {
+      const response = await api.put(
+        `/api/orders/${orderId}/shiprocket/update`,
+        {},
+        { timeout: 30000 }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Test Shiprocket credentials
+  testShiprocketCredentials: async () => {
+    try {
+      const response = await api.get("/api/orders/shiprocket/test-credentials");
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 // Payment Services

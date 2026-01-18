@@ -16,7 +16,10 @@ const {
     getAllShiprocketOrders,
     syncOrdersWithShiprocket,
     testShiprocketCredentials,
-    handleShiprocketWebhook
+    handleShiprocketWebhook,
+    updateSingleOrderFromShiprocket,
+    trackOrderByOrderNumber,
+    bulkUpdateOrdersFromShiprocket
 } = require('../controller/orderController.js');
 const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
 
@@ -38,8 +41,10 @@ router.get('/', isAuthenticated, authorize(['admin']), getAllOrders);
 router.get('/stats/overview', isAuthenticated, authorize(['admin']), getOrderStats);
 router.get('/shiprocket/all', isAuthenticated, authorize(['admin']), getAllShiprocketOrders);
 router.post('/shiprocket/sync', isAuthenticated, authorize(['admin']), syncOrdersWithShiprocket);
+router.post('/shiprocket/bulk-update', isAuthenticated, authorize(['admin']), bulkUpdateOrdersFromShiprocket);
 router.post('/shiprocket/cancel', isAuthenticated, authorize(['admin']), cancelOrdersInShiprocket);
 router.get('/shiprocket/test-credentials', isAuthenticated, authorize(['admin']), testShiprocketCredentials);
+router.put('/:id/shiprocket/update', isAuthenticated, authorize(['admin']), updateSingleOrderFromShiprocket);
 
 // Guest checkout route (no authentication required)
 router.post('/guest', createGuestOrder);
@@ -47,6 +52,9 @@ router.get('/guest/track', getGuestOrder);
 
 // Public order tracking by AWB (no authentication required)
 router.get('/track/awb', trackOrderByAWB);
+
+// Public order tracking by order number (no authentication required)
+router.get('/track/:order_number', trackOrderByOrderNumber);
 
 // Shiprocket webhook (no authentication required)
 router.post('/shiprocket/webhook', handleShiprocketWebhook);

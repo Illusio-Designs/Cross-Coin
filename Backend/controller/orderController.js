@@ -2624,7 +2624,7 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
       
       for (const order of ordersForStatusUpdate) {
         try {
-          console.log(`🔄 Updating status for existing order ${order.order_number}`);
+          console.log(`🔄 Updating status for existing order ${order.order_number} (Shiprocket ID: ${order.shiprocket_order_id})`);
           
           const statusUpdate = await updateOrderStatusFromShiprocket(order, transaction);
           
@@ -2684,7 +2684,7 @@ async function updateOrderStatusFromShiprocket(order, transaction = null) {
       return { updated: false, reason: 'No Shiprocket order ID' };
     }
 
-    console.log(`🔄 Updating status for order ${order.order_number} from Shiprocket`);
+    console.log(`🔄 Updating status for order ${order.order_number} from Shiprocket (ID: ${order.shiprocket_order_id})`);
     
     // Get current Shiprocket order details
     const shiprocketDetails = await getShiprocketOrderDetails(order.shiprocket_order_id);
@@ -2695,6 +2695,17 @@ async function updateOrderStatusFromShiprocket(order, transaction = null) {
 
     const shiprocketOrder = shiprocketDetails.order;
     const shipments = shiprocketOrder.shipments || [];
+    
+    console.log(`📦 Shiprocket order details for ${order.order_number}:`, {
+      order_status: shiprocketOrder.status,
+      shipments_count: shipments.length,
+      shipments: shipments.map(s => ({
+        id: s.id,
+        status: s.status,
+        awb: s.awb,
+        courier: s.courier_name
+      }))
+    });
     
     // Determine the most current status
     let currentShiprocketStatus = shiprocketOrder.status;
@@ -2710,11 +2721,20 @@ async function updateOrderStatusFromShiprocket(order, transaction = null) {
       trackingNumber = latestShipment.awb;
       courierName = latestShipment.courier_name;
       
+      // Update shipment ID if not already set
+      if (!order.shiprocket_shipment_id && latestShipment.id) {
+        await order.update({ shiprocket_shipment_id: latestShipment.id }, { transaction });
+        console.log(`📦 Updated shipment ID for order ${order.order_number}: ${latestShipment.id}`);
+      }
+      
       // Get tracking URL if available
       try {
         const trackingInfo = await getShiprocketOrderTracking(order.shiprocket_order_id);
         if (trackingInfo.success && trackingInfo.tracking.shipments.length > 0) {
-          trackingUrl = trackingInfo.tracking.shipments[0].tracking_url;
+          const shipmentTracking = trackingInfo.tracking.shipments.find(s => s.shipment_id == latestShipment.id);
+          if (shipmentTracking && shipmentTracking.tracking_url) {
+            trackingUrl = shipmentTracking.tracking_url;
+          }
         }
       } catch (trackingError) {
         console.log(`⚠️  Could not get tracking URL: ${trackingError.message}`);
@@ -2730,76 +2750,73 @@ async function updateOrderStatusFromShiprocket(order, transaction = null) {
       shiprocket_shipment_status: shipmentStatus,
       new_local_status: newLocalStatus,
       tracking_number: trackingNumber,
-      courier_name: courierName
+      courier_name: courierName,
+      tracking_url: trackingUrl
     });
 
-    // Check if status actually changed
-    if (order.status === newLocalStatus) {
-      console.log(`✅ Order ${order.order_number} status is already up to date: ${newLocalStatus}`);
-      
-      // Still update tracking info if it's new
-      let trackingUpdated = false;
-      const updateData = {};
-      
-      if (trackingNumber && order.tracking_number !== trackingNumber) {
-        updateData.tracking_number = trackingNumber;
-        trackingUpdated = true;
-      }
-      
-      if (courierName && order.courier_name !== courierName) {
-        updateData.courier_name = courierName;
-        trackingUpdated = true;
-      }
-      
-      if (trackingUrl && order.tracking_url !== trackingUrl) {
-        updateData.tracking_url = trackingUrl;
-        trackingUpdated = true;
-      }
-      
-      if (trackingUpdated) {
-        await order.update(updateData, { transaction });
-        console.log(`📦 Updated tracking info for order ${order.order_number}`);
-      }
-      
-      return { 
-        updated: trackingUpdated, 
-        reason: trackingUpdated ? 'Tracking info updated' : 'Status already current',
-        status_changed: false,
-        tracking_updated: trackingUpdated
-      };
+    // Prepare update data
+    const updateData = {};
+    let statusChanged = false;
+    let trackingUpdated = false;
+
+    // Check if status needs to be updated
+    if (order.status !== newLocalStatus) {
+      updateData.status = newLocalStatus;
+      statusChanged = true;
+    }
+    
+    // Check if tracking info needs to be updated
+    if (trackingNumber && order.tracking_number !== trackingNumber) {
+      updateData.tracking_number = trackingNumber;
+      trackingUpdated = true;
+    }
+    
+    if (courierName && order.courier_name !== courierName) {
+      updateData.courier_name = courierName;
+      trackingUpdated = true;
+    }
+    
+    if (trackingUrl && order.tracking_url !== trackingUrl) {
+      updateData.tracking_url = trackingUrl;
+      trackingUpdated = true;
     }
 
-    // Update order status and tracking information
-    const updateData = {
-      status: newLocalStatus
-    };
-    
-    if (trackingNumber) updateData.tracking_number = trackingNumber;
-    if (courierName) updateData.courier_name = courierName;
-    if (trackingUrl) updateData.tracking_url = trackingUrl;
+    // Update order if there are changes
+    if (Object.keys(updateData).length > 0) {
+      await order.update(updateData, { transaction });
+      console.log(`✅ Updated order ${order.order_number}:`, updateData);
 
-    await order.update(updateData, { transaction });
+      // Create status history entry if status changed
+      if (statusChanged) {
+        await OrderStatusHistory.create({
+          order_id: order.id,
+          status: newLocalStatus,
+          updated_by: null, // System update
+          created_by: 'shiprocket_sync',
+          notes: `Status updated from Shiprocket. Order status: ${currentShiprocketStatus}${shipmentStatus ? `, Shipment status: ${shipmentStatus}` : ''}${trackingNumber ? `, AWB: ${trackingNumber}` : ''}${courierName ? `, Courier: ${courierName}` : ''}`
+        }, { transaction });
+      }
 
-    // Create status history entry
-    await OrderStatusHistory.create({
-      order_id: order.id,
-      status: newLocalStatus,
-      updated_by: null, // System update
-      created_by: 'shiprocket_sync',
-      notes: `Status updated from Shiprocket. Order status: ${currentShiprocketStatus}${shipmentStatus ? `, Shipment status: ${shipmentStatus}` : ''}${trackingNumber ? `, AWB: ${trackingNumber}` : ''}`
-    }, { transaction });
-
-    console.log(`✅ Updated order ${order.order_number} status: ${order.status} → ${newLocalStatus}`);
-    
-    return { 
-      updated: true, 
-      old_status: order.status, 
-      new_status: newLocalStatus,
-      status_changed: true,
-      tracking_updated: !!(trackingNumber || courierName || trackingUrl),
-      shiprocket_status: currentShiprocketStatus,
-      shipment_status: shipmentStatus
-    };
+      return { 
+        updated: true, 
+        old_status: order.status, 
+        new_status: newLocalStatus,
+        status_changed: statusChanged,
+        tracking_updated: trackingUpdated,
+        shiprocket_status: currentShiprocketStatus,
+        shipment_status: shipmentStatus,
+        tracking_number: trackingNumber,
+        courier_name: courierName
+      };
+    } else {
+      console.log(`✅ Order ${order.order_number} is already up to date`);
+      return { 
+        updated: false, 
+        reason: 'No changes needed',
+        status_changed: false,
+        tracking_updated: false
+      };
+    }
 
   } catch (error) {
     console.error(`❌ Error updating status for order ${order.order_number}:`, error.message);
@@ -2807,7 +2824,104 @@ async function updateOrderStatusFromShiprocket(order, transaction = null) {
   }
 }
 
-// Test Shiprocket credentials
+// Bulk update all orders with Shiprocket data
+module.exports.bulkUpdateOrdersFromShiprocket = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    console.log('=== BULK UPDATE ALL ORDERS FROM SHIPROCKET ===');
+    
+    // Test authentication first
+    try {
+      await authenticateShiprocket();
+      console.log("✅ Shiprocket authentication successful");
+    } catch (authError) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Shiprocket authentication failed",
+        error: authError.message
+      });
+    }
+    
+    // Get all orders with Shiprocket IDs
+    const ordersWithShiprocket = await Order.findAll({
+      where: {
+        shiprocket_order_id: { [Op.not]: null }
+      },
+      include: [
+        { model: User, as: "User", attributes: ["id", "username", "email"], required: false },
+        { model: GuestUser, as: "GuestUser", attributes: ["id", "email", "firstName", "lastName"], required: false },
+      ],
+      order: [['createdAt', 'DESC']],
+      limit: 50 // Process in batches to avoid timeout
+    });
+    
+    console.log(`📦 Found ${ordersWithShiprocket.length} orders with Shiprocket IDs`);
+    
+    const results = {
+      total_processed: ordersWithShiprocket.length,
+      updated: 0,
+      already_current: 0,
+      failed: 0,
+      errors: [],
+      updated_orders: []
+    };
+    
+    for (const order of ordersWithShiprocket) {
+      try {
+        console.log(`🔄 Processing order ${order.order_number}...`);
+        
+        const updateResult = await updateOrderStatusFromShiprocket(order, transaction);
+        
+        if (updateResult.updated) {
+          results.updated++;
+          results.updated_orders.push({
+            order_number: order.order_number,
+            old_status: updateResult.old_status,
+            new_status: updateResult.new_status,
+            status_changed: updateResult.status_changed,
+            tracking_updated: updateResult.tracking_updated,
+            tracking_number: updateResult.tracking_number,
+            courier_name: updateResult.courier_name
+          });
+          console.log(`✅ Updated order ${order.order_number}: ${updateResult.old_status} → ${updateResult.new_status}`);
+        } else {
+          results.already_current++;
+          console.log(`ℹ️  Order ${order.order_number} was already current`);
+        }
+        
+      } catch (error) {
+        results.failed++;
+        results.errors.push({
+          order_number: order.order_number,
+          error: error.message
+        });
+        console.error(`❌ Failed to update order ${order.order_number}: ${error.message}`);
+      }
+    }
+    
+    await transaction.commit();
+    
+    console.log('=== BULK UPDATE COMPLETED ===');
+    console.log(`Total: ${results.total_processed}, Updated: ${results.updated}, Current: ${results.already_current}, Failed: ${results.failed}`);
+    
+    res.json({
+      success: true,
+      message: `Bulk update completed. ${results.updated} orders updated, ${results.already_current} already current, ${results.failed} failed.`,
+      results: results
+    });
+    
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error in bulk update:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to bulk update orders",
+      error: error.message
+    });
+  }
+};
 module.exports.testShiprocketCredentials = async (req, res) => {
   try {
     console.log('=== Testing Shiprocket Credentials ===');
@@ -2836,6 +2950,242 @@ module.exports.testShiprocketCredentials = async (req, res) => {
         step5: "Check if your server IP is whitelisted in Shiprocket",
         step6: "Verify credentials by logging into https://app.shiprocket.in"
       }
+    });
+  }
+};
+
+// Update single order from Shiprocket (for testing and manual updates)
+module.exports.updateSingleOrderFromShiprocket = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { id } = req.params;
+    
+    console.log(`=== UPDATING SINGLE ORDER FROM SHIPROCKET: ${id} ===`);
+    
+    // Find the order
+    const order = await Order.findByPk(id, {
+      include: [
+        { model: User, as: "User", attributes: ["id", "username", "email"], required: false },
+        { model: GuestUser, as: "GuestUser", attributes: ["id", "email", "firstName", "lastName"], required: false },
+      ]
+    });
+    
+    if (!order) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+    
+    if (!order.shiprocket_order_id) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Order has no Shiprocket ID - cannot update from Shiprocket"
+      });
+    }
+    
+    console.log(`Found order: ${order.order_number} with Shiprocket ID: ${order.shiprocket_order_id}`);
+    
+    // Test authentication first
+    try {
+      await authenticateShiprocket();
+      console.log("✅ Shiprocket authentication successful");
+    } catch (authError) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Shiprocket authentication failed",
+        error: authError.message
+      });
+    }
+    
+    // Update the order from Shiprocket
+    const updateResult = await updateOrderStatusFromShiprocket(order, transaction);
+    
+    await transaction.commit();
+    
+    // Fetch the updated order to return
+    const updatedOrder = await Order.findByPk(id, {
+      include: [
+        { model: User, as: "User", attributes: ["id", "username", "email"], required: false },
+        { model: GuestUser, as: "GuestUser", attributes: ["id", "email", "firstName", "lastName"], required: false },
+        { model: OrderStatusHistory, as: "OrderStatusHistories", order: [["created_at", "DESC"]], limit: 5 }
+      ]
+    });
+    
+    res.json({
+      success: true,
+      message: updateResult.updated ? "Order updated successfully from Shiprocket" : "Order was already up to date",
+      update_result: updateResult,
+      order: {
+        id: updatedOrder.id,
+        order_number: updatedOrder.order_number,
+        status: updatedOrder.status,
+        shiprocket_order_id: updatedOrder.shiprocket_order_id,
+        shiprocket_shipment_id: updatedOrder.shiprocket_shipment_id,
+        tracking_number: updatedOrder.tracking_number,
+        courier_name: updatedOrder.courier_name,
+        tracking_url: updatedOrder.tracking_url,
+        created_at: updatedOrder.created_at,
+        updated_at: updatedOrder.updated_at
+      },
+      recent_status_history: updatedOrder.OrderStatusHistories
+    });
+    
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error updating single order from Shiprocket:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update order from Shiprocket",
+      error: error.message
+    });
+  }
+};
+
+// Track and update order by order number
+module.exports.trackOrderByOrderNumber = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { order_number } = req.params;
+    
+    console.log(`=== TRACKING ORDER BY ORDER NUMBER: ${order_number} ===`);
+    
+    // Find the order by order number
+    const order = await Order.findOne({
+      where: { order_number: order_number },
+      include: [
+        { model: User, as: "User", attributes: ["id", "username", "email"], required: false },
+        { model: GuestUser, as: "GuestUser", attributes: ["id", "email", "firstName", "lastName"], required: false },
+        { model: OrderStatusHistory, as: "OrderStatusHistories", order: [["created_at", "DESC"]], limit: 10 }
+      ]
+    });
+    
+    if (!order) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: `Order with number ${order_number} not found`
+      });
+    }
+    
+    console.log(`Found order: ${order.order_number} (ID: ${order.id})`);
+    console.log(`Current status: ${order.status}`);
+    console.log(`Shiprocket Order ID: ${order.shiprocket_order_id}`);
+    console.log(`Tracking Number: ${order.tracking_number}`);
+    
+    let updateResult = null;
+    let shiprocketData = null;
+    
+    // If order has Shiprocket ID, try to update from Shiprocket
+    if (order.shiprocket_order_id) {
+      try {
+        console.log("🔐 Authenticating with Shiprocket...");
+        await authenticateShiprocket();
+        console.log("✅ Shiprocket authentication successful");
+        
+        console.log("🔄 Updating order from Shiprocket...");
+        updateResult = await updateOrderStatusFromShiprocket(order, transaction);
+        
+        // Get detailed Shiprocket data for response
+        const shiprocketDetails = await getShiprocketOrderDetails(order.shiprocket_order_id);
+        if (shiprocketDetails.success) {
+          shiprocketData = {
+            order_status: shiprocketDetails.order.status,
+            shipments: shiprocketDetails.order.shipments?.map(s => ({
+              id: s.id,
+              status: s.status,
+              awb: s.awb,
+              courier_name: s.courier_name,
+              pickup_date: s.pickup_date,
+              delivered_date: s.delivered_date
+            })) || []
+          };
+        }
+        
+      } catch (shiprocketError) {
+        console.error("❌ Shiprocket update failed:", shiprocketError.message);
+        updateResult = { 
+          updated: false, 
+          error: true, 
+          reason: shiprocketError.message 
+        };
+      }
+    } else {
+      console.log("⚠️  Order has no Shiprocket ID - cannot update from Shiprocket");
+      updateResult = { 
+        updated: false, 
+        reason: "No Shiprocket ID found for this order" 
+      };
+    }
+    
+    await transaction.commit();
+    
+    // Fetch the updated order to return latest data
+    const finalOrder = await Order.findByPk(order.id, {
+      include: [
+        { model: User, as: "User", attributes: ["id", "username", "email"], required: false },
+        { model: GuestUser, as: "GuestUser", attributes: ["id", "email", "firstName", "lastName"], required: false },
+        { model: OrderStatusHistory, as: "OrderStatusHistories", order: [["created_at", "DESC"]], limit: 10 }
+      ]
+    });
+    
+    // Determine customer info
+    const isGuestOrder = !!finalOrder.guest_user_id;
+    const customerInfo = isGuestOrder ? finalOrder.GuestUser : finalOrder.User;
+    
+    res.json({
+      success: true,
+      message: updateResult?.updated ? "Order found and updated from Shiprocket" : "Order found",
+      order: {
+        id: finalOrder.id,
+        order_number: finalOrder.order_number,
+        status: finalOrder.status,
+        payment_status: finalOrder.payment_status,
+        total_amount: finalOrder.total_amount,
+        final_amount: finalOrder.final_amount,
+        payment_type: finalOrder.payment_type,
+        shiprocket_order_id: finalOrder.shiprocket_order_id,
+        shiprocket_shipment_id: finalOrder.shiprocket_shipment_id,
+        tracking_number: finalOrder.tracking_number,
+        courier_name: finalOrder.courier_name,
+        tracking_url: finalOrder.tracking_url,
+        created_at: finalOrder.created_at,
+        updated_at: finalOrder.updated_at
+      },
+      customer: {
+        type: isGuestOrder ? "guest" : "registered",
+        info: customerInfo
+      },
+      tracking: {
+        has_tracking: !!finalOrder.tracking_number,
+        tracking_number: finalOrder.tracking_number,
+        courier_name: finalOrder.courier_name,
+        tracking_url: finalOrder.tracking_url,
+        current_status: finalOrder.status
+      },
+      shiprocket_data: shiprocketData,
+      update_result: updateResult,
+      status_history: finalOrder.OrderStatusHistories?.map(history => ({
+        id: history.id,
+        status: history.status,
+        notes: history.notes,
+        created_at: history.created_at,
+        created_by: history.created_by
+      })) || []
+    });
+    
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error tracking order by order number:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to track order",
+      error: error.message
     });
   }
 };

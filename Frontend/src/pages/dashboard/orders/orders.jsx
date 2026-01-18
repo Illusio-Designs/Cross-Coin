@@ -118,6 +118,113 @@ const Orders = () => {
         }
     };
 
+    const bulkUpdateOrders = async () => {
+        setLoading(true);
+        try {
+            const result = await orderService.bulkUpdateOrdersFromShiprocket();
+            
+            // Show detailed results
+            const { results } = result;
+            let message = `Bulk update completed! `;
+            
+            if (results.total_processed > 0) {
+                message += `Processed ${results.total_processed} orders. `;
+            }
+            
+            if (results.updated > 0) {
+                message += `${results.updated} orders updated. `;
+            }
+            
+            if (results.already_current > 0) {
+                message += `${results.already_current} already current. `;
+            }
+            
+            if (results.failed > 0) {
+                message += `${results.failed} orders failed. `;
+                console.error('Failed orders:', results.errors);
+            }
+            
+            toast.success(message);
+            
+            // Refresh orders after update
+            fetchOrders();
+        } catch (error) {
+            console.error('=== Bulk Update Failed ===');
+            console.error('Error object:', error);
+            
+            let errorMessage = 'Failed to bulk update orders';
+            if (error.message) {
+                errorMessage = error.message;
+            } else if (error.error) {
+                errorMessage = error.error;
+            }
+            
+            toast.error(errorMessage);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const updateSingleOrder = async (orderId) => {
+        try {
+            const result = await orderService.updateSingleOrderFromShiprocket(orderId);
+            
+            if (result.success) {
+                let message = result.message;
+                if (result.update_result?.updated) {
+                    if (result.update_result.status_changed) {
+                        message += ` Status: ${result.update_result.old_status} → ${result.update_result.new_status}`;
+                    }
+                    if (result.update_result.tracking_updated) {
+                        message += ` Tracking updated.`;
+                    }
+                }
+                toast.success(message);
+                
+                // Refresh orders after update
+                fetchOrders();
+            } else {
+                toast.error(result.message || 'Failed to update order');
+            }
+        } catch (error) {
+            console.error('=== Single Order Update Failed ===');
+            console.error('Error object:', error);
+            
+            let errorMessage = 'Failed to update order from Shiprocket';
+            if (error.message) {
+                errorMessage = error.message;
+            } else if (error.error) {
+                errorMessage = error.error;
+            }
+            
+            toast.error(errorMessage);
+        }
+    };
+
+    const testShiprocketCredentials = async () => {
+        try {
+            const result = await orderService.testShiprocketCredentials();
+            
+            if (result.success) {
+                toast.success('Shiprocket credentials are valid and working!');
+            } else {
+                toast.error(result.message || 'Shiprocket credentials test failed');
+            }
+        } catch (error) {
+            console.error('=== Shiprocket Test Failed ===');
+            console.error('Error object:', error);
+            
+            let errorMessage = 'Failed to test Shiprocket credentials';
+            if (error.message) {
+                errorMessage = error.message;
+            } else if (error.error) {
+                errorMessage = error.error;
+            }
+            
+            toast.error(errorMessage);
+        }
+    };
+
     // Initial load
     useEffect(() => {
         fetchOrders(1);
@@ -445,13 +552,41 @@ const Orders = () => {
                         </svg>
                         View
                     </button>
+                    
+                    {row.shiprocket_order_id && (
+                        <button 
+                            className="action-btn update-shiprocket" 
+                            title="Update from Shiprocket" 
+                            onClick={() => updateSingleOrder(row.id)}
+                            style={{
+                                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '0.5rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                fontSize: '0.75rem',
+                                fontWeight: '500',
+                                marginTop: '0.25rem'
+                            }}
+                        >
+                            <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                            </svg>
+                            Update
+                        </button>
+                    )}
+                    
                     <div className="status-info" style={{
                         fontSize: '11px',
                         color: '#666',
                         marginTop: '4px',
                         fontStyle: 'italic'
                     }}>
-                        Status auto-synced
+                        {row.shiprocket_order_id ? 'Shiprocket synced' : 'Not synced'}
                     </div>
                 </div>
             )
@@ -515,6 +650,59 @@ const Orders = () => {
                             </svg>
                             {loading ? 'Syncing...' : 'Comprehensive Sync'}
                         </button>
+                        
+                        <button 
+                            className="bulk-update-button"
+                            onClick={bulkUpdateOrders}
+                            title="Update all existing orders with latest Shiprocket data"
+                            disabled={loading}
+                            style={{
+                                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                padding: '0.75rem 1rem',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                transition: 'all 0.3s ease',
+                                fontSize: '0.875rem'
+                            }}
+                        >
+                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                            </svg>
+                            {loading ? 'Updating...' : 'Bulk Update'}
+                        </button>
+                        
+                        <button 
+                            className="test-credentials-button"
+                            onClick={testShiprocketCredentials}
+                            title="Test Shiprocket API credentials"
+                            disabled={loading}
+                            style={{
+                                background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                padding: '0.75rem 1rem',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                transition: 'all 0.3s ease',
+                                fontSize: '0.875rem'
+                            }}
+                        >
+                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Test API
+                        </button>
+                        
                         <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
                             <div className="modern-searchbar-group">
                                 <span className="modern-searchbar-icon">
@@ -551,9 +739,13 @@ const Orders = () => {
 
 
                 <div style={{ marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '14px', color: '#888' }}>
-                        Comprehensive Shiprocket sync: Automatically tests credentials, syncs new orders, and updates existing order statuses.
-                    </span>
+                    <div style={{ fontSize: '14px', color: '#888', lineHeight: '1.4' }}>
+                        <strong>Shiprocket Integration:</strong><br/>
+                        • <strong>Comprehensive Sync:</strong> Tests credentials, syncs new orders, updates statuses<br/>
+                        • <strong>Bulk Update:</strong> Updates all existing orders with latest Shiprocket data<br/>
+                        • <strong>Single Update:</strong> Update individual orders (available for synced orders)<br/>
+                        • <strong>Test API:</strong> Verify Shiprocket credentials
+                    </div>
                 </div>
 
                 {notification && (
@@ -643,7 +835,9 @@ const Orders = () => {
                             </div>
 
                             <div className="info-note">
-                                <strong>Note:</strong> Order statuses are automatically synchronized with Shiprocket. Use "Comprehensive Sync" to update all orders at once. Manual status changes have been disabled to maintain sync integrity.
+                                <strong>Shiprocket Integration:</strong> Order statuses are automatically synchronized with Shiprocket. 
+                                Use "Comprehensive Sync" for new orders, "Bulk Update" to refresh all existing orders, 
+                                or "Update" button for individual orders. Manual status changes are disabled to maintain sync integrity.
                             </div>
 
                             <Table 
