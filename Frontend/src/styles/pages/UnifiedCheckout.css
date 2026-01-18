@@ -1303,3 +1303,234 @@ div.guest-checkout-actions button.btn.btn-secondary:hover {
   border-color: #c0c0c0 !important;
   color: #222 !important;
 }
+/* Enhanced Coupon Styles */
+.promo-remove {
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1.1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-radius: 4px;
+}
+
+.promo-remove:hover {
+  background: #c0392b;
+}
+
+.promo-input:disabled {
+  background-color: #f5f5f5;
+  color: #666;
+  cursor: not-allowed;
+}
+
+.coupon-applied-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.coupon-applied-indicator .checkmark {
+  color: #155724;
+  font-weight: bold;
+}
+
+.coupon-applied-text {
+  color: #155724;
+  font-size: 0.9rem;
+  flex: 1;
+}
+
+/* Coupon Card Enhancements */
+.coupon-card {
+  border: 1px dashed #ccc;
+  padding: 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #fff;
+}
+
+.coupon-card:hover {
+  border-color: #180D3E;
+  box-shadow: 0 2px 8px rgba(24, 13, 62, 0.1);
+  transform: translateY(-1px);
+}
+
+.coupon-card.selected {
+  border-style: solid;
+  border-color: #180D3E;
+  background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%);
+  box-shadow: 0 4px 12px rgba(24, 13, 62, 0.15);
+}
+
+.coupon-card-code {
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  background: #180D3E;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.coupon-card.selected .coupon-card-code {
+  background: #CE1E36;
+}
+
+.coupon-card-description {
+  font-size: 0.85rem;
+  color: #666;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.coupon-card.selected .coupon-card-description {
+  color: #444;
+}
+
+/* Coupon Message Enhancements */
+.coupon-message {
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.coupon-error {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+}
+
+.coupon-success {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1px solid #86efac;
+  color: #16a34a;
+}
+
+.coupon-error::before {
+  content: "⚠️";
+}
+
+.coupon-success::before {
+  content: "✅";
+}
+
+/* Available Coupons Section Enhancements */
+.available-coupons {
+  margin-top: 1.5rem;
+  border-top: 2px solid #e5e7eb;
+  padding-top: 1.5rem;
+}
+
+.available-coupons-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #180D3E;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.available-coupons-title::before {
+  content: "🎫";
+}
+
+.coupons-list {
+  max-height: 250px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-right: 0.5rem;
+}
+
+/* Enhanced scrollbar for coupons list */
+.coupons-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.coupons-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.coupons-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.coupons-list::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Mobile responsiveness for coupon section */
+@media (max-width: 768px) {
+  .available-coupons {
+    margin-top: 1rem;
+    padding-top: 1rem;
+  }
+  
+  .available-coupons-title {
+    font-size: 1rem;
+  }
+  
+  .coupons-list {
+    max-height: 200px;
+    gap: 0.5rem;
+  }
+  
+  .coupon-card {
+    padding: 0.6rem;
+  }
+  
+  .coupon-card-code {
+    font-size: 0.8rem;
+    padding: 3px 6px;
+  }
+  
+  .coupon-card-description {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .promo-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .promo-input,
+  .promo-apply,
+  .promo-remove {
+    width: 100%;
+    padding: 0.75rem;
+  }
+  
+  .coupon-message {
+    padding: 0.6rem;
+    font-size: 0.85rem;
+  }
+  
+  .available-coupons-title {
+    font-size: 0.95rem;
+  }
+  
+  .coupons-list {
+    max-height: 150px;
+  }
+}

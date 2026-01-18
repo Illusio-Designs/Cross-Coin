@@ -106,8 +106,20 @@ if (!fs.existsSync(seoUploadsDir)) {
     fs.mkdirSync(seoUploadsDir, { recursive: true });
 }
 
-// Serve static files
-app.use('/uploads', express.static(uploadsDir));
+// Serve static files with logging
+app.use('/uploads', (req, res, next) => {
+    console.log('Static file request:', req.originalUrl);
+    next();
+}, express.static(uploadsDir));
+
+// Handle trailing slashes in uploads URLs
+app.use('/uploads/*/', (req, res, next) => {
+    console.log('Trailing slash detected in uploads URL:', req.originalUrl);
+    // Remove trailing slash and redirect
+    const newUrl = req.originalUrl.slice(0, -1);
+    console.log('Redirecting to:', newUrl);
+    res.redirect(301, newUrl);
+});
 
 // Enhanced health check API endpoint
 app.get('/api/health', async (req, res) => {
@@ -178,13 +190,18 @@ app.post('/api/facebook-pixel', async (req, res) => {
     }
 });
 
-// 404 handler
-app.use('*', (req, res) => {
+// 404 handler for API routes only
+app.use('/api/*', (req, res) => {
     res.status(404).json({
         success: false,
         message: 'API endpoint not found',
         path: req.originalUrl
     });
+});
+
+// 404 handler for non-API routes (static files, etc.)
+app.use('*', (req, res) => {
+    res.status(404).send('File not found');
 });
 
 // Enhanced error handling middleware

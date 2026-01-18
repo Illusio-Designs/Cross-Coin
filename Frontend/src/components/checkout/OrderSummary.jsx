@@ -54,16 +54,30 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
       router.push('/auth/login');
       return;
     }
+    
+    setCouponError("");
+    setCouponSuccess("");
+    
     try {
       const response = await validateCoupon(promoCode);
-      const discount = parseFloat(response.discountAmount);
       
-      const newCouponData = { ...response.coupon, discount };
-      onCouponApplied(newCouponData);
-      
-      setCouponError("");
+      if (response && response.coupon && response.discountAmount) {
+        const discount = parseFloat(response.discountAmount);
+        
+        const newCouponData = { 
+          ...response.coupon, 
+          discount: discount,
+          discountAmount: discount
+        };
+        
+        onCouponApplied(newCouponData);
+        setCouponSuccess(`Coupon applied! You saved ₹${discount.toFixed(2)}`);
+      } else {
+        throw new Error("Invalid coupon response format");
+      }
     } catch (error) {
-      setCouponError(error.message || "An error occurred.");
+      console.error("Coupon validation error:", error);
+      setCouponError(error.message || "Failed to apply coupon. Please try again.");
       onCouponRemoved();
     }
   };
@@ -88,6 +102,13 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
   
   const handleCouponClick = (code) => {
     setPromoCode(code);
+  };
+
+  const handleRemoveCoupon = () => {
+    setPromoCode("");
+    setCouponSuccess("");
+    setCouponError("");
+    onCouponRemoved();
   };
 
   const generateCouponDescription = (coupon) => {
@@ -171,8 +192,13 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
             placeholder="Enter promo code"
             value={promoCode}
             onChange={(e) => setPromoCode(e.target.value)}
+            disabled={!!appliedCoupon}
           />
-          <button className="promo-apply" onClick={handleApplyCoupon}>Apply</button>
+          {appliedCoupon ? (
+            <button className="promo-remove" onClick={handleRemoveCoupon}>Remove</button>
+          ) : (
+            <button className="promo-apply" onClick={handleApplyCoupon}>Apply</button>
+          )}
         </div>
         {couponError && <div className="coupon-message coupon-error">{couponError}</div>}
         {couponSuccess && <div className="coupon-message coupon-success">{couponSuccess}</div>}

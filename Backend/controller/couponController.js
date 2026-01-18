@@ -1,4 +1,4 @@
-const { Coupon, CouponUsage, Cart, CartItem, Product, Category, User, ProductVariation } = require('../model/associations.js');
+const { Coupon, CouponUsage, Cart, CartItem, Product, Category, ProductVariation } = require('../model/associations.js');
 const { Op } = require('sequelize');
 
 // Create a new coupon
@@ -27,6 +27,7 @@ module.exports.createCoupon = async (req, res) => {
 
         if (existingCoupon) {
             return res.status(400).json({
+                success: false,
                 message: 'Coupon code already exists'
             });
         }
@@ -34,12 +35,14 @@ module.exports.createCoupon = async (req, res) => {
         // Validate discount value based on type
         if (type === 'percentage' && (value <= 0 || value > 100)) {
             return res.status(400).json({
+                success: false,
                 message: 'Percentage discount must be between 0 and 100'
             });
         }
 
         if (type === 'fixed' && value <= 0) {
             return res.status(400).json({
+                success: false,
                 message: 'Fixed discount value must be greater than 0'
             });
         }
@@ -47,6 +50,7 @@ module.exports.createCoupon = async (req, res) => {
         // Validate min purchase amount
         if (minPurchase && minPurchase < 0) {
             return res.status(400).json({
+                success: false,
                 message: 'Minimum purchase amount cannot be negative'
             });
         }
@@ -54,6 +58,7 @@ module.exports.createCoupon = async (req, res) => {
         // Validate max discount
         if (maxDiscount && maxDiscount < 0) {
             return res.status(400).json({
+                success: false,
                 message: 'Maximum discount cannot be negative'
             });
         }
@@ -61,6 +66,7 @@ module.exports.createCoupon = async (req, res) => {
         // Validate usage limit
         if (usageLimit && usageLimit < 1) {
             return res.status(400).json({
+                success: false,
                 message: 'Usage limit must be at least 1'
             });
         }
@@ -71,6 +77,7 @@ module.exports.createCoupon = async (req, res) => {
 
         if (end <= start) {
             return res.status(400).json({
+                success: false,
                 message: 'End date must be after start date'
             });
         }
@@ -93,12 +100,14 @@ module.exports.createCoupon = async (req, res) => {
         });
 
         res.status(201).json({
+            success: true,
             message: 'Coupon created successfully',
             coupon: newCoupon
         });
     } catch (error) {
         console.error('Error creating coupon:', error);
         res.status(500).json({
+            success: false,
             message: 'Failed to create coupon',
             error: error.message
         });
@@ -109,22 +118,24 @@ module.exports.createCoupon = async (req, res) => {
 module.exports.getAllCoupons = async (req, res) => {
     try {
         const coupons = await Coupon.findAll({
-            /*
             include: [{
                 model: CouponUsage,
                 as: 'CouponUsages',
-                attributes: ['userId', 'usedAt']
-            }]
-            */
+                attributes: ['userId', 'usedAt', 'discountAmount'],
+                required: false
+            }],
+            order: [['createdAt', 'DESC']]
         });
 
         res.status(200).json({
+            success: true,
             count: coupons.length,
             coupons
         });
     } catch (error) {
         console.error('Error fetching coupons:', error);
         res.status(500).json({
+            success: false,
             message: 'Failed to fetch coupons',
             error: error.message
         });
@@ -139,18 +150,27 @@ module.exports.getCouponById = async (req, res) => {
         const coupon = await Coupon.findByPk(id, {
             include: [{
                 model: CouponUsage,
-                attributes: ['userId', 'usedAt']
+                as: 'CouponUsages',
+                attributes: ['userId', 'usedAt', 'discountAmount'],
+                required: false
             }]
         });
         
         if (!coupon) {
-            return res.status(404).json({ message: 'Coupon not found' });
+            return res.status(404).json({ 
+                success: false,
+                message: 'Coupon not found' 
+            });
         }
 
-        res.status(200).json(coupon);
+        res.status(200).json({
+            success: true,
+            ...coupon.toJSON()
+        });
     } catch (error) {
         console.error('Error fetching coupon:', error);
         res.status(500).json({
+            success: false,
             message: 'Failed to fetch coupon',
             error: error.message
         });
@@ -164,7 +184,10 @@ module.exports.validateCoupon = async (req, res) => {
         const userId = req.user.id;
 
         if (!code) {
-            return res.status(400).json({ message: 'Coupon code is required' });
+            return res.status(400).json({ 
+                success: false,
+                message: 'Coupon code is required' 
+            });
         }
 
         const coupon = await Coupon.findOne({
@@ -177,12 +200,18 @@ module.exports.validateCoupon = async (req, res) => {
         });
 
         if (!coupon) {
-            return res.status(404).json({ message: 'Invalid or expired coupon code' });
+            return res.status(404).json({ 
+                success: false,
+                message: 'Invalid or expired coupon code' 
+            });
         }
 
         // Check total usage limit
         if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
-            return res.status(400).json({ message: 'This coupon has reached its usage limit.' });
+            return res.status(400).json({ 
+                success: false,
+                message: 'This coupon has reached its usage limit.' 
+            });
         }
 
         // Check per-user usage limit
@@ -191,12 +220,18 @@ module.exports.validateCoupon = async (req, res) => {
         });
 
         if (coupon.perUserLimit && userUsageCount >= coupon.perUserLimit) {
-            return res.status(400).json({ message: `You have already used this coupon the maximum number of times.` });
+            return res.status(400).json({ 
+                success: false,
+                message: `You have already used this coupon the maximum number of times.` 
+            });
         }
 
         // Specific check for coupons with no per-user limit (implying one-time use)
         if (!coupon.perUserLimit && userUsageCount > 0) {
-            return res.status(400).json({ message: 'You have already used this coupon.' });
+            return res.status(400).json({ 
+                success: false,
+                message: 'You have already used this coupon.' 
+            });
         }
 
         // Get user's cart to check applicability and order amount
@@ -207,13 +242,22 @@ module.exports.validateCoupon = async (req, res) => {
                 as: 'CartItems',
                 include: [{
                     model: Product,
-                    include: [{ model: Category }]
+                    include: [{ 
+                        model: Category,
+                        attributes: ['id', 'name']
+                    }, {
+                        model: ProductVariation,
+                        attributes: ['id', 'price']
+                    }]
                 }]
             }]
         });
 
         if (!userCart || !userCart.CartItems || userCart.CartItems.length === 0) {
-            return res.status(400).json({ message: 'Your cart is empty.' });
+            return res.status(400).json({ 
+                success: false,
+                message: 'Your cart is empty.' 
+            });
         }
 
         let cartItems = userCart.CartItems;
@@ -223,7 +267,11 @@ module.exports.validateCoupon = async (req, res) => {
         // Defensively parse applicableProducts and applicableCategories
         let applicableProducts = coupon.applicableProducts;
         if (typeof applicableProducts === 'string') {
-            try { applicableProducts = JSON.parse(applicableProducts); } catch (e) { applicableProducts = null; }
+            try { 
+                applicableProducts = JSON.parse(applicableProducts); 
+            } catch (e) { 
+                applicableProducts = null; 
+            }
         }
         if (!Array.isArray(applicableProducts)) {
             applicableProducts = null;
@@ -231,7 +279,11 @@ module.exports.validateCoupon = async (req, res) => {
 
         let applicableCategories = coupon.applicableCategories;
         if (typeof applicableCategories === 'string') {
-            try { applicableCategories = JSON.parse(applicableCategories); } catch (e) { applicableCategories = null; }
+            try { 
+                applicableCategories = JSON.parse(applicableCategories); 
+            } catch (e) { 
+                applicableCategories = null; 
+            }
         }
         if (!Array.isArray(applicableCategories)) {
             applicableCategories = null;
@@ -246,18 +298,23 @@ module.exports.validateCoupon = async (req, res) => {
 
             if (isApplicableProduct && isApplicableCategory) {
                 applicableItems.push(item);
-                // The price is already stored on the cart item, so we can use it directly.
-                applicableAmount += item.price * item.quantity;
+                // Use the price from the cart item or product variation
+                const itemPrice = item.price || (product.ProductVariations && product.ProductVariations.length > 0 ? product.ProductVariations[0].price : 0);
+                applicableAmount += itemPrice * item.quantity;
             }
         }
 
         if (applicableItems.length === 0) {
-            return res.status(400).json({ message: 'This coupon is not applicable to any items in your cart.' });
+            return res.status(400).json({ 
+                success: false,
+                message: 'This coupon is not applicable to any items in your cart.' 
+            });
         }
 
         if (coupon.minPurchase && applicableAmount < coupon.minPurchase) {
             return res.status(400).json({
-                message: `You must spend at least ${coupon.minPurchase} on eligible items to use this coupon.`
+                success: false,
+                message: `You must spend at least ₹${coupon.minPurchase} on eligible items to use this coupon.`
             });
         }
 
@@ -271,23 +328,37 @@ module.exports.validateCoupon = async (req, res) => {
             discountAmount = parseFloat(coupon.value);
         }
 
+        // Ensure discount doesn't exceed applicable amount
         if (discountAmount > applicableAmount) {
             discountAmount = applicableAmount;
         }
 
-        const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-        const finalAmount = subtotal - discountAmount;
+        const subtotal = cartItems.reduce((sum, item) => {
+            const itemPrice = item.price || (item.Product && item.Product.ProductVariations && item.Product.ProductVariations.length > 0 ? item.Product.ProductVariations[0].price : 0);
+            return sum + (itemPrice * item.quantity);
+        }, 0);
+        
+        const finalAmount = Math.max(0, subtotal - discountAmount);
 
         res.status(200).json({
-            message: 'Coupon applied successfully!',
+            success: true,
+            message: 'Coupon is valid and can be applied!',
             discountAmount: discountAmount.toFixed(2),
             finalAmount: finalAmount.toFixed(2),
-            coupon: { code: coupon.code }
+            subtotal: subtotal.toFixed(2),
+            coupon: {
+                id: coupon.id,
+                code: coupon.code,
+                type: coupon.type,
+                value: coupon.value,
+                description: coupon.description
+            }
         });
 
     } catch (error) {
         console.error('Error validating coupon:', error);
         res.status(500).json({
+            success: false,
             message: 'Failed to validate coupon',
             error: error.message
         });
@@ -297,14 +368,21 @@ module.exports.validateCoupon = async (req, res) => {
 // Apply a coupon (increment used count)
 module.exports.applyCoupon = async (req, res) => {
     try {
-        const { code, userId } = req.body;
+        const { code, orderId, discountAmount } = req.body;
+        const userId = req.user.id;
 
         if (!code) {
-            return res.status(400).json({ message: 'Coupon code is required' });
+            return res.status(400).json({ 
+                success: false,
+                message: 'Coupon code is required' 
+            });
         }
 
-        if (!userId) {
-            return res.status(400).json({ message: 'User ID is required' });
+        if (!discountAmount || discountAmount <= 0) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Valid discount amount is required' 
+            });
         }
 
         // Find the coupon
@@ -318,7 +396,10 @@ module.exports.applyCoupon = async (req, res) => {
         });
 
         if (!coupon) {
-            return res.status(404).json({ message: 'Invalid or expired coupon code' });
+            return res.status(404).json({ 
+                success: false,
+                message: 'Invalid or expired coupon code' 
+            });
         }
 
         // Check per-user usage limit
@@ -327,21 +408,32 @@ module.exports.applyCoupon = async (req, res) => {
         });
 
         if (coupon.perUserLimit && userUsageCount >= coupon.perUserLimit) {
-            return res.status(400).json({ message: 'You have already used this coupon the maximum number of times.' });
+            return res.status(400).json({ 
+                success: false,
+                message: 'You have already used this coupon the maximum number of times.' 
+            });
         }
         if (!coupon.perUserLimit && userUsageCount > 0) {
-            return res.status(400).json({ message: 'You have already used this coupon.' });
+            return res.status(400).json({ 
+                success: false,
+                message: 'You have already used this coupon.' 
+            });
         }
 
         // Check if coupon is already used to its maximum
         if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
-            return res.status(400).json({ message: 'Coupon has reached maximum usage limit' });
+            return res.status(400).json({ 
+                success: false,
+                message: 'Coupon has reached maximum usage limit' 
+            });
         }
 
-        // Record the usage
+        // Record the usage with discount amount and order association
         await CouponUsage.create({
             couponId: coupon.id,
             userId: userId,
+            orderId: orderId || null,
+            discountAmount: parseFloat(discountAmount),
             usedAt: new Date()
         });
 
@@ -349,12 +441,18 @@ module.exports.applyCoupon = async (req, res) => {
         await coupon.increment('usageCount');
 
         res.status(200).json({
+            success: true,
             message: 'Coupon applied successfully',
-            coupon
+            coupon: {
+                id: coupon.id,
+                code: coupon.code,
+                discountAmount: parseFloat(discountAmount)
+            }
         });
     } catch (error) {
         console.error('Error applying coupon:', error);
         res.status(500).json({
+            success: false,
             message: 'Failed to apply coupon',
             error: error.message
         });
@@ -376,12 +474,14 @@ module.exports.getUserCouponHistory = async (req, res) => {
         });
 
         res.status(200).json({
+            success: true,
             message: 'Coupon usage history retrieved successfully',
             history: usageHistory
         });
     } catch (error) {
         console.error('Error fetching coupon history:', error);
         res.status(500).json({
+            success: false,
             message: 'Failed to fetch coupon history',
             error: error.message
         });
@@ -410,7 +510,10 @@ module.exports.updateCoupon = async (req, res) => {
 
         const coupon = await Coupon.findByPk(id);
         if (!coupon) {
-            return res.status(404).json({ message: 'Coupon not found' });
+            return res.status(404).json({ 
+                success: false,
+                message: 'Coupon not found' 
+            });
         }
 
         // Check if updated code already exists (if changing the code)
@@ -424,6 +527,7 @@ module.exports.updateCoupon = async (req, res) => {
 
             if (existingCoupon) {
                 return res.status(400).json({
+                    success: false,
                     message: 'Coupon code already exists'
                 });
             }
@@ -432,12 +536,14 @@ module.exports.updateCoupon = async (req, res) => {
         // Validate discount value based on type
         if (type === 'percentage' && (value <= 0 || value > 100)) {
             return res.status(400).json({
+                success: false,
                 message: 'Percentage discount must be between 0 and 100'
             });
         }
 
         if (type === 'fixed' && value <= 0) {
             return res.status(400).json({
+                success: false,
                 message: 'Fixed discount value must be greater than 0'
             });
         }
@@ -445,6 +551,7 @@ module.exports.updateCoupon = async (req, res) => {
         // Validate min purchase amount
         if (minPurchase && minPurchase < 0) {
             return res.status(400).json({
+                success: false,
                 message: 'Minimum purchase amount cannot be negative'
             });
         }
@@ -452,6 +559,7 @@ module.exports.updateCoupon = async (req, res) => {
         // Validate max discount
         if (maxDiscount && maxDiscount < 0) {
             return res.status(400).json({
+                success: false,
                 message: 'Maximum discount cannot be negative'
             });
         }
@@ -459,6 +567,7 @@ module.exports.updateCoupon = async (req, res) => {
         // Validate usage limit
         if (usageLimit && usageLimit < 1) {
             return res.status(400).json({
+                success: false,
                 message: 'Usage limit must be at least 1'
             });
         }
@@ -472,6 +581,7 @@ module.exports.updateCoupon = async (req, res) => {
 
         if (end <= start) {
             return res.status(400).json({
+                success: false,
                 message: 'End date must be after start date'
             });
         }
@@ -481,25 +591,27 @@ module.exports.updateCoupon = async (req, res) => {
             code: code ? code.toUpperCase() : coupon.code,
             description: description !== undefined ? description : coupon.description,
             type: type || coupon.type,
-            value: value || coupon.value,
-            minPurchase: minPurchase !== undefined ? minPurchase : coupon.minPurchase,
-            maxDiscount: maxDiscount !== undefined ? maxDiscount : coupon.maxDiscount,
+            value: value !== undefined ? Number(value) : coupon.value,
+            minPurchase: minPurchase !== undefined ? (minPurchase ? Number(minPurchase) : null) : coupon.minPurchase,
+            maxDiscount: maxDiscount !== undefined ? (maxDiscount ? Number(maxDiscount) : null) : coupon.maxDiscount,
             startDate: start,
             endDate: end,
-            usageLimit: usageLimit !== undefined ? usageLimit : coupon.usageLimit,
-            perUserLimit: perUserLimit !== undefined ? perUserLimit : coupon.perUserLimit,
+            usageLimit: usageLimit !== undefined ? (usageLimit ? Number(usageLimit) : null) : coupon.usageLimit,
+            perUserLimit: perUserLimit !== undefined ? (perUserLimit ? Number(perUserLimit) : null) : coupon.perUserLimit,
             status: status || coupon.status,
             applicableCategories: applicableCategories !== undefined ? applicableCategories : coupon.applicableCategories,
             applicableProducts: applicableProducts !== undefined ? applicableProducts : coupon.applicableProducts
         });
 
         res.status(200).json({
+            success: true,
             message: 'Coupon updated successfully',
             coupon
         });
     } catch (error) {
         console.error('Error updating coupon:', error);
         res.status(500).json({
+            success: false,
             message: 'Failed to update coupon',
             error: error.message
         });
@@ -513,39 +625,31 @@ module.exports.deleteCoupon = async (req, res) => {
 
         const coupon = await Coupon.findByPk(id);
         if (!coupon) {
-            return res.status(404).json({ message: 'Coupon not found' });
+            return res.status(404).json({ 
+                success: false,
+                message: 'Coupon not found' 
+            });
         }
 
         await coupon.destroy();
 
         res.status(200).json({
+            success: true,
             message: 'Coupon deleted successfully'
         });
     } catch (error) {
         console.error('Error deleting coupon:', error);
         res.status(500).json({
+            success: false,
             message: 'Failed to delete coupon',
             error: error.message
         });
     }
 };
 
-// Get Coupon by ID
+// Get Coupon by ID (alias for getCouponById)
 module.exports.getCoupon = async (req, res) => {
-    try {
-        const { id } = req.params; // Assuming the coupon ID is passed as a URL parameter
-
-        const coupon = await Coupon.findByPk(id);
-        
-        if (!coupon) {
-            return res.status(404).json({ message: 'Coupon not found' });
-        }
-
-        res.json(coupon);
-    } catch (error) {
-        console.error('Error fetching coupon:', error);
-        res.status(500).json({ message: 'Failed to fetch coupon', error: error.message });
-    }
+    return module.exports.getCouponById(req, res);
 };
 
 // Get all active public coupons
@@ -557,18 +661,21 @@ module.exports.getPublicCoupons = async (req, res) => {
                 startDate: { [Op.lte]: new Date() },
                 endDate: { [Op.gte]: new Date() }
             },
-            attributes: ['id', 'code', 'description', 'type', 'value', 'minPurchase', 'maxDiscount', 'endDate']
+            attributes: ['id', 'code', 'description', 'type', 'value', 'minPurchase', 'maxDiscount', 'endDate'],
+            order: [['createdAt', 'DESC']]
         });
 
         res.status(200).json({
+            success: true,
             count: coupons.length,
             coupons
         });
     } catch (error) {
         console.error('Error fetching public coupons:', error);
         res.status(500).json({
+            success: false,
             message: 'Failed to fetch coupons',
             error: error.message
         });
     }
-}; 
+};
