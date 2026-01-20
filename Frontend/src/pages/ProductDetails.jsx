@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
@@ -59,7 +59,6 @@ export default function ProductDetails() {
   const [copiedCoupon, setCopiedCoupon] = useState(null);
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState({});
   const [tooltipStyle, setTooltipStyle] = useState({});
   const [isBuyNowLoading, setIsBuyNowLoading] = useState(false);
   const couponRefs = useRef({});
@@ -78,9 +77,27 @@ export default function ProductDetails() {
   const selectedVariationBySku = product?.variations.find(v => v.sku === selectedSku) || product?.variations[0];
 
   // Use images from selected variation if available, else fallback to product images
-  const variationImages = selectedVariation?.images && selectedVariation.images.length > 0
-    ? selectedVariation.images
-    : product?.images || [];
+  const variationImages = useMemo(() => {
+    if (selectedVariation?.images && selectedVariation.images.length > 0) {
+      return selectedVariation.images;
+    }
+    if (product?.images && product.images.length > 0) {
+      return product.images;
+    }
+    // If no images available, return empty array
+    return [];
+  }, [selectedVariation, product]);
+
+  // Debug: Log variation images data
+  useEffect(() => {
+    console.log('=== ProductDetails Image Debug ===');
+    console.log('selectedVariation:', selectedVariation);
+    console.log('product?.images:', product?.images);
+    console.log('variationImages:', variationImages);
+    console.log('selectedThumbnail:', selectedThumbnail);
+    console.log('Current image:', variationImages[selectedThumbnail]);
+    console.log('================================');
+  }, [selectedVariation, variationImages, selectedThumbnail, product]);
 
   // Reset selectedThumbnail when SKU changes
   useEffect(() => {
@@ -1018,19 +1035,7 @@ export default function ProductDetails() {
         <div className="product-details">
           <div className="product-gallery" style={{ textAlign: 'center' }}>
             <div style={{ position: 'relative', display: 'inline-block' }}>
-              {/* Skeleton placeholder for main image */}
-              {!imageLoaded[selectedThumbnail] && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 0, left: 0, right: 0, bottom: 0,
-                    background: '#eee',
-                    borderRadius: 8,
-                    zIndex: 1
-                  }}
-                />
-              )}
-              {variationImages[selectedThumbnail] && (variationImages[selectedThumbnail].image_url || variationImages[selectedThumbnail].url || variationImages[selectedThumbnail]) ? (
+              {variationImages.length > 0 && variationImages[selectedThumbnail] ? (
                 <>
                   <SafeImage
                     imageData={{
@@ -1038,7 +1043,7 @@ export default function ProductDetails() {
                         variationImages[selectedThumbnail]?.url ||
                         variationImages[selectedThumbnail]
                     }}
-                    alt={variationImages[selectedThumbnail]?.alt_text || product.name}
+                    alt={variationImages[selectedThumbnail]?.alt_text || product?.name || "Product Image"}
                     width="100%"
                     height="auto"
                     style={{
@@ -1052,7 +1057,19 @@ export default function ProductDetails() {
                   />
                 </>
               ) : (
-                <div style={{ width: 400, height: 400, background: '#eee', borderRadius: 8 }} />
+                <div style={{ 
+                  width: 400, 
+                  height: 400, 
+                  background: '#eee', 
+                  borderRadius: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#666',
+                  fontSize: '16px'
+                }}>
+                  No Image Available
+                </div>
               )}
               {/* Zoom button overlay */}
               <button
