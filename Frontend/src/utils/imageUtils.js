@@ -113,8 +113,11 @@ export function getDirectImageUrl(imageData) {
     return imageUrl;
   }
   
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
-  console.log('getDirectImageUrl: Base URL:', baseUrl);
+  // Get the base URL - check both environment variable and fallback
+  const envApiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const baseUrl = envApiUrl || "https://api.crosscoin.in";
+  console.log('getDirectImageUrl: Environment API URL:', envApiUrl);
+  console.log('getDirectImageUrl: Base URL used:', baseUrl);
   
   // If it already starts with /uploads/, just prepend the base URL
   if (imageUrl.startsWith("/uploads/")) {
