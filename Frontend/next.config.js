@@ -6,9 +6,9 @@ const nextConfig = {
     // Enable server components
     serverComponentsExternalPackages: ["axios"],
   },
-  // Image configuration - optimized for performance
+  // Image configuration - disabled optimization to use direct server images
   images: {
-    unoptimized: false, // Enable Next.js image optimization
+    unoptimized: true, // Disable Next.js image optimization to avoid 402 errors
     domains: ["api.crosscoin.in", "crosscoin.in", "www.crosscoin.in", "localhost"],
     formats: ["image/webp", "image/avif"],
     minimumCacheTTL: 60,

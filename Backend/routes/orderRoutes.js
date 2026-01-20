@@ -9,17 +9,16 @@ const {
     getGuestOrder,
     trackOrderByAWB,
     cancelOrder,
-    cancelOrdersInShiprocket,
+    cancelOrdersInFShip,
     getOrderStats,
-    getShiprocketTrackingForOrder,
-    getShiprocketLabelForOrder,
-    getAllShiprocketOrders,
-    syncOrdersWithShiprocket,
-    testShiprocketCredentials,
-    handleShiprocketWebhook,
-    updateSingleOrderFromShiprocket,
-    trackOrderByOrderNumber,
-    bulkUpdateOrdersFromShiprocket
+    getFShipTrackingForOrder,
+    getFShipLabelForOrder,
+    getFShipCouriers,
+    syncOrdersWithFShip,
+    testFShipCredentials,
+    handleFShipWebhook,
+    updateSingleOrderFromFShip,
+    trackOrderByOrderNumber
 } = require('../controller/orderController.js');
 const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
 
@@ -39,12 +38,11 @@ router.get('/test', (req, res) => {
 // Admin routes (specific routes first)
 router.get('/', isAuthenticated, authorize(['admin']), getAllOrders);
 router.get('/stats/overview', isAuthenticated, authorize(['admin']), getOrderStats);
-router.get('/shiprocket/all', isAuthenticated, authorize(['admin']), getAllShiprocketOrders);
-router.post('/shiprocket/sync', isAuthenticated, authorize(['admin']), syncOrdersWithShiprocket);
-router.post('/shiprocket/bulk-update', isAuthenticated, authorize(['admin']), bulkUpdateOrdersFromShiprocket);
-router.post('/shiprocket/cancel', isAuthenticated, authorize(['admin']), cancelOrdersInShiprocket);
-router.get('/shiprocket/test-credentials', isAuthenticated, authorize(['admin']), testShiprocketCredentials);
-router.put('/:id/shiprocket/update', isAuthenticated, authorize(['admin']), updateSingleOrderFromShiprocket);
+router.post('/fship/sync', isAuthenticated, authorize(['admin']), syncOrdersWithFShip);
+router.post('/fship/cancel', isAuthenticated, authorize(['admin']), cancelOrdersInFShip);
+router.get('/fship/test-credentials', isAuthenticated, authorize(['admin']), testFShipCredentials);
+router.get('/fship/couriers', isAuthenticated, authorize(['admin']), getFShipCouriers);
+router.put('/:id/fship/update', isAuthenticated, authorize(['admin']), updateSingleOrderFromFShip);
 
 // Guest checkout route (no authentication required)
 router.post('/guest', createGuestOrder);
@@ -56,8 +54,8 @@ router.get('/track/awb', trackOrderByAWB);
 // Public order tracking by order number (no authentication required)
 router.get('/track/:order_number', trackOrderByOrderNumber);
 
-// Shiprocket webhook (no authentication required)
-router.post('/shiprocket/webhook', handleShiprocketWebhook);
+// FShip webhook (no authentication required)
+router.post('/fship/webhook', handleFShipWebhook);
 
 // Protected routes (parameter routes last)
 router.post('/', isAuthenticated, createOrder);
@@ -65,7 +63,7 @@ router.get('/my-orders', isAuthenticated, getUserOrders);
 router.get('/:id', isAuthenticated, getOrder);
 router.put('/:id/cancel', isAuthenticated, cancelOrder);
 router.put('/:id/status', isAuthenticated, authorize(['admin']), updateOrderStatus);
-router.get('/:id/shiprocket/tracking', isAuthenticated, getShiprocketTrackingForOrder);
-router.get('/:id/shiprocket/label', isAuthenticated, getShiprocketLabelForOrder);
+router.get('/:id/fship/tracking', isAuthenticated, getFShipTrackingForOrder);
+router.get('/:id/fship/label', isAuthenticated, getFShipLabelForOrder);
 
 module.exports = router;

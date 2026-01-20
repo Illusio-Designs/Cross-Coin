@@ -11,19 +11,8 @@ const { GuestUser } = require("../model/guestUserModel.js");
 const { ProductImage } = require("../model/productImageModel.js");
 const { Op } = require("sequelize");
 const { sequelize } = require("../config/db.js");
-const {
-  createShiprocketOrder,
-  getShiprocketTracking,
-  getShiprocketLabel,
-  requestShiprocketPickup,
-  cancelShiprocketShipment,
-  getAllShiprocketOrders,
-  checkShiprocketOrderExists,
-  getShiprocketOrderDetails,
-  getShiprocketOrderTracking,
-  mapShiprocketStatusToLocal,
-  authenticateShiprocket,
-} = require("../services/shiprocketService.js");
+// Import FShip service instead of Shiprocket
+const fshipService = require("../services/fshipService.js");
 const { setImmediate } = require("timers");
 const { sendFacebookEvent } = require("../integration/facebookPixel.js");
 
@@ -297,164 +286,89 @@ module.exports.createOrder = async (req, res) => {
     });
     console.log("createOrder: Order fetched successfully");
 
-    // Shiprocket integration - moved to background to avoid blocking order creation
+    // FShip integration - moved to background to avoid blocking order creation
     try {
       // Get shipping address separately
       const address = await ShippingAddress.findByPk(shipping_address_id);
       const user = createdOrder.User;
 
       // Validate address and phone
-      if (!address || !address.address_line1 || !address.phone) {
+      if (!address || !address.address || !address.phone) {
         console.error(
-          `Order ${createdOrder.order_number}: Missing address or phone, cannot sync to Shiprocket.`
+          `Order ${createdOrder.order_number}: Missing address or phone, cannot sync to FShip.`
         );
       } else {
         const orderItems = createdOrder.OrderItems.map((item) => ({
-          product_name: item.Product.name,
-          sku: item.Product.sku || "",
+          productName: item.Product.name,
+          sku: item.Product.sku || `PROD-${item.Product.id}`,
           quantity: item.quantity,
-          price: item.price,
+          unitPrice: item.price,
+          productCategory: "Socks",
+          hsnCode: "6115",
+          taxRate: 0,
+          productDiscount: 0
         }));
 
-        // Format phone number function
-        const formatPhoneNumber = (phone) => {
-          if (!phone) return "9876543210";
-          const digits = phone.toString().replace(/\D/g, "");
-
-          if (digits.length === 12 && digits.startsWith("91")) {
-            return digits.substring(2);
-          }
-
-          if (digits.length === 11 && digits.startsWith("0")) {
-            return digits.substring(1);
-          }
-
-          if (digits.length === 10) {
-            return digits;
-          }
-
-          if (digits.length < 10) {
-            return "9876543210";
-          }
-
-          if (digits.length > 10) {
-            return digits.slice(-10);
-          }
-
-          return "9876543210";
+        const fshipOrderData = {
+          customer_Name: String(user.username),
+          customer_Mobile: String(address.phone),
+          customer_Emailid: String(user.email),
+          customer_Address: String(address.address),
+          landMark: "",
+          customer_Address_Type: "Home",
+          customer_PinCode: String(address.pincode),
+          customer_City: String(address.city || "Mumbai"),
+          orderId: String(createdOrder.order_number),
+          invoice_Number: String(createdOrder.order_number),
+          payment_Mode: createdOrder.payment_type === "cod" ? 1 : 2, // 1=COD, 2=PREPAID
+          express_Type: "surface",
+          is_Ndd: 0,
+          order_Amount: parseFloat(createdOrder.total_amount),
+          tax_Amount: 0,
+          extra_Charges: 0,
+          total_Amount: parseFloat(createdOrder.final_amount),
+          shipment_Weight: 0.5, // Default weight for socks
+          shipment_Length: 25,
+          shipment_Width: 15,
+          shipment_Height: 5,
+          pick_Address_ID: 1, // Default warehouse ID
+          return_Address_ID: 1,
+          products: orderItems
         };
 
-        const shiprocketPayload = {
-          order_id: String(createdOrder.order_number),
-          order_date: new Date().toISOString().slice(0, 19).replace("T", " "),
-          pickup_location: "warehouse",
-          channel_id: "7361105",
-          comment: `Order from Cross-Coin: ${createdOrder.order_number}`,
-          billing_customer_name: String(user.username),
-          billing_last_name: "",
-          billing_address: String(address.address || "Default Address"),
-          billing_address_2: "",
-          billing_city: String(address.city || "Mumbai"),
-          billing_pincode: parseInt(address.pincode) || 400001,
-          billing_state: String(address.state || "Maharashtra"),
-          billing_country: String(address.country || "India"),
-          billing_email: String(user.email),
-          billing_phone: formatPhoneNumber(address.phone),
-          shipping_is_billing: true,
-          shipping_customer_name: String(user.username),
-          shipping_last_name: "",
-          shipping_address: String(address.address || "Default Address"),
-          shipping_address_2: "",
-          shipping_city: String(address.city || "Mumbai"),
-          shipping_pincode: parseInt(address.pincode) || 400001,
-          shipping_state: String(address.state || "Maharashtra"),
-          shipping_country: String(address.country || "India"),
-          shipping_email: String(user.email),
-          shipping_phone: formatPhoneNumber(address.phone),
-          order_items: orderItems.map((item) => ({
-            name: String(item.product_name),
-            sku: String(item.sku || `PROD-${item.product_id || Date.now()}`),
-            units: parseInt(item.quantity),
-            selling_price: parseFloat(item.price),
-            discount: 0,
-            tax: 0,
-            hsn: 441122,
-          })),
-          payment_method:
-            createdOrder.payment_type === "cod" ? "COD" : "Prepaid",
-          shipping_charges: 0,
-          giftwrap_charges: 0,
-          transaction_charges: 0,
-          total_discount: 0,
-          sub_total: parseFloat(createdOrder.total_amount),
-          length: 14,
-          breadth: 3,
-          height: 10,
-          weight: 0.70,
-        };
-
-        // Run Shiprocket integration in background
+        // Run FShip integration in background
         setImmediate(async () => {
           try {
-            // Check if order already exists in Shiprocket first
-            const duplicateCheck = await checkShiprocketOrderExists(createdOrder.order_number);
-            if (duplicateCheck.exists && duplicateCheck.order) {
-              console.log(`🔄 Order ${createdOrder.order_number} already exists in Shiprocket - updating local record`);
-              const existingOrder = duplicateCheck.order;
-              const shipments = Array.isArray(existingOrder.shipments) ? existingOrder.shipments : [];
-              
+            console.log(`🔄 Creating FShip order for ${createdOrder.order_number}`);
+            
+            const fshipResponse = await fshipService.createForwardOrder(fshipOrderData);
+            
+            if (fshipResponse.success) {
               await createdOrder.update({
-                shiprocket_order_id: existingOrder.id,
-                shiprocket_shipment_id: shipments.length > 0 ? shipments[0].shipment_id : null
+                fship_order_id: fshipResponse.orderId,
+                fship_waybill: fshipResponse.waybill,
+                fship_route_code: fshipResponse.routeCode,
+                tracking_number: fshipResponse.waybill,
+                status: "processing"
               });
               
-              console.log("✅ Updated with existing Shiprocket data:", existingOrder.id);
-              return;
-            }
-
-            const shipRes = await createShiprocketOrder(shiprocketPayload);
-            
-            // Handle both new orders and duplicates
-            if (shipRes.is_duplicate) {
-              console.log("🔄 Shiprocket returned duplicate - updating with existing data");
-            } else {
-              console.log("🆕 Created new Shiprocket order");
-            }
-            
-            await createdOrder.update({
-              shiprocket_order_id: shipRes.order_id,
-              shiprocket_shipment_id:
-                shipRes.shipments?.[0]?.shipment_id || null,
-            });
-            console.log("✅ Shiprocket Order Created:", shipRes.order_id);
-          } catch (err) {
-            // Handle duplicate errors gracefully
-            if (err.message.includes('already exists') || err.message.includes('duplicate')) {
-              console.log("🔄 Duplicate error caught - attempting to resolve");
+              console.log("✅ FShip Order Created:", fshipResponse.orderId);
+              
+              // Register pickup automatically
               try {
-                const existingCheck = await checkShiprocketOrderExists(createdOrder.order_number);
-                if (existingCheck.exists && existingCheck.order) {
-                  const existingOrder = existingCheck.order;
-                  const shipments = Array.isArray(existingOrder.shipments) ? existingOrder.shipments : [];
-                  
-                  await createdOrder.update({
-                    shiprocket_order_id: existingOrder.id,
-                    shiprocket_shipment_id: shipments.length > 0 ? shipments[0].shipment_id : null
-                  });
-                  
-                  console.log("✅ Resolved duplicate - updated with existing Shiprocket data");
-                  return;
-                }
-              } catch (resolveError) {
-                console.error("❌ Could not resolve duplicate:", resolveError.message);
+                await fshipService.registerPickup([fshipResponse.waybill]);
+                console.log("📦 FShip Pickup Registered:", fshipResponse.waybill);
+              } catch (pickupError) {
+                console.error("❌ Failed to register FShip pickup:", pickupError.message);
               }
             }
-            console.error("❌ Failed to create Shiprocket order:", err.message);
+          } catch (err) {
+            console.error("❌ Failed to create FShip order:", err.message);
           }
         });
       }
     } catch (err) {
-      console.error("❌ Failed to prepare Shiprocket order:", err.message);
+      console.error("❌ Failed to prepare FShip order:", err.message);
     }
 
     console.log("createOrder: Sending success response...");
@@ -464,11 +378,11 @@ module.exports.createOrder = async (req, res) => {
     });
     console.log("createOrder: Response sent successfully");
 
-    // --- Auto-sync all unsynced orders with Shiprocket in the background ---
+    // --- Auto-sync all unsynced orders with FShip in the background ---
     try {
       setImmediate(async () => {
         try {
-          await module.exports.syncOrdersWithShiprocket(
+          await module.exports.syncOrdersWithFShip(
             {
               user: req.user,
               headers: req.headers,
@@ -481,12 +395,12 @@ module.exports.createOrder = async (req, res) => {
             }
           );
         } catch (err) {
-          console.error("Background Shiprocket sync failed:", err.message);
+          console.error("Background FShip sync failed:", err.message);
         }
       });
     } catch (err) {
       console.error(
-        "Failed to trigger background Shiprocket sync:",
+        "Failed to trigger background FShip sync:",
         err.message
       );
     }
@@ -819,204 +733,95 @@ module.exports.createGuestOrder = async (req, res) => {
       );
     }
 
-    // Create Shiprocket order automatically for guest orders
+    // Create FShip order automatically for guest orders
     setImmediate(async () => {
       try {
         console.log(
-          "createGuestOrder: Creating Shiprocket order for guest order:",
+          "createGuestOrder: Creating FShip order for guest order:",
           order.order_number
         );
 
-        // Format phone number function
-        const formatPhoneNumber = (phone) => {
-          if (!phone) return "9876543210";
-          const digits = phone.toString().replace(/\D/g, "");
-
-          if (digits.length === 12 && digits.startsWith("91")) {
-            return digits.substring(2);
-          }
-
-          if (digits.length === 11 && digits.startsWith("0")) {
-            return digits.substring(1);
-          }
-
-          if (digits.length === 10) {
-            return digits;
-          }
-
-          if (digits.length < 10) {
-            return "9876543210";
-          }
-
-          if (digits.length > 10) {
-            return digits.slice(-10);
-          }
-
-          return "9876543210";
-        };
-
-        // Prepare Shiprocket payload for guest order
-        const shiprocketPayload = {
-          order_id: String(order.order_number),
-          order_date: new Date().toISOString().slice(0, 19).replace("T", " "),
-          pickup_location: "warehouse",
-          channel_id: "7361105",
-          comment: `Guest order from Cross-Coin: ${order.order_number}`,
-          billing_customer_name: String(guestUser.firstName),
-          billing_last_name: String(guestUser.lastName || ""),
-          billing_address: String(
-            guestShippingAddress.address || "Default Address"
-          ),
-          billing_address_2: "",
-          billing_city: String(guestShippingAddress.city || "Mumbai"),
-          billing_pincode: parseInt(guestShippingAddress.pincode) || 400001,
-          billing_state: String(guestShippingAddress.state || "Maharashtra"),
-          billing_country: String(guestShippingAddress.country || "India"),
-          billing_email: String(guestUser.email),
-          billing_phone: formatPhoneNumber(
-            guestShippingAddress.phone || guestUser.phone
-          ),
-          shipping_is_billing: true,
-          shipping_customer_name: String(guestUser.firstName),
-          shipping_last_name: String(guestUser.lastName || ""),
-          shipping_address: String(
-            guestShippingAddress.address || "Default Address"
-          ),
-          shipping_address_2: "",
-          shipping_city: String(guestShippingAddress.city || "Mumbai"),
-          shipping_pincode: parseInt(guestShippingAddress.pincode) || 400001,
-          shipping_state: String(guestShippingAddress.state || "Maharashtra"),
-          shipping_country: String(guestShippingAddress.country || "India"),
-          shipping_email: String(guestUser.email),
-          shipping_phone: formatPhoneNumber(
-            guestShippingAddress.phone || guestUser.phone
-          ),
-          order_items: validatedItems.map((item) => ({
-            name: String(item.product.name),
-            sku: String(item.product.sku || `PROD-${item.product.id}`),
-            units: parseInt(item.quantity),
-            selling_price: parseFloat(item.price),
-            discount: 0,
-            tax: 0,
-            hsn: parseInt(item.product.hsn_code || 9999),
-          })),
-          payment_method: payment_type === "cod" ? "COD" : "Prepaid",
-          shipping_charges: 0,
-          giftwrap_charges: 0,
-          transaction_charges: 0,
-          total_discount: 0,
-          sub_total: parseFloat(totalAmount),
-          length: 14,
-          breadth: 3,
-          height: 10,
-          weight: 0.70,
+        const fshipOrderData = {
+          customer_Name: `${guestUser.firstName} ${guestUser.lastName}`.trim(),
+          customer_Mobile: String(guestShippingAddress.phone || guestUser.phone),
+          customer_Emailid: String(guestUser.email),
+          customer_Address: String(guestShippingAddress.address),
+          landMark: "",
+          customer_Address_Type: "Home",
+          customer_PinCode: String(guestShippingAddress.pincode),
+          customer_City: String(guestShippingAddress.city || "Mumbai"),
+          orderId: String(order.order_number),
+          invoice_Number: String(order.order_number),
+          payment_Mode: payment_type === "cod" ? 1 : 2, // 1=COD, 2=PREPAID
+          express_Type: "surface",
+          is_Ndd: 0,
+          order_Amount: parseFloat(totalAmount),
+          tax_Amount: 0,
+          extra_Charges: 0,
+          total_Amount: parseFloat(finalAmount),
+          shipment_Weight: 0.5, // Default weight for socks
+          shipment_Length: 25,
+          shipment_Width: 15,
+          shipment_Height: 5,
+          pick_Address_ID: 1, // Default warehouse ID
+          return_Address_ID: 1,
+          products: validatedItems.map((item) => ({
+            productName: item.product.name,
+            sku: item.product.sku || `PROD-${item.product.id}`,
+            quantity: item.quantity,
+            unitPrice: item.price,
+            productCategory: "Socks",
+            hsnCode: "6115",
+            taxRate: 0,
+            productDiscount: 0
+          }))
         };
 
         console.log(
-          "createGuestOrder: Shiprocket payload prepared:",
-          shiprocketPayload
+          "createGuestOrder: FShip payload prepared:",
+          fshipOrderData
         );
 
-        // Check if order already exists in Shiprocket first
-        try {
-          const duplicateCheck = await checkShiprocketOrderExists(order.order_number);
-          if (duplicateCheck.exists && duplicateCheck.order) {
-            console.log(`🔄 Guest order ${order.order_number} already exists in Shiprocket - updating local record`);
-            const existingOrder = duplicateCheck.order;
-            const shipments = Array.isArray(existingOrder.shipments) ? existingOrder.shipments : [];
-            
-            await order.update({
-              shiprocket_order_id: existingOrder.id,
-              shiprocket_shipment_id: shipments.length > 0 ? shipments[0].shipment_id : null
-            });
-            
-            console.log("createGuestOrder: ✅ Updated with existing Shiprocket data:", existingOrder.id);
-            return;
-          }
-        } catch (duplicateCheckError) {
-          console.log(`⚠️  Could not check for duplicates: ${duplicateCheckError.message} - proceeding with creation`);
-        }
+        const fshipResponse = await fshipService.createForwardOrder(fshipOrderData);
 
-        const shiprocketResponse = await createShiprocketOrder(
-          shiprocketPayload
-        );
+        if (fshipResponse.success) {
+          await order.update({
+            fship_order_id: fshipResponse.orderId,
+            fship_waybill: fshipResponse.waybill,
+            fship_route_code: fshipResponse.routeCode,
+            tracking_number: fshipResponse.waybill,
+            status: "processing"
+          });
 
-        // Handle both new orders and duplicates
-        if (shiprocketResponse.is_duplicate) {
-          console.log(`🔄 Guest order ${order.order_number} - Shiprocket returned duplicate`);
-        } else {
-          console.log(`🆕 Created new Shiprocket order for guest: ${order.order_number}`);
-        }
+          console.log(
+            "createGuestOrder: ✅ FShip Order Created for guest:",
+            {
+              order_number: order.order_number,
+              fship_order_id: fshipResponse.orderId,
+              waybill: fshipResponse.waybill,
+            }
+          );
 
-        // Update order with Shiprocket IDs
-        await order.update({
-          shiprocket_order_id: shiprocketResponse.order_id || null,
-          shiprocket_shipment_id:
-            (shiprocketResponse.shipments &&
-              shiprocketResponse.shipments[0]?.shipment_id) ||
-            null,
-        });
-
-        console.log(
-          "createGuestOrder: ✅ Shiprocket Order Created for guest:",
-          {
-            order_number: order.order_number,
-            shiprocket_order_id: shiprocketResponse.order_id,
-            shipment_id: shiprocketResponse.shipments?.[0]?.shipment_id,
-            is_duplicate: shiprocketResponse.is_duplicate || false,
-          }
-        );
-
-        // Request pickup if shipment ID exists (only for new orders)
-        if (
-          !shiprocketResponse.is_duplicate &&
-          shiprocketResponse.shipments &&
-          shiprocketResponse.shipments[0]?.shipment_id
-        ) {
+          // Register pickup
           try {
-            const pickupResponse = await requestShiprocketPickup([
-              shiprocketResponse.shipments[0].shipment_id,
-            ]);
+            await fshipService.registerPickup([fshipResponse.waybill]);
             console.log(
-              "createGuestOrder: ✅ Shiprocket Pickup Requested:",
-              pickupResponse
+              "createGuestOrder: ✅ FShip Pickup Requested:",
+              fshipResponse.waybill
             );
           } catch (pickupError) {
             console.error(
-              "createGuestOrder: ❌ Failed to request Shiprocket pickup:",
+              "createGuestOrder: ❌ Failed to request FShip pickup:",
               pickupError.message
             );
           }
         }
-      } catch (shiprocketError) {
-        // Handle duplicate errors gracefully for guest orders
-        if (shiprocketError.message.includes('already exists') || shiprocketError.message.includes('duplicate')) {
-          console.log(`🔄 Guest order ${order.order_number} - duplicate error caught, attempting to resolve`);
-          try {
-            const existingCheck = await checkShiprocketOrderExists(order.order_number);
-            if (existingCheck.exists && existingCheck.order) {
-              const existingOrder = existingCheck.order;
-              const shipments = Array.isArray(existingOrder.shipments) ? existingOrder.shipments : [];
-              
-              await order.update({
-                shiprocket_order_id: existingOrder.id,
-                shiprocket_shipment_id: shipments.length > 0 ? shipments[0].shipment_id : null
-              });
-              
-              console.log("createGuestOrder: ✅ Resolved duplicate - updated with existing Shiprocket data");
-              return;
-            }
-          } catch (resolveError) {
-            console.error("createGuestOrder: ❌ Could not resolve duplicate:", resolveError.message);
-          }
-        }
-        
+      } catch (fshipError) {
         console.error(
-          "createGuestOrder: ❌ Failed to create Shiprocket order for guest:",
+          "createGuestOrder: ❌ Failed to create FShip order for guest:",
           {
             order_number: order.order_number,
-            error: shiprocketError.message,
-            response: shiprocketError.response?.data,
+            error: fshipError.message,
           }
         );
       }
@@ -1372,28 +1177,32 @@ module.exports.trackOrderByAWB = async (req, res) => {
   }
 };
 
-// Handle Shiprocket webhook for order updates
-module.exports.handleShiprocketWebhook = async (req, res) => {
+// Handle FShip webhook for order updates
+module.exports.handleFShipWebhook = async (req, res) => {
   try {
     const webhookData = req.body;
-    console.log("Shiprocket Webhook received:", webhookData);
+    console.log("FShip Webhook received:", webhookData);
 
     const {
-      order_id,
-      shipment_id,
+      waybill,
       status,
-      awb_code,
       courier_name,
-      tracking_url,
+      order_id,
     } = webhookData;
 
-    if (!order_id) {
-      return res.status(400).json({ message: "Order ID is required" });
+    if (!waybill && !order_id) {
+      return res.status(400).json({ message: "Waybill or Order ID is required" });
     }
 
-    // Find order by Shiprocket order ID (which matches our order_number)
+    // Find order by FShip waybill or order ID
     const order = await Order.findOne({
-      where: { shiprocket_order_id: order_id },
+      where: {
+        [Op.or]: [
+          { fship_waybill: waybill },
+          { fship_order_id: order_id },
+          { order_number: order_id }
+        ]
+      },
       include: [
         { model: User, as: "User", attributes: ["id", "email"] },
         {
@@ -1405,38 +1214,19 @@ module.exports.handleShiprocketWebhook = async (req, res) => {
     });
 
     if (!order) {
-      console.log("Order not found for Shiprocket order ID:", order_id);
+      console.log("Order not found for FShip waybill/order ID:", waybill || order_id);
       return res.status(404).json({ message: "Order not found" });
     }
 
-    // Update order with Shiprocket tracking information
+    // Update order with FShip tracking information
     const updateData = {};
-    if (shipment_id) updateData.shiprocket_shipment_id = shipment_id;
-    if (awb_code) updateData.tracking_number = awb_code;
+    if (waybill) updateData.tracking_number = waybill;
     if (courier_name) updateData.courier_name = courier_name;
-    if (tracking_url) updateData.tracking_url = tracking_url;
 
-    // Map Shiprocket status to our order status
+    // Map FShip status to our order status
     let orderStatus = order.status;
     if (status) {
-      switch (status.toLowerCase()) {
-        case "shipped":
-        case "in_transit":
-          orderStatus = "shipped";
-          break;
-        case "delivered":
-          orderStatus = "delivered";
-          break;
-        case "cancelled":
-        case "rto":
-          orderStatus = "cancelled";
-          break;
-        case "returned":
-          orderStatus = "returned";
-          break;
-        default:
-          orderStatus = "processing";
-      }
+      orderStatus = fshipService.mapFShipStatusToCrossCoin(status);
       updateData.status = orderStatus;
     }
 
@@ -1447,23 +1237,23 @@ module.exports.handleShiprocketWebhook = async (req, res) => {
       await OrderStatusHistory.create({
         order_id: order.id,
         status: orderStatus,
-        notes: `Shiprocket webhook: ${status}${
-          awb_code ? ` - AWB: ${awb_code}` : ""
+        notes: `FShip webhook: ${status}${
+          waybill ? ` - AWB: ${waybill}` : ""
         }${courier_name ? ` - Courier: ${courier_name}` : ""}`,
-        created_by: "shiprocket_webhook",
+        created_by: "fship_webhook",
       });
 
-      console.log("Order updated via Shiprocket webhook:", {
+      console.log("Order updated via FShip webhook:", {
         order_number: order.order_number,
         status: orderStatus,
-        tracking_number: awb_code,
+        tracking_number: waybill,
         courier: courier_name,
       });
     }
 
     res.json({ message: "Webhook processed successfully" });
   } catch (error) {
-    console.error("Error processing Shiprocket webhook:", error);
+    console.error("Error processing FShip webhook:", error);
     res
       .status(500)
       .json({ message: "Failed to process webhook", error: error.message });
@@ -1782,15 +1572,15 @@ module.exports.getOrder = async (req, res) => {
   }
 };
 
-// Update order status - DEPRECATED: Use Shiprocket sync instead
+// Update order status - DEPRECATED: Use FShip sync instead
 module.exports.updateOrderStatus = async (req, res) => {
   try {
-    // Manual status updates are now disabled to maintain Shiprocket sync integrity
+    // Manual status updates are now disabled to maintain FShip sync integrity
     return res.status(400).json({
       success: false,
-      message: "Manual status updates are disabled. Order statuses are automatically synchronized with Shiprocket.",
-      recommendation: "Use the comprehensive Shiprocket sync feature to update order statuses automatically.",
-      endpoint: "POST /api/orders/shiprocket/sync"
+      message: "Manual status updates are disabled. Order statuses are automatically synchronized with FShip.",
+      recommendation: "Use the comprehensive FShip sync feature to update order statuses automatically.",
+      endpoint: "POST /api/orders/fship/sync"
     });
   } catch (error) {
     console.error("Error in updateOrderStatus:", error);
@@ -1869,42 +1659,18 @@ module.exports.cancelOrder = async (req, res) => {
       }
     }
 
-    // Cancel order in Shiprocket if it exists
-    if (order.shiprocket_order_id) {
+    // Cancel order in FShip if it exists
+    if (order.fship_waybill) {
       try {
-        const {
-          cancelShiprocketOrder,
-        } = require("../services/shiprocketService");
-        const cancelRes = await cancelShiprocketOrder(
-          order.shiprocket_order_id
+        const cancelRes = await fshipService.cancelOrder(
+          order.fship_waybill,
+          reason || "Order cancelled by customer"
         );
-        if (cancelRes.success) {
-          console.log(
-            "Shiprocket order cancelled successfully:",
-            cancelRes.data
-          );
-        } else {
-          console.error("Failed to cancel Shiprocket order:", cancelRes.error);
-        }
+        console.log("FShip order cancelled successfully:", cancelRes);
       } catch (err) {
         console.error(
-          "Failed to cancel Shiprocket order:",
-          err?.response?.data || err.message
-        );
-      }
-    }
-
-    // Also cancel shipment if it exists
-    if (order.shiprocket_shipment_id) {
-      try {
-        const cancelRes = await cancelShiprocketShipment([
-          order.shiprocket_shipment_id,
-        ]);
-        console.log("Shiprocket shipment cancelled:", cancelRes);
-      } catch (err) {
-        console.error(
-          "Failed to cancel Shiprocket shipment:",
-          err?.response?.data || err.message
+          "Failed to cancel FShip order:",
+          err.message
         );
       }
     }
@@ -1963,69 +1729,64 @@ module.exports.getOrderStats = async (req, res) => {
   }
 };
 
-// Get Shiprocket tracking info for an order
-module.exports.getShiprocketTrackingForOrder = async (req, res) => {
+// Get FShip tracking info for an order
+module.exports.getFShipTrackingForOrder = async (req, res) => {
   try {
     const { id } = req.params; // order id
     const order = await Order.findByPk(id);
-    if (!order || !order.shiprocket_shipment_id) {
+    if (!order || !order.fship_waybill) {
       return res
         .status(404)
-        .json({ message: "Order or Shiprocket shipment not found" });
+        .json({ message: "Order or FShip waybill not found" });
     }
-    const tracking = await getShiprocketTracking(order.shiprocket_shipment_id);
+    const tracking = await fshipService.getTrackingHistory(order.fship_waybill);
     res.json({ tracking });
   } catch (error) {
-    console.error("Error fetching Shiprocket tracking:", error);
+    console.error("Error fetching FShip tracking:", error);
     res.status(500).json({
-      message: "Failed to fetch Shiprocket tracking",
+      message: "Failed to fetch FShip tracking",
       error: error.message,
     });
   }
 };
 
-// Get Shiprocket label for an order
-module.exports.getShiprocketLabelForOrder = async (req, res) => {
+// Get FShip label for an order
+module.exports.getFShipLabelForOrder = async (req, res) => {
   try {
     const { id } = req.params; // order id
     const order = await Order.findByPk(id);
-    if (!order || !order.shiprocket_shipment_id) {
+    if (!order || !order.fship_waybill) {
       return res
         .status(404)
-        .json({ message: "Order or Shiprocket shipment not found" });
+        .json({ message: "Order or FShip waybill not found" });
     }
-    const labelData = await getShiprocketLabel(order.shiprocket_shipment_id);
-    res.json({ label_url: labelData.label_url });
+    const labelData = await fshipService.getShippingLabel(order.fship_waybill);
+    res.json({ label_data: labelData });
   } catch (error) {
-    console.error("Error fetching Shiprocket label:", error);
+    console.error("Error fetching FShip label:", error);
     res.status(500).json({
-      message: "Failed to fetch Shiprocket label",
+      message: "Failed to fetch FShip label",
       error: error.message,
     });
   }
 };
 
-// Get all Shiprocket orders
-module.exports.getAllShiprocketOrders = async (req, res) => {
+// Get FShip courier list
+module.exports.getFShipCouriers = async (req, res) => {
   try {
-    const { page = 1, limit = 50 } = req.query;
-    const shiprocketOrders = await getAllShiprocketOrders({
-      page: parseInt(page),
-      limit: parseInt(limit),
-    });
-    res.json(shiprocketOrders);
+    const couriers = await fshipService.getCourierList();
+    res.json({ couriers });
   } catch (error) {
-    console.error("Error fetching Shiprocket orders:", error);
+    console.error("Error fetching FShip couriers:", error);
     res.status(500).json({
-      message: "Failed to fetch Shiprocket orders",
+      message: "Failed to fetch FShip couriers",
       error: error.message,
     });
   }
 };
 
-// Sync existing orders with Shiprocket
-// Cancel orders in Shiprocket (bulk)
-module.exports.cancelOrdersInShiprocket = async (req, res) => {
+// Cancel orders in FShip (bulk)
+module.exports.cancelOrdersInFShip = async (req, res) => {
   try {
     const { orderIds } = req.body;
 
@@ -2033,7 +1794,6 @@ module.exports.cancelOrdersInShiprocket = async (req, res) => {
       return res.status(400).json({ message: "Order IDs are required" });
     }
 
-    const { cancelShiprocketOrder } = require("../services/shiprocketService");
     const results = {
       total: orderIds.length,
       successful: 0,
@@ -2044,22 +1804,31 @@ module.exports.cancelOrdersInShiprocket = async (req, res) => {
     for (const orderId of orderIds) {
       try {
         const order = await Order.findByPk(orderId);
-        if (!order || !order.shiprocket_order_id) {
+        if (!order || !order.fship_waybill) {
           results.failed++;
-          results.errors.push(`Order ${orderId}: No Shiprocket order ID found`);
+          results.errors.push(`Order ${orderId}: No FShip waybill found`);
           continue;
         }
 
-        const cancelResult = await cancelShiprocketOrder(
-          order.shiprocket_order_id
+        const cancelResult = await fshipService.cancelOrder(
+          order.fship_waybill,
+          "Bulk cancellation"
         );
-        if (cancelResult.success) {
-          results.successful++;
-          console.log(`Order ${orderId} cancelled in Shiprocket successfully`);
-        } else {
-          results.failed++;
-          results.errors.push(`Order ${orderId}: ${cancelResult.error}`);
-        }
+        
+        results.successful++;
+        console.log(`Order ${orderId} cancelled in FShip successfully`);
+        
+        // Update local order status
+        await order.update({ status: "cancelled" });
+        
+        // Add status history
+        await OrderStatusHistory.create({
+          order_id: order.id,
+          status: "cancelled",
+          notes: "Cancelled via FShip bulk operation",
+          created_by: "admin",
+        });
+        
       } catch (error) {
         results.failed++;
         results.errors.push(`Order ${orderId}: ${error.message}`);
@@ -2071,48 +1840,52 @@ module.exports.cancelOrdersInShiprocket = async (req, res) => {
       results,
     });
   } catch (error) {
-    console.error("Error cancelling orders in Shiprocket:", error);
+    console.error("Error cancelling orders in FShip:", error);
     res.status(500).json({
-      message: "Failed to cancel orders in Shiprocket",
+      message: "Failed to cancel orders in FShip",
       error: error.message,
     });
   }
 };
 
-module.exports.syncOrdersWithShiprocket = async (req, res) => {
+module.exports.syncOrdersWithFShip = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    console.log("=== COMPREHENSIVE SHIPROCKET SYNC PROCESS START ===");
-    console.log("This will: 1) Check credentials 2) Sync new orders 3) Update existing order statuses");
+    console.log("=== COMPREHENSIVE FSHIP SYNC PROCESS START ===");
+    console.log("This will: 1) Test connection 2) Sync new orders 3) Update existing order statuses");
 
-    // STEP 1: Test Shiprocket authentication
+    // STEP 1: Test FShip connection
     try {
-      console.log("=== STEP 1: TESTING SHIPROCKET AUTHENTICATION ===");
-      await authenticateShiprocket();
-      console.log("✅ SHIPROCKET AUTHENTICATION SUCCESS");
+      console.log("=== STEP 1: TESTING FSHIP CONNECTION ===");
+      const testResult = await fshipService.testConnection();
+      if (!testResult.success) {
+        throw new Error(testResult.message);
+      }
+      console.log("✅ FSHIP CONNECTION SUCCESS");
     } catch (authError) {
-      console.error("❌ SHIPROCKET AUTHENTICATION FAILED");
-      console.error("Auth error:", authError);
+      console.error("❌ FSHIP CONNECTION FAILED");
+      console.error("Connection error:", authError);
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: "Shiprocket authentication failed",
+        message: "FShip connection failed",
         error: authError.message,
-        step: "authentication"
+        step: "connection"
       });
     }
 
     // STEP 2: Get all orders for comprehensive sync
     console.log("=== STEP 2: FETCHING ORDERS FOR SYNC ===");
     
-    // Get orders that need initial sync (no Shiprocket IDs)
+    // Get orders that need initial sync (no FShip IDs)
     const unsyncedOrders = await Order.findAll({
       where: {
         [Op.or]: [
-          { shiprocket_order_id: null },
-          { shiprocket_shipment_id: null },
+          { fship_order_id: null },
+          { fship_waybill: null },
         ],
+        status: { [Op.notIn]: ['cancelled', 'delivered'] } // Don't sync completed orders
       },
       include: [
         { model: OrderItem, as: "OrderItems", include: [{ model: Product, as: "Product" }] },
@@ -2123,21 +1896,17 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
       limit: 25 // Limit to prevent timeout
     });
 
-    // Get orders that need status updates (already have Shiprocket IDs)
+    // Get orders that need status updates (already have FShip IDs)
     const ordersForStatusUpdate = await Order.findAll({
       where: {
-        shiprocket_order_id: { [Op.not]: null },
+        fship_waybill: { [Op.not]: null },
         status: { [Op.in]: ['pending', 'processing', 'shipped'] } // Only non-final statuses
       },
-      include: [
-        { model: User, as: "User", attributes: ["id", "username", "email"], required: false },
-        { model: GuestUser, as: "GuestUser", attributes: ["id", "email", "firstName", "lastName"], required: false },
-      ],
       limit: 25 // Limit to prevent timeout
     });
 
-    console.log(`Found ${unsyncedOrders.length} orders to sync with Shiprocket`);
-    console.log(`Found ${ordersForStatusUpdate.length} orders to update status from Shiprocket`);
+    console.log(`Found ${unsyncedOrders.length} orders to sync with FShip`);
+    console.log(`Found ${ordersForStatusUpdate.length} orders to update status from FShip`);
 
     const syncResults = {
       total_orders_processed: unsyncedOrders.length + ordersForStatusUpdate.length,
@@ -2150,472 +1919,116 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
       steps_completed: []
     };
 
-    syncResults.steps_completed.push("✅ Authentication successful");
+    syncResults.steps_completed.push("✅ Connection test successful");
     syncResults.steps_completed.push(`📊 Found ${unsyncedOrders.length} new orders and ${ordersForStatusUpdate.length} existing orders`);
 
-    // STEP 3: Sync new orders with Shiprocket
+    // STEP 3: Sync new orders with FShip
     if (unsyncedOrders.length > 0) {
-      console.log("=== STEP 3: SYNCING NEW ORDERS WITH SHIPROCKET ===");
+      console.log("=== STEP 3: SYNCING NEW ORDERS WITH FSHIP ===");
       
       for (const order of unsyncedOrders) {
         try {
-          // Enhanced duplicate prevention - check multiple conditions
-          if (order.shiprocket_order_id && order.shiprocket_shipment_id) {
-            console.log(`⏭️  Skipping order ${order.order_number} - already fully synced`);
+          console.log(`🔄 Processing new order ${order.order_number}`);
+
+          // Get shipping address
+          let shippingAddress = order.ShippingAddress;
+          if (!shippingAddress) {
+            if (order.user_id) {
+              shippingAddress = await ShippingAddress.findOne({
+                where: { user_id: order.user_id },
+              });
+            } else if (order.guest_user_id) {
+              shippingAddress = await ShippingAddress.findOne({
+                where: { guest_user_id: order.guest_user_id },
+              });
+            }
+          }
+
+          if (!shippingAddress) {
+            syncResults.failed++;
+            syncResults.errors.push(`Order ${order.order_number}: No shipping address found`);
+            console.error(`❌ No shipping address found for order ${order.order_number}`);
             continue;
           }
 
-          // Double-check by order number to prevent duplicates
-          try {
-            const duplicateCheck = await checkShiprocketOrderExists(order.order_number);
-            if (duplicateCheck.exists && duplicateCheck.order) {
-              console.log(`🔄 Found existing Shiprocket order for ${order.order_number} - updating local record`);
-              const existingOrder = duplicateCheck.order;
-              const shipments = existingOrder.shipments || [];
-              
-              await order.update({
-                shiprocket_order_id: existingOrder.id,
-                shiprocket_shipment_id: shipments.length > 0 ? shipments[0].shipment_id : null
-              }, { transaction });
-              
-              // Update status based on Shiprocket data
-              try {
-                const statusUpdate = await updateOrderStatusFromShiprocket(order, transaction);
-                if (statusUpdate.updated && statusUpdate.status_changed) {
-                  syncResults.status_updates++;
-                  console.log(`📈 Status updated for order ${order.order_number}: ${statusUpdate.old_status} → ${statusUpdate.new_status}`);
-                }
-                if (statusUpdate.tracking_updated) {
-                  syncResults.tracking_updates++;
-                }
-              } catch (statusError) {
-                console.log(`⚠️  Could not update status: ${statusError.message}`);
-              }
-              
-              syncResults.existing_orders_updated++;
-              console.log(`✅ Updated order ${order.order_number} with existing Shiprocket data`);
-              continue;
-            }
-          } catch (duplicateCheckError) {
-            console.log(`⚠️  Could not check for duplicates: ${duplicateCheckError.message} - proceeding with creation`);
-          }
+          // Get customer information
+          const isGuestOrder = !order.User && order.GuestUser;
+          const customerName = isGuestOrder 
+            ? `${order.GuestUser.firstName} ${order.GuestUser.lastName}`.trim() 
+            : (order.User?.username || "Customer");
+          const customerEmail = isGuestOrder 
+            ? order.GuestUser.email 
+            : (order.User?.email || "customer@example.com");
 
-          console.log(`🔄 Processing new order ${order.order_number} for user ${order.user_id} / guest ${order.guest_user_id}`);
+          // Prepare FShip order data
+          const fshipOrderData = {
+            customer_Name: customerName,
+            customer_Mobile: fshipService.formatPhoneNumber(shippingAddress.phone),
+            customer_Emailid: customerEmail,
+            customer_Address: shippingAddress.address,
+            landMark: "",
+            customer_Address_Type: "Home",
+            customer_PinCode: shippingAddress.pincode,
+            customer_City: shippingAddress.city || "Mumbai",
+            orderId: order.order_number,
+            invoice_Number: order.order_number,
+            payment_Mode: order.payment_type === "cod" ? 1 : 2, // 1=COD, 2=PREPAID
+            express_Type: "surface",
+            is_Ndd: 0,
+            order_Amount: parseFloat(order.total_amount),
+            tax_Amount: 0,
+            extra_Charges: 0,
+            total_Amount: parseFloat(order.final_amount),
+            shipment_Weight: 0.5, // Default weight for socks
+            shipment_Length: 25,
+            shipment_Width: 15,
+            shipment_Height: 5,
+            pick_Address_ID: 1, // Default warehouse ID
+            return_Address_ID: 1,
+            products: order.OrderItems.map((item) => ({
+              productName: item.Product.name,
+              sku: item.Product.sku || `PROD-${item.Product.id}`,
+              quantity: item.quantity,
+              unitPrice: item.price,
+              productCategory: "Socks",
+              hsnCode: "6115",
+              taxRate: 0,
+              productDiscount: 0
+            }))
+          };
 
-        // Try multiple ways to get shipping address
-        let shippingAddress = null;
+          console.log(`📦 Creating FShip order for ${order.order_number}`);
+          const fshipResponse = await fshipService.createForwardOrder(fshipOrderData);
 
-        // First, try to get from the order's included data
-        if (order.ShippingAddress) {
-          shippingAddress = order.ShippingAddress;
-          console.log("Found shipping address from order include");
-        } else if (order.user_id) {
-          // If registered user, try to find by user_id
-          shippingAddress = await ShippingAddress.findOne({
-            where: { user_id: order.user_id },
-          });
-          console.log("Found shipping address by user_id query");
-        } else if (order.guest_user_id) {
-          // If guest user, try to find by guest_user_id
-          shippingAddress = await ShippingAddress.findOne({
-            where: { guest_user_id: order.guest_user_id },
-          });
-          console.log("Found shipping address by guest_user_id query");
-        }
+          if (fshipResponse.success) {
+            // Update order with FShip data
+            await order.update({
+              fship_order_id: fshipResponse.orderId,
+              fship_waybill: fshipResponse.waybill,
+              fship_route_code: fshipResponse.routeCode,
+              tracking_number: fshipResponse.waybill,
+              status: "processing"
+            }, { transaction });
 
-        // If still not found, try to find any address for this user
-        if (!shippingAddress && order.user_id) {
-          const userAddresses = await ShippingAddress.findAll({
-            where: { user_id: order.user_id },
-          });
-          if (userAddresses.length > 0) {
-            shippingAddress = userAddresses[0];
-            console.log("Found shipping address from user addresses list");
-          }
-        }
+            syncResults.new_orders_synced++;
+            console.log(`✅ Successfully synced order ${order.order_number} with FShip`);
 
-        // If still not found and guest user, try guest addresses
-        if (!shippingAddress && order.guest_user_id) {
-          const guestAddresses = await ShippingAddress.findAll({
-            where: { guest_user_id: order.guest_user_id },
-          });
-          if (guestAddresses.length > 0) {
-            shippingAddress = guestAddresses[0];
-            console.log("Found shipping address from guest addresses list");
-          }
-        }
-
-        console.log("Shipping address found:", !!shippingAddress);
-        if (shippingAddress) {
-          console.log("Address data:", {
-            id: shippingAddress.id,
-            user_id: shippingAddress.user_id,
-            address: shippingAddress.address,
-            city: shippingAddress.city,
-            pincode: shippingAddress.pincode,
-            state: shippingAddress.state,
-            country: shippingAddress.country,
-            phone: shippingAddress.phone,
-          });
-        }
-
-        if (!shippingAddress) {
-          syncResults.failed++;
-          const userIdentifier = order.user_id 
-            ? `user ${order.user_id}` 
-            : order.guest_user_id 
-              ? `guest ${order.guest_user_id}` 
-              : 'unknown user';
-          syncResults.errors.push(
-            `Order ${order.order_number}: No shipping address found for ${userIdentifier}`
-          );
-          console.error(`❌ No shipping address found for order ${order.order_number}`);
-          continue;
-        }
-
-        // Validate and prepare address data with fallbacks
-        const billingAddress = shippingAddress.address || "Default Address";
-
-        // Format phone number using the same function that works
-        const formatPhoneNumber = (phone) => {
-          if (!phone) return "9876543210";
-          const digits = phone.toString().replace(/\D/g, "");
-
-          if (digits.length === 12 && digits.startsWith("91")) {
-            return digits.substring(2);
-          }
-
-          if (digits.length === 11 && digits.startsWith("0")) {
-            return digits.substring(1);
-          }
-
-          if (digits.length === 10) {
-            return digits;
-          }
-
-          if (digits.length < 10) {
-            return "9876543210";
-          }
-
-          if (digits.length > 10) {
-            return digits.slice(-10);
-          }
-
-          return "9876543210";
-        };
-
-        const billingPhone = formatPhoneNumber(shippingAddress.phone);
-
-        const billingCity = shippingAddress.city || "Default City";
-        const billingPincode = shippingAddress.pincode || "000000";
-        const billingState = shippingAddress.state || "Default State";
-
-        console.log("Processed address data:", {
-          billingAddress,
-          billingPhone,
-          billingCity,
-          billingPincode,
-          billingState,
-        });
-
-        // Get customer information (handle both registered users and guests)
-        const isGuestOrder = !order.User && order.GuestUser;
-        const customerName = isGuestOrder 
-          ? `${order.GuestUser.firstName} ${order.GuestUser.lastName}`.trim() 
-          : (order.User?.username || "Customer");
-        const customerEmail = isGuestOrder 
-          ? order.GuestUser.email 
-          : (order.User?.email || "customer@example.com");
-        const customerFirstName = isGuestOrder 
-          ? order.GuestUser.firstName 
-          : (order.User?.username || "Customer");
-        const customerLastName = isGuestOrder 
-          ? (order.GuestUser.lastName || "") 
-          : "";
-
-        console.log("Customer information:", {
-          isGuestOrder,
-          customerName,
-          customerEmail,
-          customerFirstName,
-          customerLastName
-        });
-
-        // Map order data to Shiprocket's required format
-        const shiprocketOrderPayload = {
-          order_id: String(order.order_number),
-          order_date: order.createdAt
-            .toISOString()
-            .slice(0, 19)
-            .replace("T", " "),
-          pickup_location: "warehouse",
-          channel_id: "7361105",
-          comment: `Order from Cross-Coin: ${order.order_number}${isGuestOrder ? ' (Guest)' : ''}`,
-          billing_customer_name: String(customerFirstName),
-          billing_last_name: String(customerLastName),
-          billing_address: String(billingAddress),
-          billing_address_2: "",
-          billing_city: String(billingCity),
-          billing_pincode: parseInt(billingPincode) || 400001,
-          billing_state: String(billingState),
-          billing_country: String(shippingAddress.country || "India"),
-          billing_email: String(customerEmail),
-          billing_phone: billingPhone,
-          shipping_is_billing: true,
-          shipping_customer_name: String(customerFirstName),
-          shipping_last_name: String(customerLastName),
-          shipping_address: String(billingAddress),
-          shipping_address_2: "",
-          shipping_city: String(billingCity),
-          shipping_pincode: parseInt(billingPincode) || 400001,
-          shipping_state: String(billingState),
-          shipping_country: String(shippingAddress.country || "India"),
-          shipping_email: String(customerEmail),
-          shipping_phone: billingPhone,
-          order_items: order.OrderItems.map((item, index) => ({
-            name: String(item.Product.name),
-            sku:
-              String(item.Product.sku || `PROD-${item.Product.id}`) +
-              `-${item.id || index}`,
-            units: parseInt(item.quantity),
-            selling_price: parseFloat(item.price),
-            discount: 0,
-            tax: 0,
-            hsn: 441122,
-          })),
-          payment_method: order.payment_type === "cod" ? "COD" : "Prepaid",
-          shipping_charges: parseFloat(order.shipping_fee || 0),
-          giftwrap_charges: 0,
-          transaction_charges: 0,
-          total_discount: parseFloat(order.discount_amount || 0),
-          sub_total: parseFloat(order.total_amount || 0),
-          length: 14,
-          breadth: 3,
-          height: 10,
-          weight: 0.70,
-        };
-
-        console.log("=== SHIPROCKET ORDER SYNC DEBUG ===");
-        console.log("Order:", order.order_number);
-        console.log("Order Financial Details:", {
-          total_amount: order.total_amount,
-          shipping_fee: order.shipping_fee,
-          discount_amount: order.discount_amount,
-          payment_type: order.payment_type
-        });
-        console.log(
-          "Full Shiprocket payload:",
-          JSON.stringify(shiprocketOrderPayload, null, 2)
-        );
-
-        // Validate payload before sending
-        const requiredFields = [
-          "order_id",
-          "order_date",
-          "pickup_location",
-          "billing_customer_name",
-          "billing_address",
-          "billing_city",
-          "billing_pincode",
-          "billing_state",
-          "billing_country",
-          "billing_email",
-          "billing_phone",
-          "order_items",
-          "payment_method",
-          "sub_total",
-        ];
-
-        const missingFields = requiredFields.filter(
-          (field) => !shiprocketOrderPayload[field]
-        );
-        if (missingFields.length > 0) {
-          console.error("❌ Missing required fields:", missingFields);
-          syncResults.failed++;
-          syncResults.errors.push(
-            `Order ${
-              order.order_number
-            }: Missing required fields: ${missingFields.join(", ")}`
-          );
-          continue;
-        }
-
-        // Validate order_items
-        if (
-          !Array.isArray(shiprocketOrderPayload.order_items) ||
-          shiprocketOrderPayload.order_items.length === 0
-        ) {
-          console.error(
-            "❌ Invalid order_items:",
-            shiprocketOrderPayload.order_items
-          );
-          syncResults.failed++;
-          syncResults.errors.push(
-            `Order ${order.order_number}: Invalid order_items`
-          );
-          continue;
-        }
-
-        console.log("✅ Payload validation passed");
-        console.log("Sending to Shiprocket API...");
-
-        const shiprocketResponse = await createShiprocketOrder(
-          shiprocketOrderPayload
-        );
-
-        // Handle both new orders and existing duplicates
-        if (shiprocketResponse.is_duplicate) {
-          console.log(`🔄 Order ${order.order_number} already exists in Shiprocket - updating local record`);
-          
-          // Update order with existing Shiprocket IDs
-          await order.update(
-            {
-              shiprocket_order_id: shiprocketResponse.order_id || null,
-              shiprocket_shipment_id:
-                (shiprocketResponse.shipments &&
-                  shiprocketResponse.shipments[0]?.shipment_id) ||
-                null,
-            },
-            { transaction }
-          );
-          
-          syncResults.existing_orders_updated++;
-          console.log(`✅ Updated order ${order.order_number} with existing Shiprocket data`);
-        } else {
-          console.log(`🆕 Created new Shiprocket order for ${order.order_number}`);
-          
-          // Update order with Shiprocket IDs
-          await order.update(
-            {
-              shiprocket_order_id: shiprocketResponse.order_id || null,
-              shiprocket_shipment_id:
-                (shiprocketResponse.shipments &&
-                  shiprocketResponse.shipments[0]?.shipment_id) ||
-                null,
-            },
-            { transaction }
-          );
-
-          // Request pickup if shipment ID exists (only for new orders)
-          if (
-            shiprocketResponse.shipments &&
-            shiprocketResponse.shipments[0]?.shipment_id
-          ) {
+            // Register pickup
             try {
-              await requestShiprocketPickup([
-                shiprocketResponse.shipments[0].shipment_id,
-              ]);
-              console.log(`📦 Pickup requested for order ${order.order_number}`);
+              await fshipService.registerPickup([fshipResponse.waybill]);
+              console.log(`📦 Pickup registered for order ${order.order_number}`);
             } catch (pickupErr) {
-              console.error(
-                "Failed to request pickup for order",
-                order.order_number,
-                pickupErr.message
-              );
+              console.error(`Failed to register pickup for order ${order.order_number}:`, pickupErr.message);
             }
           }
-
-          syncResults.new_orders_synced++;
-          console.log(`✅ Successfully synced order ${order.order_number} with Shiprocket`);
+        } catch (error) {
+          syncResults.failed++;
+          console.error(`❌ Failed to sync order ${order.order_number}:`, error.message);
+          syncResults.errors.push(`Order ${order.order_number}: ${error.message}`);
         }
-
-        // Update order status based on Shiprocket status
-        try {
-          console.log(`🔄 Updating status for order ${order.order_number} based on Shiprocket data`);
-          const statusUpdate = await updateOrderStatusFromShiprocket(order, transaction);
-          
-          if (statusUpdate.updated) {
-            if (statusUpdate.status_changed) {
-              console.log(`📈 Status updated for order ${order.order_number}: ${statusUpdate.old_status} → ${statusUpdate.new_status}`);
-            }
-            if (statusUpdate.tracking_updated) {
-              console.log(`📦 Tracking info updated for order ${order.order_number}`);
-            }
-          } else {
-            console.log(`ℹ️  Status update for order ${order.order_number}: ${statusUpdate.reason}`);
-          }
-        } catch (statusError) {
-          console.error(`⚠️  Could not update status for order ${order.order_number}:`, statusError.message);
-          // Don't fail the sync if status update fails
-        }
-      } catch (error) {
-        syncResults.failed++;
-
-        console.error("=== SHIPROCKET API ERROR ===");
-        console.error("Order:", order.order_number);
-        console.error("Error Status:", error.response?.status);
-        console.error("Error Data:", error.response?.data);
-        console.error("Error Message:", error.message);
-
-        // Handle specific duplicate order errors
-        const errorData = error.response?.data;
-        const errorMessage = error.message;
-        
-        // Check if this is a duplicate order error
-        const isDuplicateError = (
-          errorMessage.includes('already exists') ||
-          errorMessage.includes('duplicate') ||
-          (errorData && (
-            JSON.stringify(errorData).includes('already exists') ||
-            JSON.stringify(errorData).includes('duplicate') ||
-            JSON.stringify(errorData).includes('Order ID already exists')
-          ))
-        );
-
-        if (isDuplicateError) {
-          console.log(`🔄 Duplicate order detected for ${order.order_number} - attempting to find existing order`);
-          try {
-            const existingCheck = await checkShiprocketOrderExists(order.order_number);
-            if (existingCheck.exists && existingCheck.order) {
-              const existingOrder = existingCheck.order;
-              const shipments = Array.isArray(existingOrder.shipments) ? existingOrder.shipments : [];
-              
-              await order.update({
-                shiprocket_order_id: existingOrder.id,
-                shiprocket_shipment_id: shipments.length > 0 ? shipments[0].shipment_id : null
-              }, { transaction });
-              
-              // Convert this from failed to successful
-              syncResults.failed--;
-              syncResults.existing_orders_updated++;
-              console.log(`✅ Resolved duplicate - updated order ${order.order_number} with existing Shiprocket data`);
-              continue;
-            }
-          } catch (duplicateResolveError) {
-            console.error(`❌ Could not resolve duplicate for order ${order.order_number}:`, duplicateResolveError.message);
-          }
-        }
-
-        console.error("Full Error Object:", {
-          name: error.name,
-          message: error.message,
-          status: error.response?.status,
-          data: error.response?.data,
-          config: {
-            url: error.config?.url,
-            method: error.config?.method,
-            headers: error.config?.headers,
-          },
-        });
-
-        // Extract specific error details
-        let finalErrorMessage = error.message;
-        if (error.response?.data) {
-          if (typeof error.response.data === "object") {
-            finalErrorMessage = JSON.stringify(error.response.data);
-          } else {
-            finalErrorMessage = error.response.data;
-          }
-        }
-
-        syncResults.errors.push(`Order ${order.order_number}: ${finalErrorMessage}`);
-        console.error(
-          `❌ Failed to sync order ${order.order_number}: ${finalErrorMessage}`
-        );
       }
-    }
 
-    syncResults.steps_completed.push(`✅ New order sync completed: ${syncResults.new_orders_synced} created, ${syncResults.existing_orders_updated} updated`);
+      syncResults.steps_completed.push(`✅ New order sync completed: ${syncResults.new_orders_synced} created`);
     }
 
     // STEP 4: Update status for existing orders
@@ -2624,21 +2037,27 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
       
       for (const order of ordersForStatusUpdate) {
         try {
-          console.log(`🔄 Updating status for existing order ${order.order_number} (Shiprocket ID: ${order.shiprocket_order_id})`);
+          console.log(`🔄 Updating status for existing order ${order.order_number} (Waybill: ${order.fship_waybill})`);
           
-          const statusUpdate = await updateOrderStatusFromShiprocket(order, transaction);
+          const trackingData = await fshipService.getTrackingHistory(order.fship_waybill);
           
-          if (statusUpdate.updated) {
-            if (statusUpdate.status_changed) {
+          if (trackingData && trackingData.summary) {
+            const newStatus = fshipService.mapFShipStatusToCrossCoin(trackingData.summary.status);
+            
+            if (newStatus !== order.status) {
+              await order.update({ status: newStatus }, { transaction });
+              
+              // Add status history
+              await OrderStatusHistory.create({
+                order_id: order.id,
+                status: newStatus,
+                notes: `FShip sync: ${trackingData.summary.status}`,
+                created_by: "fship_sync",
+              }, { transaction });
+              
               syncResults.status_updates++;
-              console.log(`📈 Status updated for order ${order.order_number}: ${statusUpdate.old_status} → ${statusUpdate.new_status}`);
+              console.log(`📈 Status updated for order ${order.order_number}: ${order.status} → ${newStatus}`);
             }
-            if (statusUpdate.tracking_updated) {
-              syncResults.tracking_updates++;
-              console.log(`📦 Tracking info updated for order ${order.order_number}`);
-            }
-          } else {
-            console.log(`ℹ️  Status update for order ${order.order_number}: ${statusUpdate.reason}`);
           }
         } catch (statusError) {
           console.error(`⚠️  Could not update status for order ${order.order_number}:`, statusError.message);
@@ -2647,333 +2066,82 @@ module.exports.syncOrdersWithShiprocket = async (req, res) => {
         }
       }
       
-      syncResults.steps_completed.push(`✅ Status updates completed: ${syncResults.status_updates} status changes, ${syncResults.tracking_updates} tracking updates`);
+      syncResults.steps_completed.push(`✅ Status updates completed: ${syncResults.status_updates} status changes`);
     }
 
     await transaction.commit();
-    console.log("=== COMPREHENSIVE SHIPROCKET SYNC PROCESS COMPLETED ===");
+    console.log("=== COMPREHENSIVE FSHIP SYNC PROCESS COMPLETED ===");
     console.log("Final results:", syncResults);
 
     res.json({
       success: true,
-      message: "Comprehensive Shiprocket sync completed successfully",
+      message: "Comprehensive FShip sync completed successfully",
       results: syncResults,
     });
   } catch (error) {
     await transaction.rollback();
-    console.error("=== SHIPROCKET SYNC PROCESS FAILED ===");
+    console.error("=== FSHIP SYNC PROCESS FAILED ===");
     console.error("Error details:", {
       message: error.message,
       stack: error.stack,
-      response: error.response?.data,
-      status: error.response?.status,
     });
     res.status(500).json({
       success: false,
-      message: "Failed to sync orders with Shiprocket",
+      message: "Failed to sync orders with FShip",
       error: error.message,
     });
   }
 };
 
-// Update order status based on Shiprocket status
-async function updateOrderStatusFromShiprocket(order, transaction = null) {
+// Test FShip credentials
+module.exports.testFShipCredentials = async (req, res) => {
   try {
-    if (!order.shiprocket_order_id) {
-      console.log(`⏭️  Order ${order.order_number} has no Shiprocket order ID - skipping status update`);
-      return { updated: false, reason: 'No Shiprocket order ID' };
-    }
-
-    console.log(`🔄 Updating status for order ${order.order_number} from Shiprocket (ID: ${order.shiprocket_order_id})`);
+    console.log('=== Testing FShip Credentials ===');
+    const testResult = await fshipService.testConnection();
     
-    // Get current Shiprocket order details
-    const shiprocketDetails = await getShiprocketOrderDetails(order.shiprocket_order_id);
-    if (!shiprocketDetails.success) {
-      console.log(`❌ Could not get Shiprocket details for order ${order.order_number}: ${shiprocketDetails.error}`);
-      return { updated: false, reason: shiprocketDetails.error };
-    }
-
-    const shiprocketOrder = shiprocketDetails.order;
-    
-    // Ensure shipments is always an array with additional safety checks
-    let shipments = [];
-    if (shiprocketOrder.shipments) {
-      if (Array.isArray(shiprocketOrder.shipments)) {
-        shipments = shiprocketOrder.shipments;
-      } else {
-        console.log(`⚠️  Shipments is not an array for order ${order.order_number}:`, typeof shiprocketOrder.shipments, shiprocketOrder.shipments);
-        shipments = [];
-      }
-    }
-    
-    console.log(`📦 Shiprocket order details for ${order.order_number}:`, {
-      order_status: shiprocketOrder.status,
-      shipments_count: shipments.length,
-      shipments_type: typeof shiprocketOrder.shipments,
-      shipments_is_array: Array.isArray(shiprocketOrder.shipments),
-      shipments: shipments.length > 0 ? shipments.map(s => ({
-        id: s?.id || 'N/A',
-        status: s?.status || 'N/A',
-        awb: s?.awb || 'N/A',
-        courier: s?.courier_name || 'N/A'
-      })) : 'No shipments'
-    });
-    
-    // Determine the most current status
-    let currentShiprocketStatus = shiprocketOrder.status;
-    let shipmentStatus = null;
-    let trackingNumber = null;
-    let courierName = null;
-    let trackingUrl = null;
-
-    // If there are shipments, use the most recent shipment status
-    if (shipments.length > 0) {
-      const latestShipment = shipments[shipments.length - 1]; // Get latest shipment
-      shipmentStatus = latestShipment.status;
-      trackingNumber = latestShipment.awb;
-      courierName = latestShipment.courier_name;
-      
-      // Update shipment ID if not already set
-      if (!order.shiprocket_shipment_id && latestShipment.id) {
-        await order.update({ shiprocket_shipment_id: latestShipment.id }, { transaction });
-        console.log(`📦 Updated shipment ID for order ${order.order_number}: ${latestShipment.id}`);
-      }
-      
-      // Get tracking URL if available
-      try {
-        const trackingInfo = await getShiprocketOrderTracking(order.shiprocket_order_id);
-        if (trackingInfo.success && trackingInfo.tracking && trackingInfo.tracking.shipments && Array.isArray(trackingInfo.tracking.shipments) && trackingInfo.tracking.shipments.length > 0) {
-          const shipmentTracking = trackingInfo.tracking.shipments.find(s => s.shipment_id == latestShipment.id);
-          if (shipmentTracking && shipmentTracking.tracking_url) {
-            trackingUrl = shipmentTracking.tracking_url;
-          }
-        }
-      } catch (trackingError) {
-        console.log(`⚠️  Could not get tracking URL: ${trackingError.message}`);
-      }
-    }
-
-    // Map Shiprocket status to local status
-    const newLocalStatus = mapShiprocketStatusToLocal(currentShiprocketStatus, shipmentStatus);
-    
-    console.log(`📊 Status mapping for order ${order.order_number}:`, {
-      current_local_status: order.status,
-      shiprocket_order_status: currentShiprocketStatus,
-      shiprocket_shipment_status: shipmentStatus,
-      new_local_status: newLocalStatus,
-      tracking_number: trackingNumber,
-      courier_name: courierName,
-      tracking_url: trackingUrl
-    });
-
-    // Prepare update data
-    const updateData = {};
-    let statusChanged = false;
-    let trackingUpdated = false;
-
-    // Check if status needs to be updated
-    if (order.status !== newLocalStatus) {
-      updateData.status = newLocalStatus;
-      statusChanged = true;
-    }
-    
-    // Check if tracking info needs to be updated
-    if (trackingNumber && order.tracking_number !== trackingNumber) {
-      updateData.tracking_number = trackingNumber;
-      trackingUpdated = true;
-    }
-    
-    if (courierName && order.courier_name !== courierName) {
-      updateData.courier_name = courierName;
-      trackingUpdated = true;
-    }
-    
-    if (trackingUrl && order.tracking_url !== trackingUrl) {
-      updateData.tracking_url = trackingUrl;
-      trackingUpdated = true;
-    }
-
-    // Update order if there are changes
-    if (Object.keys(updateData).length > 0) {
-      await order.update(updateData, { transaction });
-      console.log(`✅ Updated order ${order.order_number}:`, updateData);
-
-      // Create status history entry if status changed
-      if (statusChanged) {
-        await OrderStatusHistory.create({
-          order_id: order.id,
-          status: newLocalStatus,
-          updated_by: null, // System update
-          created_by: 'shiprocket_sync',
-          notes: `Status updated from Shiprocket. Order status: ${currentShiprocketStatus}${shipmentStatus ? `, Shipment status: ${shipmentStatus}` : ''}${trackingNumber ? `, AWB: ${trackingNumber}` : ''}${courierName ? `, Courier: ${courierName}` : ''}`
-        }, { transaction });
-      }
-
-      return { 
-        updated: true, 
-        old_status: order.status, 
-        new_status: newLocalStatus,
-        status_changed: statusChanged,
-        tracking_updated: trackingUpdated,
-        shiprocket_status: currentShiprocketStatus,
-        shipment_status: shipmentStatus,
-        tracking_number: trackingNumber,
-        courier_name: courierName
-      };
+    if (testResult.success) {
+      res.json({
+        success: true,
+        message: "FShip credentials are valid and working!",
+        status: "success",
+        couriers: testResult.couriers,
+      });
     } else {
-      console.log(`✅ Order ${order.order_number} is already up to date`);
-      return { 
-        updated: false, 
-        reason: 'No changes needed',
-        status_changed: false,
-        tracking_updated: false
-      };
-    }
-
-  } catch (error) {
-    console.error(`❌ Error updating status for order ${order.order_number}:`, error.message);
-    return { updated: false, reason: error.message, error: true };
-  }
-}
-
-// Bulk update all orders with Shiprocket data
-module.exports.bulkUpdateOrdersFromShiprocket = async (req, res) => {
-  const transaction = await sequelize.transaction();
-  
-  try {
-    console.log('=== BULK UPDATE ALL ORDERS FROM SHIPROCKET ===');
-    
-    // Test authentication first
-    try {
-      await authenticateShiprocket();
-      console.log("✅ Shiprocket authentication successful");
-    } catch (authError) {
-      await transaction.rollback();
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
-        message: "Shiprocket authentication failed",
-        error: authError.message
+        message: "FShip authentication failed",
+        error: testResult.message,
+        status: "error",
       });
     }
-    
-    // Get all orders with Shiprocket IDs
-    const ordersWithShiprocket = await Order.findAll({
-      where: {
-        shiprocket_order_id: { [Op.not]: null }
-      },
-      include: [
-        { model: User, as: "User", attributes: ["id", "username", "email"], required: false },
-        { model: GuestUser, as: "GuestUser", attributes: ["id", "email", "firstName", "lastName"], required: false },
-      ],
-      order: [['createdAt', 'DESC']],
-      limit: 50 // Process in batches to avoid timeout
-    });
-    
-    console.log(`📦 Found ${ordersWithShiprocket.length} orders with Shiprocket IDs`);
-    
-    const results = {
-      total_processed: ordersWithShiprocket.length,
-      updated: 0,
-      already_current: 0,
-      failed: 0,
-      errors: [],
-      updated_orders: []
-    };
-    
-    for (const order of ordersWithShiprocket) {
-      try {
-        console.log(`🔄 Processing order ${order.order_number}...`);
-        
-        const updateResult = await updateOrderStatusFromShiprocket(order, transaction);
-        
-        if (updateResult.updated) {
-          results.updated++;
-          results.updated_orders.push({
-            order_number: order.order_number,
-            old_status: updateResult.old_status,
-            new_status: updateResult.new_status,
-            status_changed: updateResult.status_changed,
-            tracking_updated: updateResult.tracking_updated,
-            tracking_number: updateResult.tracking_number,
-            courier_name: updateResult.courier_name
-          });
-          console.log(`✅ Updated order ${order.order_number}: ${updateResult.old_status} → ${updateResult.new_status}`);
-        } else {
-          results.already_current++;
-          console.log(`ℹ️  Order ${order.order_number} was already current`);
-        }
-        
-      } catch (error) {
-        results.failed++;
-        results.errors.push({
-          order_number: order.order_number,
-          error: error.message
-        });
-        console.error(`❌ Failed to update order ${order.order_number}: ${error.message}`);
-      }
-    }
-    
-    await transaction.commit();
-    
-    console.log('=== BULK UPDATE COMPLETED ===');
-    console.log(`Total: ${results.total_processed}, Updated: ${results.updated}, Current: ${results.already_current}, Failed: ${results.failed}`);
-    
-    res.json({
-      success: true,
-      message: `Bulk update completed. ${results.updated} orders updated, ${results.already_current} already current, ${results.failed} failed.`,
-      results: results
-    });
-    
   } catch (error) {
-    await transaction.rollback();
-    console.error("Error in bulk update:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to bulk update orders",
-      error: error.message
-    });
-  }
-};
-module.exports.testShiprocketCredentials = async (req, res) => {
-  try {
-    console.log('=== Testing Shiprocket Credentials ===');
-    const token = await authenticateShiprocket();
-    
-    res.json({
-      success: true,
-      message: "Shiprocket credentials are valid and working!",
-      status: "success",
-      token_received: token ? true : false,
-    });
-  } catch (error) {
-    console.error('=== Shiprocket Test Failed ===');
+    console.error('=== FShip Test Failed ===');
     console.error('Error:', error.message);
     
     res.status(400).json({
       success: false,
-      message: "Shiprocket authentication failed",
+      message: "FShip authentication failed",
       error: error.message,
       status: "error",
       troubleshooting: {
-        step1: "Verify SHIPROCKET_EMAIL is set in environment variables",
-        step2: "Verify SHIPROCKET_PASSWORD is set in environment variables",
-        step3: "Check if your Shiprocket account is active",
-        step4: "Ensure API access is enabled in Shiprocket dashboard (Settings > API)",
-        step5: "Check if your server IP is whitelisted in Shiprocket",
-        step6: "Verify credentials by logging into https://app.shiprocket.in"
+        step1: "Verify FSHIP_API_KEY is set in environment variables",
+        step2: "Verify FSHIP_ENVIRONMENT is set (staging/production)",
+        step3: "Check if your FShip account is active",
+        step4: "Ensure API access is enabled in FShip dashboard",
+        step5: "Verify credentials by contacting FShip support"
       }
     });
   }
 };
 
-// Update single order from Shiprocket (for testing and manual updates)
-module.exports.updateSingleOrderFromShiprocket = async (req, res) => {
+// Update single order from FShip (for testing and manual updates)
+module.exports.updateSingleOrderFromFShip = async (req, res) => {
   const transaction = await sequelize.transaction();
   
   try {
     const { id } = req.params;
     
-    console.log(`=== UPDATING SINGLE ORDER FROM SHIPROCKET: ${id} ===`);
+    console.log(`=== UPDATING SINGLE ORDER FROM FSHIP: ${id} ===`);
     
     // Find the order
     const order = await Order.findByPk(id, {
@@ -2991,31 +2159,68 @@ module.exports.updateSingleOrderFromShiprocket = async (req, res) => {
       });
     }
     
-    if (!order.shiprocket_order_id) {
+    if (!order.fship_waybill) {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: "Order has no Shiprocket ID - cannot update from Shiprocket"
+        message: "Order has no FShip waybill - cannot update from FShip"
       });
     }
     
-    console.log(`Found order: ${order.order_number} with Shiprocket ID: ${order.shiprocket_order_id}`);
+    console.log(`Found order: ${order.order_number} with FShip waybill: ${order.fship_waybill}`);
     
-    // Test authentication first
+    // Test FShip connection first
     try {
-      await authenticateShiprocket();
-      console.log("✅ Shiprocket authentication successful");
+      const testResult = await fshipService.testConnection();
+      if (!testResult.success) {
+        throw new Error(testResult.message);
+      }
+      console.log("✅ FShip connection successful");
     } catch (authError) {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: "Shiprocket authentication failed",
+        message: "FShip connection failed",
         error: authError.message
       });
     }
     
-    // Update the order from Shiprocket
-    const updateResult = await updateOrderStatusFromShiprocket(order, transaction);
+    // Update the order from FShip
+    let updateResult = { updated: false, reason: "No updates needed" };
+    
+    try {
+      const trackingData = await fshipService.getTrackingHistory(order.fship_waybill);
+      
+      if (trackingData && trackingData.summary) {
+        const newStatus = fshipService.mapFShipStatusToCrossCoin(trackingData.summary.status);
+        
+        if (newStatus !== order.status) {
+          await order.update({ status: newStatus }, { transaction });
+          
+          // Add status history
+          await OrderStatusHistory.create({
+            order_id: order.id,
+            status: newStatus,
+            notes: `FShip manual update: ${trackingData.summary.status}`,
+            created_by: "manual_fship_update",
+          }, { transaction });
+          
+          updateResult = {
+            updated: true,
+            old_status: order.status,
+            new_status: newStatus,
+            fship_status: trackingData.summary.status
+          };
+        }
+      }
+    } catch (trackingError) {
+      console.error("Failed to get FShip tracking data:", trackingError.message);
+      updateResult = {
+        updated: false,
+        error: true,
+        reason: trackingError.message
+      };
+    }
     
     await transaction.commit();
     
@@ -3030,17 +2235,16 @@ module.exports.updateSingleOrderFromShiprocket = async (req, res) => {
     
     res.json({
       success: true,
-      message: updateResult.updated ? "Order updated successfully from Shiprocket" : "Order was already up to date",
+      message: updateResult.updated ? "Order updated successfully from FShip" : "Order was already up to date",
       update_result: updateResult,
       order: {
         id: updatedOrder.id,
         order_number: updatedOrder.order_number,
         status: updatedOrder.status,
-        shiprocket_order_id: updatedOrder.shiprocket_order_id,
-        shiprocket_shipment_id: updatedOrder.shiprocket_shipment_id,
+        fship_order_id: updatedOrder.fship_order_id,
+        fship_waybill: updatedOrder.fship_waybill,
         tracking_number: updatedOrder.tracking_number,
         courier_name: updatedOrder.courier_name,
-        tracking_url: updatedOrder.tracking_url,
         created_at: updatedOrder.created_at,
         updated_at: updatedOrder.updated_at
       },
@@ -3049,10 +2253,10 @@ module.exports.updateSingleOrderFromShiprocket = async (req, res) => {
     
   } catch (error) {
     await transaction.rollback();
-    console.error("Error updating single order from Shiprocket:", error);
+    console.error("Error updating single order from FShip:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to update order from Shiprocket",
+      message: "Failed to update order from FShip",
       error: error.message
     });
   }
@@ -3087,51 +2291,78 @@ module.exports.trackOrderByOrderNumber = async (req, res) => {
     
     console.log(`Found order: ${order.order_number} (ID: ${order.id})`);
     console.log(`Current status: ${order.status}`);
-    console.log(`Shiprocket Order ID: ${order.shiprocket_order_id}`);
+    console.log(`FShip Order ID: ${order.fship_order_id}`);
+    console.log(`FShip Waybill: ${order.fship_waybill}`);
     console.log(`Tracking Number: ${order.tracking_number}`);
     
     let updateResult = null;
-    let shiprocketData = null;
+    let fshipData = null;
     
-    // If order has Shiprocket ID, try to update from Shiprocket
-    if (order.shiprocket_order_id) {
+    // If order has FShip waybill, try to update from FShip
+    if (order.fship_waybill) {
       try {
-        console.log("🔐 Authenticating with Shiprocket...");
-        await authenticateShiprocket();
-        console.log("✅ Shiprocket authentication successful");
+        console.log("🔐 Testing FShip connection...");
+        const testResult = await fshipService.testConnection();
+        if (!testResult.success) {
+          throw new Error(testResult.message);
+        }
+        console.log("✅ FShip connection successful");
         
-        console.log("🔄 Updating order from Shiprocket...");
-        updateResult = await updateOrderStatusFromShiprocket(order, transaction);
+        console.log("🔄 Updating order from FShip...");
+        const trackingData = await fshipService.getTrackingHistory(order.fship_waybill);
         
-        // Get detailed Shiprocket data for response
-        const shiprocketDetails = await getShiprocketOrderDetails(order.shiprocket_order_id);
-        if (shiprocketDetails.success) {
-          shiprocketData = {
-            order_status: shiprocketDetails.order.status,
-            shipments: shiprocketDetails.order.shipments?.map(s => ({
-              id: s.id,
-              status: s.status,
-              awb: s.awb,
-              courier_name: s.courier_name,
-              pickup_date: s.pickup_date,
-              delivered_date: s.delivered_date
-            })) || []
+        if (trackingData && trackingData.summary) {
+          const newStatus = fshipService.mapFShipStatusToCrossCoin(trackingData.summary.status);
+          
+          if (newStatus !== order.status) {
+            await order.update({ status: newStatus }, { transaction });
+            
+            // Add status history
+            await OrderStatusHistory.create({
+              order_id: order.id,
+              status: newStatus,
+              notes: `FShip tracking update: ${trackingData.summary.status}`,
+              created_by: "fship_tracking",
+            }, { transaction });
+            
+            updateResult = {
+              updated: true,
+              old_status: order.status,
+              new_status: newStatus,
+              fship_status: trackingData.summary.status
+            };
+          } else {
+            updateResult = {
+              updated: false,
+              reason: "Status already up to date"
+            };
+          }
+          
+          // Prepare FShip data for response
+          fshipData = {
+            order_status: trackingData.summary.status,
+            tracking_history: trackingData.history || []
+          };
+        } else {
+          updateResult = {
+            updated: false,
+            reason: "No tracking data available from FShip"
           };
         }
         
-      } catch (shiprocketError) {
-        console.error("❌ Shiprocket update failed:", shiprocketError.message);
+      } catch (fshipError) {
+        console.error("❌ FShip update failed:", fshipError.message);
         updateResult = { 
           updated: false, 
           error: true, 
-          reason: shiprocketError.message 
+          reason: fshipError.message 
         };
       }
     } else {
-      console.log("⚠️  Order has no Shiprocket ID - cannot update from Shiprocket");
+      console.log("⚠️  Order has no FShip waybill - cannot update from FShip");
       updateResult = { 
         updated: false, 
-        reason: "No Shiprocket ID found for this order" 
+        reason: "No FShip waybill found for this order" 
       };
     }
     
@@ -3152,7 +2383,7 @@ module.exports.trackOrderByOrderNumber = async (req, res) => {
     
     res.json({
       success: true,
-      message: updateResult?.updated ? "Order found and updated from Shiprocket" : "Order found",
+      message: updateResult?.updated ? "Order found and updated from FShip" : "Order found",
       order: {
         id: finalOrder.id,
         order_number: finalOrder.order_number,
@@ -3161,11 +2392,10 @@ module.exports.trackOrderByOrderNumber = async (req, res) => {
         total_amount: finalOrder.total_amount,
         final_amount: finalOrder.final_amount,
         payment_type: finalOrder.payment_type,
-        shiprocket_order_id: finalOrder.shiprocket_order_id,
-        shiprocket_shipment_id: finalOrder.shiprocket_shipment_id,
+        fship_order_id: finalOrder.fship_order_id,
+        fship_waybill: finalOrder.fship_waybill,
         tracking_number: finalOrder.tracking_number,
         courier_name: finalOrder.courier_name,
-        tracking_url: finalOrder.tracking_url,
         created_at: finalOrder.created_at,
         updated_at: finalOrder.updated_at
       },
@@ -3177,10 +2407,9 @@ module.exports.trackOrderByOrderNumber = async (req, res) => {
         has_tracking: !!finalOrder.tracking_number,
         tracking_number: finalOrder.tracking_number,
         courier_name: finalOrder.courier_name,
-        tracking_url: finalOrder.tracking_url,
         current_status: finalOrder.status
       },
-      shiprocket_data: shiprocketData,
+      fship_data: fshipData,
       update_result: updateResult,
       status_history: finalOrder.OrderStatusHistories?.map(history => ({
         id: history.id,

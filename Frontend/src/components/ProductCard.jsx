@@ -1,5 +1,5 @@
 import React from "react";
-import Image from "next/image";
+import SafeImage from "./common/SafeImage";
 import { FiHeart, FiShoppingCart } from "react-icons/fi";
 import { HiOutlineEye } from "react-icons/hi2";
 import { useRouter } from "next/router";
@@ -98,14 +98,12 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
           <span className="product-badge">{formatBadge(product.badge)}</span>
         )}
         {productImage ? (
-          <Image
-            src={productImage}
+          <SafeImage
+            imageData={imageData}
             alt={product?.name || "Product Image"}
-            width={300}
-            height={300}
-            sizes="(max-width: 500px) 50vw, (max-width: 768px) 33vw, 300px"
+            width="300px"
+            height="300px"
             style={{ objectFit: "cover", background: "#f5f5f5" }}
-            loading="lazy"
           />
         ) : (
           <div

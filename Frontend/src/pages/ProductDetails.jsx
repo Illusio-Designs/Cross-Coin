@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
-import Image from "next/image";
+import SafeImage from "../components/common/SafeImage";
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
@@ -1032,42 +1032,24 @@ export default function ProductDetails() {
               )}
               {variationImages[selectedThumbnail] && (variationImages[selectedThumbnail].image_url || variationImages[selectedThumbnail].url || variationImages[selectedThumbnail]) ? (
                 <>
-                  <Image
-                    src={forceEnvImageBase(
-                      variationImages[selectedThumbnail]?.image_url ||
+                  <SafeImage
+                    imageData={{
+                      image_url: variationImages[selectedThumbnail]?.image_url ||
                         variationImages[selectedThumbnail]?.url ||
                         variationImages[selectedThumbnail]
-                    )}
+                    }}
                     alt={variationImages[selectedThumbnail]?.alt_text || product.name}
-                    width={900}
-                    height={900}
-                    priority
-                    sizes="(max-width: 768px) 100vw, 600px"
+                    width="100%"
+                    height="auto"
                     style={{
-                      width: "100%",
-                      height: "auto",
                       objectFit: "contain",
                       boxShadow: "0 2px 8px #eee",
                       background: "#eee",
                       display: "block",
+                      cursor: "pointer"
                     }}
-                    onLoad={() =>
-                      setImageLoaded((prev) => ({
-                        ...prev,
-                        [selectedThumbnail]: true,
-                      }))
-                    }
-                    onError={() =>
-                      setImageLoaded((prev) => ({
-                        ...prev,
-                        [selectedThumbnail]: true,
-                      }))
-                    }
                     onClick={() => setIsZoomOpen(true)}
                   />
-                  {!imageLoaded[selectedThumbnail] && (
-                    <div className="shimmer-placeholder" />
-                  )}
                 </>
               ) : (
                 <div style={{ width: 400, height: 400, background: '#eee', borderRadius: 8 }} />
@@ -1103,23 +1085,13 @@ export default function ProductDetails() {
               {variationImages.map((image, idx) => (
                 (image && (image.image_url || image.url || image)) ? (
                   <div key={image.id || idx} style={{ position: 'relative', width: 80, height: 80 }}>
-                    {/* Skeleton placeholder for thumbnail */}
-                    {!imageLoaded[idx] && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: 0, left: 0, right: 0, bottom: 0,
-                          background: '#eee',
-                          zIndex: 1
-                        }}
-                      />
-                    )}
-                    <Image
-                      src={forceEnvImageBase(image.image_url || image.url || image)}
+                    <SafeImage
+                      imageData={{
+                        image_url: image.image_url || image.url || image
+                      }}
                       alt={image.alt_text || `${product.name} thumbnail ${idx + 1}`}
-                      width={80}
-                      height={80}
-                      sizes="80px"
+                      width="80px"
+                      height="80px"
                       style={{
                         objectFit: "cover",
                         border:
@@ -1130,17 +1102,8 @@ export default function ProductDetails() {
                         background: "#eee",
                         display: "block",
                       }}
-                      onLoad={() =>
-                        setImageLoaded((prev) => ({ ...prev, [idx]: true }))
-                      }
-                      onError={() =>
-                        setImageLoaded((prev) => ({ ...prev, [idx]: true }))
-                      }
                       onClick={() => setSelectedThumbnail(idx)}
                     />
-                    {!imageLoaded[idx] && (
-                      <div className="shimmer-placeholder" style={{ width: 80, height: 80, position: 'absolute', top: 0, left: 0 }} />
-                    )}
                   </div>
                 ) : (
                   <div key={image.id || idx} style={{ width: 80, height: 80, background: '#eee', borderRadius: 4 }} />
@@ -1150,12 +1113,12 @@ export default function ProductDetails() {
             {/* Zoom Modal */}
             {isZoomOpen && (
               <Modal isOpen={isZoomOpen} onClose={() => setIsZoomOpen(false)}>
-                <img
-                  src={forceEnvImageBase(
-                    variationImages[selectedThumbnail]?.image_url ||
+                <SafeImage
+                  imageData={{
+                    image_url: variationImages[selectedThumbnail]?.image_url ||
                     variationImages[selectedThumbnail]?.url ||
                     variationImages[selectedThumbnail]
-                  )}
+                  }}
                   alt="Zoomed"
                   style={{ width: '100%', maxWidth: 700, objectFit: 'contain', borderRadius: 8 }}
                 />
@@ -1376,9 +1339,11 @@ export default function ProductDetails() {
                             {review.ReviewImages && review.ReviewImages.length > 0 && (
                     <div className="review-images" style={{ marginTop: 8, display: 'flex', gap: 4 }}>
                       {review.ReviewImages.map((image, imgIdx) => (
-                        <img
+                        <SafeImage
                           key={imgIdx}
-                          src={forceEnvImageBase(`/uploads/reviews/${image.fileName}`)}
+                          imageData={{
+                            image_url: `/uploads/reviews/${image.fileName}`
+                          }}
                           alt={`Review image ${imgIdx + 1}`}
                           style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }}
                         />

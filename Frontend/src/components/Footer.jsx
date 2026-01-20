@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { AiOutlineMail } from "react-icons/ai";
 import { FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn } from "react-icons/fa";
 import { MdOutlinePhoneInTalk } from "react-icons/md"; 
-import Image from "next/image";
+import SafeImage from "./common/SafeImage";
 import { getPublicCategories } from "../services/publicindex";
 
 const Footer = () => {
@@ -34,7 +34,13 @@ const Footer = () => {
         <div className="footer__col footer__brand">
           <div className="footer__logo">
             <span className="footer__logo">
-            <Image src="/assets/crosscoin_logo.webp" alt="logo" width={120} height={40} unoptimized />
+            <SafeImage 
+              imageData={{ image_url: "/assets/crosscoin_logo.webp" }}
+              alt="logo" 
+              width="120px" 
+              height="40px" 
+              style={{ objectFit: 'contain' }}
+            />
             </span>
           </div>
           <p>Discover premium quality socks designed for comfort and style. Join our community for exclusive deals, new arrivals, and special offers on your favorite Cross Coin collections!</p>

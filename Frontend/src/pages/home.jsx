@@ -4,7 +4,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import Testimonials from "../components/Testimonials";
 import ProductCard from "../components/ProductCard";
-import Image from "next/image";
+import SafeImage from "../components/common/SafeImage";
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -522,12 +522,10 @@ const Home = () => {
           {slides.length > 0 ? (
             <div className="hero-slide" key={current}>
               <div className="hero-slide__image">
-                <Image 
-                  src={slides[current].image} 
+                <SafeImage 
+                  imageData={{ image_url: slides[current].image }}
                   alt={slides[current].title} 
-                  fill
-                  priority
-                  style={{ objectFit: 'cover' }}
+                  style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                 />
               </div>
               <div className="hero-slide__content">
@@ -763,29 +761,27 @@ const Home = () => {
                 return (
                   <div key={product.id} className={`featured-product-card ${expandedCards[index] ? 'expanded' : ''}`}>
                     <div className="product-images">
-                      <Image
+                      <SafeImage
                         className="main-image"
-                        src={forceEnvImageBase(variationImages[state.selectedThumbnail])}
+                        imageData={{ image_url: variationImages[state.selectedThumbnail] }}
                         alt={product.name}
-                        width={400}
-                        height={400}
+                        width="400px"
+                        height="400px"
                         style={{ objectFit: 'cover' }}
-                        unoptimized
                       />
                       <div className="thumbnail-images">
                         {variationImages.map((src, idx) => (
-                          <Image
+                          <SafeImage
                             key={idx}
-                            src={forceEnvImageBase(src)}
+                            imageData={{ image_url: src }}
                             alt={`${product.name} thumbnail ${idx + 1}`}
                             className={state.selectedThumbnail === idx ? 'active' : ''}
                             onClick={() => {
                               setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, selectedThumbnail: idx } : s));
                             }}
-                            width={60}
-                            height={60}
-                            style={{ objectFit: 'cover' }}
-                            unoptimized
+                            width="60px"
+                            height="60px"
+                            style={{ objectFit: 'cover', cursor: 'pointer' }}
                           />
                         ))}
                       </div>
