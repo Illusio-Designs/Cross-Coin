@@ -1,28 +1,49 @@
+// Cache for processed image URLs to prevent repeated processing
+const imageUrlCache = new Map();
+
+// Clear image URL cache (useful for development or when URLs change)
+export function clearImageUrlCache() {
+  imageUrlCache.clear();
+}
+
 // Normalize image URL to ensure consistent formatting
 export function normalizeImageUrl(imageUrl) {
   if (!imageUrl || typeof imageUrl !== 'string') {
     return "/assets/card1-left.webp";
   }
   
+  // Check cache first
+  if (imageUrlCache.has(imageUrl)) {
+    return imageUrlCache.get(imageUrl);
+  }
+  
+  let finalUrl;
+  
   // If it's already a full HTTP URL, return as-is
   if (imageUrl.startsWith("http")) {
-    return imageUrl;
+    finalUrl = imageUrl;
   }
-  
   // If it's an asset path, return as-is
-  if (imageUrl.startsWith("/assets/")) {
-    return imageUrl;
+  else if (imageUrl.startsWith("/assets/")) {
+    finalUrl = imageUrl;
+  }
+  else {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
+    
+    // If it already starts with /uploads/, just prepend the base URL
+    if (imageUrl.startsWith("/uploads/")) {
+      finalUrl = `${baseUrl}${imageUrl}`;
+    }
+    // If it's just a filename, add the full uploads/products path
+    else {
+      finalUrl = `${baseUrl}/uploads/products/${imageUrl}`;
+    }
   }
   
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
+  // Cache the result
+  imageUrlCache.set(imageUrl, finalUrl);
   
-  // If it already starts with /uploads/, just prepend the base URL
-  if (imageUrl.startsWith("/uploads/")) {
-    return `${baseUrl}${imageUrl}`;
-  }
-  
-  // If it's just a filename, add the full uploads/products path
-  return `${baseUrl}/uploads/products/${imageUrl}`;
+  return finalUrl;
 }
 
 export function getProductImageSrc(imageData) {
@@ -47,7 +68,7 @@ export function getOptimizedImageSrc(
   height = 300,
   quality = 80
 ) {
-  const baseSrc = getProductImageSrc(imageData);
+  const baseSrc = getDirectImageUrl(imageData);
 
   // If it's an external URL or asset, return as-is
   if (baseSrc.startsWith("http") || baseSrc.startsWith("/assets/")) {
@@ -72,7 +93,7 @@ export async function checkImageAccessibility(imageUrl) {
 
 // Get image with fallback handling
 export function getImageWithFallback(imageData, fallbackImage = "/assets/card1-left.webp") {
-  const primaryImage = getProductImageSrc(imageData);
+  const primaryImage = getDirectImageUrl(imageData);
   
   // If it's already a fallback asset, return it
   if (primaryImage.startsWith("/assets/")) {
@@ -91,43 +112,45 @@ export function handleImageError(event, fallbackSrc = "/assets/card1-left.webp")
   }
 }
 
-// Get direct image URL (bypass Next.js optimization)
+// Cache for processed image URLs to prevent repeated processing
+const imageUrlCache = new Map();
+
+// Get direct image URL (bypass Next.js optimization) with caching
 export function getDirectImageUrl(imageData) {
   if (!imageData || !imageData.image_url) {
-    console.log('getDirectImageUrl: No image data, using fallback');
     return "/assets/card1-left.webp";
   }
   
   const imageUrl = imageData.image_url;
-  console.log('getDirectImageUrl: Input image URL:', imageUrl);
+  
+  // Check cache first
+  if (imageUrlCache.has(imageUrl)) {
+    return imageUrlCache.get(imageUrl);
+  }
+  
+  let finalUrl;
   
   // If it's already a full HTTP URL, return as-is
   if (imageUrl.startsWith("http")) {
-    console.log('getDirectImageUrl: Already full HTTP URL:', imageUrl);
-    return imageUrl;
+    finalUrl = imageUrl;
   }
-  
   // If it's an asset path, return as-is
-  if (imageUrl.startsWith("/assets/")) {
-    console.log('getDirectImageUrl: Asset path:', imageUrl);
-    return imageUrl;
+  else if (imageUrl.startsWith("/assets/")) {
+    finalUrl = imageUrl;
   }
-  
-  // Get the base URL - check both environment variable and fallback
-  const envApiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const baseUrl = envApiUrl || "https://api.crosscoin.in";
-  console.log('getDirectImageUrl: Environment API URL:', envApiUrl);
-  console.log('getDirectImageUrl: Base URL used:', baseUrl);
-  
   // If it already starts with /uploads/, just prepend the base URL
-  if (imageUrl.startsWith("/uploads/")) {
-    const finalUrl = `${baseUrl}${imageUrl}`;
-    console.log('getDirectImageUrl: Final URL (uploads path):', finalUrl);
-    return finalUrl;
+  else if (imageUrl.startsWith("/uploads/")) {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
+    finalUrl = `${baseUrl}${imageUrl}`;
+  }
+  // If it's just a filename, add the full uploads/products path
+  else {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
+    finalUrl = `${baseUrl}/uploads/products/${imageUrl}`;
   }
   
-  // If it's just a filename, add the full uploads/products path
-  const finalUrl = `${baseUrl}/uploads/products/${imageUrl}`;
-  console.log('getDirectImageUrl: Final URL (filename):', finalUrl);
+  // Cache the result
+  imageUrlCache.set(imageUrl, finalUrl);
+  
   return finalUrl;
 }
