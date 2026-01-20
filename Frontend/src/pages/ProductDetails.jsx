@@ -3,7 +3,6 @@ import { useSearchParams } from "next/navigation";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import SafeImage from "../components/common/SafeImage";
-import ImageDebugger from "../components/common/ImageDebugger";
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
@@ -1016,7 +1015,6 @@ export default function ProductDetails() {
     >
       <div className="product-details-container">
         <Header />
-        <ImageDebugger testUrl="https://api.crosscoin.in/uploads/products/variation_0_image-1752745582906-960261465.png" />
         <div className="product-details">
           <div className="product-gallery" style={{ textAlign: 'center' }}>
             <div style={{ position: 'relative', display: 'inline-block' }}>
