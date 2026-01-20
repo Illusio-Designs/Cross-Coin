@@ -5,6 +5,7 @@ import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
 import Modal from "@/components/common/Modal";
 import Button from "@/components/common/Button";
+import SafeImage from "@/components/common/SafeImage";
 import '../../../styles/dashboard/orders.css';
 import "../../../styles/dashboard/seo.css"; // Reusing styles for consistency
 import { toast } from 'react-hot-toast';
@@ -66,11 +67,11 @@ const Orders = () => {
     const syncOrders = async () => {
         setLoading(true);
         try {
-            const result = await orderService.syncOrdersWithShiprocket();
+            const result = await orderService.syncOrdersWithFShip();
             
             // Show detailed results
             const { results } = result;
-            let message = `Sync completed! `;
+            let message = `FShip sync completed! `;
             
             if (results.total_orders_processed > 0) {
                 message += `Processed ${results.total_orders_processed} orders. `;
@@ -102,57 +103,10 @@ const Orders = () => {
             // Refresh orders after sync
             fetchOrders();
         } catch (error) {
-            console.error('=== Order Sync Failed ===');
+            console.error('=== FShip Order Sync Failed ===');
             console.error('Error object:', error);
             
-            let errorMessage = 'Failed to sync orders';
-            if (error.message) {
-                errorMessage = error.message;
-            } else if (error.error) {
-                errorMessage = error.error;
-            }
-            
-            toast.error(errorMessage);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const bulkUpdateOrders = async () => {
-        setLoading(true);
-        try {
-            const result = await orderService.bulkUpdateOrdersFromShiprocket();
-            
-            // Show detailed results
-            const { results } = result;
-            let message = `Bulk update completed! `;
-            
-            if (results.total_processed > 0) {
-                message += `Processed ${results.total_processed} orders. `;
-            }
-            
-            if (results.updated > 0) {
-                message += `${results.updated} orders updated. `;
-            }
-            
-            if (results.already_current > 0) {
-                message += `${results.already_current} already current. `;
-            }
-            
-            if (results.failed > 0) {
-                message += `${results.failed} orders failed. `;
-                console.error('Failed orders:', results.errors);
-            }
-            
-            toast.success(message);
-            
-            // Refresh orders after update
-            fetchOrders();
-        } catch (error) {
-            console.error('=== Bulk Update Failed ===');
-            console.error('Error object:', error);
-            
-            let errorMessage = 'Failed to bulk update orders';
+            let errorMessage = 'Failed to sync orders with FShip';
             if (error.message) {
                 errorMessage = error.message;
             } else if (error.error) {
@@ -167,7 +121,7 @@ const Orders = () => {
 
     const updateSingleOrder = async (orderId) => {
         try {
-            const result = await orderService.updateSingleOrderFromShiprocket(orderId);
+            const result = await orderService.updateSingleOrderFromFShip(orderId);
             
             if (result.success) {
                 let message = result.message;
@@ -190,7 +144,7 @@ const Orders = () => {
             console.error('=== Single Order Update Failed ===');
             console.error('Error object:', error);
             
-            let errorMessage = 'Failed to update order from Shiprocket';
+            let errorMessage = 'Failed to update order from FShip';
             if (error.message) {
                 errorMessage = error.message;
             } else if (error.error) {
@@ -201,20 +155,20 @@ const Orders = () => {
         }
     };
 
-    const testShiprocketCredentials = async () => {
+    const testFShipCredentials = async () => {
         try {
-            const result = await orderService.testShiprocketCredentials();
+            const result = await orderService.testFShipCredentials();
             
             if (result.success) {
-                toast.success('Shiprocket credentials are valid and working!');
+                toast.success('FShip credentials are valid and working!');
             } else {
-                toast.error(result.message || 'Shiprocket credentials test failed');
+                toast.error(result.message || 'FShip credentials test failed');
             }
         } catch (error) {
-            console.error('=== Shiprocket Test Failed ===');
+            console.error('=== FShip Test Failed ===');
             console.error('Error object:', error);
             
-            let errorMessage = 'Failed to test Shiprocket credentials';
+            let errorMessage = 'Failed to test FShip credentials';
             if (error.message) {
                 errorMessage = error.message;
             } else if (error.error) {
@@ -405,7 +359,7 @@ const Orders = () => {
         };
 
         orders.forEach(order => {
-            if (order.shiprocket_order_id || order.shiprocket_shipment_id) {
+            if (order.fship_order_id || order.fship_waybill) {
                 stats.synced++;
             } else {
                 stats.notSynced++;
@@ -531,10 +485,10 @@ const Orders = () => {
             cell: (row) => <span className={`status-badge status-${row.status}`}>{row.status}</span> 
         },
         {
-            header: "Shiprocket Sync",
+            header: "FShip Sync",
             cell: (row) =>
-                row.shiprocket_order_id
-                    ? <span className="status-badge status-synced">Synced<br/><small>ID: {row.shiprocket_order_id}</small></span>
+                row.fship_order_id || row.fship_waybill
+                    ? <span className="status-badge status-synced">Synced<br/><small>AWB: {row.fship_waybill || 'Pending'}</small></span>
                     : <span className="status-badge status-unsynced">Not Synced</span>
         },
         {
@@ -553,10 +507,10 @@ const Orders = () => {
                         View
                     </button>
                     
-                    {row.shiprocket_order_id && (
+                    {(row.fship_order_id || row.fship_waybill) && (
                         <button 
-                            className="action-btn update-shiprocket" 
-                            title="Update from Shiprocket" 
+                            className="action-btn update-fship" 
+                            title="Update from FShip" 
                             onClick={() => updateSingleOrder(row.id)}
                             style={{
                                 background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
@@ -586,7 +540,7 @@ const Orders = () => {
                         marginTop: '4px',
                         fontStyle: 'italic'
                     }}>
-                        {row.shiprocket_order_id ? 'Shiprocket synced' : 'Not synced'}
+                        {(row.fship_order_id || row.fship_waybill) ? 'FShip synced' : 'Not synced'}
                     </div>
                 </div>
             )
@@ -642,45 +596,19 @@ const Orders = () => {
                         <button 
                             className="sync-button"
                             onClick={syncOrders}
-                            title="Comprehensive Shiprocket sync - Tests credentials, syncs new orders, and updates statuses"
+                            title="Comprehensive FShip sync - Tests credentials, syncs new orders, and updates statuses"
                             disabled={loading}
                         >
                             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
-                            {loading ? 'Syncing...' : 'Comprehensive Sync'}
-                        </button>
-                        
-                        <button 
-                            className="bulk-update-button"
-                            onClick={bulkUpdateOrders}
-                            title="Update all existing orders with latest Shiprocket data"
-                            disabled={loading}
-                            style={{
-                                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '8px',
-                                padding: '0.75rem 1rem',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                transition: 'all 0.3s ease',
-                                fontSize: '0.875rem'
-                            }}
-                        >
-                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                            </svg>
-                            {loading ? 'Updating...' : 'Bulk Update'}
+                            {loading ? 'Syncing...' : 'FShip Sync'}
                         </button>
                         
                         <button 
                             className="test-credentials-button"
-                            onClick={testShiprocketCredentials}
-                            title="Test Shiprocket API credentials"
+                            onClick={testFShipCredentials}
+                            title="Test FShip API credentials"
                             disabled={loading}
                             style={{
                                 background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
@@ -700,7 +628,7 @@ const Orders = () => {
                             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            Test API
+                            Test FShip API
                         </button>
                         
                         <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
@@ -740,11 +668,10 @@ const Orders = () => {
 
                 <div style={{ marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ fontSize: '14px', color: '#888', lineHeight: '1.4' }}>
-                        <strong>Shiprocket Integration:</strong><br/>
-                        • <strong>Comprehensive Sync:</strong> Tests credentials, syncs new orders, updates statuses<br/>
-                        • <strong>Bulk Update:</strong> Updates all existing orders with latest Shiprocket data<br/>
+                        <strong>FShip Integration:</strong><br/>
+                        • <strong>FShip Sync:</strong> Tests credentials, syncs new orders, updates statuses<br/>
                         • <strong>Single Update:</strong> Update individual orders (available for synced orders)<br/>
-                        • <strong>Test API:</strong> Verify Shiprocket credentials
+                        • <strong>Test FShip API:</strong> Verify FShip credentials and connection
                     </div>
                 </div>
 
@@ -835,8 +762,8 @@ const Orders = () => {
                             </div>
 
                             <div className="info-note">
-                                <strong>Shiprocket Integration:</strong> Order statuses are automatically synchronized with Shiprocket. 
-                                Use "Comprehensive Sync" for new orders, "Bulk Update" to refresh all existing orders, 
+                                <strong>FShip Integration:</strong> Order statuses are automatically synchronized with FShip. 
+                                Use "FShip Sync" for new orders and status updates, 
                                 or "Update" button for individual orders. Manual status changes are disabled to maintain sync integrity.
                             </div>
 
@@ -926,15 +853,26 @@ const Orders = () => {
                                 <div><strong>Payment Status:</strong> <span className={`status-badge status-${getPaymentStatusClass(selectedOrder)}`}>{getPaymentStatusDisplay(selectedOrder)}</span></div>
                                 <div><strong>Order Status:</strong> <span className={`status-badge status-${selectedOrder.status}`}>{selectedOrder.status}</span></div>
                                 {selectedOrder.notes && <div style={{ gridColumn: '1 / -1' }}><strong>Order Notes:</strong> {selectedOrder.notes}</div>}
-                                {/* Shiprocket Information */}
-                                {(selectedOrder.shiprocket_order_id || selectedOrder.shiprocket_shipment_id || selectedOrder.tracking_number) && (
+                                {/* FShip Information */}
+                                {(selectedOrder.fship_order_id || selectedOrder.fship_waybill || selectedOrder.tracking_number) && (
                                     <>
                                         <div style={{ gridColumn: '1 / -1', marginTop: '12px', padding: '12px', backgroundColor: '#e8f5e9', borderRadius: '6px' }}>
-                                            <h5 style={{ margin: '0 0 8px 0', color: '#2e7d32' }}>Shiprocket Tracking Information</h5>
+                                            <h5 style={{ margin: '0 0 8px 0', color: '#2e7d32' }}>FShip Tracking Information</h5>
+                                            {selectedOrder.fship_order_id && <div><strong>FShip Order ID:</strong> {selectedOrder.fship_order_id}</div>}
+                                            {selectedOrder.fship_waybill && <div><strong>AWB Number:</strong> {selectedOrder.fship_waybill}</div>}
+                                            {selectedOrder.fship_route_code && <div><strong>Route Code:</strong> {selectedOrder.fship_route_code}</div>}
+                                            {selectedOrder.tracking_number && <div><strong>Tracking Number:</strong> {selectedOrder.tracking_number}</div>}
+                                            {selectedOrder.courier_name && <div><strong>Courier:</strong> {selectedOrder.courier_name}</div>}
+                                        </div>
+                                    </>
+                                )}
+                                {/* Legacy Shiprocket Information (if exists) */}
+                                {(selectedOrder.shiprocket_order_id || selectedOrder.shiprocket_shipment_id) && (
+                                    <>
+                                        <div style={{ gridColumn: '1 / -1', marginTop: '12px', padding: '12px', backgroundColor: '#fff3cd', borderRadius: '6px' }}>
+                                            <h5 style={{ margin: '0 0 8px 0', color: '#856404' }}>Legacy Shiprocket Information</h5>
                                             {selectedOrder.shiprocket_order_id && <div><strong>Shiprocket Order ID:</strong> {selectedOrder.shiprocket_order_id}</div>}
                                             {selectedOrder.shiprocket_shipment_id && <div><strong>Shipment ID:</strong> {selectedOrder.shiprocket_shipment_id}</div>}
-                                            {selectedOrder.tracking_number && <div><strong>AWB Number:</strong> {selectedOrder.tracking_number}</div>}
-                                            {selectedOrder.courier_name && <div><strong>Courier:</strong> {selectedOrder.courier_name}</div>}
                                             {selectedOrder.tracking_url && (
                                                 <div><strong>Track Package:</strong> <a href={selectedOrder.tracking_url} target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2' }}>Click to track</a></div>
                                             )}
@@ -974,13 +912,13 @@ const Orders = () => {
                                             <tr key={item.id}>
                                                 <td>
                                                     <div className="product-image-container">
-                                                        <img 
-                                                            src={imageUrl} 
+                                                        <SafeImage 
+                                                            imageData={{ image_url: imageUrl }}
                                                             alt={item.Product?.name || 'Product'} 
                                                             className="product-image"
-                                                            onError={(e) => {
-                                                                e.target.src = '/assets/card1-left.webp';
-                                                            }}
+                                                            width="60px"
+                                                            height="60px"
+                                                            style={{ objectFit: 'cover' }}
                                                         />
                                                     </div>
                                                 </td>

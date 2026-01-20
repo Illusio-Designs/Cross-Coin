@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from "next/link";
 import { useRouter } from "next/router";
-import Image from "next/image";
+import SafeImage from "../common/SafeImage";
 import {
   FaHome, FaUser, FaBox, FaClipboardList, FaChartBar, FaLock, FaChevronDown, FaChevronLeft, FaChevronRight, FaQuestionCircle, FaShoppingCart, FaCreditCard, FaStar, FaCog, FaTags, FaTruck, FaFileAlt, FaSignOutAlt, FaImages
 } from 'react-icons/fa';
@@ -109,7 +109,13 @@ const Sidebar = ({ isCollapsed, onToggleCollapse, onViewChange, currentView }) =
       {/* Header */}
       <div className="sidebar-v2-header">
         <div className="sidebar-v2-logo">
-          <Image src="/crosscoin icon.png" alt="CrossCoin Logo" width={36} height={36} />
+          <SafeImage 
+            imageData={{ image_url: "/crosscoin icon.png" }}
+            alt="CrossCoin Logo" 
+            width="36px" 
+            height="36px" 
+            style={{ objectFit: 'contain' }}
+          />
           {!isCollapsed && <span className="sidebar-v2-title">CrossCoin<br /><span className="sidebar-v2-subtitle">ADMIN PANEL</span></span>}
         </div>
         <button className="sidebar-v2-toggle" aria-label="Toggle sidebar" onClick={onToggleCollapse}>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import Image from "next/image";
+import SafeImage from "../components/common/SafeImage";
 import "../styles/pages/Profile.css";
 import { useRouter } from "next/router";
 import SeoWrapper from "../console/SeoWrapper";
@@ -373,15 +373,15 @@ export default function Profile() {
                       {order.OrderItems &&
                         order.OrderItems.map((item) => (
                           <div className="order-card-body" key={item.id}>
-                            <Image
-                              src={forceEnvImageBase(
-                                `${item.Product?.ProductImages?.[0]?.image_url}`
-                              )}
+                            <SafeImage
+                              imageData={{
+                                image_url: item.Product?.ProductImages?.[0]?.image_url
+                              }}
                               alt={item.Product?.name}
                               className="order-product-img"
-                              width={100}
-                              height={100}
-                              unoptimized
+                              width="100px"
+                              height="100px"
+                              style={{ objectFit: 'cover' }}
                             />
                             <div className="order-product-info">
                               <div className="order-product-title">

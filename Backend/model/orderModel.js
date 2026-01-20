@@ -75,6 +75,24 @@ const Order = sequelize.define('Order', {
         type: DataTypes.TEXT,
         allowNull: true
     },
+    // FShip integration fields
+    fship_order_id: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    fship_waybill: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    fship_route_code: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    fship_courier_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
+    // Legacy Shiprocket fields (kept for backward compatibility)
     shiprocket_order_id: {
         type: DataTypes.STRING,
         allowNull: true

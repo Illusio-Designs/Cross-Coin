@@ -3,7 +3,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
-import Image from 'next/image';
+import SafeImage from '../components/common/SafeImage';
 import { useRouter } from 'next/router';
 import { FiHeart, FiShoppingCart, FiTrash2 } from 'react-icons/fi';
 import { AiFillHeart } from 'react-icons/ai';
@@ -148,11 +148,11 @@ const Wishlist = () => {
                       }
                     }}
                   >
-                    <Image
-                      src={getProductImageSrc({ image_url: imageUrl })}
+                    <SafeImage
+                      imageData={{ image_url: imageUrl }}
                       alt={item.name}
-                      width={300}
-                      height={250}
+                      width="300px"
+                      height="250px"
                       style={{ objectFit: 'cover' }}
                     />
                     <button

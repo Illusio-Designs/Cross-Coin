@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import Image from "next/image";
+import SafeImage from "../common/SafeImage";
 import { FiTrash2 } from "react-icons/fi";
 import { FaBoxOpen } from "react-icons/fa";
 import { useCart } from "../../context/CartContext";
@@ -185,11 +185,11 @@ export default function CartStep() {
             </div>
             <div className="buy-now-item">
               <div style={{ position: 'relative', width: 100, height: 100 }}>
-                <img
-                  src={forceEnvImageBase(pickCartItemImage(buyNowItem))}
+                <SafeImage
+                  imageData={{ image_url: pickCartItemImage(buyNowItem) }}
                   alt={buyNowItem.name}
-                  width={100}
-                  height={100}
+                  width="100px"
+                  height="100px"
                   className="cart-item-img"
                   style={{
                     objectFit: 'cover',
@@ -271,25 +271,18 @@ export default function CartStep() {
                   <div className="cart-item existing-cart-item" key={item.id}>
                     <div style={{ position: 'relative', width: 100, height: 100 }}>
                       {imageUrl ? (
-                        <>
-                          <img
-                            src={forceEnvImageBase(imageUrl)}
-                            alt={item.name}
-                            width={100}
-                            height={100}
-                            className="cart-item-img"
-                            style={{
-                              objectFit: 'cover',
-                              background: '#eee',
-                              display: 'block'
-                            }}
-                            onLoad={() => handleImageLoad(item.id)}
-                            onError={() => handleImageLoad(item.id)}
-                          />
-                          {!imageLoaded[item.id] && (
-                            <div className="shimmer-placeholder" style={{ width: 100, height: 100, position: 'absolute', top: 0, left: 0 }} />
-                          )}
-                        </>
+                        <SafeImage
+                          imageData={{ image_url: imageUrl }}
+                          alt={item.name}
+                          width="100px"
+                          height="100px"
+                          className="cart-item-img"
+                          style={{
+                            objectFit: 'cover',
+                            background: '#eee',
+                            display: 'block'
+                          }}
+                        />
                       ) : (
                         <div style={{ width: 100, height: 100, background: '#eee', borderRadius: 8 }} />
                       )}

@@ -237,21 +237,13 @@ export const orderService = {
     }
   },
 
-  // Get all Shiprocket orders
-  getAllShiprocketOrders: async (params = {}) => {
-    try {
-      const response = await api.get("/api/orders/shiprocket/all", { params });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  // Sync orders with Shiprocket - Comprehensive sync includes credential testing
-  syncOrdersWithShiprocket: async () => {
+  // FShip Integration Services
+  
+  // Sync orders with FShip - Comprehensive sync includes credential testing
+  syncOrdersWithFShip: async () => {
     try {
       const response = await api.post(
-        "/api/orders/shiprocket/sync",
+        "/api/orders/fship/sync",
         {},
         { timeout: 60000 }
       );
@@ -261,25 +253,11 @@ export const orderService = {
     }
   },
 
-  // Bulk update all orders from Shiprocket
-  bulkUpdateOrdersFromShiprocket: async () => {
-    try {
-      const response = await api.post(
-        "/api/orders/shiprocket/bulk-update",
-        {},
-        { timeout: 60000 }
-      );
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  // Update single order from Shiprocket
-  updateSingleOrderFromShiprocket: async (orderId) => {
+  // Update single order from FShip
+  updateSingleOrderFromFShip: async (orderId) => {
     try {
       const response = await api.put(
-        `/api/orders/${orderId}/shiprocket/update`,
+        `/api/orders/${orderId}/fship/update`,
         {},
         { timeout: 30000 }
       );
@@ -289,14 +267,105 @@ export const orderService = {
     }
   },
 
-  // Test Shiprocket credentials
-  testShiprocketCredentials: async () => {
+  // Test FShip credentials
+  testFShipCredentials: async () => {
     try {
-      const response = await api.get("/api/orders/shiprocket/test-credentials");
+      const response = await api.get("/api/orders/fship/test-credentials");
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
     }
+  },
+
+  // Get FShip tracking for order
+  getFShipTracking: async (orderId) => {
+    try {
+      const response = await api.get(`/api/orders/${orderId}/fship/tracking`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Get FShip shipping label for order
+  getFShipLabel: async (orderId) => {
+    try {
+      const response = await api.get(`/api/orders/${orderId}/fship/label`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Get FShip couriers list
+  getFShipCouriers: async () => {
+    try {
+      const response = await api.get("/api/orders/fship/couriers");
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Cancel orders in FShip
+  cancelOrdersInFShip: async (orderIds) => {
+    try {
+      const response = await api.post("/api/orders/fship/cancel", { orderIds });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Track order by order number (public)
+  trackOrderByOrderNumber: async (orderNumber) => {
+    try {
+      const response = await api.get(`/api/orders/track/${orderNumber}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Track order by AWB (public)
+  trackOrderByAWB: async (awbNumber) => {
+    try {
+      const response = await api.get(`/api/orders/track/awb?awb_number=${awbNumber}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Get guest order (public)
+  getGuestOrder: async (email, orderNumber) => {
+    try {
+      const response = await api.get(`/api/orders/guest/track?email=${email}&orderNumber=${orderNumber}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Legacy Shiprocket methods (deprecated but kept for backward compatibility)
+  getAllShiprocketOrders: async (params = {}) => {
+    console.warn('getAllShiprocketOrders is deprecated. Use FShip methods instead.');
+    try {
+      const response = await api.get("/api/orders", { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  syncOrdersWithShiprocket: async () => {
+    console.warn('syncOrdersWithShiprocket is deprecated. Use syncOrdersWithFShip instead.');
+    return this.syncOrdersWithFShip();
+  },
+
+  testShiprocketCredentials: async () => {
+    console.warn('testShiprocketCredentials is deprecated. Use testFShipCredentials instead.');
+    return this.testFShipCredentials();
   },
 };
 
@@ -1054,8 +1123,11 @@ export const policyService = {
   },
 };
 
-export const testShiprocketCredentials = () =>
-  api.get("/api/shiprocket/test-credentials");
+// Legacy function (deprecated)
+export const testShiprocketCredentials = () => {
+  console.warn('testShiprocketCredentials is deprecated. Use orderService.testFShipCredentials instead.');
+  return orderService.testFShipCredentials();
+};
 
 // Dashboard Services
 export const dashboardService = {

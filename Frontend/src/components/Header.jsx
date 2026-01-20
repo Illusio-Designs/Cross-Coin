@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { FiUser, FiHeart, FiSearch, FiMenu, FiX } from "react-icons/fi";
 import { BsCart } from "react-icons/bs";
-import Image from "next/image";
+import SafeImage from "./common/SafeImage";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCart } from "../context/CartContext";
@@ -157,13 +157,12 @@ const Header = () => {
       <div className="header__top">
         <div className="header__logo">
           <Link href="/">
-            <Image
-              src="/assets/crosscoin_logo.webp"
+            <SafeImage
+              imageData={{ image_url: "/assets/crosscoin_logo.webp" }}
               alt="logo"
-              width={120}
-              height={40}
-              priority
-              unoptimized
+              width="120px"
+              height="40px"
+              style={{ objectFit: 'contain' }}
             />
           </Link>
         </div>

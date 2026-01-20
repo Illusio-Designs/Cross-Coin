@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import SafeImage from '../components/common/SafeImage';
 import { trackOrderByAWB, trackOrderByOrderNumber } from '../services/publicindex';
 import { formatAttributesForDisplay } from '../utils/productAttributeFormatter';
 import styles from '../styles/pages/OrderTracking.css';
@@ -223,7 +224,7 @@ export default function OrderTracking() {
                                 {orderData.update_result && orderData.update_result.updated && (
                                     <div className="update-info">
                                         <small className="update-notice">
-                                            ✅ Order information updated from Shiprocket
+                                            ✅ Order information updated from FShip
                                             {orderData.update_result.status_changed && (
                                                 <span> - Status updated to {getStatusText(orderData.order.status)}</span>
                                             )}
@@ -252,7 +253,13 @@ export default function OrderTracking() {
                                             <div key={index} className="item">
                                                 <div className="item-image">
                                                     {item.product.image ? (
-                                                        <img src={item.product.image} alt={item.product.name} />
+                                                        <SafeImage 
+                                                            imageData={{ image_url: item.product.image }}
+                                                            alt={item.product.name}
+                                                            width="100px"
+                                                            height="100px"
+                                                            style={{ objectFit: 'cover' }}
+                                                        />
                                                     ) : (
                                                         <div className="no-image">No Image</div>
                                                     )}
@@ -292,7 +299,8 @@ export default function OrderTracking() {
                                                     </span>
                                                     {history.created_by && (
                                                         <span className="timeline-source">
-                                                            {history.created_by === 'shiprocket_sync' ? '(Auto-updated from Shiprocket)' : ''}
+                                                            {history.created_by === 'fship_sync' || history.created_by === 'fship_webhook' || history.created_by === 'fship_tracking' ? '(Auto-updated from FShip)' : 
+                                                             history.created_by === 'shiprocket_sync' ? '(Legacy: Auto-updated from Shiprocket)' : ''}
                                                         </span>
                                                     )}
                                                 </div>
@@ -302,10 +310,48 @@ export default function OrderTracking() {
                                 </div>
                             )}
 
-                            {/* Enhanced Shiprocket Data Display */}
+                            {/* Enhanced FShip Data Display */}
+                            {orderData.fship_data && (
+                                <div className="fship-info">
+                                    <h3>FShip Shipping Details</h3>
+                                    <div className="fship-details">
+                                        <div className="info-row">
+                                            <span>FShip Status:</span>
+                                            <span>{orderData.fship_data.order_status}</span>
+                                        </div>
+                                        {orderData.fship_data.tracking_history && Array.isArray(orderData.fship_data.tracking_history) && orderData.fship_data.tracking_history.length > 0 && (
+                                            <div className="tracking-history-info">
+                                                <h4>Tracking History:</h4>
+                                                {orderData.fship_data.tracking_history.map((event, index) => (
+                                                    <div key={index} className="tracking-event">
+                                                        <div className="info-row">
+                                                            <span>Status:</span>
+                                                            <span>{event.status}</span>
+                                                        </div>
+                                                        {event.location && (
+                                                            <div className="info-row">
+                                                                <span>Location:</span>
+                                                                <span>{event.location}</span>
+                                                            </div>
+                                                        )}
+                                                        {event.timestamp && (
+                                                            <div className="info-row">
+                                                                <span>Date:</span>
+                                                                <span>{new Date(event.timestamp).toLocaleString()}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Legacy Shiprocket Data Display (for backward compatibility) */}
                             {orderData.shiprocket_data && (
                                 <div className="shiprocket-info">
-                                    <h3>Shipping Details</h3>
+                                    <h3>Legacy Shipping Details (Shiprocket)</h3>
                                     <div className="shiprocket-details">
                                         <div className="info-row">
                                             <span>Shiprocket Status:</span>
