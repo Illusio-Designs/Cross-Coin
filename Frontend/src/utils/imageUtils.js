@@ -93,27 +93,38 @@ export function handleImageError(event, fallbackSrc = "/assets/card1-left.webp")
 
 // Get direct image URL (bypass Next.js optimization)
 export function getDirectImageUrl(imageData) {
-  if (!imageData || !imageData.image_url) return "/assets/card1-left.webp";
+  if (!imageData || !imageData.image_url) {
+    console.log('getDirectImageUrl: No image data, using fallback');
+    return "/assets/card1-left.webp";
+  }
   
   const imageUrl = imageData.image_url;
+  console.log('getDirectImageUrl: Input image URL:', imageUrl);
   
   // If it's already a full HTTP URL, return as-is
   if (imageUrl.startsWith("http")) {
+    console.log('getDirectImageUrl: Already full HTTP URL:', imageUrl);
     return imageUrl;
   }
   
   // If it's an asset path, return as-is
   if (imageUrl.startsWith("/assets/")) {
+    console.log('getDirectImageUrl: Asset path:', imageUrl);
     return imageUrl;
   }
   
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
+  console.log('getDirectImageUrl: Base URL:', baseUrl);
   
   // If it already starts with /uploads/, just prepend the base URL
   if (imageUrl.startsWith("/uploads/")) {
-    return `${baseUrl}${imageUrl}`;
+    const finalUrl = `${baseUrl}${imageUrl}`;
+    console.log('getDirectImageUrl: Final URL (uploads path):', finalUrl);
+    return finalUrl;
   }
   
   // If it's just a filename, add the full uploads/products path
-  return `${baseUrl}/uploads/products/${imageUrl}`;
+  const finalUrl = `${baseUrl}/uploads/products/${imageUrl}`;
+  console.log('getDirectImageUrl: Final URL (filename):', finalUrl);
+  return finalUrl;
 }
