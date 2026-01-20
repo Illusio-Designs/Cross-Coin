@@ -11,18 +11,19 @@ const SafeImage = ({
   height,
   ...props 
 }) => {
-  const [imageSrc, setImageSrc] = useState(fallbackSrc);
+  const [imageSrc, setImageSrc] = useState(null);
   const [imageError, setImageError] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (imageData) {
+    if (imageData && imageData.image_url) {
       const directUrl = getDirectImageUrl(imageData);
       console.log('SafeImage: Processing image URL:', directUrl);
       setImageSrc(directUrl);
       setImageError(false);
       setLoading(true);
     } else {
+      console.log('SafeImage: No image data, using fallback');
       setImageSrc(fallbackSrc);
       setImageError(false);
       setLoading(false);
@@ -31,11 +32,13 @@ const SafeImage = ({
 
   const handleError = (event) => {
     console.warn('SafeImage: Image failed to load:', imageSrc);
-    if (!imageError) {
+    if (!imageError && imageSrc !== fallbackSrc) {
       setImageSrc(fallbackSrc);
       setImageError(true);
+      setLoading(true); // Try loading the fallback
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleLoad = () => {
@@ -43,8 +46,30 @@ const SafeImage = ({
     setLoading(false);
   };
 
+  // Don't render anything if no image source
+  if (!imageSrc) {
+    return (
+      <div 
+        className={`safe-image-container ${className}`} 
+        style={{ 
+          width: width || '100%',
+          height: height || '200px',
+          backgroundColor: '#f0f0f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#666',
+          fontSize: '14px',
+          ...style
+        }}
+      >
+        No Image
+      </div>
+    );
+  }
+
   return (
-    <div className={`safe-image-container ${className}`} style={{ position: 'relative', ...style }}>
+    <div className={`safe-image-container ${className}`} style={{ position: 'relative', display: 'inline-block' }}>
       <img
         src={imageSrc}
         alt={alt}
@@ -59,24 +84,23 @@ const SafeImage = ({
         }}
         {...props}
       />
-      {loading && !imageError && (
+      {loading && (
         <div 
-          className="image-loading-placeholder" 
+          className="image-loading-overlay" 
           style={{
             position: 'absolute',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            width: width || '100%',
-            height: height || '200px',
-            backgroundColor: '#f0f0f0',
+            backgroundColor: 'rgba(240, 240, 240, 0.8)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: '#666',
-            fontSize: '14px',
-            zIndex: 1
+            fontSize: '12px',
+            zIndex: 1,
+            pointerEvents: 'none'
           }}
         >
           Loading...
