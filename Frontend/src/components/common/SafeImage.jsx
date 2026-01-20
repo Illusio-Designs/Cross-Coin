@@ -18,6 +18,7 @@ const SafeImage = ({
   useEffect(() => {
     if (imageData) {
       const directUrl = getDirectImageUrl(imageData);
+      console.log('SafeImage: Processing image URL:', directUrl);
       setImageSrc(directUrl);
       setImageError(false);
       setLoading(true);
@@ -29,8 +30,8 @@ const SafeImage = ({
   }, [imageData, fallbackSrc]);
 
   const handleError = (event) => {
+    console.warn('SafeImage: Image failed to load:', imageSrc);
     if (!imageError) {
-      console.warn('Image failed to load, using fallback:', imageSrc);
       setImageSrc(fallbackSrc);
       setImageError(true);
     }
@@ -38,39 +39,49 @@ const SafeImage = ({
   };
 
   const handleLoad = () => {
+    console.log('SafeImage: Image loaded successfully:', imageSrc);
     setLoading(false);
   };
 
   return (
-    <div className={`safe-image-container ${className}`} style={style}>
-      {loading && !imageError && (
-        <div className="image-loading-placeholder" style={{
-          width: width || '100%',
-          height: height || '200px',
-          backgroundColor: '#f0f0f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#666',
-          fontSize: '14px'
-        }}>
-          Loading...
-        </div>
-      )}
+    <div className={`safe-image-container ${className}`} style={{ position: 'relative', ...style }}>
       <img
         src={imageSrc}
         alt={alt}
         onError={handleError}
         onLoad={handleLoad}
         style={{
-          display: loading && !imageError ? 'none' : 'block',
           width: width || '100%',
           height: height || 'auto',
           objectFit: 'cover',
+          display: 'block',
           ...style
         }}
         {...props}
       />
+      {loading && !imageError && (
+        <div 
+          className="image-loading-placeholder" 
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: width || '100%',
+            height: height || '200px',
+            backgroundColor: '#f0f0f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#666',
+            fontSize: '14px',
+            zIndex: 1
+          }}
+        >
+          Loading...
+        </div>
+      )}
     </div>
   );
 };
