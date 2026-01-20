@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { getDirectImageUrl } from '../../utils/imageUtils';
+import React, { useState } from 'react';
 
 const SafeImage = ({ 
   imageData, 
@@ -14,27 +13,29 @@ const SafeImage = ({
   const [imageError, setImageError] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Memoize the image URL to prevent repeated processing
-  const imageSrc = useMemo(() => {
-    if (imageData && imageData.image_url) {
-      return getDirectImageUrl(imageData);
+  // Build URL directly inline - simplest possible approach
+  let imageSrc = fallbackSrc;
+  
+  if (imageData && imageData.image_url) {
+    const imageUrl = imageData.image_url;
+    
+    if (imageUrl.startsWith("http")) {
+      imageSrc = imageUrl;
+    } else if (imageUrl.startsWith("/assets/")) {
+      imageSrc = imageUrl;
+    } else if (imageUrl.startsWith("/uploads/")) {
+      imageSrc = `https://api.crosscoin.in${imageUrl}`;
+    } else {
+      imageSrc = `https://api.crosscoin.in/uploads/products/${imageUrl}`;
     }
-    return fallbackSrc;
-  }, [imageData, fallbackSrc]);
-
-  // Reset states when image source changes
-  useEffect(() => {
-    setImageError(false);
-    setLoading(true);
-  }, [imageSrc]);
+  }
 
   const handleError = (event) => {
     if (!imageError && imageSrc !== fallbackSrc) {
-      // Try fallback image
       setImageError(true);
       event.target.src = fallbackSrc;
+      setLoading(true);
     } else {
-      // Even fallback failed, stop loading
       setLoading(false);
     }
   };
@@ -43,47 +44,10 @@ const SafeImage = ({
     setLoading(false);
   };
 
-  // Don't render anything if no image source
-  if (!imageSrc) {
-    return (
-      <div 
-        className={`safe-image-container ${className}`} 
-        style={{ 
-          width: width || '100%',
-          height: height || '200px',
-          backgroundColor: '#f0f0f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#666',
-          fontSize: '14px',
-          ...style
-        }}
-      >
-        No Image
-      </div>
-    );
-  }
-
   return (
     <div className={`safe-image-container ${className}`} style={{ position: 'relative', display: 'inline-block' }}>
-      <img
-        src={imageSrc}
-        alt={alt}
-        onError={handleError}
-        onLoad={handleLoad}
-        style={{
-          width: width || '100%',
-          height: height || 'auto',
-          objectFit: 'cover',
-          display: loading ? 'none' : 'block',
-          ...style
-        }}
-        {...props}
-      />
       {loading && (
         <div 
-          className="image-loading-overlay" 
           style={{
             width: width || '100%',
             height: height || '200px',
@@ -99,6 +63,20 @@ const SafeImage = ({
           Loading...
         </div>
       )}
+      <img
+        src={imageSrc}
+        alt={alt}
+        onError={handleError}
+        onLoad={handleLoad}
+        style={{
+          width: width || '100%',
+          height: height || 'auto',
+          objectFit: 'cover',
+          display: loading ? 'none' : 'block',
+          ...style
+        }}
+        {...props}
+      />
     </div>
   );
 };
