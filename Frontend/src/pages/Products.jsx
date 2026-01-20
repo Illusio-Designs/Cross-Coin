@@ -83,8 +83,6 @@ const Products = () => {
       if (categoriesLoadedRef.current) return; // Prevent multiple calls
 
       try {
-        console.log("Fetching categories...");
-        console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
         const data = await getPublicCategories();
         console.log("Categories API response:", data);
         setCategories(data);
@@ -124,8 +122,6 @@ const Products = () => {
 
         if (isCategorySpecific && categoryName) {
           // Fetch products by category name
-          console.log("Fetching products for category:", categoryName);
-          console.log("API URL for category:", process.env.NEXT_PUBLIC_API_URL);
           response = await getPublicCategoryByName(categoryName);
           console.log("Category API Response:", response);
 
@@ -178,8 +174,6 @@ const Products = () => {
           }
         } else {
           // Fetch all products
-          console.log("Fetching all products");
-          console.log("API URL for all products:", process.env.NEXT_PUBLIC_API_URL);
           const params = {
             page: 1,
             limit: 1000, // Fetch all for client-side filtering
