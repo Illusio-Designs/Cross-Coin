@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { getDirectImageUrl } from '../../utils/imageUtils';
 
 const SafeImage = ({ 
@@ -11,38 +11,35 @@ const SafeImage = ({
   height,
   ...props 
 }) => {
-  const [imageSrc, setImageSrc] = useState(null);
   const [imageError, setImageError] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  // Memoize the image URL to prevent repeated processing
+  const imageSrc = useMemo(() => {
     if (imageData && imageData.image_url) {
-      const directUrl = getDirectImageUrl(imageData);
-      console.log('SafeImage: Processing image URL:', directUrl);
-      setImageSrc(directUrl);
-      setImageError(false);
-      setLoading(true);
-    } else {
-      console.log('SafeImage: No image data, using fallback');
-      setImageSrc(fallbackSrc);
-      setImageError(false);
-      setLoading(false);
+      return getDirectImageUrl(imageData);
     }
+    return fallbackSrc;
   }, [imageData, fallbackSrc]);
 
+  // Reset states when image source changes
+  useEffect(() => {
+    setImageError(false);
+    setLoading(true);
+  }, [imageSrc]);
+
   const handleError = (event) => {
-    console.warn('SafeImage: Image failed to load:', imageSrc);
     if (!imageError && imageSrc !== fallbackSrc) {
-      setImageSrc(fallbackSrc);
+      // Try fallback image
       setImageError(true);
-      setLoading(true); // Try loading the fallback
+      event.target.src = fallbackSrc;
     } else {
+      // Even fallback failed, stop loading
       setLoading(false);
     }
   };
 
   const handleLoad = () => {
-    console.log('SafeImage: Image loaded successfully:', imageSrc);
     setLoading(false);
   };
 
@@ -79,7 +76,7 @@ const SafeImage = ({
           width: width || '100%',
           height: height || 'auto',
           objectFit: 'cover',
-          display: 'block',
+          display: loading ? 'none' : 'block',
           ...style
         }}
         {...props}
@@ -88,19 +85,15 @@ const SafeImage = ({
         <div 
           className="image-loading-overlay" 
           style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(240, 240, 240, 0.8)',
+            width: width || '100%',
+            height: height || '200px',
+            backgroundColor: '#f0f0f0',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: '#666',
             fontSize: '12px',
-            zIndex: 1,
-            pointerEvents: 'none'
+            borderRadius: '4px'
           }}
         >
           Loading...

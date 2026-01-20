@@ -4,9 +4,6 @@ import { FiHeart, FiShoppingCart } from "react-icons/fi";
 import { HiOutlineEye } from "react-icons/hi2";
 import { useRouter } from "next/router";
 import { useWishlist } from "../context/WishlistContext";
-import {
-  getOptimizedImageSrc,
-} from "../utils/imageUtils";
 
 // Filter options data - This should come from API in real implementation
 export const filterOptions = {
@@ -56,10 +53,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
   } else if (typeof product?.image === "string") {
     imageData = { image_url: product.image };
   }
-  const productImage =
-    imageData && imageData.image_url
-      ? getOptimizedImageSrc(imageData, 300, 300)
-      : null;
 
   // Get the first variation for price
   const price = variation?.price || 0;
@@ -97,7 +90,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
         {product?.badge && (
           <span className="product-badge">{formatBadge(product.badge)}</span>
         )}
-        {productImage ? (
+        {imageData ? (
           <SafeImage
             imageData={imageData}
             alt={product?.name || "Product Image"}
