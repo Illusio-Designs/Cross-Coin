@@ -907,22 +907,23 @@ const Orders = () => {
                                         console.log('=== Order Item Image Debug ===');
                                         console.log('Item:', item);
                                         console.log('ProductVariation:', item.ProductVariation);
-                                        console.log('ProductVariation images:', item.ProductVariation?.images);
+                                        console.log('ProductVariation VariationImages:', item.ProductVariation?.VariationImages);
                                         console.log('Product images:', item.Product?.ProductImages);
                                         
                                         // First try to get image from the specific variation (SKU-based)
-                                        // Check if ProductVariation has images array
-                                        if (item.ProductVariation?.images && Array.isArray(item.ProductVariation.images) && item.ProductVariation.images.length > 0) {
-                                            // Use the first image from the variation
-                                            imageToDisplay = item.ProductVariation.images[0];
+                                        // Check if ProductVariation has VariationImages array
+                                        if (item.ProductVariation?.VariationImages && Array.isArray(item.ProductVariation.VariationImages) && item.ProductVariation.VariationImages.length > 0) {
+                                            // Use the primary image or first image from the variation
+                                            imageToDisplay = item.ProductVariation.VariationImages.find(img => img.is_primary) || 
+                                                           item.ProductVariation.VariationImages[0];
                                             console.log('Using variation image:', imageToDisplay);
                                         } 
-                                        // Check if ProductVariation has a single image property
+                                        // Check if ProductVariation has a single image property (legacy)
                                         else if (item.ProductVariation?.image) {
                                             imageToDisplay = { image_url: item.ProductVariation.image };
                                             console.log('Using variation single image:', imageToDisplay);
                                         }
-                                        // Check if the variation has image_url directly
+                                        // Check if the variation has image_url directly (legacy)
                                         else if (item.ProductVariation?.image_url) {
                                             imageToDisplay = { image_url: item.ProductVariation.image_url };
                                             console.log('Using variation image_url:', imageToDisplay);
