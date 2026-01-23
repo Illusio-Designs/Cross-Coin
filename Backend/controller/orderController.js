@@ -1376,6 +1376,13 @@ module.exports.getAllOrders = async (req, res) => {
               model: ProductVariation,
               as: "ProductVariation",
               attributes: ["id", "sku", "price", "attributes"],
+              include: [
+                {
+                  model: ProductImage,
+                  as: "VariationImages",
+                  attributes: ["id", "image_url", "alt_text", "is_primary"]
+                }
+              ],
               required: false,
             },
           ],
@@ -1476,6 +1483,13 @@ module.exports.getUserOrders = async (req, res) => {
               model: ProductVariation,
               as: "ProductVariation",
               attributes: ["id", "sku", "price", "attributes"],
+              include: [
+                {
+                  model: ProductImage,
+                  as: "VariationImages",
+                  attributes: ["id", "image_url", "alt_text", "is_primary"]
+                }
+              ],
               required: false,
             },
           ],
@@ -1525,6 +1539,13 @@ module.exports.getOrder = async (req, res) => {
               model: ProductVariation,
               as: "ProductVariation",
               attributes: ["id", "sku", "price", "attributes"],
+              include: [
+                {
+                  model: ProductImage,
+                  as: "VariationImages",
+                  attributes: ["id", "image_url", "alt_text", "is_primary"]
+                }
+              ],
               required: false,
             },
           ],
