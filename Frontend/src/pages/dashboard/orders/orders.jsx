@@ -911,12 +911,24 @@ const Orders = () => {
                                         console.log('Product images:', item.Product?.ProductImages);
                                         
                                         // First try to get image from the specific variation (SKU-based)
-                                        if (item.ProductVariation?.images && item.ProductVariation.images.length > 0) {
+                                        // Check if ProductVariation has images array
+                                        if (item.ProductVariation?.images && Array.isArray(item.ProductVariation.images) && item.ProductVariation.images.length > 0) {
                                             // Use the first image from the variation
                                             imageToDisplay = item.ProductVariation.images[0];
                                             console.log('Using variation image:', imageToDisplay);
-                                        } else {
-                                            // Fallback to primary product image
+                                        } 
+                                        // Check if ProductVariation has a single image property
+                                        else if (item.ProductVariation?.image) {
+                                            imageToDisplay = { image_url: item.ProductVariation.image };
+                                            console.log('Using variation single image:', imageToDisplay);
+                                        }
+                                        // Check if the variation has image_url directly
+                                        else if (item.ProductVariation?.image_url) {
+                                            imageToDisplay = { image_url: item.ProductVariation.image_url };
+                                            console.log('Using variation image_url:', imageToDisplay);
+                                        }
+                                        // Fallback to primary product image
+                                        else {
                                             imageToDisplay = item.Product?.ProductImages?.find(img => img.is_primary) || 
                                                            item.Product?.ProductImages?.[0];
                                             console.log('Using product image (fallback):', imageToDisplay);
@@ -937,9 +949,12 @@ const Orders = () => {
                                                             imageData={{ image_url: imageUrl }}
                                                             alt={item.Product?.name || 'Product'} 
                                                             className="product-image"
-                                                            width="60px"
-                                                            height="60px"
-                                                            style={{ objectFit: 'cover' }}
+                                                            width="80px"
+                                                            height="80px"
+                                                            style={{ 
+                                                                objectFit: 'cover',
+                                                                borderRadius: '8px'
+                                                            }}
                                                         />
                                                     </div>
                                                 </td>
@@ -956,10 +971,33 @@ const Orders = () => {
                                                                 ))}
                                                             </div>
                                                         )}
+                                                        <div className="product-sku-display" style={{
+                                                            marginTop: '8px',
+                                                            fontSize: '11px',
+                                                            color: '#666',
+                                                            fontFamily: 'monospace',
+                                                            background: '#f8f9fa',
+                                                            padding: '4px 8px',
+                                                            borderRadius: '4px',
+                                                            display: 'inline-block'
+                                                        }}>
+                                                            SKU: {sku}
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <div className="product-sku">
+                                                    <div className="product-sku" style={{
+                                                        fontSize: '12px',
+                                                        fontWeight: '600',
+                                                        color: '#495057',
+                                                        background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+                                                        padding: '8px 12px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #90caf9',
+                                                        textAlign: 'center',
+                                                        fontFamily: 'monospace',
+                                                        letterSpacing: '0.5px'
+                                                    }}>
                                                         {sku}
                                                     </div>
                                                 </td>
