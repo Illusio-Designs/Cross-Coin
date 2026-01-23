@@ -900,10 +900,31 @@ const Orders = () => {
                                 </thead>
                                 <tbody>
                                     {selectedOrder.OrderItems.map(item => {
-                                        // Get the primary product image
-                                        const primaryImage = item.Product?.ProductImages?.find(img => img.is_primary) || 
+                                        // Get variation-specific image first, then fallback to product image
+                                        let imageToDisplay = null;
+                                        
+                                        // Debug: Log the available data
+                                        console.log('=== Order Item Image Debug ===');
+                                        console.log('Item:', item);
+                                        console.log('ProductVariation:', item.ProductVariation);
+                                        console.log('ProductVariation images:', item.ProductVariation?.images);
+                                        console.log('Product images:', item.Product?.ProductImages);
+                                        
+                                        // First try to get image from the specific variation (SKU-based)
+                                        if (item.ProductVariation?.images && item.ProductVariation.images.length > 0) {
+                                            // Use the first image from the variation
+                                            imageToDisplay = item.ProductVariation.images[0];
+                                            console.log('Using variation image:', imageToDisplay);
+                                        } else {
+                                            // Fallback to primary product image
+                                            imageToDisplay = item.Product?.ProductImages?.find(img => img.is_primary) || 
                                                            item.Product?.ProductImages?.[0];
-                                        const imageUrl = getProductImageSrc(primaryImage);
+                                            console.log('Using product image (fallback):', imageToDisplay);
+                                        }
+                                        
+                                        const imageUrl = getProductImageSrc(imageToDisplay);
+                                        console.log('Final image URL:', imageUrl);
+                                        console.log('===============================');
                                         
                                         // Get SKU from ProductVariation if available, otherwise show 'N/A'
                                         const sku = item.ProductVariation?.sku || 'N/A';
