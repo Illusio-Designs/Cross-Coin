@@ -29,7 +29,7 @@ import Analytics from "../components/common/Analytics";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 
-export default function App({ Component, pageProps }) {
+function App({ Component, pageProps }) {
   const [loading, setLoading] = useState(false); // Start with false to allow immediate paint
   const router = useRouter();
   const progressRef = useRef();
@@ -151,3 +151,5 @@ export default function App({ Component, pageProps }) {
     </>
   );
 }
+
+export default App;

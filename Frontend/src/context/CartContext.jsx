@@ -17,7 +17,7 @@ import {
 
 const CartContext = createContext();
 
-export const CartProvider = ({ children }) => {
+function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
   const [cartCount, setCartCount] = useState(0);
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
@@ -315,12 +315,14 @@ export const CartProvider = ({ children }) => {
       {children}
     </CartContext.Provider>
   );
-};
+}
 
-export const useCart = () => {
+function useCart() {
   const context = useContext(CartContext);
   if (!context) {
     throw new Error('useCart must be used within a CartProvider');
   }
   return context;
-}; 
+}
+
+export { CartProvider, useCart }; 

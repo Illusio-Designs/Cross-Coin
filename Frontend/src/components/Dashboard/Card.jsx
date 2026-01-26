@@ -3,7 +3,7 @@ import '../../styles/dashboard/Card.css';
 import { FaBox, FaShoppingCart, FaDollarSign, FaUsers, FaStar, FaClock, FaRupeeSign } from "react-icons/fa";
 import { dashboardService } from '../../services';
 
-export default function CardGrid() {
+function CardGrid() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,7 +32,7 @@ export default function CardGrid() {
     return (
       <div className="dashboard-sections">
         <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-          Loading dashboard statistics...
+          Loading dashboard statistics... 🎯 Testing Fast Refresh
         </div>
       </div>
     );
@@ -187,4 +187,6 @@ export default function CardGrid() {
       </div>
     </div>
   );
-} 
+}
+
+export default CardGrid;

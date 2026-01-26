@@ -10,13 +10,13 @@ import {
 
 const WishlistContext = createContext();
 
-export const useWishlist = () => {
+function useWishlist() {
   const context = useContext(WishlistContext);
   if (!context) {
     throw new Error('useWishlist must be used within a WishlistProvider');
   }
   return context;
-};
+}
 
 function forceEnvImageBase(url) {
   if (!url || typeof url !== 'string') return '/assets/card1-left.webp';
@@ -32,7 +32,7 @@ function forceEnvImageBase(url) {
   return `${baseUrl}${url}`;
 }
 
-export const WishlistProvider = ({ children }) => {
+function WishlistProvider({ children }) {
   const [wishlist, setWishlist] = useState([]);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
@@ -245,6 +245,6 @@ export const WishlistProvider = ({ children }) => {
       {children}
     </WishlistContext.Provider>
   );
-};
+}
 
-export { WishlistContext }; 
+export { WishlistContext, WishlistProvider, useWishlist }; 
