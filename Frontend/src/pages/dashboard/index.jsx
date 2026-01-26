@@ -1,11 +1,11 @@
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Sidebar from "@/components/Sidebar/Sidebar.jsx";
 import CardGrid from '@/components/Dashboard/Card';
+import DashboardHeader from '@/components/Dashboard/DashboardHeader';
+import DashboardFooter from '@/components/Dashboard/DashboardFooter';
 import { useState, useEffect } from "react";
-import { useRouter } from "next/router";
 import Loader from "@/components/Loader";
-import { FiMaximize, FiMinimize } from "react-icons/fi";
-import { FaUserCircle } from "react-icons/fa";
+import { handleViewChange, getViewFromPath } from "@/utils/dashboardRouting";
 
 // Import all dashboard pages
 import Products from "./products/products";
@@ -21,102 +21,7 @@ import SEO from "./seo/seo";
 import Slider from "./slider/slider";
 import Policies from "./policies";
 
-function DashboardHeader({ isCollapsed, isFullscreen, onToggleFullscreen, currentView }) {
-  const sidebarWidth = isCollapsed ? 72 : 260;
-  
-  // Convert view name to display title
-  const getPageTitle = (view) => {
-    const titles = {
-      'main': 'Dashboard',
-      'products': 'Products',
-      'categories': 'Categories',
-      'attributes': 'Attributes',
-      'orders': 'Orders',
-      'consumers': 'Consumers',
-      'shippingFees': 'Shipping Fees',
-      'payments': 'Payments',
-      'coupons': 'Coupons',
-      'reviews': 'Reviews',
-      'seo': 'SEO',
-      'policies': 'Policies',
-      'slider': 'Slider'
-    };
-    return titles[view] || 'Dashboard';
-  };
-
-  return (
-    <header
-      className="dashboard-header"
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: sidebarWidth,
-        width: `calc(100% - ${sidebarWidth}px)`,
-        zIndex: 100,
-        transition: 'left 0.3s cubic-bezier(.4,0,.2,1), width 0.3s cubic-bezier(.4,0,.2,1)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        height: 80,
-        background: '#F3F4F5',
-        borderBottom: '1px solid #E6E6E6',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
-        padding: '0 0',
-      }}
-    >
-      {/* Left group: Title only */}
-      <div style={{ display: 'flex', alignItems: 'center', marginLeft: 20 }}>
-        <div className="header-title" style={{ fontWeight: 700, fontSize: '1.7rem', color: '#180D3E', letterSpacing: 0.2 }}>
-          {getPageTitle(currentView)}
-        </div>
-      </div>
-      {/* Right group: Fullscreen button + Profile icon + Admin label */}
-      <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: 14, marginRight: 40, minWidth: 120, justifyContent: 'flex-end' }}>
-        <button
-          onClick={onToggleFullscreen}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: 26,
-            color: '#180D3E',
-            outline: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            marginRight: 0
-          }}
-          title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-        >
-          {isFullscreen ? <FiMinimize /> : <FiMaximize />}
-        </button>
-        <FaUserCircle style={{ fontSize: 28, color: '#180D3E' }} />
-        <span style={{ fontWeight: 600, color: '#180D3E', fontSize: '1.15rem', letterSpacing: 0.2 }}>Admin</span>
-      </div>
-    </header>
-  );
-}
-
-function DashboardFooter({ isCollapsed }) {
-  const sidebarWidth = isCollapsed ? 72 : 260;
-  return (
-    <footer
-      className="dashboard-footer"
-      style={{
-        position: 'fixed',
-        bottom: 0,
-        left: sidebarWidth,
-        width: `calc(100% - ${sidebarWidth}px)`,
-        zIndex: 100,
-        transition: 'left 0.3s cubic-bezier(.4,0,.2,1), width 0.3s cubic-bezier(.4,0,.2,1)',
-      }}
-    >
-      &copy; {new Date().getFullYear()} CrossCoin. All rights reserved.
-    </footer>
-  );
-}
-
-export default function Dashboard() {
-  const router = useRouter();
+function Dashboard() {
   const [currentView, setCurrentView] = useState('main');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -124,25 +29,13 @@ export default function Dashboard() {
 
   // Handle URL-based routing on page load
   useEffect(() => {
-    const path = window.location.pathname;
-    if (path === '/dashboard') {
-      setCurrentView('main');
-    } else if (path.startsWith('/dashboard/')) {
-      const page = path.split('/dashboard/')[1];
-      setCurrentView(page);
-    }
+    setCurrentView(getViewFromPath());
   }, []);
 
   // Handle browser back/forward buttons
   useEffect(() => {
     const handlePopState = () => {
-      const path = window.location.pathname;
-      if (path === '/dashboard') {
-        setCurrentView('main');
-      } else if (path.startsWith('/dashboard/')) {
-        const page = path.split('/dashboard/')[1];
-        setCurrentView(page);
-      }
+      setCurrentView(getViewFromPath());
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -158,15 +51,8 @@ export default function Dashboard() {
     }
   }, [isLoading]);
 
-  const handleViewChange = (view) => {
-    if (view === 'logout') {
-      window.location.href = '/auth/adminlogin';
-    } else {
-      setCurrentView(view);
-      // Update URL without page reload using browser history API
-      const newUrl = view === 'main' ? '/dashboard' : `/dashboard/${view}`;
-      window.history.pushState({}, '', newUrl);
-    }
+  const onViewChange = (view) => {
+    handleViewChange(view, setCurrentView);
   };
 
   // Fullscreen logic
@@ -244,7 +130,7 @@ export default function Dashboard() {
         <Sidebar
           isCollapsed={isCollapsed}
           onToggleCollapse={() => setIsCollapsed((prev) => !prev)}
-          onViewChange={handleViewChange}
+          onViewChange={onViewChange}
           currentView={currentView}
         />
         <DashboardHeader isCollapsed={isCollapsed} isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} currentView={currentView} />
@@ -275,8 +161,6 @@ export default function Dashboard() {
       </div>
     </ProtectedRoute>
   );
-} 
+}
 
-
-
-
+export default Dashboard;

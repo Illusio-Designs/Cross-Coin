@@ -13,7 +13,7 @@ import {
 
 const AuthContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
+function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const { setIsAuthenticated } = useContext(WishlistContext) || {};
@@ -136,14 +136,15 @@ export const AuthProvider = ({ children }) => {
             {!loading && children}
         </AuthContext.Provider>
     );
-};
+}
 
-export const useAuth = () => {
+function useAuth() {
     const context = useContext(AuthContext);
     if (!context) {
         throw new Error('useAuth must be used within an AuthProvider');
     }
     return context;
-};
+}
 
+export { AuthProvider, useAuth };
 export default AuthContext; 

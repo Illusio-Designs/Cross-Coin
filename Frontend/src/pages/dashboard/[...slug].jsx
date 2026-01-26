@@ -1,5 +1,7 @@
 import Dashboard from './index';
 
-export default function DashboardCatchAll() {
+function DashboardCatchAll() {
   return <Dashboard />;
 }
+
+export default DashboardCatchAll;
