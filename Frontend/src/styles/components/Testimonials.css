@@ -33,58 +33,49 @@
 }
 
 .testimonial-card {
-  background: #fff;
-  border: 1px solid #ececec;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-  padding: 28px 24px 20px 24px;
+  background: #fafbfc;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 220px;
-  min-width: 350px;
-  max-width: 350px;
-  transition: box-shadow 0.2s;
+  min-height: 140px;
+  min-width: 260px;
+  max-width: 300px;
+  transition: box-shadow 0.2s, transform 0.2s;
   cursor: pointer;
+  box-shadow: 0 2px 8px #eee;
 }
 
 .testimonial-card:hover {
-  box-shadow: 0 4px 24px rgba(206,30,54,0.10);
+  box-shadow: 0 4px 16px rgba(206,30,54,0.10);
+  transform: translateY(-2px);
 }
 
-.testimonial-text {
-  font-size: 20px;
-  color: #000000;
-  margin-bottom: 24px;
-  flex: 1;
-}
-
-.testimonial-user {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.testimonial-avatar {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.testimonial-name {
-  font-weight: 600;
-  font-size: 1rem;
+.reviewer-name {
+  font-weight: bold;
+  font-size: 0.95rem;
   color: #222;
+  margin-bottom: 4px;
 }
 
 .testimonial-rating {
-  margin-top: 2px;
+  color: #f59e42;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
 }
 
 .testimonial-star {
-  color: #ffb400;
-  font-size: 1.1rem;
+  color: #f59e42;
   margin-right: 2px;
+}
+
+.testimonial-text {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.5;
+  flex: 1;
 }
 
 .testimonials-container .slider-arrow {
@@ -127,16 +118,17 @@
   .testimonials-container {
     position: relative;
     padding: 40px 0;
-}
+  }
   .testimonials-section {
     padding: 50px 3%;
     background: #ffffff;
-}
-.testimonial-card {
-  padding: 24px;
-  min-height: 170px;
-  min-width: 260px;
-}
+  }
+  .testimonial-card {
+    padding: 14px;
+    min-height: 130px;
+    min-width: 240px;
+    max-width: 280px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -151,9 +143,24 @@
   }
 
   .testimonial-card {
-    min-width: 280px;
-    max-width: 280px;
+    min-width: 240px;
+    max-width: 260px;
+    padding: 12px;
+    min-height: 120px;
   }
+  
+  .reviewer-name {
+    font-size: 0.9rem;
+  }
+  
+  .testimonial-rating {
+    font-size: 1rem;
+  }
+  
+  .testimonial-text {
+    font-size: 12px;
+  }
+  
   .footer__newsletter-policy{
     text-align: left;
   }

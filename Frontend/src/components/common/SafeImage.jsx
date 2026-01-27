@@ -45,29 +45,24 @@ const SafeImage = ({
   };
 
   return (
-    <div className={`safe-image-container ${className}`} style={{ position: 'relative', display: 'inline-block' }}>
+    <div className={`safe-image-container ${className}`} style={{ position: 'relative', display: 'inline-block', height: '-webkit-fill-available' }}>
       {loading && (
         <div 
           style={{
             width: width || '100%',
             height: height || '200px',
             backgroundColor: '#f0f0f0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#666',
-            fontSize: '12px',
             borderRadius: '4px'
           }}
-        >
-          Loading...
-        </div>
+        />
       )}
       <img
         src={imageSrc}
         alt={alt}
         onError={handleError}
         onLoad={handleLoad}
+        loading="eager"
+        decoding="async"
         style={{
           width: width || '100%',
           height: height || 'auto',

@@ -451,37 +451,29 @@ const Home = () => {
     image: '/assets/card1-left.webp'
   };
 
-  // Get the image source with fallback
+  console.log('Current category:', currentCategory);
+  console.log('All categories:', categories);
+
+  // Get the image source with fallback - simple version
   const getCategoryImageSrc = () => {
-    if (currentCategory && currentCategory.image) {
-      const img = currentCategory.image;
-      
-      // If already a full URL, return it
-      if (img.startsWith('http')) {
-        return img;
-      }
-      
-      // Use live backend URL
-      const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://api.crosscoin.in';
-      
-      // Clean up the path
-      let cleanedPath = img;
-      
-      // Remove duplicate '/uploads/categories/'
-      cleanedPath = cleanedPath.replace(/(\/uploads\/categories\/)+/g, '/uploads/categories/');
-      
-      // Ensure path starts with /uploads/categories/
-      if (!cleanedPath.startsWith('/uploads/categories/') && !cleanedPath.startsWith('uploads/categories/')) {
-        cleanedPath = `/uploads/categories/${cleanedPath}`;
-      }
-      
-      // Remove leading slash if present for concatenation
-      if (cleanedPath.startsWith('/')) {
-        return `${baseUrl}${cleanedPath}`;
-      }
-      return `${baseUrl}/${cleanedPath}`;
+    if (!currentCategory || !currentCategory.image) {
+      console.log('No category or image, using fallback');
+      return '/assets/card1-left.webp';
     }
-    return '/assets/card1-left.webp';
+
+    const baseUrl = 'https://api.crosscoin.in';
+    let imageUrl = '/assets/card1-left.webp';
+    
+    if (currentCategory.image.startsWith('http')) {
+      imageUrl = currentCategory.image;
+    } else if (currentCategory.image.startsWith('/uploads/')) {
+      imageUrl = `${baseUrl}${currentCategory.image}`;
+    } else {
+      imageUrl = `${baseUrl}/uploads/categories/${currentCategory.image}`;
+    }
+    
+    console.log('Category:', currentCategory.name, 'Image URL:', imageUrl);
+    return imageUrl;
   };
 
   const scrollExclusiveSlider = (direction) => {
@@ -605,29 +597,23 @@ const Home = () => {
                 <button className="slider-arrow slider-arrow-left" aria-label="Previous category" onClick={() => scrollCategoryImage('left')}>
                   <IoIosArrowBack />
                 </button>
-                <div style={{ position: 'relative', width: 350 }}>
-                  {getCategoryImageSrc() ? (
-                    <>
-                      <img
-                        src={getCategoryImageSrc()}
-                        alt={currentCategory.name || 'Category'}
-                        width={350}
-                        height={400}
-                        style={{
-                          background: '#eee',
-                          display: 'block',
-                          filter: categoryImageLoaded ? 'none' : 'grayscale(1)'
-                        }}
-                        onLoad={() => setCategoryImageLoaded(true)}
-                        onError={() => setCategoryImageLoaded(true)}
-                      />
-                      {!categoryImageLoaded && (
-                        <div className="shimmer-placeholder" style={{ width: 350, height: 400, position: 'absolute', top: 0, left: 0 }}></div>
-                      )}
-                    </>
-                  ) : (
-                    <div style={{ width: 300, height: 300, background: '#eee', borderRadius: 8 }}></div>
-                  )}
+                <div style={{ position: 'relative', width: 350, height: 400 }}>
+                  <img
+                    src={getCategoryImageSrc()}
+                    alt={currentCategory.name || 'Category'}
+                    className="category-card-image"
+                    loading="eager"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block'
+                    }}
+                    onError={(e) => {
+                      console.error('Category image failed to load:', getCategoryImageSrc());
+                      e.target.src = '/assets/card1-left.webp';
+                    }}
+                  />
                 </div>
                 <h3>{currentCategory.name}</h3>
                 <button className="slider-arrow slider-arrow-right" aria-label="Next category" onClick={() => scrollCategoryImage('right')}>
