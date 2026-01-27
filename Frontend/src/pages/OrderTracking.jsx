@@ -159,7 +159,16 @@ export default function OrderTracking() {
                                 </div>
                                 <div className="info-row">
                                     <span>Order Date:</span>
-                                    <span>{new Date(orderData.order.created_at).toLocaleDateString()}</span>
+                                    <span>
+                                        {orderData.order.created_at || orderData.order.createdAt 
+                                            ? new Date(orderData.order.created_at || orderData.order.createdAt).toLocaleDateString('en-IN', { 
+                                                year: 'numeric', 
+                                                month: 'long', 
+                                                day: 'numeric' 
+                                            })
+                                            : 'Date not available'
+                                        }
+                                    </span>
                                 </div>
                                 <div className="info-row">
                                     <span>Total Amount:</span>
@@ -295,7 +304,13 @@ export default function OrderTracking() {
                                                     <h4>{getStatusText(history.status)}</h4>
                                                     {history.notes && <p>{history.notes}</p>}
                                                     <span className="timeline-date">
-                                                        {new Date(history.created_at).toLocaleString()}
+                                                        {new Date(history.createdAt || history.created_at).toLocaleString('en-IN', {
+                                                            year: 'numeric',
+                                                            month: 'short',
+                                                            day: 'numeric',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })}
                                                     </span>
                                                     {history.created_by && (
                                                         <span className="timeline-source">
@@ -337,7 +352,13 @@ export default function OrderTracking() {
                                                         {event.timestamp && (
                                                             <div className="info-row">
                                                                 <span>Date:</span>
-                                                                <span>{new Date(event.timestamp).toLocaleString()}</span>
+                                                                <span>{new Date(event.timestamp).toLocaleString('en-IN', {
+                                                                    year: 'numeric',
+                                                                    month: 'short',
+                                                                    day: 'numeric',
+                                                                    hour: '2-digit',
+                                                                    minute: '2-digit'
+                                                                })}</span>
                                                             </div>
                                                         )}
                                                     </div>
@@ -381,13 +402,21 @@ export default function OrderTracking() {
                                                         {shipment.pickup_date && (
                                                             <div className="info-row">
                                                                 <span>Pickup Date:</span>
-                                                                <span>{new Date(shipment.pickup_date).toLocaleDateString()}</span>
+                                                                <span>{new Date(shipment.pickup_date).toLocaleDateString('en-IN', {
+                                                                    year: 'numeric',
+                                                                    month: 'long',
+                                                                    day: 'numeric'
+                                                                })}</span>
                                                             </div>
                                                         )}
                                                         {shipment.delivered_date && (
                                                             <div className="info-row">
                                                                 <span>Delivered Date:</span>
-                                                                <span>{new Date(shipment.delivered_date).toLocaleDateString()}</span>
+                                                                <span>{new Date(shipment.delivered_date).toLocaleDateString('en-IN', {
+                                                                    year: 'numeric',
+                                                                    month: 'long',
+                                                                    day: 'numeric'
+                                                                })}</span>
                                                             </div>
                                                         )}
                                                     </div>
