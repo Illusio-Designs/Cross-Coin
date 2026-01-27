@@ -818,11 +818,18 @@ export const couponService = {
 
 // Review Services
 export const reviewService = {
-  getAllReviews: async (status = "all") => {
+  getAllReviews: async (status = "all", params = {}) => {
     try {
-      const response = await api.get(`/api/reviews/admin/all?status=${status}`);
-      if (response.data && response.data.reviews) {
-        return response.data.reviews;
+      const { page = 1, limit = 10 } = params;
+      const response = await api.get(`/api/reviews/admin/all`, {
+        params: {
+          status,
+          page,
+          limit
+        }
+      });
+      if (response.data) {
+        return response.data;
       }
       throw new Error("Invalid response format from server");
     } catch (error) {
