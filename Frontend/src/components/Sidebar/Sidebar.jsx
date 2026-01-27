@@ -69,6 +69,13 @@ const Sidebar = ({ isCollapsed, onToggleCollapse, onViewChange, currentView }) =
   const [openMenu, setOpenMenu] = React.useState(null);
   const [hoveredMenu, setHoveredMenu] = React.useState(null);
 
+  const handleHelpClick = () => {
+    const phoneNumber = '917600046416'; // WhatsApp number without + or spaces
+    const message = encodeURIComponent('Hi, I need help with CrossCoin Admin Panel. Can you assist me?');
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   // Helper to check if a menu or submenu is active
   const isMenuActive = (item) => {
     if (item.view && currentView === item.view) return true;
@@ -184,7 +191,11 @@ const Sidebar = ({ isCollapsed, onToggleCollapse, onViewChange, currentView }) =
       </nav>
       {/* Footer */}
       <div className="sidebar-v2-footer">
-        <button className="sidebar-v2-help" aria-label="Help">
+        <button 
+          className="sidebar-v2-help" 
+          aria-label="Help"
+          onClick={handleHelpClick}
+        >
           <FaQuestionCircle />
           {!isCollapsed && <span>Need help?</span>}
         </button>
