@@ -4,6 +4,7 @@ import InputField from "@/components/common/InputField";
 import Modal from "@/components/common/Modal";
 import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
+import Loader from "@/components/Loader";
 import { categoryService } from "@/services";
 import { debounce } from 'lodash';
 import "../../../styles/dashboard/seo.css";
@@ -317,7 +318,9 @@ export default function Categories() {
         {/* Table Section */}
         <div className="seo-table-container">
           {loading ? (
-            <div className="seo-loading">Loading...</div>
+            <div style={{ position: 'relative', minHeight: '400px' }}>
+              <Loader />
+            </div>
           ) : (
             <>
               {filteredData.length === 0 ? (

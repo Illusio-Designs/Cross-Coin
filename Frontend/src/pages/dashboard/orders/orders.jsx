@@ -6,6 +6,7 @@ import Pagination from "@/components/common/Pagination";
 import Modal from "@/components/common/Modal";
 import Button from "@/components/common/Button";
 import SafeImage from "@/components/common/SafeImage";
+import Loader from "@/components/Loader";
 import '../../../styles/dashboard/orders.css';
 import "../../../styles/dashboard/seo.css"; // Reusing styles for consistency
 import { toast } from 'react-hot-toast';
@@ -778,7 +779,11 @@ const Orders = () => {
                 )}
 
                 <div className="seo-table-container orders-table">
-                    {loading ? <div className="seo-loading">Loading...</div> :
+                    {loading ? (
+                        <div style={{ position: 'relative', minHeight: '400px' }}>
+                            <Loader />
+                        </div>
+                    ) :
                         <>
                             {filteredData.length === 0 ? <div className="seo-empty-state">No orders found.</div> :
                                 <>

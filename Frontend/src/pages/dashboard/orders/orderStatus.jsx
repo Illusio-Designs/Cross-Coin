@@ -3,6 +3,7 @@ import { orderService } from '../../../services';
 import { debounce } from 'lodash';
 import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
+import Loader from "@/components/Loader";
 import '../../../styles/dashboard/orders.css';
 import "../../../styles/dashboard/seo.css";
 
@@ -137,7 +138,11 @@ const OrderStatus = () => {
             </div>
 
             <div className="seo-table-container">
-                {loading ? <div className="seo-loading">Loading...</div> :
+                {loading ? (
+                    <div style={{ position: 'relative', minHeight: '400px' }}>
+                        <Loader />
+                    </div>
+                ) :
                     <>
                         {filteredData.length === 0 ? <div className="seo-empty-state">No status history found.</div> :
                             <>

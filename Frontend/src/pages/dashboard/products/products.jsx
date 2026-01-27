@@ -4,6 +4,7 @@ import InputField from "@/components/common/InputField";
 import Modal from "@/components/common/Modal";
 import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
+import Loader from "@/components/Loader";
 import { productService } from "@/services";
 import { categoryService } from "@/services";
 import { attributeService } from "@/services";
@@ -1133,7 +1134,9 @@ const ProductsPage = () => {
       {/* Table Section */}
       <div className="seo-table-container products-table">
         {loading ? (
-          <div className="seo-loading">Loading...</div>
+          <div style={{ position: 'relative', minHeight: '400px' }}>
+            <Loader />
+          </div>
         ) : (
           <>
             {filteredData.length === 0 ? (
