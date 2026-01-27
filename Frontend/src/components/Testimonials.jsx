@@ -74,17 +74,13 @@ const Testimonials = () => {
         <div className="testimonials-slider" ref={sliderRef}>
           {reviews.map((review, idx) => (
             <div className="testimonial-card" key={idx}>
-              <p className="testimonial-text">{review.review}</p>
-              <div className="testimonial-user">
-                <div>
-                  <div className="testimonial-name">{review.reviewerName}</div>
-                  <div className="testimonial-rating">
-                    {Array.from({ length: review.rating }).map((_, i) => (
-                      <span key={i} className="testimonial-star">★</span>
-                    ))}
-                  </div>
-                </div>
+              <div className="reviewer-name">{review.reviewerName}</div>
+              <div className="testimonial-rating">
+                {Array.from({ length: review.rating }).map((_, i) => (
+                  <span key={i} className="testimonial-star">★</span>
+                ))}
               </div>
+              <p className="testimonial-text">{review.review}</p>
             </div>
           ))}
         </div>

@@ -81,27 +81,23 @@ const Collections = () => {
         <div className="collections-grid">
           {categories && Array.isArray(categories) && categories.length > 0 ? (
             categories.map((cat) => {
-            // Home page logic for image URL
-            let img = cat.image;
+            // Simple image URL construction
             let imageUrl = '/assets/card1-left.webp';
-            if (img) {
-              if (img.startsWith('http')) {
-                imageUrl = img;
+            
+            if (cat.image) {
+              const baseUrl = 'https://api.crosscoin.in';
+              
+              if (cat.image.startsWith('http')) {
+                imageUrl = cat.image;
+              } else if (cat.image.startsWith('/uploads/')) {
+                imageUrl = `${baseUrl}${cat.image}`;
               } else {
-                // Remove duplicate /uploads/categories/
-                const cleanedPath = img.replace(/(\/uploads\/categories\/)+/g, '/uploads/categories/');
-                let baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://api.crosscoin.in';
-                
-                // Ensure proper path formatting
-                if (!cleanedPath.startsWith('/uploads/categories/') && !cleanedPath.startsWith('uploads/categories/')) {
-                  imageUrl = `${baseUrl}/uploads/categories/${cleanedPath}`;
-                } else if (cleanedPath.startsWith('/')) {
-                  imageUrl = `${baseUrl}${cleanedPath}`;
-                } else {
-                  imageUrl = `${baseUrl}/${cleanedPath}`;
-                }
+                imageUrl = `${baseUrl}/uploads/categories/${cat.image}`;
               }
             }
+            
+            console.log('Category:', cat.name, 'Image URL:', imageUrl);
+            
             return (
               <Link
                 key={cat.id || cat._id}
@@ -113,6 +109,10 @@ const Collections = () => {
                   src={imageUrl}
                   alt={cat.name}
                   className="category-card-image"
+                  onError={(e) => {
+                    console.error('Failed to load image:', imageUrl);
+                    e.target.src = '/assets/card1-left.webp';
+                  }}
                 />
                 <div className="category-card-name">{cat.name}</div>
               </Link>
