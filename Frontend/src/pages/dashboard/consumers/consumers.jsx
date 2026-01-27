@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import Button from "@/components/common/Button";
 import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
+import Modal from "@/components/common/Modal";
 import { debounce } from 'lodash';
 import { userService } from '@/services';
 
@@ -12,6 +13,8 @@ export default function Consumers() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [consumers, setConsumers] = useState([]);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedConsumer, setSelectedConsumer] = useState(null);
 
   // Fetch consumers from backend
   useEffect(() => {
@@ -73,6 +76,22 @@ export default function Consumers() {
     setCurrentPage(1);
   }, [filterValue]);
 
+  // Handler functions for actions
+  const handleView = async (id) => {
+    try {
+      setLoading(true);
+      const consumer = consumers.find(c => c.id === id);
+      if (consumer) {
+        setSelectedConsumer(consumer);
+        setIsViewModalOpen(true);
+      }
+    } catch (error) {
+      console.error('Error viewing consumer:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Columns definition (no join date, no last login)
   const columns = [
     { header: "S/N", accessor: "serial_number" },
@@ -81,15 +100,27 @@ export default function Consumers() {
     { header: "Role", accessor: "role" },
     { header: "Status", accessor: "status" },
     {
-      header: "Option",
-      accessor: "ok",
-      cell: () => (
-        <Button variant="primary" size="small">OK</Button>
+      header: "Actions",
+      accessor: "actions",
+      cell: (row) => (
+        <div className="action-buttons">
+          <button
+            className="action-btn view"
+            title="View Details"
+            onClick={() => handleView(row.id)}
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+        </div>
       )
     }
   ];
 
   return (
+    <>
     <div className="dashboard-page">
       <div className="seo-header-container">
         <h1 className="seo-title">Consumers Management</h1>
@@ -114,7 +145,7 @@ export default function Consumers() {
       </div>
 
       {/* Table Section */}
-      <div className="seo-table-container">
+      <div className="seo-table-container consumers-table">
         {loading ? (
           <div className="seo-loading">Loading...</div>
         ) : error ? (
@@ -138,8 +169,7 @@ export default function Consumers() {
                   <div className="seo-pagination-container">
                     <Pagination
                       currentPage={currentPage}
-                      totalItems={filteredData.length}
-                      itemsPerPage={itemsPerPage}
+                      totalPages={totalPages}
                       onPageChange={setCurrentPage}
                     />
                   </div>
@@ -150,5 +180,67 @@ export default function Consumers() {
         )}
       </div>
     </div>
+
+    {/* Consumer Details Modal */}
+    <Modal
+      isOpen={isViewModalOpen}
+      onClose={() => setIsViewModalOpen(false)}
+      title={`Consumer Details: ${selectedConsumer?.name || 'N/A'}`}
+    >
+      {selectedConsumer && (
+        <div className="consumer-details-modal">
+          <div className="consumer-section">
+            <h4 style={{ marginBottom: '12px', color: '#180D3E', borderBottom: '2px solid #180D3E', paddingBottom: '8px' }}>
+              Personal Information
+            </h4>
+            <div className="consumer-info-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div><strong>Name:</strong> {selectedConsumer.name || 'N/A'}</div>
+              <div><strong>Username:</strong> {selectedConsumer.username || 'N/A'}</div>
+              <div><strong>Email:</strong> {selectedConsumer.email || 'N/A'}</div>
+              <div><strong>Role:</strong> {selectedConsumer.role || 'N/A'}</div>
+              <div><strong>Status:</strong> 
+                <span style={{ 
+                  marginLeft: '8px',
+                  padding: '4px 8px', 
+                  borderRadius: '4px',
+                  backgroundColor: selectedConsumer.status === 'active' ? '#d1fae5' : '#fee2e2',
+                  color: selectedConsumer.status === 'active' ? '#065f46' : '#dc2626',
+                  fontSize: '12px',
+                  fontWeight: '600'
+                }}>
+                  {selectedConsumer.status || 'N/A'}
+                </span>
+              </div>
+              <div><strong>Phone:</strong> {selectedConsumer.phone || 'N/A'}</div>
+            </div>
+          </div>
+
+          {selectedConsumer.createdAt && (
+            <div className="consumer-section" style={{ marginTop: '20px' }}>
+              <h4 style={{ marginBottom: '12px', color: '#180D3E', borderBottom: '2px solid #CE1E36', paddingBottom: '8px' }}>
+                Account Information
+              </h4>
+              <div className="consumer-info-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div><strong>Joined:</strong> {new Date(selectedConsumer.createdAt).toLocaleDateString('en-US', { 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}</div>
+                <div><strong>Last Updated:</strong> {selectedConsumer.updatedAt ? new Date(selectedConsumer.updatedAt).toLocaleDateString('en-US', { 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                }) : 'N/A'}</div>
+              </div>
+            </div>
+          )}
+
+          <div className="modal-footer" style={{ marginTop: '24px', textAlign: 'right' }}>
+            <Button variant="secondary" onClick={() => setIsViewModalOpen(false)}>Close</Button>
+          </div>
+        </div>
+      )}
+    </Modal>
+    </>
   );
 } 

@@ -1,0 +1,594 @@
+/* Full Width Dashboard Fix - CLEAN VERSION */
+
+/* Ensure dashboard layout uses full width */
+.dashboard-layout {
+  width: 100%;
+  max-width: none;
+}
+
+/* Main content area should use all available space */
+.dashboard-main {
+  width: 100%;
+  max-width: none;
+  flex: 1;
+}
+
+/* Content area should fill the space with padding on all sides including small bottom padding */
+.dashboard-content {
+  width: 100% !important;
+  max-width: none !important;
+  padding: 2rem 2rem 1rem 2rem !important; /* top, right, bottom, left - small bottom padding */
+  box-sizing: border-box !important;
+}
+
+/* Dashboard pages should have padding on all sides with small bottom padding */
+.dashboard-page {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 1.5rem 1.5rem 0.5rem 1.5rem !important; /* top, right, bottom, left - small bottom padding */
+  box-sizing: border-box !important;
+}
+
+/* Table containers should use full width with NO padding/margin */
+.seo-table-container,
+.table-container {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Tables should use full available width */
+.common-table {
+  width: 100% !important;
+  min-width: 100% !important;
+  table-layout: fixed !important;
+}
+
+/* Header container should use full width with proper spacing */
+.seo-header-container {
+  width: 100% !important;
+  max-width: none !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 1.5rem !important;
+  padding: 0 !important;
+}
+
+/* Ensure no centering or max-width constraints */
+* {
+  box-sizing: border-box;
+}
+
+/* Remove any container constraints */
+.container,
+.max-w-7xl,
+.mx-auto {
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: 100% !important;
+}
+
+/* Add proper spacing around content elements */
+.seo-title {
+  margin-bottom: 0 !important;
+}
+
+.adding-button {
+  margin-left: auto !important;
+}
+
+/* Ensure table has proper border radius and spacing */
+.table-container {
+  border-radius: 12px !important; /* Nice rounded corners */
+  overflow: hidden !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important; /* Enhanced shadow */
+  margin: 0 !important;
+  padding: 0 !important;
+  background: white !important;
+}
+
+/* Add border radius to the table itself */
+.common-table {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  table-layout: fixed !important; /* Fixed layout for consistent column widths */
+  word-wrap: break-word !important; /* Break long words */
+}
+
+/* Ensure first row has proper top radius */
+.common-table thead tr:first-child th:first-child {
+  border-top-left-radius: 12px !important;
+}
+
+.common-table thead tr:first-child th:last-child {
+  border-top-right-radius: 12px !important;
+}
+
+/* Ensure last row has proper bottom radius */
+.common-table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 12px !important;
+}
+
+.common-table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 12px !important;
+}
+
+/* Fix table cell content overflow */
+.common-table td {
+  max-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  padding: 12px 8px !important;
+}
+
+/* Allow specific columns to wrap text */
+.common-table td.allow-wrap {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  max-width: 200px !important;
+}
+
+/* Specific column widths for different table types */
+.common-table th:first-child,
+.common-table td:first-child {
+  width: 60px !important; /* S/N column */
+  min-width: 60px !important;
+}
+
+.common-table th:last-child,
+.common-table td:last-child {
+  width: 100px !important; /* Actions column - increased width */
+  min-width: 100px !important;
+  text-align: center !important;
+}
+
+/* SEO table specific widths */
+.seo-table-container .common-table th:nth-child(2),
+.seo-table-container .common-table td:nth-child(2) {
+  width: 150px !important; /* Page Name */
+  min-width: 150px !important;
+}
+
+.seo-table-container .common-table th:nth-child(3),
+.seo-table-container .common-table td:nth-child(3) {
+  width: 200px !important; /* Meta Title */
+  min-width: 200px !important;
+}
+
+.seo-table-container .common-table th:nth-child(4),
+.seo-table-container .common-table td:nth-child(4) {
+  width: 250px !important; /* Meta Description */
+  min-width: 250px !important;
+}
+
+.seo-table-container .common-table th:nth-child(5),
+.seo-table-container .common-table td:nth-child(5) {
+  width: 200px !important; /* Meta Keywords */
+  min-width: 200px !important;
+}
+
+/* Orders table specific widths */
+.orders-table .common-table th:nth-child(2),
+.orders-table .common-table td:nth-child(2) {
+  width: 120px !important; /* Order ID */
+  min-width: 120px !important;
+}
+
+.orders-table .common-table th:nth-child(3),
+.orders-table .common-table td:nth-child(3) {
+  width: 180px !important; /* Customer */
+  min-width: 180px !important;
+}
+
+.orders-table .common-table th:nth-child(4),
+.orders-table .common-table td:nth-child(4) {
+  width: 100px !important; /* Date */
+  min-width: 100px !important;
+}
+
+.orders-table .common-table th:nth-child(5),
+.orders-table .common-table td:nth-child(5) {
+  width: 100px !important; /* Payment Type */
+  min-width: 100px !important;
+}
+
+.orders-table .common-table th:nth-child(6),
+.orders-table .common-table td:nth-child(6) {
+  width: 120px !important; /* Payment Status */
+  min-width: 120px !important;
+}
+
+.orders-table .common-table th:nth-child(7),
+.orders-table .common-table td:nth-child(7) {
+  width: 100px !important; /* Total */
+  min-width: 100px !important;
+}
+
+.orders-table .common-table th:nth-child(8),
+.orders-table .common-table td:nth-child(8) {
+  width: 120px !important; /* Order Status */
+  min-width: 120px !important;
+}
+
+.orders-table .common-table th:nth-child(9),
+.orders-table .common-table td:nth-child(9) {
+  width: 140px !important; /* FShip Sync */
+  min-width: 140px !important;
+}
+
+/* Consumers table specific widths */
+.consumers-table .common-table th:nth-child(2),
+.consumers-table .common-table td:nth-child(2) {
+  width: 150px !important; /* Name */
+  min-width: 150px !important;
+}
+
+.consumers-table .common-table th:nth-child(3),
+.consumers-table .common-table td:nth-child(3) {
+  width: 200px !important; /* Email */
+  min-width: 200px !important;
+}
+
+.consumers-table .common-table th:nth-child(4),
+.consumers-table .common-table td:nth-child(4) {
+  width: 100px !important; /* Role */
+  min-width: 100px !important;
+}
+
+.consumers-table .common-table th:nth-child(5),
+.consumers-table .common-table td:nth-child(5) {
+  width: 100px !important; /* Status */
+  min-width: 100px !important;
+}
+
+/* Pagination should have proper spacing */
+.seo-pagination-container {
+  margin-top: 1rem !important;
+  padding: 0 !important;
+  width: 100% !important;
+}
+
+/* Add text truncation utility classes */
+.text-truncate {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  max-width: 200px !important;
+}
+
+.text-truncate-long {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  max-width: 300px !important;
+}
+
+.text-wrap {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  max-width: 250px !important;
+  line-height: 1.4 !important;
+}
+
+/* Responsive adjustments with padding on all sides including small bottom padding */
+@media (min-width: 1024px) {
+  .dashboard-content {
+    padding: 2.5rem 2.5rem 1.5rem 2.5rem !important; /* top, right, bottom, left */
+  }
+  
+  .dashboard-page {
+    padding: 2rem 2rem 1rem 2rem !important; /* top, right, bottom, left */
+  }
+}
+
+@media (min-width: 1280px) {
+  .dashboard-content {
+    padding: 3rem 3rem 2rem 3rem !important; /* top, right, bottom, left */
+  }
+  
+  .dashboard-page {
+    padding: 2.5rem 2.5rem 1.5rem 2.5rem !important; /* top, right, bottom, left */
+  }
+}
+
+@media (min-width: 1536px) {
+  .dashboard-content {
+    padding: 3.5rem 3.5rem 2.5rem 3.5rem !important; /* top, right, bottom, left */
+  }
+  
+  .dashboard-page {
+    padding: 3rem 3rem 2rem 3rem !important; /* top, right, bottom, left */
+  }
+}
+
+/* Standardized action buttons - icon only with simple tooltips - THEME COLORS */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.action-btn {
+  width: 32px !important;
+  height: 32px !important;
+  padding: 6px !important;
+  border-radius: 6px !important;
+  border: none !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease !important;
+  position: relative !important;
+}
+
+.action-btn:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.action-btn svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+/* Theme-based action button colors */
+.action-btn.edit {
+  background: linear-gradient(135deg, #180D3E 0%, #2a1a4d 100%) !important;
+  color: white !important;
+}
+
+.action-btn.edit:hover {
+  background: linear-gradient(135deg, #2a1a4d 0%, #180D3E 100%) !important;
+  box-shadow: 0 4px 12px rgba(24, 13, 62, 0.3) !important;
+}
+
+.action-btn.delete {
+  background: linear-gradient(135deg, #CE1E36 0%, #a01729 100%) !important;
+  color: white !important;
+}
+
+.action-btn.delete:hover {
+  background: linear-gradient(135deg, #a01729 0%, #CE1E36 100%) !important;
+  box-shadow: 0 4px 12px rgba(206, 30, 54, 0.3) !important;
+}
+
+.action-btn.view {
+  background: linear-gradient(135deg, #180D3E 0%, #2a1a4d 100%) !important;
+  color: white !important;
+}
+
+.action-btn.view:hover {
+  background: linear-gradient(135deg, #2a1a4d 0%, #180D3E 100%) !important;
+  box-shadow: 0 4px 12px rgba(24, 13, 62, 0.3) !important;
+}
+
+.action-btn.moderate {
+  background: linear-gradient(135deg, #CE1E36 0%, #a01729 100%) !important;
+  color: white !important;
+}
+
+.action-btn.moderate:hover {
+  background: linear-gradient(135deg, #a01729 0%, #CE1E36 100%) !important;
+  box-shadow: 0 4px 12px rgba(206, 30, 54, 0.3) !important;
+}
+
+/* Ensure action buttons container uses proper layout */
+.adding-button {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Table horizontal scroll functionality */
+.seo-table-container,
+.table-container,
+.orders-table,
+.consumers-table {
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  width: 100% !important;
+  position: relative !important;
+}
+
+/* Ensure table maintains minimum width for proper column display */
+.common-table {
+  min-width: 800px !important; /* Minimum width to ensure all columns are visible */
+  width: 100% !important;
+}
+
+/* Custom scrollbar styling for tables */
+.seo-table-container::-webkit-scrollbar,
+.table-container::-webkit-scrollbar,
+.orders-table::-webkit-scrollbar,
+.consumers-table::-webkit-scrollbar {
+  height: 8px;
+}
+
+.seo-table-container::-webkit-scrollbar-track,
+.table-container::-webkit-scrollbar-track,
+.orders-table::-webkit-scrollbar-track,
+.consumers-table::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.seo-table-container::-webkit-scrollbar-thumb,
+.table-container::-webkit-scrollbar-thumb,
+.orders-table::-webkit-scrollbar-thumb,
+.consumers-table::-webkit-scrollbar-thumb {
+  background: #180D3E;
+  border-radius: 4px;
+}
+
+.seo-table-container::-webkit-scrollbar-thumb:hover,
+.table-container::-webkit-scrollbar-thumb:hover,
+.orders-table::-webkit-scrollbar-thumb:hover,
+.consumers-table::-webkit-scrollbar-thumb:hover {
+  background: #CE1E36;
+}
+
+/* Ensure table headers are sticky during horizontal scroll */
+.common-table thead th {
+  position: sticky !important;
+  top: 0 !important;
+  background: white !important;
+  z-index: 10 !important;
+}
+
+/* Dimension fields styling - RESTORED */
+.dimensions-section {
+  margin-top: 1rem;
+}
+
+.dimensions-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.dimensions-inputs .input-field {
+  margin-bottom: 0;
+}
+
+.dimensions-section h6 {
+  color: #180D3E;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+/* Orders table specific styling */
+.orders-table .customer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.orders-table .customer-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 13px;
+}
+
+.orders-table .customer-email {
+  font-size: 11px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.orders-table .guest-badge {
+  background: #e3f2fd !important;
+  color: #1976d2 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+}
+
+.orders-table .action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.orders-table .action-btn {
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 60px;
+  justify-content: center;
+}
+
+.orders-table .action-btn.edit {
+  background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+  color: white;
+}
+
+.orders-table .action-btn.update-fship {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: white;
+}
+
+.orders-table .status-info {
+  font-size: 10px;
+  color: #666;
+  font-style: italic;
+  text-align: center;
+  margin-top: 2px;
+}
+
+.orders-table .status-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  display: inline-block;
+  min-width: 60px;
+}
+
+.orders-table .status-badge.status-paid {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.orders-table .status-badge.status-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.orders-table .status-badge.status-synced {
+  background: #dbeafe;
+  color: #1e40af;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.orders-table .status-badge.status-unsynced {
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 10px;
+}
+
+/* Status badges for order status */
+.orders-table .status-badge.status-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.orders-table .status-badge.status-processing {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.orders-table .status-badge.status-shipped {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.orders-table .status-badge.status-delivered {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.orders-table .status-badge.status-cancelled {
+  background: #fee2e2;
+  color: #dc2626;
+}

@@ -143,6 +143,8 @@ function Dashboard() {
             minHeight: '100vh',
             display: 'flex',
             flexDirection: 'column',
+            width: `calc(100% - ${isCollapsed ? 72 : 260}px)`,
+            maxWidth: 'none',
           }}
         >
           <main
@@ -153,6 +155,10 @@ function Dashboard() {
               minHeight: 'calc(100vh - 136px)',
               transition: 'margin 0.3s cubic-bezier(.4,0,.2,1)',
               position: 'relative', // Added for loader positioning
+              width: '100%',
+              maxWidth: 'none',
+              padding: '0', // Remove padding here since it's handled by CSS
+              boxSizing: 'border-box',
             }}
           >
             {renderContent()}

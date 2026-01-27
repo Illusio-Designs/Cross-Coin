@@ -12,7 +12,7 @@ const OrderStatus = () => {
     const [error, setError] = useState(null);
     const [filterValue, setFilterValue] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage] = useState(15);
+    const [itemsPerPage] = useState(10);
     const [statusFilter, setStatusFilter] = useState("all");
     const [dashboardOrderIds, setDashboardOrderIds] = useState([]);
 
@@ -181,7 +181,7 @@ const OrderStatus = () => {
                                 <Table columns={columns} data={currentItems} className="w-full" striped={true} hoverable={true} style={{ fontSize: '14px' }} />
                                 {filteredData.length > itemsPerPage && (
                                     <div className="seo-pagination-container">
-                                        <Pagination currentPage={currentPage} totalItems={filteredData.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} />
+                                        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                                     </div>
                                 )}
                             </>
