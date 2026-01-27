@@ -1,5 +1,7 @@
 const { Payment } = require('../model/paymentModel.js');
 const { Order } = require('../model/orderModel.js');
+const { User } = require('../model/userModel.js');
+const { GuestUser } = require('../model/guestUserModel.js');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/db.js');
 const { PaymentService } = require('../services/paymentService.js');
@@ -270,7 +272,7 @@ module.exports.processRefund = async (req, res) => {
 // Get all payments (admin only)
 module.exports.getAllPayments = async (req, res) => {
     try {
-        const { status, payment_type, start_date, end_date, page = 1, limit = 10 } = req.query;
+        const { status, payment_type, start_date, end_date, page = 1, limit = 100 } = req.query;
         
         // Build filter based on query parameters
         const filter = {};
@@ -290,7 +292,23 @@ module.exports.getAllPayments = async (req, res) => {
         const payments = await Payment.findAndCountAll({
             where: filter,
             include: [
-                { model: Order }
+                { 
+                    model: Order,
+                    attributes: ['id', 'order_number', 'payment_type', 'user_id', 'guest_user_id'],
+                    include: [
+                        { 
+                            model: User,
+                            attributes: ['id', 'username', 'email'],
+                            required: false
+                        },
+                        {
+                            model: GuestUser,
+                            as: 'GuestUser',
+                            attributes: ['id', 'firstName', 'lastName', 'email'],
+                            required: false
+                        }
+                    ]
+                }
             ],
             order: [['createdAt', 'DESC']],
             limit: parseInt(limit),
@@ -300,6 +318,7 @@ module.exports.getAllPayments = async (req, res) => {
         const totalPages = Math.ceil(payments.count / limit);
 
         res.json({
+            success: true,
             payments: payments.rows,
             pagination: {
                 total: payments.count,
@@ -310,7 +329,7 @@ module.exports.getAllPayments = async (req, res) => {
         });
     } catch (error) {
         console.error('Error getting payments:', error);
-        res.status(500).json({ message: 'Failed to get payments', error: error.message });
+        res.status(500).json({ success: false, message: 'Failed to get payments', error: error.message });
     }
 };
 
@@ -514,18 +533,35 @@ module.exports.updateOrderPayment = async (req, res) => {
     order.status = 'processing';
     await order.save();
 
-    // Update or create payment record
-    await Payment.upsert({
-      order_id: order.id,
-      user_id: order.user_id || null,
-      guest_user_id: order.guest_user_id || null,
-      payment_type: 'razorpay',
-      amount_paid: order.final_amount,
-      status: 'successful',
-      transaction_id: razorpayPaymentId,
-      razorpay_order_id: razorpayOrderId,
-      razorpay_signature: razorpaySignature,
+    // Find existing payment record for this order
+    let payment = await Payment.findOne({
+      where: { order_id: order.id }
     });
+
+    if (payment) {
+      // Update existing payment
+      await payment.update({
+        payment_type: 'razorpay',
+        amount_paid: order.final_amount,
+        status: 'successful',
+        transaction_id: razorpayPaymentId,
+        razorpay_order_id: razorpayOrderId,
+        razorpay_signature: razorpaySignature,
+      });
+    } else {
+      // Create new payment record if none exists
+      await Payment.create({
+        order_id: order.id,
+        user_id: order.user_id || null,
+        guest_user_id: order.guest_user_id || null,
+        payment_type: 'razorpay',
+        amount_paid: order.final_amount,
+        status: 'successful',
+        transaction_id: razorpayPaymentId,
+        razorpay_order_id: razorpayOrderId,
+        razorpay_signature: razorpaySignature,
+      });
+    }
 
     res.json({ 
       success: true, 
