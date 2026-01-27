@@ -24,6 +24,7 @@ import "../styles/pages/Login.css";
 import "../styles/pages/Policy.css";
 import "../styles/dashboard/layout.css";
 import "../styles/dashboard/sidebar.css";
+import "../styles/dashboard/full-width-fix.css";
 import "../styles/pages/auth/adminlogin.css";
 import Analytics from "../components/common/Analytics";
 import { SpeedInsights } from "@vercel/speed-insights/next";

@@ -18,7 +18,7 @@ const Orders = () => {
     const [error, setError] = useState(null);
     const [filterValue, setFilterValue] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage] = useState(20); // Increased from 10 to 20
+    const [itemsPerPage, setItemsPerPage] = useState(10);
     const [totalPages, setTotalPages] = useState(0);
     const [totalOrders, setTotalOrders] = useState(0);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -28,6 +28,16 @@ const Orders = () => {
     const [sortBy, setSortBy] = useState("createdAt");
     const [sortOrder, setSortOrder] = useState("desc");
     const [notification, setNotification] = useState(null);
+    const [allOrdersStats, setAllOrdersStats] = useState({
+        total: 0,
+        prepaid: 0,
+        cod: 0,
+        paid: 0,
+        pending: 0,
+        totalRevenue: 0,
+        averageOrderValue: 0,
+        deliveredOrders: 0
+    });
 
     const fetchOrders = async (page = currentPage) => {
         setLoading(true);
@@ -44,21 +54,93 @@ const Orders = () => {
             
             const data = await orderService.getAllOrders(params);
             
-            console.log('=== FRONTEND ORDERS DEBUG ===');
-            console.log('API Response:', data);
-            console.log('Orders received:', data.orders?.length || 0);
-            console.log('Total orders:', data.total);
-            console.log('Total pages:', data.totalPages);
-            console.log('Current page:', page);
-            console.log('Items per page:', itemsPerPage);
-            
             setOrders(data.orders || data.data || []);
-            setTotalPages(data.totalPages || Math.ceil((data.total || 0) / itemsPerPage));
-            setTotalOrders(data.total || 0);
+            // Always calculate totalPages correctly on frontend to avoid backend errors
+            const totalOrdersCount = data.total || 0;
+            const calculatedTotalPages = Math.ceil(totalOrdersCount / itemsPerPage);
+            setTotalPages(calculatedTotalPages);
+            setTotalOrders(totalOrdersCount);
         } catch (err) {
             setError(err.message || 'Failed to fetch orders');
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Fetch all orders for stats calculation
+    const fetchAllOrdersForStats = async () => {
+        try {
+            const params = {
+                page: 1,
+                limit: 10000, // Get all orders
+                status: statusFilter !== 'all' ? statusFilter : undefined,
+                payment_status: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined
+            };
+            
+            const data = await orderService.getAllOrders(params);
+            const allOrders = data.orders || data.data || [];
+            
+            // Calculate stats from all orders
+            const stats = {
+                total: allOrders.length,
+                prepaid: 0,
+                cod: 0,
+                paid: 0,
+                pending: 0,
+                totalRevenue: 0,
+                averageOrderValue: 0,
+                deliveredOrders: 0
+            };
+
+            allOrders.forEach(order => {
+                const paymentType = order.payment_type?.toLowerCase();
+                const paymentStatus = order.payment_status?.toLowerCase();
+                const orderStatus = order.status?.toLowerCase();
+                
+                const orderTotal = parseFloat(order.final_amount || 0);
+                
+                // Include all orders except cancelled ones
+                if (orderStatus !== 'cancelled') {
+                    stats.totalRevenue += orderTotal;
+                }
+                
+                // Count delivered orders separately for tracking
+                if (orderStatus === 'delivered') {
+                    stats.deliveredOrders++;
+                }
+                
+                // Count payment types and statuses
+                if (['credit_card', 'debit_card', 'upi', 'wallet'].includes(paymentType)) {
+                    stats.prepaid++;
+                    if (paymentStatus === 'paid') {
+                        stats.paid++;
+                    } else {
+                        stats.pending++;
+                    }
+                } else if (paymentType === 'cod') {
+                    stats.cod++;
+                    if (orderStatus === 'delivered' || paymentStatus === 'paid') {
+                        stats.paid++;
+                    } else {
+                        stats.pending++;
+                    }
+                } else {
+                    // Handle other payment types
+                    if (paymentStatus === 'paid') {
+                        stats.paid++;
+                    } else {
+                        stats.pending++;
+                    }
+                }
+            });
+
+            // Calculate average order value based on non-cancelled orders
+            const nonCancelledOrders = allOrders.filter(order => order.status?.toLowerCase() !== 'cancelled');
+            stats.averageOrderValue = nonCancelledOrders.length > 0 ? stats.totalRevenue / nonCancelledOrders.length : 0;
+            
+            setAllOrdersStats(stats);
+        } catch (err) {
+            console.error('Failed to fetch stats:', err);
         }
     };
 
@@ -102,6 +184,7 @@ const Orders = () => {
             
             // Refresh orders after sync
             fetchOrders();
+            fetchAllOrdersForStats();
         } catch (error) {
             console.error('=== FShip Order Sync Failed ===');
             console.error('Error object:', error);
@@ -137,6 +220,7 @@ const Orders = () => {
                 
                 // Refresh orders after update
                 fetchOrders();
+                fetchAllOrdersForStats();
             } else {
                 toast.error(result.message || 'Failed to update order');
             }
@@ -182,6 +266,7 @@ const Orders = () => {
     // Initial load
     useEffect(() => {
         fetchOrders(1);
+        fetchAllOrdersForStats();
     }, []);
 
 
@@ -189,7 +274,8 @@ const Orders = () => {
     useEffect(() => {
         setCurrentPage(1);
         fetchOrders(1);
-    }, [filterValue, paymentTypeFilter, statusFilter, sortBy, sortOrder]);
+        fetchAllOrdersForStats();
+    }, [filterValue, paymentTypeFilter, statusFilter, sortBy, sortOrder, itemsPerPage]);
 
     // Load orders when page changes
     useEffect(() => {
@@ -435,10 +521,9 @@ const Orders = () => {
         }
     });
 
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentItems = sortedData.slice(indexOfFirstItem, indexOfLastItem);
-    const currentItemsWithSN = currentItems.map((item, idx) => ({
+    // Backend already handles pagination, so we just add serial numbers based on current page
+    const indexOfFirstItem = (currentPage - 1) * itemsPerPage;
+    const currentItemsWithSN = sortedData.map((item, idx) => ({
         ...item,
         serial_number: indexOfFirstItem + idx + 1
     }));
@@ -496,7 +581,7 @@ const Orders = () => {
             cell: (row) => (
                 <div className="action-buttons">
                     <button 
-                        className="action-btn edit" 
+                        className="action-btn view" 
                         title="View Details" 
                         onClick={() => { setSelectedOrder(row); setIsViewModalOpen(true); }}
                     >
@@ -504,44 +589,19 @@ const Orders = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
-                        View
                     </button>
                     
                     {(row.fship_order_id || row.fship_waybill) && (
                         <button 
-                            className="action-btn update-fship" 
-                            title="Update from FShip" 
+                            className="action-btn edit" 
+                            title="Update" 
                             onClick={() => updateSingleOrder(row.id)}
-                            style={{
-                                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                padding: '0.5rem',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                                fontSize: '0.75rem',
-                                fontWeight: '500',
-                                marginTop: '0.25rem'
-                            }}
                         >
-                            <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
                             </svg>
-                            Update
                         </button>
                     )}
-                    
-                    <div className="status-info" style={{
-                        fontSize: '11px',
-                        color: '#666',
-                        marginTop: '4px',
-                        fontStyle: 'italic'
-                    }}>
-                        {(row.fship_order_id || row.fship_waybill) ? 'FShip synced' : 'Not synced'}
-                    </div>
                 </div>
             )
         }
@@ -580,7 +640,9 @@ const Orders = () => {
                         padding: '10px',
                         backgroundColor: '#f8f9fa',
                         borderRadius: '8px',
-                        fontSize: '14px'
+                        fontSize: '14px',
+                        alignItems: 'center',
+                        flexWrap: 'wrap'
                     }}>
                         <span className="total-orders" style={{color: '#007bff', fontWeight: 'bold'}}>
                             Total Orders: <strong>{totalOrders}</strong>
@@ -591,6 +653,33 @@ const Orders = () => {
                         <span className="showing-info" style={{color: '#28a745'}}>
                             Showing {orders.length} orders
                         </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+                            <label style={{ color: '#495057', fontWeight: '600', fontSize: '13px' }}>Show:</label>
+                            <select 
+                                value={itemsPerPage} 
+                                onChange={(e) => {
+                                    setItemsPerPage(Number(e.target.value));
+                                    setCurrentPage(1);
+                                }}
+                                style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '6px',
+                                    border: '2px solid #180D3E',
+                                    background: '#fff',
+                                    color: '#374151',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    outline: 'none'
+                                }}
+                            >
+                                <option value={10}>10</option>
+                                <option value={25}>25</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                            <span style={{ color: '#6c757d', fontSize: '13px' }}>per page</span>
+                        </div>
                     </div>
                     <div className="adding-button">
                         <button 
@@ -688,48 +777,41 @@ const Orders = () => {
                     </div>
                 )}
 
-                <div className="seo-table-container">
+                <div className="seo-table-container orders-table">
                     {loading ? <div className="seo-loading">Loading...</div> :
                         <>
                             {filteredData.length === 0 ? <div className="seo-empty-state">No orders found.</div> :
                                 <>
                             {/* Payment Statistics */}
                             <div className="payment-stats">
-                                {(() => {
-                                    const stats = getPaymentStats();
-                                    return (
-                                        <>
-                                            <div className="stat-item">
-                                                <span className="stat-label">Total Orders:</span>
-                                                <span className="stat-badge total">{stats.total}</span>
-                                            </div>
-                                            <div className="stat-item">
-                                                <span className="stat-label">Prepaid:</span>
-                                                <span className="stat-badge prepaid">{stats.prepaid}</span>
-                                            </div>
-                                            <div className="stat-item">
-                                                <span className="stat-label">COD:</span>
-                                                <span className="stat-badge cod">{stats.cod}</span>
-                                            </div>
-                                            <div className="stat-item">
-                                                <span className="stat-label">Paid:</span>
-                                                <span className="stat-badge paid">{stats.paid}</span>
-                                            </div>
-                                            <div className="stat-item">
-                                                <span className="stat-label">Pending:</span>
-                                                <span className="stat-badge pending">{stats.pending}</span>
-                                            </div>
-                                            <div className="stat-item revenue">
-                                                <span className="stat-label">Total Revenue:</span>
-                                                <span className="stat-badge revenue">{formatCurrency(stats.totalRevenue)}</span>
-                                            </div>
-                                            <div className="stat-item avg">
-                                                <span className="stat-label">Avg Order:</span>
-                                                <span className="stat-badge avg">{formatCurrency(stats.averageOrderValue)}</span>
-                                            </div>
-                                        </>
-                                    );
-                                })()}
+                                <div className="stat-item">
+                                    <span className="stat-label">Total Orders:</span>
+                                    <span className="stat-badge total">{allOrdersStats.total}</span>
+                                </div>
+                                <div className="stat-item">
+                                    <span className="stat-label">Prepaid:</span>
+                                    <span className="stat-badge prepaid">{allOrdersStats.prepaid}</span>
+                                </div>
+                                <div className="stat-item">
+                                    <span className="stat-label">COD:</span>
+                                    <span className="stat-badge cod">{allOrdersStats.cod}</span>
+                                </div>
+                                <div className="stat-item">
+                                    <span className="stat-label">Paid:</span>
+                                    <span className="stat-badge paid">{allOrdersStats.paid}</span>
+                                </div>
+                                <div className="stat-item">
+                                    <span className="stat-label">Pending:</span>
+                                    <span className="stat-badge pending">{allOrdersStats.pending}</span>
+                                </div>
+                                <div className="stat-item revenue">
+                                    <span className="stat-label">Total Revenue:</span>
+                                    <span className="stat-badge revenue">{formatCurrency(allOrdersStats.totalRevenue)}</span>
+                                </div>
+                                <div className="stat-item avg">
+                                    <span className="stat-label">Avg Order:</span>
+                                    <span className="stat-badge avg">{formatCurrency(allOrdersStats.averageOrderValue)}</span>
+                                </div>
                             </div>
 
                             {/* Sort Controls */}
@@ -767,6 +849,7 @@ const Orders = () => {
                                 or "Update" button for individual orders. Manual status changes are disabled to maintain sync integrity.
                             </div>
 
+                            <div className="orders-table">
                             <Table 
                                 columns={columns} 
                                 data={currentItemsWithSN} 
@@ -774,12 +857,12 @@ const Orders = () => {
                                 striped={true} 
                                 hoverable={true} 
                             />
-                            {totalPages > 1 && (
+                            </div>
+                            {totalOrders > itemsPerPage && (
                                 <div className="seo-pagination-container">
                                     <Pagination 
                                         currentPage={currentPage} 
-                                        totalItems={totalOrders} 
-                                        itemsPerPage={itemsPerPage} 
+                                        totalPages={totalPages}
                                         onPageChange={(page) => {
                                             setCurrentPage(page);
                                             fetchOrders(page);
@@ -887,6 +970,7 @@ const Orders = () => {
                             <h4 style={{ marginBottom: '12px', color: '#333', borderBottom: '2px solid #6f42c1', paddingBottom: '8px' }}>
                                 Products Ordered
                             </h4>
+                            <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
                             <table className="items-table">
                                 <thead>
                                     <tr>
@@ -1010,6 +1094,7 @@ const Orders = () => {
                                     })}
                                 </tbody>
                             </table>
+                            </div>
                         </div>
 
                         {/* Order Summary Section */}

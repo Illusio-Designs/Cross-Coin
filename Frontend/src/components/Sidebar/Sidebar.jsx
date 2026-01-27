@@ -109,11 +109,11 @@ const Sidebar = ({ isCollapsed, onToggleCollapse, onViewChange, currentView }) =
       {/* Header */}
       <div className="sidebar-v2-header">
         <div className="sidebar-v2-logo">
-          <SafeImage 
-            imageData={{ image_url: "/crosscoin icon.png" }}
+          <img 
+            src="/crosscoin icon.png"
             alt="CrossCoin Logo" 
-            width="36px" 
-            height="36px" 
+            width="36" 
+            height="36" 
             style={{ objectFit: 'contain' }}
           />
           {!isCollapsed && <span className="sidebar-v2-title">CrossCoin<br /><span className="sidebar-v2-subtitle">ADMIN PANEL</span></span>}

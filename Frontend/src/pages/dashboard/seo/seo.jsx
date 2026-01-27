@@ -143,7 +143,7 @@ export default function SEO() {
       header: "Actions",
       accessor: "actions",
       cell: ({ page_name }) => (
-        <div className="flex gap-2 justify-center">
+        <div className="action-buttons">
           <button
             className="action-btn edit"
             title="Edit"
@@ -152,7 +152,6 @@ export default function SEO() {
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z"/>
             </svg>
-            Edit
           </button>
         </div>
       )
@@ -311,7 +310,7 @@ export default function SEO() {
         </div>
         
         {/* Table Section */}
-        <div className="seo-table-container">
+        <div className="seo-table-container seo-table">
           {loading ? (
             <div className="seo-loading">Loading...</div>
           ) : error ? (
@@ -335,8 +334,7 @@ export default function SEO() {
                     <div className="seo-pagination-container">
                       <Pagination
                         currentPage={currentPage}
-                        totalItems={filteredData.length}
-                        itemsPerPage={itemsPerPage}
+                        totalPages={totalPages}
                         onPageChange={setCurrentPage}
                       />
                     </div>
