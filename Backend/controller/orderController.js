@@ -2405,40 +2405,53 @@ module.exports.trackOrderByOrderNumber = async (req, res) => {
     res.json({
       success: true,
       message: updateResult?.updated ? "Order found and updated from FShip" : "Order found",
-      order: {
-        id: finalOrder.id,
-        order_number: finalOrder.order_number,
-        status: finalOrder.status,
-        payment_status: finalOrder.payment_status,
-        total_amount: finalOrder.total_amount,
-        final_amount: finalOrder.final_amount,
-        payment_type: finalOrder.payment_type,
-        fship_order_id: finalOrder.fship_order_id,
-        fship_waybill: finalOrder.fship_waybill,
-        tracking_number: finalOrder.tracking_number,
-        courier_name: finalOrder.courier_name,
-        created_at: finalOrder.created_at,
-        updated_at: finalOrder.updated_at
-      },
-      customer: {
-        type: isGuestOrder ? "guest" : "registered",
-        info: customerInfo
-      },
-      tracking: {
-        has_tracking: !!finalOrder.tracking_number,
-        tracking_number: finalOrder.tracking_number,
-        courier_name: finalOrder.courier_name,
-        current_status: finalOrder.status
-      },
-      fship_data: fshipData,
-      update_result: updateResult,
-      status_history: finalOrder.OrderStatusHistories?.map(history => ({
-        id: history.id,
-        status: history.status,
-        notes: history.notes,
-        created_at: history.created_at,
-        created_by: history.created_by
-      })) || []
+      data: {
+        order: {
+          id: finalOrder.id,
+          order_number: finalOrder.order_number,
+          status: finalOrder.status,
+          payment_status: finalOrder.payment_status,
+          total_amount: finalOrder.total_amount,
+          final_amount: finalOrder.final_amount,
+          payment_type: finalOrder.payment_type,
+          fship_order_id: finalOrder.fship_order_id,
+          fship_waybill: finalOrder.fship_waybill,
+          tracking_number: finalOrder.tracking_number,
+          courier_name: finalOrder.courier_name,
+          tracking_url: finalOrder.tracking_url,
+          created_at: finalOrder.createdAt || finalOrder.created_at,
+          updated_at: finalOrder.updatedAt || finalOrder.updated_at
+        },
+        customer: {
+          type: isGuestOrder ? "guest" : "registered",
+          info: customerInfo
+        },
+        tracking: {
+          has_tracking: !!finalOrder.tracking_number,
+          tracking_number: finalOrder.tracking_number,
+          courier_name: finalOrder.courier_name,
+          tracking_url: finalOrder.tracking_url,
+          current_status: finalOrder.status
+        },
+        fship_data: fshipData,
+        update_result: updateResult,
+        status_history: finalOrder.OrderStatusHistories?.map(history => ({
+          id: history.id,
+          status: history.status,
+          notes: history.notes,
+          created_at: history.createdAt || history.created_at,
+          created_by: history.created_by || history.createdBy
+        })) || [],
+        items: finalOrder.OrderItems?.map(item => ({
+          id: item.id,
+          quantity: item.quantity,
+          price: item.price,
+          total_price: item.total_price,
+          product: item.Product,
+          variation: item.ProductVariation
+        })) || [],
+        shipping_address: finalOrder.ShippingAddress || null
+      }
     });
     
   } catch (error) {
