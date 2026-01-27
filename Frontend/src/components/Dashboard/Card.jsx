@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import '../../styles/dashboard/Card.css';
 import { FaBox, FaShoppingCart, FaDollarSign, FaUsers, FaStar, FaClock, FaRupeeSign } from "react-icons/fa";
 import { dashboardService } from '../../services';
+import Loader from '../Loader';
 
 function CardGrid() {
   const [stats, setStats] = useState(null);
@@ -31,8 +32,14 @@ function CardGrid() {
   if (loading) {
     return (
       <div className="dashboard-sections">
-        <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-          Loading dashboard statistics... 📄 10 Items Per Page Fixed!
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '400px',
+          width: '100%'
+        }}>
+          <Loader />
         </div>
       </div>
     );
