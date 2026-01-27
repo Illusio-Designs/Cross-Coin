@@ -282,7 +282,7 @@
   }
   
   .dashboard-page {
-    padding: 2rem 2rem 1rem 2rem !important; /* top, right, bottom, left */
+    padding: 1rem 1rem 1rem 1rem !important; /* top, right, bottom, left */
   }
 }
 
@@ -292,7 +292,7 @@
   }
   
   .dashboard-page {
-    padding: 2.5rem 2.5rem 1.5rem 2.5rem !important; /* top, right, bottom, left */
+    padding: 1.5rem 1.5rem 1.5rem 1.5rem !important; /* top, right, bottom, left */
   }
 }
 
@@ -302,7 +302,7 @@
   }
   
   .dashboard-page {
-    padding: 3rem 3rem 2rem 3rem !important; /* top, right, bottom, left */
+    padding: 2rem 2rem 2rem 2rem !important; /* top, right, bottom, left */
   }
 }
 

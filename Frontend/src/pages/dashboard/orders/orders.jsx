@@ -7,6 +7,7 @@ import Modal from "@/components/common/Modal";
 import Button from "@/components/common/Button";
 import SafeImage from "@/components/common/SafeImage";
 import '../../../styles/dashboard/orders.css';
+import '../../../styles/dashboard/table-columns.css';
 import "../../../styles/dashboard/seo.css"; // Reusing styles for consistency
 import { toast } from 'react-hot-toast';
 import { getProductImageSrc } from '../../../utils/imageUtils';
