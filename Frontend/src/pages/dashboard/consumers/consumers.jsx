@@ -3,6 +3,7 @@ import Button from "@/components/common/Button";
 import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
 import Modal from "@/components/common/Modal";
+import Loader from "@/components/Loader";
 import { debounce } from 'lodash';
 import { userService } from '@/services';
 
@@ -146,7 +147,9 @@ export default function Consumers() {
       {/* Table Section */}
       <div className="seo-table-container consumers-table">
         {loading ? (
-          <div className="seo-loading">Loading...</div>
+          <div style={{ position: 'relative', minHeight: '400px' }}>
+            <Loader />
+          </div>
         ) : error ? (
           <div className="seo-empty-state">{error}</div>
         ) : (

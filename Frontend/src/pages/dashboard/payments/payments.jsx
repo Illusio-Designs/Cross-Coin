@@ -3,6 +3,7 @@ import Button from "@/components/common/Button";
 import Modal from "@/components/common/Modal";
 import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
+import Loader from "@/components/Loader";
 import { paymentService } from "@/services";
 import { debounce } from 'lodash';
 import { toast } from "react-hot-toast";
@@ -368,7 +369,9 @@ export default function Payments() {
         {/* Table Section */}
         <div className="seo-table-container">
           {loading ? (
-            <div className="seo-loading">Loading payments...</div>
+            <div style={{ position: 'relative', minHeight: '400px' }}>
+              <Loader />
+            </div>
           ) : (
             <>
               {filteredData.length === 0 ? (

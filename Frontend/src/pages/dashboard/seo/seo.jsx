@@ -5,6 +5,7 @@ import InputField from "../../../components/common/InputField";
 import Modal from "../../../components/common/Modal";
 import Table from "../../../components/common/Table";
 import Pagination from "../../../components/common/Pagination";
+import Loader from "../../../components/Loader";
 import { seoService, userService } from "../../../services";
 import { debounce } from 'lodash';
 import { useRouter } from 'next/router';
@@ -312,7 +313,9 @@ export default function SEO() {
         {/* Table Section */}
         <div className="seo-table-container seo-table">
           {loading ? (
-            <div className="seo-loading">Loading...</div>
+            <div style={{ position: 'relative', minHeight: '400px' }}>
+              <Loader />
+            </div>
           ) : error ? (
             <div className="seo-error">{error}</div>
           ) : (
