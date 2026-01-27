@@ -256,6 +256,15 @@ const setupDatabase = async () => {
     }
 
     console.log("✓ Database setup completed successfully!");
+    
+    // Clean up duplicate payments
+    console.log("\nCleaning up duplicate payments...");
+    await cleanupDuplicatePayments();
+    
+    // Sync payment data (fix NULL payment_type and amount_paid)
+    console.log("\nSyncing payment data...");
+    await syncPaymentData();
+    
     return true;
   } catch (error) {
     console.error("❌ Database setup failed:", error.message);
@@ -266,6 +275,128 @@ const setupDatabase = async () => {
       }
     }
     throw error;
+  }
+};
+
+// Function to clean up duplicate payments
+const cleanupDuplicatePayments = async () => {
+  try {
+    const { Payment } = require("../model/paymentModel.js");
+
+    console.log("Checking for duplicate payment records...");
+
+    // Find all payments grouped by order_id
+    const [duplicates] = await sequelize.query(`
+      SELECT order_id, COUNT(*) as count
+      FROM payments
+      GROUP BY order_id
+      HAVING count > 1
+    `);
+
+    if (duplicates.length === 0) {
+      console.log("✓ No duplicate payments found");
+      return;
+    }
+
+    console.log(`Found ${duplicates.length} orders with duplicate payments`);
+
+    let removed = 0;
+
+    for (const dup of duplicates) {
+      // Get all payments for this order
+      const payments = await Payment.findAll({
+        where: { order_id: dup.order_id },
+        order: [
+          ["status", "DESC"], // Keep successful over pending
+          ["createdAt", "DESC"], // Keep latest
+        ],
+      });
+
+      // Keep the first one (successful and latest), delete the rest
+      const toKeep = payments[0];
+      const toDelete = payments.slice(1);
+
+      for (const payment of toDelete) {
+        await payment.destroy();
+        removed++;
+        console.log(
+          `  Removed duplicate payment ID ${payment.id} for order ${dup.order_id}`
+        );
+      }
+    }
+
+    console.log(`✓ Removed ${removed} duplicate payment records`);
+  } catch (error) {
+    console.error("⚠️ Error cleaning up duplicate payments:", error.message);
+  }
+};
+
+// Function to sync payment data
+const syncPaymentData = async () => {
+  try {
+    const { Payment } = require("../model/paymentModel.js");
+    const { Order } = require("../model/orderModel.js");
+
+    console.log("Checking payments for missing data...");
+
+    // Get all payments
+    const allPayments = await Payment.findAll({
+      include: [
+        {
+          model: Order,
+          attributes: ["id", "order_number", "payment_type", "final_amount"],
+        },
+      ],
+    });
+
+    let stats = {
+      nullPaymentType: 0,
+      nullAmount: 0,
+      updated: 0,
+    };
+
+    for (const payment of allPayments) {
+      let needsUpdate = false;
+      const updates = {};
+
+      // Fix NULL payment_type
+      if (!payment.payment_type) {
+        stats.nullPaymentType++;
+        if (payment.Order && payment.Order.payment_type) {
+          updates.payment_type = payment.Order.payment_type;
+          needsUpdate = true;
+        } else {
+          // Default to COD if order also doesn't have it
+          updates.payment_type = "cod";
+          needsUpdate = true;
+        }
+      }
+
+      // Fix NULL or 0 amount_paid
+      if (!payment.amount_paid || payment.amount_paid === 0) {
+        stats.nullAmount++;
+        if (payment.Order && payment.Order.final_amount) {
+          updates.amount_paid = payment.Order.final_amount;
+          needsUpdate = true;
+        }
+      }
+
+      // Update if needed
+      if (needsUpdate) {
+        await payment.update(updates);
+        stats.updated++;
+      }
+    }
+
+    if (stats.updated > 0) {
+      console.log(`✓ Fixed ${stats.nullPaymentType} payments with NULL payment_type`);
+      console.log(`✓ Fixed ${stats.nullAmount} payments with NULL/0 amount`);
+      console.log(`✓ Total payments updated: ${stats.updated}`);
+    } else {
+      console.log("✓ All payment data is already synchronized");
+    }
+  } catch (error) {
+    console.error("⚠️ Error syncing payment data:", error.message);
   }
 };
 

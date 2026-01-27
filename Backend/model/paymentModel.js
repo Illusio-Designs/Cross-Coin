@@ -34,10 +34,18 @@ const Payment = sequelize.define(
       },
     },
     payment_type: {
-      type: DataTypes.ENUM("cod", "credit_card", "debit_card", "upi", "wallet"),
+      type: DataTypes.ENUM("cod", "credit_card", "debit_card", "upi", "wallet", "razorpay"),
       allowNull: false,
     },
     transaction_id: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    razorpay_order_id: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    razorpay_signature: {
       type: DataTypes.STRING,
       allowNull: true,
     },
