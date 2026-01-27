@@ -1,4 +1,4 @@
-const Policy = require('../model/policyModel');
+const { Policy } = require('../model/policyModel');
 
 exports.createPolicy = async (req, res) => {
   try {
@@ -6,6 +6,7 @@ exports.createPolicy = async (req, res) => {
     const policy = await Policy.create({ title, content });
     res.status(201).json(policy);
   } catch (err) {
+    console.error('Create policy error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -15,6 +16,7 @@ exports.getPolicies = async (req, res) => {
     const policies = await Policy.findAll();
     res.json(policies);
   } catch (err) {
+    console.error('Get policies error:', err);
     res.status(500).json({ error: err.message });
   }
 };

@@ -34,9 +34,7 @@
   min-width: 150px;
 }
 
-.common-table th:nth-child(3) {
-  width: 120px; /* Type column */
-}
+
 
 .common-table th:nth-child(4) {
   width: 120px; /* Required column */

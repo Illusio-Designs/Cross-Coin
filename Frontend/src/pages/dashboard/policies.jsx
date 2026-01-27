@@ -13,16 +13,6 @@ import DOMPurify from 'dompurify';
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
-// Helper to get first two lines of plain text from HTML
-function getFirstTwoLines(html) {
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = html;
-  const text = tempDiv.textContent || tempDiv.innerText || '';
-  const lines = text.split(/\r?\n|\r|\n/).filter(Boolean);
-  if (lines.length <= 2) return text;
-  return lines.slice(0, 2).join(' ') + '...';
-}
-
 export default function Policies() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -34,8 +24,7 @@ export default function Policies() {
   const [formData, setFormData] = useState({
     id: null,
     title: "",
-    content: "",
-    status: "active"
+    content: ""
   });
 
   // Debounced search function
@@ -108,16 +97,27 @@ export default function Policies() {
     { 
       header: "Content", 
       accessor: "content",
-      cell: ({ content }) => (
-        <div
-          className="policy-content-cell"
-          title={(() => { const tempDiv = document.createElement('div'); tempDiv.innerHTML = content; return tempDiv.textContent || tempDiv.innerText || ''; })()}
-        >
-          {getFirstTwoLines(content)}
-        </div>
-      )
+      cell: ({ content }) => {
+        // Extract plain text from HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = content;
+        const plainText = tempDiv.textContent || tempDiv.innerText || '';
+        
+        return (
+          <div
+            className="policy-content-cell"
+            title={plainText}
+            style={{ 
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {plainText}
+          </div>
+        );
+      }
     },
-    { header: "Status", accessor: "status" },
     {
       header: "Actions",
       accessor: "actions",
@@ -153,8 +153,7 @@ export default function Policies() {
       setFormData({
         id: data.id,
         title: data.title || "",
-        content: data.content || "",
-        status: data.status || "active"
+        content: data.content || ""
       });
       setIsModalOpen(true);
     } catch (err) {
@@ -184,8 +183,7 @@ export default function Policies() {
     setFormData({
       id: null,
       title: "",
-      content: "",
-      status: "active"
+      content: ""
     });
     setIsModalOpen(true);
   };
@@ -195,8 +193,7 @@ export default function Policies() {
     setFormData({
       id: null,
       title: "",
-      content: "",
-      status: "active"
+      content: ""
     });
   };
 
@@ -215,14 +212,12 @@ export default function Policies() {
       if (formData.id) {
         await policyService.updatePolicy(formData.id, {
           title: formData.title,
-          content: formData.content,
-          status: formData.status
+          content: formData.content
         });
       } else {
         await policyService.createPolicy({
           title: formData.title,
-          content: formData.content,
-          status: formData.status
+          content: formData.content
         });
       }
       await fetchPolicies();
@@ -230,8 +225,7 @@ export default function Policies() {
       setFormData({
         id: null,
         title: "",
-        content: "",
-        status: "active"
+        content: ""
       });
     } catch (err) {
       setError(err.message || "Failed to save policy");
@@ -273,7 +267,7 @@ export default function Policies() {
       </div>
 
         {/* Table Section */}
-        <div className="seo-table-container">
+        <div className="seo-table-container policies-table">
           {loading ? (
             <div className="seo-loading">Loading...</div>
           ) : (
@@ -332,18 +326,6 @@ export default function Policies() {
                 style={{ minHeight: 200 }}
               />
             </div>
-            <InputField
-              label="Status"
-              type="select"
-              name="status"
-              value={formData.status}
-              onChange={handleInputChange}
-              required
-              options={[
-                { value: "active", label: "Active" },
-                { value: "inactive", label: "Inactive" }
-              ]}
-            />
           </div>
           <div className="modal-footer">
                 <Button

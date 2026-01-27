@@ -7,7 +7,6 @@ import Pagination from "@/components/common/Pagination";
 import { reviewService } from "@/services";
 import { debounce } from 'lodash';
 import "../../../styles/dashboard/reviews.css";
-import "../../../styles/dashboard/table-columns.css";
 
 export default function Reviews() {
   const [isModalOpen, setIsModalOpen] = useState(false);
