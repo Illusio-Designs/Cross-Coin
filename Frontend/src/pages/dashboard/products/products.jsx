@@ -10,7 +10,6 @@ import { attributeService } from "@/services";
 import { debounce } from 'lodash';
 import AttributeSelector from '@/components/products/AttributeSelector';
 import "../../../styles/dashboard/products.css";
-import "../../../styles/dashboard/table-columns.css";
 import dynamic from 'next/dynamic';
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 import 'react-quill/dist/quill.snow.css';

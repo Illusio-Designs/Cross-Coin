@@ -54,7 +54,7 @@ export default function Consumers() {
       if (!filterValue) return true;
       const searchTerm = filterValue.toLowerCase();
       return (
-        (item.name?.toLowerCase().includes(searchTerm)) ||
+        (item.username?.toLowerCase().includes(searchTerm)) ||
         (item.email?.toLowerCase().includes(searchTerm))
       );
     });
@@ -95,10 +95,9 @@ export default function Consumers() {
   // Columns definition (no join date, no last login)
   const columns = [
     { header: "S/N", accessor: "serial_number" },
-    { header: "Name", accessor: "name" },
+    { header: "Name", accessor: "username" },
     { header: "Email", accessor: "email" },
     { header: "Role", accessor: "role" },
-    { header: "Status", accessor: "status" },
     {
       header: "Actions",
       accessor: "actions",
@@ -185,7 +184,7 @@ export default function Consumers() {
     <Modal
       isOpen={isViewModalOpen}
       onClose={() => setIsViewModalOpen(false)}
-      title={`Consumer Details: ${selectedConsumer?.name || 'N/A'}`}
+      title={`Consumer Details: ${selectedConsumer?.username || 'N/A'}`}
     >
       {selectedConsumer && (
         <div className="consumer-details-modal">
@@ -194,7 +193,6 @@ export default function Consumers() {
               Personal Information
             </h4>
             <div className="consumer-info-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div><strong>Name:</strong> {selectedConsumer.name || 'N/A'}</div>
               <div><strong>Username:</strong> {selectedConsumer.username || 'N/A'}</div>
               <div><strong>Email:</strong> {selectedConsumer.email || 'N/A'}</div>
               <div><strong>Role:</strong> {selectedConsumer.role || 'N/A'}</div>
