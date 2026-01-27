@@ -164,15 +164,19 @@ export default function SEO() {
       setLoading(true);
       setError(null);
       const response = await seoService.getSEOData(pageName);
-      console.log('Edit SEO Data:', response);
+      console.log('Edit SEO Data Response:', response);
+      
+      // Handle both direct data and nested data property
+      const data = response.data || response;
+      console.log('Extracted SEO Data:', data);
       
       setFormData({
         original_page_name: pageName,
-        page_name: response.page_name || "",
-        meta_title: response.meta_title || "",
-        meta_description: response.meta_description || "",
-        meta_keywords: response.meta_keywords || "",
-        meta_image: response.meta_image || null
+        page_name: data.page_name || pageName,
+        meta_title: data.meta_title || "",
+        meta_description: data.meta_description || "",
+        meta_keywords: data.meta_keywords || "",
+        meta_image: data.meta_image || null
       });
       setIsModalOpen(true);
     } catch (err) {
