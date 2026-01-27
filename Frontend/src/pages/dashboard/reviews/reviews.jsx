@@ -11,11 +11,13 @@ import "../../../styles/dashboard/reviews.css";
 export default function Reviews() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [filterValue, setFilterValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [totalReviews, setTotalReviews] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [formData, setFormData] = useState({
     status: "pending",
     is_featured: false,
@@ -36,26 +38,54 @@ export default function Reviews() {
     debouncedSearch(value);
   };
 
-  // Fetch reviews data
+  // Fetch reviews data with backend pagination
   const fetchReviews = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await reviewService.getAllReviews();
+      
+      // Update service call to include pagination params
+      const params = {
+        page: currentPage,
+        limit: itemsPerPage,
+        status: 'all'
+      };
+      
+      const response = await reviewService.getAllReviews('all', params);
       console.log('API Response:', response);
       
-      const mappedReviews = response.map(review => ({
-        id: review.id,
-        customerName: review.customerName || 'Guest',
-        productName: review.productName || 'N/A',
-        rating: review.rating,
-        review: review.review,
-        status: review.status,
-        is_featured: review.is_featured,
-        admin_notes: review.admin_notes
-      }));
-      
-      setReviews(mappedReviews);
+      if (response && response.reviews) {
+        const mappedReviews = response.reviews.map(review => ({
+          id: review.id,
+          customerName: review.customerName || 'Guest',
+          productName: review.productName || 'N/A',
+          rating: review.rating,
+          review: review.review,
+          status: review.status,
+          is_featured: review.is_featured,
+          admin_notes: review.admin_notes
+        }));
+        
+        setReviews(mappedReviews);
+        setTotalReviews(response.pagination?.total || mappedReviews.length);
+        setTotalPages(response.pagination?.totalPages || Math.ceil(mappedReviews.length / itemsPerPage));
+      } else {
+        // Fallback for old API format
+        const mappedReviews = response.map(review => ({
+          id: review.id,
+          customerName: review.customerName || 'Guest',
+          productName: review.productName || 'N/A',
+          rating: review.rating,
+          review: review.review,
+          status: review.status,
+          is_featured: review.is_featured,
+          admin_notes: review.admin_notes
+        }));
+        
+        setReviews(mappedReviews);
+        setTotalReviews(mappedReviews.length);
+        setTotalPages(Math.ceil(mappedReviews.length / itemsPerPage));
+      }
     } catch (err) {
       setError(err.message || "Failed to fetch reviews");
       console.error("Error fetching reviews:", err);
@@ -66,9 +96,9 @@ export default function Reviews() {
 
   useEffect(() => {
     fetchReviews();
-  }, []);
+  }, [currentPage, itemsPerPage]);
 
-  // Enhanced filter function
+  // Enhanced filter function - now just for display, backend handles actual filtering
   const filteredData = reviews.filter(item => {
     if (!filterValue) return true;
     
@@ -80,22 +110,19 @@ export default function Reviews() {
     );
   });
 
-  // Pagination
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+  // Backend handles pagination, so we just display what we get
+  const currentItems = filteredData;
 
-  // Add serial number to each row
+  // Add serial number to each row based on current page
   const currentItemsWithSN = currentItems.map((item, idx) => ({
     ...item,
-    serial_number: indexOfFirstItem + idx + 1
+    serial_number: (currentPage - 1) * itemsPerPage + idx + 1
   }));
 
-  // Reset to first page when filter changes
+  // Reset to first page when filter or itemsPerPage changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterValue]);
+  }, [filterValue, itemsPerPage]);
 
   // Columns definition
   const columns = [
@@ -304,7 +331,7 @@ export default function Reviews() {
                     striped={true}
                     hoverable={true}
                   />
-                  {filteredData.length > itemsPerPage && (
+                  {totalReviews > itemsPerPage && (
                     <div className="seo-pagination-container">
                       <Pagination
                         currentPage={currentPage}
