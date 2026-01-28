@@ -229,15 +229,15 @@ export const getPublicProductReviews = async (productId, params = {}) => {
 };
 
 // Validate a coupon
-export const validateCoupon = async (code) => {
+export const validateCoupon = async (code, cartTotal) => {
   try {
     const token = localStorage.getItem("token");
     const response = await axios.post(
       `${API_URL}/api/coupons/validate`,
-      { code },
-      {
+      { code, cartTotal },
+      token ? {
         headers: { Authorization: `Bearer ${token}` },
-      }
+      } : {}
     );
     return response.data;
   } catch (error) {

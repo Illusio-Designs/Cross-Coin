@@ -177,16 +177,23 @@ module.exports.getCouponById = async (req, res) => {
     }
 };
 
-// Validate a coupon
+// Validate a coupon (works for both authenticated and guest users)
 module.exports.validateCoupon = async (req, res) => {
     try {
-        const { code } = req.body;
-        const userId = req.user.id;
+        const { code, cartTotal } = req.body;
+        const userId = req.user?.id; // Optional - works for guests too
 
         if (!code) {
             return res.status(400).json({ 
                 success: false,
                 message: 'Coupon code is required' 
+            });
+        }
+
+        if (!cartTotal || cartTotal <= 0) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Cart total is required' 
             });
         }
 
@@ -214,110 +221,38 @@ module.exports.validateCoupon = async (req, res) => {
             });
         }
 
-        // Check per-user usage limit
-        const userUsageCount = await CouponUsage.count({
-            where: { couponId: coupon.id, userId: userId }
-        });
-
-        if (coupon.perUserLimit && userUsageCount >= coupon.perUserLimit) {
-            return res.status(400).json({ 
-                success: false,
-                message: `You have already used this coupon the maximum number of times.` 
+        // Check per-user usage limit (only for authenticated users)
+        if (userId) {
+            const userUsageCount = await CouponUsage.count({
+                where: { couponId: coupon.id, userId: userId }
             });
-        }
 
-        // Specific check for coupons with no per-user limit (implying one-time use)
-        if (!coupon.perUserLimit && userUsageCount > 0) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'You have already used this coupon.' 
-            });
-        }
-
-        // Get user's cart to check applicability and order amount
-        const userCart = await Cart.findOne({
-            where: { user_id: userId },
-            include: [{
-                model: CartItem,
-                as: 'CartItems',
-                include: [{
-                    model: Product,
-                    include: [{ 
-                        model: Category,
-                        attributes: ['id', 'name']
-                    }, {
-                        model: ProductVariation,
-                        attributes: ['id', 'price']
-                    }]
-                }]
-            }]
-        });
-
-        if (!userCart || !userCart.CartItems || userCart.CartItems.length === 0) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'Your cart is empty.' 
-            });
-        }
-
-        let cartItems = userCart.CartItems;
-        let applicableItems = [];
-        let applicableAmount = 0;
-
-        // Defensively parse applicableProducts and applicableCategories
-        let applicableProducts = coupon.applicableProducts;
-        if (typeof applicableProducts === 'string') {
-            try { 
-                applicableProducts = JSON.parse(applicableProducts); 
-            } catch (e) { 
-                applicableProducts = null; 
+            if (coupon.perUserLimit && userUsageCount >= coupon.perUserLimit) {
+                return res.status(400).json({ 
+                    success: false,
+                    message: `You have already used this coupon the maximum number of times.` 
+                });
             }
-        }
-        if (!Array.isArray(applicableProducts)) {
-            applicableProducts = null;
-        }
 
-        let applicableCategories = coupon.applicableCategories;
-        if (typeof applicableCategories === 'string') {
-            try { 
-                applicableCategories = JSON.parse(applicableCategories); 
-            } catch (e) { 
-                applicableCategories = null; 
-            }
-        }
-        if (!Array.isArray(applicableCategories)) {
-            applicableCategories = null;
-        }
-
-        for (const item of cartItems) {
-            const product = item.Product;
-            if (!product) continue;
-
-            const isApplicableProduct = !applicableProducts || applicableProducts.length === 0 || applicableProducts.includes(product.id);
-            const isApplicableCategory = !applicableCategories || applicableCategories.length === 0 || applicableCategories.includes(product.categoryId);
-
-            if (isApplicableProduct && isApplicableCategory) {
-                applicableItems.push(item);
-                // Use the price from the cart item or product variation
-                const itemPrice = item.price || (product.ProductVariations && product.ProductVariations.length > 0 ? product.ProductVariations[0].price : 0);
-                applicableAmount += itemPrice * item.quantity;
+            if (!coupon.perUserLimit && userUsageCount > 0) {
+                return res.status(400).json({ 
+                    success: false,
+                    message: 'You have already used this coupon.' 
+                });
             }
         }
 
-        if (applicableItems.length === 0) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'This coupon is not applicable to any items in your cart.' 
-            });
-        }
-
+        // Check minimum purchase requirement
+        const applicableAmount = parseFloat(cartTotal);
+        
         if (coupon.minPurchase && applicableAmount < coupon.minPurchase) {
             return res.status(400).json({
                 success: false,
-                message: `You must spend at least ₹${coupon.minPurchase} on eligible items to use this coupon.`
+                message: `You must spend at least ₹${coupon.minPurchase} to use this coupon. Add ₹${(coupon.minPurchase - applicableAmount).toFixed(2)} more to your cart.`
             });
         }
 
+        // Calculate discount
         let discountAmount = 0;
         if (coupon.type === 'percentage') {
             discountAmount = (applicableAmount * parseFloat(coupon.value)) / 100;
@@ -328,24 +263,19 @@ module.exports.validateCoupon = async (req, res) => {
             discountAmount = parseFloat(coupon.value);
         }
 
-        // Ensure discount doesn't exceed applicable amount
+        // Ensure discount doesn't exceed cart total
         if (discountAmount > applicableAmount) {
             discountAmount = applicableAmount;
         }
 
-        const subtotal = cartItems.reduce((sum, item) => {
-            const itemPrice = item.price || (item.Product && item.Product.ProductVariations && item.Product.ProductVariations.length > 0 ? item.Product.ProductVariations[0].price : 0);
-            return sum + (itemPrice * item.quantity);
-        }, 0);
-        
-        const finalAmount = Math.max(0, subtotal - discountAmount);
+        const finalAmount = Math.max(0, applicableAmount - discountAmount);
 
         res.status(200).json({
             success: true,
             message: 'Coupon is valid and can be applied!',
             discountAmount: discountAmount.toFixed(2),
             finalAmount: finalAmount.toFixed(2),
-            subtotal: subtotal.toFixed(2),
+            subtotal: applicableAmount.toFixed(2),
             coupon: {
                 id: coupon.id,
                 code: coupon.code,
