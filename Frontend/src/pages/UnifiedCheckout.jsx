@@ -486,13 +486,21 @@ export default function UnifiedCheckout() {
           },
           modal: {
             ondismiss: function() {
-              console.log("Payment cancelled");
+              console.log("Payment cancelled by user");
+              showOrderPlacedErrorToast("Payment was cancelled. Your cart items are safe.");
               setIsProcessing(false);
             }
           }
         };
         
         const rzp = new window.Razorpay(options);
+        
+        rzp.on('payment.failed', function (response) {
+          console.error("Payment failed:", response.error);
+          showOrderPlacedErrorToast("Payment failed: " + (response.error.description || "Please try again"));
+          setIsProcessing(false);
+        });
+        
         rzp.open();
       }
     } catch (error) {

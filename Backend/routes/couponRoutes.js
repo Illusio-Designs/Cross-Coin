@@ -9,12 +9,12 @@ const {
     getPublicCoupons,
     applyCoupon
 } = require('../controller/couponController.js');
-const { isAuthenticated, authorize, authenticate } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, authorize, authenticate, optionalAuth } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 
-// Public routes
-router.post('/validate', authenticate, validateCoupon);
+// Public routes (no authentication required)
+router.post('/validate', validateCoupon); // Changed: removed authenticate middleware
 router.get('/public', getPublicCoupons);
 
 // Authenticated user route

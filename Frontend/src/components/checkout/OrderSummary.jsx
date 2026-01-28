@@ -49,17 +49,12 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
       setCouponError("Please enter a promo code.");
       return;
     }
-    if (!user) {
-      setCouponError("Please log in to apply a coupon.");
-      router.push('/auth/login');
-      return;
-    }
     
     setCouponError("");
     setCouponSuccess("");
     
     try {
-      const response = await validateCoupon(promoCode);
+      const response = await validateCoupon(promoCode, subtotal);
       
       if (response && response.coupon && response.discountAmount) {
         const discount = parseFloat(response.discountAmount);
@@ -70,8 +65,11 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
           discountAmount: discount
         };
         
+        // Save to sessionStorage to persist across page refreshes
+        sessionStorage.setItem("appliedCoupon", JSON.stringify(newCouponData));
+        
         onCouponApplied(newCouponData);
-        setCouponSuccess(`Coupon applied! You saved ₹${discount.toFixed(2)}`);
+        setCouponSuccess(`🎉 Yay! You saved ₹${discount.toFixed(2)}`);
       } else {
         throw new Error("Invalid coupon response format");
       }

@@ -201,11 +201,6 @@ export default function CartStep() {
               <div className="cart-item-details">
                 <div className="cart-item-title">
                   {buyNowItem.name}
-                  {/* Add pack indicator if multiple colors */}
-                  {(buyNowItem.variation?.attributes?.color?.length > 1 || 
-                    (Array.isArray(buyNowItem.color) && buyNowItem.color.length > 1)) && (
-                    <span className="pack-indicator">📦 Pack</span>
-                  )}
                 </div>
                 {buyNowItem.variation && buyNowItem.variation.name && (
                   <div className="cart-item-meta">Variation: {buyNowItem.variation.name}</div>
@@ -255,11 +250,6 @@ export default function CartStep() {
         {/* Cart Items Section - Show existing cart items */}
         {cartItems.length > 0 && (
           <div className="existing-cart-section">
-            <div className="existing-cart-header">
-              <h3>🛍️ Items Already in Your Cart</h3>
-              <span className="cart-count">{cartItems.length} item{cartItems.length > 1 ? 's' : ''}</span>
-            </div>
-            
             <div className="cart-items-list">
               {cartItems.map((item) => {
                 const imageUrl = pickCartItemImage(item);
@@ -290,11 +280,6 @@ export default function CartStep() {
                     <div className="cart-item-details">
                       <div className="cart-item-title">
                         {item.name}
-                        {/* Add pack indicator if multiple colors */}
-                        {(item.variation?.attributes?.color?.length > 1 || 
-                          (Array.isArray(item.color) && item.color.length > 1)) && (
-                          <span className="pack-indicator">📦 Pack</span>
-                        )}
                       </div>
                       {item.variation && item.variation.name && (
                         <div className="cart-item-meta">Variation: {item.variation.name}</div>
@@ -335,15 +320,6 @@ export default function CartStep() {
                       </div>
                       
                       <div className="cart-item-buttons">
-                        {/* Move to Buy Now Button - Prominent */}
-                        <button 
-                          className="move-to-buy-now-btn primary"
-                          onClick={() => moveCartItemToBuyNow(item.id)}
-                          title="Move to Buy Now"
-                        >
-                          Move to Buy Now
-                        </button>
-                        
                         <button className="cart-item-remove" onClick={() => {
                           console.log('CartStep: Remove button clicked for item:', item);
                           removeFromCart(item.id);
