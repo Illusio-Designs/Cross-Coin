@@ -92,6 +92,10 @@ const Order = sequelize.define('Order', {
         type: DataTypes.INTEGER,
         allowNull: true
     },
+    fship_label_url: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
     // Legacy Shiprocket fields (kept for backward compatibility)
     shiprocket_order_id: {
         type: DataTypes.STRING,

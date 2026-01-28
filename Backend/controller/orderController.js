@@ -331,8 +331,8 @@ module.exports.createOrder = async (req, res) => {
           shipment_Length: 25,
           shipment_Width: 15,
           shipment_Height: 5,
-          pick_Address_ID: 1, // Default warehouse ID
-          return_Address_ID: 1,
+          pick_Address_ID: parseInt(process.env.FSHIP_DEFAULT_WAREHOUSE_ID) || 12191,
+          return_Address_ID: parseInt(process.env.FSHIP_DEFAULT_WAREHOUSE_ID) || 12191,
           products: orderItems
         };
 
@@ -348,6 +348,7 @@ module.exports.createOrder = async (req, res) => {
                 fship_order_id: fshipResponse.orderId,
                 fship_waybill: fshipResponse.waybill,
                 fship_route_code: fshipResponse.routeCode,
+                fship_label_url: fshipResponse.labelUrl,
                 tracking_number: fshipResponse.waybill,
                 status: "processing"
               });
@@ -763,8 +764,8 @@ module.exports.createGuestOrder = async (req, res) => {
           shipment_Length: 25,
           shipment_Width: 15,
           shipment_Height: 5,
-          pick_Address_ID: 1, // Default warehouse ID
-          return_Address_ID: 1,
+          pick_Address_ID: parseInt(process.env.FSHIP_DEFAULT_WAREHOUSE_ID) || 12191,
+          return_Address_ID: parseInt(process.env.FSHIP_DEFAULT_WAREHOUSE_ID) || 12191,
           products: validatedItems.map((item) => ({
             productName: item.product.name,
             sku: item.product.sku || `PROD-${item.product.id}`,
@@ -789,6 +790,7 @@ module.exports.createGuestOrder = async (req, res) => {
             fship_order_id: fshipResponse.orderId,
             fship_waybill: fshipResponse.waybill,
             fship_route_code: fshipResponse.routeCode,
+            fship_label_url: fshipResponse.labelUrl,
             tracking_number: fshipResponse.waybill,
             status: "processing"
           });

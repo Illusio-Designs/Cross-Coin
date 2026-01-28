@@ -141,6 +141,7 @@ class FShipService {
                 waybill: response.data.waybill,
                 routeCode: response.data.route_code,
                 status: response.data.order_status,
+                labelUrl: response.data.labelurl,
                 response: response.data.response
             };
         } catch (error) {
