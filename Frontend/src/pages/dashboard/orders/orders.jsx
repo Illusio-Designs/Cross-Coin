@@ -951,6 +951,19 @@ const Orders = () => {
                                             {selectedOrder.fship_route_code && <div><strong>Route Code:</strong> {selectedOrder.fship_route_code}</div>}
                                             {selectedOrder.tracking_number && <div><strong>Tracking Number:</strong> {selectedOrder.tracking_number}</div>}
                                             {selectedOrder.courier_name && <div><strong>Courier:</strong> {selectedOrder.courier_name}</div>}
+                                            {selectedOrder.fship_label_url && (
+                                                <div style={{ marginTop: '8px' }}>
+                                                    <strong>Shipping Label:</strong>{' '}
+                                                    <a 
+                                                        href={selectedOrder.fship_label_url} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer" 
+                                                        style={{ color: '#1976d2', textDecoration: 'underline' }}
+                                                    >
+                                                        Download Label PDF
+                                                    </a>
+                                                </div>
+                                            )}
                                         </div>
                                     </>
                                 )}
