@@ -357,6 +357,7 @@ export default function Categories() {
         isOpen={isModalOpen}
         onClose={handleModalClose}
         title={formData.id ? "Edit Category" : "Add New Category"}
+        closeOnOverlayClick={false}
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">

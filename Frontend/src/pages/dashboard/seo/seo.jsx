@@ -358,6 +358,7 @@ export default function SEO() {
         isOpen={isModalOpen}
         onClose={handleModalClose}
         title={formData.original_page_name ? "Edit SEO Entry" : "Add New SEO Entry"}
+        closeOnOverlayClick={false}
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
