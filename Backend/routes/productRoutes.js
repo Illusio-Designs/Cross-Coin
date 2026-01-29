@@ -11,7 +11,8 @@ const {
     getNewArrivals,
     getBestSellers,
     getPublicProductBySlug,
-    getAllPublicProducts
+    getAllPublicProducts,
+    getExistingImages
 } = require('../controller/productController.js');
 const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
 const { productUpload } = require('../middleware/uploadMiddleware.js');
@@ -39,6 +40,7 @@ const multerErrorHandler = (err, req, res, next) => {
 
 // Admin routes
 router.get('/', isAuthenticated, authorize(['admin']), getAllProducts);
+router.get('/existing-images', isAuthenticated, authorize(['admin']), getExistingImages);
 router.post('/', isAuthenticated, authorize(['admin']), productUpload.any(), multerErrorHandler, createProduct);
 router.put('/:id', isAuthenticated, authorize(['admin']), productUpload.any(), multerErrorHandler, updateProduct);
 router.delete('/:id', isAuthenticated, authorize(['admin']), deleteProduct);

@@ -593,11 +593,13 @@ export default function ProductDetails() {
     const img = imageObj.image_url || imageObj.url || imageObj;
     if (typeof img !== 'string') return '/assets/card1-left.webp';
     if (img.startsWith('http')) return img;
-    let baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
-    if (img.startsWith('/')) {
+    if (img.startsWith('/assets/')) return img;
+    
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+    if (img.startsWith('/uploads/')) {
       return `${baseUrl}${img}`;
     }
-    return `${baseUrl}/${img}`;
+    return `${baseUrl}/uploads/products/${img}`;
   }
 
   function forceEnvImageBase(url) {

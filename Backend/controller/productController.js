@@ -846,43 +846,94 @@ module.exports.updateProduct = async (req, res) => {
     }
 
     // --- Optimized Product Image Update Logic ---
-    // Only add new product-level images, do not delete existing unless new ones are uploaded
+    // Handle new images and library images, preserve existing images unless explicitly deleted
     if (images && images.length > 0) {
       const productLevelImages = images.filter(
         (image) => !image.fieldname.match(/^variation_(\d+)_image$/)
       );
-      if (productLevelImages.length > 0) {
-        // Delete existing product-level images from storage and DB
-        if (product.ProductImages && product.ProductImages.length > 0) {
-          for (const image of product.ProductImages) {
-            const imagePath = path.join(
-              __dirname,
-              "../uploads/products",
-              image.image_url.split("/").pop()
-            );
-            try {
-              await fs.unlink(imagePath);
-            } catch (error) {
-              console.error("Error deleting image file:", error);
+      
+      // Parse library images from request body if any
+      const libraryImages = JSON.parse(req.body.libraryImages || "[]");
+      
+      if (productLevelImages.length > 0 || libraryImages.length > 0) {
+        // Only delete existing images if new ones are being uploaded (not library images)
+        if (productLevelImages.length > 0) {
+          // Delete existing product-level images from storage and DB only when new files are uploaded
+          if (product.ProductImages && product.ProductImages.length > 0) {
+            for (const image of product.ProductImages) {
+              const imagePath = path.join(
+                __dirname,
+                "../uploads/products",
+                image.image_url.split("/").pop()
+              );
+              try {
+                await fs.unlink(imagePath);
+              } catch (error) {
+                console.error("Error deleting image file:", error);
+              }
             }
           }
+          await ProductImage.destroy({
+            where: {
+              product_id: id,
+              product_variation_id: null,
+            },
+            transaction,
+          });
         }
-        await ProductImage.destroy({
-          where: {
-            product_id: id,
-            product_variation_id: null,
-          },
-          transaction,
-        });
-        for (const [index, image] of productLevelImages.entries()) {
+        
+        let imageIndex = 0;
+        
+        // Add new uploaded images
+        for (const image of productLevelImages) {
           await ProductImage.create(
             {
               product_id: product.id,
               product_variation_id: null,
               image_url: `/uploads/products/${image.filename}`,
               alt_text: name,
-              display_order: index,
-              is_primary: index === 0,
+              display_order: imageIndex,
+              is_primary: imageIndex === 0,
+              status: "active",
+            },
+            { transaction }
+          );
+          imageIndex++;
+        }
+        
+        // Add library images (existing images from uploads folder)
+        for (const libraryImage of libraryImages) {
+          await ProductImage.create(
+            {
+              product_id: product.id,
+              product_variation_id: null,
+              image_url: libraryImage.image_url || libraryImage.url,
+              alt_text: name,
+              display_order: imageIndex,
+              is_primary: imageIndex === 0 && productLevelImages.length === 0, // Only primary if no uploaded images
+              status: "active",
+            },
+            { transaction }
+          );
+          imageIndex++;
+        }
+      }
+    } else {
+      // Handle library images only (no new file uploads)
+      const libraryImages = JSON.parse(req.body.libraryImages || "[]");
+      if (libraryImages.length > 0) {
+        // Don't delete existing images, just add library images
+        const existingImageCount = product.ProductImages ? product.ProductImages.length : 0;
+        
+        for (const [index, libraryImage] of libraryImages.entries()) {
+          await ProductImage.create(
+            {
+              product_id: product.id,
+              product_variation_id: null,
+              image_url: libraryImage.image_url || libraryImage.url,
+              alt_text: name,
+              display_order: existingImageCount + index,
+              is_primary: existingImageCount === 0 && index === 0, // Only primary if no existing images
               status: "active",
             },
             { transaction }
@@ -890,7 +941,7 @@ module.exports.updateProduct = async (req, res) => {
         }
       }
     }
-    // If no new images are uploaded, existing images are preserved
+    // If no new images and no library images, preserve existing images
 
     // Recalculate and update badge
     const badge = await calculateProductBadge(product, transaction);
@@ -1412,4 +1463,88 @@ const isProductOutOfStock = async (productId, transaction) => {
   });
   if (variations.length === 0) return false;
   return variations.every((v) => v.stock <= 0);
+};
+// Get existing images from uploads/products folder or all uploads
+module.exports.getExistingImages = async (req, res) => {
+  try {
+    const { source = 'products' } = req.query;
+    
+    let uploadsPath;
+    if (source === 'uploads') {
+      // Get all images from uploads directory
+      uploadsPath = path.join(__dirname, '../uploads');
+    } else {
+      // Get only product images
+      uploadsPath = path.join(__dirname, '../uploads/products');
+    }
+    
+    // Check if uploads directory exists
+    try {
+      await fs.access(uploadsPath);
+    } catch (error) {
+      return res.json({
+        success: true,
+        images: [],
+        message: `${source === 'uploads' ? 'Uploads' : 'Products'} directory not found`
+      });
+    }
+
+    let imageFiles = [];
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+
+    if (source === 'uploads') {
+      // Recursively scan all subdirectories in uploads
+      const scanDirectory = async (dirPath, relativePath = '') => {
+        const files = await fs.readdir(dirPath, { withFileTypes: true });
+        
+        for (const file of files) {
+          const fullPath = path.join(dirPath, file.name);
+          const relativeFilePath = path.join(relativePath, file.name);
+          
+          if (file.isDirectory()) {
+            // Skip node_modules and other system directories
+            if (!['node_modules', '.git', '.next'].includes(file.name)) {
+              await scanDirectory(fullPath, relativeFilePath);
+            }
+          } else if (file.isFile()) {
+            const ext = path.extname(file.name).toLowerCase();
+            if (imageExtensions.includes(ext)) {
+              // Use forward slashes for web URLs
+              const webPath = `/uploads/${relativeFilePath.replace(/\\/g, '/')}`;
+              imageFiles.push(webPath);
+            }
+          }
+        }
+      };
+      
+      await scanDirectory(uploadsPath);
+    } else {
+      // Only scan products directory
+      const files = await fs.readdir(uploadsPath);
+      imageFiles = files
+        .filter(file => {
+          const ext = path.extname(file).toLowerCase();
+          return imageExtensions.includes(ext);
+        })
+        .map(file => `/uploads/products/${file}`);
+    }
+
+    // Sort images by name for consistent ordering
+    imageFiles.sort();
+
+    res.json({
+      success: true,
+      images: imageFiles,
+      total: imageFiles.length,
+      source: source
+    });
+
+  } catch (error) {
+    console.error('Error getting existing images:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get existing images',
+      error: error.message
+    });
+  }
 };

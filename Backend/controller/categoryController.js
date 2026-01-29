@@ -16,8 +16,12 @@ const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/categorie
 const formatCategoryResponse = (category) => {
     const categoryData = category.toJSON();
     categoryData.parentName = category.parent ? category.parent.name : null;
-    // Add full image path
-    categoryData.image = `/uploads/categories/${categoryData.image}`;
+    
+    // Add full image path only if it doesn't already have it
+    if (categoryData.image && !categoryData.image.startsWith('/uploads/')) {
+        categoryData.image = `/uploads/categories/${categoryData.image}`;
+    }
+    
     console.log('Formatted category image path:', categoryData.image);
     delete categoryData.parent;
     return categoryData;
@@ -152,7 +156,12 @@ const getAllCategories = async (req, res) => {
         const formattedCategories = categories.map(category => {
             const categoryData = category.toJSON();
             categoryData.parentName = category.parent ? category.parent.name : null;
-            categoryData.image = `/uploads/categories/${categoryData.image}`;
+            
+            // Add full image path only if it doesn't already have it
+            if (categoryData.image && !categoryData.image.startsWith('/uploads/')) {
+                categoryData.image = `/uploads/categories/${categoryData.image}`;
+            }
+            
             delete categoryData.parent;
             return categoryData;
         });
@@ -301,7 +310,9 @@ const getPublicCategories = async (req, res) => {
             description: category.description,
             parentId: category.parentId,
             parentName: category.parent ? category.parent.name : null,
-            image: category.image ? `/uploads/categories/${category.image}` : null,
+            image: category.image && !category.image.startsWith('/uploads/') 
+                ? `/uploads/categories/${category.image}` 
+                : category.image,
             slug: category.slug
         }));
 
@@ -371,7 +382,9 @@ const getPublicCategoryByName = async (req, res) => {
             description: category.description,
             parentId: category.parentId,
             parentName: category.parent ? category.parent.name : null,
-            image: category.image ? `/uploads/categories/${category.image}` : null,
+            image: category.image && !category.image.startsWith('/uploads/') 
+                ? `/uploads/categories/${category.image}` 
+                : category.image,
             slug: category.slug,
             products: category.products ? category.products.map(product => {
                 let image = null;

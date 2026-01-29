@@ -10,6 +10,7 @@ import { categoryService } from "@/services";
 import { attributeService } from "@/services";
 import { debounce } from 'lodash';
 import AttributeSelector from '@/components/products/AttributeSelector';
+import ExistingImageSelector from '@/components/products/ExistingImageSelector';
 import "../../../styles/dashboard/products.css";
 import dynamic from 'next/dynamic';
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
@@ -27,6 +28,7 @@ const ProductsPage = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [currentStep, setCurrentStep] = useState(1);
+  const [showExistingImageSelector, setShowExistingImageSelector] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -35,6 +37,8 @@ const ProductsPage = () => {
     price: "",
     stock: "",
     images: [],
+    imagesToDelete: [], // Track images to delete
+    variationImagesToDelete: [], // Track variation images to delete
     weight: "",
     weightUnit: "g",
     dimensions: { length: "", width: "", height: "" },
@@ -285,21 +289,16 @@ const ProductsPage = () => {
         status: product.status,
         badge: product.badge || 'none',
         total_sold: product.total_sold || 0,
+        imagesToDelete: [], // Reset deletion tracking
+        variationImagesToDelete: [], // Reset deletion tracking
         images: product.images?.map(img => {
-          let imageUrl = img.image_url;
-          // If image_url doesn't start with http, construct full URL
-          if (!imageUrl.startsWith('http')) {
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-            if (imageUrl.startsWith('/uploads/')) {
-              imageUrl = `${baseUrl}${imageUrl}`;
-            } else {
-              imageUrl = `${baseUrl}/uploads/products/${imageUrl}`;
-            }
-          }
+          console.log('Loading existing image:', img);
+          
           return {
             id: img.id,
-            name: imageUrl.split('/').pop(),
-            url: imageUrl,
+            name: img.image_url.split('/').pop(),
+            image_url: img.image_url, // Keep original format for SafeImage
+            url: img.image_url, // Also provide url for compatibility
             type: 'image/jpeg',
             existing: true
           };
@@ -439,6 +438,7 @@ const ProductsPage = () => {
   const handleModalClose = () => {
     setIsModalOpen(false);
     setCurrentStep(1);
+    setShowExistingImageSelector(false); // Reset image selector
     setFormData({
       name: "",
       description: "",
@@ -447,6 +447,8 @@ const ProductsPage = () => {
       price: "",
       stock: "",
       images: [],
+      imagesToDelete: [], // Reset deletion tracking
+      variationImagesToDelete: [], // Reset deletion tracking
       weight: "",
       weightUnit: "g",
       dimensions: { length: "", width: "", height: "" },
@@ -470,6 +472,13 @@ const ProductsPage = () => {
       },
       variationImages: []
     });
+  };
+
+  const handleExistingImagesSelect = (selectedImages) => {
+    setFormData(prev => ({
+      ...prev,
+      images: [...(prev.images || []), ...selectedImages]
+    }));
   };
 
   const handleInputChange = (e) => {
@@ -719,13 +728,36 @@ const ProductsPage = () => {
         // Add SEO data
         formDataToSend.append('seo', JSON.stringify(seoData));
 
-        // Add images
+        // Add images (only new File objects, not existing images)
+        const libraryImages = [];
         if (formData.images && formData.images.length > 0) {
             formData.images.forEach((image, index) => {
                 if (image instanceof File) {
                     formDataToSend.append(`images`, image);
+                } else if (image.fromLibrary || image.existing === false) {
+                    // This is a library image (existing image from uploads folder)
+                    libraryImages.push({
+                        image_url: image.image_url || image.url,
+                        url: image.url || image.image_url,
+                        name: image.name
+                    });
                 }
             });
+        }
+
+        // Add library images data
+        if (libraryImages.length > 0) {
+            formDataToSend.append('libraryImages', JSON.stringify(libraryImages));
+        }
+
+        // Add images to delete (for updates)
+        if (formData.id && formData.imagesToDelete && formData.imagesToDelete.length > 0) {
+            formDataToSend.append('imagesToDelete', JSON.stringify(formData.imagesToDelete));
+        }
+
+        // Add variation images to delete (for updates)
+        if (formData.id && formData.variationImagesToDelete && formData.variationImagesToDelete.length > 0) {
+            formDataToSend.append('variationImagesToDelete', JSON.stringify(formData.variationImagesToDelete));
         }
 
         // Add variation images
@@ -837,34 +869,63 @@ const ProductsPage = () => {
             {/* Product Images Upload */}
             <div className="product-images-section">
               <label>Product Images</label>
-              <input
-                type="file"
-                name="images"
-                multiple
-                accept="image/*"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files);
-                  setFormData(prev => ({
-                    ...prev,
-                    images: [...(prev.images || []), ...files]
-                  }));
-                }}
-              />
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                <input
+                  type="file"
+                  name="images"
+                  multiple
+                  accept="image/*"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files);
+                    setFormData(prev => ({
+                      ...prev,
+                      images: [...(prev.images || []), ...files]
+                    }));
+                  }}
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowExistingImageSelector(true)}
+                  style={{
+                    padding: '8px 12px',
+                    background: '#007bff',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  Select Existing
+                </button>
+              </div>
               <div className="images-preview" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 8 }}>
                 {formData.images && formData.images.map((img, imgIdx) => (
                   <div key={imgIdx} style={{ position: 'relative' }}>
                     <img
-                      src={img instanceof File ? URL.createObjectURL(img) : img.url}
+                      src={img instanceof File ? URL.createObjectURL(img) : (img.image_url || img.url)}
                       alt={`Product Image ${imgIdx + 1}`}
                       style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
                     />
                     <button
                       type="button"
                       onClick={() => {
-                        setFormData(prev => ({
-                          ...prev,
-                          images: prev.images.filter((_, index) => index !== imgIdx)
-                        }));
+                        const imageToRemove = formData.images[imgIdx];
+                        
+                        setFormData(prev => {
+                          const newState = {
+                            ...prev,
+                            images: prev.images.filter((_, index) => index !== imgIdx)
+                          };
+                          
+                          // If this is an existing image (has id), track it for deletion
+                          if (imageToRemove.existing && imageToRemove.id) {
+                            newState.imagesToDelete = [...prev.imagesToDelete, imageToRemove.id];
+                          }
+                          
+                          return newState;
+                        });
                       }}
                       style={{
                         position: 'absolute',
@@ -1252,6 +1313,13 @@ const ProductsPage = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Existing Image Selector Modal */}
+      <ExistingImageSelector
+        isOpen={showExistingImageSelector}
+        onClose={() => setShowExistingImageSelector(false)}
+        onSelectImages={handleExistingImagesSelect}
+      />
     </div>
     </>
   );
