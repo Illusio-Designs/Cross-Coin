@@ -765,9 +765,15 @@ export const productService = {
     }
   },
 
-  getExistingImages: async (source = 'products') => {
+  getExistingImages: async (source = 'products', productId = null) => {
     try {
-      const params = source !== 'products' ? { source } : {};
+      const params = {};
+      if (source !== 'products') {
+        params.source = source;
+      }
+      if (productId) {
+        params.productId = productId;
+      }
       const response = await api.get('/api/products/existing-images', { params });
       return response.data;
     } catch (error) {
