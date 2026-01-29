@@ -29,6 +29,8 @@ const ProductsPage = () => {
   const [categories, setCategories] = useState([]);
   const [currentStep, setCurrentStep] = useState(1);
   const [showExistingImageSelector, setShowExistingImageSelector] = useState(false);
+  const [showVariationImageSelector, setShowVariationImageSelector] = useState(false);
+  const [currentVariationIndex, setCurrentVariationIndex] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -439,6 +441,8 @@ const ProductsPage = () => {
     setIsModalOpen(false);
     setCurrentStep(1);
     setShowExistingImageSelector(false); // Reset image selector
+    setShowVariationImageSelector(false); // Reset variation image selector
+    setCurrentVariationIndex(null); // Reset variation index
     setFormData({
       name: "",
       description: "",
@@ -479,6 +483,29 @@ const ProductsPage = () => {
       ...prev,
       images: [...(prev.images || []), ...selectedImages]
     }));
+  };
+
+  const handleVariationExistingImagesSelect = (selectedImages) => {
+    if (currentVariationIndex !== null) {
+      setFormData(prev => {
+        const newVariationImages = [...(prev.variationImages || [])];
+        // Initialize the array for this variation if it doesn't exist
+        if (!newVariationImages[currentVariationIndex]) {
+          newVariationImages[currentVariationIndex] = [];
+        }
+        // Add selected images to the variation
+        newVariationImages[currentVariationIndex] = [
+          ...(newVariationImages[currentVariationIndex] || []),
+          ...selectedImages
+        ];
+        return { ...prev, variationImages: newVariationImages };
+      });
+    }
+  };
+
+  const openVariationImageSelector = (variationIndex) => {
+    setCurrentVariationIndex(variationIndex);
+    setShowVariationImageSelector(true);
   };
 
   const handleInputChange = (e) => {
@@ -1082,21 +1109,69 @@ const ProductsPage = () => {
                   {/* Variation Images Upload */}
                   <div className="variation-images-upload">
                     <label>Variation Images</label>
-                    <input
-                      type="file"
-                      name={`variationImage.${index}`}
-                      multiple
-                      accept="image/*"
-                      onChange={handleInputChange}
-                    />
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                      <input
+                        type="file"
+                        name={`variationImage.${index}`}
+                        multiple
+                        accept="image/*"
+                        onChange={handleInputChange}
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => openVariationImageSelector(index)}
+                        style={{
+                          padding: '8px 12px',
+                          border: '1px solid #ddd',
+                          background: '#f8f9fa',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        Select Existing
+                      </button>
+                    </div>
                     <div className="variation-images-preview" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 8 }}>
                       {(formData.variationImages && formData.variationImages[index]) && formData.variationImages[index].map((img, imgIdx) => (
                         <div key={imgIdx} style={{ position: 'relative' }}>
                           <img
-                            src={img instanceof File ? URL.createObjectURL(img) : img.url}
+                            src={img instanceof File ? URL.createObjectURL(img) : (img.image_url || img.url)}
                             alt={`Variation ${index + 1} Image ${imgIdx + 1}`}
                             style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
                           />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => {
+                                const newVariationImages = [...(prev.variationImages || [])];
+                                if (newVariationImages[index]) {
+                                  newVariationImages[index] = newVariationImages[index].filter((_, i) => i !== imgIdx);
+                                }
+                                return { ...prev, variationImages: newVariationImages };
+                              });
+                            }}
+                            style={{
+                              position: 'absolute',
+                              top: '-5px',
+                              right: '-5px',
+                              background: 'red',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: '20px',
+                              height: '20px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            ×
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -1319,6 +1394,18 @@ const ProductsPage = () => {
         isOpen={showExistingImageSelector}
         onClose={() => setShowExistingImageSelector(false)}
         onSelectImages={handleExistingImagesSelect}
+        productId={formData.id} // Pass the product ID when editing
+      />
+
+      {/* Variation Image Selector Modal */}
+      <ExistingImageSelector
+        isOpen={showVariationImageSelector}
+        onClose={() => {
+          setShowVariationImageSelector(false);
+          setCurrentVariationIndex(null);
+        }}
+        onSelectImages={handleVariationExistingImagesSelect}
+        productId={formData.id} // Pass the product ID when editing
       />
     </div>
     </>

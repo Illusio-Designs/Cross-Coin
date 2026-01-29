@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import Modal from '@/components/common/Modal';
 import { productService } from '@/services';
 
-const ExistingImageSelector = ({ isOpen, onClose, onSelectImages }) => {
+const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = null }) => {
   const [existingImages, setExistingImages] = useState([]);
   const [selectedImages, setSelectedImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [imageSource, setImageSource] = useState('products'); // 'products' or 'uploads'
+  const [imageSource, setImageSource] = useState(productId ? 'current_product' : 'products'); // Default to current product if productId provided
 
   useEffect(() => {
     if (isOpen) {
@@ -19,7 +19,14 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages }) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await productService.getExistingImages(imageSource);
+      let data;
+      if (imageSource === 'current_product' && productId) {
+        // Get images for specific product
+        data = await productService.getExistingImages('products', productId);
+      } else {
+        // Get all images from selected source
+        data = await productService.getExistingImages(imageSource);
+      }
       setExistingImages(data.images || []);
     } catch (err) {
       setError(err.message || 'Failed to fetch existing images');
@@ -67,7 +74,10 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages }) => {
     }
     
     // For relative paths, construct the full URL based on the source
-    if (imageSource === 'uploads') {
+    if (imageSource === 'current_product') {
+      // Current product images are already stored with full paths
+      return imagePath.startsWith('/') ? `${baseUrl}${imagePath}` : `${baseUrl}/uploads/products/${imagePath}`;
+    } else if (imageSource === 'uploads') {
       // For general uploads, the path should already be complete from backend
       return `${baseUrl}${imagePath.startsWith('/') ? imagePath : `/${imagePath}`}`;
     } else {
@@ -110,7 +120,28 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages }) => {
               }}>
                 Select Image Source:
               </label>
-              <div style={{ display: 'flex', gap: '16px' }}>
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                {productId && (
+                  <label style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}>
+                    <input
+                      type="radio"
+                      name="imageSource"
+                      value="current_product"
+                      checked={imageSource === 'current_product'}
+                      onChange={(e) => {
+                        setImageSource(e.target.value);
+                        setSelectedImages([]);
+                      }}
+                      style={{ marginRight: '8px' }}
+                    />
+                    Current Product Images
+                  </label>
+                )}
                 <label style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
@@ -128,7 +159,7 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages }) => {
                     }}
                     style={{ marginRight: '8px' }}
                   />
-                  Product Images (uploads/products)
+                  All Product Images (uploads/products)
                 </label>
                 <label style={{ 
                   display: 'flex', 
@@ -222,7 +253,10 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages }) => {
 
             {existingImages.length === 0 && (
               <div style={{ textAlign: 'center', color: '#666', padding: '40px' }}>
-                No existing images found in the {imageSource === 'products' ? 'uploads/products' : 'uploads'} folder.
+                {imageSource === 'current_product' 
+                  ? 'No images found for this product.' 
+                  : `No existing images found in the ${imageSource === 'products' ? 'uploads/products' : 'uploads'} folder.`
+                }
               </div>
             )}
 

@@ -1467,7 +1467,31 @@ const isProductOutOfStock = async (productId, transaction) => {
 // Get existing images from uploads/products folder or all uploads
 module.exports.getExistingImages = async (req, res) => {
   try {
-    const { source = 'products' } = req.query;
+    const { source = 'products', productId } = req.query;
+    
+    // If productId is provided, get images from database for that specific product
+    if (productId) {
+      const { ProductImage } = require('../model/associations.js');
+      
+      const productImages = await ProductImage.findAll({
+        where: { 
+          product_id: productId
+          // Include both product-level and variation images
+        },
+        attributes: ['id', 'image_url', 'alt_text', 'display_order', 'is_primary', 'product_variation_id'],
+        order: [['display_order', 'ASC'], ['createdAt', 'ASC']]
+      });
+
+      const imagePaths = productImages.map(img => img.image_url);
+
+      return res.json({
+        success: true,
+        images: imagePaths,
+        total: imagePaths.length,
+        source: 'product_specific',
+        productId: productId
+      });
+    }
     
     let uploadsPath;
     if (source === 'uploads') {
