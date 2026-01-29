@@ -317,7 +317,7 @@ export default function SEO() {
         {/* Table Section */}
         <div className="seo-table-container seo-table">
           {loading ? (
-            <div style={{ position: 'relative', minHeight: '400px' }}>
+            <div style={{ position: 'relative', minHeight: '400px', zIndex: '1' }}>
               <Loader />
             </div>
           ) : error ? (

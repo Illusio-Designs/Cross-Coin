@@ -408,7 +408,7 @@ export default function Slider() {
         {/* Table Section */}
         <div className="seo-table-container">
           {loading ? (
-            <div style={{ position: 'relative', minHeight: '400px' }}>
+            <div style={{ position: 'relative', minHeight: '400px', zIndex: '1' }}>
               <Loader />
             </div>
           ) : error ? (

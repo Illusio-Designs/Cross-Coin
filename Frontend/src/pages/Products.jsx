@@ -131,15 +131,12 @@ const Products = () => {
             const transformedProducts = (response.products || []).map((p) => {
               let imageUrl = null;
               if (p.image) {
+                const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
                 if (p.image.startsWith("http")) {
                   imageUrl = p.image;
                 } else if (p.image.startsWith("/uploads/")) {
-                  const baseUrl =
-                    process.env.NEXT_PUBLIC_IMAGE_URL || "https://crosscoin.in";
                   imageUrl = `${baseUrl}${p.image}`;
                 } else {
-                  const baseUrl =
-                    process.env.NEXT_PUBLIC_IMAGE_URL || "https://crosscoin.in";
                   imageUrl = `${baseUrl}/uploads/products/${p.image}`;
                 }
               }
@@ -150,7 +147,7 @@ const Products = () => {
                   id: response.id,
                   name: response.name,
                 },
-                images: imageUrl ? [{ image_url: imageUrl }] : [],
+                images: imageUrl ? [{ image_url: imageUrl }] : [], // Keep empty array for no images
                 variations: [
                   {
                     price: parseFloat(p.price) || 0,
