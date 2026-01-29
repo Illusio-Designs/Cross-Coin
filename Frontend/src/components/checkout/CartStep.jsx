@@ -196,6 +196,7 @@ export default function CartStep() {
                     background: '#eee',
                     display: 'block'
                   }}
+                  isProductCard={true}
                 />
               </div>
               <div className="cart-item-details">
@@ -272,6 +273,7 @@ export default function CartStep() {
                             background: '#eee',
                             display: 'block'
                           }}
+                          isProductCard={true}
                         />
                       ) : (
                         <div style={{ width: 100, height: 100, background: '#eee', borderRadius: 8 }} />

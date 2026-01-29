@@ -8,14 +8,17 @@ const SafeImage = ({
   fallbackSrc = "/assets/card1-left.webp",
   width,
   height,
+  isLogo = false, // New prop to identify logo images
+  isProductCard = false, // New prop to identify product card images
   ...props 
 }) => {
   const [imageError, setImageError] = useState(false);
-  const [imageSrc, setImageSrc] = useState(fallbackSrc);
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageSrc, setImageSrc] = useState(null);
 
   useEffect(() => {
     // Build URL when imageData changes
-    let newSrc = fallbackSrc;
+    let newSrc = null;
     
     if (imageData) {
       let rawUrl = null;
@@ -30,7 +33,7 @@ const SafeImage = ({
       }
       
       // Process the URL
-      if (rawUrl) {
+      if (rawUrl && rawUrl.trim() !== '') {
         // If already a full URL, use it
         if (rawUrl.startsWith("http")) {
           newSrc = rawUrl;
@@ -52,20 +55,68 @@ const SafeImage = ({
       }
     }
     
+    // If no valid image source and it's not a logo or product card, use fallback
+    if (!newSrc && !isLogo && !isProductCard) {
+      newSrc = fallbackSrc;
+    }
+    
     setImageSrc(newSrc);
     setImageError(false);
-  }, [imageData, fallbackSrc]);
+    setImageLoading(true);
+  }, [imageData, fallbackSrc, isLogo, isProductCard]);
 
   const handleError = (event) => {
-    if (!imageError && imageSrc !== fallbackSrc) {
+    if (!imageError) {
       setImageError(true);
-      setImageSrc(fallbackSrc);
+      setImageLoading(false);
+      // For product cards, we'll show gray placeholder in the render logic
+      // For logos, we set imageSrc to null to hide completely
+      if (isLogo) {
+        setImageSrc(null);
+      }
+      // For other images (not product cards or logos), show fallback
+      else if (!isProductCard && imageSrc !== fallbackSrc) {
+        setImageSrc(fallbackSrc);
+      }
     }
   };
 
   const handleLoad = () => {
     // Image loaded successfully
+    setImageLoading(false);
   };
+
+  // Don't render anything if it's a logo and there's no valid image
+  if (isLogo && (!imageSrc || imageError)) {
+    return null;
+  }
+
+  // For product cards with error, show gray placeholder
+  if (isProductCard && imageError) {
+    return (
+      <div
+        className={className}
+        style={{
+          width: width || '100%',
+          height: height || 'auto',
+          backgroundColor: '#f5f5f5',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#ccc',
+          fontSize: '14px',
+          ...style
+        }}
+        {...props}
+      >
+      </div>
+    );
+  }
+
+  // Don't render if no image source
+  if (!imageSrc) {
+    return null;
+  }
 
   return (
     <img

@@ -1028,7 +1028,6 @@ const Orders = () => {
                                         // Check if the variation has image_url directly (legacy)
                                         else if (item.ProductVariation?.image_url) {
                                             imageToDisplay = { image_url: item.ProductVariation.image_url };
-                                            console.log('Using variation image_url:', imageToDisplay);
                                         }
                                         // Fallback to primary product image
                                         else {
@@ -1038,8 +1037,6 @@ const Orders = () => {
                                         }
                                         
                                         const imageUrl = getProductImageSrc(imageToDisplay);
-                                        console.log('Final image URL:', imageUrl);
-                                        console.log('===============================');
                                         
                                         // Get SKU from ProductVariation if available, otherwise show 'N/A'
                                         const sku = item.ProductVariation?.sku || 'N/A';

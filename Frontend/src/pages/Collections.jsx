@@ -99,8 +99,6 @@ const Collections = () => {
               }
             }
             
-            console.log('Category:', cat.name, 'Image URL:', imageUrl);
-            
             return (
               <Link
                 key={cat.id || cat._id}

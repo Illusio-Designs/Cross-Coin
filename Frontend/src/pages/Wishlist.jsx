@@ -154,6 +154,7 @@ const Wishlist = () => {
                       width="300px"
                       height="250px"
                       style={{ objectFit: 'cover' }}
+                      isProductCard={true}
                     />
                     <button
                       className="wishlist-icon-btn"
