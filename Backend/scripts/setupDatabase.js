@@ -269,6 +269,10 @@ const setupDatabase = async () => {
     console.log("\nFixing category image paths...");
     await fixCategoryImagePaths();
     
+    // Fix corrupted product image URLs
+    console.log("\nFixing corrupted product image URLs...");
+    await fixProductImageUrls();
+    
     return true;
   } catch (error) {
     console.error("❌ Database setup failed:", error.message);
@@ -446,6 +450,107 @@ const fixCategoryImagePaths = async () => {
     }
   } catch (error) {
     console.error('⚠️ Error fixing category image paths:', error.message);
+  }
+};
+
+// Function to fix corrupted product image URLs
+const fixProductImageUrls = async () => {
+  try {
+    const { ProductSEO } = require('../model/associations.js');
+    const { Op } = require('sequelize');
+    
+    console.log('Checking for corrupted ogImage URLs...');
+    
+    // Find all ProductSEO records with corrupted ogImage URLs
+    const corruptedRecords = await ProductSEO.findAll({
+      where: {
+        ogImage: {
+          [Op.and]: [
+            { [Op.not]: null },
+            { [Op.like]: 'https://api.crosscoin.in%' },
+            { [Op.notLike]: 'https://api.crosscoin.in/uploads/%' }
+          ]
+        }
+      }
+    });
+    
+    console.log(`Found ${corruptedRecords.length} records with corrupted ogImage URLs`);
+    
+    let fixedCount = 0;
+    
+    for (const record of corruptedRecords) {
+      const originalUrl = record.ogImage;
+      
+      // Extract the filename from the corrupted URL
+      // Example: "https://api.crosscoin.invariation_0_image-1753379446299-705405863.png"
+      // Should become: "https://api.crosscoin.in/uploads/products/variation_0_image-1753379446299-705405863.png"
+      
+      if (originalUrl.includes('variation_') && originalUrl.endsWith('.png')) {
+        // Extract filename after the last occurrence of 'in'
+        const parts = originalUrl.split('in');
+        if (parts.length > 1) {
+          const filename = parts[parts.length - 1];
+          const fixedUrl = `https://api.crosscoin.in/uploads/products/${filename}`;
+          
+          await record.update({ ogImage: fixedUrl });
+          console.log(`  Fixed ogImage: ${originalUrl} -> ${fixedUrl}`);
+          fixedCount++;
+        }
+      }
+    }
+    
+    // Also fix structured data that might have corrupted image URLs
+    const recordsWithStructuredData = await ProductSEO.findAll({
+      where: {
+        structuredData: {
+          [Op.not]: null
+        }
+      }
+    });
+    
+    let structuredDataFixedCount = 0;
+    
+    for (const record of recordsWithStructuredData) {
+      try {
+        const structuredData = JSON.parse(record.structuredData);
+        
+        if (structuredData.image && typeof structuredData.image === 'string') {
+          const originalImageUrl = structuredData.image;
+          
+          // Fix corrupted image URLs in structured data
+          if (originalImageUrl.includes('api.crosscoin.in') && 
+              !originalImageUrl.includes('/uploads/products/') &&
+              originalImageUrl.includes('variation_')) {
+            
+            const parts = originalImageUrl.split('in');
+            if (parts.length > 1) {
+              const filename = parts[parts.length - 1];
+              const fixedUrl = `https://api.crosscoin.in/uploads/products/${filename}`;
+              
+              structuredData.image = fixedUrl;
+              
+              await record.update({ 
+                structuredData: JSON.stringify(structuredData) 
+              });
+              
+              console.log(`  Fixed structured data image: ${originalImageUrl} -> ${fixedUrl}`);
+              structuredDataFixedCount++;
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`  Error parsing structured data for record ${record.id}:`, error.message);
+      }
+    }
+    
+    if (fixedCount > 0 || structuredDataFixedCount > 0) {
+      console.log(`✓ Fixed ${fixedCount} ogImage URLs`);
+      console.log(`✓ Fixed ${structuredDataFixedCount} structured data image URLs`);
+    } else {
+      console.log('✓ All product image URLs are already correct');
+    }
+  } catch (error) {
+    console.error('⚠️ Error fixing product image URLs:', error.message);
   }
 };
 

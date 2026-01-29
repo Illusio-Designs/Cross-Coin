@@ -16,8 +16,8 @@ export function getDirectImageUrl(imageData) {
     return imageUrl;
   }
   
-  // Direct server URL construction - hardcoded, no environment variables
-  const baseUrl = "https://api.crosscoin.in";
+  // Use environment variable for API URL
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
   
   if (imageUrl.startsWith("/uploads/")) {
     return `${baseUrl}${imageUrl}`;

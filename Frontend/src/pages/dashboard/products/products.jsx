@@ -357,19 +357,24 @@ const ProductsPage = () => {
             }
           })
         },
-        variationImages: product.variations?.map(variation => {
-          console.log('Loading variation images for variation:', variation.id, variation.images);
-          return variation.images?.map(img => {
+        variationImages: product.variations?.map((variation, vIndex) => {
+          console.log(`Loading variation images for variation ${vIndex}:`, variation.id, variation.images);
+          const variationImages = variation.images?.map(img => {
+            console.log('Processing variation image:', img);
+            
+            // Get the base URL
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+            
+            // Construct the proper image URL
             let imageUrl = img.image_url;
-            // If image_url doesn't start with http, construct full URL
             if (!imageUrl.startsWith('http')) {
-              const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
               if (imageUrl.startsWith('/uploads/')) {
                 imageUrl = `${baseUrl}${imageUrl}`;
               } else {
                 imageUrl = `${baseUrl}/uploads/products/${imageUrl}`;
               }
             }
+            
             const imageObj = {
               id: img.id,
               name: imageUrl.split('/').pop(),
@@ -381,6 +386,9 @@ const ProductsPage = () => {
             console.log('Processed variation image:', imageObj);
             return imageObj;
           }) || [];
+          
+          console.log(`Variation ${vIndex} final images:`, variationImages);
+          return variationImages;
         }) || []
       };
 
@@ -595,7 +603,12 @@ const ProductsPage = () => {
       const files = Array.from(e.target.files);
       setFormData(prev => {
         const newVariationImages = [...(prev.variationImages || [])];
-        newVariationImages[variationIndex] = files;
+        // Initialize the array for this variation if it doesn't exist
+        if (!newVariationImages[variationIndex]) {
+          newVariationImages[variationIndex] = [];
+        }
+        // Add new files to existing images for this variation
+        newVariationImages[variationIndex] = [...newVariationImages[variationIndex], ...files];
         return { ...prev, variationImages: newVariationImages };
       });
       return;
@@ -794,16 +807,32 @@ const ProductsPage = () => {
         }
 
         // Add variation images
+        const variationLibraryImages = [];
         if (formData.variationImages && formData.variationImages.length > 0) {
           formData.variationImages.forEach((images, vIdx) => {
             if (images && images.length > 0) {
               images.forEach((img, imgIdx) => {
                 if (img instanceof File) {
                   formDataToSend.append(`variation_${vIdx}_image`, img);
+                } else if (img.fromLibrary || img.existing === false) {
+                  // This is a library image for variation
+                  if (!variationLibraryImages[vIdx]) {
+                    variationLibraryImages[vIdx] = [];
+                  }
+                  variationLibraryImages[vIdx].push({
+                    image_url: img.image_url || img.url,
+                    url: img.url || img.image_url,
+                    name: img.name
+                  });
                 }
               });
             }
           });
+        }
+
+        // Add variation library images data
+        if (variationLibraryImages.length > 0) {
+          formDataToSend.append('variationLibraryImages', JSON.stringify(variationLibraryImages));
         }
 
         let response;
@@ -1142,45 +1171,71 @@ const ProductsPage = () => {
                     </div>
                     <div className="variation-images-preview" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 8 }}>
                       {(formData.variationImages && formData.variationImages[index] && formData.variationImages[index].length > 0) ? 
-                        formData.variationImages[index].map((img, imgIdx) => (
-                          <div key={imgIdx} style={{ position: 'relative' }}>
-                            <img
-                              src={img instanceof File ? URL.createObjectURL(img) : (img.url || img.image_url)}
-                              alt={`Variation ${index + 1} Image ${imgIdx + 1}`}
-                              style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setFormData(prev => {
-                                  const newVariationImages = [...(prev.variationImages || [])];
-                                  if (newVariationImages[index]) {
-                                    newVariationImages[index] = newVariationImages[index].filter((_, i) => i !== imgIdx);
-                                  }
-                                  return { ...prev, variationImages: newVariationImages };
-                                });
-                              }}
-                              style={{
-                                position: 'absolute',
-                                top: '-5px',
-                                right: '-5px',
-                                background: 'red',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '50%',
-                                width: '20px',
-                                height: '20px',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                              }}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        )) : (
+                        formData.variationImages[index].map((img, imgIdx) => {
+                          console.log(`Rendering variation ${index} image ${imgIdx}:`, img);
+                          const imageUrl = img instanceof File ? URL.createObjectURL(img) : (img.url || img.image_url);
+                          console.log(`Image URL for variation ${index} image ${imgIdx}:`, imageUrl);
+                          
+                          return (
+                            <div key={imgIdx} style={{ position: 'relative' }}>
+                              <img
+                                src={imageUrl}
+                                alt={`Variation ${index + 1} Image ${imgIdx + 1}`}
+                                style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
+                                onError={(e) => {
+                                  console.error(`Failed to load variation ${index} image ${imgIdx}:`, imageUrl);
+                                  e.target.style.backgroundColor = '#f5f5f5';
+                                  e.target.style.display = 'flex';
+                                  e.target.style.alignItems = 'center';
+                                  e.target.style.justifyContent = 'center';
+                                  e.target.alt = 'Failed to load';
+                                }}
+                                onLoad={() => {
+                                  console.log(`Successfully loaded variation ${index} image ${imgIdx}:`, imageUrl);
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const imageToRemove = formData.variationImages[index][imgIdx];
+                                  
+                                  setFormData(prev => {
+                                    const newVariationImages = [...(prev.variationImages || [])];
+                                    if (newVariationImages[index]) {
+                                      newVariationImages[index] = newVariationImages[index].filter((_, i) => i !== imgIdx);
+                                    }
+                                    
+                                    // If this is an existing variation image (has id), track it for deletion
+                                    const newState = { ...prev, variationImages: newVariationImages };
+                                    if (imageToRemove && imageToRemove.existing && imageToRemove.id) {
+                                      newState.variationImagesToDelete = [...(prev.variationImagesToDelete || []), imageToRemove.id];
+                                    }
+                                    
+                                    return newState;
+                                  });
+                                }}
+                                style={{
+                                  position: 'absolute',
+                                  top: '-5px',
+                                  right: '-5px',
+                                  background: 'red',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '50%',
+                                  width: '20px',
+                                  height: '20px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          );
+                        }) : (
                           <div style={{ color: '#999', fontStyle: 'italic', padding: '20px 0' }}>
                             No images for this variation yet
                           </div>
