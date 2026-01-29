@@ -952,14 +952,15 @@ module.exports.updateProduct = async (req, res) => {
 
     // --- Optimized Product Image Update Logic ---
     // Handle new images and library images, preserve existing images unless explicitly deleted
-    if (images && images.length > 0) {
-      const productLevelImages = images.filter(
-        (image) => !image.fieldname.match(/^variation_(\d+)_image$/)
-      );
-      
-      // Parse library images from request body if any
-      const libraryImages = JSON.parse(req.body.libraryImages || "[]");
-      
+    const productLevelImages = images ? images.filter(
+      (image) => !image.fieldname.match(/^variation_(\d+)_image$/)
+    ) : [];
+    
+    // Parse library images from request body if any
+    const libraryImages = JSON.parse(req.body.libraryImages || "[]");
+    
+    // Only add new images if there are any (either uploaded files or library images)
+    if (productLevelImages.length > 0 || libraryImages.length > 0) {
       // Get the highest existing display_order for proper ordering
       const existingImages = await ProductImage.findAll({
         where: {
@@ -1007,42 +1008,8 @@ module.exports.updateProduct = async (req, res) => {
         );
         imageIndex++;
       }
-    } else {
-      // Handle library images only (no new file uploads)
-      const libraryImages = JSON.parse(req.body.libraryImages || "[]");
-      if (libraryImages.length > 0) {
-        // Get the highest existing display_order for proper ordering
-        const existingImages = await ProductImage.findAll({
-          where: {
-            product_id: id,
-            product_variation_id: null,
-          },
-          attributes: ['display_order'],
-          order: [['display_order', 'DESC']],
-          limit: 1,
-          transaction,
-        });
-        
-        let imageIndex = existingImages.length > 0 ? existingImages[0].display_order + 1 : 0;
-        
-        for (const libraryImage of libraryImages) {
-          await ProductImage.create(
-            {
-              product_id: product.id,
-              product_variation_id: null,
-              image_url: libraryImage.image_url || libraryImage.url,
-              alt_text: name,
-              display_order: imageIndex,
-              is_primary: imageIndex === 0 && existingImages.length === 0, // Only primary if no existing images
-              status: "active",
-            },
-            { transaction }
-          );
-          imageIndex++;
-        }
-      }
     }
-    // Existing images are preserved unless explicitly deleted via imagesToDelete
+    // If no new images and no library images, preserve all existing images (do nothing)
 
     // Recalculate and update badge
     const badge = await calculateProductBadge(product, transaction);

@@ -828,8 +828,8 @@ const ProductsPage = () => {
             formData.images.forEach((image, index) => {
                 if (image instanceof File) {
                     formDataToSend.append(`images`, image);
-                } else if (image.fromLibrary || image.existing === false) {
-                    // This is a library image (existing image from uploads folder)
+                } else if (image.fromLibrary || image.existing === false || image.existing === true) {
+                    // This includes: library images, new selected images, and existing images that should be preserved
                     libraryImages.push({
                         image_url: image.image_url || image.url,
                         url: image.url || image.image_url,
@@ -862,8 +862,8 @@ const ProductsPage = () => {
               images.forEach((img, imgIdx) => {
                 if (img instanceof File) {
                   formDataToSend.append(`variation_${vIdx}_image`, img);
-                } else if (img.fromLibrary || img.existing === false) {
-                  // This is a library image for variation
+                } else if (img.fromLibrary || img.existing === false || img.existing === true) {
+                  // This includes: library images, new selected images, and existing images that should be preserved
                   if (!variationLibraryImages[vIdx]) {
                     variationLibraryImages[vIdx] = [];
                   }
