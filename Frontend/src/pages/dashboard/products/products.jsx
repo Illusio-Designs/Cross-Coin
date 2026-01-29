@@ -822,23 +822,32 @@ const ProductsPage = () => {
         // Add SEO data
         formDataToSend.append('seo', JSON.stringify(seoData));
 
-        // Add images (only new File objects and newly selected library images)
+        // Add images (new files and preserve existing ones)
         const libraryImages = [];
+        const existingImageIds = []; // Track existing image IDs to preserve
+        
         if (formData.images && formData.images.length > 0) {
             formData.images.forEach((image, index) => {
                 if (image instanceof File) {
                     // New uploaded files
                     formDataToSend.append(`images`, image);
                 } else if (image.fromLibrary === true) {
-                    // Only newly selected library images (not existing images)
+                    // Newly selected library images
                     libraryImages.push({
                         image_url: image.image_url || image.url,
                         url: image.url || image.image_url,
                         name: image.name
                     });
+                } else if (image.existing === true && image.id) {
+                    // Existing images - track their IDs to preserve them
+                    existingImageIds.push(image.id);
                 }
-                // Existing images (image.existing === true) are preserved automatically by not deleting them
             });
+        }
+
+        // Send existing image IDs to preserve them
+        if (existingImageIds.length > 0) {
+            formDataToSend.append('preserveImageIds', JSON.stringify(existingImageIds));
         }
 
         // Add library images data
@@ -858,6 +867,8 @@ const ProductsPage = () => {
 
         // Add variation images
         const variationLibraryImages = [];
+        const existingVariationImageIds = []; // Track existing variation image IDs to preserve
+        
         if (formData.variationImages && formData.variationImages.length > 0) {
           formData.variationImages.forEach((images, vIdx) => {
             if (images && images.length > 0) {
@@ -865,7 +876,7 @@ const ProductsPage = () => {
                 if (img instanceof File) {
                   formDataToSend.append(`variation_${vIdx}_image`, img);
                 } else if (img.fromLibrary === true) {
-                  // Only newly selected library images (not existing images)
+                  // Newly selected library images for variation
                   if (!variationLibraryImages[vIdx]) {
                     variationLibraryImages[vIdx] = [];
                   }
@@ -874,10 +885,18 @@ const ProductsPage = () => {
                     url: img.url || img.image_url,
                     name: img.name
                   });
+                } else if (img.existing === true && img.id) {
+                  // Existing variation images - track their IDs to preserve them
+                  existingVariationImageIds.push(img.id);
                 }
               });
             }
           });
+        }
+
+        // Send existing variation image IDs to preserve them
+        if (existingVariationImageIds.length > 0) {
+          formDataToSend.append('preserveVariationImageIds', JSON.stringify(existingVariationImageIds));
         }
 
         // Add variation library images data
