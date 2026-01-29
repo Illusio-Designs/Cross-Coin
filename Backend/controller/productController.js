@@ -678,6 +678,8 @@ module.exports.updateProduct = async (req, res) => {
     const variationImagesToDelete = JSON.parse(
       req.body.variationImagesToDelete || "[]"
     );
+    const preserveImageIds = JSON.parse(req.body.preserveImageIds || "[]");
+    const preserveVariationImageIds = JSON.parse(req.body.preserveVariationImageIds || "[]");
 
     // Validate required fields
     if (!name) {
@@ -1009,6 +1011,14 @@ module.exports.updateProduct = async (req, res) => {
         imageIndex++;
       }
     }
+    
+    // Preserve existing images that are in preserveImageIds (don't delete them)
+    // All existing images are preserved by default unless they're in imagesToDelete
+    console.log('Preserving image IDs:', preserveImageIds);
+    console.log('Preserving variation image IDs:', preserveVariationImageIds);
+    console.log('Images to delete:', imagesToDelete);
+    console.log('Variation images to delete:', variationImagesToDelete);
+    
     // If no new images and no library images, preserve all existing images (do nothing)
 
     // Recalculate and update badge
