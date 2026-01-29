@@ -19,6 +19,7 @@ import Coupons from "./coupon/coupons";
 import Reviews from "./reviews/reviews";
 import SEO from "./seo/seo";
 import Slider from "./slider/slider";
+import MediaGallery from "./media/gallery";
 import Policies from "./policies";
 
 function Dashboard() {
@@ -119,6 +120,8 @@ function Dashboard() {
         return <Policies />;
       case 'slider':
         return <Slider />;
+      case 'media-gallery':
+        return <MediaGallery />;
       default:
         return <CardGrid />;
     }

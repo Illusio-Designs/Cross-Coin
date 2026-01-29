@@ -1572,3 +1572,165 @@ module.exports.getExistingImages = async (req, res) => {
     });
   }
 };
+
+// Upload images to uploads/products folder
+module.exports.uploadImages = async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No files uploaded'
+      });
+    }
+
+    const uploadedImages = [];
+    const failedImages = [];
+
+    for (const file of req.files) {
+      try {
+        // The file is already saved by multer, just record the info
+        const imagePath = `/uploads/products/${file.filename}`;
+        uploadedImages.push({
+          originalName: file.originalname,
+          filename: file.filename,
+          path: imagePath,
+          size: file.size,
+          mimetype: file.mimetype
+        });
+        
+        console.log(`Uploaded image: ${file.filename}`);
+      } catch (error) {
+        console.error(`Failed to process uploaded file ${file.originalname}:`, error);
+        failedImages.push({
+          originalName: file.originalname,
+          error: error.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Successfully uploaded ${uploadedImages.length} image(s)`,
+      uploadedImages,
+      failedImages,
+      totalUploaded: uploadedImages.length,
+      totalFailed: failedImages.length
+    });
+
+  } catch (error) {
+    console.error('Error uploading images:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload images',
+      error: error.message
+    });
+  }
+};
+
+// Delete images from uploads/products folder
+module.exports.deleteImages = async (req, res) => {
+  try {
+    const { imagePaths } = req.body;
+    
+    if (!imagePaths || !Array.isArray(imagePaths) || imagePaths.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image paths provided'
+      });
+    }
+
+    const deletedImages = [];
+    const failedImages = [];
+    const protectedImages = [];
+
+    for (const imagePath of imagePaths) {
+      try {
+        // Extract filename from path
+        let filename;
+        if (imagePath.startsWith('/uploads/products/')) {
+          filename = imagePath.replace('/uploads/products/', '');
+        } else if (imagePath.includes('/')) {
+          filename = imagePath.split('/').pop();
+        } else {
+          filename = imagePath;
+        }
+
+        // Check if image is being used in any product
+        const { ProductImage } = require('../model/associations.js');
+        const usedInProducts = await ProductImage.findAll({
+          where: {
+            image_url: {
+              [Op.or]: [
+                imagePath,
+                `/uploads/products/${filename}`,
+                filename
+              ]
+            }
+          },
+          include: [
+            {
+              model: require('../model/associations.js').Product,
+              attributes: ['id', 'name']
+            }
+          ]
+        });
+
+        if (usedInProducts.length > 0) {
+          const productNames = usedInProducts.map(img => img.Product?.name || `Product ID: ${img.Product?.id}`).join(', ');
+          protectedImages.push({
+            path: imagePath,
+            reason: `Image is being used in product(s): ${productNames}`,
+            productCount: usedInProducts.length
+          });
+          continue;
+        }
+
+        // Construct full file path
+        const fullPath = path.join(__dirname, '../uploads/products', filename);
+        
+        // Check if file exists
+        try {
+          await fs.access(fullPath);
+        } catch (error) {
+          failedImages.push({
+            path: imagePath,
+            error: 'File not found'
+          });
+          continue;
+        }
+
+        // Delete the file
+        await fs.unlink(fullPath);
+        deletedImages.push(imagePath);
+        
+        console.log(`Deleted image: ${fullPath}`);
+      } catch (error) {
+        console.error(`Failed to delete image ${imagePath}:`, error);
+        failedImages.push({
+          path: imagePath,
+          error: error.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Successfully deleted ${deletedImages.length} image(s)${protectedImages.length > 0 ? `. ${protectedImages.length} image(s) were protected from deletion.` : ''}`,
+      deletedImages,
+      failedImages,
+      protectedImages,
+      totalRequested: imagePaths.length,
+      totalDeleted: deletedImages.length,
+      totalFailed: failedImages.length,
+      totalProtected: protectedImages.length
+    });
+
+  } catch (error) {
+    console.error('Error deleting images:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete images',
+      error: error.message
+    });
+  }
+};

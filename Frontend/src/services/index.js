@@ -780,6 +780,35 @@ export const productService = {
       throw error.response?.data || error.message;
     }
   },
+
+  uploadImages: async (files) => {
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('images', files[i]);
+      }
+      
+      const response = await api.post('/api/products/upload-images', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  deleteImages: async (imagePaths) => {
+    try {
+      const response = await api.delete('/api/products/delete-images', {
+        data: { imagePaths }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 // Coupon Services
