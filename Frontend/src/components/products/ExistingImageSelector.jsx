@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '@/components/common/Modal';
+import { productService } from '@/services';
 
 const ExistingImageSelector = ({ isOpen, onClose, onSelectImages }) => {
   const [existingImages, setExistingImages] = useState([]);
@@ -18,18 +19,10 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages }) => {
     setLoading(true);
     setError(null);
     try {
-      const endpoint = imageSource === 'products' 
-        ? `${process.env.NEXT_PUBLIC_API_URL}/api/products/existing-images`
-        : `${process.env.NEXT_PUBLIC_API_URL}/api/products/existing-images?source=uploads`;
-      
-      const response = await fetch(endpoint);
-      if (!response.ok) {
-        throw new Error('Failed to fetch existing images');
-      }
-      const data = await response.json();
+      const data = await productService.getExistingImages(imageSource);
       setExistingImages(data.images || []);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Failed to fetch existing images');
     } finally {
       setLoading(false);
     }
@@ -62,17 +55,25 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages }) => {
 
   const getImageUrl = (imagePath) => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+    
+    // If it's already a full URL, return as is
     if (imagePath.startsWith('http')) {
       return imagePath;
     }
+    
+    // If it already starts with /uploads/, just prepend the base URL
     if (imagePath.startsWith('/uploads/')) {
       return `${baseUrl}${imagePath}`;
     }
-    // Handle both product images and general upload images
+    
+    // For relative paths, construct the full URL based on the source
     if (imageSource === 'uploads') {
-      return `${baseUrl}/uploads/${imagePath}`;
+      // For general uploads, the path should already be complete from backend
+      return `${baseUrl}${imagePath.startsWith('/') ? imagePath : `/${imagePath}`}`;
+    } else {
+      // For product images, always use /uploads/products/
+      return `${baseUrl}/uploads/products/${imagePath}`;
     }
-    return `${baseUrl}/uploads/products/${imagePath}`;
   };
 
   return (

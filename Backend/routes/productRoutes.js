@@ -27,7 +27,6 @@ router.get('/featured', getFeaturedProducts);
 router.get('/new-arrivals', getNewArrivals);
 router.get('/best-sellers', getBestSellers);
 router.get('/category/:categoryId', getProductsByCategory);
-router.get('/:id', getProduct);
 
 // Multer error handler middleware
 const multerErrorHandler = (err, req, res, next) => {
@@ -38,11 +37,14 @@ const multerErrorHandler = (err, req, res, next) => {
   next();
 };
 
-// Admin routes
+// Admin routes (specific routes before parameterized routes)
 router.get('/', isAuthenticated, authorize(['admin']), getAllProducts);
 router.get('/existing-images', isAuthenticated, authorize(['admin']), getExistingImages);
 router.post('/', isAuthenticated, authorize(['admin']), productUpload.any(), multerErrorHandler, createProduct);
 router.put('/:id', isAuthenticated, authorize(['admin']), productUpload.any(), multerErrorHandler, updateProduct);
 router.delete('/:id', isAuthenticated, authorize(['admin']), deleteProduct);
+
+// This should be last as it's a parameterized route
+router.get('/:id', getProduct);
 
 module.exports = router; 
