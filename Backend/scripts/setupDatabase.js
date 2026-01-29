@@ -265,6 +265,10 @@ const setupDatabase = async () => {
     console.log("\nSyncing payment data...");
     await syncPaymentData();
     
+    // Fix category image paths
+    console.log("\nFixing category image paths...");
+    await fixCategoryImagePaths();
+    
     return true;
   } catch (error) {
     console.error("❌ Database setup failed:", error.message);
@@ -397,6 +401,51 @@ const syncPaymentData = async () => {
     }
   } catch (error) {
     console.error("⚠️ Error syncing payment data:", error.message);
+  }
+};
+
+// Function to fix category image paths
+const fixCategoryImagePaths = async () => {
+  try {
+    const { Category } = require('../model/categoryModel');
+    
+    console.log('Checking category image paths...');
+    
+    // Get all categories
+    const categories = await Category.findAll();
+    
+    let fixed = 0;
+    
+    for (const category of categories) {
+      if (category.image && category.image.includes('//uploads/')) {
+        // Remove duplicate /uploads/categories/ paths
+        let cleanPath = category.image;
+        
+        // Keep removing duplicate paths until clean
+        while (cleanPath.includes('//uploads/categories/')) {
+          cleanPath = cleanPath.replace('//uploads/categories/', '/');
+        }
+        
+        // Extract just the filename
+        const filename = cleanPath.split('/').pop();
+        
+        console.log(`  Fixing category ${category.id}: ${category.name}`);
+        console.log(`    Old: ${category.image}`);
+        console.log(`    New: ${filename}`);
+        
+        // Update with just the filename
+        await category.update({ image: filename });
+        fixed++;
+      }
+    }
+    
+    if (fixed > 0) {
+      console.log(`✓ Fixed ${fixed} category image paths`);
+    } else {
+      console.log('✓ All category image paths are already correct');
+    }
+  } catch (error) {
+    console.error('⚠️ Error fixing category image paths:', error.message);
   }
 };
 

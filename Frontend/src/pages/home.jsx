@@ -457,23 +457,29 @@ const Home = () => {
   // Get the image source with fallback - simple version
   const getCategoryImageSrc = () => {
     if (!currentCategory || !currentCategory.image) {
-      console.log('No category or image, using fallback');
       return '/assets/card1-left.webp';
     }
 
-    const baseUrl = 'https://api.crosscoin.in';
-    let imageUrl = '/assets/card1-left.webp';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+    const imageUrl = currentCategory.image;
     
-    if (currentCategory.image.startsWith('http')) {
-      imageUrl = currentCategory.image;
-    } else if (currentCategory.image.startsWith('/uploads/')) {
-      imageUrl = `${baseUrl}${currentCategory.image}`;
-    } else {
-      imageUrl = `${baseUrl}/uploads/categories/${currentCategory.image}`;
+    // If it's already a fallback asset, return it directly
+    if (imageUrl.startsWith('/assets/')) {
+      return imageUrl;
     }
     
-    console.log('Category:', currentCategory.name, 'Image URL:', imageUrl);
-    return imageUrl;
+    // If already a full URL, use it
+    if (imageUrl.startsWith('http')) {
+      return imageUrl;
+    }
+    
+    // If it starts with /uploads/, prepend base URL
+    if (imageUrl.startsWith('/uploads/')) {
+      return `${baseUrl}${imageUrl}`;
+    }
+    
+    // Otherwise assume it's just a filename
+    return `${baseUrl}/uploads/categories/${imageUrl}`;
   };
 
   const scrollExclusiveSlider = (direction) => {
@@ -610,7 +616,6 @@ const Home = () => {
                       display: 'block'
                     }}
                     onError={(e) => {
-                      console.error('Category image failed to load:', getCategoryImageSrc());
                       e.target.src = '/assets/card1-left.webp';
                     }}
                   />

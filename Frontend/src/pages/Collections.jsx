@@ -85,13 +85,16 @@ const Collections = () => {
             let imageUrl = '/assets/card1-left.webp';
             
             if (cat.image) {
-              const baseUrl = 'https://api.crosscoin.in';
+              const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
               
               if (cat.image.startsWith('http')) {
+                // Already a full URL
                 imageUrl = cat.image;
               } else if (cat.image.startsWith('/uploads/')) {
+                // Already has /uploads/ prefix, just add base URL
                 imageUrl = `${baseUrl}${cat.image}`;
               } else {
+                // Just a filename, add full path
                 imageUrl = `${baseUrl}/uploads/categories/${cat.image}`;
               }
             }
