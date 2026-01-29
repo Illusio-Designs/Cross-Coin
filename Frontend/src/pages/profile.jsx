@@ -38,7 +38,7 @@ const tabs = [
 ];
 
 function forceEnvImageBase(url) {
-  if (!url || typeof url !== "string") return "/assets/card1-left.webp";
+  if (!url || typeof url !== "string") return null; // Return null instead of fallback
   if (url.startsWith("http")) {
     if (url.includes("localhost:5000")) {
       const baseUrl =

@@ -19,7 +19,7 @@ function useWishlist() {
 }
 
 function forceEnvImageBase(url) {
-  if (!url || typeof url !== 'string') return '/assets/card1-left.webp';
+  if (!url || typeof url !== 'string') return null; // No fallback image
   if (url.startsWith('http')) {
     if (url.includes('localhost:5000')) {
       const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
@@ -56,7 +56,7 @@ function WishlistProvider({ children }) {
             } else if (product?.image) {
               primaryImage = forceEnvImageBase(product.image);
             } else {
-              primaryImage = '/assets/card1-left.webp';
+              primaryImage = null; // No fallback image
             }
             // Get price and comparePrice from the first variation
             const firstVariation = product?.ProductVariations?.[0] || {};
@@ -103,7 +103,7 @@ function WishlistProvider({ children }) {
           } else if (product?.image) {
             primaryImage = forceEnvImageBase(product.image);
           } else {
-            primaryImage = '/assets/card1-left.webp';
+            primaryImage = null; // No fallback image
           }
           const variation = item.Variation || product?.ProductVariations?.[0] || {};
           return {

@@ -431,11 +431,11 @@ const Header = () => {
                               }
                               alt={product.name}
                               onError={(e) => {
-                                e.target.src = "/assets/card1-left.webp";
+                                e.target.style.display = 'none'; // Hide broken image
                               }}
                             />
                           ) : (
-                            <img src="/assets/card1-left.webp" alt="No image" />
+                            <div style={{ width: '40px', height: '40px', backgroundColor: '#f5f5f5' }}></div> // Gray placeholder instead of fallback image
                           )}
                         </div>
                         <div className="search-result-info">

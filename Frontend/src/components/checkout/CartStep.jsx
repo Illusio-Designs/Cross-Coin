@@ -19,7 +19,7 @@ function getNormalizedImageUrl(imageUrl) {
 }
 
 function forceEnvImageBase(url) {
-  if (!url || typeof url !== 'string') return '/assets/card1-left.webp';
+  if (!url || typeof url !== 'string') return null; // No fallback image
   if (url.startsWith('http')) {
     if (url.includes('localhost:5000')) {
       const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
@@ -45,7 +45,7 @@ function pickCartItemImage(item) {
   }
   
   // Last fallback
-  return '/assets/card1-left.webp';
+  return null; // No fallback image
 }
 
 // Helper to get variation-specific price

@@ -1,7 +1,7 @@
 // Simple direct image URL builder - no caching, no complex processing
 export function getDirectImageUrl(imageData) {
   if (!imageData || !imageData.image_url) {
-    return "/assets/card1-left.webp";
+    return null; // No fallback image
   }
   
   const imageUrl = imageData.image_url;
@@ -29,7 +29,7 @@ export function getDirectImageUrl(imageData) {
 // Simple normalize function
 export function normalizeImageUrl(imageUrl) {
   if (!imageUrl || typeof imageUrl !== 'string') {
-    return "/assets/card1-left.webp";
+    return null; // No fallback image
   }
   
   return getDirectImageUrl({ image_url: imageUrl });
@@ -80,7 +80,7 @@ export async function checkImageAccessibility(imageUrl) {
 }
 
 // Get image with fallback handling
-export function getImageWithFallback(imageData, fallbackImage = "/assets/card1-left.webp") {
+export function getImageWithFallback(imageData, fallbackImage = null) { // No default fallback
   const primaryImage = getDirectImageUrl(imageData);
   
   // If it's already a fallback asset, return it
@@ -92,9 +92,9 @@ export function getImageWithFallback(imageData, fallbackImage = "/assets/card1-l
 }
 
 // Handle image error and provide fallback
-export function handleImageError(event, fallbackSrc = "/assets/card1-left.webp") {
+export function handleImageError(event, fallbackSrc = null) { // No default fallback
   const img = event.target;
-  if (img.src !== fallbackSrc) {
+  if (fallbackSrc && img.src !== fallbackSrc) {
     console.warn('Image failed to load, using fallback:', img.src);
     img.src = fallbackSrc;
   }

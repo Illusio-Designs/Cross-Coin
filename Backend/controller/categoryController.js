@@ -404,9 +404,9 @@ const getPublicCategoryByName = async (req, res) => {
                             : `/uploads/products/${firstImage.image_url}`;
                     }
                 }
-                // Fallback to default image if still null
+                // No fallback image
                 if (!image) {
-                    image = '/assets/card1-left.webp';
+                    image = null;
                 }
                 return {
                     id: product.id,

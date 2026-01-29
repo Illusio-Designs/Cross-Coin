@@ -82,7 +82,7 @@ const Collections = () => {
           {categories && Array.isArray(categories) && categories.length > 0 ? (
             categories.map((cat) => {
             // Simple image URL construction
-            let imageUrl = '/assets/card1-left.webp';
+            let imageUrl = null; // No fallback image
             
             if (cat.image) {
               const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
@@ -112,7 +112,7 @@ const Collections = () => {
                   className="category-card-image"
                   onError={(e) => {
                     console.error('Failed to load image:', imageUrl);
-                    e.target.src = '/assets/card1-left.webp';
+                    e.target.style.display = 'none'; // Hide broken image
                   }}
                 />
                 <div className="category-card-name">{cat.name}</div>

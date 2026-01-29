@@ -147,8 +147,8 @@ router.get("/feed", async (req, res) => {
         }
       }
     } else {
-      // Fallback to a default product image if no image is found
-      imageUrl = `${frontendUrl}/assets/card1-left.webp`;
+      // No fallback image
+      imageUrl = null;
     }
 
     // Get category name

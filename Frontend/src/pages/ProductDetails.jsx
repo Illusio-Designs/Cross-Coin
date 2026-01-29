@@ -589,9 +589,9 @@ export default function ProductDetails() {
 
   // Use home page logic for image URL (getCategoryImageSrc equivalent)
   function getProductImageSrcForDetails(imageObj) {
-    if (!imageObj) return '/assets/card1-left.webp';
+    if (!imageObj) return null; // Return null instead of fallback
     const img = imageObj.image_url || imageObj.url || imageObj;
-    if (typeof img !== 'string') return '/assets/card1-left.webp';
+    if (typeof img !== 'string') return null; // Return null instead of fallback
     if (img.startsWith('http')) return img;
     if (img.startsWith('/assets/')) return img;
     
@@ -603,7 +603,7 @@ export default function ProductDetails() {
   }
 
   function forceEnvImageBase(url) {
-    if (!url) return '/assets/card1-left.webp';
+    if (!url) return null; // Return null instead of fallback
     if (url.startsWith('http')) {
       if (url.includes('localhost:5000')) {
         const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
