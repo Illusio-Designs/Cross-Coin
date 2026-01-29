@@ -80,13 +80,20 @@ const MediaGallery = () => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
     console.log('Media Gallery - constructing URL for:', imagePath);
     
+    if (!imagePath || typeof imagePath !== 'string') {
+      console.warn('Media Gallery - Invalid image path:', imagePath);
+      return null;
+    }
+    
     let finalUrl;
     if (imagePath.startsWith('http')) {
       finalUrl = imagePath;
     } else if (imagePath.startsWith('/uploads/')) {
       finalUrl = `${baseUrl}${imagePath}`;
     } else {
-      finalUrl = `${baseUrl}/uploads/products/${imagePath}`;
+      // Remove any leading slash and ensure proper path construction
+      const cleanPath = imagePath.replace(/^\/+/, '');
+      finalUrl = `${baseUrl}/uploads/products/${cleanPath}`;
     }
     
     console.log('Media Gallery - final URL:', finalUrl);
@@ -521,47 +528,84 @@ const MediaGallery = () => {
                     }}>
                       Loading...
                     </div>
-                    <img
-                      src={getImageUrl(imagePath)}
-                      alt={getImageName(imagePath)}
-                      style={{
-                        width: '100%',
-                        height: '200px',
-                        objectFit: 'cover',
-                        backgroundColor: '#f5f5f5',
-                        position: 'relative',
-                        zIndex: 2
-                      }}
-                      onError={(e) => {
-                        console.error('Media Gallery - Failed to load image:', getImageUrl(imagePath));
-                        console.error('Original image path:', imagePath);
-                        
-                        // Hide the loading text
-                        const loadingDiv = e.target.previousElementSibling;
-                        if (loadingDiv) {
-                          loadingDiv.style.display = 'none';
-                        }
-                        
-                        // Show error placeholder
-                        e.target.style.backgroundColor = '#f5f5f5';
-                        e.target.style.display = 'flex';
-                        e.target.style.alignItems = 'center';
-                        e.target.style.justifyContent = 'center';
-                        e.target.style.color = '#999';
-                        e.target.style.fontSize = '12px';
-                        e.target.alt = 'Image failed to load';
-                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0xMDAgNzBMMTMwIDEwMEgxMTVWMTMwSDg1VjEwMEg3MEwxMDAgNzBaIiBmaWxsPSIjQ0NDIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5IiBmb250LXNpemU9IjEyIj5JbWFnZSBub3QgZm91bmQ8L3RleHQ+Cjwvc3ZnPg==';
-                      }}
-                      onLoad={(e) => {
-                        console.log('Media Gallery - Successfully loaded image:', getImageUrl(imagePath));
-                        
-                        // Hide the loading text
-                        const loadingDiv = e.target.previousElementSibling;
-                        if (loadingDiv) {
-                          loadingDiv.style.display = 'none';
-                        }
-                      }}
-                    />
+                    {(() => {
+                      const imageUrl = getImageUrl(imagePath);
+                      if (!imageUrl) {
+                        return (
+                          <div style={{
+                            width: '100%',
+                            height: '200px',
+                            backgroundColor: '#f5f5f5',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#999',
+                            fontSize: '12px',
+                            position: 'relative',
+                            zIndex: 2
+                          }}>
+                            Invalid image path
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <img
+                          src={imageUrl}
+                          alt={getImageName(imagePath)}
+                          style={{
+                            width: '100%',
+                            height: '200px',
+                            objectFit: 'cover',
+                            backgroundColor: '#f5f5f5',
+                            position: 'relative',
+                            zIndex: 2
+                          }}
+                          onError={(e) => {
+                            console.error('Media Gallery - Failed to load image:', imageUrl);
+                            console.error('Original image path:', imagePath);
+                            
+                            // Hide the loading text
+                            const loadingDiv = e.target.previousElementSibling;
+                            if (loadingDiv) {
+                              loadingDiv.style.display = 'none';
+                            }
+                            
+                            // Replace with error placeholder
+                            e.target.style.display = 'none';
+                            const errorDiv = document.createElement('div');
+                            errorDiv.style.cssText = `
+                              width: 100%;
+                              height: 200px;
+                              background-color: #f5f5f5;
+                              display: flex;
+                              align-items: center;
+                              justify-content: center;
+                              color: #999;
+                              font-size: 12px;
+                              position: relative;
+                              z-index: 2;
+                              flex-direction: column;
+                              gap: 4px;
+                            `;
+                            errorDiv.innerHTML = `
+                              <div>Image not found</div>
+                              <div style="font-size: 10px; opacity: 0.7;">${getImageName(imagePath)}</div>
+                            `;
+                            e.target.parentNode.appendChild(errorDiv);
+                          }}
+                          onLoad={(e) => {
+                            console.log('Media Gallery - Successfully loaded image:', imageUrl);
+                            
+                            // Hide the loading text
+                            const loadingDiv = e.target.previousElementSibling;
+                            if (loadingDiv) {
+                              loadingDiv.style.display = 'none';
+                            }
+                          }}
+                        />
+                      );
+                    })()}
                     {selectedImages.includes(imagePath) && (
                       <div style={{
                         position: 'absolute',
@@ -633,34 +677,64 @@ const MediaGallery = () => {
                         />
                       </td>
                       <td style={{ padding: '12px', border: '1px solid #ddd' }}>
-                        <img
-                          src={getImageUrl(imagePath)}
-                          alt={getImageName(imagePath)}
-                          style={{
-                            width: '60px',
-                            height: '60px',
-                            objectFit: 'cover',
-                            borderRadius: '4px',
-                            backgroundColor: '#f5f5f5'
-                          }}
-                          onError={(e) => {
-                            console.error('Media Gallery List - Failed to load image:', getImageUrl(imagePath));
-                            console.error('Original image path:', imagePath);
-                            
-                            // Show a placeholder instead of hiding
-                            e.target.style.backgroundColor = '#f5f5f5';
-                            e.target.style.display = 'flex';
-                            e.target.style.alignItems = 'center';
-                            e.target.style.justifyContent = 'center';
-                            e.target.style.color = '#999';
-                            e.target.style.fontSize = '10px';
-                            e.target.alt = 'Failed';
-                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0zMCAyMEwzNiAyNkgzM1YzMkgyN1YyNkgyNEwzMCAyMFoiIGZpbGw9IiNDQ0MiLz4KPC9zdmc+';
-                          }}
-                          onLoad={() => {
-                            console.log('Media Gallery List - Successfully loaded image:', getImageUrl(imagePath));
-                          }}
-                        />
+                        {(() => {
+                          const imageUrl = getImageUrl(imagePath);
+                          if (!imageUrl) {
+                            return (
+                              <div style={{
+                                width: '60px',
+                                height: '60px',
+                                backgroundColor: '#f5f5f5',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#999',
+                                fontSize: '10px',
+                                borderRadius: '4px'
+                              }}>
+                                Invalid
+                              </div>
+                            );
+                          }
+                          
+                          return (
+                            <img
+                              src={imageUrl}
+                              alt={getImageName(imagePath)}
+                              style={{
+                                width: '60px',
+                                height: '60px',
+                                objectFit: 'cover',
+                                borderRadius: '4px',
+                                backgroundColor: '#f5f5f5'
+                              }}
+                              onError={(e) => {
+                                console.error('Media Gallery List - Failed to load image:', imageUrl);
+                                console.error('Original image path:', imagePath);
+                                
+                                // Replace with error placeholder
+                                e.target.style.display = 'none';
+                                const errorDiv = document.createElement('div');
+                                errorDiv.style.cssText = `
+                                  width: 60px;
+                                  height: 60px;
+                                  background-color: #f5f5f5;
+                                  display: flex;
+                                  align-items: center;
+                                  justify-content: center;
+                                  color: #999;
+                                  font-size: 10px;
+                                  border-radius: 4px;
+                                `;
+                                errorDiv.textContent = 'Not found';
+                                e.target.parentNode.appendChild(errorDiv);
+                              }}
+                              onLoad={() => {
+                                console.log('Media Gallery List - Successfully loaded image:', imageUrl);
+                              }}
+                            />
+                          );
+                        })()}
                       </td>
                       <td style={{ padding: '12px', border: '1px solid #ddd', fontWeight: '500' }}>
                         {getImageName(imagePath)}
