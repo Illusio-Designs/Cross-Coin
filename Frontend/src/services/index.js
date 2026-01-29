@@ -764,6 +764,16 @@ export const productService = {
       throw error.response?.data || error.message;
     }
   },
+
+  getExistingImages: async (source = 'products') => {
+    try {
+      const params = source !== 'products' ? { source } : {};
+      const response = await api.get('/api/products/existing-images', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 // Coupon Services
