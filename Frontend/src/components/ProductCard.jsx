@@ -45,13 +45,26 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
 
   // Get the primary image or first image from the images array
   let imageData = null;
-  if (variation?.images && variation.images.length > 0) {
+  
+  // Priority 1: Check variation images
+  if (variation?.images && Array.isArray(variation.images) && variation.images.length > 0) {
     imageData = variation.images[0];
-  } else if (Array.isArray(product?.images) && product.images.length > 0) {
-    imageData =
-      product.images.find((img) => img.is_primary) || product.images[0];
-  } else if (typeof product?.image === "string") {
-    imageData = { image_url: product.image };
+  } 
+  // Priority 2: Check product images array
+  else if (Array.isArray(product?.images) && product.images.length > 0) {
+    imageData = product.images.find((img) => img.is_primary) || product.images[0];
+  } 
+  // Priority 3: Check if product has a single image property
+  else if (product?.image) {
+    if (typeof product.image === 'string') {
+      imageData = { image_url: product.image };
+    } else {
+      imageData = product.image;
+    }
+  }
+  // Priority 4: Check ProductImages (from backend)
+  else if (Array.isArray(product?.ProductImages) && product.ProductImages.length > 0) {
+    imageData = product.ProductImages.find((img) => img.is_primary) || product.ProductImages[0];
   }
 
   // Get the first variation for price
@@ -90,30 +103,13 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
         {product?.badge && (
           <span className="product-badge">{formatBadge(product.badge)}</span>
         )}
-        {imageData ? (
-          <SafeImage
-            imageData={imageData}
-            alt={product?.name || "Product Image"}
-            width="300px"
-            height="300px"
-            style={{ objectFit: "cover", background: "#f5f5f5" }}
-          />
-        ) : (
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
-              background: "#f5f5f5",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#999",
-              fontSize: "14px",
-            }}
-          >
-            {" "}
-          </div>
-        )}
+        <SafeImage
+          imageData={imageData}
+          alt={product?.name || "Product Image"}
+          width="300px"
+          height="300px"
+          style={{ objectFit: "cover", background: "#f5f5f5" }}
+        />
         <button
           className={`wishlist-btn ${
             isInWishlist(product?.id) ? "active" : ""

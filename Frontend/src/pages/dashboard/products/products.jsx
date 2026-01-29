@@ -285,11 +285,25 @@ const ProductsPage = () => {
         status: product.status,
         badge: product.badge || 'none',
         total_sold: product.total_sold || 0,
-        images: product.images?.map(img => ({
-          name: img.image_url.split('/').pop(),
-          url: `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}${img.image_url}`,
-          type: 'image/jpeg'
-        })) || [],
+        images: product.images?.map(img => {
+          let imageUrl = img.image_url;
+          // If image_url doesn't start with http, construct full URL
+          if (!imageUrl.startsWith('http')) {
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+            if (imageUrl.startsWith('/uploads/')) {
+              imageUrl = `${baseUrl}${imageUrl}`;
+            } else {
+              imageUrl = `${baseUrl}/uploads/products/${imageUrl}`;
+            }
+          }
+          return {
+            id: img.id,
+            name: imageUrl.split('/').pop(),
+            url: imageUrl,
+            type: 'image/jpeg',
+            existing: true
+          };
+        }) || [],
         weight: product.weight || '',
         weightUnit: product.weightUnit || 'g',
         dimensions: product.dimensions || { length: '', width: '', height: '' },
@@ -342,11 +356,25 @@ const ProductsPage = () => {
             }
           })
         },
-        variationImages: product.variations?.map(variation => variation.images?.map(img => ({
-          name: img.image_url.split('/').pop(),
-          url: `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}${img.image_url}`,
-          type: 'image/jpeg'
-        }))) || []
+        variationImages: product.variations?.map(variation => variation.images?.map(img => {
+          let imageUrl = img.image_url;
+          // If image_url doesn't start with http, construct full URL
+          if (!imageUrl.startsWith('http')) {
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+            if (imageUrl.startsWith('/uploads/')) {
+              imageUrl = `${baseUrl}${imageUrl}`;
+            } else {
+              imageUrl = `${baseUrl}/uploads/products/${imageUrl}`;
+            }
+          }
+          return {
+            id: img.id,
+            name: imageUrl.split('/').pop(),
+            url: imageUrl,
+            type: 'image/jpeg',
+            existing: true
+          };
+        })) || []
       };
 
       setFormData(formData);

@@ -11,22 +11,40 @@ const SafeImage = ({
   ...props 
 }) => {
   const [imageError, setImageError] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  // Build URL directly inline - simplest possible approach
+  // Build URL directly inline
   let imageSrc = fallbackSrc;
   
-  if (imageData && imageData.image_url) {
-    const imageUrl = imageData.image_url;
+  if (imageData) {
+    let rawUrl = null;
     
-    if (imageUrl.startsWith("http")) {
-      imageSrc = imageUrl;
-    } else if (imageUrl.startsWith("/assets/")) {
-      imageSrc = imageUrl;
-    } else if (imageUrl.startsWith("/uploads/")) {
-      imageSrc = `https://api.crosscoin.in${imageUrl}`;
-    } else {
-      imageSrc = `https://api.crosscoin.in/uploads/products/${imageUrl}`;
+    // Handle different image data formats
+    if (typeof imageData === 'string') {
+      rawUrl = imageData;
+    } else if (imageData.image_url) {
+      rawUrl = imageData.image_url;
+    } else if (imageData.url) {
+      rawUrl = imageData.url;
+    }
+    
+    // Process the URL
+    if (rawUrl) {
+      // If already a full URL, use it
+      if (rawUrl.startsWith("http")) {
+        imageSrc = rawUrl;
+      } 
+      // If it's an assets path, use it directly
+      else if (rawUrl.startsWith("/assets/")) {
+        imageSrc = rawUrl;
+      } 
+      // If it starts with /uploads/, prepend the API URL
+      else if (rawUrl.startsWith("/uploads/")) {
+        imageSrc = `https://api.crosscoin.in${rawUrl}`;
+      } 
+      // Otherwise assume it's just a filename in products folder
+      else {
+        imageSrc = `https://api.crosscoin.in/uploads/products/${rawUrl}`;
+      }
     }
   }
 
@@ -34,45 +52,23 @@ const SafeImage = ({
     if (!imageError && imageSrc !== fallbackSrc) {
       setImageError(true);
       event.target.src = fallbackSrc;
-      setLoading(true);
-    } else {
-      setLoading(false);
     }
   };
 
-  const handleLoad = () => {
-    setLoading(false);
-  };
-
   return (
-    <div className={`safe-image-container ${className}`} style={{ position: 'relative', display: 'inline-block', height: '-webkit-fill-available' }}>
-      {loading && (
-        <div 
-          style={{
-            width: width || '100%',
-            height: height || '200px',
-            backgroundColor: '#f0f0f0',
-            borderRadius: '4px'
-          }}
-        />
-      )}
-      <img
-        src={imageSrc}
-        alt={alt}
-        onError={handleError}
-        onLoad={handleLoad}
-        loading="eager"
-        decoding="async"
-        style={{
-          width: width || '100%',
-          height: height || 'auto',
-          objectFit: 'cover',
-          display: loading ? 'none' : 'block',
-          ...style
-        }}
-        {...props}
-      />
-    </div>
+    <img
+      src={imageSrc}
+      alt={alt}
+      onError={handleError}
+      className={className}
+      style={{
+        width: width || '100%',
+        height: height || 'auto',
+        objectFit: 'cover',
+        ...style
+      }}
+      {...props}
+    />
   );
 };
 
