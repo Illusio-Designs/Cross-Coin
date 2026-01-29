@@ -23,6 +23,7 @@ const menu = [
       { label: "Products", view: "products" },
       { label: "Categories", view: "categories" },
       { label: "Attributes", view: "attributes" },
+      { label: "Media Gallery", view: "media-gallery" },
     ]
   },
   {

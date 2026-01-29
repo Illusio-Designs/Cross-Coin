@@ -7,7 +7,7 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
   const [selectedImages, setSelectedImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [imageSource, setImageSource] = useState(productId ? 'current_product' : 'products'); // Default to current product if productId provided
+  const [imageSource, setImageSource] = useState('products'); // Always default to 'products' to show all images
 
   useEffect(() => {
     if (isOpen) {
@@ -19,17 +19,61 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
     setLoading(true);
     setError(null);
     try {
+      console.log('=== Fetching Existing Images ===');
+      console.log('Image Source:', imageSource);
+      console.log('Product ID:', productId);
+      console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
+      
+      // Check if user is authenticated
+      const token = localStorage.getItem('token');
+      console.log('Auth Token:', token ? 'Present' : 'Missing');
+      
       let data;
       if (imageSource === 'current_product' && productId) {
         // Get images for specific product
+        console.log('Fetching images for specific product:', productId);
         data = await productService.getExistingImages('products', productId);
       } else {
         // Get all images from selected source
+        console.log('Fetching all images from source:', imageSource);
         data = await productService.getExistingImages(imageSource);
       }
+      
+      console.log('API Response:', data);
+      console.log('Images found:', data.images?.length || 0);
+      
+      if (data.images && data.images.length > 0) {
+        console.log('Sample image paths:', data.images.slice(0, 3));
+      }
+      
       setExistingImages(data.images || []);
     } catch (err) {
-      setError(err.message || 'Failed to fetch existing images');
+      console.error('Error fetching existing images:', err);
+      console.error('Error details:', {
+        message: err.message,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        url: err.config?.url
+      });
+      
+      let errorMessage = 'Failed to fetch existing images';
+      
+      if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please login again.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Access denied. Admin privileges required.';
+      } else if (err.response?.status === 404) {
+        errorMessage = 'API endpoint not found.';
+      } else if (err.response?.status >= 500) {
+        errorMessage = 'Server error. Please try again later.';
+      } else if (err.code === 'NETWORK_ERROR' || err.message.includes('Network Error')) {
+        errorMessage = 'Network error. Check your internet connection.';
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -97,8 +141,34 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
         {loading && <div className="loading">Loading existing images...</div>}
         
         {error && (
-          <div className="error-message" style={{ color: 'red', marginBottom: '16px' }}>
-            {error}
+          <div className="error-message" style={{ 
+            color: 'red', 
+            marginBottom: '16px',
+            padding: '12px',
+            backgroundColor: '#fee',
+            border: '1px solid #fcc',
+            borderRadius: '4px'
+          }}>
+            <strong>Error:</strong> {error}
+            <br />
+            <div style={{ marginTop: '8px' }}>
+              <button
+                onClick={fetchExistingImages}
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '12px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  marginRight: '8px'
+                }}
+              >
+                Retry
+              </button>
+              <small>Check the browser console for more details.</small>
+            </div>
           </div>
         )}
 
