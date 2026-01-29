@@ -328,7 +328,35 @@ module.exports.createProduct = async (req, res) => {
         metaKeywords: seo.metaKeywords || "",
         ogTitle: seo.ogTitle || name,
         ogDescription: seo.ogDescription || description,
-        ogImage: seo.ogImage || null,
+        ogImage: (() => {
+          let ogImageUrl = seo.ogImage || null;
+          
+          // If ogImage is provided, ensure it has proper URL format
+          if (ogImageUrl && typeof ogImageUrl === 'string') {
+            // If it's already a full URL, use it as-is
+            if (ogImageUrl.startsWith('http')) {
+              return ogImageUrl;
+            }
+            // If it starts with /uploads/, prepend the API URL
+            else if (ogImageUrl.startsWith('/uploads/')) {
+              const apiUrl = process.env.API_URL || 'https://api.crosscoin.in';
+              return `${apiUrl}${ogImageUrl}`;
+            }
+            // If it's just a filename, construct the full URL
+            else {
+              const apiUrl = process.env.API_URL || 'https://api.crosscoin.in';
+              return `${apiUrl}/uploads/products/${ogImageUrl}`;
+            }
+          }
+          
+          // Fallback to first product image if no ogImage provided
+          if (images && images.length > 0) {
+            const apiUrl = process.env.API_URL || 'https://api.crosscoin.in';
+            return `${apiUrl}/uploads/products/${images[0].filename}`;
+          }
+          
+          return null;
+        })(),
         canonicalUrl:
           seo.canonicalUrl ||
           `${process.env.FRONTEND_URL}/products/${product.slug}`,
@@ -340,7 +368,7 @@ module.exports.createProduct = async (req, res) => {
             name: name,
             description: description,
             image: images?.[0]
-              ? `/uploads/products/${images[0].filename}`
+              ? `${process.env.API_URL || 'https://api.crosscoin.in'}/uploads/products/${images[0].filename}`
               : null,
             offers: {
               "@type": "Offer",
@@ -427,6 +455,31 @@ module.exports.createProduct = async (req, res) => {
                 );
               }
             }
+          }
+        }
+        
+        // Handle variation library images (existing images from uploads folder)
+        const variationLibraryImages = JSON.parse(req.body.variationLibraryImages || "[]");
+        if (variationLibraryImages.length > 0 && variationLibraryImages[i]) {
+          for (const libraryImage of variationLibraryImages[i]) {
+            console.log(
+              `--- Before ProductImage.create for variation library image (variation ${i}) ---`
+            );
+            await ProductImage.create(
+              {
+                product_id: product.id,
+                product_variation_id: variationRecord.id,
+                image_url: libraryImage.image_url || libraryImage.url,
+                alt_text: name,
+                display_order: 0,
+                is_primary: false,
+                status: "active",
+              },
+              { transaction }
+            );
+            console.log(
+              `--- After ProductImage.create for variation library image (variation ${i}) ---`
+            );
           }
         }
       }
@@ -721,7 +774,35 @@ module.exports.updateProduct = async (req, res) => {
       metaKeywords: seo.metaKeywords || seo.meta_keywords || "",
       ogTitle: seo.ogTitle || seo.og_title || name,
       ogDescription: seo.ogDescription || seo.og_description || description,
-      ogImage: seo.ogImage || seo.og_image || null,
+      ogImage: (() => {
+        let ogImageUrl = seo.ogImage || seo.og_image || null;
+        
+        // If ogImage is provided, ensure it has proper URL format
+        if (ogImageUrl && typeof ogImageUrl === 'string') {
+          // If it's already a full URL, use it as-is
+          if (ogImageUrl.startsWith('http')) {
+            return ogImageUrl;
+          }
+          // If it starts with /uploads/, prepend the API URL
+          else if (ogImageUrl.startsWith('/uploads/')) {
+            const apiUrl = process.env.API_URL || 'https://api.crosscoin.in';
+            return `${apiUrl}${ogImageUrl}`;
+          }
+          // If it's just a filename, construct the full URL
+          else {
+            const apiUrl = process.env.API_URL || 'https://api.crosscoin.in';
+            return `${apiUrl}/uploads/products/${ogImageUrl}`;
+          }
+        }
+        
+        // Fallback to first product image if no ogImage provided
+        if (images && images.length > 0) {
+          const apiUrl = process.env.API_URL || 'https://api.crosscoin.in';
+          return `${apiUrl}/uploads/products/${images[0].filename}`;
+        }
+        
+        return null;
+      })(),
       canonicalUrl:
         seo.canonicalUrl ||
         seo.canonical_url ||
@@ -734,7 +815,9 @@ module.exports.updateProduct = async (req, res) => {
           "@type": "Product",
           name: name,
           description: description,
-          image: images?.[0] ? `/uploads/products/${images[0].filename}` : null,
+          image: images?.[0] ? 
+            `${process.env.API_URL || 'https://api.crosscoin.in'}/uploads/products/${images[0].filename}` : 
+            null,
           offers: {
             "@type": "Offer",
             price: variations[0]?.price || 0,
@@ -828,6 +911,28 @@ module.exports.updateProduct = async (req, res) => {
                 { transaction }
               );
             }
+          }
+        }
+      }
+      
+      // Handle variation library images (existing images from uploads folder)
+      const variationLibraryImages = JSON.parse(req.body.variationLibraryImages || "[]");
+      if (variationLibraryImages.length > 0) {
+        const variationIndex = variations.findIndex(v => v.sku === variation.sku);
+        if (variationIndex !== -1 && variationLibraryImages[variationIndex]) {
+          for (const libraryImage of variationLibraryImages[variationIndex]) {
+            await ProductImage.create(
+              {
+                product_id: product.id,
+                product_variation_id: dbVariation.id,
+                image_url: libraryImage.image_url || libraryImage.url,
+                alt_text: name,
+                display_order: 0,
+                is_primary: false,
+                status: "active",
+              },
+              { transaction }
+            );
           }
         }
       }
