@@ -80,11 +80,9 @@ export default function Slider() {
       if (Array.isArray(response)) {
         setSliders(response);
         console.log('Sliders data:', response);
-        console.log('Image URLs:', response.map(slider => slider.image));
       } else if (response.sliders && Array.isArray(response.sliders)) {
         setSliders(response.sliders);
         console.log('Sliders data:', response.sliders);
-        console.log('Image URLs:', response.sliders.map(slider => slider.image));
       } else {
         console.warn('Unexpected response format:', response);
         setSliders([]);
@@ -139,7 +137,6 @@ export default function Slider() {
     // If the image path contains localhost, replace it with the production URL
     if (imagePath.includes('localhost:5000')) {
       const productionUrl = imagePath.replace('http://localhost:5000', 'https://api.crosscoin.in');
-      console.log('Replaced localhost URL with production URL:', productionUrl);
       return productionUrl;
     }
     
@@ -158,13 +155,6 @@ export default function Slider() {
       accessor: "image",
       cell: ({ image }) => {
         const imageUrl = getImageUrl(image);
-        console.log('Image cell rendering:', { image, imageUrl });
-        
-        // Test if the image URL is accessible
-        const testImage = new Image();
-        testImage.onload = () => console.log('Image is accessible:', imageUrl);
-        testImage.onerror = () => console.error('Image is not accessible:', imageUrl);
-        testImage.src = imageUrl;
         
         return (
           <div style={{ width: '150px', height: '100px', position: 'relative' }}>
@@ -182,9 +172,6 @@ export default function Slider() {
                   console.error('Image failed to load:', imageUrl);
                   e.target.style.display = 'none';
                   e.target.nextSibling.style.display = 'flex';
-                }}
-                onLoad={() => {
-                  console.log('Image loaded successfully:', imageUrl);
                 }}
                 crossOrigin="anonymous"
                 data-no-optimize="true"

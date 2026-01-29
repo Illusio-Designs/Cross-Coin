@@ -163,6 +163,7 @@ const Header = () => {
               width="120px"
               height="40px"
               style={{ objectFit: 'contain' }}
+              isLogo={true}
             />
           </Link>
         </div>

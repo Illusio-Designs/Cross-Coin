@@ -759,6 +759,7 @@ const Home = () => {
                         width="400px"
                         height="400px"
                         style={{ objectFit: 'cover' }}
+                        isProductCard={true}
                       />
                       <div className="thumbnail-images">
                         {variationImages.map((src, idx) => (
@@ -767,6 +768,7 @@ const Home = () => {
                             imageData={{ image_url: src }}
                             alt={`${product.name} thumbnail ${idx + 1}`}
                             className={state.selectedThumbnail === idx ? 'active' : ''}
+                            isProductCard={true}
                             onClick={() => {
                               setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, selectedThumbnail: idx } : s));
                             }}

@@ -40,6 +40,7 @@ const Footer = () => {
               width="120px" 
               height="40px" 
               style={{ objectFit: 'contain' }}
+              isLogo={true}
             />
             </span>
           </div>

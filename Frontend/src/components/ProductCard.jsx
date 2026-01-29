@@ -109,6 +109,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
           width="300px"
           height="300px"
           style={{ objectFit: "cover", background: "#f5f5f5" }}
+          isProductCard={true}
         />
         <button
           className={`wishlist-btn ${
