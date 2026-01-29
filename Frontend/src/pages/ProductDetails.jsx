@@ -606,13 +606,13 @@ export default function ProductDetails() {
     if (!url) return null; // Return null instead of fallback
     if (url.startsWith('http')) {
       if (url.includes('localhost:5000')) {
-        const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
         const path = url.replace(/^https?:\/\/[^/]+/, '');
         return `${baseUrl}${path}`;
       }
       return url;
     }
-    const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
     return `${baseUrl}${url}`;
   }
 

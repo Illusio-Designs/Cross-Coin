@@ -23,7 +23,7 @@ function forceEnvImageBase(url) {
   if (!url || typeof url !== 'string') return null; // Return null instead of fallback
   
   // Use live backend URL
-  const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://api.crosscoin.in';
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
   
   if (url.startsWith('http')) {
     // Replace localhost with live URL

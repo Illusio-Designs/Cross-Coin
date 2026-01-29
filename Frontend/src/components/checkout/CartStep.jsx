@@ -11,7 +11,7 @@ function getNormalizedImageUrl(imageUrl) {
   if (/^https?:\/\//.test(imageUrl)) {
     return imageUrl;
   }
-  const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
   if (imageUrl.startsWith('/')) {
     return `${baseUrl}${imageUrl}`;
   }
@@ -22,13 +22,13 @@ function forceEnvImageBase(url) {
   if (!url || typeof url !== 'string') return null; // No fallback image
   if (url.startsWith('http')) {
     if (url.includes('localhost:5000')) {
-      const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
       const path = url.replace(/^https?:\/\/[^/]+/, '');
       return `${baseUrl}${path}`;
     }
     return url;
   }
-  const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://crosscoin.in';
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
   return `${baseUrl}${url}`;
 }
 

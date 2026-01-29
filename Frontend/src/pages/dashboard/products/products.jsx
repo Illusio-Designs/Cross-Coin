@@ -66,6 +66,28 @@ const ProductsPage = () => {
   });
   const [attributes, setAttributes] = useState([]);
 
+  // Test function to debug image URLs
+  window.testImageUrl = (imagePath) => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+    console.log('Testing image URL construction:');
+    console.log('Input path:', imagePath);
+    console.log('Base URL:', baseUrl);
+    
+    let result;
+    if (!imagePath.startsWith('http')) {
+      if (imagePath.startsWith('/uploads/')) {
+        result = `${baseUrl}${imagePath}`;
+      } else {
+        result = `${baseUrl}/uploads/products/${imagePath}`;
+      }
+    } else {
+      result = imagePath;
+    }
+    
+    console.log('Final URL:', result);
+    return result;
+  };
+
   // Debounced search function
   const debouncedSearch = useCallback(
     debounce((searchTerm) => {
@@ -282,6 +304,19 @@ const ProductsPage = () => {
       const response = await productService.getProduct(id);
       const product = response;
       
+      console.log('=== PRODUCT EDIT DEBUG ===');
+      console.log('Raw product response:', product);
+      console.log('Product images:', product.images);
+      console.log('Product variations:', product.variations);
+      console.log('Environment API URL:', process.env.NEXT_PUBLIC_API_URL);
+      console.log('Base URL being used:', process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in');
+      if (product.variations) {
+        product.variations.forEach((variation, index) => {
+          console.log(`Variation ${index} images:`, variation.images);
+        });
+      }
+      console.log('=== END PRODUCT EDIT DEBUG ===');
+      
       // Format the data for the form
       const formData = {
         id: product.id,
@@ -296,11 +331,24 @@ const ProductsPage = () => {
         images: product.images?.map(img => {
           console.log('Loading existing image:', img);
           
+          // Get the base URL
+          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+          
+          // Construct the proper image URL
+          let imageUrl = img.image_url;
+          if (!imageUrl.startsWith('http')) {
+            if (imageUrl.startsWith('/uploads/')) {
+              imageUrl = `${baseUrl}${imageUrl}`;
+            } else {
+              imageUrl = `${baseUrl}/uploads/products/${imageUrl}`;
+            }
+          }
+          
           return {
             id: img.id,
-            name: img.image_url.split('/').pop(),
-            image_url: img.image_url, // Keep original format for SafeImage
-            url: img.image_url, // Also provide url for compatibility
+            name: imageUrl.split('/').pop(),
+            image_url: imageUrl, // Use the full URL
+            url: imageUrl, // Also provide url for compatibility
             type: 'image/jpeg',
             existing: true
           };
@@ -963,53 +1011,70 @@ const ProductsPage = () => {
                 </button>
               </div>
               <div className="images-preview" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 8 }}>
-                {formData.images && formData.images.map((img, imgIdx) => (
-                  <div key={imgIdx} style={{ position: 'relative' }}>
-                    <img
-                      src={img instanceof File ? URL.createObjectURL(img) : (img.image_url || img.url)}
-                      alt={`Product Image ${imgIdx + 1}`}
-                      style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const imageToRemove = formData.images[imgIdx];
-                        
-                        setFormData(prev => {
-                          const newState = {
-                            ...prev,
-                            images: prev.images.filter((_, index) => index !== imgIdx)
-                          };
+                {formData.images && formData.images.map((img, imgIdx) => {
+                  console.log(`Rendering product image ${imgIdx}:`, img);
+                  const imageUrl = img instanceof File ? URL.createObjectURL(img) : (img.url || img.image_url);
+                  console.log(`Product image URL ${imgIdx}:`, imageUrl);
+                  
+                  return (
+                    <div key={imgIdx} style={{ position: 'relative' }}>
+                      <img
+                        src={imageUrl}
+                        alt={`Product Image ${imgIdx + 1}`}
+                        style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
+                        onError={(e) => {
+                          console.error(`Failed to load product image ${imgIdx}:`, imageUrl);
+                          e.target.style.backgroundColor = '#f5f5f5';
+                          e.target.style.display = 'flex';
+                          e.target.style.alignItems = 'center';
+                          e.target.style.justifyContent = 'center';
+                          e.target.alt = 'Failed to load';
+                        }}
+                        onLoad={() => {
+                          console.log(`Successfully loaded product image ${imgIdx}:`, imageUrl);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const imageToRemove = formData.images[imgIdx];
                           
-                          // If this is an existing image (has id), track it for deletion
-                          if (imageToRemove.existing && imageToRemove.id) {
-                            newState.imagesToDelete = [...prev.imagesToDelete, imageToRemove.id];
-                          }
-                          
-                          return newState;
-                        });
-                      }}
-                      style={{
-                        position: 'absolute',
-                        top: '-8px',
-                        right: '-8px',
-                        background: '#ef4444',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '50%',
-                        width: '20px',
-                        height: '20px',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
+                          setFormData(prev => {
+                            const newState = {
+                              ...prev,
+                              images: prev.images.filter((_, index) => index !== imgIdx)
+                            };
+                            
+                            // If this is an existing image (has id), track it for deletion
+                            if (imageToRemove.existing && imageToRemove.id) {
+                              newState.imagesToDelete = [...prev.imagesToDelete, imageToRemove.id];
+                            }
+                            
+                            return newState;
+                          });
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: '-8px',
+                          right: '-8px',
+                          background: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '20px',
+                          height: '20px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
