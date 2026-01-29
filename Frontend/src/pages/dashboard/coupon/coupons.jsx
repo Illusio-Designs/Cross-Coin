@@ -447,6 +447,7 @@ export default function Coupons() {
         isOpen={isModalOpen}
         onClose={handleModalClose}
         title={formData.id ? "Edit Coupon" : "Add New Coupon"}
+        closeOnOverlayClick={false}
       >
         <form onSubmit={handleSubmit} className="seo-form">
           {error && <div className="modal-error-banner">{error}</div>}

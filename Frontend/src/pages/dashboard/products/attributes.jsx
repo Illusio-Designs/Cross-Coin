@@ -331,6 +331,7 @@ export default function Attributes() {
         isOpen={isModalOpen}
         onClose={handleModalClose}
         title={formData.id ? "Edit Attribute" : "Add New Attribute"}
+        closeOnOverlayClick={false}
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">

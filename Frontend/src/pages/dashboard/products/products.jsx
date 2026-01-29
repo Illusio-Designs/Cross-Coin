@@ -1469,6 +1469,7 @@ const ProductsPage = () => {
         isOpen={isModalOpen}
         onClose={handleModalClose}
         title={formData.id ? "Edit Product" : "Add New Product"}
+        closeOnOverlayClick={false}
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">

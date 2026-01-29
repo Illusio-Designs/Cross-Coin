@@ -270,6 +270,7 @@ export default function ShippingFees() {
         isOpen={isAddModalOpen}
         onClose={handleModalClose}
         title="Add New Shipping Fee"
+        closeOnOverlayClick={false}
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
@@ -319,6 +320,7 @@ export default function ShippingFees() {
         isOpen={isEditModalOpen}
         onClose={handleModalClose}
         title="Edit Shipping Fee"
+        closeOnOverlayClick={false}
       >
         {selectedFee && (
           <form onSubmit={handleSubmit} className="seo-form">

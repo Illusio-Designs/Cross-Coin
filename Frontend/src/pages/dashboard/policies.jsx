@@ -309,6 +309,7 @@ export default function Policies() {
         isOpen={isModalOpen}
         onClose={handleModalClose}
         title={formData.id ? "Edit Policy" : "Add New Policy"}
+        closeOnOverlayClick={false}
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">

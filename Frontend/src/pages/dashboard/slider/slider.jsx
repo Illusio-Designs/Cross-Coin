@@ -449,6 +449,7 @@ export default function Slider() {
         isOpen={isModalOpen}
         onClose={handleModalClose}
         title={formData.id ? "Edit Slider" : "Add New Slider"}
+        closeOnOverlayClick={false}
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">

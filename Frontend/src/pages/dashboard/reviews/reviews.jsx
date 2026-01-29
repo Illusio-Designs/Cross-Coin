@@ -355,6 +355,7 @@ export default function Reviews() {
         isOpen={isModalOpen}
         onClose={handleModalClose}
         title="Moderate Review"
+        closeOnOverlayClick={false}
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
