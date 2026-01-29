@@ -15,15 +15,61 @@ const MediaGallery = () => {
 
   useEffect(() => {
     fetchImages();
+    
+    // Add test functions to window for debugging
+    window.testMediaGalleryImage = async (imagePath) => {
+      console.log('Testing media gallery image:', imagePath);
+      const url = getImageUrl(imagePath);
+      console.log('Constructed URL:', url);
+      
+      const info = await getImageInfo(imagePath);
+      console.log('Image info:', info);
+      
+      return { url, info };
+    };
+    
+    window.checkAllMediaImages = async () => {
+      console.log('Checking all media gallery images...');
+      const results = [];
+      
+      for (let i = 0; i < Math.min(images.length, 10); i++) {
+        const imagePath = images[i];
+        const result = await window.testMediaGalleryImage(imagePath);
+        results.push({ imagePath, ...result });
+      }
+      
+      console.log('Media gallery image check results:', results);
+      return results;
+    };
   }, []);
 
   const fetchImages = async () => {
     setLoading(true);
     setError(null);
     try {
+      console.log('=== MEDIA GALLERY FETCH DEBUG ===');
+      console.log('Fetching images from API...');
+      
       const data = await productService.getExistingImages('products');
+      
+      console.log('API Response:', data);
+      console.log('Images received:', data.images?.length || 0);
+      
+      if (data.images && data.images.length > 0) {
+        console.log('Sample image paths:', data.images.slice(0, 5));
+        data.images.forEach((imagePath, index) => {
+          if (index < 5) { // Log first 5 images
+            console.log(`Image ${index}:`, imagePath);
+            console.log(`Constructed URL ${index}:`, getImageUrl(imagePath));
+          }
+        });
+      }
+      
+      console.log('=== END MEDIA GALLERY FETCH DEBUG ===');
+      
       setImages(data.images || []);
     } catch (err) {
+      console.error('Media Gallery fetch error:', err);
       setError(err.message || 'Failed to fetch images');
     } finally {
       setLoading(false);
@@ -32,17 +78,61 @@ const MediaGallery = () => {
 
   const getImageUrl = (imagePath) => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+    console.log('Media Gallery - constructing URL for:', imagePath);
+    
+    let finalUrl;
     if (imagePath.startsWith('http')) {
-      return imagePath;
+      finalUrl = imagePath;
+    } else if (imagePath.startsWith('/uploads/')) {
+      finalUrl = `${baseUrl}${imagePath}`;
+    } else {
+      finalUrl = `${baseUrl}/uploads/products/${imagePath}`;
     }
-    if (imagePath.startsWith('/uploads/')) {
-      return `${baseUrl}${imagePath}`;
-    }
-    return `${baseUrl}/uploads/products/${imagePath}`;
+    
+    console.log('Media Gallery - final URL:', finalUrl);
+    return finalUrl;
   };
 
   const getImageName = (imagePath) => {
     return imagePath.split('/').pop();
+  };
+
+  // Function to check if image URL is valid
+  const isValidImageUrl = (imagePath) => {
+    if (!imagePath || typeof imagePath !== 'string') return false;
+    if (imagePath.length < 5) return false;
+    
+    // Check for image extensions
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+    const hasValidExtension = imageExtensions.some(ext => 
+      imagePath.toLowerCase().includes(ext)
+    );
+    
+    return hasValidExtension;
+  };
+
+  // Function to get image size info (for debugging)
+  const getImageInfo = async (imagePath) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        resolve({
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+          size: `${img.naturalWidth}x${img.naturalHeight}`,
+          loaded: true
+        });
+      };
+      img.onerror = () => {
+        resolve({
+          width: 0,
+          height: 0,
+          size: 'Failed to load',
+          loaded: false
+        });
+      };
+      img.src = getImageUrl(imagePath);
+    });
   };
 
   const toggleImageSelection = (imagePath) => {
@@ -164,8 +254,21 @@ const MediaGallery = () => {
   // Filter and sort images
   const filteredImages = images
     .filter(imagePath => {
+      // First check if it's a valid image path
+      if (!isValidImageUrl(imagePath)) {
+        console.warn('Media Gallery - Filtering out invalid image path:', imagePath);
+        return false;
+      }
+      
+      // Then check search term
       const imageName = getImageName(imagePath).toLowerCase();
-      return imageName.includes(searchTerm.toLowerCase());
+      const matchesSearch = imageName.includes(searchTerm.toLowerCase());
+      
+      if (!matchesSearch) {
+        console.log('Media Gallery - Filtering out due to search:', imagePath);
+      }
+      
+      return matchesSearch;
     })
     .sort((a, b) => {
       const nameA = getImageName(a).toLowerCase();
@@ -184,6 +287,12 @@ const MediaGallery = () => {
           return 0;
       }
     });
+
+  console.log('Media Gallery - Filtered images:', {
+    total: images.length,
+    filtered: filteredImages.length,
+    searchTerm: searchTerm
+  });
 
   if (loading) {
     return (
@@ -396,16 +505,61 @@ const MediaGallery = () => {
                   onClick={() => toggleImageSelection(imagePath)}
                 >
                   <div className="media-item-image" style={{ position: 'relative' }}>
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: '#f5f5f5',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#999',
+                      fontSize: '12px',
+                      zIndex: 1
+                    }}>
+                      Loading...
+                    </div>
                     <img
                       src={getImageUrl(imagePath)}
                       alt={getImageName(imagePath)}
                       style={{
                         width: '100%',
                         height: '200px',
-                        objectFit: 'cover'
+                        objectFit: 'cover',
+                        backgroundColor: '#f5f5f5',
+                        position: 'relative',
+                        zIndex: 2
                       }}
                       onError={(e) => {
-                        e.target.style.display = 'none';
+                        console.error('Media Gallery - Failed to load image:', getImageUrl(imagePath));
+                        console.error('Original image path:', imagePath);
+                        
+                        // Hide the loading text
+                        const loadingDiv = e.target.previousElementSibling;
+                        if (loadingDiv) {
+                          loadingDiv.style.display = 'none';
+                        }
+                        
+                        // Show error placeholder
+                        e.target.style.backgroundColor = '#f5f5f5';
+                        e.target.style.display = 'flex';
+                        e.target.style.alignItems = 'center';
+                        e.target.style.justifyContent = 'center';
+                        e.target.style.color = '#999';
+                        e.target.style.fontSize = '12px';
+                        e.target.alt = 'Image failed to load';
+                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0xMDAgNzBMMTMwIDEwMEgxMTVWMTMwSDg1VjEwMEg3MEwxMDAgNzBaIiBmaWxsPSIjQ0NDIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5IiBmb250LXNpemU9IjEyIj5JbWFnZSBub3QgZm91bmQ8L3RleHQ+Cjwvc3ZnPg==';
+                      }}
+                      onLoad={(e) => {
+                        console.log('Media Gallery - Successfully loaded image:', getImageUrl(imagePath));
+                        
+                        // Hide the loading text
+                        const loadingDiv = e.target.previousElementSibling;
+                        if (loadingDiv) {
+                          loadingDiv.style.display = 'none';
+                        }
                       }}
                     />
                     {selectedImages.includes(imagePath) && (
@@ -486,10 +640,25 @@ const MediaGallery = () => {
                             width: '60px',
                             height: '60px',
                             objectFit: 'cover',
-                            borderRadius: '4px'
+                            borderRadius: '4px',
+                            backgroundColor: '#f5f5f5'
                           }}
                           onError={(e) => {
-                            e.target.style.display = 'none';
+                            console.error('Media Gallery List - Failed to load image:', getImageUrl(imagePath));
+                            console.error('Original image path:', imagePath);
+                            
+                            // Show a placeholder instead of hiding
+                            e.target.style.backgroundColor = '#f5f5f5';
+                            e.target.style.display = 'flex';
+                            e.target.style.alignItems = 'center';
+                            e.target.style.justifyContent = 'center';
+                            e.target.style.color = '#999';
+                            e.target.style.fontSize = '10px';
+                            e.target.alt = 'Failed';
+                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0zMCAyMEwzNiAyNkgzM1YzMkgyN1YyNkgyNEwzMCAyMFoiIGZpbGw9IiNDQ0MiLz4KPC9zdmc+';
+                          }}
+                          onLoad={() => {
+                            console.log('Media Gallery List - Successfully loaded image:', getImageUrl(imagePath));
                           }}
                         />
                       </td>
