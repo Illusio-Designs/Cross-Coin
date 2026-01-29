@@ -5,7 +5,7 @@ const SafeImage = ({
   alt = "Product Image", 
   className = "", 
   style = {},
-  fallbackSrc = "/assets/card1-left.webp",
+  fallbackSrc = null, // No default fallback image
   width,
   height,
   isLogo = false, // New prop to identify logo images
@@ -91,7 +91,29 @@ const SafeImage = ({
     return null;
   }
 
-  // For product cards with error, show gray placeholder
+  // For product cards, show gray placeholder only when no image source exists
+  if (isProductCard && !imageSrc) {
+    return (
+      <div
+        className={className}
+        style={{
+          width: width || '100%',
+          height: height || 'auto',
+          backgroundColor: '#f5f5f5',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#ccc',
+          fontSize: '14px',
+          ...style
+        }}
+        {...props}
+      >
+      </div>
+    );
+  }
+
+  // For product cards with error after trying to load, show gray placeholder
   if (isProductCard && imageError) {
     return (
       <div

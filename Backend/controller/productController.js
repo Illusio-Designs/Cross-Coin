@@ -124,7 +124,7 @@ const formatProductResponse = (product) => {
     }
     productData.mainImage = mainImageFile;
   } else {
-    productData.mainImage = "/assets/card1-left.webp"; // Use your placeholder image path
+    productData.mainImage = null; // No placeholder image
   }
 
   // Format category

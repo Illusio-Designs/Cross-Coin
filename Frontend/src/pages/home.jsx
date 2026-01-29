@@ -20,7 +20,7 @@ import { seoService } from '../services/index';
 const formatTwoDigits = (num) => num.toString().padStart(2, '0');
 
 function forceEnvImageBase(url) {
-  if (!url || typeof url !== 'string') return '/assets/card1-left.webp';
+  if (!url || typeof url !== 'string') return null; // Return null instead of fallback
   
   // Use live backend URL
   const baseUrl = process.env.NEXT_PUBLIC_IMAGE_URL || 'https://api.crosscoin.in';
@@ -448,7 +448,7 @@ const Home = () => {
   const currentCategory = categories[currentCategoryIndex] || {
     id: null,
     name: 'Loading...',
-    image: '/assets/card1-left.webp'
+    image: null // No fallback image
   };
 
   console.log('Current category:', currentCategory);
@@ -457,7 +457,7 @@ const Home = () => {
   // Get the image source with fallback - simple version
   const getCategoryImageSrc = () => {
     if (!currentCategory || !currentCategory.image) {
-      return '/assets/card1-left.webp';
+      return null; // No fallback image
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
@@ -616,7 +616,7 @@ const Home = () => {
                       display: 'block'
                     }}
                     onError={(e) => {
-                      e.target.src = '/assets/card1-left.webp';
+                      e.target.style.display = 'none'; // Hide broken image
                     }}
                   />
                 </div>
@@ -721,7 +721,7 @@ const Home = () => {
                 const selectedVariation = product.variations?.find(v => v.sku === selectedSku) || product.variations?.[0];
                 const variationImages = selectedVariation?.images && selectedVariation.images.length > 0
                   ? selectedVariation.images.map(img => img.image_url)
-                  : (product.images && product.images.length > 0 ? product.images.map(img => img.image_url) : ['/assets/card1-left.webp']);
+                  : (product.images && product.images.length > 0 ? product.images.map(img => img.image_url) : []);
                 const attrs = selectedVariation && typeof selectedVariation.attributes === 'string'
                   ? JSON.parse(selectedVariation.attributes)
                   : selectedVariation?.attributes || {};
@@ -968,7 +968,7 @@ const Home = () => {
                   imagesArr = product.images.map(img => {
                     let imageUrl = img.image_url || img.url || img;
                     if (!imageUrl) {
-                      imageUrl = '/assets/card1-left.webp';
+                      imageUrl = null; // No fallback
                     } else if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads/')) {
                       imageUrl = `/uploads/products/${imageUrl}`;
                     }
@@ -980,13 +980,13 @@ const Home = () => {
                 } else if (product.image) {
                   let imageUrl = product.image;
                   if (!imageUrl) {
-                    imageUrl = '/assets/card1-left.webp';
+                    imageUrl = null; // No fallback
                   } else if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads/')) {
                     imageUrl = `/uploads/products/${imageUrl}`;
                   }
                   imagesArr = [{ image_url: imageUrl }];
                 } else {
-                  imagesArr = [{ image_url: '/assets/card1-left.webp' }];
+                  imagesArr = []; // No fallback image
                 }
                 const formattedProduct = {
                   id: product.id,

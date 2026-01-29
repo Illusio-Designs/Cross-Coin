@@ -21,7 +21,7 @@ function pickWishlistItemImage(item) {
     const primary = item.images.find(img => img.is_primary);
     return primary ? primary.image_url : item.images[0].image_url;
   }
-  return item.image || '/assets/card1-left.webp';
+  return item.image || null; // Return null instead of fallback
 }
 
 

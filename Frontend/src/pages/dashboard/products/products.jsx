@@ -357,25 +357,31 @@ const ProductsPage = () => {
             }
           })
         },
-        variationImages: product.variations?.map(variation => variation.images?.map(img => {
-          let imageUrl = img.image_url;
-          // If image_url doesn't start with http, construct full URL
-          if (!imageUrl.startsWith('http')) {
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-            if (imageUrl.startsWith('/uploads/')) {
-              imageUrl = `${baseUrl}${imageUrl}`;
-            } else {
-              imageUrl = `${baseUrl}/uploads/products/${imageUrl}`;
+        variationImages: product.variations?.map(variation => {
+          console.log('Loading variation images for variation:', variation.id, variation.images);
+          return variation.images?.map(img => {
+            let imageUrl = img.image_url;
+            // If image_url doesn't start with http, construct full URL
+            if (!imageUrl.startsWith('http')) {
+              const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+              if (imageUrl.startsWith('/uploads/')) {
+                imageUrl = `${baseUrl}${imageUrl}`;
+              } else {
+                imageUrl = `${baseUrl}/uploads/products/${imageUrl}`;
+              }
             }
-          }
-          return {
-            id: img.id,
-            name: imageUrl.split('/').pop(),
-            url: imageUrl,
-            type: 'image/jpeg',
-            existing: true
-          };
-        })) || []
+            const imageObj = {
+              id: img.id,
+              name: imageUrl.split('/').pop(),
+              url: imageUrl,
+              image_url: imageUrl, // Also provide image_url for compatibility
+              type: 'image/jpeg',
+              existing: true
+            };
+            console.log('Processed variation image:', imageObj);
+            return imageObj;
+          }) || [];
+        }) || []
       };
 
       setFormData(formData);
@@ -1135,45 +1141,51 @@ const ProductsPage = () => {
                       </button>
                     </div>
                     <div className="variation-images-preview" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 8 }}>
-                      {(formData.variationImages && formData.variationImages[index]) && formData.variationImages[index].map((img, imgIdx) => (
-                        <div key={imgIdx} style={{ position: 'relative' }}>
-                          <img
-                            src={img instanceof File ? URL.createObjectURL(img) : (img.image_url || img.url)}
-                            alt={`Variation ${index + 1} Image ${imgIdx + 1}`}
-                            style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setFormData(prev => {
-                                const newVariationImages = [...(prev.variationImages || [])];
-                                if (newVariationImages[index]) {
-                                  newVariationImages[index] = newVariationImages[index].filter((_, i) => i !== imgIdx);
-                                }
-                                return { ...prev, variationImages: newVariationImages };
-                              });
-                            }}
-                            style={{
-                              position: 'absolute',
-                              top: '-5px',
-                              right: '-5px',
-                              background: 'red',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '50%',
-                              width: '20px',
-                              height: '20px',
-                              cursor: 'pointer',
-                              fontSize: '12px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
+                      {(formData.variationImages && formData.variationImages[index] && formData.variationImages[index].length > 0) ? 
+                        formData.variationImages[index].map((img, imgIdx) => (
+                          <div key={imgIdx} style={{ position: 'relative' }}>
+                            <img
+                              src={img instanceof File ? URL.createObjectURL(img) : (img.url || img.image_url)}
+                              alt={`Variation ${index + 1} Image ${imgIdx + 1}`}
+                              style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => {
+                                  const newVariationImages = [...(prev.variationImages || [])];
+                                  if (newVariationImages[index]) {
+                                    newVariationImages[index] = newVariationImages[index].filter((_, i) => i !== imgIdx);
+                                  }
+                                  return { ...prev, variationImages: newVariationImages };
+                                });
+                              }}
+                              style={{
+                                position: 'absolute',
+                                top: '-5px',
+                                right: '-5px',
+                                background: 'red',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: '20px',
+                                height: '20px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        )) : (
+                          <div style={{ color: '#999', fontStyle: 'italic', padding: '20px 0' }}>
+                            No images for this variation yet
+                          </div>
+                        )
+                      }
                     </div>
                   </div>
                 </div>
