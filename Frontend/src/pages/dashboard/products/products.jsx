@@ -722,6 +722,18 @@ const ProductsPage = () => {
     try {
         console.log('=== FORM SUBMIT DEBUG ===');
         console.log('Form data images:', formData.images);
+        console.log('Form data images length:', formData.images?.length || 0);
+        if (formData.images) {
+          formData.images.forEach((img, idx) => {
+            console.log(`Image ${idx}:`, {
+              id: img.id,
+              existing: img.existing,
+              fromLibrary: img.fromLibrary,
+              isFile: img instanceof File,
+              name: img.name
+            });
+          });
+        }
         console.log('Images to delete:', formData.imagesToDelete);
         console.log('Variation images to delete:', formData.variationImagesToDelete);
         
@@ -856,9 +868,11 @@ const ProductsPage = () => {
         }
         
         console.log('=== SENDING TO BACKEND ===');
+        console.log('Form data images array:', formData.images);
         console.log('Existing image IDs to preserve:', existingImageIds);
         console.log('Library images to add:', libraryImages);
         console.log('Images to delete:', formData.imagesToDelete);
+        console.log('Has new file uploads:', productLevelImages.length > 0);
         console.log('=== END BACKEND DATA ===');
 
         // Add library images data
