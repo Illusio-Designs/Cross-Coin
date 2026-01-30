@@ -865,23 +865,29 @@ module.exports.updateProduct = async (req, res) => {
     // 1. Get existing variations from DB
     const existingVariations = product.ProductVariations || [];
     const existingVariationMap = new Map(
-      existingVariations.map((v) => [v.sku, v])
+      existingVariations.map((v) => [v.id, v])
     );
-    const incomingVariationSkus = new Set(variations.map((v) => v.sku));
+    const incomingVariationIds = variations.map((v) => v.id).filter(id => id);
 
     console.log('=== VARIATION UPDATE DEBUG ===');
     console.log('Existing variations:', existingVariations.map(v => ({ id: v.id, sku: v.sku })));
-    console.log('Incoming variation SKUs:', Array.from(incomingVariationSkus));
+    console.log('Incoming variations:', variations.map(v => ({ id: v.id, sku: v.sku })));
     console.log('Preserve variation image IDs:', preserveVariationImageIds);
 
     // 2. Update or create incoming variations
     for (const variation of variations) {
-      let dbVariation = existingVariationMap.get(variation.sku);
+      let dbVariation = null;
+      
+      // If variation has an ID, try to find existing variation by ID
+      if (variation.id) {
+        dbVariation = existingVariationMap.get(variation.id);
+      }
       if (dbVariation) {
-        console.log('Updating existing variation:', variation.sku);
-        // Update existing variation
+        console.log('Updating existing variation ID:', variation.id, 'SKU:', variation.sku);
+        // Update existing variation (including SKU change)
         await dbVariation.update(
           {
+            sku: variation.sku, // Allow SKU updates
             price: Number(variation.price),
             comparePrice: variation.comparePrice
               ? Number(variation.comparePrice)
@@ -917,27 +923,44 @@ module.exports.updateProduct = async (req, res) => {
       
       // Handle NEW variation images only (existing ones are preserved automatically)
       if (images && images.length > 0) {
+        // Get existing variation images to avoid duplicates
+        const existingVariationImages = await ProductImage.findAll({
+          where: { 
+            product_id: product.id,
+            product_variation_id: dbVariation.id 
+          },
+          transaction
+        });
+        const existingVariationImageUrls = new Set(existingVariationImages.map(img => img.image_url));
+        
         for (const image of images) {
           const match = image.fieldname.match(/^variation_(\d+)_image$/);
           if (match) {
             const variationIdx = parseInt(match[1], 10);
             if (
               variations[variationIdx] &&
-              variations[variationIdx].sku === variation.sku
+              (variations[variationIdx].id === variation.id || variations[variationIdx].sku === variation.sku)
             ) {
-              console.log('Adding new variation image for:', variation.sku);
-              await ProductImage.create(
-                {
-                  product_id: product.id,
-                  product_variation_id: dbVariation.id,
-                  image_url: `/uploads/products/${image.filename}`,
-                  alt_text: name,
-                  display_order: 0,
-                  is_primary: false,
-                  status: "active",
-                },
-                { transaction }
-              );
+              const imageUrl = `/uploads/products/${image.filename}`;
+              
+              // Only add if this image URL doesn't already exist for this variation
+              if (!existingVariationImageUrls.has(imageUrl)) {
+                console.log('Adding new variation image for ID:', variation.id, 'SKU:', variation.sku);
+                await ProductImage.create(
+                  {
+                    product_id: product.id,
+                    product_variation_id: dbVariation.id,
+                    image_url: imageUrl,
+                    alt_text: name,
+                    display_order: 0,
+                    is_primary: false,
+                    status: "active",
+                  },
+                  { transaction }
+                );
+              } else {
+                console.log('Skipping duplicate variation uploaded image:', imageUrl);
+              }
             }
           }
         }
@@ -946,22 +969,39 @@ module.exports.updateProduct = async (req, res) => {
       // Handle variation library images (existing images from uploads folder)
       const variationLibraryImages = JSON.parse(req.body.variationLibraryImages || "[]");
       if (variationLibraryImages.length > 0) {
-        const variationIndex = variations.findIndex(v => v.sku === variation.sku);
+        const variationIndex = variations.findIndex(v => v.id === variation.id || v.sku === variation.sku);
         if (variationIndex !== -1 && variationLibraryImages[variationIndex]) {
+          // Get existing variation images to avoid duplicates
+          const existingVariationImages = await ProductImage.findAll({
+            where: { 
+              product_id: product.id,
+              product_variation_id: dbVariation.id 
+            },
+            transaction
+          });
+          const existingVariationImageUrls = new Set(existingVariationImages.map(img => img.image_url));
+          
           for (const libraryImage of variationLibraryImages[variationIndex]) {
-            console.log('Adding library image for variation:', variation.sku);
-            await ProductImage.create(
-              {
-                product_id: product.id,
-                product_variation_id: dbVariation.id,
-                image_url: libraryImage.image_url || libraryImage.url,
-                alt_text: name,
-                display_order: 0,
-                is_primary: false,
-                status: "active",
-              },
-              { transaction }
-            );
+            const imageUrl = libraryImage.image_url || libraryImage.url;
+            
+            // Only add if this image URL doesn't already exist for this variation
+            if (!existingVariationImageUrls.has(imageUrl)) {
+              console.log('Adding new library image for variation ID:', variation.id, 'SKU:', variation.sku);
+              await ProductImage.create(
+                {
+                  product_id: product.id,
+                  product_variation_id: dbVariation.id,
+                  image_url: imageUrl,
+                  alt_text: name,
+                  display_order: 0,
+                  is_primary: false,
+                  status: "active",
+                },
+                { transaction }
+              );
+            } else {
+              console.log('Skipping duplicate variation library image:', imageUrl);
+            }
           }
         }
       }
@@ -981,7 +1021,7 @@ module.exports.updateProduct = async (req, res) => {
     console.log('New files to add:', images ? images.length : 0);
     console.log('Library images to add:', JSON.parse(req.body.libraryImages || "[]").length);
     
-    // Step 1: Only add NEW uploaded files (if any)
+    // Step 1: Only add NEW uploaded files (if any) - but check for duplicates
     if (images && images.length > 0) {
       const productLevelImages = images.filter(
         (image) => !image.fieldname.match(/^variation_(\d+)_image$/)
@@ -990,12 +1030,67 @@ module.exports.updateProduct = async (req, res) => {
       if (productLevelImages.length > 0) {
         console.log('Adding', productLevelImages.length, 'new uploaded images');
         
+        // Get existing image URLs to avoid duplicates
+        const existingImages = await ProductImage.findAll({
+          where: { 
+            product_id: product.id,
+            product_variation_id: null 
+          },
+          transaction
+        });
+        const existingImageUrls = new Set(existingImages.map(img => img.image_url));
+        
         for (const image of productLevelImages) {
+          const imageUrl = `/uploads/products/${image.filename}`;
+          
+          // Only add if this image URL doesn't already exist
+          if (!existingImageUrls.has(imageUrl)) {
+            console.log('Adding new uploaded image:', imageUrl);
+            await ProductImage.create(
+              {
+                product_id: product.id,
+                product_variation_id: null,
+                image_url: imageUrl,
+                alt_text: name,
+                display_order: 0,
+                is_primary: false,
+                status: "active",
+              },
+              { transaction }
+            );
+          } else {
+            console.log('Skipping duplicate uploaded image:', imageUrl);
+          }
+        }
+      }
+    }
+    
+    // Step 2: Only add NEW library images (if any) - but check for duplicates
+    const libraryImages = JSON.parse(req.body.libraryImages || "[]");
+    if (libraryImages.length > 0) {
+      console.log('Adding', libraryImages.length, 'new library images');
+      
+      // Get existing image URLs to avoid duplicates
+      const existingImages = await ProductImage.findAll({
+        where: { 
+          product_id: product.id,
+          product_variation_id: null 
+        },
+        transaction
+      });
+      const existingImageUrls = new Set(existingImages.map(img => img.image_url));
+      
+      for (const libraryImage of libraryImages) {
+        const imageUrl = libraryImage.image_url || libraryImage.url;
+        
+        // Only add if this image URL doesn't already exist
+        if (!existingImageUrls.has(imageUrl)) {
+          console.log('Adding new library image:', imageUrl);
           await ProductImage.create(
             {
               product_id: product.id,
               product_variation_id: null,
-              image_url: `/uploads/products/${image.filename}`,
+              image_url: imageUrl,
               alt_text: name,
               display_order: 0,
               is_primary: false,
@@ -1003,28 +1098,9 @@ module.exports.updateProduct = async (req, res) => {
             },
             { transaction }
           );
+        } else {
+          console.log('Skipping duplicate library image:', imageUrl);
         }
-      }
-    }
-    
-    // Step 2: Only add NEW library images (if any)
-    const libraryImages = JSON.parse(req.body.libraryImages || "[]");
-    if (libraryImages.length > 0) {
-      console.log('Adding', libraryImages.length, 'new library images');
-      
-      for (const libraryImage of libraryImages) {
-        await ProductImage.create(
-          {
-            product_id: product.id,
-            product_variation_id: null,
-            image_url: libraryImage.image_url || libraryImage.url,
-            alt_text: name,
-            display_order: 0,
-            is_primary: false,
-            status: "active",
-          },
-          { transaction }
-        );
       }
     }
     
