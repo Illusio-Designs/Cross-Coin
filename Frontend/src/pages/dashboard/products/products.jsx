@@ -872,7 +872,7 @@ const ProductsPage = () => {
         console.log('Existing image IDs to preserve:', existingImageIds);
         console.log('Library images to add:', libraryImages);
         console.log('Images to delete:', formData.imagesToDelete);
-        console.log('Has new file uploads:', productLevelImages.length > 0);
+        console.log('Has new file uploads:', formData.images ? formData.images.some(img => img instanceof File) : false);
         console.log('=== END BACKEND DATA ===');
 
         // Add library images data
@@ -931,18 +931,32 @@ const ProductsPage = () => {
 
         let response;
         if (formData.id) {
+            console.log('Updating product with ID:', formData.id);
             response = await productService.updateProduct(formData.id, formDataToSend);
         } else {
+            console.log('Creating new product');
             response = await productService.createProduct(formDataToSend);
         }
 
+        console.log('=== API RESPONSE ===');
+        console.log('Response:', response);
+        console.log('Success:', response?.success);
+        console.log('=== END API RESPONSE ===');
+
         if (response.success) {
+            console.log('Product saved successfully, closing modal');
             setIsModalOpen(false);
             await fetchProducts();
         } else {
+            console.error('Save failed:', response.message);
             throw new Error(response.message || 'Failed to save product');
         }
     } catch (err) {
+        console.error('=== SAVE ERROR ===');
+        console.error('Error object:', err);
+        console.error('Error message:', err.message);
+        console.error('Error response:', err.response?.data);
+        console.error('=== END SAVE ERROR ===');
         setError(err.message || err.response?.data?.message || "Error saving product");
     } finally {
         setLoading(false);
