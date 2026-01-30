@@ -715,10 +715,18 @@ module.exports.updateProduct = async (req, res) => {
     }
 
     // --- Delete product-level images marked for deletion ---
+    console.log('=== IMAGE DELETION CHECK ===');
+    console.log('Images to delete array:', imagesToDelete);
+    console.log('Images to delete length:', imagesToDelete.length);
+    console.log('Images to delete type:', typeof imagesToDelete);
+    
     if (Array.isArray(imagesToDelete) && imagesToDelete.length > 0) {
+      console.log('DELETING IMAGES:', imagesToDelete);
       for (const imgId of imagesToDelete) {
+        console.log('Deleting image with ID:', imgId);
         const img = await ProductImage.findByPk(imgId, { transaction });
         if (img) {
+          console.log('Found image to delete:', img.image_url);
           // Remove file from storage
           const imagePath = path.join(
             __dirname,
@@ -733,6 +741,8 @@ module.exports.updateProduct = async (req, res) => {
           await img.destroy({ transaction });
         }
       }
+    } else {
+      console.log('NO IMAGES TO DELETE');
     }
     // --- Delete variation images marked for deletion ---
     if (
@@ -962,14 +972,20 @@ module.exports.updateProduct = async (req, res) => {
     // --- COMPLETELY REWRITTEN IMAGE LOGIC ---
     // The key principle: NEVER delete existing images unless explicitly requested
     
+    console.log('=== IMAGE ADDITION CHECK ===');
+    
     const productLevelImages = images ? images.filter(
       (image) => !image.fieldname.match(/^variation_(\d+)_image$/)
     ) : [];
     
     const libraryImages = JSON.parse(req.body.libraryImages || "[]");
     
+    console.log('Product level images to add:', productLevelImages.length);
+    console.log('Library images to add:', libraryImages.length);
+    
     // Step 1: Add new uploaded images (if any)
     if (productLevelImages.length > 0) {
+      console.log('ADDING NEW UPLOADED IMAGES');
       // Get current max display_order
       const maxOrderResult = await ProductImage.findOne({
         where: {
@@ -981,8 +997,10 @@ module.exports.updateProduct = async (req, res) => {
       });
       
       let nextOrder = (maxOrderResult?.dataValues?.maxOrder || -1) + 1;
+      console.log('Next display order:', nextOrder);
       
       for (const image of productLevelImages) {
+        console.log('Adding uploaded image:', image.filename);
         await ProductImage.create(
           {
             product_id: product.id,
@@ -997,10 +1015,13 @@ module.exports.updateProduct = async (req, res) => {
         );
         nextOrder++;
       }
+    } else {
+      console.log('NO NEW UPLOADED IMAGES TO ADD');
     }
     
     // Step 2: Add library images (if any)
     if (libraryImages.length > 0) {
+      console.log('ADDING LIBRARY IMAGES');
       // Get current max display_order
       const maxOrderResult = await ProductImage.findOne({
         where: {
@@ -1012,8 +1033,10 @@ module.exports.updateProduct = async (req, res) => {
       });
       
       let nextOrder = (maxOrderResult?.dataValues?.maxOrder || -1) + 1;
+      console.log('Next display order for library images:', nextOrder);
       
       for (const libraryImage of libraryImages) {
+        console.log('Adding library image:', libraryImage.image_url || libraryImage.url);
         await ProductImage.create(
           {
             product_id: product.id,
@@ -1028,11 +1051,14 @@ module.exports.updateProduct = async (req, res) => {
         );
         nextOrder++;
       }
+    } else {
+      console.log('NO LIBRARY IMAGES TO ADD');
     }
     
     // Step 3: EXISTING IMAGES ARE NEVER TOUCHED
     // They remain exactly as they were unless explicitly deleted via imagesToDelete
     
+    console.log('=== EXISTING IMAGES PRESERVED ===');
     console.log('Image update completed. Existing images preserved, new images added if any.');
     
     // If no new images and no library images, preserve all existing images (do nothing)
