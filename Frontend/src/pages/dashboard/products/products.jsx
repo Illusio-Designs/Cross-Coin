@@ -720,6 +720,11 @@ const ProductsPage = () => {
     setError(null);
 
     try {
+        console.log('=== FORM SUBMIT DEBUG ===');
+        console.log('Form data images:', formData.images);
+        console.log('Images to delete:', formData.imagesToDelete);
+        console.log('Variation images to delete:', formData.variationImagesToDelete);
+        
         // Get the first image URL for SEO
         let firstImageUrl = null;
         if (formData.images && formData.images.length > 0) {
@@ -849,6 +854,12 @@ const ProductsPage = () => {
         if (existingImageIds.length > 0) {
             formDataToSend.append('preserveImageIds', JSON.stringify(existingImageIds));
         }
+        
+        console.log('=== SENDING TO BACKEND ===');
+        console.log('Existing image IDs to preserve:', existingImageIds);
+        console.log('Library images to add:', libraryImages);
+        console.log('Images to delete:', formData.imagesToDelete);
+        console.log('=== END BACKEND DATA ===');
 
         // Add library images data
         if (libraryImages.length > 0) {

@@ -652,7 +652,12 @@ module.exports.updateProduct = async (req, res) => {
     const { id } = req.params;
     console.log("=== UPDATE PRODUCT REQUEST ===");
     console.log("Product ID:", id);
-    console.log("Request Body:", JSON.stringify(req.body, null, 2));
+    console.log("Request Body Keys:", Object.keys(req.body));
+    console.log("Images to delete:", imagesToDelete);
+    console.log("Variation images to delete:", variationImagesToDelete);
+    console.log("Preserve image IDs:", preserveImageIds);
+    console.log("Preserve variation image IDs:", preserveVariationImageIds);
+    console.log("Library images:", req.body.libraryImages);
     console.log(
       "Files:",
       req.files
@@ -952,32 +957,29 @@ module.exports.updateProduct = async (req, res) => {
       }
     }
 
-    // --- Optimized Product Image Update Logic ---
-    // Handle new images and library images, preserve existing images unless explicitly deleted
+    // --- COMPLETELY REWRITTEN IMAGE LOGIC ---
+    // The key principle: NEVER delete existing images unless explicitly requested
+    
     const productLevelImages = images ? images.filter(
       (image) => !image.fieldname.match(/^variation_(\d+)_image$/)
     ) : [];
     
-    // Parse library images from request body if any
     const libraryImages = JSON.parse(req.body.libraryImages || "[]");
     
-    // Only add new images if there are any (either uploaded files or library images)
-    if (productLevelImages.length > 0 || libraryImages.length > 0) {
-      // Get the highest existing display_order for proper ordering
-      const existingImages = await ProductImage.findAll({
+    // Step 1: Add new uploaded images (if any)
+    if (productLevelImages.length > 0) {
+      // Get current max display_order
+      const maxOrderResult = await ProductImage.findOne({
         where: {
           product_id: id,
           product_variation_id: null,
         },
-        attributes: ['display_order'],
-        order: [['display_order', 'DESC']],
-        limit: 1,
+        attributes: [[sequelize.fn('MAX', sequelize.col('display_order')), 'maxOrder']],
         transaction,
       });
       
-      let imageIndex = existingImages.length > 0 ? existingImages[0].display_order + 1 : 0;
+      let nextOrder = (maxOrderResult?.dataValues?.maxOrder || -1) + 1;
       
-      // Add new uploaded images (don't delete existing ones)
       for (const image of productLevelImages) {
         await ProductImage.create(
           {
@@ -985,16 +987,30 @@ module.exports.updateProduct = async (req, res) => {
             product_variation_id: null,
             image_url: `/uploads/products/${image.filename}`,
             alt_text: name,
-            display_order: imageIndex,
-            is_primary: imageIndex === 0 && existingImages.length === 0, // Only primary if no existing images
+            display_order: nextOrder,
+            is_primary: false, // Don't change primary status of existing images
             status: "active",
           },
           { transaction }
         );
-        imageIndex++;
+        nextOrder++;
       }
+    }
+    
+    // Step 2: Add library images (if any)
+    if (libraryImages.length > 0) {
+      // Get current max display_order
+      const maxOrderResult = await ProductImage.findOne({
+        where: {
+          product_id: id,
+          product_variation_id: null,
+        },
+        attributes: [[sequelize.fn('MAX', sequelize.col('display_order')), 'maxOrder']],
+        transaction,
+      });
       
-      // Add library images (existing images from uploads folder)
+      let nextOrder = (maxOrderResult?.dataValues?.maxOrder || -1) + 1;
+      
       for (const libraryImage of libraryImages) {
         await ProductImage.create(
           {
@@ -1002,22 +1018,20 @@ module.exports.updateProduct = async (req, res) => {
             product_variation_id: null,
             image_url: libraryImage.image_url || libraryImage.url,
             alt_text: name,
-            display_order: imageIndex,
-            is_primary: imageIndex === 0 && existingImages.length === 0, // Only primary if no existing images
+            display_order: nextOrder,
+            is_primary: false, // Don't change primary status of existing images
             status: "active",
           },
           { transaction }
         );
-        imageIndex++;
+        nextOrder++;
       }
     }
     
-    // Preserve existing images that are in preserveImageIds (don't delete them)
-    // All existing images are preserved by default unless they're in imagesToDelete
-    console.log('Preserving image IDs:', preserveImageIds);
-    console.log('Preserving variation image IDs:', preserveVariationImageIds);
-    console.log('Images to delete:', imagesToDelete);
-    console.log('Variation images to delete:', variationImagesToDelete);
+    // Step 3: EXISTING IMAGES ARE NEVER TOUCHED
+    // They remain exactly as they were unless explicitly deleted via imagesToDelete
+    
+    console.log('Image update completed. Existing images preserved, new images added if any.');
     
     // If no new images and no library images, preserve all existing images (do nothing)
 
