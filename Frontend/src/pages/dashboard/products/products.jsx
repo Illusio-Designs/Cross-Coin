@@ -865,6 +865,28 @@ const ProductsPage = () => {
         console.log('New library images:', libraryImages.length);
         console.log('Images to delete:', formData.imagesToDelete.length);
         console.log('Existing images will be preserved automatically');
+        
+        // Debug preserve IDs
+        if (formData.id && formData.images) {
+            const existingImageIds = formData.images
+                .filter(img => img.existing === true && img.id)
+                .map(img => img.id);
+            console.log('Existing image IDs to preserve:', existingImageIds);
+        }
+        if (formData.id && formData.variationImages) {
+            const existingVariationImageIds = [];
+            formData.variationImages.forEach(images => {
+                if (images && images.length > 0) {
+                    images.forEach(img => {
+                        if (img.existing === true && img.id) {
+                            existingVariationImageIds.push(img.id);
+                        }
+                    });
+                }
+            });
+            console.log('Existing variation image IDs to preserve:', existingVariationImageIds);
+        }
+        
         console.log('=== END BACKEND DATA ===');
 
         // Add library images data
@@ -880,6 +902,33 @@ const ProductsPage = () => {
         // Add variation images to delete (for updates)
         if (formData.id && formData.variationImagesToDelete && formData.variationImagesToDelete.length > 0) {
             formDataToSend.append('variationImagesToDelete', JSON.stringify(formData.variationImagesToDelete));
+        }
+
+        // Add existing image IDs to preserve (for updates)
+        if (formData.id && formData.images) {
+            const existingImageIds = formData.images
+                .filter(img => img.existing === true && img.id)
+                .map(img => img.id);
+            if (existingImageIds.length > 0) {
+                formDataToSend.append('preserveImageIds', JSON.stringify(existingImageIds));
+            }
+        }
+
+        // Add existing variation image IDs to preserve (for updates)
+        if (formData.id && formData.variationImages) {
+            const existingVariationImageIds = [];
+            formData.variationImages.forEach(images => {
+                if (images && images.length > 0) {
+                    images.forEach(img => {
+                        if (img.existing === true && img.id) {
+                            existingVariationImageIds.push(img.id);
+                        }
+                    });
+                }
+            });
+            if (existingVariationImageIds.length > 0) {
+                formDataToSend.append('preserveVariationImageIds', JSON.stringify(existingVariationImageIds));
+            }
         }
 
         // Add variation images (ONLY new files and newly selected library images)
