@@ -839,9 +839,8 @@ const ProductsPage = () => {
         // Add SEO data
         formDataToSend.append('seo', JSON.stringify(seoData));
 
-        // Add images (new files and preserve existing ones)
+        // Add images (ONLY new files and newly selected library images)
         const libraryImages = [];
-        const existingImageIds = []; // Track existing image IDs to preserve
         
         if (formData.images && formData.images.length > 0) {
             formData.images.forEach((image, index) => {
@@ -855,24 +854,17 @@ const ProductsPage = () => {
                         url: image.url || image.image_url,
                         name: image.name
                     });
-                } else if (image.existing === true && image.id) {
-                    // Existing images - track their IDs to preserve them
-                    existingImageIds.push(image.id);
                 }
+                // Existing images (image.existing === true) are completely ignored
+                // They will be preserved automatically by the backend
             });
-        }
-
-        // Send existing image IDs to preserve them
-        if (existingImageIds.length > 0) {
-            formDataToSend.append('preserveImageIds', JSON.stringify(existingImageIds));
         }
         
         console.log('=== SENDING TO BACKEND ===');
-        console.log('Form data images array:', formData.images);
-        console.log('Existing image IDs to preserve:', existingImageIds);
-        console.log('Library images to add:', libraryImages);
-        console.log('Images to delete:', formData.imagesToDelete);
-        console.log('Has new file uploads:', formData.images ? formData.images.some(img => img instanceof File) : false);
+        console.log('New file uploads:', formData.images ? formData.images.filter(img => img instanceof File).length : 0);
+        console.log('New library images:', libraryImages.length);
+        console.log('Images to delete:', formData.imagesToDelete.length);
+        console.log('Existing images will be preserved automatically');
         console.log('=== END BACKEND DATA ===');
 
         // Add library images data
@@ -890,9 +882,8 @@ const ProductsPage = () => {
             formDataToSend.append('variationImagesToDelete', JSON.stringify(formData.variationImagesToDelete));
         }
 
-        // Add variation images
+        // Add variation images (ONLY new files and newly selected library images)
         const variationLibraryImages = [];
-        const existingVariationImageIds = []; // Track existing variation image IDs to preserve
         
         if (formData.variationImages && formData.variationImages.length > 0) {
           formData.variationImages.forEach((images, vIdx) => {
@@ -910,18 +901,12 @@ const ProductsPage = () => {
                     url: img.url || img.image_url,
                     name: img.name
                   });
-                } else if (img.existing === true && img.id) {
-                  // Existing variation images - track their IDs to preserve them
-                  existingVariationImageIds.push(img.id);
                 }
+                // Existing variation images (img.existing === true) are completely ignored
+                // They will be preserved automatically by the backend
               });
             }
           });
-        }
-
-        // Send existing variation image IDs to preserve them
-        if (existingVariationImageIds.length > 0) {
-          formDataToSend.append('preserveVariationImageIds', JSON.stringify(existingVariationImageIds));
         }
 
         // Add variation library images data

@@ -91,22 +91,19 @@ const formatProductResponse = (product) => {
     delete productData.ProductVariations;
   }
 
-  // Format images - separate product-level and variation images
+  // Format images - include ALL images (both product-level and variation images) in the images array
   if (productData.ProductImages) {
-    // Only include product-level images (not variation images)
-    productData.images = productData.ProductImages
-      .filter((image) => image.product_variation_id === null)
-      .map((image) => {
-        return {
-          id: image.id,
-          image_url: image.image_url, // Keep the full path
-          alt_text: image.alt_text,
-          display_order: image.display_order,
-          is_primary: image.is_primary,
-          status: image.status,
-          product_variation_id: image.product_variation_id,
-        };
-      });
+    productData.images = productData.ProductImages.map((image) => {
+      return {
+        id: image.id,
+        image_url: image.image_url, // Keep the full path
+        alt_text: image.alt_text,
+        display_order: image.display_order,
+        is_primary: image.is_primary,
+        status: image.status,
+        product_variation_id: image.product_variation_id,
+      };
+    });
     delete productData.ProductImages;
   } else {
     productData.images = [];
@@ -977,97 +974,64 @@ module.exports.updateProduct = async (req, res) => {
     // Note: Variation deletion should be handled separately with explicit user action
     // This prevents accidental deletion when just editing product details
 
-    // --- COMPLETELY REWRITTEN IMAGE LOGIC ---
-    // The key principle: NEVER delete existing images unless explicitly requested
+    // --- SIMPLE IMAGE LOGIC: NEVER TOUCH EXISTING IMAGES ---
     
-    console.log('=== IMAGE ADDITION CHECK ===');
+    console.log('=== IMAGE UPDATE LOGIC ===');
+    console.log('Images to delete:', imagesToDelete.length);
+    console.log('New files to add:', images ? images.length : 0);
+    console.log('Library images to add:', JSON.parse(req.body.libraryImages || "[]").length);
     
-    const productLevelImages = images ? images.filter(
-      (image) => !image.fieldname.match(/^variation_(\d+)_image$/)
-    ) : [];
-    
-    const libraryImages = JSON.parse(req.body.libraryImages || "[]");
-    
-    console.log('Product level images to add:', productLevelImages.length);
-    console.log('Library images to add:', libraryImages.length);
-    
-    // Step 1: Add new uploaded images (if any)
-    if (productLevelImages.length > 0) {
-      console.log('ADDING NEW UPLOADED IMAGES');
-      // Get current max display_order
-      const maxOrderResult = await ProductImage.findOne({
-        where: {
-          product_id: id,
-          product_variation_id: null,
-        },
-        attributes: [[sequelize.fn('MAX', sequelize.col('display_order')), 'maxOrder']],
-        transaction,
-      });
+    // Step 1: Only add NEW uploaded files (if any)
+    if (images && images.length > 0) {
+      const productLevelImages = images.filter(
+        (image) => !image.fieldname.match(/^variation_(\d+)_image$/)
+      );
       
-      let nextOrder = (maxOrderResult?.dataValues?.maxOrder || -1) + 1;
-      console.log('Next display order:', nextOrder);
-      
-      for (const image of productLevelImages) {
-        console.log('Adding uploaded image:', image.filename);
-        await ProductImage.create(
-          {
-            product_id: product.id,
-            product_variation_id: null,
-            image_url: `/uploads/products/${image.filename}`,
-            alt_text: name,
-            display_order: nextOrder,
-            is_primary: false, // Don't change primary status of existing images
-            status: "active",
-          },
-          { transaction }
-        );
-        nextOrder++;
+      if (productLevelImages.length > 0) {
+        console.log('Adding', productLevelImages.length, 'new uploaded images');
+        
+        for (const image of productLevelImages) {
+          await ProductImage.create(
+            {
+              product_id: product.id,
+              product_variation_id: null,
+              image_url: `/uploads/products/${image.filename}`,
+              alt_text: name,
+              display_order: 0,
+              is_primary: false,
+              status: "active",
+            },
+            { transaction }
+          );
+        }
       }
-    } else {
-      console.log('NO NEW UPLOADED IMAGES TO ADD');
     }
     
-    // Step 2: Add library images (if any)
+    // Step 2: Only add NEW library images (if any)
+    const libraryImages = JSON.parse(req.body.libraryImages || "[]");
     if (libraryImages.length > 0) {
-      console.log('ADDING LIBRARY IMAGES');
-      // Get current max display_order
-      const maxOrderResult = await ProductImage.findOne({
-        where: {
-          product_id: id,
-          product_variation_id: null,
-        },
-        attributes: [[sequelize.fn('MAX', sequelize.col('display_order')), 'maxOrder']],
-        transaction,
-      });
-      
-      let nextOrder = (maxOrderResult?.dataValues?.maxOrder || -1) + 1;
-      console.log('Next display order for library images:', nextOrder);
+      console.log('Adding', libraryImages.length, 'new library images');
       
       for (const libraryImage of libraryImages) {
-        console.log('Adding library image:', libraryImage.image_url || libraryImage.url);
         await ProductImage.create(
           {
             product_id: product.id,
             product_variation_id: null,
             image_url: libraryImage.image_url || libraryImage.url,
             alt_text: name,
-            display_order: nextOrder,
-            is_primary: false, // Don't change primary status of existing images
+            display_order: 0,
+            is_primary: false,
             status: "active",
           },
           { transaction }
         );
-        nextOrder++;
       }
-    } else {
-      console.log('NO LIBRARY IMAGES TO ADD');
     }
     
-    // Step 3: EXISTING IMAGES ARE NEVER TOUCHED
-    // They remain exactly as they were unless explicitly deleted via imagesToDelete
+    // Step 3: EXISTING IMAGES ARE COMPLETELY UNTOUCHED
+    // They stay exactly as they are unless explicitly deleted
     
-    console.log('=== EXISTING IMAGES PRESERVED ===');
-    console.log('Image update completed. Existing images preserved, new images added if any.');
+    console.log('=== EXISTING IMAGES LEFT ALONE ===');
     
     // If no new images and no library images, preserve all existing images (do nothing)
 
