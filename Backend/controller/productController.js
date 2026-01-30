@@ -91,19 +91,22 @@ const formatProductResponse = (product) => {
     delete productData.ProductVariations;
   }
 
-  // Format images
+  // Format images - separate product-level and variation images
   if (productData.ProductImages) {
-    productData.images = productData.ProductImages.map((image) => {
-      return {
-        id: image.id,
-        image_url: image.image_url, // Keep the full path
-        alt_text: image.alt_text,
-        display_order: image.display_order,
-        is_primary: image.is_primary,
-        status: image.status,
-        product_variation_id: image.product_variation_id,
-      };
-    });
+    // Only include product-level images (not variation images)
+    productData.images = productData.ProductImages
+      .filter((image) => image.product_variation_id === null)
+      .map((image) => {
+        return {
+          id: image.id,
+          image_url: image.image_url, // Keep the full path
+          alt_text: image.alt_text,
+          display_order: image.display_order,
+          is_primary: image.is_primary,
+          status: image.status,
+          product_variation_id: image.product_variation_id,
+        };
+      });
     delete productData.ProductImages;
   } else {
     productData.images = [];
@@ -869,10 +872,16 @@ module.exports.updateProduct = async (req, res) => {
     );
     const incomingVariationSkus = new Set(variations.map((v) => v.sku));
 
+    console.log('=== VARIATION UPDATE DEBUG ===');
+    console.log('Existing variations:', existingVariations.map(v => ({ id: v.id, sku: v.sku })));
+    console.log('Incoming variation SKUs:', Array.from(incomingVariationSkus));
+    console.log('Preserve variation image IDs:', preserveVariationImageIds);
+
     // 2. Update or create incoming variations
     for (const variation of variations) {
       let dbVariation = existingVariationMap.get(variation.sku);
       if (dbVariation) {
+        console.log('Updating existing variation:', variation.sku);
         // Update existing variation
         await dbVariation.update(
           {
@@ -887,6 +896,7 @@ module.exports.updateProduct = async (req, res) => {
         );
         await handleProductAttributes(variation, transaction);
       } else {
+        console.log('Creating new variation:', variation.sku);
         // Create new variation
         const timestamp = Date.now();
         const randomString = Math.random().toString(36).substring(2, 8);
@@ -907,7 +917,8 @@ module.exports.updateProduct = async (req, res) => {
         );
         await handleProductAttributes(variation, transaction);
       }
-      // Handle images for this variation (add new only)
+      
+      // Handle NEW variation images only (existing ones are preserved automatically)
       if (images && images.length > 0) {
         for (const image of images) {
           const match = image.fieldname.match(/^variation_(\d+)_image$/);
@@ -917,6 +928,7 @@ module.exports.updateProduct = async (req, res) => {
               variations[variationIdx] &&
               variations[variationIdx].sku === variation.sku
             ) {
+              console.log('Adding new variation image for:', variation.sku);
               await ProductImage.create(
                 {
                   product_id: product.id,
@@ -940,6 +952,7 @@ module.exports.updateProduct = async (req, res) => {
         const variationIndex = variations.findIndex(v => v.sku === variation.sku);
         if (variationIndex !== -1 && variationLibraryImages[variationIndex]) {
           for (const libraryImage of variationLibraryImages[variationIndex]) {
+            console.log('Adding library image for variation:', variation.sku);
             await ProductImage.create(
               {
                 product_id: product.id,
@@ -957,17 +970,12 @@ module.exports.updateProduct = async (req, res) => {
       }
     }
 
-    // 3. Delete variations that are not in the incoming list
-    for (const dbVariation of existingVariations) {
-      if (!incomingVariationSkus.has(dbVariation.sku)) {
-        // Delete associated images
-        await ProductImage.destroy({
-          where: { product_variation_id: dbVariation.id },
-          transaction,
-        });
-        await dbVariation.destroy({ transaction });
-      }
-    }
+    // 3. ONLY delete variations that are explicitly removed (not just different SKUs)
+    // For now, we preserve all existing variations to avoid accidental deletion
+    console.log('Preserving all existing variations and their images');
+    
+    // Note: Variation deletion should be handled separately with explicit user action
+    // This prevents accidental deletion when just editing product details
 
     // --- COMPLETELY REWRITTEN IMAGE LOGIC ---
     // The key principle: NEVER delete existing images unless explicitly requested
@@ -1083,6 +1091,10 @@ module.exports.updateProduct = async (req, res) => {
       ],
     });
 
+    console.log('=== SENDING RESPONSE ===');
+    console.log('Updated product found:', !!updatedProduct);
+    console.log('Sending success response');
+
     res.json({
       success: true,
       message: "Product updated successfully",
@@ -1090,7 +1102,10 @@ module.exports.updateProduct = async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
+    console.error("=== UPDATE PRODUCT ERROR ===");
     console.error("Error updating product:", error);
+    console.error("Error stack:", error.stack);
+    console.error("=== END UPDATE ERROR ===");
     res.status(500).json({
       success: false,
       message: "Failed to update product",
