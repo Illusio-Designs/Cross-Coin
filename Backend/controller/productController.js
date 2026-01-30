@@ -650,6 +650,23 @@ module.exports.updateProduct = async (req, res) => {
 
   try {
     const { id } = req.params;
+    
+    // Parse form data FIRST
+    const name = req.body.name?.trim();
+    const description = req.body.description?.trim();
+    const categoryId = req.body.categoryId;
+    const status = req.body.status || "active";
+    const variations = JSON.parse(req.body.variations || "[]");
+    const seo = JSON.parse(req.body.seo || "{}");
+    const images = req.files;
+    const imagesToDelete = JSON.parse(req.body.imagesToDelete || "[]");
+    const variationImagesToDelete = JSON.parse(
+      req.body.variationImagesToDelete || "[]"
+    );
+    const preserveImageIds = JSON.parse(req.body.preserveImageIds || "[]");
+    const preserveVariationImageIds = JSON.parse(req.body.preserveVariationImageIds || "[]");
+    
+    // THEN do the logging
     console.log("=== UPDATE PRODUCT REQUEST ===");
     console.log("Product ID:", id);
     console.log("Request Body Keys:", Object.keys(req.body));
@@ -670,21 +687,6 @@ module.exports.updateProduct = async (req, res) => {
           }))
         : "No files"
     );
-
-    // Parse form data
-    const name = req.body.name?.trim();
-    const description = req.body.description?.trim();
-    const categoryId = req.body.categoryId;
-    const status = req.body.status || "active";
-    const variations = JSON.parse(req.body.variations || "[]");
-    const seo = JSON.parse(req.body.seo || "{}");
-    const images = req.files;
-    const imagesToDelete = JSON.parse(req.body.imagesToDelete || "[]");
-    const variationImagesToDelete = JSON.parse(
-      req.body.variationImagesToDelete || "[]"
-    );
-    const preserveImageIds = JSON.parse(req.body.preserveImageIds || "[]");
-    const preserveVariationImageIds = JSON.parse(req.body.preserveVariationImageIds || "[]");
 
     // Validate required fields
     if (!name) {
