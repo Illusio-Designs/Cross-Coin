@@ -54,7 +54,22 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
     setCouponSuccess("");
     
     try {
-      const response = await validateCoupon(promoCode, subtotal);
+      // Determine payment mode from shippingFee
+      const paymentMode = shippingFee?.orderType === 'cod' ? 'cod' : 'prepaid';
+      
+      // Prepare cart items for quantity-based coupons
+      const cartItemsForValidation = cartItems.map(item => ({
+        quantity: item.quantity
+      }));
+      
+      // Add buy now item if present
+      if (buyNowItem) {
+        cartItemsForValidation.push({
+          quantity: buyNowItem.quantity || 1
+        });
+      }
+      
+      const response = await validateCoupon(promoCode, subtotal, paymentMode, cartItemsForValidation);
       
       if (response && response.coupon && response.discountAmount) {
         const discount = parseFloat(response.discountAmount);
@@ -114,26 +129,42 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
     const minPurchase = parseFloat(coupon.minPurchase);
     const maxDiscount = parseFloat(coupon.maxDiscount);
 
+    let description = '';
+    
     if (coupon.type === 'percentage') {
-      let description = `Get ${value}% off`;
+      description = `Get ${value}% off`;
       if (minPurchase > 0) {
         description += ` on a minimum purchase of ₹${minPurchase}`;
       }
       if (maxDiscount > 0) {
         description += `. Maximum discount: ₹${maxDiscount}`;
       }
-      return description + '.';
-    }
-
-    if (coupon.type === 'fixed') {
-      let description = `Get a flat ₹${value} discount`;
+    } else if (coupon.type === 'fixed') {
+      description = `Get a flat ₹${value} discount`;
       if (minPurchase > 0) {
         description += ` on a minimum purchase of ₹${minPurchase}`;
       }
-      return description + '.';
+    } else if (coupon.type === 'tiered') {
+      description = `Tiered discount based on cart value`;
+    } else if (coupon.type === 'quantity_based') {
+      description = `Discount based on quantity purchased`;
+    } else {
+      description = 'A special discount on your order';
     }
     
-    return 'A special discount on your order.';
+    // Add payment mode restriction info
+    if (coupon.paymentModeRestriction === 'cod') {
+      description += ' (COD only)';
+    } else if (coupon.paymentModeRestriction === 'prepaid') {
+      description += ' (Prepaid only)';
+    }
+    
+    // Add first order restriction info
+    if (coupon.firstOrderOnly) {
+      description += ' (First order only)';
+    }
+    
+    return description + '.';
   };
 
   const formatCurrency = (amount) => {
@@ -205,20 +236,41 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
         <div className="available-coupons">
           <h3 className="available-coupons-title">Available Coupons</h3>
           <div className="coupons-list">
-            {availableCoupons.map((coupon) => (
-              <div
-                key={coupon.id}
-                className={`coupon-card ${promoCode === coupon.code ? 'selected' : ''}`}
-                onClick={() => handleCouponClick(coupon.code)}
-              >
-                <div className="coupon-card-header">
-                    <span className="coupon-card-code">{coupon.code}</span>
+            {availableCoupons.map((coupon) => {
+              // Check if coupon is applicable for current payment mode
+              const currentPaymentMode = shippingFee?.orderType === 'cod' ? 'cod' : 'prepaid';
+              const isApplicable = !coupon.paymentModeRestriction || 
+                                 coupon.paymentModeRestriction === 'all' || 
+                                 coupon.paymentModeRestriction === currentPaymentMode;
+              
+              return (
+                <div
+                  key={coupon.id}
+                  className={`coupon-card ${promoCode === coupon.code ? 'selected' : ''} ${!isApplicable ? 'not-applicable' : ''}`}
+                  onClick={() => isApplicable && handleCouponClick(coupon.code)}
+                  style={{ 
+                    opacity: isApplicable ? 1 : 0.6,
+                    cursor: isApplicable ? 'pointer' : 'not-allowed'
+                  }}
+                >
+                  <div className="coupon-card-header">
+                      <span className="coupon-card-code">{coupon.code}</span>
+                      {!isApplicable && (
+                        <span style={{ 
+                          fontSize: '10px', 
+                          color: '#ff6b6b', 
+                          fontWeight: 'bold' 
+                        }}>
+                          Not applicable
+                        </span>
+                      )}
+                  </div>
+                  <div className="coupon-card-body">
+                      <p className="coupon-card-description">{coupon.description || generateCouponDescription(coupon)}</p>
+                  </div>
                 </div>
-                <div className="coupon-card-body">
-                    <p className="coupon-card-description">{coupon.description || generateCouponDescription(coupon)}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

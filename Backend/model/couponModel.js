@@ -12,7 +12,7 @@ const Coupon = sequelize.define('Coupon', {
         allowNull: false
     },
     type: {
-        type: DataTypes.ENUM('percentage', 'fixed'),
+        type: DataTypes.ENUM('percentage', 'fixed', 'tiered', 'quantity_based'),
         allowNull: false
     },
     value: {
@@ -26,6 +26,27 @@ const Coupon = sequelize.define('Coupon', {
     maxDiscount: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true
+    },
+    // New fields for advanced coupon types
+    paymentModeRestriction: {
+        type: DataTypes.ENUM('all', 'cod', 'prepaid'),
+        defaultValue: 'all',
+        comment: 'Restrict coupon to specific payment modes'
+    },
+    firstOrderOnly: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        comment: 'Coupon only valid for first orders'
+    },
+    tieredDiscounts: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        comment: 'Array of {minAmount, discount} for tiered discounts'
+    },
+    quantityBasedDiscounts: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        comment: 'Array of {minQuantity, discount} for quantity-based discounts'
     },
     startDate: {
         type: DataTypes.DATE,

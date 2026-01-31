@@ -30,7 +30,12 @@ export default function Coupons() {
     applicableCategories: [],
     applicableProducts: [],
     startDate: "",
-    endDate: ""
+    endDate: "",
+    // New fields
+    paymentModeRestriction: "all",
+    firstOrderOnly: false,
+    tieredDiscounts: [],
+    quantityBasedDiscounts: []
   });
 
   // Debounced search function
@@ -203,7 +208,12 @@ export default function Coupons() {
         applicableCategories: data.applicableCategories || [],
         applicableProducts: data.applicableProducts || [],
         startDate: formatDateForInput(data.startDate),
-        endDate: formatDateForInput(data.endDate)
+        endDate: formatDateForInput(data.endDate),
+        // New fields
+        paymentModeRestriction: data.paymentModeRestriction || "all",
+        firstOrderOnly: data.firstOrderOnly || false,
+        tieredDiscounts: data.tieredDiscounts || [],
+        quantityBasedDiscounts: data.quantityBasedDiscounts || []
       });
       setIsModalOpen(true);
     } catch (err) {
@@ -244,7 +254,12 @@ export default function Coupons() {
       applicableCategories: [],
       applicableProducts: [],
       startDate: "",
-      endDate: ""
+      endDate: "",
+      // New fields
+      paymentModeRestriction: "all",
+      firstOrderOnly: false,
+      tieredDiscounts: [],
+      quantityBasedDiscounts: []
     });
     setIsModalOpen(true);
   };
@@ -265,7 +280,12 @@ export default function Coupons() {
       applicableCategories: [],
       applicableProducts: [],
       startDate: "",
-      endDate: ""
+      endDate: "",
+      // New fields
+      paymentModeRestriction: "all",
+      firstOrderOnly: false,
+      tieredDiscounts: [],
+      quantityBasedDiscounts: []
     });
   };
 
@@ -366,7 +386,12 @@ export default function Coupons() {
         applicableCategories: [],
         applicableProducts: [],
         startDate: "",
-        endDate: ""
+        endDate: "",
+        // New fields
+        paymentModeRestriction: "all",
+        firstOrderOnly: false,
+        tieredDiscounts: [],
+        quantityBasedDiscounts: []
       });
     } catch (err) {
       setError(err.message || "Failed to save coupon");
@@ -477,7 +502,9 @@ export default function Coupons() {
               required
               options={[
                 { value: "percentage", label: "Percentage" },
-                { value: "fixed", label: "Fixed Amount" }
+                { value: "fixed", label: "Fixed Amount" },
+                { value: "tiered", label: "Tiered Discount" },
+                { value: "quantity_based", label: "Quantity Based" }
               ]}
             />
             <InputField
@@ -566,6 +593,102 @@ export default function Coupons() {
               value={formData.endDate}
               onChange={handleInputChange}
             />
+            
+            {/* New Advanced Fields */}
+            <div style={{ marginTop: '20px', borderTop: '1px solid #e0e0e0', paddingTop: '20px' }}>
+              <h4 style={{ marginBottom: '15px', color: '#333' }}>Advanced Settings</h4>
+              
+              <InputField
+                label="Payment Mode Restriction"
+                type="select"
+                name="paymentModeRestriction"
+                value={formData.paymentModeRestriction}
+                onChange={handleInputChange}
+                options={[
+                  { value: "all", label: "All Payment Modes" },
+                  { value: "cod", label: "Cash on Delivery Only" },
+                  { value: "prepaid", label: "Prepaid Only" }
+                ]}
+              />
+              
+              <InputField
+                label="First Order Only"
+                type="select"
+                name="firstOrderOnly"
+                value={formData.firstOrderOnly}
+                onChange={handleInputChange}
+                options={[
+                  { value: false, label: "No" },
+                  { value: true, label: "Yes" }
+                ]}
+              />
+              
+              {formData.type === 'tiered' && (
+                <div style={{ marginTop: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                    Tiered Discounts (JSON format)
+                  </label>
+                  <textarea
+                    name="tieredDiscounts"
+                    value={JSON.stringify(formData.tieredDiscounts, null, 2)}
+                    onChange={(e) => {
+                      try {
+                        const parsed = JSON.parse(e.target.value);
+                        setFormData(prev => ({ ...prev, tieredDiscounts: parsed }));
+                      } catch (err) {
+                        // Invalid JSON, keep the text as is for user to fix
+                        setFormData(prev => ({ ...prev, tieredDiscounts: e.target.value }));
+                      }
+                    }}
+                    placeholder='[{"minAmount": 0, "discount": 100}, {"minAmount": 1000, "discount": 150}]'
+                    rows="4"
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontFamily: 'monospace'
+                    }}
+                  />
+                  <small style={{ color: '#666', fontSize: '12px' }}>
+                    Example: {`[{"minAmount": 0, "discount": 100}, {"minAmount": 1000, "discount": 150}]`}
+                  </small>
+                </div>
+              )}
+              
+              {formData.type === 'quantity_based' && (
+                <div style={{ marginTop: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                    Quantity Based Discounts (JSON format)
+                  </label>
+                  <textarea
+                    name="quantityBasedDiscounts"
+                    value={JSON.stringify(formData.quantityBasedDiscounts, null, 2)}
+                    onChange={(e) => {
+                      try {
+                        const parsed = JSON.parse(e.target.value);
+                        setFormData(prev => ({ ...prev, quantityBasedDiscounts: parsed }));
+                      } catch (err) {
+                        // Invalid JSON, keep the text as is for user to fix
+                        setFormData(prev => ({ ...prev, quantityBasedDiscounts: e.target.value }));
+                      }
+                    }}
+                    placeholder='[{"minQuantity": 2, "discount": 50}, {"minQuantity": 3, "discount": 100}]'
+                    rows="4"
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontFamily: 'monospace'
+                    }}
+                  />
+                  <small style={{ color: '#666', fontSize: '12px' }}>
+                    Example: {`[{"minQuantity": 2, "discount": 50}, {"minQuantity": 3, "discount": 100}]`}
+                  </small>
+                </div>
+              )}
+            </div>
           </div>
           <div className="modal-footer">
             <Button
