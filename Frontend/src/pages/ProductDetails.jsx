@@ -7,11 +7,12 @@ import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from "next/navigation";
-import { getPublicProductBySlug, createPublicReview, getPublicCoupons } from '../services/publicindex';
+import { getPublicProductBySlug, createPublicReview, getPublicCoupons, getPublicProductReviews } from '../services/publicindex';
 import SeoWrapper from '../console/SeoWrapper';
 import { showValidationErrorToast, showReviewSubmittedSuccessToast, showReviewSubmittedErrorToast } from '../utils/toast';
 import Loader from '../components/Loader';
 import { fbqTrack } from '../components/common/Analytics';
+import InfiniteReviewsSlider from '../components/InfiniteReviewsSlider';
 import { getProductImageSrc } from '../utils/imageUtils';
 import DOMPurify from 'dompurify';
 import Modal from "../components/common/Modal";
@@ -57,6 +58,7 @@ export default function ProductDetails() {
   const [filePreview, setFilePreview] = useState([]);
   const [coupons, setCoupons] = useState([]);
   const [copiedCoupon, setCopiedCoupon] = useState(null);
+  const [allReviews, setAllReviews] = useState([]);
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [tooltipStyle, setTooltipStyle] = useState({});
@@ -186,6 +188,28 @@ export default function ProductDetails() {
     };
     fetchCoupons();
   }, []);
+
+  // Fetch all reviews for the product
+  useEffect(() => {
+    if (!product?.id) return;
+    
+    const fetchAllReviews = async () => {
+      try {
+        console.log('API BEING CALLED: ProductDetails all reviews fetch for product:', product.id);
+        const response = await getPublicProductReviews(product.id, { limit: 100 }); // Fetch up to 100 reviews
+        if (response.success && response.reviews) {
+          setAllReviews(response.reviews);
+        } else {
+          setAllReviews(product.reviews || []); // Fallback to product reviews
+        }
+      } catch (err) {
+        console.error('Error fetching all reviews:', err);
+        setAllReviews(product.reviews || []); // Fallback to product reviews
+      }
+    };
+    
+    fetchAllReviews();
+  }, [product?.id]);
 
   // Get all unique color names from variations
   const colorOptions = product?.variations
@@ -417,6 +441,15 @@ export default function ProductDetails() {
         const updatedProduct = await getPublicProductBySlug(productSlug);
         if (updatedProduct.success) {
           setProduct(updatedProduct.data);
+          // Also refresh all reviews
+          try {
+            const allReviewsResponse = await getPublicProductReviews(updatedProduct.data.id, { limit: 100 });
+            if (allReviewsResponse.success && allReviewsResponse.reviews) {
+              setAllReviews(allReviewsResponse.reviews);
+            }
+          } catch (err) {
+            console.error('Error refreshing all reviews:', err);
+          }
         }
       }
     } catch (error) {
@@ -938,9 +971,9 @@ export default function ProductDetails() {
 
   // Calculate star counts for 5-1 stars
   const starCounts = [5, 4, 3, 2, 1].map(star =>
-    product.reviews ? product.reviews.filter(r => r.rating === star).length : 0
+    allReviews ? allReviews.filter(r => r.rating === star).length : 0
   );
-  const totalReviews = product.reviews ? product.reviews.length : 0;
+  const totalReviews = allReviews ? allReviews.length : 0;
 
   // Log color options and selected color for debugging
   console.log('Color options:', colorOptions, 'Selected color:', selectedColor);
@@ -1315,66 +1348,7 @@ export default function ProductDetails() {
             ))}
             <span className="total-reviews-label">({totalReviews} reviews)</span>
                   </div>
-          <div
-            className="review-slider"
-            style={{
-              display: 'flex',
-              overflowX: 'auto',
-              gap: '16px',
-              padding: '8px 0',
-              scrollSnapType: 'x mandatory'
-            }}
-          >
-            {(product.reviews && product.reviews.length > 0) ? (
-              product.reviews.map((review, idx) => (
-                <div
-                  key={review.id || idx}
-                  className="review-slide"
-                  style={{
-                    minWidth: '280px',
-                    maxWidth: '320px',
-                    background: '#fafbfc',
-                    border: '1px solid #eee',
-                    borderRadius: '8px',
-                    padding: '16px',
-                    scrollSnapAlign: 'start',
-                    boxShadow: '0 2px 8px #eee'
-                  }}
-                >
-                  <div className="reviewer-name" style={{ fontWeight: 'bold', marginBottom: 4 }}>
-                    {review.reviewerName || review.User?.username || review.guestName || 'Anonymous'}
-                  </div>
-                  <div className="review-stars" style={{ color: '#f59e42', marginBottom: 4 }}>
-                                {Array.from({ length: review.rating }).map((_, i) => (
-                      <span key={i}>★</span>
-                                ))}
-                              </div>
-                  <div className="review-text" style={{ fontSize: 14, marginBottom: 8 }}>
-                    {review.review}
-                            </div>
-                  <div className="review-date" style={{ fontSize: 12, color: '#888' }}>
-                              {new Date(review.createdAt).toLocaleDateString()}
-                          </div>
-                            {review.ReviewImages && review.ReviewImages.length > 0 && (
-                    <div className="review-images" style={{ marginTop: 8, display: 'flex', gap: 4 }}>
-                      {review.ReviewImages.map((image, imgIdx) => (
-                        <SafeImage
-                          key={imgIdx}
-                          imageData={{
-                            image_url: `/uploads/reviews/${image.fileName}`
-                          }}
-                          alt={`Review image ${imgIdx + 1}`}
-                          style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }}
-                        />
-                                ))}
-                              </div>
-                            )}
-                          </div>
-              ))
-                  ) : (
-              <div style={{ color: '#888', fontSize: 14 }}>No reviews yet.</div>
-                  )}
-                </div>
+          <InfiniteReviewsSlider reviews={allReviews} />
           {showReviewForm && (
             <div 
               className="review-form-modal"
