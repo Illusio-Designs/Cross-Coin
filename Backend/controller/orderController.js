@@ -300,7 +300,7 @@ module.exports.createOrder = async (req, res) => {
       } else {
         const orderItems = createdOrder.OrderItems.map((item) => ({
           productName: item.Product.name,
-          sku: item.Product.sku || `PROD-${item.Product.id}`,
+          sku: item.ProductVariation?.sku || item.Product.sku || `PROD-${item.Product.id}`,
           quantity: item.quantity,
           unitPrice: item.price,
           productCategory: "Socks",
