@@ -472,6 +472,8 @@ const ProductsPage = () => {
       price: "",
       stock: "",
       images: [],
+      imagesToDelete: [], // Add missing array
+      variationImagesToDelete: [], // Add missing array
       weight: "",
       weightUnit: "g",
       dimensions: { length: "", width: "", height: "" },
@@ -863,7 +865,7 @@ const ProductsPage = () => {
         console.log('=== SENDING TO BACKEND ===');
         console.log('New file uploads:', formData.images ? formData.images.filter(img => img instanceof File).length : 0);
         console.log('New library images:', libraryImages.length);
-        console.log('Images to delete:', formData.imagesToDelete.length);
+        console.log('Images to delete:', formData.imagesToDelete?.length || 0);
         console.log('Existing images will be preserved automatically');
         
         // Debug preserve IDs
