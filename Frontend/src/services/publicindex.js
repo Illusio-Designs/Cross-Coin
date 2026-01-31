@@ -229,12 +229,27 @@ export const getPublicProductReviews = async (productId, params = {}) => {
 };
 
 // Validate a coupon
-export const validateCoupon = async (code, cartTotal) => {
+export const validateCoupon = async (code, cartTotal, paymentMode = null, cartItems = null) => {
   try {
     const token = localStorage.getItem("token");
+    const requestData = { 
+      code, 
+      cartTotal 
+    };
+    
+    // Add payment mode if provided
+    if (paymentMode) {
+      requestData.paymentMode = paymentMode;
+    }
+    
+    // Add cart items if provided (for quantity-based coupons)
+    if (cartItems && Array.isArray(cartItems)) {
+      requestData.cartItems = cartItems;
+    }
+    
     const response = await axios.post(
       `${API_URL}/api/coupons/validate`,
-      { code, cartTotal },
+      requestData,
       token ? {
         headers: { Authorization: `Bearer ${token}` },
       } : {}

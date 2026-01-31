@@ -273,6 +273,10 @@ const setupDatabase = async () => {
     console.log("\nFixing corrupted product image URLs...");
     await fixProductImageUrls();
     
+    // Update coupon table with new fields
+    console.log("\nUpdating coupon table with new fields...");
+    await updateCouponTable();
+    
     return true;
   } catch (error) {
     console.error("❌ Database setup failed:", error.message);
@@ -572,6 +576,50 @@ const findAvailablePort = async (startPort) => {
       });
     });
   });
+};
+
+// Function to update coupon table with new fields
+const updateCouponTable = async () => {
+  try {
+    console.log('Adding new fields to coupons table...');
+
+    // Add new columns to coupons table
+    await sequelize.query(`
+      ALTER TABLE coupons 
+      ADD COLUMN IF NOT EXISTS paymentModeRestriction ENUM('all', 'cod', 'prepaid') DEFAULT 'all' COMMENT 'Restrict coupon to specific payment modes'
+    `);
+    console.log('✓ Added paymentModeRestriction column');
+
+    await sequelize.query(`
+      ALTER TABLE coupons 
+      ADD COLUMN IF NOT EXISTS firstOrderOnly BOOLEAN DEFAULT FALSE COMMENT 'Coupon only valid for first orders'
+    `);
+    console.log('✓ Added firstOrderOnly column');
+
+    await sequelize.query(`
+      ALTER TABLE coupons 
+      ADD COLUMN IF NOT EXISTS tieredDiscounts JSON COMMENT 'Array of {minAmount, discount} for tiered discounts'
+    `);
+    console.log('✓ Added tieredDiscounts column');
+
+    await sequelize.query(`
+      ALTER TABLE coupons 
+      ADD COLUMN IF NOT EXISTS quantityBasedDiscounts JSON COMMENT 'Array of {minQuantity, discount} for quantity-based discounts'
+    `);
+    console.log('✓ Added quantityBasedDiscounts column');
+
+    // Update the type enum to include new types
+    await sequelize.query(`
+      ALTER TABLE coupons 
+      MODIFY COLUMN type ENUM('percentage', 'fixed', 'tiered', 'quantity_based') NOT NULL
+    `);
+    console.log('✓ Updated type enum');
+
+    console.log('✓ Coupon table update completed successfully!');
+    
+  } catch (error) {
+    console.log('⚠️ Coupon table update skipped (columns may already exist):', error.message);
+  }
 };
 
 module.exports = { setupDatabase, findAvailablePort };

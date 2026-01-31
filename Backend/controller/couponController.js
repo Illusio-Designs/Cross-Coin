@@ -17,7 +17,12 @@ module.exports.createCoupon = async (req, res) => {
             perUserLimit,
             status,
             applicableCategories,
-            applicableProducts
+            applicableProducts,
+            // New fields
+            paymentModeRestriction,
+            firstOrderOnly,
+            tieredDiscounts,
+            quantityBasedDiscounts
         } = req.body;
 
         // Check if coupon code already exists
@@ -40,10 +45,26 @@ module.exports.createCoupon = async (req, res) => {
             });
         }
 
-        if (type === 'fixed' && value <= 0) {
+        if ((type === 'fixed' || type === 'tiered' || type === 'quantity_based') && value <= 0) {
             return res.status(400).json({
                 success: false,
-                message: 'Fixed discount value must be greater than 0'
+                message: 'Discount value must be greater than 0'
+            });
+        }
+
+        // Validate tiered discounts
+        if (type === 'tiered' && (!tieredDiscounts || !Array.isArray(tieredDiscounts) || tieredDiscounts.length === 0)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Tiered discounts are required for tiered coupon type'
+            });
+        }
+
+        // Validate quantity-based discounts
+        if (type === 'quantity_based' && (!quantityBasedDiscounts || !Array.isArray(quantityBasedDiscounts) || quantityBasedDiscounts.length === 0)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Quantity-based discounts are required for quantity-based coupon type'
             });
         }
 
@@ -96,7 +117,12 @@ module.exports.createCoupon = async (req, res) => {
             perUserLimit: perUserLimit || null,
             status: status || 'active',
             applicableCategories: applicableCategories || null,
-            applicableProducts: applicableProducts || null
+            applicableProducts: applicableProducts || null,
+            // New fields
+            paymentModeRestriction: paymentModeRestriction || 'all',
+            firstOrderOnly: firstOrderOnly || false,
+            tieredDiscounts: tieredDiscounts || null,
+            quantityBasedDiscounts: quantityBasedDiscounts || null
         });
 
         res.status(201).json({
@@ -180,7 +206,7 @@ module.exports.getCouponById = async (req, res) => {
 // Validate a coupon (works for both authenticated and guest users)
 module.exports.validateCoupon = async (req, res) => {
     try {
-        const { code, cartTotal } = req.body;
+        const { code, cartTotal, paymentMode, cartItems } = req.body;
         const userId = req.user?.id; // Optional - works for guests too
 
         if (!code) {
@@ -213,6 +239,31 @@ module.exports.validateCoupon = async (req, res) => {
             });
         }
 
+        // Check payment mode restriction
+        if (coupon.paymentModeRestriction !== 'all' && paymentMode && coupon.paymentModeRestriction !== paymentMode) {
+            const modeText = coupon.paymentModeRestriction === 'cod' ? 'Cash on Delivery' : 'Prepaid';
+            return res.status(400).json({
+                success: false,
+                message: `This coupon is only valid for ${modeText} orders`
+            });
+        }
+
+        // Check first order restriction
+        if (coupon.firstOrderOnly && userId) {
+            // Check if user has any previous orders
+            const { Order } = require('../model/associations.js');
+            const previousOrders = await Order.count({
+                where: { user_id: userId }
+            });
+            
+            if (previousOrders > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'This coupon is only valid for first orders'
+                });
+            }
+        }
+
         // Check total usage limit
         if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
             return res.status(400).json({ 
@@ -223,6 +274,7 @@ module.exports.validateCoupon = async (req, res) => {
 
         // Check per-user usage limit (only for authenticated users)
         if (userId) {
+            const { CouponUsage } = require('../model/associations.js');
             const userUsageCount = await CouponUsage.count({
                 where: { couponId: coupon.id, userId: userId }
             });
@@ -252,15 +304,109 @@ module.exports.validateCoupon = async (req, res) => {
             });
         }
 
-        // Calculate discount
+        // Calculate discount based on coupon type
         let discountAmount = 0;
+        
         if (coupon.type === 'percentage') {
             discountAmount = (applicableAmount * parseFloat(coupon.value)) / 100;
             if (coupon.maxDiscount && discountAmount > coupon.maxDiscount) {
                 discountAmount = parseFloat(coupon.maxDiscount);
             }
-        } else { // Fixed amount
+        } else if (coupon.type === 'fixed') {
             discountAmount = parseFloat(coupon.value);
+        } else if (coupon.type === 'tiered') {
+            // Find the applicable tier based on cart amount
+            let tiers = coupon.tieredDiscounts;
+            
+            // Ensure tiers is a valid array
+            if (!tiers) {
+                tiers = [];
+            } else if (typeof tiers === 'string') {
+                try {
+                    tiers = JSON.parse(tiers);
+                } catch (e) {
+                    tiers = [];
+                }
+            } else if (!Array.isArray(tiers)) {
+                tiers = [];
+            }
+            
+            let applicableTier = null;
+            
+            if (tiers.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'This tiered coupon is not properly configured'
+                });
+            }
+            
+            for (const tier of tiers.sort((a, b) => b.minAmount - a.minAmount)) {
+                if (applicableAmount >= tier.minAmount) {
+                    applicableTier = tier;
+                    break;
+                }
+            }
+            
+            if (applicableTier) {
+                discountAmount = parseFloat(applicableTier.discount);
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: `This coupon requires a minimum purchase amount that you haven't met`
+                });
+            }
+        } else if (coupon.type === 'quantity_based') {
+            // Calculate total quantity in cart
+            const totalQuantity = cartItems ? cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0) : 0;
+            
+            if (totalQuantity === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Cart items are required for quantity-based coupons'
+                });
+            }
+            
+            // Find the applicable quantity tier
+            let quantityTiers = coupon.quantityBasedDiscounts;
+            
+            // Ensure quantityTiers is a valid array
+            if (!quantityTiers) {
+                quantityTiers = [];
+            } else if (typeof quantityTiers === 'string') {
+                try {
+                    quantityTiers = JSON.parse(quantityTiers);
+                } catch (e) {
+                    quantityTiers = [];
+                }
+            } else if (!Array.isArray(quantityTiers)) {
+                quantityTiers = [];
+            }
+            
+            let applicableQuantityTier = null;
+            
+            if (quantityTiers.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'This quantity-based coupon is not properly configured'
+                });
+            }
+            
+            for (const tier of quantityTiers.sort((a, b) => b.minQuantity - a.minQuantity)) {
+                if (totalQuantity >= tier.minQuantity) {
+                    applicableQuantityTier = tier;
+                    break;
+                }
+            }
+            
+            if (applicableQuantityTier) {
+                discountAmount = parseFloat(applicableQuantityTier.discount);
+            } else {
+                const minQty = Math.min(...quantityTiers.map(t => t.minQuantity));
+                return res.status(400).json({
+                    success: false,
+                    message: `You need at least ${minQty} items in your cart to use this coupon`
+                });
+            }
         }
 
         // Ensure discount doesn't exceed cart total
@@ -281,7 +427,9 @@ module.exports.validateCoupon = async (req, res) => {
                 code: coupon.code,
                 type: coupon.type,
                 value: coupon.value,
-                description: coupon.description
+                description: coupon.description,
+                paymentModeRestriction: coupon.paymentModeRestriction,
+                firstOrderOnly: coupon.firstOrderOnly
             }
         });
 
@@ -591,7 +739,10 @@ module.exports.getPublicCoupons = async (req, res) => {
                 startDate: { [Op.lte]: new Date() },
                 endDate: { [Op.gte]: new Date() }
             },
-            attributes: ['id', 'code', 'description', 'type', 'value', 'minPurchase', 'maxDiscount', 'endDate'],
+            attributes: [
+                'id', 'code', 'description', 'type', 'value', 'minPurchase', 'maxDiscount', 'endDate',
+                'paymentModeRestriction', 'firstOrderOnly', 'tieredDiscounts', 'quantityBasedDiscounts'
+            ],
             order: [['createdAt', 'DESC']]
         });
 
