@@ -28,6 +28,11 @@
   padding: 20px 0;
 }
 
+.testimonials-slider.infinite-scroll {
+  /* Smooth infinite scrolling */
+  animation: none;
+}
+
 .testimonials-slider::-webkit-scrollbar {
   display: none;
 }
