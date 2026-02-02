@@ -9,6 +9,7 @@ const {
     getGuestOrder,
     trackOrderByAWB,
     cancelOrder,
+    adminCancelOrder,
     cancelOrdersInFShip,
     getOrderStats,
     getFShipTrackingForOrder,
@@ -43,6 +44,7 @@ router.post('/fship/cancel', isAuthenticated, authorize(['admin']), cancelOrders
 router.get('/fship/test-credentials', isAuthenticated, authorize(['admin']), testFShipCredentials);
 router.get('/fship/couriers', isAuthenticated, authorize(['admin']), getFShipCouriers);
 router.put('/:id/fship/update', isAuthenticated, authorize(['admin']), updateSingleOrderFromFShip);
+router.put('/:id/admin/cancel', isAuthenticated, authorize(['admin']), adminCancelOrder);
 
 // Guest checkout route (no authentication required)
 router.post('/guest', createGuestOrder);

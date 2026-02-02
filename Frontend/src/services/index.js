@@ -317,6 +317,16 @@ export const orderService = {
     }
   },
 
+  // Admin cancel order
+  adminCancelOrder: async (orderId, reason) => {
+    try {
+      const response = await api.put(`/api/orders/${orderId}/admin/cancel`, { reason });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Track order by order number (public)
   trackOrderByOrderNumber: async (orderNumber) => {
     try {
