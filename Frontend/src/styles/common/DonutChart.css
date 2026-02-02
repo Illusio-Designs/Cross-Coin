@@ -5,10 +5,11 @@
     padding: 16px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     border: 1px solid #e5e7eb;
-    min-height: 320px;
+    min-height: 280px;
     display: flex;
     flex-direction: column;
     max-width: 100%;
+    overflow: hidden; /* Prevent overflow */
 }
 
 .donut-chart-header {
@@ -32,9 +33,10 @@
 .donut-chart-content {
     display: flex;
     flex: 1;
-    gap: 16px;
+    gap: 12px;
     align-items: flex-start;
     justify-content: center;
+    overflow: hidden; /* Prevent overflow */
 }
 
 .donut-chart-wrapper {
@@ -67,16 +69,16 @@
 }
 
 .donut-chart-total-value {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     color: #111827;
     line-height: 1.2;
 }
 
 .donut-chart-total-label {
-    font-size: 10px;
+    font-size: 9px;
     color: #6b7280;
-    margin-top: 4px;
+    margin-top: 2px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -85,19 +87,22 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    max-width: 200px;
-    min-width: 160px;
+    gap: 4px;
+    max-width: 180px;
+    min-width: 140px;
+    overflow-y: auto; /* Allow scrolling if needed */
+    max-height: 200px; /* Limit height */
 }
 
 .donut-legend-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px 6px;
+    gap: 6px;
+    padding: 3px 4px;
     border-radius: 4px;
     transition: background-color 0.2s ease;
-    font-size: 12px;
+    font-size: 11px;
+    line-height: 1.2;
 }
 
 .donut-legend-item:hover {
@@ -105,8 +110,8 @@
 }
 
 .donut-legend-color {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     flex-shrink: 0;
 }
@@ -114,24 +119,49 @@
 .donut-legend-content {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
     flex: 1;
+    min-width: 0; /* Allow text to wrap */
 }
 
 .donut-legend-label {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     color: #374151;
-    line-height: 1.3;
+    line-height: 1.2;
+    word-break: break-word; /* Allow long text to break */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .donut-legend-value {
-    font-size: 10px;
+    font-size: 9px;
     color: #6b7280;
-    line-height: 1.2;
+    line-height: 1.1;
 }
 
 /* Responsive Design */
+@media (max-width: 1400px) {
+    .donut-chart-container {
+        padding: 12px;
+        min-height: 260px;
+    }
+    
+    .donut-chart-legend {
+        max-width: 160px;
+        min-width: 120px;
+    }
+    
+    .donut-legend-label {
+        font-size: 10px;
+    }
+    
+    .donut-legend-value {
+        font-size: 8px;
+    }
+}
+
 @media (max-width: 768px) {
     .donut-chart-content {
         flex-direction: column;
