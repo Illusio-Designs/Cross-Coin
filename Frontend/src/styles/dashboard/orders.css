@@ -169,6 +169,55 @@
   border: 1px solid #4ade80;
 }
 
+/* New FShip Status Badges */
+.status-badge.status-booked {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.status-badge.status-pickup-initiated {
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #3730a3;
+  border: 1px solid #a5b4fc;
+}
+
+.status-badge.status-manifested {
+  background: linear-gradient(135deg, #cffafe 0%, #a7f3d0 100%);
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+}
+
+.status-badge.status-in-transit {
+  background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+  color: #9a3412;
+  border: 1px solid #fb923c;
+}
+
+.status-badge.status-out-for-delivery {
+  background: linear-gradient(135deg, #fecaca 0%, #f87171 100%);
+  color: #7f1d1d;
+  border: 1px solid #ef4444;
+}
+
+.status-badge.status-rto {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+
+.status-badge.status-order-cancelled {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #991b1b;
+  border: 1px solid #f87171;
+}
+
+.status-badge.status-exception {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  color: #7f1d1d;
+  border: 1px solid #dc2626;
+}
+
 .action-btn.status-select-action {
   background: #f3f4f6;
   color: #374151;

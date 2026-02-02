@@ -5,6 +5,7 @@ import Footer from '../components/Footer';
 import SafeImage from '../components/common/SafeImage';
 import { trackOrderByAWB, trackOrderByOrderNumber } from '../services/publicindex';
 import { formatAttributesForDisplay } from '../utils/productAttributeFormatter';
+import { getStatusColor, getStatusDisplayText } from '../utils/statusUtils';
 import styles from '../styles/pages/OrderTracking.css';
 
 export default function OrderTracking() {
@@ -50,30 +51,6 @@ export default function OrderTracking() {
             setError(err.message || 'Failed to track order');
         } finally {
             setLoading(false);
-        }
-    };
-
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'pending': return '#F59E0B';
-            case 'processing': return '#180D3E';
-            case 'shipped': return '#CE1E36';
-            case 'delivered': return '#10B981';
-            case 'cancelled': return '#EF4444';
-            case 'returned': return '#6B7280';
-            default: return '#6B7280';
-        }
-    };
-
-    const getStatusText = (status) => {
-        switch (status) {
-            case 'pending': return 'Order Pending';
-            case 'processing': return 'Processing';
-            case 'shipped': return 'Shipped';
-            case 'delivered': return 'Delivered';
-            case 'cancelled': return 'Cancelled';
-            case 'returned': return 'Returned';
-            default: return status;
         }
     };
 
@@ -148,7 +125,7 @@ export default function OrderTracking() {
                             <div className="order-header">
                                 <h2>Order Details</h2>
                                 <div className="order-status" style={{ color: getStatusColor(orderData.order.status) }}>
-                                    {getStatusText(orderData.order.status)}
+                                    {getStatusDisplayText(orderData.order.status)}
                                 </div>
                             </div>
 
@@ -235,7 +212,7 @@ export default function OrderTracking() {
                                         <small className="update-notice">
                                             ✅ Order information updated from FShip
                                             {orderData.update_result.status_changed && (
-                                                <span> - Status updated to {getStatusText(orderData.order.status)}</span>
+                                                <span> - Status updated to {getStatusDisplayText(orderData.order.status)}</span>
                                             )}
                                         </small>
                                     </div>
@@ -301,7 +278,7 @@ export default function OrderTracking() {
                                             <div key={index} className="timeline-item">
                                                 <div className="timeline-marker" style={{ backgroundColor: getStatusColor(history.status) }}></div>
                                                 <div className="timeline-content">
-                                                    <h4>{getStatusText(history.status)}</h4>
+                                                    <h4>{getStatusDisplayText(history.status)}</h4>
                                                     {history.notes && <p>{history.notes}</p>}
                                                     <span className="timeline-date">
                                                         {new Date(history.createdAt || history.created_at).toLocaleString('en-IN', {

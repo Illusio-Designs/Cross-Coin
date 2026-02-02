@@ -12,6 +12,7 @@ import "../../../styles/dashboard/seo.css"; // Reusing styles for consistency
 import { toast } from 'react-hot-toast';
 import { getProductImageSrc } from '../../../utils/imageUtils';
 import { getAttributeComponents } from '../../../utils/productAttributeFormatter';
+import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusUtils';
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -639,7 +640,7 @@ const Orders = () => {
         { header: "Total", cell: (row) => formatCurrency(getOrderTotal(row)) },
         { 
             header: "Order Status", 
-            cell: (row) => <span className={`status-badge status-${row.status}`}>{row.status}</span> 
+            cell: (row) => <span className={`status-badge status-${getStatusClassName(row.status)}`}>{getStatusDisplayText(row.status)}</span> 
         },
         {
             header: "FShip Sync",
@@ -1119,7 +1120,7 @@ const Orders = () => {
                                     fontWeight: '500'
                                 }}>{formatPaymentType(selectedOrder.payment_type)}</span></div>
                                 <div><strong>Payment Status:</strong> <span className={`status-badge status-${getPaymentStatusClass(selectedOrder)}`}>{getPaymentStatusDisplay(selectedOrder)}</span></div>
-                                <div><strong>Order Status:</strong> <span className={`status-badge status-${selectedOrder.status}`}>{selectedOrder.status}</span></div>
+                                <div><strong>Order Status:</strong> <span className={`status-badge status-${getStatusClassName(selectedOrder.status)}`}>{getStatusDisplayText(selectedOrder.status)}</span></div>
                                 {selectedOrder.notes && <div style={{ gridColumn: '1 / -1' }}><strong>Order Notes:</strong> {selectedOrder.notes}</div>}
                                 {/* FShip Information */}
                                 {(selectedOrder.fship_order_id || selectedOrder.fship_waybill || selectedOrder.tracking_number) && (

@@ -6,6 +6,7 @@ import Pagination from "@/components/common/Pagination";
 import Loader from "@/components/Loader";
 import '../../../styles/dashboard/orders.css';
 import "../../../styles/dashboard/seo.css";
+import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusUtils';
 
 const OrderStatus = () => {
     const [history, setHistory] = useState([]);
@@ -101,7 +102,7 @@ const OrderStatus = () => {
     const columns = [
         { header: "S/N", accessor: "serial_number" },
         { header: "Order Number", cell: (row) => row.Order?.order_number || 'N/A' },
-        { header: "Status", cell: (row) => <span className={`status-badge status-${row.status}`}>{row.status}</span> },
+        { header: "Status", cell: (row) => <span className={`status-badge status-${getStatusClassName(row.status)}`}>{getStatusDisplayText(row.status)}</span> },
         { header: "Notes", cell: (row) => row.notes || 'No notes' },
         { header: "Updated By", cell: (row) => row.UpdatedBy?.username || 'System' },
         { header: "Timestamp", cell: (row) => formatDate(row.createdAt) }
