@@ -2038,32 +2038,41 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
             }))
           };
 
-          // Check if order already exists in FShip before creating
+          // Check if order already exists in FShip before creating - using enhanced search
           try {
-            console.log(`🔍 Checking if order ${order.order_number} already exists in FShip...`);
-            const existsCheck = await fshipService.checkOrderExists(order.order_number);
+            console.log(`🔍 Searching for order ${order.order_number} in all FShip orders...`);
+            const existsCheck = await fshipService.findOrderByIdFromAll(order.order_number);
             
             if (existsCheck.exists) {
-              console.log(`⚠️ Order ${order.order_number} already exists in FShip, updating local data`);
+              console.log(`⚠️ Order ${order.order_number} found in FShip`);
+              if (existsCheck.totalFound > 1) {
+                console.log(`📋 Found ${existsCheck.totalFound} duplicate orders, selected the best one`);
+              }
               
-              // Update our local order with existing FShip data
+              // Update our local order with the best FShip data
               const updateData = {};
               
-              if (existsCheck.data?.apiorderid) {
+              // Update FShip Order ID
+              if (existsCheck.data.apiorderid && (!order.fship_order_id || order.fship_order_id === "0")) {
                 updateData.fship_order_id = existsCheck.data.apiorderid;
               }
               
-              if (existsCheck.data?.waybill) {
-                updateData.fship_waybill = existsCheck.data.waybill;
-                updateData.tracking_number = existsCheck.data.waybill;
+              // Update AWB/Waybill
+              const fshipAWB = existsCheck.data.waybill || existsCheck.data.awb_number;
+              if (fshipAWB && (!order.fship_waybill || order.fship_waybill !== fshipAWB)) {
+                updateData.fship_waybill = fshipAWB;
+                updateData.tracking_number = fshipAWB;
               }
               
-              if (existsCheck.data?.route_code) {
+              // Update Route Code
+              if (existsCheck.data.route_code && (!order.fship_route_code || order.fship_route_code !== existsCheck.data.route_code)) {
                 updateData.fship_route_code = existsCheck.data.route_code;
               }
               
-              if (existsCheck.data?.order_status) {
-                const newStatus = fshipService.mapFShipStatusToCrossCoin(existsCheck.data.order_status);
+              // Update Status
+              const fshipStatus = existsCheck.data.order_status || existsCheck.data.status;
+              if (fshipStatus) {
+                const newStatus = fshipService.mapFShipStatusToCrossCoin(fshipStatus);
                 if (newStatus !== order.status) {
                   updateData.status = newStatus;
                 }
@@ -2074,7 +2083,7 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
               }
               
               syncResults.new_orders_synced++;
-              console.log(`✅ Updated existing FShip order ${order.order_number}`);
+              console.log(`✅ Updated existing FShip order ${order.order_number} with best data`);
               continue; // Skip creating new order
             }
           } catch (checkError) {
@@ -2750,37 +2759,46 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
       });
     }
     
-    // Check if order already exists in FShip
+    // Check if order already exists in FShip using comprehensive search
     try {
-      console.log(`🔍 Checking if order ${order.order_number} already exists in FShip...`);
-      const existsCheck = await fshipService.checkOrderExists(order.order_number);
+      console.log(`🔍 Searching for order ${order.order_number} in all FShip orders...`);
+      const existsCheck = await fshipService.findOrderByIdFromAll(order.order_number);
       
       if (existsCheck.exists) {
-        console.log(`⚠️ Order ${order.order_number} already exists in FShip`);
-        console.log('FShip data:', existsCheck.data);
+        console.log(`⚠️ Order ${order.order_number} found in FShip`);
+        if (existsCheck.totalFound > 1) {
+          console.log(`📋 Found ${existsCheck.totalFound} duplicate orders, selected the best one`);
+        }
+        console.log('Selected FShip data:', existsCheck.data);
         
-        // Update our local order with FShip data if we don't have it
+        // Update our local order with the best FShip data
         const updateData = {};
         let hasUpdates = false;
         
+        // Update FShip Order ID
         if (existsCheck.data.apiorderid && (!order.fship_order_id || order.fship_order_id === "0")) {
           updateData.fship_order_id = existsCheck.data.apiorderid;
           hasUpdates = true;
         }
         
-        if (existsCheck.data.waybill && !order.fship_waybill) {
-          updateData.fship_waybill = existsCheck.data.waybill;
-          updateData.tracking_number = existsCheck.data.waybill;
+        // Update AWB/Waybill
+        const fshipAWB = existsCheck.data.waybill || existsCheck.data.awb_number;
+        if (fshipAWB && (!order.fship_waybill || order.fship_waybill !== fshipAWB)) {
+          updateData.fship_waybill = fshipAWB;
+          updateData.tracking_number = fshipAWB;
           hasUpdates = true;
         }
         
-        if (existsCheck.data.route_code && !order.fship_route_code) {
+        // Update Route Code
+        if (existsCheck.data.route_code && (!order.fship_route_code || order.fship_route_code !== existsCheck.data.route_code)) {
           updateData.fship_route_code = existsCheck.data.route_code;
           hasUpdates = true;
         }
         
-        if (existsCheck.data.order_status) {
-          const newStatus = fshipService.mapFShipStatusToCrossCoin(existsCheck.data.order_status);
+        // Update Status
+        const fshipStatus = existsCheck.data.order_status || existsCheck.data.status;
+        if (fshipStatus) {
+          const newStatus = fshipService.mapFShipStatusToCrossCoin(fshipStatus);
           if (newStatus !== order.status) {
             updateData.status = newStatus;
             hasUpdates = true;
@@ -2789,7 +2807,7 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
         
         if (hasUpdates) {
           await order.update(updateData, { transaction });
-          console.log(`✅ Updated local order ${order.order_number} with existing FShip data`);
+          console.log(`✅ Updated local order ${order.order_number} with best FShip data`);
           console.log('Updated data:', updateData);
         }
         
@@ -2797,7 +2815,7 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
         
         return res.json({
           success: true,
-          message: `Order ${order.order_number} already exists in FShip and has been synchronized`,
+          message: `Order ${order.order_number} found in FShip and synchronized with latest data`,
           data: {
             order: {
               id: order.id,
@@ -2808,15 +2826,18 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
               fship_route_code: order.fship_route_code,
               tracking_number: order.tracking_number
             },
-            existing_fship_data: existsCheck.data,
-            note: "Order already existed in FShip, local data updated with AWB and status"
+            fship_data: existsCheck.data,
+            duplicates_found: existsCheck.totalFound || 1,
+            note: existsCheck.totalFound > 1 
+              ? `Found ${existsCheck.totalFound} duplicate orders in FShip, selected the best one (delivered/latest)`
+              : "Order found and synchronized with FShip data"
           }
         });
       }
       
       console.log(`✅ Order ${order.order_number} does not exist in FShip, proceeding with creation`);
     } catch (checkError) {
-      console.error(`⚠️ Could not verify if order exists in FShip: ${checkError.message}`);
+      console.error(`⚠️ Could not search for order in FShip: ${checkError.message}`);
       console.log("Proceeding with order creation anyway...");
     }
     
