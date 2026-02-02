@@ -37,7 +37,8 @@ const Orders = () => {
         pending: 0,
         totalRevenue: 0,
         averageOrderValue: 0,
-        deliveredOrders: 0
+        deliveredOrders: 0,
+        cancelledOrders: 0
     });
 
     const fetchOrders = async (page = currentPage) => {
@@ -90,7 +91,8 @@ const Orders = () => {
                 pending: 0,
                 totalRevenue: 0,
                 averageOrderValue: 0,
-                deliveredOrders: 0
+                deliveredOrders: 0,
+                cancelledOrders: 0
             };
 
             allOrders.forEach(order => {
@@ -100,8 +102,11 @@ const Orders = () => {
                 
                 const orderTotal = parseFloat(order.final_amount || 0);
                 
-                // Include all orders except cancelled ones
-                if (orderStatus !== 'cancelled') {
+                // Count cancelled orders
+                if (orderStatus === 'cancelled') {
+                    stats.cancelledOrders++;
+                } else {
+                    // Include all orders except cancelled ones in revenue
                     stats.totalRevenue += orderTotal;
                 }
                 
@@ -264,6 +269,36 @@ const Orders = () => {
         }
     };
 
+    const cancelOrder = async (orderId, orderNumber) => {
+        const reason = prompt(`Enter cancellation reason for order ${orderNumber}:`);
+        if (!reason) return;
+
+        try {
+            const result = await orderService.adminCancelOrder(orderId, reason);
+            
+            if (result.success) {
+                toast.success(`Order ${orderNumber} cancelled successfully`);
+                // Refresh orders after cancellation
+                fetchOrders();
+                fetchAllOrdersForStats();
+            } else {
+                toast.error(result.message || 'Failed to cancel order');
+            }
+        } catch (error) {
+            console.error('=== Order Cancellation Failed ===');
+            console.error('Error object:', error);
+            
+            let errorMessage = 'Failed to cancel order';
+            if (error.message) {
+                errorMessage = error.message;
+            } else if (error.error) {
+                errorMessage = error.error;
+            }
+            
+            toast.error(errorMessage);
+        }
+    };
+
     // Initial load
     useEffect(() => {
         fetchOrders(1);
@@ -384,7 +419,8 @@ const Orders = () => {
             pending: 0,
             totalRevenue: 0,
             averageOrderValue: 0,
-            deliveredOrders: 0
+            deliveredOrders: 0,
+            cancelledOrders: 0
         };
 
         orders.forEach(order => {
@@ -396,8 +432,11 @@ const Orders = () => {
             // This gives the total business value of valid orders
             const orderTotal = parseFloat(order.final_amount || 0);
             
-            // Include all orders except cancelled ones
-            if (orderStatus !== 'cancelled') {
+            // Count cancelled orders
+            if (orderStatus === 'cancelled') {
+                stats.cancelledOrders++;
+            } else {
+                // Include all orders except cancelled ones in revenue
                 stats.totalRevenue += orderTotal;
             }
             
@@ -600,6 +639,33 @@ const Orders = () => {
                         >
                             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                            </svg>
+                        </button>
+                    )}
+
+                    {(row.status === 'pending' || row.status === 'processing') && (
+                        <button 
+                            className="action-btn cancel" 
+                            title="Cancel Order & Sync with FShip" 
+                            onClick={() => cancelOrder(row.id, row.order_number)}
+                            style={{
+                                backgroundColor: '#dc3545',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '6px 8px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.2s ease',
+                                marginLeft: '4px'
+                            }}
+                            onMouseOver={(e) => e.target.style.backgroundColor = '#c82333'}
+                            onMouseOut={(e) => e.target.style.backgroundColor = '#dc3545'}
+                        >
+                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
                     )}
@@ -808,6 +874,14 @@ const Orders = () => {
                                 <div className="stat-item">
                                     <span className="stat-label">Pending:</span>
                                     <span className="stat-badge pending">{allOrdersStats.pending}</span>
+                                </div>
+                                <div className="stat-item">
+                                    <span className="stat-label">Delivered:</span>
+                                    <span className="stat-badge delivered">{allOrdersStats.deliveredOrders}</span>
+                                </div>
+                                <div className="stat-item">
+                                    <span className="stat-label">Cancelled:</span>
+                                    <span className="stat-badge cancelled">{allOrdersStats.cancelledOrders}</span>
                                 </div>
                                 <div className="stat-item revenue">
                                     <span className="stat-label">Total Revenue:</span>

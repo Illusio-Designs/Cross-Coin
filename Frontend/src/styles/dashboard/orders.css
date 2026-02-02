@@ -875,6 +875,12 @@
   box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
 }
 
+.stat-badge.delivered { 
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+  color: #fff; 
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
 .stat-badge.revenue { 
   background: linear-gradient(135deg, #059669 0%, #047857 100%); 
   color: #fff; 
@@ -1827,4 +1833,120 @@
     height: 8px;
     border-radius: 50%;
     background: currentColor;
+}
+
+/* Cancel Button Styles */
+.action-btn.cancel {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+    margin-left: 4px;
+}
+
+.action-btn.cancel:hover {
+    background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.4);
+}
+
+.action-btn.cancel:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+}
+
+.action-btn.cancel svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2.5;
+}
+
+/* Action Buttons Container */
+.action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    justify-content: flex-start;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0;
+    min-width: 32px;
+    height: 32px;
+}
+
+.action-btn.view {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.action-btn.view:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
+}
+
+.action-btn.edit {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+.action-btn.edit:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
+}
+
+/* Responsive Action Buttons */
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+        gap: 2px;
+        align-items: stretch;
+    }
+    
+    .action-btn {
+        width: 100%;
+        min-width: auto;
+        height: 28px;
+        padding: 4px 6px;
+    }
+    
+    .action-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .action-buttons {
+        gap: 1px;
+    }
+    
+    .action-btn {
+        height: 24px;
+        padding: 2px 4px;
+    }
+    
+    .action-btn svg {
+        width: 12px;
+        height: 12px;
+    }
 }

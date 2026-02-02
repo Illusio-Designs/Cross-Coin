@@ -1729,6 +1729,12 @@ module.exports.getOrderStats = async (req, res) => {
     const totalPendingOrders = await Order.count({
       where: { status: "pending" },
     });
+    const totalProcessingOrders = await Order.count({
+      where: { status: "processing" },
+    });
+    const totalShippedOrders = await Order.count({
+      where: { status: "shipped" },
+    });
     const totalDeliveredOrders = await Order.count({
       where: { status: "delivered" },
     });
@@ -1736,10 +1742,17 @@ module.exports.getOrderStats = async (req, res) => {
       where: { status: "cancelled" },
     });
 
+    // Calculate average order value (excluding cancelled orders)
+    const nonCancelledOrdersCount = totalOrders - totalCancelledOrders;
+    const averageOrderValue = nonCancelledOrdersCount > 0 ? (totalRevenue || 0) / nonCancelledOrdersCount : 0;
+
     res.json({
       totalOrders,
       totalRevenue: totalRevenue || 0,
+      averageOrderValue,
       totalPendingOrders,
+      totalProcessingOrders,
+      totalShippedOrders,
       totalDeliveredOrders,
       totalCancelledOrders,
     });
@@ -2463,6 +2476,164 @@ module.exports.trackOrderByOrderNumber = async (req, res) => {
       success: false,
       message: "Failed to track order",
       error: error.message
+    });
+  }
+};
+
+// Admin cancel order (by admin)
+module.exports.adminCancelOrder = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const orderId = req.params.id;
+    const { reason } = req.body;
+    const adminId = req.user.id;
+
+    const order = await Order.findByPk(orderId, {
+      include: [
+        { model: User, attributes: ["id", "username", "email"] },
+        { model: GuestUser, as: "GuestUser", attributes: ["id", "firstName", "lastName", "email"] },
+        { 
+          model: OrderItem, 
+          as: "OrderItems",
+          include: [
+            { model: Product, as: "Product" },
+            { model: ProductVariation, as: "ProductVariation" }
+          ]
+        },
+        { model: ShippingAddress, as: "ShippingAddress" }
+      ]
+    });
+
+    if (!order) {
+      await transaction.rollback();
+      return res.status(404).json({ 
+        success: false,
+        message: "Order not found" 
+      });
+    }
+
+    // Cannot cancel if already delivered or cancelled
+    if (order.status === "delivered" || order.status === "cancelled") {
+      await transaction.rollback();
+      return res.status(400).json({ 
+        success: false,
+        message: `Cannot cancel ${order.status} orders` 
+      });
+    }
+
+    // Update order status
+    order.status = "cancelled";
+    await order.save({ transaction });
+
+    // Create status history entry with admin's reason
+    await OrderStatusHistory.create(
+      {
+        order_id: order.id,
+        status: "cancelled",
+        updated_by: adminId,
+        notes: reason || "Order cancelled by admin",
+        created_by: "admin"
+      },
+      { transaction }
+    );
+
+    // If payment is 'paid', mark for refund
+    if (order.payment_status === "paid") {
+      const payment = await Payment.findOne({
+        where: { order_id: order.id, status: "successful" },
+      });
+
+      if (payment) {
+        payment.status = "refunded";
+        await payment.save({ transaction });
+
+        order.payment_status = "refunded";
+        await order.save({ transaction });
+      }
+    }
+
+    // Restore stock for cancelled items
+    for (const item of order.OrderItems) {
+      if (item.variation_id) {
+        // Restore variation stock
+        const variation = await ProductVariation.findByPk(item.variation_id);
+        if (variation) {
+          variation.stock += item.quantity;
+          await variation.save({ transaction });
+        }
+      } else {
+        // Restore product stock
+        const product = await Product.findByPk(item.product_id);
+        if (product) {
+          product.stock_quantity = (product.stock_quantity || 0) + item.quantity;
+          await product.save({ transaction });
+        }
+      }
+    }
+
+    // Cancel order in FShip if it exists
+    let fshipCancelResult = null;
+    if (order.fship_waybill) {
+      try {
+        console.log(`🔄 Cancelling FShip order: ${order.fship_waybill}`);
+        fshipCancelResult = await fshipService.cancelOrder(
+          order.fship_waybill,
+          reason || "Order cancelled by admin"
+        );
+        console.log("✅ FShip order cancelled successfully:", fshipCancelResult);
+        
+        // Update order with FShip cancellation info
+        order.fship_status = "cancelled";
+        await order.save({ transaction });
+        
+      } catch (err) {
+        console.error("❌ Failed to cancel FShip order:", err.message);
+        // Don't fail the entire operation if FShip cancellation fails
+        fshipCancelResult = { 
+          success: false, 
+          error: err.message 
+        };
+      }
+    }
+
+    await transaction.commit();
+
+    // Determine customer info for response
+    const isGuestOrder = !!order.guest_user_id;
+    const customerInfo = isGuestOrder ? order.GuestUser : order.User;
+
+    res.json({
+      success: true,
+      message: "Order cancelled successfully",
+      data: {
+        order: {
+          id: order.id,
+          order_number: order.order_number,
+          status: order.status,
+          payment_status: order.payment_status,
+          cancelled_by: "admin",
+          cancelled_at: new Date().toISOString(),
+          cancellation_reason: reason || "Order cancelled by admin"
+        },
+        customer: {
+          type: isGuestOrder ? "guest" : "registered",
+          name: isGuestOrder 
+            ? `${customerInfo.firstName} ${customerInfo.lastName}` 
+            : customerInfo.username,
+          email: customerInfo.email
+        },
+        fship_cancellation: fshipCancelResult
+      }
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error cancelling order (admin):", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to cancel order", 
+      error: error.message 
     });
   }
 };
