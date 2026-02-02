@@ -96,15 +96,6 @@ const Order = sequelize.define('Order', {
         type: DataTypes.TEXT,
         allowNull: true
     },
-    // Legacy Shiprocket fields (kept for backward compatibility)
-    shiprocket_order_id: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    shiprocket_shipment_id: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
     tracking_number: {
         type: DataTypes.STRING,
         allowNull: true
