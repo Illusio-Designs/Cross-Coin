@@ -7,8 +7,8 @@ const DonutChart = ({
     subtitle, 
     totalValue, 
     totalLabel,
-    size = 180,
-    strokeWidth = 25,
+    size = 140,
+    strokeWidth = 20,
     showLegend = true,
     colors = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6', '#f97316', '#84cc16']
 }) => {

@@ -13,9 +13,9 @@ import { toast } from 'react-hot-toast';
 import { getProductImageSrc } from '../../../utils/imageUtils';
 import { getAttributeComponents } from '../../../utils/productAttributeFormatter';
 import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusUtils';
-import PaymentChart from '../../../components/dashboard/PaymentChart';
-import ShippingChart from '../../../components/dashboard/ShippingChart';
-import PaymentStatusChart from '../../../components/dashboard/PaymentStatusChart';
+import PaymentChart from '../../../components/Dashboard/PaymentChart';
+import ShippingChart from '../../../components/Dashboard/ShippingChart';
+import PaymentStatusChart from '../../../components/Dashboard/PaymentStatusChart';
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -474,72 +474,6 @@ const Orders = () => {
         }
     };
 
-    const getPaymentStats = () => {
-        const stats = {
-            total: orders.length,
-            prepaid: 0,
-            cod: 0,
-            paid: 0,
-            pending: 0,
-            totalRevenue: 0,
-            averageOrderValue: 0,
-            deliveredOrders: 0,
-            cancelledOrders: 0
-        };
-
-        orders.forEach(order => {
-            const paymentType = order.payment_type?.toLowerCase();
-            const paymentStatus = order.payment_status?.toLowerCase();
-            const orderStatus = order.status?.toLowerCase();
-            
-            // Calculate revenue from ALL orders EXCEPT cancelled orders
-            // This gives the total business value of valid orders
-            const orderTotal = parseFloat(order.final_amount || 0);
-            
-            // Count cancelled orders
-            if (orderStatus === 'cancelled') {
-                stats.cancelledOrders++;
-            } else {
-                // Include all orders except cancelled ones in revenue
-                stats.totalRevenue += orderTotal;
-            }
-            
-            // Count delivered orders separately for tracking
-            if (orderStatus === 'delivered') {
-                stats.deliveredOrders++;
-            }
-            
-            // Count payment types and statuses
-            if (['credit_card', 'debit_card', 'upi', 'wallet'].includes(paymentType)) {
-                stats.prepaid++;
-                if (paymentStatus === 'paid') {
-                    stats.paid++;
-                } else {
-                    stats.pending++;
-                }
-            } else if (paymentType === 'cod') {
-                stats.cod++;
-                if (orderStatus === 'delivered' || paymentStatus === 'paid') {
-                    stats.paid++;
-                } else {
-                    stats.pending++;
-                }
-            } else {
-                // Handle other payment types
-                if (paymentStatus === 'paid') {
-                    stats.paid++;
-                } else {
-                    stats.pending++;
-                }
-            }
-        });
-
-        // Calculate average order value based on non-cancelled orders
-        const nonCancelledOrders = orders.filter(order => order.status?.toLowerCase() !== 'cancelled');
-        stats.averageOrderValue = nonCancelledOrders.length > 0 ? stats.totalRevenue / nonCancelledOrders.length : 0;
-        return stats;
-    };
-
     const getSyncStats = () => {
         const stats = {
             total: orders.length,
@@ -857,6 +791,12 @@ const Orders = () => {
                     
                     {/* Add responsive styles */}
                     <style jsx>{`
+                        @media (max-width: 1400px) {
+                            .orders-analytics {
+                                grid-template-columns: repeat(3, 1fr) !important;
+                                gap: 12px !important;
+                            }
+                        }
                         @media (max-width: 1200px) {
                             .orders-analytics {
                                 grid-template-columns: repeat(2, 1fr) !important;
@@ -971,46 +911,6 @@ const Orders = () => {
                         <>
                             {orders.length === 0 ? <div className="seo-empty-state">No orders found.</div> :
                                 <>
-                            {/* Payment Statistics */}
-                            <div className="payment-stats">
-                                <div className="stat-item">
-                                    <span className="stat-label">Total Orders:</span>
-                                    <span className="stat-badge total">{allOrdersStats.total}</span>
-                                </div>
-                                <div className="stat-item">
-                                    <span className="stat-label">Prepaid:</span>
-                                    <span className="stat-badge prepaid">{allOrdersStats.prepaid}</span>
-                                </div>
-                                <div className="stat-item">
-                                    <span className="stat-label">COD:</span>
-                                    <span className="stat-badge cod">{allOrdersStats.cod}</span>
-                                </div>
-                                <div className="stat-item">
-                                    <span className="stat-label">Paid:</span>
-                                    <span className="stat-badge paid">{allOrdersStats.paid}</span>
-                                </div>
-                                <div className="stat-item">
-                                    <span className="stat-label">Pending:</span>
-                                    <span className="stat-badge pending">{allOrdersStats.pending}</span>
-                                </div>
-                                <div className="stat-item">
-                                    <span className="stat-label">Delivered:</span>
-                                    <span className="stat-badge delivered">{allOrdersStats.deliveredOrders}</span>
-                                </div>
-                                <div className="stat-item">
-                                    <span className="stat-label">Cancelled:</span>
-                                    <span className="stat-badge cancelled">{allOrdersStats.cancelledOrders}</span>
-                                </div>
-                                <div className="stat-item revenue">
-                                    <span className="stat-label">Total Revenue:</span>
-                                    <span className="stat-badge revenue">{formatCurrency(allOrdersStats.totalRevenue)}</span>
-                                </div>
-                                <div className="stat-item avg">
-                                    <span className="stat-label">Avg Order:</span>
-                                    <span className="stat-badge avg">{formatCurrency(allOrdersStats.averageOrderValue)}</span>
-                                </div>
-                            </div>
-
                             {/* Sort Controls */}
                             <div className="sort-controls">
                                 <div className="sort-group">
