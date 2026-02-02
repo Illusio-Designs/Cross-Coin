@@ -239,7 +239,7 @@ export const orderService = {
 
   // FShip Integration Services
   
-  // Sync orders with FShip - Comprehensive sync includes credential testing
+  // Sync orders with FShip - Comprehensive sync includes new orders and status updates
   syncOrdersWithFShip: async () => {
     try {
       const response = await api.post(
@@ -261,16 +261,6 @@ export const orderService = {
         {},
         { timeout: 30000 }
       );
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  // Test FShip credentials
-  testFShipCredentials: async () => {
-    try {
-      const response = await api.get("/api/orders/fship/test-credentials");
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -373,10 +363,6 @@ export const orderService = {
     return this.syncOrdersWithFShip();
   },
 
-  testShiprocketCredentials: async () => {
-    console.warn('testShiprocketCredentials is deprecated. Use testFShipCredentials instead.');
-    return this.testFShipCredentials();
-  },
 };
 
 // Payment Services
@@ -1183,12 +1169,6 @@ export const policyService = {
       throw error.response?.data || error.message;
     }
   },
-};
-
-// Legacy function (deprecated)
-export const testShiprocketCredentials = () => {
-  console.warn('testShiprocketCredentials is deprecated. Use orderService.testFShipCredentials instead.');
-  return orderService.testFShipCredentials();
 };
 
 // Dashboard Services

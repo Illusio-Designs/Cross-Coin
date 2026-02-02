@@ -16,7 +16,6 @@ const {
     getFShipLabelForOrder,
     getFShipCouriers,
     syncOrdersWithFShip,
-    testFShipCredentials,
     handleFShipWebhook,
     updateSingleOrderFromFShip,
     trackOrderByOrderNumber
@@ -41,7 +40,6 @@ router.get('/', isAuthenticated, authorize(['admin']), getAllOrders);
 router.get('/stats/overview', isAuthenticated, authorize(['admin']), getOrderStats);
 router.post('/fship/sync', isAuthenticated, authorize(['admin']), syncOrdersWithFShip);
 router.post('/fship/cancel', isAuthenticated, authorize(['admin']), cancelOrdersInFShip);
-router.get('/fship/test-credentials', isAuthenticated, authorize(['admin']), testFShipCredentials);
 router.get('/fship/couriers', isAuthenticated, authorize(['admin']), getFShipCouriers);
 router.put('/:id/fship/update', isAuthenticated, authorize(['admin']), updateSingleOrderFromFShip);
 router.put('/:id/admin/cancel', isAuthenticated, authorize(['admin']), adminCancelOrder);
