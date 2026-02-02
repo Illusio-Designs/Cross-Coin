@@ -644,6 +644,7 @@ class FShipService {
             'in transit', 
             'out for delivery', 
             'delivered', 
+            'undelivered',
             'rto', 
             'cancelled', 
             'order cancelled', 
