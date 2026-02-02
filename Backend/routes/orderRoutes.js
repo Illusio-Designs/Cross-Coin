@@ -8,6 +8,7 @@ const {
     createGuestOrder,
     getGuestOrder,
     trackOrderByAWB,
+    trackOrderByOrderNumber,
     cancelOrder,
     adminCancelOrder,
     cancelOrdersInFShip,
@@ -17,8 +18,7 @@ const {
     getFShipCouriers,
     syncOrdersWithFShip,
     handleFShipWebhook,
-    syncSingleOrderWithFShip,
-    trackOrderByOrderNumber
+    syncSingleOrderWithFShip
 } = require('../controller/orderController.js');
 const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
 

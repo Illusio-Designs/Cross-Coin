@@ -2503,3 +2503,154 @@ module.exports.adminCancelOrder = async (req, res) => {
     });
   }
 };
+// Track order by order number (works for both registered and guest orders)
+module.exports.trackOrderByOrderNumber = async (req, res) => {
+  try {
+    const { order_number } = req.params;
+
+    if (!order_number) {
+      return res.status(400).json({
+        success: false,
+        message: "Order number is required",
+      });
+    }
+
+    console.log(`Tracking order by order number: ${order_number}`);
+
+    // Find order by order number
+    const order = await Order.findOne({
+      where: { order_number: order_number },
+      include: [
+        {
+          model: User,
+          as: "User",
+          attributes: ["id", "email", "username"],
+          required: false,
+        },
+        {
+          model: GuestUser,
+          as: "GuestUser",
+          attributes: ["id", "email", "firstName", "lastName", "phone"],
+          required: false,
+        },
+        {
+          model: ShippingAddress,
+          as: "ShippingAddress",
+          attributes: [
+            "id",
+            "full_name",
+            "address",
+            "city",
+            "state",
+            "pincode",
+            "phone",
+          ],
+        },
+        {
+          model: OrderItem,
+          as: "OrderItems",
+          include: [
+            {
+              model: Product,
+              as: "Product",
+              attributes: ["id", "name", "slug"],
+              include: [
+                {
+                  model: ProductImage,
+                  as: "ProductImages",
+                  attributes: ["image_url"],
+                  limit: 1,
+                },
+              ],
+            },
+            {
+              model: ProductVariation,
+              as: "ProductVariation",
+              attributes: ["id", "sku", "price", "attributes"],
+              required: false,
+            },
+          ],
+        },
+        {
+          model: OrderStatusHistory,
+          as: "OrderStatusHistories",
+          order: [["created_at", "DESC"]],
+          required: false,
+        },
+      ],
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found with this order number",
+      });
+    }
+
+    // Determine if it's a guest order or registered user order
+    const isGuestOrder = !!order.guest_user_id;
+    const customerInfo = isGuestOrder ? order.GuestUser : order.User;
+
+    res.json({
+      success: true,
+      data: {
+        order: {
+          id: order.id,
+          order_number: order.order_number,
+          total_amount: order.total_amount,
+          shipping_fee: order.shipping_fee,
+          discount_amount: order.discount_amount,
+          final_amount: order.final_amount,
+          payment_type: order.payment_type,
+          status: order.status,
+          payment_status: order.payment_status,
+          tracking_number: order.tracking_number,
+          courier_name: order.courier_name,
+          tracking_url: order.tracking_url,
+          fship_waybill: order.fship_waybill,
+          created_at: order.created_at,
+          updated_at: order.updated_at,
+        },
+        customer: {
+          type: isGuestOrder ? "guest" : "registered",
+          info: customerInfo,
+        },
+        shipping_address: order.ShippingAddress,
+        items: order.OrderItems.map((item) => ({
+          id: item.id,
+          product: {
+            id: item.Product.id,
+            name: item.Product.name,
+            slug: item.Product.slug,
+            image: item.Product.ProductImages?.[0]?.image_url || null,
+          },
+          variation: item.ProductVariation
+            ? {
+                id: item.ProductVariation.id,
+                sku: item.ProductVariation.sku,
+                price: item.ProductVariation.price,
+                attributes: item.ProductVariation.attributes,
+              }
+            : null,
+          quantity: item.quantity,
+          price: item.price,
+          total_price: item.total_price,
+        })),
+        status_history: order.OrderStatusHistories.map((history) => ({
+          id: history.id,
+          status: history.status,
+          notes: history.notes,
+          created_at: history.created_at,
+          created_by: history.created_by,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error("Error tracking order by order number:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to track order",
+      error: error.message,
+    });
+  }
+};
