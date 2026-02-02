@@ -1272,6 +1272,9 @@ module.exports.getAllOrders = async (req, res) => {
       end_date,
       page = 1,
       limit = 10,
+      search, // Add search parameter
+      sort = "createdAt",
+      order = "DESC"
     } = req.query;
 
     console.log("=== GET ALL ORDERS DEBUG ===");
@@ -1282,41 +1285,23 @@ module.exports.getAllOrders = async (req, res) => {
       end_date,
       page,
       limit,
+      search,
+      sort,
+      order
     });
-
-    // First, let's check the total count without any filters
-    const totalCount = await Order.count();
-    console.log("TOTAL ORDERS IN DATABASE (no filters):", totalCount);
-
-    // Check for suspicious patterns
-    const recentOrders = await Order.findAll({
-      attributes: ["id", "order_number", "createdAt"],
-      order: [["createdAt", "DESC"]],
-      limit: 10,
-    });
-    console.log("=== RECENT 10 ORDERS ===");
-    recentOrders.forEach((order) => {
-      console.log(
-        `ID: ${order.id}, Order: ${order.order_number}, Created: ${order.createdAt}`
-      );
-    });
-
-    // Check for orders created today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayOrders = await Order.count({
-      where: {
-        createdAt: {
-          [Op.gte]: today,
-        },
-      },
-    });
-    console.log("ORDERS CREATED TODAY:", todayOrders);
 
     // Build filter based on query parameters
     const filter = {};
-    if (status) filter.status = status;
-    if (payment_status) filter.payment_status = payment_status;
+    
+    // Status filter
+    if (status && status !== 'all') {
+      filter.status = status;
+    }
+    
+    // Payment status filter
+    if (payment_status && payment_status !== 'all') {
+      filter.payment_status = payment_status;
+    }
 
     // Date range filter
     if (start_date && end_date) {
@@ -1325,15 +1310,50 @@ module.exports.getAllOrders = async (req, res) => {
       };
     }
 
+    // Search functionality
+    const searchConditions = [];
+    if (search && search.trim()) {
+      const searchTerm = search.trim();
+      
+      // Search in order number
+      searchConditions.push({
+        order_number: {
+          [Op.like]: `%${searchTerm}%`
+        }
+      });
+      
+      // Search in final amount
+      if (!isNaN(searchTerm)) {
+        searchConditions.push({
+          final_amount: {
+            [Op.like]: `%${searchTerm}%`
+          }
+        });
+      }
+      
+      // Search in tracking number
+      searchConditions.push({
+        tracking_number: {
+          [Op.like]: `%${searchTerm}%`
+        }
+      });
+      
+      // Search in courier name
+      searchConditions.push({
+        courier_name: {
+          [Op.like]: `%${searchTerm}%`
+        }
+      });
+    }
+
     // Pagination
     const offset = (page - 1) * limit;
 
-    // Add sorting support
-    const sortField = req.query.sort || "createdAt";
-    const sortOrder = req.query.order || "DESC";
-    const orderClause = [[sortField, sortOrder]];
+    // Build order clause
+    const orderClause = [[sort, order.toUpperCase()]];
 
-    const orders = await Order.findAndCountAll({
+    // Build the main query
+    const queryOptions = {
       where: filter,
       distinct: true,
       col: "id",
@@ -1343,12 +1363,54 @@ module.exports.getAllOrders = async (req, res) => {
           as: "User",
           attributes: ["id", "username", "email"],
           required: false,
+          ...(search && search.trim() ? {
+            where: {
+              [Op.or]: [
+                {
+                  username: {
+                    [Op.like]: `%${search.trim()}%`
+                  }
+                },
+                {
+                  email: {
+                    [Op.like]: `%${search.trim()}%`
+                  }
+                }
+              ]
+            }
+          } : {})
         },
         {
           model: GuestUser,
           as: "GuestUser",
           attributes: ["id", "email", "firstName", "lastName", "phone"],
           required: false,
+          ...(search && search.trim() ? {
+            where: {
+              [Op.or]: [
+                {
+                  email: {
+                    [Op.like]: `%${search.trim()}%`
+                  }
+                },
+                {
+                  firstName: {
+                    [Op.like]: `%${search.trim()}%`
+                  }
+                },
+                {
+                  lastName: {
+                    [Op.like]: `%${search.trim()}%`
+                  }
+                },
+                {
+                  phone: {
+                    [Op.like]: `%${search.trim()}%`
+                  }
+                }
+              ]
+            }
+          } : {})
         },
         {
           model: ShippingAddress,
@@ -1364,6 +1426,37 @@ module.exports.getAllOrders = async (req, res) => {
             "country",
           ],
           required: false,
+          ...(search && search.trim() ? {
+            where: {
+              [Op.or]: [
+                {
+                  full_name: {
+                    [Op.like]: `%${search.trim()}%`
+                  }
+                },
+                {
+                  phone: {
+                    [Op.like]: `%${search.trim()}%`
+                  }
+                },
+                {
+                  address: {
+                    [Op.like]: `%${search.trim()}%`
+                  }
+                },
+                {
+                  city: {
+                    [Op.like]: `%${search.trim()}%`
+                  }
+                },
+                {
+                  pincode: {
+                    [Op.like]: `%${search.trim()}%`
+                  }
+                }
+              ]
+            }
+          } : {})
         },
         {
           model: OrderItem,
@@ -1393,7 +1486,27 @@ module.exports.getAllOrders = async (req, res) => {
       order: orderClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-    });
+    };
+
+    // Add search conditions to main where clause if any
+    if (searchConditions.length > 0) {
+      if (Object.keys(filter).length > 0) {
+        queryOptions.where = {
+          [Op.and]: [
+            filter,
+            {
+              [Op.or]: searchConditions
+            }
+          ]
+        };
+      } else {
+        queryOptions.where = {
+          [Op.or]: searchConditions
+        };
+      }
+    }
+
+    const orders = await Order.findAndCountAll(queryOptions);
 
     const totalPages = Math.ceil(orders.count / limit);
 
@@ -1403,33 +1516,13 @@ module.exports.getAllOrders = async (req, res) => {
       limit: parseInt(limit),
       page: parseInt(page),
       totalPages,
+      searchTerm: search || 'none',
+      filtersApplied: {
+        status: status || 'all',
+        payment_status: payment_status || 'all',
+        hasDateRange: !!(start_date && end_date)
+      }
     });
-
-    // Log all order IDs and details
-    console.log("=== ALL ORDER IDs AND DETAILS ===");
-    orders.rows.forEach((order, index) => {
-      console.log(
-        `${index + 1}. ID: ${order.id}, Order: ${order.order_number}, Amount: ${
-          order.total_amount
-        }, Status: ${order.status}, Created: ${order.createdAt}`
-      );
-    });
-
-    // Check for duplicate order numbers
-    const orderNumbers = orders.rows.map((order) => order.order_number);
-    const uniqueOrderNumbers = [...new Set(orderNumbers)];
-    console.log("=== DUPLICATE CHECK ===");
-    console.log("Total orders returned:", orderNumbers.length);
-    console.log("Unique order numbers:", uniqueOrderNumbers.length);
-    if (orderNumbers.length !== uniqueOrderNumbers.length) {
-      console.log("❌ DUPLICATE ORDER NUMBERS FOUND!");
-      const duplicates = orderNumbers.filter(
-        (item, index) => orderNumbers.indexOf(item) !== index
-      );
-      console.log("Duplicate order numbers:", [...new Set(duplicates)]);
-    } else {
-      console.log("✅ No duplicate order numbers");
-    }
 
     res.json({
       orders: orders.rows,
@@ -1441,6 +1534,13 @@ module.exports.getAllOrders = async (req, res) => {
         limit: parseInt(limit),
         totalPages,
       },
+      filters: {
+        status: status || 'all',
+        payment_status: payment_status || 'all',
+        search: search || '',
+        sort,
+        order
+      }
     });
   } catch (error) {
     console.error("Error getting orders:", error);

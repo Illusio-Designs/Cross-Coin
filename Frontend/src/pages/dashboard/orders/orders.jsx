@@ -53,9 +53,19 @@ const Orders = () => {
                 limit: itemsPerPage,
                 status: statusFilter !== 'all' ? statusFilter : undefined,
                 payment_status: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
+                search: filterValue || undefined, // Add search parameter
                 sort: sortBy,
                 order: sortOrder
             };
+            
+            // Remove undefined values
+            Object.keys(params).forEach(key => {
+                if (params[key] === undefined) {
+                    delete params[key];
+                }
+            });
+            
+            console.log('Fetching orders with params:', params);
             
             const data = await orderService.getAllOrders(params);
             
@@ -79,8 +89,16 @@ const Orders = () => {
                 page: 1,
                 limit: 10000, // Get all orders
                 status: statusFilter !== 'all' ? statusFilter : undefined,
-                payment_status: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined
+                payment_status: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
+                search: filterValue || undefined // Add search parameter
             };
+            
+            // Remove undefined values
+            Object.keys(params).forEach(key => {
+                if (params[key] === undefined) {
+                    delete params[key];
+                }
+            });
             
             const data = await orderService.getAllOrders(params);
             const allOrders = data.orders || data.data || [];
@@ -353,8 +371,16 @@ const Orders = () => {
         }
     }, [currentPage]);
 
-    const debouncedSearch = useCallback(debounce((searchTerm) => setFilterValue(searchTerm), 300), []);
-    const handleSearchChange = (e) => debouncedSearch(e.target.value);
+    const debouncedSearch = useCallback(debounce((searchTerm) => {
+        setFilterValue(searchTerm);
+        setCurrentPage(1); // Reset to first page when searching
+    }, 300), []);
+    
+    const handleSearchChange = (e) => {
+        const value = e.target.value;
+        setFilterValue(value); // Update immediately for UI responsiveness
+        debouncedSearch(value); // Debounced API call
+    };
 
     // Remove manual status change - now handled automatically by FShip sync
     // const handleStatusChange = async (orderId, newStatus) => {
@@ -529,74 +555,9 @@ const Orders = () => {
         return stats;
     };
 
-    const filteredData = orders.filter(order => {
-        if (filterValue) {
-        const searchTerm = filterValue.toLowerCase();
-            const matchesSearch = (
-            order.order_number.toLowerCase().includes(searchTerm) ||
-                order.User?.username.toLowerCase().includes(searchTerm) ||
-                order.User?.email?.toLowerCase().includes(searchTerm)
-            );
-            if (!matchesSearch) return false;
-        }
-        
-        if (paymentTypeFilter !== "all") {
-            const orderPaymentType = order.payment_type?.toLowerCase();
-            if (paymentTypeFilter === "prepaid") {
-                if (!['credit_card', 'debit_card', 'upi', 'wallet'].includes(orderPaymentType)) {
-                    return false;
-                }
-            } else if (paymentTypeFilter === "cod") {
-                if (orderPaymentType !== 'cod') {
-                    return false;
-                }
-            }
-        }
-
-        if (statusFilter !== "all") {
-            if (order.status?.toLowerCase() !== statusFilter) {
-                return false;
-            }
-        }
-        
-        return true;
-    });
-
-    const sortedData = [...filteredData].sort((a, b) => {
-        let aValue, bValue;
-        
-        switch (sortBy) {
-            case 'order_number':
-                aValue = a.order_number;
-                bValue = b.order_number;
-                break;
-            case 'total':
-                aValue = getOrderTotal(a);
-                bValue = getOrderTotal(b);
-                break;
-            case 'status':
-                aValue = a.status;
-                bValue = b.status;
-                break;
-            case 'payment_status':
-                aValue = getPaymentStatusDisplay(a);
-                bValue = getPaymentStatusDisplay(b);
-                break;
-            default:
-                aValue = new Date(a.createdAt);
-                bValue = new Date(b.createdAt);
-        }
-        
-        if (sortOrder === 'asc') {
-            return aValue > bValue ? 1 : -1;
-        } else {
-            return aValue < bValue ? 1 : -1;
-        }
-    });
-
-    // Backend already handles pagination, so we just add serial numbers based on current page
+    // Backend already handles pagination, filtering, and sorting, so we just add serial numbers based on current page
     const indexOfFirstItem = (currentPage - 1) * itemsPerPage;
-    const currentItemsWithSN = sortedData.map((item, idx) => ({
+    const currentItemsWithSN = orders.map((item, idx) => ({
         ...item,
         serial_number: indexOfFirstItem + idx + 1
     }));
@@ -908,7 +869,28 @@ const Orders = () => {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
                                 </span>
-                                <input type="text" className="modern-searchbar-input" placeholder="Search orders, customers..." onChange={handleSearchChange} />
+                                <input 
+                                    type="text" 
+                                    className="modern-searchbar-input" 
+                                    placeholder="Search orders, customers, phone, AWB..." 
+                                    value={filterValue}
+                                    onChange={handleSearchChange} 
+                                />
+                                {filterValue && (
+                                    <button 
+                                        type="button"
+                                        className="clear-search-btn"
+                                        onClick={() => {
+                                            setFilterValue('');
+                                            setCurrentPage(1);
+                                        }}
+                                        title="Clear search"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                )}
                             </div>
                         </form>
                         <select 
@@ -928,9 +910,17 @@ const Orders = () => {
                             <option value="all">All Status</option>
                             <option value="pending">Pending</option>
                             <option value="processing">Processing</option>
+                            <option value="booked">Booked</option>
+                            <option value="pickup initiated">Pickup Initiated</option>
+                            <option value="manifested">Manifested</option>
+                            <option value="in transit">In Transit</option>
                             <option value="shipped">Shipped</option>
+                            <option value="out for delivery">Out for Delivery</option>
                             <option value="delivered">Delivered</option>
+                            <option value="rto">RTO</option>
                             <option value="cancelled">Cancelled</option>
+                            <option value="order cancelled">Order Cancelled</option>
+                            <option value="exception">Exception</option>
                         </select>
                     </div>
                 </div>
@@ -958,7 +948,7 @@ const Orders = () => {
                         </div>
                     ) :
                         <>
-                            {filteredData.length === 0 ? <div className="seo-empty-state">No orders found.</div> :
+                            {orders.length === 0 ? <div className="seo-empty-state">No orders found.</div> :
                                 <>
                             {/* Payment Statistics */}
                             <div className="payment-stats">
@@ -1029,11 +1019,7 @@ const Orders = () => {
                                 </div>
                             </div>
 
-                            <div className="info-note">
-                                <strong>Order Management:</strong> Order statuses are automatically synchronized with FShip. 
-                                Use "FShip Sync" for bulk operations, individual "Sync" buttons for unsynced orders, 
-                                or "Update" button for synced orders. Manual status changes are disabled to maintain sync integrity.
-                            </div>
+                            
 
                             <div className="orders-table">
                             <Table 
