@@ -18,6 +18,7 @@ const {
     syncOrdersWithFShip,
     handleFShipWebhook,
     updateSingleOrderFromFShip,
+    syncSingleOrderWithFShip,
     trackOrderByOrderNumber
 } = require('../controller/orderController.js');
 const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
@@ -42,6 +43,7 @@ router.post('/fship/sync', isAuthenticated, authorize(['admin']), syncOrdersWith
 router.post('/fship/cancel', isAuthenticated, authorize(['admin']), cancelOrdersInFShip);
 router.get('/fship/couriers', isAuthenticated, authorize(['admin']), getFShipCouriers);
 router.put('/:id/fship/update', isAuthenticated, authorize(['admin']), updateSingleOrderFromFShip);
+router.put('/:id/fship/sync', isAuthenticated, authorize(['admin']), syncSingleOrderWithFShip);
 router.put('/:id/admin/cancel', isAuthenticated, authorize(['admin']), adminCancelOrder);
 
 // Guest checkout route (no authentication required)

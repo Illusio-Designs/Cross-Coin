@@ -245,6 +245,34 @@ const Orders = () => {
         }
     };
 
+    const syncSingleOrder = async (orderId, orderNumber) => {
+        try {
+            const result = await orderService.syncSingleOrderWithFShip(orderId);
+            
+            if (result.success) {
+                toast.success(`Order ${orderNumber} synced successfully with FShip! AWB: ${result.data?.fship_response?.waybill || 'Generated'}`);
+                
+                // Refresh orders after sync
+                fetchOrders();
+                fetchAllOrdersForStats();
+            } else {
+                toast.error(result.message || 'Failed to sync order with FShip');
+            }
+        } catch (error) {
+            console.error('=== Single Order Sync Failed ===');
+            console.error('Error object:', error);
+            
+            let errorMessage = 'Failed to sync order with FShip';
+            if (error.message) {
+                errorMessage = error.message;
+            } else if (error.error) {
+                errorMessage = error.error;
+            }
+            
+            toast.error(errorMessage);
+        }
+    };
+
     const cancelOrder = async (orderId, orderNumber) => {
         const reason = prompt(`Enter cancellation reason for order ${orderNumber}:`);
         if (!reason) return;
@@ -594,38 +622,28 @@ const Orders = () => {
         },
         {
             header: "Actions",
-            cell: (row) => (
-                <div className="action-buttons">
-                    <button 
-                        className="action-btn view" 
-                        title="View Details" 
-                        onClick={() => { setSelectedOrder(row); setIsViewModalOpen(true); }}
-                    >
-                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                    </button>
-                    
-                    {(row.fship_waybill) && (
-                        <button 
-                            className="action-btn edit" 
-                            title="Update" 
-                            onClick={() => updateSingleOrder(row.id)}
-                        >
-                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                            </svg>
-                        </button>
-                    )}
+            cell: (row) => {
+                // Debug logging to see what's happening
+                console.log('Order row data:', {
+                    id: row.id,
+                    order_number: row.order_number,
+                    status: row.status,
+                    fship_order_id: row.fship_order_id,
+                    fship_waybill: row.fship_waybill,
+                    hasSync: !(row.fship_order_id || row.fship_waybill) && (row.status === 'pending' || row.status === 'processing'),
+                    hasUpdate: !!row.fship_waybill,
+                    hasCancel: (row.status === 'pending' || row.status === 'processing')
+                });
 
-                    {(row.status === 'pending' || row.status === 'processing') && (
+                return (
+                    <div className="action-buttons" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                        {/* View button - always visible */}
                         <button 
-                            className="action-btn cancel" 
-                            title="Cancel Order & Sync with FShip" 
-                            onClick={() => cancelOrder(row.id, row.order_number)}
+                            className="action-btn view" 
+                            title="View Details" 
+                            onClick={() => { setSelectedOrder(row); setIsViewModalOpen(true); }}
                             style={{
-                                backgroundColor: '#dc3545',
+                                backgroundColor: '#007bff',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '4px',
@@ -633,20 +651,95 @@ const Orders = () => {
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.2s ease',
-                                marginLeft: '4px'
+                                justifyContent: 'center'
                             }}
-                            onMouseOver={(e) => e.target.style.backgroundColor = '#c82333'}
-                            onMouseOut={(e) => e.target.style.backgroundColor = '#dc3545'}
                         >
                             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
                         </button>
-                    )}
-                </div>
-            )
+                        
+                        {/* Sync button for unsynced orders */}
+                        {!(row.fship_order_id || row.fship_waybill) && (row.status === 'pending' || row.status === 'processing') && (
+                            <button 
+                                className="action-btn sync" 
+                                title="Sync with FShip" 
+                                onClick={() => syncSingleOrder(row.id, row.order_number)}
+                                style={{
+                                    backgroundColor: '#28a745',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    padding: '6px 8px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s ease'
+                                }}
+                                onMouseOver={(e) => e.target.style.backgroundColor = '#218838'}
+                                onMouseOut={(e) => e.target.style.backgroundColor = '#28a745'}
+                            >
+                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                            </button>
+                        )}
+                        
+                        {/* Update button for synced orders */}
+                        {(row.fship_waybill) && (
+                            <button 
+                                className="action-btn edit" 
+                                title="Update from FShip" 
+                                onClick={() => updateSingleOrder(row.id)}
+                                style={{
+                                    backgroundColor: '#17a2b8',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    padding: '6px 8px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                                </svg>
+                            </button>
+                        )}
+
+                        {/* Cancel button for pending/processing orders */}
+                        {(row.status === 'pending' || row.status === 'processing') && (
+                            <button 
+                                className="action-btn cancel" 
+                                title="Cancel Order & Sync with FShip" 
+                                onClick={() => cancelOrder(row.id, row.order_number)}
+                                style={{
+                                    backgroundColor: '#dc3545',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    padding: '6px 8px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s ease'
+                                }}
+                                onMouseOver={(e) => e.target.style.backgroundColor = '#c82333'}
+                                onMouseOut={(e) => e.target.style.backgroundColor = '#dc3545'}
+                            >
+                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        )}
+                    </div>
+                );
+            }
         }
     ];
 
@@ -867,8 +960,8 @@ const Orders = () => {
 
                             <div className="info-note">
                                 <strong>Order Management:</strong> Order statuses are automatically synchronized with FShip. 
-                                Use "FShip Sync" for new orders and status updates, 
-                                or "Update" button for individual orders. Manual status changes are disabled to maintain sync integrity.
+                                Use "FShip Sync" for bulk operations, individual "Sync" buttons for unsynced orders, 
+                                or "Update" button for synced orders. Manual status changes are disabled to maintain sync integrity.
                             </div>
 
                             <div className="orders-table">

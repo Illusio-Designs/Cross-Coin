@@ -52,7 +52,25 @@ class FShipService {
         if (error.response?.status === 401) {
             throw new Error('FShip authentication failed: Invalid API key');
         } else if (error.response?.status === 400) {
-            throw new Error(`FShip ${operation} failed: ${error.response?.data?.response || 'Bad request'}`);
+            // Try to get more specific error details
+            const errorData = error.response?.data;
+            let errorMessage = 'Bad request';
+            
+            if (errorData) {
+                if (errorData.response) {
+                    errorMessage = errorData.response;
+                } else if (errorData.message) {
+                    errorMessage = errorData.message;
+                } else if (errorData.error) {
+                    errorMessage = errorData.error;
+                } else if (typeof errorData === 'string') {
+                    errorMessage = errorData;
+                } else {
+                    errorMessage = `Bad request - ${JSON.stringify(errorData)}`;
+                }
+            }
+            
+            throw new Error(`FShip ${operation} failed: ${errorMessage}`);
         } else if (!error.response) {
             throw new Error(`FShip ${operation} failed: Network error`);
         } else {
@@ -486,6 +504,45 @@ class FShipService {
                 success: false,
                 message: error.message
             };
+        }
+    }
+
+    /**
+     * Check if order exists in FShip by order ID
+     */
+    async checkOrderExists(orderId) {
+        try {
+            console.log('=== FShip Check Order Exists ===');
+            console.log('Order ID:', orderId);
+
+            // Try to get order details - if it exists, we'll get data back
+            const payload = {
+                orderId: orderId
+            };
+
+            const response = await this.axiosInstance.post('/api/getorderdetails', payload);
+            
+            if (response.data && response.data.data) {
+                console.log('Order exists in FShip:', response.data.data);
+                return {
+                    exists: true,
+                    data: response.data.data
+                };
+            }
+            
+            return { exists: false };
+        } catch (error) {
+            // If we get a 404 or "order not found" error, the order doesn't exist
+            if (error.response?.status === 404 || 
+                error.response?.data?.message?.toLowerCase().includes('not found') ||
+                error.response?.data?.response?.toLowerCase().includes('not found')) {
+                console.log('Order does not exist in FShip');
+                return { exists: false };
+            }
+            
+            // For other errors, we can't determine if it exists, so we'll assume it doesn't
+            console.error('Error checking order existence:', error.message);
+            return { exists: false, error: error.message };
         }
     }
 }
