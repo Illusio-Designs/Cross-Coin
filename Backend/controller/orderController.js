@@ -2761,11 +2761,97 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
     
     // Check if order already exists in FShip using comprehensive search
     try {
-      console.log(`🔍 Searching for order ${order.order_number} in all FShip orders...`);
+      console.log(`🔍 Searching for order ${order.order_number} in FShip...`);
+      
+      // If we already have an AWB, use tracking history to get current status
+      if (order.fship_waybill || order.tracking_number) {
+        const awb = order.fship_waybill || order.tracking_number;
+        console.log(`📋 Order has existing AWB ${awb}, checking tracking history...`);
+        
+        try {
+          const trackingResult = await fshipService.getTrackingHistory(awb);
+          
+          if (trackingResult && trackingResult.summary) {
+            console.log(`✅ Found order via tracking history!`);
+            
+            // Update our local order with the latest tracking data
+            const updateData = {};
+            let hasUpdates = false;
+            
+            // Update FShip Order ID if we don't have it
+            if (trackingResult.summary.apiorderid && (!order.fship_order_id || order.fship_order_id === "0")) {
+              updateData.fship_order_id = trackingResult.summary.apiorderid;
+              hasUpdates = true;
+            }
+            
+            // Update status if different
+            const fshipStatus = trackingResult.summary.status;
+            if (fshipStatus) {
+              const newStatus = fshipService.mapFShipStatusToCrossCoin(fshipStatus);
+              if (newStatus !== order.status) {
+                updateData.status = newStatus;
+                hasUpdates = true;
+                console.log(`📊 Status update: ${order.status} → ${newStatus} (FShip: ${fshipStatus})`);
+              }
+            }
+            
+            // Update courier information
+            if (trackingResult.summary.fulfilledby && (!order.courier_name || order.courier_name !== trackingResult.summary.fulfilledby)) {
+              updateData.courier_name = trackingResult.summary.fulfilledby;
+              hasUpdates = true;
+            }
+            
+            if (hasUpdates) {
+              await order.update(updateData, { transaction });
+              console.log(`✅ Updated local order ${order.order_number} with latest tracking data`);
+              console.log('Updated data:', updateData);
+              
+              // Create status history entry for status changes
+              if (updateData.status && updateData.status !== order.status) {
+                await OrderStatusHistory.create({
+                  order_id: order.id,
+                  status: updateData.status,
+                  notes: `Status updated from FShip tracking: ${fshipStatus}`,
+                  updated_by: null,
+                  created_by: "fship_sync"
+                }, { transaction });
+                console.log(`📝 Created status history entry: ${updateData.status}`);
+              }
+            }
+            
+            await transaction.commit();
+            
+            return res.json({
+              success: true,
+              message: `Order ${order.order_number} ${hasUpdates ? 'updated' : 'already synced'} with latest FShip tracking data`,
+              data: {
+                order: {
+                  id: order.id,
+                  order_number: order.order_number,
+                  status: updateData.status || order.status,
+                  fship_order_id: updateData.fship_order_id || order.fship_order_id,
+                  fship_waybill: order.fship_waybill,
+                  fship_route_code: order.fship_route_code,
+                  tracking_number: order.tracking_number,
+                  courier_name: updateData.courier_name || order.courier_name
+                },
+                tracking_data: trackingResult.summary,
+                updates_applied: hasUpdates,
+                note: "Order status updated from FShip tracking history"
+              }
+            });
+          }
+        } catch (trackingError) {
+          console.log(`⚠️ Could not get tracking history for AWB ${awb}: ${trackingError.message}`);
+          // Continue with other search methods
+        }
+      }
+      
+      // Try to find the order using various search methods
       const existsCheck = await fshipService.findOrderByIdFromAll(order.order_number);
       
       if (existsCheck.exists) {
-        console.log(`⚠️ Order ${order.order_number} found in FShip`);
+        console.log(`⚠️ Order ${order.order_number} found in FShip via ${existsCheck.source || 'search'}`);
         if (existsCheck.totalFound > 1) {
           console.log(`📋 Found ${existsCheck.totalFound} duplicate orders, selected the best one`);
         }
@@ -2795,39 +2881,60 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
           hasUpdates = true;
         }
         
-        // Update Status
+        // Update Status - this is crucial for delivered orders
         const fshipStatus = existsCheck.data.order_status || existsCheck.data.status;
         if (fshipStatus) {
           const newStatus = fshipService.mapFShipStatusToCrossCoin(fshipStatus);
           if (newStatus !== order.status) {
             updateData.status = newStatus;
             hasUpdates = true;
+            console.log(`📊 Status update: ${order.status} → ${newStatus} (FShip: ${fshipStatus})`);
           }
+        }
+        
+        // Update courier information if available
+        if (existsCheck.data.courier_name && (!order.courier_name || order.courier_name !== existsCheck.data.courier_name)) {
+          updateData.courier_name = existsCheck.data.courier_name;
+          hasUpdates = true;
         }
         
         if (hasUpdates) {
           await order.update(updateData, { transaction });
           console.log(`✅ Updated local order ${order.order_number} with best FShip data`);
           console.log('Updated data:', updateData);
+          
+          // Create status history entry for status changes
+          if (updateData.status && updateData.status !== order.status) {
+            await OrderStatusHistory.create({
+              order_id: order.id,
+              status: updateData.status,
+              notes: `Status updated from FShip sync: ${fshipStatus}`,
+              updated_by: null,
+              created_by: "fship_sync"
+            }, { transaction });
+            console.log(`📝 Created status history entry: ${updateData.status}`);
+          }
         }
         
         await transaction.commit();
         
         return res.json({
           success: true,
-          message: `Order ${order.order_number} found in FShip and synchronized with latest data`,
+          message: `Order ${order.order_number} ${hasUpdates ? 'updated' : 'already synced'} with FShip data${existsCheck.totalFound > 1 ? ` (selected best from ${existsCheck.totalFound} duplicates)` : ''}`,
           data: {
             order: {
               id: order.id,
               order_number: order.order_number,
-              status: order.status,
-              fship_order_id: order.fship_order_id,
-              fship_waybill: order.fship_waybill,
-              fship_route_code: order.fship_route_code,
-              tracking_number: order.tracking_number
+              status: updateData.status || order.status,
+              fship_order_id: updateData.fship_order_id || order.fship_order_id,
+              fship_waybill: updateData.fship_waybill || order.fship_waybill,
+              fship_route_code: updateData.fship_route_code || order.fship_route_code,
+              tracking_number: updateData.tracking_number || order.tracking_number,
+              courier_name: updateData.courier_name || order.courier_name
             },
             fship_data: existsCheck.data,
             duplicates_found: existsCheck.totalFound || 1,
+            updates_applied: hasUpdates,
             note: existsCheck.totalFound > 1 
               ? `Found ${existsCheck.totalFound} duplicate orders in FShip, selected the best one (delivered/latest)`
               : "Order found and synchronized with FShip data"
