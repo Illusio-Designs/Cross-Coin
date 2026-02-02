@@ -2403,3 +2403,103 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
     });
   }
 };
+
+// Admin cancel order (by admin)
+module.exports.adminCancelOrder = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const orderId = req.params.id;
+    const { reason } = req.body;
+    const adminId = req.user.id;
+
+    const order = await Order.findByPk(orderId);
+    if (!order) {
+      await transaction.rollback();
+      return res.status(404).json({ 
+        success: false,
+        message: "Order not found" 
+      });
+    }
+
+    // Cannot cancel if already delivered or cancelled
+    if (order.status === "delivered" || order.status === "cancelled") {
+      await transaction.rollback();
+      return res.status(400).json({ 
+        success: false,
+        message: `Cannot cancel ${order.status} orders` 
+      });
+    }
+
+    // Update order status
+    order.status = "cancelled";
+    await order.save({ transaction });
+
+    // Create status history entry with admin's reason
+    await OrderStatusHistory.create(
+      {
+        order_id: order.id,
+        status: "cancelled",
+        updated_by: adminId,
+        notes: `Admin cancelled: ${reason || 'No reason provided'}`,
+        created_by: "admin"
+      },
+      { transaction }
+    );
+
+    // If payment is 'paid', mark for refund
+    if (order.payment_status === "paid") {
+      const payment = await Payment.findOne({
+        where: { order_id: order.id, status: "completed" },
+      });
+
+      if (payment) {
+        payment.status = "refunded";
+        await payment.save({ transaction });
+
+        order.payment_status = "refunded";
+        await order.save({ transaction });
+      }
+    }
+
+    // Cancel order in FShip if it exists
+    if (order.fship_waybill) {
+      try {
+        const cancelRes = await fshipService.cancelOrder(
+          order.fship_waybill,
+          reason || "Order cancelled by admin"
+        );
+        console.log("FShip order cancelled successfully:", cancelRes);
+      } catch (err) {
+        console.error(
+          "Failed to cancel FShip order:",
+          err.message
+        );
+        // Don't fail the entire operation if FShip cancel fails
+      }
+    }
+
+    await transaction.commit();
+
+    res.json({
+      success: true,
+      message: "Order cancelled successfully by admin",
+      data: {
+        order: {
+          id: order.id,
+          order_number: order.order_number,
+          status: order.status,
+          payment_status: order.payment_status
+        }
+      }
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error cancelling order (admin):", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to cancel order", 
+      error: error.message 
+    });
+  }
+};

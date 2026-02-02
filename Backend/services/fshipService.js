@@ -635,22 +635,35 @@ class FShipService {
         if (!fshipStatus) return 'processing';
         
         const status = fshipStatus.toLowerCase().trim();
-        const statusMapping = {
-            'booked': 'processing',
-            'pickup initiated': 'processing',
-            'manifested': 'processing',
-            'in transit': 'shipped',
-            'out for delivery': 'out_for_delivery',
-            'delivered': 'delivered',
-            'rto': 'returned',
-            'cancelled': 'cancelled',
-            'order cancelled': 'cancelled',
-            'exception': 'exception'
+        
+        // Valid FShip statuses that we now support directly
+        const validStatuses = [
+            'booked', 
+            'pickup initiated', 
+            'manifested', 
+            'in transit', 
+            'out for delivery', 
+            'delivered', 
+            'rto', 
+            'cancelled', 
+            'order cancelled', 
+            'exception'
+        ];
+
+        if (validStatuses.includes(status)) {
+            console.log(`📊 Using FShip status directly: "${fshipStatus}"`);
+            return status;
+        }
+        
+        // Legacy mapping for any edge cases
+        const legacyMapping = {
+            'shipped': 'in transit',
+            'processing': 'booked'
         };
 
-        const mappedStatus = statusMapping[status];
+        const mappedStatus = legacyMapping[status];
         if (mappedStatus) {
-            console.log(`📊 Status mapping: "${fshipStatus}" → "${mappedStatus}"`);
+            console.log(`📊 Legacy status mapping: "${fshipStatus}" → "${mappedStatus}"`);
             return mappedStatus;
         }
         
@@ -713,27 +726,8 @@ class FShipService {
                 return { exists: false };
             }
             
-            // Try alternative method - get all orders and search for this one
-            try {
-                console.log('Trying alternative method to find order...');
-                const allOrdersResponse = await this.axiosInstance.get('/api/getallorders');
-                
-                if (allOrdersResponse.data && Array.isArray(allOrdersResponse.data)) {
-                    const foundOrder = allOrdersResponse.data.find(order => 
-                        order.orderId === orderId || order.order_id === orderId
-                    );
-                    
-                    if (foundOrder) {
-                        console.log('Order found via alternative method:', foundOrder);
-                        return {
-                            exists: true,
-                            data: foundOrder
-                        };
-                    }
-                }
-            } catch (altError) {
-                console.error('Alternative method also failed:', altError.message);
-            }
+            // Alternative method disabled due to 404 error on /api/getallorders endpoint
+            console.log('Alternative method disabled - endpoint not available');
             
             // For other errors, we can't determine if it exists, so we'll assume it doesn't
             console.error('Error checking order existence:', error.message);
