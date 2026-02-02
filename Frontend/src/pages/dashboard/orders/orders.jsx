@@ -189,6 +189,10 @@ const Orders = () => {
                 message += `${results.tracking_updates} tracking updates. `;
             }
             
+            if (results.skipped_final_state > 0) {
+                message += `${results.skipped_final_state} orders skipped (delivered/cancelled). `;
+            }
+            
             if (results.failed > 0) {
                 message += `${results.failed} orders failed. `;
                 console.error('Failed orders:', results.errors);
@@ -351,7 +355,7 @@ const Orders = () => {
     const debouncedSearch = useCallback(debounce((searchTerm) => setFilterValue(searchTerm), 300), []);
     const handleSearchChange = (e) => debouncedSearch(e.target.value);
 
-    // Remove manual status change - now handled automatically by Shiprocket sync
+    // Remove manual status change - now handled automatically by FShip sync
     // const handleStatusChange = async (orderId, newStatus) => {
     //     try {
     //         await orderService.updateOrderStatus(orderId, { status: newStatus });
@@ -684,32 +688,56 @@ const Orders = () => {
                             </svg>
                         </button>
                         
-                        {/* Sync button - always visible for all orders */}
+                        {/* Sync button - always visible but disabled for final states */}
                         <button 
                             className="action-btn sync" 
-                            title={row.fship_order_id || row.fship_waybill ? "Re-sync with FShip" : "Sync with FShip"}
+                            title={
+                                (row.status === 'delivered' || row.status === 'cancelled') 
+                                    ? `Order is ${row.status} - no sync needed`
+                                    : (row.fship_order_id || row.fship_waybill ? "Re-sync with FShip" : "Sync with FShip")
+                            }
                             onClick={() => syncSingleOrder(row.id, row.order_number)}
-                            disabled={syncingOrders.has(row.id) || syncingAll}
+                            disabled={
+                                syncingOrders.has(row.id) || 
+                                syncingAll || 
+                                row.status === 'delivered' || 
+                                row.status === 'cancelled'
+                            }
                             style={{
-                                backgroundColor: (syncingOrders.has(row.id) || syncingAll) ? '#6c757d' : '#28a745',
+                                backgroundColor: (
+                                    syncingOrders.has(row.id) || 
+                                    syncingAll || 
+                                    row.status === 'delivered' || 
+                                    row.status === 'cancelled'
+                                ) ? '#6c757d' : '#28a745',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '4px',
                                 padding: '6px 8px',
-                                cursor: (syncingOrders.has(row.id) || syncingAll) ? 'not-allowed' : 'pointer',
+                                cursor: (
+                                    syncingOrders.has(row.id) || 
+                                    syncingAll || 
+                                    row.status === 'delivered' || 
+                                    row.status === 'cancelled'
+                                ) ? 'not-allowed' : 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 transition: 'all 0.2s ease',
-                                opacity: (syncingOrders.has(row.id) || syncingAll) ? 0.6 : 1
+                                opacity: (
+                                    syncingOrders.has(row.id) || 
+                                    syncingAll || 
+                                    row.status === 'delivered' || 
+                                    row.status === 'cancelled'
+                                ) ? 0.6 : 1
                             }}
                             onMouseOver={(e) => {
-                                if (!syncingOrders.has(row.id) && !syncingAll) {
+                                if (!syncingOrders.has(row.id) && !syncingAll && row.status !== 'delivered' && row.status !== 'cancelled') {
                                     e.target.style.backgroundColor = '#218838';
                                 }
                             }}
                             onMouseOut={(e) => {
-                                if (!syncingOrders.has(row.id) && !syncingAll) {
+                                if (!syncingOrders.has(row.id) && !syncingAll && row.status !== 'delivered' && row.status !== 'cancelled') {
                                     e.target.style.backgroundColor = '#28a745';
                                 }
                             }}
@@ -717,6 +745,10 @@ const Orders = () => {
                             {(syncingOrders.has(row.id) || syncingAll) ? (
                                 <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="animate-spin">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                            ) : (row.status === 'delivered' || row.status === 'cancelled') ? (
+                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                 </svg>
                             ) : (
                                 <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -1111,19 +1143,6 @@ const Orders = () => {
                                                         Download Label PDF
                                                     </a>
                                                 </div>
-                                            )}
-                                        </div>
-                                    </>
-                                )}
-                                {/* Legacy Shiprocket Information (if exists) */}
-                                {(selectedOrder.shiprocket_order_id || selectedOrder.shiprocket_shipment_id) && (
-                                    <>
-                                        <div style={{ gridColumn: '1 / -1', marginTop: '12px', padding: '12px', backgroundColor: '#fff3cd', borderRadius: '6px' }}>
-                                            <h5 style={{ margin: '0 0 8px 0', color: '#856404' }}>Legacy Shiprocket Information</h5>
-                                            {selectedOrder.shiprocket_order_id && <div><strong>Shiprocket Order ID:</strong> {selectedOrder.shiprocket_order_id}</div>}
-                                            {selectedOrder.shiprocket_shipment_id && <div><strong>Shipment ID:</strong> {selectedOrder.shiprocket_shipment_id}</div>}
-                                            {selectedOrder.tracking_url && (
-                                                <div><strong>Track Package:</strong> <a href={selectedOrder.tracking_url} target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2' }}>Click to track</a></div>
                                             )}
                                         </div>
                                     </>

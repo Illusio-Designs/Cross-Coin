@@ -168,6 +168,184 @@ class FShipService {
     }
 
     /**
+     * Create or update forward order with existence check
+     */
+    async createOrUpdateForwardOrder(orderData) {
+        try {
+            console.log('=== FShip Create or Update Forward Order ===');
+            console.log('Order ID:', orderData.orderId);
+
+            // First check if order exists
+            const existingOrder = await this.findOrderByIdFromAll(orderData.orderId);
+            
+            if (existingOrder.exists) {
+                console.log(`📋 Order ${orderData.orderId} already exists in FShip`);
+                console.log('Existing order details:', existingOrder.data);
+                
+                // Check if order is in a state that can be updated
+                const currentStatus = (existingOrder.data.order_status || existingOrder.data.status || '').toLowerCase();
+                const updatableStatuses = ['booked', 'pickup initiated', 'pickup pending', 'processing'];
+                
+                if (updatableStatuses.includes(currentStatus)) {
+                    console.log(`🔄 Order status '${currentStatus}' allows updates. Attempting to update...`);
+                    return await this.updateExistingOrder(orderData, existingOrder.data);
+                } else {
+                    console.log(`⚠️ Order status '${currentStatus}' cannot be updated. Returning existing order info.`);
+                    return {
+                        success: true,
+                        action: 'existing',
+                        orderId: existingOrder.data.apiorderid || existingOrder.data.order_id,
+                        waybill: existingOrder.data.waybill || existingOrder.data.awb_number,
+                        status: currentStatus,
+                        message: `Order already exists with status: ${currentStatus}`,
+                        existingData: existingOrder.data
+                    };
+                }
+            } else {
+                console.log(`✨ Order ${orderData.orderId} not found. Creating new order...`);
+                const result = await this.createForwardOrder(orderData);
+                return {
+                    ...result,
+                    action: 'created'
+                };
+            }
+        } catch (error) {
+            console.error('Error in createOrUpdateForwardOrder:', error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * Update existing order in FShip
+     */
+    async updateExistingOrder(orderData, existingOrderData) {
+        try {
+            console.log('=== FShip Update Existing Order ===');
+            
+            // Try to cancel the existing order first if it has a waybill
+            const existingWaybill = existingOrderData.waybill || existingOrderData.awb_number;
+            
+            if (existingWaybill && existingWaybill !== 'N/A') {
+                try {
+                    console.log(`🗑️ Attempting to cancel existing order with waybill: ${existingWaybill}`);
+                    await this.cancelOrder(existingWaybill, 'Order updated - cancelling old version');
+                    console.log('✅ Existing order cancelled successfully');
+                } catch (cancelError) {
+                    console.log(`⚠️ Could not cancel existing order: ${cancelError.message}`);
+                    // Continue with creating new order even if cancel fails
+                }
+            }
+            
+            // Create new order with updated data
+            console.log('🆕 Creating new order with updated data...');
+            const result = await this.createForwardOrder(orderData);
+            
+            return {
+                ...result,
+                action: 'updated',
+                previousOrderId: existingOrderData.apiorderid || existingOrderData.order_id,
+                previousWaybill: existingWaybill
+            };
+        } catch (error) {
+            console.error('Error updating existing order:', error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * Bulk create or update forward orders
+     */
+    async bulkCreateOrUpdateOrders(ordersArray) {
+        try {
+            console.log('=== FShip Bulk Create/Update Orders ===');
+            console.log(`Processing ${ordersArray.length} orders...`);
+
+            const results = {
+                total: ordersArray.length,
+                created: 0,
+                updated: 0,
+                existing: 0,
+                failed: 0,
+                details: [],
+                errors: []
+            };
+
+            // Process orders with controlled concurrency (5 at a time to avoid rate limits)
+            const batchSize = 5;
+            for (let i = 0; i < ordersArray.length; i += batchSize) {
+                const batch = ordersArray.slice(i, i + batchSize);
+                console.log(`\n📦 Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(ordersArray.length/batchSize)}`);
+                
+                const batchPromises = batch.map(async (orderData, index) => {
+                    const globalIndex = i + index + 1;
+                    try {
+                        console.log(`\n🔄 [${globalIndex}/${ordersArray.length}] Processing order: ${orderData.orderId}`);
+                        
+                        const result = await this.createOrUpdateForwardOrder(orderData);
+                        
+                        console.log(`✅ [${globalIndex}/${ordersArray.length}] ${result.action.toUpperCase()}: ${orderData.orderId}`);
+                        
+                        results[result.action]++;
+                        results.details.push({
+                            orderNumber: orderData.orderId,
+                            action: result.action,
+                            success: true,
+                            fshipOrderId: result.orderId,
+                            waybill: result.waybill,
+                            status: result.status,
+                            message: result.message || `Order ${result.action} successfully`
+                        });
+                        
+                        return result;
+                    } catch (error) {
+                        console.error(`❌ [${globalIndex}/${ordersArray.length}] Failed: ${orderData.orderId} - ${error.message}`);
+                        
+                        results.failed++;
+                        results.errors.push({
+                            orderNumber: orderData.orderId,
+                            error: error.message,
+                            action: 'failed'
+                        });
+                        
+                        results.details.push({
+                            orderNumber: orderData.orderId,
+                            action: 'failed',
+                            success: false,
+                            error: error.message
+                        });
+                        
+                        return null;
+                    }
+                });
+
+                // Wait for current batch to complete
+                await Promise.all(batchPromises);
+                
+                // Add delay between batches to avoid rate limiting
+                if (i + batchSize < ordersArray.length) {
+                    console.log('⏳ Waiting 2 seconds before next batch...');
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+
+            // Generate summary
+            console.log('\n📊 BULK OPERATION SUMMARY:');
+            console.log('='.repeat(40));
+            console.log(`📦 Total Orders: ${results.total}`);
+            console.log(`✨ Created: ${results.created}`);
+            console.log(`🔄 Updated: ${results.updated}`);
+            console.log(`📋 Existing: ${results.existing}`);
+            console.log(`❌ Failed: ${results.failed}`);
+            console.log(`✅ Success Rate: ${((results.total - results.failed) / results.total * 100).toFixed(1)}%`);
+
+            return results;
+        } catch (error) {
+            console.error('Error in bulk operation:', error.message);
+            throw error;
+        }
+    }
+
+    /**
      * Validate order data before sending to FShip
      */
     validateOrderData(orderData) {
@@ -451,22 +629,6 @@ class FShipService {
     }
 
     /**
-     * Re-attempt delivery
-     */
-    async reattemptOrder(reattemptData) {
-        try {
-            console.log('=== FShip Re-attempt Order ===');
-            console.log('Re-attempt Data:', JSON.stringify(reattemptData, null, 2));
-
-            const response = await this.axiosInstance.post('/api/reattemptorder', reattemptData);
-            console.log('Re-attempt registered successfully');
-            return response.data;
-        } catch (error) {
-            this.handleApiError(error, 'Re-attempt Order');
-        }
-    }
-
-    /**
      * Map FShip status to Cross-Coin status
      */
     mapFShipStatusToCrossCoin(fshipStatus) {
@@ -580,104 +742,6 @@ class FShipService {
     }
 
     /**
-     * Get order status by AWB/Waybill number
-     */
-    async getOrderByAWB(awbNumber) {
-        try {
-            console.log('=== FShip Get Order by AWB ===');
-            console.log('AWB Number:', awbNumber);
-
-            // Try to get shipment status by AWB
-            const shipmentData = await this.getShipmentStatus(awbNumber);
-            
-            if (shipmentData && shipmentData.data) {
-                console.log('Order found by AWB:', shipmentData.data);
-                return {
-                    exists: true,
-                    data: shipmentData.data
-                };
-            }
-            
-            return { exists: false };
-        } catch (error) {
-            console.error('Error getting order by AWB:', error.message);
-            return { exists: false, error: error.message };
-        }
-    }
-
-    /**
-     * Get all orders from FShip - try multiple endpoints
-     */
-    async getAllOrdersFromFShip() {
-        try {
-            console.log('=== FShip Get All Orders ===');
-            
-            // Try the primary endpoint first
-            try {
-                const response = await this.axiosInstance.get('/api/getallorders');
-                
-                if (response.data && Array.isArray(response.data)) {
-                    console.log(`Found ${response.data.length} orders in FShip`);
-                    return {
-                        success: true,
-                        orders: response.data
-                    };
-                }
-            } catch (primaryError) {
-                console.log('Primary endpoint failed, trying alternatives...');
-                
-                // Try alternative endpoints
-                const alternativeEndpoints = [
-                    '/api/orders',
-                    '/api/getorders',
-                    '/api/orderlist',
-                    '/api/allorders'
-                ];
-                
-                for (const endpoint of alternativeEndpoints) {
-                    try {
-                        console.log(`Trying endpoint: ${endpoint}`);
-                        const response = await this.axiosInstance.get(endpoint);
-                        
-                        if (response.data && Array.isArray(response.data)) {
-                            console.log(`✅ Success with ${endpoint}: Found ${response.data.length} orders`);
-                            return {
-                                success: true,
-                                orders: response.data
-                            };
-                        } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
-                            console.log(`✅ Success with ${endpoint}: Found ${response.data.data.length} orders`);
-                            return {
-                                success: true,
-                                orders: response.data.data
-                            };
-                        }
-                    } catch (altError) {
-                        console.log(`❌ ${endpoint} failed: ${altError.response?.status || altError.message}`);
-                        continue;
-                    }
-                }
-                
-                // If all endpoints fail, throw the original error
-                throw primaryError;
-            }
-            
-            return {
-                success: false,
-                orders: [],
-                message: 'No orders found or invalid response format'
-            };
-        } catch (error) {
-            console.error('Error getting all orders from FShip:', error.message);
-            return {
-                success: false,
-                orders: [],
-                error: error.message
-            };
-        }
-    }
-
-    /**
      * Find order in FShip by order ID from all orders - gets the latest/best match
      */
     async findOrderByIdFromAll(orderId) {
@@ -685,261 +749,25 @@ class FShipService {
             console.log('=== FShip Find Order by ID from All Orders ===');
             console.log('Looking for Order ID:', orderId);
             
-            // First try direct order search methods
-            const directSearchMethods = [
-                () => this.getOrderByDirectSearch(orderId),
-                () => this.getOrderByTrackingSearch(orderId),
-                () => this.getAllOrdersAndSearch(orderId)
-            ];
-            
-            for (const searchMethod of directSearchMethods) {
-                try {
-                    const result = await searchMethod();
-                    if (result.exists) {
-                        return result;
-                    }
-                } catch (error) {
-                    console.log(`Search method failed: ${error.message}`);
-                    continue;
-                }
-            }
-            
-            console.log(`Order ${orderId} not found in FShip using any method`);
-            return { exists: false };
-            
-        } catch (error) {
-            console.error('Error finding order by ID from all orders:', error.message);
-            return { exists: false, error: error.message };
-        }
-    }
-
-    /**
-     * Try to get order by direct search (if such endpoint exists)
-     */
-    async getOrderByDirectSearch(orderId) {
-        try {
-            console.log(`🔍 Trying direct search for order ${orderId}...`);
-            
-            const searchEndpoints = [
-                { endpoint: '/api/getorderdetails', payload: { orderId: orderId } },
-                { endpoint: '/api/getorderdetails', payload: { order_id: orderId } },
-                { endpoint: '/api/getorderdetails', payload: { orderNumber: orderId } },
-                { endpoint: '/api/searchorder', payload: { order_id: orderId } },
-                { endpoint: '/api/findorder', payload: { orderId: orderId } },
-                { endpoint: '/api/order', payload: { id: orderId } }
-            ];
-            
-            for (const { endpoint, payload } of searchEndpoints) {
-                try {
-                    console.log(`Trying ${endpoint} with payload:`, payload);
-                    const response = await this.axiosInstance.post(endpoint, payload);
-                    
-                    console.log(`Response from ${endpoint}:`, JSON.stringify(response.data, null, 2));
-                    
-                    if (response.data && response.data.data) {
-                        console.log(`✅ Found order via ${endpoint}`);
-                        return {
-                            exists: true,
-                            data: response.data.data,
-                            totalFound: 1
-                        };
-                    } else if (response.data && Array.isArray(response.data)) {
-                        // Handle case where data is directly an array
-                        const matchingOrders = response.data.filter(order => 
-                            order.orderId === orderId || 
-                            order.order_id === orderId ||
-                            order.orderNumber === orderId ||
-                            order.order_number === orderId ||
-                            order.invoice_number === orderId ||
-                            order.invoiceNumber === orderId
-                        );
-                        
-                        if (matchingOrders.length > 0) {
-                            console.log(`✅ Found ${matchingOrders.length} matching orders via ${endpoint}`);
-                            return {
-                                exists: true,
-                                data: matchingOrders[0], // Return the first match for now
-                                totalFound: matchingOrders.length
-                            };
-                        }
-                    } else if (response.data && typeof response.data === 'object') {
-                        // Check if the response itself is the order data
-                        if (response.data.orderId === orderId || 
-                            response.data.order_id === orderId ||
-                            response.data.orderNumber === orderId ||
-                            response.data.order_number === orderId) {
-                            console.log(`✅ Found order directly via ${endpoint}`);
-                            return {
-                                exists: true,
-                                data: response.data,
-                                totalFound: 1
-                            };
-                        }
-                    }
-                } catch (error) {
-                    console.log(`❌ ${endpoint} failed: ${error.response?.status || error.message}`);
-                    if (error.response?.data) {
-                        console.log(`Error response:`, JSON.stringify(error.response.data, null, 2));
-                    }
-                    continue;
-                }
-            }
-            
-            return { exists: false };
-        } catch (error) {
-            console.log(`Direct search failed: ${error.message}`);
-            return { exists: false };
-        }
-    }
-
-    /**
-     * Try to search by tracking/AWB if we have it
-     */
-    async getOrderByTrackingSearch(orderId) {
-        try {
-            console.log(`🔍 Trying tracking-based search for order ${orderId}...`);
-            
-            // Since we can't get all orders, let's try to find the order by trying common AWB patterns
-            // This is a fallback method - in practice, we'd need to store AWB numbers or use a different approach
-            
-            // For now, let's try the known AWB for this specific order as a test
-            if (orderId === 'ORD-20260128-8583') {
-                console.log('🔍 Trying known AWB 37355831726950 for test order...');
-                try {
-                    const trackingResult = await this.getTrackingHistory('37355831726950');
-                    
-                    if (trackingResult && trackingResult.summary) {
-                        console.log('✅ Found order via tracking history!');
-                        
-                        // Convert tracking data to our expected format
-                        const orderData = {
-                            orderId: trackingResult.summary.orderid,
-                            order_id: trackingResult.summary.orderid,
-                            apiorderid: trackingResult.summary.apiorderid,
-                            waybill: trackingResult.summary.waybill,
-                            awb_number: trackingResult.summary.waybill,
-                            order_status: trackingResult.summary.status,
-                            status: trackingResult.summary.status,
-                            courier_name: trackingResult.summary.fulfilledby,
-                            created_at: trackingResult.summary.orderedon,
-                            order_date: trackingResult.summary.orderedon,
-                            expected_delivery: trackingResult.summary.expectedDeliveryDate,
-                            last_scan_date: trackingResult.summary.lastscandate
-                        };
-                        
-                        return {
-                            exists: true,
-                            data: orderData,
-                            totalFound: 1,
-                            source: 'tracking_history'
-                        };
-                    }
-                } catch (trackingError) {
-                    console.log(`Tracking search failed: ${trackingError.message}`);
-                }
-            }
-            
-            return { exists: false };
-        } catch (error) {
-            console.log(`Tracking search failed: ${error.message}`);
-            return { exists: false };
-        }
-    }
-
-    /**
-     * Fallback to getting all orders and searching
-     */
-    async getAllOrdersAndSearch(orderId) {
-        try {
-            console.log(`🔍 Trying to get all orders and search for ${orderId}...`);
-            
-            const allOrdersResult = await this.getAllOrdersFromFShip();
-            
-            if (!allOrdersResult.success) {
-                return { exists: false, error: allOrdersResult.error };
-            }
-            
-            // Search for all orders matching this ID
-            const matchingOrders = allOrdersResult.orders.filter(order => 
-                order.orderId === orderId || 
-                order.order_id === orderId ||
-                order.orderNumber === orderId ||
-                order.order_number === orderId ||
-                order.invoice_number === orderId ||
-                order.invoiceNumber === orderId
-            );
-            
-            if (matchingOrders.length === 0) {
-                console.log(`Order ${orderId} not found in FShip`);
-                return { exists: false };
-            }
-            
-            console.log(`Found ${matchingOrders.length} matching orders for ${orderId}`);
-            
-            // If multiple orders found, prioritize by status and date
-            let bestOrder = matchingOrders[0];
-            
-            if (matchingOrders.length > 1) {
-                console.log('Multiple orders found, selecting the best one...');
-                
-                // Priority order for statuses (higher number = better)
-                const statusPriority = {
-                    'delivered': 10,
-                    'out for delivery': 9,
-                    'in transit': 8,
-                    'shipped': 7,
-                    'manifested': 6,
-                    'pickup initiated': 5,
-                    'booked': 4,
-                    'processing': 3,
-                    'pending': 2,
-                    'order cancelled': 1,
-                    'cancelled': 1
+            // Try direct order search using checkOrderExists method
+            const existsResult = await this.checkOrderExists(orderId);
+            if (existsResult.exists) {
+                return {
+                    exists: true,
+                    data: existsResult.data,
+                    totalFound: 1
                 };
-                
-                // Sort by status priority (descending) and then by date (most recent first)
-                matchingOrders.sort((a, b) => {
-                    const aStatus = (a.order_status || a.status || '').toLowerCase();
-                    const bStatus = (b.order_status || b.status || '').toLowerCase();
-                    
-                    const aPriority = statusPriority[aStatus] || 0;
-                    const bPriority = statusPriority[bStatus] || 0;
-                    
-                    // First sort by status priority
-                    if (aPriority !== bPriority) {
-                        return bPriority - aPriority;
-                    }
-                    
-                    // Then by date (most recent first)
-                    const aDate = new Date(a.created_at || a.createdAt || a.order_date || 0);
-                    const bDate = new Date(b.created_at || b.createdAt || b.order_date || 0);
-                    
-                    return bDate - aDate;
-                });
-                
-                bestOrder = matchingOrders[0];
-                
-                console.log('Selected order details:');
-                matchingOrders.forEach((order, index) => {
-                    const status = (order.order_status || order.status || '').toLowerCase();
-                    const awb = order.waybill || order.awb_number || 'N/A';
-                    const date = order.created_at || order.createdAt || order.order_date || 'N/A';
-                    console.log(`  ${index === 0 ? '✅ SELECTED' : '  '} Order: Status=${status}, AWB=${awb}, Date=${date}`);
-                });
             }
             
-            console.log('Final selected order:', bestOrder);
-            return {
-                exists: true,
-                data: bestOrder,
-                totalFound: matchingOrders.length
-            };
+            console.log(`Order ${orderId} not found in FShip`);
+            return { exists: false };
             
         } catch (error) {
-            console.log(`Get all orders and search failed: ${error.message}`);
+            console.error('Error finding order by ID:', error.message);
             return { exists: false, error: error.message };
         }
     }
+
 }
 
 module.exports = new FShipService();

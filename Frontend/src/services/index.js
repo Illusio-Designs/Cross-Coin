@@ -361,22 +361,6 @@ export const orderService = {
     }
   },
 
-  // Legacy Shiprocket methods (deprecated but kept for backward compatibility)
-  getAllShiprocketOrders: async (params = {}) => {
-    console.warn('getAllShiprocketOrders is deprecated. Use FShip methods instead.');
-    try {
-      const response = await api.get("/api/orders", { params });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  syncOrdersWithShiprocket: async () => {
-    console.warn('syncOrdersWithShiprocket is deprecated. Use syncOrdersWithFShip instead.');
-    return this.syncOrdersWithFShip();
-  },
-
 };
 
 // Payment Services

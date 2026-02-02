@@ -35,7 +35,7 @@ const OrderStatusHistory = sequelize.define(
     },
     created_by: {
       type: DataTypes.STRING(50),
-      allowNull: true, // For system-generated entries like 'system', 'shiprocket_webhook'
+      allowNull: true, // For system-generated entries like 'system', 'fship_webhook'
       defaultValue: null,
     },
     notes: {

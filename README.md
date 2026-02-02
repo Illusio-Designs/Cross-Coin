@@ -26,7 +26,6 @@
 - **Production Package**: Clean deployment folder with optimized assets
 - **TypeScript Support**: Enhanced type checking and validation
 - **Performance Monitoring**: Built-in Core Web Vitals tracking
-- **Comprehensive Shiprocket Integration**: Single-click order sync with automatic status updates
 - **Enhanced Order Management**: Real-time tracking with duplicate prevention
 
 ### 📦 Quick Start
@@ -90,7 +89,6 @@ Cross-Coin is a modern, full-stack e-commerce platform specializing in fashion a
 - **SEO Management**: Custom meta tags and SEO optimization
 - **Analytics Dashboard**: Sales reports and performance metrics
 - **Content Management**: Slider images and promotional content
-- **Shiprocket Integration**: Comprehensive order sync with automatic status updates
 - **Shipping Management**: Real-time tracking with duplicate prevention and error handling
 
 ### 🔧 Technical Features
@@ -101,51 +99,8 @@ Cross-Coin is a modern, full-stack e-commerce platform specializing in fashion a
 - **Error Handling**: Comprehensive error logging and user feedback
 - **Security**: CORS, input sanitization, and SQL injection prevention
 - **Performance Monitoring**: Built-in performance tracking
-- **Shiprocket Integration**: Comprehensive shipping management with automatic sync
 
-## 🚚 Shiprocket Integration
-
-### Comprehensive Sync System
-
-Cross-Coin features a sophisticated Shiprocket integration that provides seamless order management and shipping automation.
-
-#### Key Features
-
-- **Single-Click Sync**: One button syncs everything - credentials, orders, and status updates
-- **Automatic Status Updates**: Real-time order status synchronization from Shiprocket
-- **Duplicate Prevention**: 5-layer protection against duplicate order creation
-- **Error Recovery**: Intelligent error handling with automatic resolution
-- **Comprehensive Tracking**: AWB numbers, courier info, and tracking URLs
-
-#### Sync Process
-
-1. **Credential Verification**: Tests Shiprocket authentication
-2. **Order Discovery**: Finds new orders and existing orders needing updates
-3. **New Order Sync**: Creates orders in Shiprocket with duplicate checking
-4. **Status Updates**: Updates existing orders with current Shiprocket status
-5. **Tracking Updates**: Syncs AWB numbers, courier names, and tracking URLs
-
-#### Configuration
-
-```env
-# Backend/.env
-SHIPROCKET_EMAIL=your_shiprocket_email
-SHIPROCKET_PASSWORD=your_shiprocket_password
-```
-
-#### API Endpoints
-
-- `POST /api/orders/shiprocket/sync` - Comprehensive sync (includes credential testing, order sync, and status updates)
-- `GET /api/orders/shiprocket/test-credentials` - Test credentials (available for debugging, not used in UI)
-
-#### Status Mapping
-
-Shiprocket statuses are automatically mapped to local order statuses:
-
-- `NEW`, `READY_TO_SHIP` → `processing`
-- `PICKUP_COMPLETED`, `IN_TRANSIT`, `OUT_FOR_DELIVERY` → `shipped`
-- `DELIVERED` → `delivered`
-- `CANCELLED`, `RTO`, `LOST` → `cancelled`
+## 🚚 FShip Integration
 
 ## 🛠️ Tech Stack
 
@@ -363,8 +318,6 @@ POST   /api/orders               # Create new order
 GET    /api/orders/:id           # Get order details
 PUT    /api/orders/:id/status    # Update order status (admin)
 GET    /api/orders/track/:id     # Track order
-POST   /api/orders/shiprocket/sync # Comprehensive Shiprocket sync (admin)
-GET    /api/orders/shiprocket/test-credentials # Test Shiprocket credentials (admin)
 ```
 
 ### Cart & Wishlist Endpoints

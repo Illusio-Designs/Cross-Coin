@@ -352,24 +352,6 @@ export default function Profile() {
                         </div>
                       </div>
                       <div className="order-status">{order.status}</div>
-                      {/* Shiprocket Information */}
-                      {(order.shiprocket_order_id ||
-                        order.shiprocket_shipment_id) && (
-                        <div className="shiprocket-info">
-                          <div className="shiprocket-details">
-                            {order.shiprocket_order_id && (
-                              <span className="shiprocket-id">
-                                Shiprocket Order: {order.shiprocket_order_id}
-                              </span>
-                            )}
-                            {order.shiprocket_shipment_id && (
-                              <span className="shiprocket-shipment">
-                                Shipment ID: {order.shiprocket_shipment_id}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
                       {order.OrderItems &&
                         order.OrderItems.map((item) => (
                           <div className="order-card-body" key={item.id}>

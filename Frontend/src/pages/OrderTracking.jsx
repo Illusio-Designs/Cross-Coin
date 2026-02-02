@@ -314,8 +314,7 @@ export default function OrderTracking() {
                                                     </span>
                                                     {history.created_by && (
                                                         <span className="timeline-source">
-                                                            {history.created_by === 'fship_sync' || history.created_by === 'fship_webhook' || history.created_by === 'fship_tracking' ? '(Auto-updated from FShip)' : 
-                                                             history.created_by === 'shiprocket_sync' ? '(Legacy: Auto-updated from Shiprocket)' : ''}
+                                                            {history.created_by === 'fship_sync' || history.created_by === 'fship_webhook' || history.created_by === 'fship_tracking' ? '(Auto-updated from FShip)' : ''}
                                                         </span>
                                                     )}
                                                 </div>
@@ -358,64 +357,6 @@ export default function OrderTracking() {
                                                                     day: 'numeric',
                                                                     hour: '2-digit',
                                                                     minute: '2-digit'
-                                                                })}</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Legacy Shiprocket Data Display (for backward compatibility) */}
-                            {orderData.shiprocket_data && (
-                                <div className="shiprocket-info">
-                                    <h3>Legacy Shipping Details (Shiprocket)</h3>
-                                    <div className="shiprocket-details">
-                                        <div className="info-row">
-                                            <span>Shiprocket Status:</span>
-                                            <span>{orderData.shiprocket_data.order_status}</span>
-                                        </div>
-                                        {orderData.shiprocket_data.shipments && Array.isArray(orderData.shiprocket_data.shipments) && orderData.shiprocket_data.shipments.length > 0 && (
-                                            <div className="shipments-info">
-                                                <h4>Shipment Details:</h4>
-                                                {orderData.shiprocket_data.shipments.map((shipment, index) => (
-                                                    <div key={index} className="shipment-item">
-                                                        <div className="info-row">
-                                                            <span>Shipment Status:</span>
-                                                            <span>{shipment.status}</span>
-                                                        </div>
-                                                        {shipment.awb && (
-                                                            <div className="info-row">
-                                                                <span>AWB:</span>
-                                                                <span>{shipment.awb}</span>
-                                                            </div>
-                                                        )}
-                                                        {shipment.courier_name && (
-                                                            <div className="info-row">
-                                                                <span>Courier:</span>
-                                                                <span>{shipment.courier_name}</span>
-                                                            </div>
-                                                        )}
-                                                        {shipment.pickup_date && (
-                                                            <div className="info-row">
-                                                                <span>Pickup Date:</span>
-                                                                <span>{new Date(shipment.pickup_date).toLocaleDateString('en-IN', {
-                                                                    year: 'numeric',
-                                                                    month: 'long',
-                                                                    day: 'numeric'
-                                                                })}</span>
-                                                            </div>
-                                                        )}
-                                                        {shipment.delivered_date && (
-                                                            <div className="info-row">
-                                                                <span>Delivered Date:</span>
-                                                                <span>{new Date(shipment.delivered_date).toLocaleDateString('en-IN', {
-                                                                    year: 'numeric',
-                                                                    month: 'long',
-                                                                    day: 'numeric'
                                                                 })}</span>
                                                             </div>
                                                         )}
