@@ -1775,7 +1775,7 @@ module.exports.getFShipTrackingForOrder = async (req, res) => {
         .status(404)
         .json({ message: "Order or FShip waybill not found" });
     }
-    const tracking = await fshipService.getTrackingHistory(order.fship_waybill);
+    const tracking = await fshipService.getShipmentStatus(order.fship_waybill);
     res.json({ tracking });
   } catch (error) {
     console.error("Error fetching FShip tracking:", error);
@@ -1921,7 +1921,8 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
           { fship_order_id: null },
           { fship_waybill: null },
         ],
-        status: { [Op.notIn]: ['cancelled', 'delivered'] } // Don't sync completed orders
+        status: { [Op.notIn]: ['cancelled', 'delivered'] }, // Don't sync completed orders
+        order_number: { [Op.notLike]: '%TEST%' } // Exclude test orders
       },
       include: [
         { model: OrderItem, as: "OrderItems", include: [{ model: Product, as: "Product" }] },
@@ -1935,8 +1936,12 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
     // Get orders that need status updates (already have FShip IDs)
     const ordersForStatusUpdate = await Order.findAll({
       where: {
-        fship_waybill: { [Op.not]: null },
-        status: { [Op.in]: ['pending', 'processing', 'shipped'] } // Only non-final statuses
+        [Op.or]: [
+          { fship_waybill: { [Op.not]: null } },
+          { fship_order_id: { [Op.not]: null } }
+        ],
+        status: { [Op.in]: ['pending', 'processing', 'shipped'] }, // Only non-final statuses
+        order_number: { [Op.notLike]: '%TEST%' } // Exclude test orders
       },
       limit: 25 // Limit to prevent timeout
     });
@@ -2019,8 +2024,8 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
             shipment_Length: 25,
             shipment_Width: 15,
             shipment_Height: 5,
-            pick_Address_ID: 1, // Default warehouse ID
-            return_Address_ID: 1,
+            pick_Address_ID: parseInt(process.env.FSHIP_DEFAULT_WAREHOUSE_ID) || 12191,
+            return_Address_ID: parseInt(process.env.FSHIP_DEFAULT_WAREHOUSE_ID) || 12191,
             products: order.OrderItems.map((item) => ({
               productName: item.Product.name,
               sku: item.Product.sku || `PROD-${item.Product.id}`,
@@ -2067,36 +2072,90 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
       syncResults.steps_completed.push(`✅ New order sync completed: ${syncResults.new_orders_synced} created`);
     }
 
-    // STEP 4: Update status for existing orders
+    // STEP 4: Update status for existing orders using individual tracking
     if (ordersForStatusUpdate.length > 0) {
       console.log("=== STEP 4: UPDATING STATUS FOR EXISTING ORDERS ===");
       
       for (const order of ordersForStatusUpdate) {
         try {
-          console.log(`🔄 Updating status for existing order ${order.order_number} (Waybill: ${order.fship_waybill})`);
+          console.log(`🔄 Updating order ${order.order_number} (Waybill: ${order.fship_waybill})`);
           
-          const trackingData = await fshipService.getTrackingHistory(order.fship_waybill);
+          if (!order.fship_waybill) {
+            console.log(`⚠️  Order ${order.order_number} has no waybill, skipping status update`);
+            continue;
+          }
           
-          if (trackingData && trackingData.summary) {
-            const newStatus = fshipService.mapFShipStatusToCrossCoin(trackingData.summary.status);
+          // Get detailed shipment status for this specific order
+          const shipmentStatus = await fshipService.getShipmentStatus(order.fship_waybill);
+          
+          if (shipmentStatus && shipmentStatus.data) {
+            const fshipData = shipmentStatus.data;
+            let hasUpdates = false;
             
+            // Prepare update data
+            const updateData = {};
+            
+            // Update status if different
+            const newStatus = fshipService.mapFShipStatusToCrossCoin(fshipData.status || fshipData.order_status);
             if (newStatus !== order.status) {
-              await order.update({ status: newStatus }, { transaction });
-              
-              // Add status history
-              await OrderStatusHistory.create({
-                order_id: order.id,
-                status: newStatus,
-                notes: `FShip sync: ${trackingData.summary.status}`,
-                created_by: "fship_sync",
-              }, { transaction });
-              
+              updateData.status = newStatus;
+              hasUpdates = true;
               syncResults.status_updates++;
-              console.log(`📈 Status updated for order ${order.order_number}: ${order.status} → ${newStatus}`);
+              console.log(`📈 Status will be updated for order ${order.order_number}: ${order.status} → ${newStatus}`);
             }
+            
+            // Update courier information
+            if (fshipData.courier_name && fshipData.courier_name !== order.courier_name) {
+              updateData.courier_name = fshipData.courier_name;
+              hasUpdates = true;
+            }
+            
+            // Update tracking URL if available
+            if (fshipData.tracking_url && fshipData.tracking_url !== order.tracking_url) {
+              updateData.tracking_url = fshipData.tracking_url;
+              hasUpdates = true;
+            }
+            
+            // Update last scan information
+            if (fshipData.last_scan_date) {
+              updateData.last_scan_date = fshipData.last_scan_date;
+              hasUpdates = true;
+            }
+            
+            if (fshipData.last_location) {
+              updateData.last_location = fshipData.last_location;
+              hasUpdates = true;
+            }
+            
+            if (fshipData.last_remarks) {
+              updateData.last_remarks = fshipData.last_remarks;
+              hasUpdates = true;
+            }
+            
+            // Apply updates if any
+            if (hasUpdates) {
+              await order.update(updateData, { transaction });
+              
+              // Add status history if status changed
+              if (updateData.status) {
+                await OrderStatusHistory.create({
+                  order_id: order.id,
+                  status: updateData.status,
+                  notes: `FShip sync: ${fshipData.status || fshipData.order_status}${fshipData.last_remarks ? ` - ${fshipData.last_remarks}` : ''}`,
+                  created_by: "fship_sync",
+                }, { transaction });
+              }
+              
+              syncResults.existing_orders_updated++;
+              console.log(`✅ Updated order ${order.order_number} with FShip data`);
+            } else {
+              console.log(`ℹ️  No updates needed for order ${order.order_number}`);
+            }
+          } else {
+            console.log(`⚠️  No shipment data found for order ${order.order_number}`);
           }
         } catch (statusError) {
-          console.error(`⚠️  Could not update status for order ${order.order_number}:`, statusError.message);
+          console.error(`⚠️  Could not update order ${order.order_number}:`, statusError.message);
           syncResults.failed++;
           syncResults.errors.push(`Status update for ${order.order_number}: ${statusError.message}`);
         }
@@ -2129,48 +2188,7 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
   }
 };
 
-// Test FShip credentials
-module.exports.testFShipCredentials = async (req, res) => {
-  try {
-    console.log('=== Testing FShip Credentials ===');
-    const testResult = await fshipService.testConnection();
-    
-    if (testResult.success) {
-      res.json({
-        success: true,
-        message: "FShip credentials are valid and working!",
-        status: "success",
-        couriers: testResult.couriers,
-      });
-    } else {
-      res.status(400).json({
-        success: false,
-        message: "FShip authentication failed",
-        error: testResult.message,
-        status: "error",
-      });
-    }
-  } catch (error) {
-    console.error('=== FShip Test Failed ===');
-    console.error('Error:', error.message);
-    
-    res.status(400).json({
-      success: false,
-      message: "FShip authentication failed",
-      error: error.message,
-      status: "error",
-      troubleshooting: {
-        step1: "Verify FSHIP_API_KEY is set in environment variables",
-        step2: "Verify FSHIP_ENVIRONMENT is set (staging/production)",
-        step3: "Check if your FShip account is active",
-        step4: "Ensure API access is enabled in FShip dashboard",
-        step5: "Verify credentials by contacting FShip support"
-      }
-    });
-  }
-};
-
-// Update single order from FShip (for testing and manual updates)
+// Update single order from FShip (for manual updates)
 module.exports.updateSingleOrderFromFShip = async (req, res) => {
   const transaction = await sequelize.transaction();
   
@@ -2225,10 +2243,12 @@ module.exports.updateSingleOrderFromFShip = async (req, res) => {
     let updateResult = { updated: false, reason: "No updates needed" };
     
     try {
-      const trackingData = await fshipService.getTrackingHistory(order.fship_waybill);
+      // Use getShipmentStatus instead of getTrackingHistory for better reliability
+      const shipmentData = await fshipService.getShipmentStatus(order.fship_waybill);
       
-      if (trackingData && trackingData.summary) {
-        const newStatus = fshipService.mapFShipStatusToCrossCoin(trackingData.summary.status);
+      if (shipmentData && shipmentData.data) {
+        const fshipStatus = shipmentData.data.status || shipmentData.data.order_status;
+        const newStatus = fshipService.mapFShipStatusToCrossCoin(fshipStatus);
         
         if (newStatus !== order.status) {
           await order.update({ status: newStatus }, { transaction });
@@ -2237,7 +2257,7 @@ module.exports.updateSingleOrderFromFShip = async (req, res) => {
           await OrderStatusHistory.create({
             order_id: order.id,
             status: newStatus,
-            notes: `FShip manual update: ${trackingData.summary.status}`,
+            notes: `FShip manual update: ${fshipStatus}`,
             created_by: "manual_fship_update",
           }, { transaction });
           
@@ -2245,12 +2265,12 @@ module.exports.updateSingleOrderFromFShip = async (req, res) => {
             updated: true,
             old_status: order.status,
             new_status: newStatus,
-            fship_status: trackingData.summary.status
+            fship_status: fshipStatus
           };
         }
       }
     } catch (trackingError) {
-      console.error("Failed to get FShip tracking data:", trackingError.message);
+      console.error("Failed to get FShip shipment data:", trackingError.message);
       updateResult = {
         updated: false,
         error: true,
@@ -2345,10 +2365,11 @@ module.exports.trackOrderByOrderNumber = async (req, res) => {
         console.log("✅ FShip connection successful");
         
         console.log("🔄 Updating order from FShip...");
-        const trackingData = await fshipService.getTrackingHistory(order.fship_waybill);
+        const shipmentData = await fshipService.getShipmentStatus(order.fship_waybill);
         
-        if (trackingData && trackingData.summary) {
-          const newStatus = fshipService.mapFShipStatusToCrossCoin(trackingData.summary.status);
+        if (shipmentData && shipmentData.data) {
+          const fshipStatus = shipmentData.data.status || shipmentData.data.order_status;
+          const newStatus = fshipService.mapFShipStatusToCrossCoin(fshipStatus);
           
           if (newStatus !== order.status) {
             await order.update({ status: newStatus }, { transaction });
@@ -2357,7 +2378,7 @@ module.exports.trackOrderByOrderNumber = async (req, res) => {
             await OrderStatusHistory.create({
               order_id: order.id,
               status: newStatus,
-              notes: `FShip tracking update: ${trackingData.summary.status}`,
+              notes: `FShip tracking update: ${fshipStatus}`,
               created_by: "fship_tracking",
             }, { transaction });
             
@@ -2365,7 +2386,7 @@ module.exports.trackOrderByOrderNumber = async (req, res) => {
               updated: true,
               old_status: order.status,
               new_status: newStatus,
-              fship_status: trackingData.summary.status
+              fship_status: fshipStatus
             };
           } else {
             updateResult = {
@@ -2376,8 +2397,8 @@ module.exports.trackOrderByOrderNumber = async (req, res) => {
           
           // Prepare FShip data for response
           fshipData = {
-            order_status: trackingData.summary.status,
-            tracking_history: trackingData.history || []
+            order_status: fshipStatus,
+            tracking_history: [] // Simplified for now
           };
         } else {
           updateResult = {

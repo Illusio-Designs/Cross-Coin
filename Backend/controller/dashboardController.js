@@ -25,6 +25,13 @@ const getDashboardStats = async (req, res) => {
       },
     });
 
+    // Get cancelled orders count
+    const cancelledOrders = await Order.count({
+      where: {
+        status: "cancelled",
+      },
+    });
+
     // Get all orders to calculate revenue the same way as orders page
     const allOrders = await Order.findAll({
       attributes: ['id', 'status', 'payment_type', 'payment_status', 'final_amount', 'total_amount', 'createdAt'],
@@ -187,6 +194,7 @@ const getDashboardStats = async (req, res) => {
           total: totalOrders,
           pending: pendingOrders,
           completed: completedOrdersCount,
+          cancelled: cancelledOrders,
           recent: recentOrders,
         },
         revenue: {

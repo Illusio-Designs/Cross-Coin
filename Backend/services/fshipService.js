@@ -454,6 +454,7 @@ class FShipService {
     mapFShipStatusToCrossCoin(fshipStatus) {
         const statusMapping = {
             'Booked': 'processing',
+            'Pickup Initiated': 'processing',
             'Manifested': 'processing',
             'In Transit': 'shipped',
             'Out for Delivery': 'out_for_delivery',

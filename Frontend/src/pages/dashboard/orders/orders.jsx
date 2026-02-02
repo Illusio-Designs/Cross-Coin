@@ -245,30 +245,6 @@ const Orders = () => {
         }
     };
 
-    const testFShipCredentials = async () => {
-        try {
-            const result = await orderService.testFShipCredentials();
-            
-            if (result.success) {
-                toast.success('FShip credentials are valid and working!');
-            } else {
-                toast.error(result.message || 'FShip credentials test failed');
-            }
-        } catch (error) {
-            console.error('=== FShip Test Failed ===');
-            console.error('Error object:', error);
-            
-            let errorMessage = 'Failed to test FShip credentials';
-            if (error.message) {
-                errorMessage = error.message;
-            } else if (error.error) {
-                errorMessage = error.error;
-            }
-            
-            toast.error(errorMessage);
-        }
-    };
-
     const cancelOrder = async (orderId, orderNumber) => {
         const reason = prompt(`Enter cancellation reason for order ${orderNumber}:`);
         if (!reason) return;
@@ -631,7 +607,7 @@ const Orders = () => {
                         </svg>
                     </button>
                     
-                    {(row.fship_order_id || row.fship_waybill) && (
+                    {(row.fship_waybill) && (
                         <button 
                             className="action-btn edit" 
                             title="Update" 
@@ -752,39 +728,13 @@ const Orders = () => {
                         <button 
                             className="sync-button"
                             onClick={syncOrders}
-                            title="Comprehensive FShip sync - Tests credentials, syncs new orders, and updates statuses"
+                            title="Comprehensive FShip sync - Syncs new orders and updates statuses"
                             disabled={loading}
                         >
                             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
                             {loading ? 'Syncing...' : 'FShip Sync'}
-                        </button>
-                        
-                        <button 
-                            className="test-credentials-button"
-                            onClick={testFShipCredentials}
-                            title="Test FShip API credentials"
-                            disabled={loading}
-                            style={{
-                                background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '8px',
-                                padding: '0.75rem 1rem',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                transition: 'all 0.3s ease',
-                                fontSize: '0.875rem'
-                            }}
-                        >
-                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Test FShip API
                         </button>
                         
                         <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
@@ -822,14 +772,7 @@ const Orders = () => {
                 </div>
 
 
-                <div style={{ marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ fontSize: '14px', color: '#888', lineHeight: '1.4' }}>
-                        <strong>FShip Integration:</strong><br/>
-                        • <strong>FShip Sync:</strong> Tests credentials, syncs new orders, updates statuses<br/>
-                        • <strong>Single Update:</strong> Update individual orders (available for synced orders)<br/>
-                        • <strong>Test FShip API:</strong> Verify FShip credentials and connection
-                    </div>
-                </div>
+
 
                 {notification && (
                     <div style={{
@@ -923,7 +866,7 @@ const Orders = () => {
                             </div>
 
                             <div className="info-note">
-                                <strong>FShip Integration:</strong> Order statuses are automatically synchronized with FShip. 
+                                <strong>Order Management:</strong> Order statuses are automatically synchronized with FShip. 
                                 Use "FShip Sync" for new orders and status updates, 
                                 or "Update" button for individual orders. Manual status changes are disabled to maintain sync integrity.
                             </div>
