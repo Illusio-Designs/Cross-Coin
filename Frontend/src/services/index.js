@@ -267,6 +267,20 @@ export const orderService = {
     }
   },
 
+  // Sync single order with FShip
+  syncSingleOrderWithFShip: async (orderId) => {
+    try {
+      const response = await api.put(
+        `/api/orders/${orderId}/fship/sync`,
+        {},
+        { timeout: 30000 }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Get FShip tracking for order
   getFShipTracking: async (orderId) => {
     try {

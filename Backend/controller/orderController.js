@@ -2038,6 +2038,50 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
             }))
           };
 
+          // Check if order already exists in FShip before creating
+          try {
+            console.log(`🔍 Checking if order ${order.order_number} already exists in FShip...`);
+            const existsCheck = await fshipService.checkOrderExists(order.order_number);
+            
+            if (existsCheck.exists) {
+              console.log(`⚠️ Order ${order.order_number} already exists in FShip, updating local data`);
+              
+              // Update our local order with existing FShip data
+              const updateData = {};
+              
+              if (existsCheck.data?.apiorderid) {
+                updateData.fship_order_id = existsCheck.data.apiorderid;
+              }
+              
+              if (existsCheck.data?.waybill) {
+                updateData.fship_waybill = existsCheck.data.waybill;
+                updateData.tracking_number = existsCheck.data.waybill;
+              }
+              
+              if (existsCheck.data?.route_code) {
+                updateData.fship_route_code = existsCheck.data.route_code;
+              }
+              
+              if (existsCheck.data?.order_status) {
+                const newStatus = fshipService.mapFShipStatusToCrossCoin(existsCheck.data.order_status);
+                if (newStatus !== order.status) {
+                  updateData.status = newStatus;
+                }
+              }
+              
+              if (Object.keys(updateData).length > 0) {
+                await order.update(updateData, { transaction });
+              }
+              
+              syncResults.new_orders_synced++;
+              console.log(`✅ Updated existing FShip order ${order.order_number}`);
+              continue; // Skip creating new order
+            }
+          } catch (checkError) {
+            console.error(`⚠️ Could not verify if order ${order.order_number} exists: ${checkError.message}`);
+            console.log("Proceeding with order creation anyway...");
+          }
+
           console.log(`📦 Creating FShip order for ${order.order_number}`);
           const fshipResponse = await fshipService.createForwardOrder(fshipOrderData);
 
@@ -2655,6 +2699,368 @@ module.exports.adminCancelOrder = async (req, res) => {
       success: false,
       message: "Failed to cancel order", 
       error: error.message 
+    });
+  }
+};
+
+// Sync individual order with FShip
+module.exports.syncSingleOrderWithFShip = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const { id } = req.params;
+    
+    console.log(`=== SYNCING SINGLE ORDER WITH FSHIP: ${id} ===`);
+    
+    // Find the order
+    const order = await Order.findByPk(id, {
+      include: [
+        { model: OrderItem, as: "OrderItems", include: [{ model: Product, as: "Product" }] },
+        { model: User, as: "User", attributes: ["id", "username", "email"], required: false },
+        { model: GuestUser, as: "GuestUser", attributes: ["id", "email", "firstName", "lastName", "phone"], required: false },
+        { model: ShippingAddress, as: "ShippingAddress" },
+      ]
+    });
+    
+    if (!order) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+    
+    // Check if order is already synced
+    if (order.fship_order_id || order.fship_waybill) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Order is already synced with FShip",
+        data: {
+          fship_order_id: order.fship_order_id,
+          fship_waybill: order.fship_waybill
+        }
+      });
+    }
+    
+    // Check if order can be synced (not cancelled or delivered)
+    if (order.status === 'cancelled' || order.status === 'delivered') {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `Cannot sync ${order.status} orders with FShip`
+      });
+    }
+    
+    console.log(`Found order: ${order.order_number} - Status: ${order.status}`);
+    
+    // Test FShip connection first
+    try {
+      const testResult = await fshipService.testConnection();
+      if (!testResult.success) {
+        throw new Error(testResult.message);
+      }
+      console.log("✅ FShip connection successful");
+    } catch (authError) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "FShip connection failed",
+        error: authError.message
+      });
+    }
+    
+    // Check if order already exists in FShip
+    try {
+      console.log(`🔍 Checking if order ${order.order_number} already exists in FShip...`);
+      const existsCheck = await fshipService.checkOrderExists(order.order_number);
+      
+      if (existsCheck.exists) {
+        console.log(`⚠️ Order ${order.order_number} already exists in FShip`);
+        
+        // Update our local order with FShip data if we don't have it
+        if (!order.fship_order_id && existsCheck.data) {
+          const updateData = {};
+          
+          if (existsCheck.data.apiorderid) {
+            updateData.fship_order_id = existsCheck.data.apiorderid;
+          }
+          
+          if (existsCheck.data.waybill) {
+            updateData.fship_waybill = existsCheck.data.waybill;
+            updateData.tracking_number = existsCheck.data.waybill;
+          }
+          
+          if (existsCheck.data.route_code) {
+            updateData.fship_route_code = existsCheck.data.route_code;
+          }
+          
+          if (existsCheck.data.order_status) {
+            const newStatus = fshipService.mapFShipStatusToCrossCoin(existsCheck.data.order_status);
+            if (newStatus !== order.status) {
+              updateData.status = newStatus;
+            }
+          }
+          
+          if (Object.keys(updateData).length > 0) {
+            await order.update(updateData, { transaction });
+            console.log(`✅ Updated local order ${order.order_number} with existing FShip data`);
+          }
+        }
+        
+        await transaction.commit();
+        
+        return res.json({
+          success: true,
+          message: `Order ${order.order_number} already exists in FShip and has been synchronized`,
+          data: {
+            order: {
+              id: order.id,
+              order_number: order.order_number,
+              status: order.status,
+              fship_order_id: order.fship_order_id,
+              fship_waybill: order.fship_waybill,
+              fship_route_code: order.fship_route_code,
+              tracking_number: order.tracking_number
+            },
+            existing_fship_data: existsCheck.data,
+            note: "Order already existed in FShip, local data updated"
+          }
+        });
+      }
+      
+      console.log(`✅ Order ${order.order_number} does not exist in FShip, proceeding with creation`);
+    } catch (checkError) {
+      console.error(`⚠️ Could not verify if order exists in FShip: ${checkError.message}`);
+      console.log("Proceeding with order creation anyway...");
+    }
+    
+    // Get shipping address
+    let shippingAddress = order.ShippingAddress;
+    if (!shippingAddress) {
+      if (order.user_id) {
+        shippingAddress = await ShippingAddress.findOne({
+          where: { user_id: order.user_id },
+        });
+      } else if (order.guest_user_id) {
+        shippingAddress = await ShippingAddress.findOne({
+          where: { guest_user_id: order.guest_user_id },
+        });
+      }
+    }
+
+    if (!shippingAddress) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "No shipping address found for this order"
+      });
+    }
+
+    // Get customer information
+    const isGuestOrder = !order.User && order.GuestUser;
+    const customerName = isGuestOrder 
+      ? `${order.GuestUser.firstName} ${order.GuestUser.lastName}`.trim() 
+      : (order.User?.username || "Customer");
+    const customerEmail = isGuestOrder 
+      ? order.GuestUser.email 
+      : (order.User?.email || "customer@example.com");
+
+    // Validate customer data
+    if (!customerName || customerName === '') {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Customer name is required for FShip sync"
+      });
+    }
+
+    if (!customerEmail || customerEmail === '') {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Customer email is required for FShip sync"
+      });
+    }
+
+    // Validate shipping address data
+    if (!shippingAddress.phone || !shippingAddress.address || !shippingAddress.pincode) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Complete shipping address (phone, address, pincode) is required for FShip sync",
+        data: {
+          phone: shippingAddress.phone,
+          address: shippingAddress.address,
+          pincode: shippingAddress.pincode,
+          city: shippingAddress.city
+        }
+      });
+    }
+
+    // Validate warehouse ID
+    const warehouseId = parseInt(process.env.FSHIP_DEFAULT_WAREHOUSE_ID);
+    if (!warehouseId || isNaN(warehouseId)) {
+      await transaction.rollback();
+      return res.status(500).json({
+        success: false,
+        message: "FSHIP_DEFAULT_WAREHOUSE_ID environment variable is not set or invalid"
+      });
+    }
+
+    console.log('Validation passed:', {
+      customerName,
+      customerEmail,
+      phone: shippingAddress.phone,
+      address: shippingAddress.address,
+      pincode: shippingAddress.pincode,
+      city: shippingAddress.city,
+      warehouseId
+    });
+
+    // Prepare FShip order data
+    const fshipOrderData = {
+      customer_Name: customerName,
+      customer_Mobile: fshipService.formatPhoneNumber(shippingAddress.phone),
+      customer_Emailid: customerEmail,
+      customer_Address: shippingAddress.address,
+      landMark: "",
+      customer_Address_Type: "Home",
+      customer_PinCode: String(shippingAddress.pincode),
+      customer_City: shippingAddress.city || "Mumbai",
+      orderId: String(order.order_number),
+      invoice_Number: String(order.order_number),
+      payment_Mode: order.payment_type === "cod" ? 1 : 2, // 1=COD, 2=PREPAID
+      express_Type: "surface",
+      is_Ndd: 0,
+      order_Amount: parseFloat(order.total_amount) || 0,
+      tax_Amount: 0,
+      extra_Charges: 0,
+      total_Amount: parseFloat(order.final_amount) || 0,
+      shipment_Weight: 0.5, // Default weight for socks
+      shipment_Length: 25,
+      shipment_Width: 15,
+      shipment_Height: 5,
+      pick_Address_ID: warehouseId,
+      return_Address_ID: warehouseId,
+      products: order.OrderItems.map((item) => ({
+        productName: String(item.Product.name || 'Product'),
+        sku: String(item.Product.sku || `PROD-${item.Product.id}`),
+        quantity: parseInt(item.quantity) || 1,
+        unitPrice: parseFloat(item.price) || 0,
+        productCategory: "Socks",
+        hsnCode: "6115",
+        taxRate: 0,
+        productDiscount: 0
+      }))
+    };
+
+    console.log(`📦 Creating FShip order for ${order.order_number}`);
+    console.log('FShip Order Data:', JSON.stringify(fshipOrderData, null, 2));
+    
+    // Validate required fields before sending to FShip
+    const requiredFields = [
+      'customer_Name', 'customer_Mobile', 'customer_Address', 
+      'customer_PinCode', 'customer_City', 'orderId', 
+      'payment_Mode', 'express_Type', 'shipment_Weight',
+      'shipment_Length', 'shipment_Width', 'shipment_Height',
+      'pick_Address_ID', 'products'
+    ];
+    
+    const missingFields = requiredFields.filter(field => !fshipOrderData[field]);
+    if (missingFields.length > 0) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `Missing required fields for FShip: ${missingFields.join(', ')}`,
+        data: fshipOrderData
+      });
+    }
+    
+    // Validate products array
+    if (!Array.isArray(fshipOrderData.products) || fshipOrderData.products.length === 0) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Products array is required and cannot be empty",
+        data: fshipOrderData
+      });
+    }
+
+    try {
+      const fshipResponse = await fshipService.createForwardOrder(fshipOrderData);
+
+      if (fshipResponse && fshipResponse.success) {
+        // Update order with FShip data
+        await order.update({
+          fship_order_id: fshipResponse.orderId,
+          fship_waybill: fshipResponse.waybill,
+          fship_route_code: fshipResponse.routeCode,
+          tracking_number: fshipResponse.waybill,
+          status: "processing"
+        }, { transaction });
+
+        console.log(`✅ Successfully synced order ${order.order_number} with FShip`);
+
+        // Register pickup
+        try {
+          await fshipService.registerPickup([fshipResponse.waybill]);
+          console.log(`📦 Pickup registered for order ${order.order_number}`);
+        } catch (pickupErr) {
+          console.error(`Failed to register pickup for order ${order.order_number}:`, pickupErr.message);
+        }
+
+        await transaction.commit();
+
+        // Return success response
+        res.json({
+          success: true,
+          message: `Order ${order.order_number} synced successfully with FShip`,
+          data: {
+            order: {
+              id: order.id,
+              order_number: order.order_number,
+              status: order.status,
+              fship_order_id: fshipResponse.orderId,
+              fship_waybill: fshipResponse.waybill,
+              fship_route_code: fshipResponse.routeCode,
+              tracking_number: fshipResponse.waybill
+            },
+            fship_response: {
+              orderId: fshipResponse.orderId,
+              waybill: fshipResponse.waybill,
+              routeCode: fshipResponse.routeCode,
+              labelUrl: fshipResponse.labelUrl
+            }
+          }
+        });
+      } else {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Failed to create order in FShip",
+          error: fshipResponse?.error || "Unknown FShip error",
+          fship_response: fshipResponse
+        });
+      }
+    } catch (fshipError) {
+      await transaction.rollback();
+      console.error('FShip API Error:', fshipError.message);
+      return res.status(400).json({
+        success: false,
+        message: "Failed to sync order with FShip",
+        error: fshipError.message,
+        sent_data: fshipOrderData
+      });
+    }
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error syncing single order with FShip:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to sync order with FShip",
+      error: error.message
     });
   }
 };
