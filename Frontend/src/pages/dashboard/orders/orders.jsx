@@ -13,6 +13,9 @@ import { toast } from 'react-hot-toast';
 import { getProductImageSrc } from '../../../utils/imageUtils';
 import { getAttributeComponents } from '../../../utils/productAttributeFormatter';
 import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusUtils';
+import PaymentChart from '../../../components/dashboard/PaymentChart';
+import ShippingChart from '../../../components/dashboard/ShippingChart';
+import PaymentStatusChart from '../../../components/dashboard/PaymentStatusChart';
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -41,6 +44,7 @@ const Orders = () => {
         deliveredOrders: 0,
         cancelledOrders: 0
     });
+    const [allOrdersData, setAllOrdersData] = useState([]); // Add this to store all orders for charts
     const [syncingOrders, setSyncingOrders] = useState(new Set());
     const [syncingAll, setSyncingAll] = useState(false);
 
@@ -64,8 +68,6 @@ const Orders = () => {
                     delete params[key];
                 }
             });
-            
-            console.log('Fetching orders with params:', params);
             
             const data = await orderService.getAllOrders(params);
             
@@ -102,6 +104,9 @@ const Orders = () => {
             
             const data = await orderService.getAllOrders(params);
             const allOrders = data.orders || data.data || [];
+            
+            // Store all orders data for charts
+            setAllOrdersData(allOrders);
             
             // Calculate stats from all orders
             const stats = {
@@ -613,18 +618,6 @@ const Orders = () => {
         {
             header: "Actions",
             cell: (row) => {
-                // Debug logging to see what's happening
-                console.log('Order row data:', {
-                    id: row.id,
-                    order_number: row.order_number,
-                    status: row.status,
-                    fship_order_id: row.fship_order_id,
-                    fship_waybill: row.fship_waybill,
-                    hasSync: true, // Always show sync button
-                    hasUpdate: !!row.fship_waybill,
-                    hasCancel: (row.status === 'pending' || row.status === 'processing')
-                });
-
                 return (
                     <div className="action-buttons" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                         {/* View button - always visible */}
@@ -849,6 +842,33 @@ const Orders = () => {
                             <span style={{ color: '#6c757d', fontSize: '13px' }}>per page</span>
                         </div>
                     </div>
+                    
+                    {/* Analytics Charts */}
+                    <div className="orders-analytics" style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(3, 1fr)',
+                        gap: '16px',
+                        marginBottom: '24px'
+                    }}>
+                        <PaymentChart allOrdersStats={allOrdersStats} />
+                        <PaymentStatusChart allOrdersStats={allOrdersStats} />
+                        <ShippingChart orders={allOrdersData} allOrdersStats={allOrdersStats} />
+                    </div>
+                    
+                    {/* Add responsive styles */}
+                    <style jsx>{`
+                        @media (max-width: 1200px) {
+                            .orders-analytics {
+                                grid-template-columns: repeat(2, 1fr) !important;
+                            }
+                        }
+                        @media (max-width: 768px) {
+                            .orders-analytics {
+                                grid-template-columns: 1fr !important;
+                            }
+                        }
+                    `}</style>
+                    
                     <div className="adding-button">
                         <button 
                             className="sync-button"
@@ -1160,25 +1180,16 @@ const Orders = () => {
                                         // Get variation-specific image first, then fallback to product image
                                         let imageToDisplay = null;
                                         
-                                        // Debug: Log the available data
-                                        console.log('=== Order Item Image Debug ===');
-                                        console.log('Item:', item);
-                                        console.log('ProductVariation:', item.ProductVariation);
-                                        console.log('ProductVariation VariationImages:', item.ProductVariation?.VariationImages);
-                                        console.log('Product images:', item.Product?.ProductImages);
-                                        
                                         // First try to get image from the specific variation (SKU-based)
                                         // Check if ProductVariation has VariationImages array
                                         if (item.ProductVariation?.VariationImages && Array.isArray(item.ProductVariation.VariationImages) && item.ProductVariation.VariationImages.length > 0) {
                                             // Use the primary image or first image from the variation
                                             imageToDisplay = item.ProductVariation.VariationImages.find(img => img.is_primary) || 
                                                            item.ProductVariation.VariationImages[0];
-                                            console.log('Using variation image:', imageToDisplay);
                                         } 
                                         // Check if ProductVariation has a single image property (legacy)
                                         else if (item.ProductVariation?.image) {
                                             imageToDisplay = { image_url: item.ProductVariation.image };
-                                            console.log('Using variation single image:', imageToDisplay);
                                         }
                                         // Check if the variation has image_url directly (legacy)
                                         else if (item.ProductVariation?.image_url) {
@@ -1188,7 +1199,6 @@ const Orders = () => {
                                         else {
                                             imageToDisplay = item.Product?.ProductImages?.find(img => img.is_primary) || 
                                                            item.Product?.ProductImages?.[0];
-                                            console.log('Using product image (fallback):', imageToDisplay);
                                         }
                                         
                                         const imageUrl = getProductImageSrc(imageToDisplay);
