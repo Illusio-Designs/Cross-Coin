@@ -248,6 +248,24 @@
   position: relative;
 }
 
+/* Orders Analytics Section */
+.orders-analytics {
+  margin: 24px 0;
+}
+
+@media (max-width: 1024px) {
+  .orders-analytics {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .orders-analytics {
+    gap: 16px;
+    margin: 16px 0;
+  }
+}
+
 .action-btn.status-select-action {
   background: #f3f4f6;
   color: #374151;
