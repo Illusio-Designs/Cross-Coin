@@ -630,7 +630,7 @@ const Orders = () => {
                     status: row.status,
                     fship_order_id: row.fship_order_id,
                     fship_waybill: row.fship_waybill,
-                    hasSync: !(row.fship_order_id || row.fship_waybill) && (row.status === 'pending' || row.status === 'processing'),
+                    hasSync: true, // Always show sync button
                     hasUpdate: !!row.fship_waybill,
                     hasCancel: (row.status === 'pending' || row.status === 'processing')
                 });
@@ -660,32 +660,30 @@ const Orders = () => {
                             </svg>
                         </button>
                         
-                        {/* Sync button for unsynced orders */}
-                        {!(row.fship_order_id || row.fship_waybill) && (row.status === 'pending' || row.status === 'processing') && (
-                            <button 
-                                className="action-btn sync" 
-                                title="Sync with FShip" 
-                                onClick={() => syncSingleOrder(row.id, row.order_number)}
-                                style={{
-                                    backgroundColor: '#28a745',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    padding: '6px 8px',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    transition: 'all 0.2s ease'
-                                }}
-                                onMouseOver={(e) => e.target.style.backgroundColor = '#218838'}
-                                onMouseOut={(e) => e.target.style.backgroundColor = '#28a745'}
-                            >
-                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                            </button>
-                        )}
+                        {/* Sync button - always visible for all orders */}
+                        <button 
+                            className="action-btn sync" 
+                            title={row.fship_order_id || row.fship_waybill ? "Re-sync with FShip" : "Sync with FShip"}
+                            onClick={() => syncSingleOrder(row.id, row.order_number)}
+                            style={{
+                                backgroundColor: '#28a745',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '6px 8px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.2s ease'
+                            }}
+                            onMouseOver={(e) => e.target.style.backgroundColor = '#218838'}
+                            onMouseOut={(e) => e.target.style.backgroundColor = '#28a745'}
+                        >
+                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                        </button>
                         
                         {/* Update button for synced orders */}
                         {(row.fship_waybill) && (

@@ -540,6 +540,28 @@ class FShipService {
                 return { exists: false };
             }
             
+            // Try alternative method - get all orders and search for this one
+            try {
+                console.log('Trying alternative method to find order...');
+                const allOrdersResponse = await this.axiosInstance.get('/api/getallorders');
+                
+                if (allOrdersResponse.data && Array.isArray(allOrdersResponse.data)) {
+                    const foundOrder = allOrdersResponse.data.find(order => 
+                        order.orderId === orderId || order.order_id === orderId
+                    );
+                    
+                    if (foundOrder) {
+                        console.log('Order found via alternative method:', foundOrder);
+                        return {
+                            exists: true,
+                            data: foundOrder
+                        };
+                    }
+                }
+            } catch (altError) {
+                console.error('Alternative method also failed:', altError.message);
+            }
+            
             // For other errors, we can't determine if it exists, so we'll assume it doesn't
             console.error('Error checking order existence:', error.message);
             return { exists: false, error: error.message };
