@@ -2730,27 +2730,7 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
       });
     }
     
-    // Check if order is already synced
-    if (order.fship_order_id || order.fship_waybill) {
-      await transaction.rollback();
-      return res.status(400).json({
-        success: false,
-        message: "Order is already synced with FShip",
-        data: {
-          fship_order_id: order.fship_order_id,
-          fship_waybill: order.fship_waybill
-        }
-      });
-    }
-    
-    // Check if order can be synced (not cancelled or delivered)
-    if (order.status === 'cancelled' || order.status === 'delivered') {
-      await transaction.rollback();
-      return res.status(400).json({
-        success: false,
-        message: `Cannot sync ${order.status} orders with FShip`
-      });
-    }
+
     
     console.log(`Found order: ${order.order_number} - Status: ${order.status}`);
     
@@ -2777,35 +2757,40 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
       
       if (existsCheck.exists) {
         console.log(`⚠️ Order ${order.order_number} already exists in FShip`);
+        console.log('FShip data:', existsCheck.data);
         
         // Update our local order with FShip data if we don't have it
-        if (!order.fship_order_id && existsCheck.data) {
-          const updateData = {};
-          
-          if (existsCheck.data.apiorderid) {
-            updateData.fship_order_id = existsCheck.data.apiorderid;
+        const updateData = {};
+        let hasUpdates = false;
+        
+        if (existsCheck.data.apiorderid && (!order.fship_order_id || order.fship_order_id === "0")) {
+          updateData.fship_order_id = existsCheck.data.apiorderid;
+          hasUpdates = true;
+        }
+        
+        if (existsCheck.data.waybill && !order.fship_waybill) {
+          updateData.fship_waybill = existsCheck.data.waybill;
+          updateData.tracking_number = existsCheck.data.waybill;
+          hasUpdates = true;
+        }
+        
+        if (existsCheck.data.route_code && !order.fship_route_code) {
+          updateData.fship_route_code = existsCheck.data.route_code;
+          hasUpdates = true;
+        }
+        
+        if (existsCheck.data.order_status) {
+          const newStatus = fshipService.mapFShipStatusToCrossCoin(existsCheck.data.order_status);
+          if (newStatus !== order.status) {
+            updateData.status = newStatus;
+            hasUpdates = true;
           }
-          
-          if (existsCheck.data.waybill) {
-            updateData.fship_waybill = existsCheck.data.waybill;
-            updateData.tracking_number = existsCheck.data.waybill;
-          }
-          
-          if (existsCheck.data.route_code) {
-            updateData.fship_route_code = existsCheck.data.route_code;
-          }
-          
-          if (existsCheck.data.order_status) {
-            const newStatus = fshipService.mapFShipStatusToCrossCoin(existsCheck.data.order_status);
-            if (newStatus !== order.status) {
-              updateData.status = newStatus;
-            }
-          }
-          
-          if (Object.keys(updateData).length > 0) {
-            await order.update(updateData, { transaction });
-            console.log(`✅ Updated local order ${order.order_number} with existing FShip data`);
-          }
+        }
+        
+        if (hasUpdates) {
+          await order.update(updateData, { transaction });
+          console.log(`✅ Updated local order ${order.order_number} with existing FShip data`);
+          console.log('Updated data:', updateData);
         }
         
         await transaction.commit();
@@ -2824,7 +2809,7 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
               tracking_number: order.tracking_number
             },
             existing_fship_data: existsCheck.data,
-            note: "Order already existed in FShip, local data updated"
+            note: "Order already existed in FShip, local data updated with AWB and status"
           }
         });
       }
