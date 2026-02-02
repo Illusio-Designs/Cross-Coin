@@ -40,6 +40,8 @@ const Orders = () => {
         deliveredOrders: 0,
         cancelledOrders: 0
     });
+    const [syncingOrders, setSyncingOrders] = useState(new Set());
+    const [syncingAll, setSyncingAll] = useState(false);
 
     const fetchOrders = async (page = currentPage) => {
         setLoading(true);
@@ -153,7 +155,13 @@ const Orders = () => {
 
 
     const syncOrders = async () => {
-        setLoading(true);
+        // Prevent double-clicking and conflicts with individual sync
+        if (syncingAll || syncingOrders.size > 0) {
+            toast.error('Sync already in progress. Please wait...');
+            return;
+        }
+
+        setSyncingAll(true);
         try {
             const result = await orderService.syncOrdersWithFShip();
             
@@ -204,7 +212,7 @@ const Orders = () => {
             
             toast.error(errorMessage);
         } finally {
-            setLoading(false);
+            setSyncingAll(false);
         }
     };
 
@@ -246,11 +254,20 @@ const Orders = () => {
     };
 
     const syncSingleOrder = async (orderId, orderNumber) => {
+        // Prevent double-clicking and conflicts with bulk sync
+        if (syncingOrders.has(orderId) || syncingAll) {
+            toast.error('Order sync already in progress...');
+            return;
+        }
+
         try {
+            // Add to syncing set
+            setSyncingOrders(prev => new Set(prev).add(orderId));
+            
             const result = await orderService.syncSingleOrderWithFShip(orderId);
             
             if (result.success) {
-                toast.success(`Order ${orderNumber} synced successfully with FShip! AWB: ${result.data?.fship_response?.waybill || 'Generated'}`);
+                toast.success(`Order ${orderNumber} synced successfully with FShip! AWB: ${result.data?.fship_response?.waybill || result.data?.order?.fship_waybill || 'Generated'}`);
                 
                 // Refresh orders after sync
                 fetchOrders();
@@ -270,6 +287,13 @@ const Orders = () => {
             }
             
             toast.error(errorMessage);
+        } finally {
+            // Remove from syncing set
+            setSyncingOrders(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(orderId);
+                return newSet;
+            });
         }
     };
 
@@ -665,24 +689,40 @@ const Orders = () => {
                             className="action-btn sync" 
                             title={row.fship_order_id || row.fship_waybill ? "Re-sync with FShip" : "Sync with FShip"}
                             onClick={() => syncSingleOrder(row.id, row.order_number)}
+                            disabled={syncingOrders.has(row.id) || syncingAll}
                             style={{
-                                backgroundColor: '#28a745',
+                                backgroundColor: (syncingOrders.has(row.id) || syncingAll) ? '#6c757d' : '#28a745',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '4px',
                                 padding: '6px 8px',
-                                cursor: 'pointer',
+                                cursor: (syncingOrders.has(row.id) || syncingAll) ? 'not-allowed' : 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                transition: 'all 0.2s ease'
+                                transition: 'all 0.2s ease',
+                                opacity: (syncingOrders.has(row.id) || syncingAll) ? 0.6 : 1
                             }}
-                            onMouseOver={(e) => e.target.style.backgroundColor = '#218838'}
-                            onMouseOut={(e) => e.target.style.backgroundColor = '#28a745'}
+                            onMouseOver={(e) => {
+                                if (!syncingOrders.has(row.id) && !syncingAll) {
+                                    e.target.style.backgroundColor = '#218838';
+                                }
+                            }}
+                            onMouseOut={(e) => {
+                                if (!syncingOrders.has(row.id) && !syncingAll) {
+                                    e.target.style.backgroundColor = '#28a745';
+                                }
+                            }}
                         >
-                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
+                            {(syncingOrders.has(row.id) || syncingAll) ? (
+                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="animate-spin">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                            ) : (
+                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                            )}
                         </button>
                         
                         {/* Update button for synced orders */}
@@ -820,12 +860,12 @@ const Orders = () => {
                             className="sync-button"
                             onClick={syncOrders}
                             title="Comprehensive FShip sync - Syncs new orders and updates statuses"
-                            disabled={loading}
+                            disabled={loading || syncingAll || syncingOrders.size > 0}
                         >
                             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
-                            {loading ? 'Syncing...' : 'FShip Sync'}
+                            {syncingAll ? 'Syncing All...' : loading ? 'Loading...' : 'FShip Sync'}
                         </button>
                         
                         <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>

@@ -567,6 +567,160 @@ class FShipService {
             return { exists: false, error: error.message };
         }
     }
+
+    /**
+     * Get order status by AWB/Waybill number
+     */
+    async getOrderByAWB(awbNumber) {
+        try {
+            console.log('=== FShip Get Order by AWB ===');
+            console.log('AWB Number:', awbNumber);
+
+            // Try to get shipment status by AWB
+            const shipmentData = await this.getShipmentStatus(awbNumber);
+            
+            if (shipmentData && shipmentData.data) {
+                console.log('Order found by AWB:', shipmentData.data);
+                return {
+                    exists: true,
+                    data: shipmentData.data
+                };
+            }
+            
+            return { exists: false };
+        } catch (error) {
+            console.error('Error getting order by AWB:', error.message);
+            return { exists: false, error: error.message };
+        }
+    }
+
+    /**
+     * Get all orders from FShip
+     */
+    async getAllOrdersFromFShip() {
+        try {
+            console.log('=== FShip Get All Orders ===');
+            
+            const response = await this.axiosInstance.get('/api/getallorders');
+            
+            if (response.data && Array.isArray(response.data)) {
+                console.log(`Found ${response.data.length} orders in FShip`);
+                return {
+                    success: true,
+                    orders: response.data
+                };
+            }
+            
+            return {
+                success: false,
+                orders: [],
+                message: 'No orders found or invalid response format'
+            };
+        } catch (error) {
+            console.error('Error getting all orders from FShip:', error.message);
+            return {
+                success: false,
+                orders: [],
+                error: error.message
+            };
+        }
+    }
+
+    /**
+     * Find order in FShip by order ID from all orders - gets the latest/best match
+     */
+    async findOrderByIdFromAll(orderId) {
+        try {
+            console.log('=== FShip Find Order by ID from All Orders ===');
+            console.log('Looking for Order ID:', orderId);
+            
+            const allOrdersResult = await this.getAllOrdersFromFShip();
+            
+            if (!allOrdersResult.success) {
+                return { exists: false, error: allOrdersResult.error };
+            }
+            
+            // Search for all orders matching this ID
+            const matchingOrders = allOrdersResult.orders.filter(order => 
+                order.orderId === orderId || 
+                order.order_id === orderId ||
+                order.orderNumber === orderId ||
+                order.order_number === orderId ||
+                order.invoice_number === orderId ||
+                order.invoiceNumber === orderId
+            );
+            
+            if (matchingOrders.length === 0) {
+                console.log(`Order ${orderId} not found in FShip`);
+                return { exists: false };
+            }
+            
+            console.log(`Found ${matchingOrders.length} matching orders for ${orderId}`);
+            
+            // If multiple orders found, prioritize by status and date
+            let bestOrder = matchingOrders[0];
+            
+            if (matchingOrders.length > 1) {
+                console.log('Multiple orders found, selecting the best one...');
+                
+                // Priority order for statuses (higher number = better)
+                const statusPriority = {
+                    'delivered': 10,
+                    'out for delivery': 9,
+                    'in transit': 8,
+                    'shipped': 7,
+                    'manifested': 6,
+                    'pickup initiated': 5,
+                    'booked': 4,
+                    'processing': 3,
+                    'pending': 2,
+                    'order cancelled': 1,
+                    'cancelled': 1
+                };
+                
+                // Sort by status priority (descending) and then by date (most recent first)
+                matchingOrders.sort((a, b) => {
+                    const aStatus = (a.order_status || a.status || '').toLowerCase();
+                    const bStatus = (b.order_status || b.status || '').toLowerCase();
+                    
+                    const aPriority = statusPriority[aStatus] || 0;
+                    const bPriority = statusPriority[bStatus] || 0;
+                    
+                    // First sort by status priority
+                    if (aPriority !== bPriority) {
+                        return bPriority - aPriority;
+                    }
+                    
+                    // Then by date (most recent first)
+                    const aDate = new Date(a.created_at || a.createdAt || a.order_date || 0);
+                    const bDate = new Date(b.created_at || b.createdAt || b.order_date || 0);
+                    
+                    return bDate - aDate;
+                });
+                
+                bestOrder = matchingOrders[0];
+                
+                console.log('Selected order details:');
+                matchingOrders.forEach((order, index) => {
+                    const status = (order.order_status || order.status || '').toLowerCase();
+                    const awb = order.waybill || order.awb_number || 'N/A';
+                    const date = order.created_at || order.createdAt || order.order_date || 'N/A';
+                    console.log(`  ${index === 0 ? '✅ SELECTED' : '  '} Order: Status=${status}, AWB=${awb}, Date=${date}`);
+                });
+            }
+            
+            console.log('Final selected order:', bestOrder);
+            return {
+                exists: true,
+                data: bestOrder,
+                totalFound: matchingOrders.length
+            };
+            
+        } catch (error) {
+            console.error('Error finding order by ID from all orders:', error.message);
+            return { exists: false, error: error.message };
+        }
+    }
 }
 
 module.exports = new FShipService();
