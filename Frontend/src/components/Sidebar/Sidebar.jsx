@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import SafeImage from "../common/SafeImage";
 import {
-  FaHome, FaUser, FaBox, FaClipboardList, FaChartBar, FaLock, FaChevronDown, FaChevronLeft, FaChevronRight, FaQuestionCircle, FaShoppingCart, FaCreditCard, FaStar, FaCog, FaTags, FaTruck, FaFileAlt, FaSignOutAlt, FaImages
+  FaHome, FaUser, FaBox, FaClipboardList, FaChartBar, FaLock, FaChevronDown, FaChevronLeft, FaChevronRight, FaQuestionCircle, FaShoppingCart, FaCreditCard, FaStar, FaCog, FaTags, FaTruck, FaFileAlt, FaSignOutAlt, FaImages, FaTimes
 } from 'react-icons/fa';
 import "./Sidebar.css";
 
@@ -66,9 +66,20 @@ const menu = [
   },
 ];
 
-const Sidebar = ({ isCollapsed, onToggleCollapse, onViewChange, currentView }) => {
+const Sidebar = ({ isCollapsed, onToggleCollapse, onViewChange, currentView, isMobileMenuOpen, onMobileMenuToggle }) => {
   const [openMenu, setOpenMenu] = React.useState(null);
   const [hoveredMenu, setHoveredMenu] = React.useState(null);
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 900);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleHelpClick = () => {
     const phoneNumber = '917600046416'; // WhatsApp number without + or spaces
@@ -89,9 +100,17 @@ const Sidebar = ({ isCollapsed, onToggleCollapse, onViewChange, currentView }) =
 
   // Toggle submenu open/close (expanded mode)
   const handleMenuClick = (idx, hasSubmenu) => {
-    if (isCollapsed) return;
+    if (isCollapsed && !isMobile) return;
     if (hasSubmenu) {
       setOpenMenu(openMenu === idx ? null : idx);
+    }
+  };
+
+  const handleMenuItemClick = (view) => {
+    onViewChange(view);
+    // Close mobile menu after selection
+    if (isMobile && onMobileMenuToggle) {
+      onMobileMenuToggle();
     }
   };
 
@@ -113,95 +132,119 @@ const Sidebar = ({ isCollapsed, onToggleCollapse, onViewChange, currentView }) =
   ];
 
   return (
-    <aside className={`sidebar-v2${isCollapsed ? " collapsed" : ""}`}> 
-      {/* Header */}
-      <div className="sidebar-v2-header">
-        <div className="sidebar-v2-logo">
-          <img 
-            src="/crosscoin icon.png"
-            alt="CrossCoin Logo" 
-            width="36" 
-            height="36" 
-            style={{ objectFit: 'contain' }}
-          />
-          {!isCollapsed && <span className="sidebar-v2-title">CrossCoin<br /><span className="sidebar-v2-subtitle">ADMIN PANEL</span></span>}
-        </div>
-        <button className="sidebar-v2-toggle" aria-label="Toggle sidebar" onClick={onToggleCollapse}>
-          {isCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
-        </button>
-      </div>
-      {/* Menu */}
-      <nav className="sidebar-v2-menu">
-        {menu.map((item, idx) => (
-          <div
-            key={item.label}
-            className={`sidebar-v2-menu-item${isMenuActive(item) ? " active" : ""}${openMenu === idx ? " open" : ""}`}
-            onMouseEnter={() => isCollapsed && setHoveredMenu(idx)}
-            onMouseLeave={() => isCollapsed && setHoveredMenu(null)}
-          >
-            <div
-              className={`sidebar-v2-menu-link${isMenuActive(item) ? " active" : ""}`}
-              onClick={() => {
-                if (item.submenu) {
-                  handleMenuClick(idx, true);
-                } else {
-                  onViewChange(item.view);
-                }
-              }}
-            >
-              <span className="sidebar-v2-icon">{item.icon}</span>
-              {!isCollapsed && <span>{item.label}</span>}
-              {item.submenu && !isCollapsed && (
-                <FaChevronDown className={`sidebar-v2-chevron${openMenu === idx ? " open" : ""}`} />
-              )}
-            </div>
-            {/* Submenu (expanded) */}
-            {item.submenu && openMenu === idx && !isCollapsed && (
-              <div className="sidebar-v2-submenu">
-                {item.submenu.map((sub) => (
-                  <div
-                    key={sub.label}
-                    className={`sidebar-v2-submenu-link${isSubmenuActive(sub) ? " active" : ""}`}
-                    onClick={() => onViewChange(sub.view)}
-                  >
-                    {sub.label}
-                  </div>
-                ))}
-              </div>
-            )}
-            {/* Submenu (collapsed, tooltip style) */}
-            {item.submenu && isCollapsed && hoveredMenu === idx && (
-              <div className="sidebar-v2-tooltip-menu">
-                {item.submenu.map((sub) => (
-                  <div
-                    key={sub.label}
-                    className={`sidebar-v2-tooltip-link${isSubmenuActive(sub) ? " active" : ""}`}
-                    onClick={() => onViewChange(sub.view)}
-                  >
-                    {sub.label}
-                  </div>
-                ))}
-              </div>
-            )}
-            {/* Tooltip for collapsed main menu */}
-            {isCollapsed && !item.submenu && hoveredMenu === idx && (
-              <div className="sidebar-v2-tooltip-label">{item.label}</div>
+    <>
+      {/* Mobile Overlay */}
+      {isMobile && isMobileMenuOpen && (
+        <div 
+          className="sidebar-mobile-overlay" 
+          onClick={onMobileMenuToggle}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <aside className={`sidebar-v2${isCollapsed ? " collapsed" : ""}${isMobile && isMobileMenuOpen ? " mobile-open" : ""}`}> 
+        {/* Header */}
+        <div className="sidebar-v2-header">
+          <div className="sidebar-v2-logo">
+            <img 
+              src="/crosscoin icon.png"
+              alt="CrossCoin Logo" 
+              width="36" 
+              height="36" 
+              style={{ objectFit: 'contain' }}
+            />
+            {(!isCollapsed || (isMobile && isMobileMenuOpen)) && (
+              <span className="sidebar-v2-title">
+                CrossCoin<br />
+                <span className="sidebar-v2-subtitle">ADMIN PANEL</span>
+              </span>
             )}
           </div>
-        ))}
-      </nav>
-      {/* Footer */}
-      <div className="sidebar-v2-footer">
-        <button 
-          className="sidebar-v2-help" 
-          aria-label="Help"
-          onClick={handleHelpClick}
-        >
-          <FaQuestionCircle />
-          {!isCollapsed && <span>Need help?</span>}
-        </button>
-      </div>
-    </aside>
+          {isMobile && isMobileMenuOpen ? (
+            <button className="sidebar-v2-toggle sidebar-mobile-close" aria-label="Close menu" onClick={onMobileMenuToggle}>
+              <FaTimes />
+            </button>
+          ) : (
+            !isMobile && (
+              <button className="sidebar-v2-toggle" aria-label="Toggle sidebar" onClick={onToggleCollapse}>
+                {isCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
+              </button>
+            )
+          )}
+        </div>
+        {/* Menu */}
+        <nav className="sidebar-v2-menu">
+          {menu.map((item, idx) => (
+            <div
+              key={item.label}
+              className={`sidebar-v2-menu-item${isMenuActive(item) ? " active" : ""}${openMenu === idx ? " open" : ""}`}
+              onMouseEnter={() => !isMobile && isCollapsed && setHoveredMenu(idx)}
+              onMouseLeave={() => !isMobile && isCollapsed && setHoveredMenu(null)}
+            >
+              <div
+                className={`sidebar-v2-menu-link${isMenuActive(item) ? " active" : ""}`}
+                onClick={() => {
+                  if (item.submenu) {
+                    handleMenuClick(idx, true);
+                  } else {
+                    handleMenuItemClick(item.view);
+                  }
+                }}
+              >
+                <span className="sidebar-v2-icon">{item.icon}</span>
+                {(!isCollapsed || (isMobile && isMobileMenuOpen)) && <span>{item.label}</span>}
+                {item.submenu && (!isCollapsed || (isMobile && isMobileMenuOpen)) && (
+                  <FaChevronDown className={`sidebar-v2-chevron${openMenu === idx ? " open" : ""}`} />
+                )}
+              </div>
+              {/* Submenu (expanded) */}
+              {item.submenu && openMenu === idx && (!isCollapsed || (isMobile && isMobileMenuOpen)) && (
+                <div className="sidebar-v2-submenu">
+                  {item.submenu.map((sub) => (
+                    <div
+                      key={sub.label}
+                      className={`sidebar-v2-submenu-link${isSubmenuActive(sub) ? " active" : ""}`}
+                      onClick={() => handleMenuItemClick(sub.view)}
+                    >
+                      {sub.label}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Submenu (collapsed, tooltip style) - Desktop only */}
+              {item.submenu && !isMobile && isCollapsed && hoveredMenu === idx && (
+                <div className="sidebar-v2-tooltip-menu">
+                  {item.submenu.map((sub) => (
+                    <div
+                      key={sub.label}
+                      className={`sidebar-v2-tooltip-link${isSubmenuActive(sub) ? " active" : ""}`}
+                      onClick={() => handleMenuItemClick(sub.view)}
+                    >
+                      {sub.label}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Tooltip for collapsed main menu - Desktop only */}
+              {!isMobile && isCollapsed && !item.submenu && hoveredMenu === idx && (
+                <div className="sidebar-v2-tooltip-label">{item.label}</div>
+              )}
+            </div>
+          ))}
+        </nav>
+        {/* Footer */}
+        <div className="sidebar-v2-footer">
+          <button 
+            className="sidebar-v2-help" 
+            aria-label="Help"
+            onClick={handleHelpClick}
+          >
+            <FaQuestionCircle />
+            {(!isCollapsed || (isMobile && isMobileMenuOpen)) && <span>Need help?</span>}
+          </button>
+        </div>
+      </aside>
+    </>
   );
 };
 
