@@ -12,12 +12,46 @@ const DonutChart = ({
     showLegend = true,
     colors = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6', '#f97316', '#84cc16']
 }) => {
+    // Safety check for data
+    if (!data || !Array.isArray(data) || data.length === 0) {
+        return (
+            <div className="donut-chart-container">
+                <div className="donut-chart-header">
+                    <h3 className="donut-chart-title">{title}</h3>
+                    {subtitle && <p className="donut-chart-subtitle">{subtitle}</p>}
+                </div>
+                <div className="donut-chart-content">
+                    <p style={{ textAlign: 'center', padding: '20px', color: '#6b7280' }}>
+                        No data available
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     const radius = (size - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
     const center = size / 2;
 
     // Calculate percentages and cumulative values
-    const total = data.reduce((sum, item) => sum + item.value, 0);
+    const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
+    
+    if (total === 0) {
+        return (
+            <div className="donut-chart-container">
+                <div className="donut-chart-header">
+                    <h3 className="donut-chart-title">{title}</h3>
+                    {subtitle && <p className="donut-chart-subtitle">{subtitle}</p>}
+                </div>
+                <div className="donut-chart-content">
+                    <p style={{ textAlign: 'center', padding: '20px', color: '#6b7280' }}>
+                        No revenue data available
+                    </p>
+                </div>
+            </div>
+        );
+    }
+    
     let cumulativePercentage = 0;
 
     const segments = data.map((item, index) => {
@@ -30,7 +64,8 @@ const DonutChart = ({
             percentage: percentage.toFixed(1),
             strokeDasharray,
             strokeDashoffset,
-            color: colors[index % colors.length]
+            // Use color from data if available, otherwise use default colors
+            color: item.color || colors[index % colors.length]
         };
         
         cumulativePercentage += percentage;

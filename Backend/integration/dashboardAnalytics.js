@@ -9,7 +9,7 @@ const GA_API_SECRET = process.env.GA_API_SECRET;          // Use environment var
 const FB_PIXEL_ID = process.env.FB_PIXEL_ID;              // Use environment variable
 const FB_ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN;      // Use environment variable
 
-router.get("/dashboard/advanced-analytics", async (req, res) => {
+router.get("/advanced-analytics", async (req, res) => {
     try {
         const [totalOrders] = await sequelize.query("SELECT COUNT(*) AS total FROM orders");
         const [totalRevenue] = await sequelize.query("SELECT SUM(total_amount) AS revenue FROM orders WHERE status = 'completed'");

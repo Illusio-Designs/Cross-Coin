@@ -1,76 +1,445 @@
-.dashboard-card {
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  padding: 16px;
+/* ===================================
+   MODERN E-COMMERCE DASHBOARD STYLES
+   =================================== */
+
+/* Main Container */
+.dashboard-sections {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  border: none;
-  background: #E8EAF6;
-  transition: all 0.2s ease;
+  gap: 24px;
+  padding: 24px;
+  background: #f8f9fa;
+  min-height: 100vh;
 }
 
-.dashboard-card:hover {
-  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-  transform: translateY(-2px);
-}
-
-.dashboard-card-icon {
-  font-size: 1.5rem;
-  color: #CE1E36;
+/* ===================================
+   HERO REVENUE SECTION
+   =================================== */
+.dashboard-hero-section {
+  width: 100%;
   margin-bottom: 8px;
 }
 
-.dashboard-card-title {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #180D3E;
-  margin-bottom: 4px;
-  line-height: 1.3;
+.revenue-hero-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  color: white;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.dashboard-card-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #180D3E;
-  margin-bottom: 2px;
+.revenue-hero-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
 }
 
-.dashboard-card-description {
-  font-size: 0.75rem;
-  color: #180D3E;
-  opacity: 0.65;
-  line-height: 1.4;
-}
-
-.dashboard-card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-}
-
-.dashboard-sections {
+.revenue-hero-content {
   display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-  padding: 20px;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 24px;
 }
 
+.revenue-hero-icon {
+  width: 80px;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  backdrop-filter: blur(10px);
+}
+
+.revenue-hero-details {
+  flex: 1;
+}
+
+.revenue-hero-title {
+  font-size: 16px;
+  font-weight: 500;
+  opacity: 0.9;
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.revenue-hero-value {
+  font-size: 48px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  line-height: 1;
+}
+
+.revenue-hero-subtitle {
+  font-size: 14px;
+  opacity: 0.8;
+  margin: 0;
+}
+
+.revenue-hero-stats {
+  display: flex;
+  gap: 32px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.revenue-stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.revenue-stat-label {
+  font-size: 13px;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.revenue-stat-value {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.revenue-stat-divider {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ===================================
+   SECTION STYLES
+   =================================== */
 .dashboard-section {
-  background: #F3F4F5;
+  background: white;
   border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-  padding: 18px;
-  flex: 1 1 100%;
-  min-width: 0;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.3s ease;
+}
+
+.dashboard-section:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .dashboard-section-title {
-  font-size: 1.125rem;
+  font-size: 18px;
   font-weight: 600;
-  color: #180D3E;
-  margin-bottom: 14px;
+  color: #1a202c;
+  margin-bottom: 20px;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-} 
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+/* ===================================
+   CARD GRID LAYOUTS
+   =================================== */
+.dashboard-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.dashboard-card-grid-3 {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+/* ===================================
+   DASHBOARD CARDS
+   =================================== */
+.dashboard-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 2px solid #f0f0f0;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  border-color: #667eea;
+}
+
+.dashboard-card:hover::before {
+  width: 100%;
+  opacity: 0.05;
+}
+
+/* Card Color Variants */
+.dashboard-card-primary::before {
+  background: #667eea;
+}
+
+.dashboard-card-success::before {
+  background: #10b981;
+}
+
+.dashboard-card-warning::before {
+  background: #f59e0b;
+}
+
+.dashboard-card-danger::before {
+  background: #ef4444;
+}
+
+.dashboard-card-info::before {
+  background: #3b82f6;
+}
+
+.dashboard-card-primary:hover {
+  border-color: #667eea;
+}
+
+.dashboard-card-success:hover {
+  border-color: #10b981;
+}
+
+.dashboard-card-warning:hover {
+  border-color: #f59e0b;
+}
+
+.dashboard-card-danger:hover {
+  border-color: #ef4444;
+}
+
+.dashboard-card-info:hover {
+  border-color: #3b82f6;
+}
+
+/* ===================================
+   CARD CONTENT
+   =================================== */
+.dashboard-card-icon {
+  font-size: 32px;
+  color: #667eea;
+  margin-bottom: 4px;
+  transition: transform 0.3s ease;
+}
+
+.dashboard-card:hover .dashboard-card-icon {
+  transform: scale(1.1);
+}
+
+.dashboard-card-primary .dashboard-card-icon {
+  color: #667eea;
+}
+
+.dashboard-card-success .dashboard-card-icon {
+  color: #10b981;
+}
+
+.dashboard-card-warning .dashboard-card-icon {
+  color: #f59e0b;
+}
+
+.dashboard-card-danger .dashboard-card-icon {
+  color: #ef4444;
+}
+
+.dashboard-card-info .dashboard-card-icon {
+  color: #3b82f6;
+}
+
+.dashboard-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.dashboard-card-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0;
+  line-height: 1;
+}
+
+.dashboard-card-description {
+  font-size: 13px;
+  color: #9ca3af;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ===================================
+   CHART CONTAINER
+   =================================== */
+.dashboard-chart-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 32px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 12px;
+  min-height: 400px;
+}
+
+/* ===================================
+   RESPONSIVE DESIGN
+   =================================== */
+@media (max-width: 1200px) {
+  .revenue-hero-value {
+    font-size: 40px;
+  }
+  
+  .revenue-stat-value {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-sections {
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  .revenue-hero-card {
+    padding: 24px;
+  }
+  
+  .revenue-hero-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+  
+  .revenue-hero-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 30px;
+  }
+  
+  .revenue-hero-value {
+    font-size: 32px;
+  }
+  
+  .revenue-hero-stats {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .revenue-stat-divider {
+    display: none;
+  }
+  
+  .dashboard-card-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-card-grid-3 {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-section {
+    padding: 16px;
+  }
+  
+  .dashboard-card {
+    padding: 20px;
+  }
+  
+  .dashboard-card-value {
+    font-size: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .revenue-hero-value {
+    font-size: 28px;
+  }
+  
+  .revenue-stat-value {
+    font-size: 18px;
+  }
+  
+  .dashboard-card-value {
+    font-size: 24px;
+  }
+}
+
+/* ===================================
+   LOADING & EMPTY STATES
+   =================================== */
+.dashboard-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  color: #9ca3af;
+}
+
+.dashboard-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #9ca3af;
+}
+
+.dashboard-empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.dashboard-empty-text {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.dashboard-empty-subtext {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+/* ===================================
+   ANIMATIONS
+   =================================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dashboard-section {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.dashboard-card {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Stagger animation for cards */
+.dashboard-card:nth-child(1) { animation-delay: 0.1s; }
+.dashboard-card:nth-child(2) { animation-delay: 0.2s; }
+.dashboard-card:nth-child(3) { animation-delay: 0.3s; }
+.dashboard-card:nth-child(4) { animation-delay: 0.4s; }
