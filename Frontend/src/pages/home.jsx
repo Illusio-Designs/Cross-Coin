@@ -719,9 +719,30 @@ const Home = () => {
                 const state = exclusiveStates[index] || { selectedThumbnail: 0, selectedColor: '', selectedSize: '', quantity: 1 };
                 const selectedSku = exclusiveSelectedSkus[index] || '';
                 const selectedVariation = product.variations?.find(v => v.sku === selectedSku) || product.variations?.[0];
-                const variationImages = selectedVariation?.images && selectedVariation.images.length > 0
-                  ? selectedVariation.images.map(img => img.image_url)
-                  : (product.images && product.images.length > 0 ? product.images.map(img => img.image_url) : []);
+                
+                // Get images for the selected variation
+                const variationImages = (() => {
+                  // Priority 1: Use images from the selected variation if available
+                  if (selectedVariation?.images && selectedVariation.images.length > 0) {
+                    return selectedVariation.images.map(img => img.image_url);
+                  }
+                  
+                  // Priority 2: Filter product images by variation ID
+                  if (product?.images && product.images.length > 0 && selectedVariation?.id) {
+                    const filteredImages = product.images.filter(img => img.product_variation_id === selectedVariation.id);
+                    if (filteredImages.length > 0) {
+                      return filteredImages.map(img => img.image_url);
+                    }
+                  }
+                  
+                  // Priority 3: Fallback to all product images
+                  if (product?.images && product.images.length > 0) {
+                    return product.images.map(img => img.image_url);
+                  }
+                  
+                  return [];
+                })();
+                
                 const attrs = selectedVariation && typeof selectedVariation.attributes === 'string'
                   ? JSON.parse(selectedVariation.attributes)
                   : selectedVariation?.attributes || {};
@@ -752,30 +773,40 @@ const Home = () => {
                 return (
                   <div key={product.id} className={`featured-product-card ${expandedCards[index] ? 'expanded' : ''}`}>
                     <div className="product-images">
-                      <SafeImage
-                        className="main-image"
-                        imageData={{ image_url: variationImages[state.selectedThumbnail] }}
-                        alt={product.name}
-                        width="400px"
-                        height="400px"
-                        style={{ objectFit: 'cover' }}
-                        isProductCard={true}
-                      />
-                      <div className="thumbnail-images">
+                      {/* Main image */}
+                      <div style={{ position: 'relative', display: 'inline-block', width: '100%', textAlign: 'center' }}>
+                        <SafeImage
+                          className="main-image"
+                          imageData={{ image_url: variationImages[state.selectedThumbnail] }}
+                          alt={product.name}
+                          width="100%"
+                          height="auto"
+                          style={{ objectFit: 'contain', boxShadow: '0 2px 8px #eee', background: '#eee', display: 'block' }}
+                          isProductCard={true}
+                        />
+                      </div>
+                      {/* Thumbnails below */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 16, marginTop: 16 }}>
                         {variationImages.map((src, idx) => (
-                          <SafeImage
-                            key={idx}
-                            imageData={{ image_url: src }}
-                            alt={`${product.name} thumbnail ${idx + 1}`}
-                            className={state.selectedThumbnail === idx ? 'active' : ''}
-                            isProductCard={true}
-                            onClick={() => {
-                              setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, selectedThumbnail: idx } : s));
-                            }}
-                            width="60px"
-                            height="60px"
-                            style={{ objectFit: 'cover', cursor: 'pointer' }}
-                          />
+                          <div key={idx} style={{ position: 'relative', width: 80, height: 80 }}>
+                            <SafeImage
+                              imageData={{ image_url: src }}
+                              alt={`${product.name} thumbnail ${idx + 1}`}
+                              width="80px"
+                              height="80px"
+                              style={{
+                                objectFit: 'cover',
+                                border: state.selectedThumbnail === idx ? '2px solid #222' : '1px solid #eee',
+                                cursor: 'pointer',
+                                background: '#eee',
+                                display: 'block'
+                              }}
+                              isProductCard={true}
+                              onClick={() => {
+                                setExclusiveStates(prev => prev.map((s, i) => i === index ? { ...s, selectedThumbnail: idx } : s));
+                              }}
+                            />
+                          </div>
                         ))}
                       </div>
                     </div>

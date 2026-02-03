@@ -80,13 +80,29 @@ export default function ProductDetails() {
 
   // Use images from selected variation if available, else fallback to product images
   const variationImages = useMemo(() => {
+    // Priority 1: Use images from the selected variation if available
     if (selectedVariation?.images && selectedVariation.images.length > 0) {
+      console.log('Using selectedVariation.images:', selectedVariation.images);
       return selectedVariation.images;
     }
+    
+    // Priority 2: Filter product images by variation ID
+    if (product?.images && product.images.length > 0 && selectedVariation?.id) {
+      const filteredImages = product.images.filter(img => img.product_variation_id === selectedVariation.id);
+      if (filteredImages.length > 0) {
+        console.log('Using filtered product images for variation:', selectedVariation.id, filteredImages);
+        return filteredImages;
+      }
+    }
+    
+    // Priority 3: Fallback to all product images
     if (product?.images && product.images.length > 0) {
+      console.log('Using all product images as fallback');
       return product.images;
     }
+    
     // If no images available, return empty array
+    console.log('No images available');
     return [];
   }, [selectedVariation, product]);
 
@@ -101,10 +117,11 @@ export default function ProductDetails() {
     console.log('================================');
   }, [selectedVariation, variationImages, selectedThumbnail, product]);
 
-  // Reset selectedThumbnail when SKU changes
+  // Reset selectedThumbnail when variation changes
   useEffect(() => {
+    console.log('Variation changed, resetting thumbnail to 0');
     setSelectedThumbnail(0);
-  }, [selectedSku]);
+  }, [selectedVariation?.id]);
 
   // Parse attributes
   const attrs = selectedVariationBySku && typeof selectedVariationBySku.attributes === 'string'
