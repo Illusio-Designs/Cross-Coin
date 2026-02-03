@@ -108,7 +108,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
           alt={product?.name || "Product Image"}
           width="300px"
           height="300px"
-          style={{ objectFit: "cover", background: "#f5f5f5" }}
+          style={{ background: "#ffffff" }}
           isProductCard={true}
         />
         <button

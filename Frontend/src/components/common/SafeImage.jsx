@@ -146,11 +146,11 @@ const SafeImage = ({
       alt={alt}
       onError={handleError}
       onLoad={handleLoad}
-      className={className}
+      className={`${className} ${isProductCard ? 'product-card-image-contain' : ''}`}
       style={{
         width: width || '100%',
         height: height || 'auto',
-        objectFit: 'cover',
+        objectFit: isProductCard ? 'contain' : 'cover',
         ...style
       }}
       {...props}
