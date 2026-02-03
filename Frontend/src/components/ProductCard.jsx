@@ -100,7 +100,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
       style={{ cursor: "pointer" }}
     >
       <div className="product-image" style={{ position: "relative" }}>
-        {product?.badge && (
+        {product?.badge && product.badge !== 'none' && (
           <span className="product-badge">{formatBadge(product.badge)}</span>
         )}
         <SafeImage
