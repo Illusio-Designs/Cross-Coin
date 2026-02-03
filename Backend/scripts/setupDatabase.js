@@ -257,6 +257,10 @@ const setupDatabase = async () => {
 
     console.log("✓ Database setup completed successfully!");
     
+    // Create RTO stock restoration table
+    console.log("\nCreating RTO stock restoration table...");
+    await createRTOStockRestorationTable();
+    
     // Clean up duplicate payments
     console.log("\nCleaning up duplicate payments...");
     await cleanupDuplicatePayments();
@@ -576,6 +580,42 @@ const findAvailablePort = async (startPort) => {
       });
     });
   });
+};
+
+// Function to create RTO stock restoration table
+const createRTOStockRestorationTable = async () => {
+  try {
+    console.log('Creating RTO stock restoration table...');
+
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS rto_stock_restoration (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        order_id INT NOT NULL,
+        order_number VARCHAR(255) NOT NULL,
+        product_id INT NOT NULL,
+        variation_id INT NULL,
+        quantity_restored INT NOT NULL,
+        stock_before INT NOT NULL DEFAULT 0,
+        stock_after INT NOT NULL DEFAULT 0,
+        restored_by VARCHAR(255) NULL COMMENT 'admin_id or system',
+        notes TEXT NULL,
+        restoration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_order_id (order_id),
+        INDEX idx_product_id (product_id),
+        INDEX idx_variation_id (variation_id),
+        INDEX idx_restoration_date (restoration_date),
+        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+        FOREIGN KEY (variation_id) REFERENCES product_variations(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+    `);
+
+    console.log('✓ RTO stock restoration table created successfully');
+  } catch (error) {
+    console.log('⚠️ RTO stock restoration table creation skipped (table may already exist):', error.message);
+  }
 };
 
 // Function to update coupon table with new fields
