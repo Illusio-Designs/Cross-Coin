@@ -146,8 +146,10 @@ function Dashboard() {
             minHeight: '100vh',
             display: 'flex',
             flexDirection: 'column',
-            width: `calc(100% - ${isCollapsed ? 72 : 260}px)`,
-            maxWidth: 'none',
+            width: `calc(100vw - ${isCollapsed ? 72 : 260}px)`,
+            maxWidth: `calc(100vw - ${isCollapsed ? 72 : 260}px)`,
+            overflow: 'hidden',
+            boxSizing: 'border-box',
           }}
         >
           <main
@@ -159,9 +161,10 @@ function Dashboard() {
               transition: 'margin 0.3s cubic-bezier(.4,0,.2,1)',
               position: 'relative', // Added for loader positioning
               width: '100%',
-              maxWidth: 'none',
+              maxWidth: '100%',
               padding: '0', // Remove padding here since it's handled by CSS
               boxSizing: 'border-box',
+              overflow: 'hidden',
             }}
           >
             {renderContent()}
