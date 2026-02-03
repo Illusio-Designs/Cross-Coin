@@ -49,6 +49,12 @@ body{
   background: #a81a2b;         /* Slightly darker on hover */
 }
 
+/* Product Card Images - Force contain to show full image without cropping */
+.product-card-image-contain {
+  object-fit: contain !important;
+  background: #ffffff !important;
+}
+
 *::-webkit-scrollbar-track {
   background: #f3f4f6;         /* Light background for track */
   border-radius: 8px;
