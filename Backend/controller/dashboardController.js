@@ -1,6 +1,6 @@
-const { Product, Order, User, Payment, Review } = require("../model/associations.js");
+const { Product, Order, User, Payment, Review, OrderItem, ProductVariation, GuestUser } = require("../model/associations.js");
 const { sequelize } = require("../config/db.js");
-const { Op } = require("sequelize");
+const { Op, QueryTypes } = require("sequelize");
 
 // Get dashboard statistics
 const getDashboardStats = async (req, res) => {
@@ -221,6 +221,204 @@ const getDashboardStats = async (req, res) => {
       },
     });
 
+    // ===== NEW FEATURES =====
+    
+    // 1. RECENT ORDERS LIST (Last 10 orders)
+    const recentOrdersList = await Order.findAll({
+      limit: 10,
+      order: [['createdAt', 'DESC']],
+      include: [
+        { 
+          model: User, 
+          as: 'User',
+          attributes: ['id', 'username', 'email'],
+          required: false
+        },
+        { 
+          model: GuestUser, 
+          as: 'GuestUser',
+          attributes: ['id', 'firstName', 'lastName', 'email'],
+          required: false
+        }
+      ],
+      attributes: ['id', 'order_number', 'final_amount', 'status', 'payment_type', 'payment_status', 'createdAt']
+    });
+
+    // Format recent orders
+    const formattedRecentOrders = recentOrdersList.map(order => ({
+      id: order.id,
+      orderNumber: order.order_number,
+      customerName: order.User ? order.User.username : 
+                    order.GuestUser ? `${order.GuestUser.firstName} ${order.GuestUser.lastName}` : 
+                    'Guest',
+      customerEmail: order.User ? order.User.email : 
+                     order.GuestUser ? order.GuestUser.email : 
+                     'N/A',
+      amount: parseFloat(order.final_amount),
+      status: order.status,
+      paymentType: order.payment_type,
+      paymentStatus: order.payment_status,
+      date: order.createdAt
+    }));
+
+    // 2. TOP SELLING PRODUCTS (Top 10 by revenue)
+    const topProducts = await sequelize.query(`
+      SELECT 
+        p.id,
+        p.name,
+        p.slug,
+        SUM(oi.quantity) as total_sold,
+        SUM(oi.subtotal) as total_revenue,
+        COUNT(DISTINCT oi.order_id) as order_count,
+        AVG(oi.price) as avg_price
+      FROM order_items oi
+      JOIN products p ON oi.product_id = p.id
+      JOIN orders o ON oi.order_id = o.id
+      WHERE o.status NOT IN ('cancelled')
+      GROUP BY p.id, p.name, p.slug
+      ORDER BY total_revenue DESC
+      LIMIT 10
+    `, { type: QueryTypes.SELECT });
+
+    // Format top products
+    const formattedTopProducts = topProducts.map(product => ({
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      price: parseFloat(product.avg_price || 0),
+      totalSold: parseInt(product.total_sold || 0),
+      totalRevenue: parseFloat(product.total_revenue || 0),
+      orderCount: parseInt(product.order_count || 0)
+    }));
+
+    // 3. LOW STOCK PRODUCTS (Stock < 10)
+    const lowStockProducts = await sequelize.query(`
+      SELECT 
+        p.id,
+        p.name,
+        p.slug,
+        pv.id as variation_id,
+        pv.sku,
+        pv.stock,
+        pv.attributes
+      FROM product_variations pv
+      JOIN products p ON pv.productId = p.id
+      WHERE pv.stock < 10 AND pv.stock > 0
+      ORDER BY pv.stock ASC
+      LIMIT 20
+    `, { type: QueryTypes.SELECT });
+
+    // Count out of stock
+    const outOfStockCount = await ProductVariation.count({
+      where: { stock: 0 }
+    });
+
+    // Format low stock products
+    const formattedLowStock = lowStockProducts.map(product => ({
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      variationId: product.variation_id,
+      sku: product.sku,
+      stock: parseInt(product.stock),
+      attributes: product.attributes
+    }));
+
+    // 4. ORDER STATUS DISTRIBUTION (Already have statusCounts)
+    const orderStatusDistribution = {
+      pending: statusCounts['pending'] || 0,
+      processing: statusCounts['processing'] || 0,
+      confirmed: statusCounts['confirmed'] || 0,
+      shipped: statusCounts['shipped'] || 0,
+      'out for delivery': statusCounts['out for delivery'] || 0,
+      'in transit': statusCounts['in transit'] || 0,
+      delivered: statusCounts['delivered'] || 0,
+      completed: statusCounts['completed'] || 0,
+      cancelled: statusCounts['cancelled'] || 0,
+      rto: statusCounts['rto'] || 0,
+      undelivered: statusCounts['undelivered'] || 0
+    };
+
+    // Format for chart (combine similar statuses)
+    const orderStatusChart = [
+      {
+        label: 'Pending',
+        value: (statusCounts['pending'] || 0),
+        color: '#8b5cf6'
+      },
+      {
+        label: 'Processing',
+        value: (statusCounts['processing'] || 0) + (statusCounts['confirmed'] || 0),
+        color: '#f59e0b'
+      },
+      {
+        label: 'Shipped',
+        value: (statusCounts['shipped'] || 0) + (statusCounts['out for delivery'] || 0) + (statusCounts['in transit'] || 0),
+        color: '#3b82f6'
+      },
+      {
+        label: 'Delivered',
+        value: (statusCounts['delivered'] || 0) + (statusCounts['completed'] || 0),
+        color: '#10b981'
+      },
+      {
+        label: 'Cancelled',
+        value: (statusCounts['cancelled'] || 0),
+        color: '#6b7280'
+      },
+      {
+        label: 'RTO',
+        value: (statusCounts['rto'] || 0),
+        color: '#ef4444'
+      }
+    ].filter(item => item.value > 0);
+
+    // 5. PAYMENT METHOD DISTRIBUTION
+    const paymentDistribution = {
+      cod: {
+        count: paymentTypeCounts['cod'] || 0,
+        revenue: allOrders
+          .filter(o => o.payment_type?.toLowerCase() === 'cod' && o.status?.toLowerCase() !== 'cancelled')
+          .reduce((sum, o) => sum + parseFloat(o.final_amount || 0), 0)
+      },
+      prepaid: {
+        count: Object.keys(paymentTypeCounts)
+          .filter(type => type !== 'cod')
+          .reduce((sum, type) => sum + (paymentTypeCounts[type] || 0), 0),
+        revenue: allOrders
+          .filter(o => o.payment_type?.toLowerCase() !== 'cod' && o.status?.toLowerCase() !== 'cancelled')
+          .reduce((sum, o) => sum + parseFloat(o.final_amount || 0), 0)
+      }
+    };
+
+    // Format for chart
+    const paymentChart = [
+      {
+        label: 'COD',
+        value: paymentDistribution.cod.revenue,
+        count: paymentDistribution.cod.count,
+        color: '#f59e0b',
+        percentage: totalRevenue > 0 ? parseFloat(((paymentDistribution.cod.revenue / totalRevenue) * 100).toFixed(1)) : 0
+      },
+      {
+        label: 'Prepaid',
+        value: paymentDistribution.prepaid.revenue,
+        count: paymentDistribution.prepaid.count,
+        color: '#10b981',
+        percentage: totalRevenue > 0 ? parseFloat(((paymentDistribution.prepaid.revenue / totalRevenue) * 100).toFixed(1)) : 0
+      }
+    ].filter(item => item.value > 0);
+
+    // 6. RTO STATISTICS
+    const rtoOrders = allOrders.filter(o => o.status?.toLowerCase() === 'rto');
+    const rtoStats = {
+      totalRTO: statusCounts['rto'] || 0,
+      rtoRevenue: parseFloat(rtoRevenue.toFixed(2)),
+      rtoRate: totalOrders > 0 ? parseFloat(((statusCounts['rto'] / totalOrders) * 100).toFixed(2)) : 0,
+      rtoPercentageOfRevenue: allOrdersRevenue > 0 ? parseFloat(((rtoRevenue / allOrdersRevenue) * 100).toFixed(2)) : 0,
+      averageRTOValue: rtoOrders.length > 0 ? parseFloat((rtoRevenue / rtoOrders.length).toFixed(2)) : 0
+    };
+
     res.status(200).json({
       success: true,
       stats: {
@@ -235,6 +433,8 @@ const getDashboardStats = async (req, res) => {
           completed: completedOrdersCount,
           cancelled: cancelledOrders,
           recent: recentOrders,
+          statusDistribution: orderStatusDistribution,
+          statusChart: orderStatusChart
         },
         revenue: {
           total: parseFloat(totalRevenue.toFixed(2)),
@@ -297,6 +497,20 @@ const getDashboardStats = async (req, res) => {
           total: totalReviews,
           approved: approvedReviews,
         },
+        // NEW FEATURES
+        recentOrders: formattedRecentOrders,
+        topProducts: formattedTopProducts,
+        lowStock: {
+          products: formattedLowStock,
+          outOfStockCount: outOfStockCount,
+          lowStockCount: formattedLowStock.length
+        },
+        paymentDistribution: {
+          cod: paymentDistribution.cod,
+          prepaid: paymentDistribution.prepaid,
+          chart: paymentChart
+        },
+        rtoStats: rtoStats
       },
     });
   } catch (error) {

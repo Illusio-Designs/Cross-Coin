@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../../styles/dashboard/Card.css';
-import { FaBox, FaShoppingCart, FaDollarSign, FaUsers, FaStar, FaClock, FaRupeeSign } from "react-icons/fa";
+import { FaBox, FaShoppingCart, FaDollarSign, FaUsers, FaStar, FaClock, FaRupeeSign, FaExclamationTriangle, FaCreditCard, FaUndo } from "react-icons/fa";
 import { dashboardService } from '../../services';
 import Loader from '../Loader';
 import DonutChart from '../common/DonutChart';
@@ -193,33 +193,260 @@ function CardGrid() {
         </div>
       </div>
 
-      {/* Revenue Breakdown Donut Chart */}
-      {stats.revenue && (
-        <div className="dashboard-section">
-          <div className="dashboard-section-title">
-            <FaRupeeSign style={{marginRight: 8}} />
-            Revenue Breakdown by Order Status
-          </div>
-          <div className="dashboard-chart-container">
-            {stats.revenue.donutChart && stats.revenue.donutChart.length > 0 ? (
+      {/* Charts Row */}
+      <div className="dashboard-charts-row">
+        {/* Revenue Breakdown Donut Chart */}
+        {stats.revenue && stats.revenue.donutChart && stats.revenue.donutChart.length > 0 && (
+          <div className="dashboard-section dashboard-chart-section">
+            <div className="dashboard-section-title">
+              <FaRupeeSign style={{marginRight: 8}} />
+              Revenue by Status
+            </div>
+            <div className="dashboard-chart-container">
               <DonutChart
                 data={stats.revenue.donutChart}
                 title="Revenue Distribution"
-                subtitle="Breakdown by order status"
+                subtitle="By order status"
                 totalValue={`₹${stats.revenue.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 totalLabel="Total Revenue"
-                size={200}
-                strokeWidth={30}
+                size={180}
+                strokeWidth={25}
                 showLegend={true}
               />
-            ) : (
-              <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
-                <p>No revenue data available for chart</p>
-                <p style={{ fontSize: '14px', marginTop: '8px' }}>
-                  Total Revenue: ₹{stats.revenue.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
+            </div>
+          </div>
+        )}
+
+        {/* Payment Distribution Chart */}
+        {stats.paymentDistribution && stats.paymentDistribution.chart && stats.paymentDistribution.chart.length > 0 && (
+          <div className="dashboard-section dashboard-chart-section">
+            <div className="dashboard-section-title">
+              <FaCreditCard style={{marginRight: 8}} />
+              Payment Methods
+            </div>
+            <div className="dashboard-chart-container">
+              <DonutChart
+                data={stats.paymentDistribution.chart}
+                title="Payment Distribution"
+                subtitle="COD vs Prepaid"
+                totalValue={`${stats.orders.total}`}
+                totalLabel="Total Orders"
+                size={180}
+                strokeWidth={25}
+                showLegend={true}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Order Status Chart */}
+        {stats.orders && stats.orders.statusChart && stats.orders.statusChart.length > 0 && (
+          <div className="dashboard-section dashboard-chart-section">
+            <div className="dashboard-section-title">
+              <FaShoppingCart style={{marginRight: 8}} />
+              Order Pipeline
+            </div>
+            <div className="dashboard-chart-container">
+              <DonutChart
+                data={stats.orders.statusChart}
+                title="Order Status"
+                subtitle="Current pipeline"
+                totalValue={`${stats.orders.total}`}
+                totalLabel="Total Orders"
+                size={180}
+                strokeWidth={25}
+                showLegend={true}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* RTO Statistics */}
+      {stats.rtoStats && stats.rtoStats.totalRTO > 0 && (
+        <div className="dashboard-section">
+          <div className="dashboard-section-title">
+            <FaUndo style={{marginRight: 8}} />
+            RTO Statistics
+          </div>
+          <div className="dashboard-card-grid dashboard-card-grid-3">
+            <div className="dashboard-card dashboard-card-danger">
+              <div className="dashboard-card-icon"><FaUndo /></div>
+              <div className="dashboard-card-title">Total RTO Orders</div>
+              <div className="dashboard-card-value">{stats.rtoStats.totalRTO}</div>
+              <div className="dashboard-card-description">{stats.rtoStats.rtoRate}% of total orders</div>
+            </div>
+            <div className="dashboard-card dashboard-card-danger">
+              <div className="dashboard-card-icon"><FaRupeeSign /></div>
+              <div className="dashboard-card-title">RTO Revenue Loss</div>
+              <div className="dashboard-card-value">
+                ₹{stats.rtoStats.rtoRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              </div>
+              <div className="dashboard-card-description">{stats.rtoStats.rtoPercentageOfRevenue}% of total revenue</div>
+            </div>
+            <div className="dashboard-card dashboard-card-danger">
+              <div className="dashboard-card-icon"><FaDollarSign /></div>
+              <div className="dashboard-card-title">Avg RTO Value</div>
+              <div className="dashboard-card-value">
+                ₹{stats.rtoStats.averageRTOValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              </div>
+              <div className="dashboard-card-description">Per RTO order</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Low Stock Alerts */}
+      {stats.lowStock && (stats.lowStock.lowStockCount > 0 || stats.lowStock.outOfStockCount > 0) && (
+        <div className="dashboard-section">
+          <div className="dashboard-section-title">
+            <FaExclamationTriangle style={{marginRight: 8, color: '#ef4444'}} />
+            Stock Alerts
+          </div>
+          <div className="dashboard-alert-cards">
+            {stats.lowStock.outOfStockCount > 0 && (
+              <div className="dashboard-alert-card alert-danger">
+                <div className="alert-icon"><FaExclamationTriangle /></div>
+                <div className="alert-content">
+                  <div className="alert-title">Out of Stock</div>
+                  <div className="alert-value">{stats.lowStock.outOfStockCount} products</div>
+                  <div className="alert-description">Need immediate restocking</div>
+                </div>
               </div>
             )}
+            {stats.lowStock.lowStockCount > 0 && (
+              <div className="dashboard-alert-card alert-warning">
+                <div className="alert-icon"><FaExclamationTriangle /></div>
+                <div className="alert-content">
+                  <div className="alert-title">Low Stock</div>
+                  <div className="alert-value">{stats.lowStock.lowStockCount} products</div>
+                  <div className="alert-description">Stock below 10 units</div>
+                </div>
+              </div>
+            )}
+          </div>
+          {stats.lowStock.products && stats.lowStock.products.length > 0 && (
+            <div className="dashboard-table-container">
+              <table className="dashboard-table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>SKU</th>
+                    <th>Stock</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.lowStock.products.slice(0, 10).map((product, index) => (
+                    <tr key={index}>
+                      <td className="table-product-name">{product.name}</td>
+                      <td>{product.sku}</td>
+                      <td>
+                        <span className={`stock-badge ${product.stock < 5 ? 'stock-critical' : 'stock-low'}`}>
+                          {product.stock} units
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`status-badge ${product.stock < 5 ? 'status-danger' : 'status-warning'}`}>
+                          {product.stock < 5 ? 'Critical' : 'Low'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Top Selling Products */}
+      {stats.topProducts && stats.topProducts.length > 0 && (
+        <div className="dashboard-section">
+          <div className="dashboard-section-title">
+            <FaStar style={{marginRight: 8, color: '#f59e0b'}} />
+            Top Selling Products
+          </div>
+          <div className="dashboard-table-container">
+            <table className="dashboard-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Product</th>
+                  <th>Price</th>
+                  <th>Sold</th>
+                  <th>Orders</th>
+                  <th>Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.topProducts.map((product, index) => (
+                  <tr key={product.id}>
+                    <td className="table-rank">#{index + 1}</td>
+                    <td className="table-product-name">{product.name}</td>
+                    <td>₹{product.price.toLocaleString('en-IN')}</td>
+                    <td>{product.totalSold} units</td>
+                    <td>{product.orderCount}</td>
+                    <td className="table-revenue">
+                      ₹{product.totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Recent Orders */}
+      {stats.recentOrders && stats.recentOrders.length > 0 && (
+        <div className="dashboard-section">
+          <div className="dashboard-section-title">
+            <FaShoppingCart style={{marginRight: 8}} />
+            Recent Orders
+          </div>
+          <div className="dashboard-table-container">
+            <table className="dashboard-table">
+              <thead>
+                <tr>
+                  <th>Order #</th>
+                  <th>Customer</th>
+                  <th>Amount</th>
+                  <th>Payment</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.recentOrders.map((order) => (
+                  <tr key={order.id}>
+                    <td className="table-order-number">{order.orderNumber}</td>
+                    <td>{order.customerName}</td>
+                    <td className="table-amount">
+                      ₹{order.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td>
+                      <span className={`payment-badge payment-${order.paymentType}`}>
+                        {order.paymentType.toUpperCase()}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`status-badge status-${order.status.toLowerCase().replace(/\s+/g, '-')}`}>
+                        {order.status}
+                      </span>
+                    </td>
+                    <td className="table-date">
+                      {new Date(order.date).toLocaleDateString('en-IN', { 
+                        day: '2-digit', 
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
