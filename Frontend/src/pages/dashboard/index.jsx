@@ -27,6 +27,23 @@ function Dashboard() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth <= 900;
+      setIsMobile(mobile);
+      if (mobile) {
+        setIsCollapsed(true);
+      }
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Handle URL-based routing on page load
   useEffect(() => {
@@ -55,6 +72,21 @@ function Dashboard() {
   const onViewChange = (view) => {
     handleViewChange(view, setCurrentView);
   };
+  
+  const handleMobileMenuToggle = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+  
+  // Get responsive sidebar width
+  const getSidebarWidth = () => {
+    if (typeof window === 'undefined') return 260;
+    
+    const width = window.innerWidth;
+    if (width <= 900) return 0; // Hidden on mobile
+    return isCollapsed ? 72 : 260;
+  };
+  
+  const sidebarWidth = getSidebarWidth();
 
   // Fullscreen logic
   const handleToggleFullscreen = () => {
@@ -126,6 +158,20 @@ function Dashboard() {
         return <CardGrid />;
     }
   };
+  
+  // Get responsive header/footer heights
+  const getHeaderHeight = () => {
+    if (typeof window === 'undefined') return 80;
+    return window.innerWidth <= 768 ? 60 : 80;
+  };
+  
+  const getFooterHeight = () => {
+    if (typeof window === 'undefined') return 56;
+    return window.innerWidth <= 768 ? 40 : 56;
+  };
+  
+  const headerHeight = getHeaderHeight();
+  const footerHeight = getFooterHeight();
 
   return (
     <ProtectedRoute requireAdmin={true}>
@@ -135,19 +181,29 @@ function Dashboard() {
           onToggleCollapse={() => setIsCollapsed((prev) => !prev)}
           onViewChange={onViewChange}
           currentView={currentView}
+          isMobileMenuOpen={isMobileMenuOpen}
+          onMobileMenuToggle={handleMobileMenuToggle}
         />
-        <DashboardHeader isCollapsed={isCollapsed} isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} currentView={currentView} />
-        <DashboardFooter isCollapsed={isCollapsed} />
+        <DashboardHeader 
+          isCollapsed={isCollapsed} 
+          isFullscreen={isFullscreen} 
+          onToggleFullscreen={handleToggleFullscreen} 
+          currentView={currentView}
+          sidebarWidth={sidebarWidth}
+          isMobile={isMobile}
+          onMobileMenuToggle={handleMobileMenuToggle}
+        />
+        <DashboardFooter isCollapsed={isCollapsed} sidebarWidth={sidebarWidth} />
         <div
           className="dashboard-main"
           style={{
-            marginLeft: isCollapsed ? 72 : 260,
+            marginLeft: sidebarWidth,
             transition: 'margin-left 0.3s cubic-bezier(.4,0,.2,1)',
             minHeight: '100vh',
             display: 'flex',
             flexDirection: 'column',
-            width: `calc(100vw - ${isCollapsed ? 72 : 260}px)`,
-            maxWidth: `calc(100vw - ${isCollapsed ? 72 : 260}px)`,
+            width: `calc(100vw - ${sidebarWidth}px)`,
+            maxWidth: `calc(100vw - ${sidebarWidth}px)`,
             overflow: 'hidden',
             boxSizing: 'border-box',
           }}
@@ -155,14 +211,14 @@ function Dashboard() {
           <main
             className="dashboard-content"
             style={{
-              marginTop: 80, // header height
-              marginBottom: 56, // footer height
-              minHeight: 'calc(100vh - 136px)',
+              marginTop: headerHeight,
+              marginBottom: footerHeight,
+              minHeight: `calc(100vh - ${headerHeight + footerHeight}px)`,
               transition: 'margin 0.3s cubic-bezier(.4,0,.2,1)',
-              position: 'relative', // Added for loader positioning
+              position: 'relative',
               width: '100%',
               maxWidth: '100%',
-              padding: '0', // Remove padding here since it's handled by CSS
+              padding: '0',
               boxSizing: 'border-box',
               overflow: 'hidden',
             }}

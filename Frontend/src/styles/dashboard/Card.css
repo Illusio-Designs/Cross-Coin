@@ -599,12 +599,15 @@ html, body {
 /* ===================================
    RESPONSIVE DESIGN
    =================================== */
+
+/* Tablet Landscape */
 @media (max-width: 1400px) {
   .dashboard-charts-row {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
+/* Tablet Portrait */
 @media (max-width: 1200px) {
   .revenue-hero-value {
     font-size: 36px;
@@ -623,10 +626,45 @@ html, body {
   }
 }
 
+/* Mobile Landscape & Small Tablets */
+@media (max-width: 900px) {
+  .dashboard-sections {
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  .revenue-hero-card {
+    padding: 24px;
+  }
+  
+  .revenue-hero-value {
+    font-size: 34px;
+  }
+  
+  .dashboard-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .dashboard-card-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .dashboard-section {
+    padding: 18px;
+  }
+  
+  .dashboard-section-title {
+    font-size: 16px;
+  }
+}
+
+/* Mobile Portrait */
 @media (max-width: 768px) {
   .dashboard-sections {
     padding: 12px;
-    gap: 16px;
+    gap: 14px;
   }
   
   .revenue-hero-card {
@@ -643,6 +681,7 @@ html, body {
     width: 56px;
     height: 56px;
     font-size: 28px;
+    margin: 0 auto;
   }
   
   .revenue-hero-value {
@@ -652,6 +691,12 @@ html, body {
   .revenue-hero-stats {
     flex-direction: column;
     gap: 14px;
+    padding-top: 16px;
+  }
+  
+  .revenue-stat-item {
+    min-width: 100%;
+    text-align: center;
   }
   
   .revenue-stat-divider {
@@ -661,10 +706,12 @@ html, body {
   .dashboard-card-grid,
   .dashboard-card-grid-3 {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
   
   .dashboard-charts-row {
     grid-template-columns: 1fr;
+    gap: 14px;
   }
   
   .dashboard-section {
@@ -673,46 +720,204 @@ html, body {
   
   .dashboard-card {
     padding: 16px;
+    min-height: 120px;
+  }
+  
+  .dashboard-card-icon {
+    font-size: 24px;
   }
   
   .dashboard-card-value {
     font-size: 24px;
   }
   
+  .dashboard-card-title {
+    font-size: 12px;
+  }
+  
+  .dashboard-card-description {
+    font-size: 11px;
+  }
+  
   .dashboard-table-container {
-    overflow-x: scroll;
+    overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    margin-left: -16px;
+    margin-right: -16px;
+    padding: 0 16px;
+  }
+  
+  .dashboard-table {
+    font-size: 12px;
+  }
+  
+  .dashboard-table th {
+    padding: 8px 10px;
+    font-size: 10px;
+  }
+  
+  .dashboard-table td {
+    padding: 10px;
   }
   
   .dashboard-alert-cards {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .dashboard-alert-card {
+    padding: 14px;
+  }
+  
+  .alert-icon {
+    font-size: 24px;
+  }
+  
+  .alert-value {
+    font-size: 20px;
   }
   
   .dashboard-chart-container {
     padding: 16px;
-    min-height: 300px;
+    min-height: 280px;
   }
   
   .dashboard-chart-section {
-    min-height: 350px;
+    min-height: 320px;
+  }
+  
+  .dashboard-section-title {
+    font-size: 15px;
+    margin-bottom: 14px;
   }
 }
 
+/* Small Mobile */
 @media (max-width: 480px) {
+  .dashboard-sections {
+    padding: 10px;
+    gap: 12px;
+  }
+  
+  .revenue-hero-card {
+    padding: 16px;
+  }
+  
+  .revenue-hero-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+  }
+  
   .revenue-hero-value {
     font-size: 28px;
+  }
+  
+  .revenue-hero-title {
+    font-size: 12px;
+  }
+  
+  .revenue-hero-subtitle {
+    font-size: 11px;
+  }
+  
+  .revenue-stat-label {
+    font-size: 11px;
   }
   
   .revenue-stat-value {
     font-size: 18px;
   }
   
+  .dashboard-section {
+    padding: 14px;
+  }
+  
+  .dashboard-card {
+    padding: 14px;
+    min-height: 110px;
+  }
+  
+  .dashboard-card-icon {
+    font-size: 22px;
+  }
+  
   .dashboard-card-value {
     font-size: 22px;
   }
   
+  .dashboard-card-title {
+    font-size: 11px;
+  }
+  
   .dashboard-section-title {
-    font-size: 15px;
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+  
+  .dashboard-alert-card {
+    padding: 12px;
+    gap: 10px;
+  }
+  
+  .alert-icon {
+    font-size: 22px;
+  }
+  
+  .alert-title {
+    font-size: 11px;
+  }
+  
+  .alert-value {
+    font-size: 18px;
+  }
+  
+  .alert-description {
+    font-size: 10px;
+  }
+  
+  .dashboard-chart-container {
+    padding: 12px;
+    min-height: 260px;
+  }
+  
+  .dashboard-chart-section {
+    min-height: 300px;
+  }
+  
+  .status-badge,
+  .payment-badge,
+  .stock-badge {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 360px) {
+  .dashboard-sections {
+    padding: 8px;
+    gap: 10px;
+  }
+  
+  .revenue-hero-value {
+    font-size: 24px;
+  }
+  
+  .revenue-stat-value {
+    font-size: 16px;
+  }
+  
+  .dashboard-card-value {
+    font-size: 20px;
+  }
+  
+  .dashboard-section {
+    padding: 12px;
+  }
+  
+  .dashboard-card {
+    padding: 12px;
   }
 }
 
