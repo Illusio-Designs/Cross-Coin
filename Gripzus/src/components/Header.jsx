@@ -14,22 +14,22 @@ export default function Header() {
             <Link href="/shop" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
               SHOP
             </Link>
-            <Link href="/men" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
-              MEN
+            <Link href="/grips" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
+              GRIPS
             </Link>
-            <Link href="/women" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
-              WOMEN
+            <Link href="/accessories" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
+              ACCESSORIES
             </Link>
-            <Link href="/trending" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
-              TRENDING
+            <Link href="/sports" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
+              SPORTS
             </Link>
           </div>
 
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <Image 
-              src="/assets/Knitwink.jpg.jpeg" 
-              alt="KNITWINK" 
+              src="/assets/Gripzus.JPG.jpeg" 
+              alt="GRIPZUS" 
               width={120} 
               height={60}
               className="h-12 lg:h-14 w-auto object-contain"
@@ -38,11 +38,11 @@ export default function Header() {
 
           {/* Right Navigation */}
           <div className="hidden lg:flex items-center space-x-8">
-            <Link href="/seasonal" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
-              SEASONAL
+            <Link href="/professional" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
+              PROFESSIONAL
             </Link>
-            <Link href="/accessories" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
-              ACCESSORIES
+            <Link href="/custom" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
+              CUSTOM
             </Link>
             <Link href="/auth/login" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
               SIGN IN/UP
@@ -74,11 +74,11 @@ export default function Header() {
           <div className="lg:hidden py-4 border-t border-gray-100">
             <div className="flex flex-col space-y-4">
               <Link href="/shop" className="text-sm font-medium text-gray-700 hover:text-black">SHOP</Link>
-              <Link href="/men" className="text-sm font-medium text-gray-700 hover:text-black">MEN</Link>
-              <Link href="/women" className="text-sm font-medium text-gray-700 hover:text-black">WOMEN</Link>
-              <Link href="/trending" className="text-sm font-medium text-gray-700 hover:text-black">TRENDING</Link>
-              <Link href="/seasonal" className="text-sm font-medium text-gray-700 hover:text-black">SEASONAL</Link>
+              <Link href="/grips" className="text-sm font-medium text-gray-700 hover:text-black">GRIPS</Link>
               <Link href="/accessories" className="text-sm font-medium text-gray-700 hover:text-black">ACCESSORIES</Link>
+              <Link href="/sports" className="text-sm font-medium text-gray-700 hover:text-black">SPORTS</Link>
+              <Link href="/professional" className="text-sm font-medium text-gray-700 hover:text-black">PROFESSIONAL</Link>
+              <Link href="/custom" className="text-sm font-medium text-gray-700 hover:text-black">CUSTOM</Link>
               <Link href="/auth/login" className="text-sm font-medium text-gray-700 hover:text-black">SIGN IN/UP</Link>
             </div>
           </div>

@@ -7,8 +7,12 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Brand */}
           <div>
-            <div className="text-2xl font-display font-black tracking-wider mb-2">
-              KNITWINK
+            <div className="flex items-center mb-4">
+              <img 
+                src="/assets/Knitwink.jpg.jpeg" 
+                alt="KNITWINK" 
+                className="h-16 w-auto object-contain invert"
+              />
             </div>
             <p className="text-sm text-gray-400 mb-4">
               Luxury in every step

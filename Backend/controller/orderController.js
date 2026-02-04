@@ -40,6 +40,42 @@ const calculateShippingFee = async (paymentType) => {
   }
 };
 
+// Helper function to calculate shipment dimensions - FIXED VALUES
+const calculateShipmentDimensions = (orderItems) => {
+  // FIXED DIMENSIONS FOR ALL ORDERS
+  // As per business requirement: 14cm x 3cm x 10cm, 70g per item
+  
+  let totalQuantity = 0;
+  
+  // Calculate total quantity of all items
+  orderItems.forEach(item => {
+    totalQuantity += item.quantity;
+  });
+
+  // Fixed dimensions per item (in cm)
+  const FIXED_LENGTH = 14;
+  const FIXED_WIDTH = 3; 
+  const FIXED_HEIGHT = 10;
+  const FIXED_WEIGHT_PER_ITEM = 0.07; // 70g = 0.07kg
+
+  // For multiple items, we stack them (increase height)
+  const finalWeight = FIXED_WEIGHT_PER_ITEM * totalQuantity;
+  const finalLength = FIXED_LENGTH;
+  const finalWidth = FIXED_WIDTH;
+  const finalHeight = FIXED_HEIGHT * totalQuantity; // Stack items vertically
+
+  console.log(`📦 Calculated FIXED dimensions for ${totalQuantity} items:`);
+  console.log(`   Weight: ${finalWeight}kg (${finalWeight * 1000}g)`);
+  console.log(`   Dimensions: ${finalLength}cm × ${finalWidth}cm × ${finalHeight}cm`);
+
+  return {
+    weight: finalWeight,
+    length: finalLength,
+    width: finalWidth,
+    height: finalHeight
+  };
+};
+
 // Create a new order
 module.exports.createOrder = async (req, res) => {
   console.log("createOrder: Starting order creation...");
@@ -345,10 +381,10 @@ module.exports.createOrder = async (req, res) => {
           tax_Amount: 0,
           extra_Charges: 0,
           total_Amount: parseFloat(createdOrder.final_amount),
-          shipment_Weight: 0.5, // Default weight for socks
-          shipment_Length: 25,
-          shipment_Width: 15,
-          shipment_Height: 5,
+          shipment_Weight: validatedItems.reduce((sum, item) => sum + item.quantity, 0) * 0.07, // 70g per item in kg
+          shipment_Length: 14,
+          shipment_Width: 3,
+          shipment_Height: 10,
           pick_Address_ID: parseInt(process.env.FSHIP_DEFAULT_WAREHOUSE_ID) || 12191,
           return_Address_ID: parseInt(process.env.FSHIP_DEFAULT_WAREHOUSE_ID) || 12191,
           products: orderItems
@@ -778,10 +814,10 @@ module.exports.createGuestOrder = async (req, res) => {
           tax_Amount: 0,
           extra_Charges: 0,
           total_Amount: parseFloat(finalAmount),
-          shipment_Weight: 0.5, // Default weight for socks
-          shipment_Length: 25,
-          shipment_Width: 15,
-          shipment_Height: 5,
+          shipment_Weight: validatedItems.reduce((sum, item) => sum + item.quantity, 0) * 0.07, // 70g per item in kg
+          shipment_Length: 14,
+          shipment_Width: 3,
+          shipment_Height: 10,
           pick_Address_ID: parseInt(process.env.FSHIP_DEFAULT_WAREHOUSE_ID) || 12191,
           return_Address_ID: parseInt(process.env.FSHIP_DEFAULT_WAREHOUSE_ID) || 12191,
           products: validatedItems.map((item) => ({
@@ -2520,9 +2556,9 @@ module.exports.prepareFShipOrderData = async (order) => {
       tax_Amount: 0,
       extra_Charges: parseFloat(order.shipping_fee) || 0,
       total_Amount: parseFloat(order.final_amount) || 0,
-      shipment_Weight: 0.5, // Default weight
-      shipment_Length: 20,
-      shipment_Width: 15,
+      shipment_Weight: (order.OrderItems?.reduce((sum, item) => sum + item.quantity, 0) || 1) * 0.07, // 70g per item in kg
+      shipment_Length: 14,
+      shipment_Width: 3,
       shipment_Height: 10,
       latitude: 0,
       longitude: 0,
