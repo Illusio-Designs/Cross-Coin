@@ -10,12 +10,12 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>KNITWINK - Luxury in Every Step</title>
-        <meta name="description" content="Experience unparalleled comfort and style with KNITWINK premium socks collection" />
+        <title>GRIPZUS - Ultimate Grip Solutions</title>
+        <meta name="description" content="Experience superior grip and control with GRIPZUS premium grip solutions" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/Knitwinkfavicon.jpeg" />
-        <link rel="shortcut icon" href="/Knitwinkfavicon.jpeg" />
-        <link rel="apple-touch-icon" href="/Knitwinkfavicon.jpeg" />
+        <link rel="icon" href="/Gripzusfavicon.jpeg" />
+        <link rel="shortcut icon" href="/Gripzusfavicon.jpeg" />
+        <link rel="apple-touch-icon" href="/Gripzusfavicon.jpeg" />
       </Head>
 
       <Header />

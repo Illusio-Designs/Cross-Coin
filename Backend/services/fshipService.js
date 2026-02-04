@@ -673,6 +673,22 @@ class FShipService {
     }
 
     /**
+     * Calculate shipment dimensions for Cross-Coin products
+     * Fixed dimensions: 14cm × 3cm × 10cm, 70g per item
+     * Items stack vertically (multiply height by quantity)
+     */
+    calculateShipmentDimensions(items) {
+        const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+        
+        return {
+            shipment_Weight: totalQuantity * 0.07, // 70g per item in kg
+            shipment_Length: 14, // Fixed length in cm
+            shipment_Width: 3,   // Fixed width in cm  
+            shipment_Height: 10 * totalQuantity // Stack items vertically
+        };
+    }
+
+    /**
      * Test API connectivity and credentials
      */
     async testConnection() {
