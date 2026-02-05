@@ -230,9 +230,9 @@ export default function CartStep({ selectedPaymentMode: propPaymentMode, onPayme
         
         {/* Payment-Mode-Aware Offer Bar - Simple Version */}
         <QuantityOfferBar 
-          onCouponApply={handleCouponApply}
           selectedPaymentMode={selectedPaymentMode}
           appliedCoupon={appliedCoupon}
+          onCouponApply={handleCouponApply}
         />
         
         {/* Applied Coupon Display */}
