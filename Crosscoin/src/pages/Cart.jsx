@@ -3,7 +3,6 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import CartStep from '../components/checkout/CartStep';
 import QuantityOfferBar from '../components/cart/QuantityOfferBar';
-import PaymentModeOfferBar from '../components/cart/PaymentModeOfferBar';
 import { useCart } from '../context/CartContext';
 import { useRouter } from 'next/router';
 import { showSuccessToast } from '../utils/toast';
