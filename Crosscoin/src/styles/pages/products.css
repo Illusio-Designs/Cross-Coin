@@ -924,7 +924,7 @@
     height: auto;
   }
   .products-page .product-image {
-    height: 250px;
+    height: auto;
     overflow: hidden;
     background: #ffffff;
     margin-bottom: 0.5rem;

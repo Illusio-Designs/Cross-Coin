@@ -33,6 +33,24 @@ export default function UnifiedCheckout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [selectedPaymentMode, setSelectedPaymentMode] = useState('cod');
+
+  // Sync payment mode with selected shipping fee
+  useEffect(() => {
+    if (shippingFee) {
+      const paymentMode = shippingFee.orderType === 'prepaid' ? 'prepaid' : 'cod';
+      setSelectedPaymentMode(paymentMode);
+      
+      // Check if applied coupon is compatible with new payment mode
+      if (appliedCoupon && appliedCoupon.paymentMode && appliedCoupon.paymentMode !== paymentMode) {
+        console.log('UnifiedCheckout: Removing incompatible coupon', {
+          couponPaymentMode: appliedCoupon.paymentMode,
+          newPaymentMode: paymentMode
+        });
+        handleCouponRemoved();
+      }
+    }
+  }, [shippingFee]);
 
   // Address management state
   const [addresses, setAddresses] = useState([]);
@@ -511,7 +529,12 @@ export default function UnifiedCheckout() {
   };
 
   const handleCouponApplied = (coupon) => {
+    console.log('UnifiedCheckout: Coupon applied:', coupon);
     setAppliedCoupon(coupon);
+    // Save to sessionStorage to persist across page refreshes
+    if (coupon) {
+      sessionStorage.setItem("appliedCoupon", JSON.stringify(coupon));
+    }
   };
 
   const handleCouponRemoved = () => {
@@ -1056,16 +1079,18 @@ export default function UnifiedCheckout() {
       <div className="cart-main checkout-container">
         <div className="cart-section">
           {/* Products Section */}
-          <CartStep />
+          <CartStep 
+            selectedPaymentMode={selectedPaymentMode}
+            onPaymentModeChange={setSelectedPaymentMode}
+            onCouponApplied={handleCouponApplied}
+            appliedCoupon={appliedCoupon}
+          />
           
           {/* Address Section */}
           {cartItems.length > 0 && (
             <>
               {renderAddressSection()}
               {isAuthenticated && renderAddressForm()}
-              
-              {/* Delivery Methods Section */}
-              {renderDeliveryMethods()}
             </>
           )}
         </div>
@@ -1088,6 +1113,8 @@ export default function UnifiedCheckout() {
               guestInfo={guestInfo}
               buyNowItem={buyNowItem}
               buyNowTotal={buyNowTotal}
+              shippingFees={shippingFees}
+              onSelectFee={handleSelectFee}
             />
           </div>
         )}
