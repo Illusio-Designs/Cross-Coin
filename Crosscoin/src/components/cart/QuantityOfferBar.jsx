@@ -4,9 +4,10 @@ import { useCart } from '../../context/CartContext';
 import { getPublicCoupons } from '../../services/publicindex';
 import './QuantityOfferBar.css';
 
-const QuantityOfferBar = ({ onCouponApply, selectedPaymentMode = 'cod', appliedCoupon }) => {
+const QuantityOfferBar = ({ selectedPaymentMode = 'cod', appliedCoupon, onCouponApply }) => {
   const { cartItems, cartTotal } = useCart();
   const [offerData, setOfferData] = useState(null);
+  const [autoAppliedCoupons, setAutoAppliedCoupons] = useState(new Set());
 
   useEffect(() => {
     const fetchAndProcessOffers = async () => {
@@ -22,128 +23,216 @@ const QuantityOfferBar = ({ onCouponApply, selectedPaymentMode = 'cod', appliedC
           return;
         }
 
-        // Get only quantity-based coupons
-        const quantityCoupons = response.coupons.filter(c => c.type === 'quantity_based' && c.quantityBasedDiscounts);
+        // Get all coupons EXCEPT first-order coupons
+        const allCoupons = response.coupons.filter(c => !c.firstOrderOnly);
         
         // Filter by payment mode
-        const applicableCoupons = quantityCoupons.filter(c => {
+        const applicableCoupons = allCoupons.filter(c => {
           if (!c.paymentModeRestriction || c.paymentModeRestriction === 'all') return true;
           return c.paymentModeRestriction === selectedPaymentMode;
         });
 
         if (applicableCoupons.length === 0) {
-          // No offers for current payment mode
           setOfferData({ type: 'no_offers', paymentMode: selectedPaymentMode });
           return;
         }
 
-        const totalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+        const subtotal = cartTotal || 0;
         let bestOffer = null;
 
-        // Process each coupon
+        // Process each coupon - PRIORITIZE AMOUNT-BASED OFFERS
         for (const coupon of applicableCoupons) {
-          let tiers = [];
-          try {
-            tiers = typeof coupon.quantityBasedDiscounts === 'string' 
-              ? JSON.parse(coupon.quantityBasedDiscounts) 
-              : coupon.quantityBasedDiscounts;
-          } catch (e) {
-            continue;
-          }
+          const isApplied = appliedCoupon && appliedCoupon.code === coupon.code;
 
-          if (!Array.isArray(tiers) || tiers.length === 0) continue;
-          tiers.sort((a, b) => a.minQuantity - b.minQuantity);
-
-          // Find current tier (already achieved)
-          const metTiers = tiers.filter(t => totalQuantity >= t.minQuantity);
-          const currentTier = metTiers.length > 0 ? metTiers[metTiers.length - 1] : null;
-          
-          // Find next tier (to achieve)
-          const nextTier = tiers.find(t => totalQuantity < t.minQuantity);
-
-          // If we have a current tier, apply it
-          if (currentTier) {
-            const currentDiscount = parseFloat(currentTier.discount);
+          // Handle percentage, fixed, and tiered coupons (AMOUNT-BASED)
+          if (coupon.type === 'percentage' || coupon.type === 'fixed' || coupon.type === 'tiered') {
+            const minPurchase = parseFloat(coupon.minPurchase || 0);
             
-            // Auto-apply current tier discount - update if discount amount changed
-            const shouldApply = !appliedCoupon || 
-                               appliedCoupon.code !== coupon.code || 
-                               parseFloat(appliedCoupon.discount || 0) !== currentDiscount;
-            
-            if (shouldApply && onCouponApply) {
-              console.log('QuantityOfferBar: Auto-applying discount:', {
-                code: coupon.code,
-                discountAmount: currentDiscount,
-                discount: currentDiscount,
-                reason: !appliedCoupon ? 'no coupon' : appliedCoupon.code !== coupon.code ? 'different coupon' : 'discount changed'
-              });
-              onCouponApply({
-                code: coupon.code,
-                discountAmount: currentDiscount,
-                discount: currentDiscount, // OrderSummary uses this
-                value: currentDiscount, // Some components might use this
-                coupon: coupon,
-                paymentMode: selectedPaymentMode,
-                tier: currentTier.minQuantity // Track which tier is applied
-              });
-            }
-
-            // If there's a next tier, show progress towards it
-            if (nextTier) {
-              const nextDiscount = parseFloat(nextTier.discount);
-              const remaining = nextTier.minQuantity - totalQuantity;
+            if (subtotal >= minPurchase) {
+              let discount = 0;
               
-              if (!bestOffer || nextDiscount > bestOffer.discount) {
-                bestOffer = {
-                  type: 'progress_with_current',
-                  coupon,
-                  currentTier,
-                  currentDiscount,
-                  nextTier,
-                  nextDiscount,
-                  currentQty: totalQuantity,
-                  requiredQty: nextTier.minQuantity,
-                  remaining,
-                  progress: (totalQuantity / nextTier.minQuantity) * 100
-                };
+              if (coupon.type === 'percentage') {
+                const percentage = parseFloat(coupon.value || 0);
+                discount = (subtotal * percentage) / 100;
+                const maxDiscount = parseFloat(coupon.maxDiscount || 0);
+                if (maxDiscount > 0 && discount > maxDiscount) {
+                  discount = maxDiscount;
+                }
+              } else if (coupon.type === 'fixed') {
+                discount = parseFloat(coupon.value || 0);
+              } else if (coupon.type === 'tiered' && coupon.tieredDiscounts) {
+                let tiers = [];
+                try {
+                  tiers = typeof coupon.tieredDiscounts === 'string' 
+                    ? JSON.parse(coupon.tieredDiscounts) 
+                    : coupon.tieredDiscounts;
+                } catch (e) {
+                  continue;
+                }
+                
+                if (Array.isArray(tiers) && tiers.length > 0) {
+                  // Sort tiers from highest to lowest to find the best applicable tier
+                  // Support both minValue and minAmount field names
+                  tiers.sort((a, b) => {
+                    const aMin = parseFloat(a.minValue || a.minAmount || 0);
+                    const bMin = parseFloat(b.minValue || b.minAmount || 0);
+                    return bMin - aMin;
+                  });
+                  
+                  // Find the highest tier where cart value meets the requirement
+                  const applicableTier = tiers.find(t => {
+                    const minRequired = parseFloat(t.minValue || t.minAmount || 0);
+                    return subtotal >= minRequired;
+                  });
+                  
+                  if (applicableTier) {
+                    discount = parseFloat(applicableTier.discount || 0);
+                    
+                    // Auto-apply only if:
+                    // 1. No coupon is currently applied, OR
+                    // 2. Same coupon but discount amount changed (tier upgrade)
+                    // 3. This coupon hasn't been auto-applied before (user didn't manually remove it)
+                    const shouldApply = discount > 0 && onCouponApply && (
+                      (!appliedCoupon && !autoAppliedCoupons.has(coupon.code)) ||
+                      (appliedCoupon && appliedCoupon.code === coupon.code && parseFloat(appliedCoupon.discount || 0) !== discount)
+                    );
+                    
+                    if (shouldApply) {
+                      onCouponApply({
+                        code: coupon.code,
+                        discountAmount: discount,
+                        discount: discount,
+                        value: discount,
+                        coupon: coupon,
+                        paymentMode: selectedPaymentMode
+                      });
+                      // Mark this coupon as auto-applied
+                      setAutoAppliedCoupons(prev => new Set([...prev, coupon.code]));
+                    }
+                  }
+                  
+                  // Check if there's a next higher tier to show progress
+                  const sortedTiersAsc = [...tiers].sort((a, b) => {
+                    const aMin = parseFloat(a.minValue || a.minAmount || 0);
+                    const bMin = parseFloat(b.minValue || b.minAmount || 0);
+                    return aMin - bMin;
+                  });
+                  const nextTier = sortedTiersAsc.find(t => {
+                    const minRequired = parseFloat(t.minValue || t.minAmount || 0);
+                    return subtotal < minRequired;
+                  });
+                  
+                  if (nextTier && isApplied && discount > 0) {
+                    const nextDiscount = parseFloat(nextTier.discount || 0);
+                    const nextValue = parseFloat(nextTier.minValue || nextTier.minAmount || 0);
+                    const remaining = nextValue - subtotal;
+                    
+                    if (!bestOffer || nextDiscount > bestOffer.discount) {
+                      bestOffer = {
+                        type: 'tiered_with_next',
+                        coupon,
+                        currentDiscount: discount,
+                        nextDiscount,
+                        currentValue: subtotal,
+                        requiredValue: nextValue,
+                        remaining,
+                        progress: (subtotal / nextValue) * 100,
+                        isApplied: true
+                      };
+                      continue;
+                    }
+                  }
+                }
+              }
+              
+              if (discount > 0) {
+                if (!bestOffer || discount > bestOffer.discount) {
+                  bestOffer = {
+                    type: isApplied ? 'achieved' : 'available',
+                    coupon,
+                    discount,
+                    isApplied
+                  };
+                }
               }
             } else {
-              // No more tiers, show achieved
-              if (!bestOffer || currentDiscount > bestOffer.discount) {
-                bestOffer = {
-                  type: 'achieved',
-                  coupon,
-                  tier: currentTier,
-                  discount: currentDiscount,
-                  currentQty: totalQuantity,
-                  requiredQty: currentTier.minQuantity
-                };
+              const remaining = minPurchase - subtotal;
+              let potentialDiscount = 0;
+              
+              if (coupon.type === 'percentage') {
+                const percentage = parseFloat(coupon.value || 0);
+                potentialDiscount = (minPurchase * percentage) / 100;
+                const maxDiscount = parseFloat(coupon.maxDiscount || 0);
+                if (maxDiscount > 0 && potentialDiscount > maxDiscount) {
+                  potentialDiscount = maxDiscount;
+                }
+              } else if (coupon.type === 'fixed') {
+                potentialDiscount = parseFloat(coupon.value || 0);
+              } else if (coupon.type === 'tiered' && coupon.tieredDiscounts) {
+                let tiers = [];
+                try {
+                  tiers = typeof coupon.tieredDiscounts === 'string' 
+                    ? JSON.parse(coupon.tieredDiscounts) 
+                    : coupon.tieredDiscounts;
+                } catch (e) {
+                  continue;
+                }
+                
+                if (Array.isArray(tiers) && tiers.length > 0) {
+                  // Find the first tier that user can reach
+                  // Support both minValue and minAmount field names
+                  tiers.sort((a, b) => {
+                    const aMin = parseFloat(a.minValue || a.minAmount || 0);
+                    const bMin = parseFloat(b.minValue || b.minAmount || 0);
+                    return aMin - bMin;
+                  });
+                  const nextTier = tiers.find(t => {
+                    const minRequired = parseFloat(t.minValue || t.minAmount || 0);
+                    return subtotal < minRequired;
+                  });
+                  
+                  if (nextTier) {
+                    potentialDiscount = parseFloat(nextTier.discount || 0);
+                    const nextValue = parseFloat(nextTier.minValue || nextTier.minAmount || 0);
+                    const tierRemaining = nextValue - subtotal;
+                    
+                    if (!bestOffer || potentialDiscount > bestOffer.discount) {
+                      bestOffer = {
+                        type: 'progress_value',
+                        coupon,
+                        discount: potentialDiscount,
+                        currentValue: subtotal,
+                        requiredValue: nextValue,
+                        remaining: tierRemaining,
+                        progress: (subtotal / nextValue) * 100,
+                        isApplied: false
+                      };
+                      continue;
+                    }
+                  }
+                }
               }
-            }
-          } else if (nextTier) {
-            // No current tier, show progress to first tier
-            const discount = parseFloat(nextTier.discount);
-            const remaining = nextTier.minQuantity - totalQuantity;
-            
-            if (!bestOffer || discount > bestOffer.discount) {
-              bestOffer = {
-                type: 'progress',
-                coupon,
-                tier: nextTier,
-                discount,
-                currentQty: totalQuantity,
-                requiredQty: nextTier.minQuantity,
-                remaining,
-                progress: (totalQuantity / nextTier.minQuantity) * 100
-              };
+              
+              if (potentialDiscount > 0) {
+                if (!bestOffer || potentialDiscount > bestOffer.discount) {
+                  bestOffer = {
+                    type: 'progress_value',
+                    coupon,
+                    discount: potentialDiscount,
+                    currentValue: subtotal,
+                    requiredValue: minPurchase,
+                    remaining,
+                    progress: (subtotal / minPurchase) * 100,
+                    isApplied: false
+                  };
+                }
+              }
             }
           }
         }
 
         if (bestOffer) {
           setOfferData(bestOffer);
-          
-          // Note: Auto-apply is now handled inside the loop above
         } else {
           setOfferData({ type: 'no_offers', paymentMode: selectedPaymentMode });
         }
@@ -180,8 +269,8 @@ const QuantityOfferBar = ({ onCouponApply, selectedPaymentMode = 'cod', appliedC
     return null;
   }
 
-  // Show achieved offer
-  if (offerData.type === 'achieved') {
+  // Show achieved offer (coupon is applied)
+  if (offerData.type === 'achieved' && offerData.isApplied) {
     return (
       <div className="quantity-offer-bar achieved">
         <div className="offer-content">
@@ -189,9 +278,11 @@ const QuantityOfferBar = ({ onCouponApply, selectedPaymentMode = 'cod', appliedC
             <FiCheck />
           </div>
           <div className="offer-text">
-            <div className="offer-title">🎉 Discount Applied!</div>
-            <div className="offer-description">
-              {offerData.coupon.description} - Saving ₹{offerData.discount} with {selectedPaymentMode === 'prepaid' ? 'Prepaid' : 'COD'}
+            <div className="offer-title" style={{ fontSize: '15px', fontWeight: '600' }}>
+              🎉 Discount Applied!
+            </div>
+            <div className="offer-description" style={{ fontSize: '12px', marginTop: '4px' }}>
+              Saving ₹{offerData.discount} with {selectedPaymentMode === 'prepaid' ? 'Prepaid' : 'COD'}
             </div>
           </div>
         </div>
@@ -207,8 +298,8 @@ const QuantityOfferBar = ({ onCouponApply, selectedPaymentMode = 'cod', appliedC
     );
   }
 
-  // Show progress with current discount applied
-  if (offerData.type === 'progress_with_current') {
+  // Show tiered coupon with next tier progress (current tier applied, showing next tier)
+  if (offerData.type === 'tiered_with_next' && offerData.isApplied) {
     const color = selectedPaymentMode === 'prepaid' ? '#28a745' : '#007bff';
     
     return (
@@ -218,11 +309,11 @@ const QuantityOfferBar = ({ onCouponApply, selectedPaymentMode = 'cod', appliedC
             <FiGift />
           </div>
           <div className="offer-text">
-            <div className="offer-title" style={{ color }}>
+            <div className="offer-title" style={{ color, fontSize: '15px', fontWeight: '600' }}>
               ✅ ₹{offerData.currentDiscount} OFF Applied!
             </div>
-            <div className="offer-description">
-              Add <strong>{offerData.remaining} more item{offerData.remaining > 1 ? 's' : ''}</strong> to get ₹{offerData.nextDiscount} OFF!
+            <div className="offer-description" style={{ fontSize: '12px', marginTop: '4px' }}>
+              Add ₹{offerData.remaining.toFixed(0)} more to get ₹{offerData.nextDiscount} OFF
             </div>
           </div>
         </div>
@@ -232,7 +323,7 @@ const QuantityOfferBar = ({ onCouponApply, selectedPaymentMode = 'cod', appliedC
             <div className="progress-fill" style={{ width: `${Math.min(offerData.progress, 100)}%`, backgroundColor: color }} />
           </div>
           <div className="progress-text">
-            {offerData.currentQty} / {offerData.requiredQty} items
+            ₹{offerData.currentValue.toFixed(0)} / ₹{offerData.requiredValue.toFixed(0)}
           </div>
         </div>
 
@@ -243,8 +334,34 @@ const QuantityOfferBar = ({ onCouponApply, selectedPaymentMode = 'cod', appliedC
     );
   }
 
-  // Show progress
-  if (offerData.type === 'progress') {
+  // Show available offer (requirements met but not applied)
+  if (offerData.type === 'available' && !offerData.isApplied) {
+    const color = selectedPaymentMode === 'prepaid' ? '#28a745' : '#007bff';
+    
+    return (
+      <div className="quantity-offer-bar" style={{ borderColor: color, background: '#e7f5ff' }}>
+        <div className="offer-content">
+          <div className="offer-icon" style={{ color }}>
+            <FiGift />
+          </div>
+          <div className="offer-text">
+            <div className="offer-title" style={{ color, fontSize: '15px', fontWeight: '600' }}>
+              🎁 Get ₹{offerData.discount} OFF on this order!
+            </div>
+            <div className="offer-description" style={{ fontSize: '12px', marginTop: '4px' }}>
+              Use code {offerData.coupon.code} to get discount
+            </div>
+          </div>
+        </div>
+        <div className="offer-badge" style={{ backgroundColor: color }}>
+          ₹{offerData.discount} OFF
+        </div>
+      </div>
+    );
+  }
+
+  // Show progress based on cart value
+  if (offerData.type === 'progress_value') {
     const color = selectedPaymentMode === 'prepaid' ? '#28a745' : '#007bff';
     const needsPaymentChange = offerData.coupon.paymentModeRestriction && 
                                 offerData.coupon.paymentModeRestriction !== 'all' && 
@@ -257,15 +374,15 @@ const QuantityOfferBar = ({ onCouponApply, selectedPaymentMode = 'cod', appliedC
             <FiGift />
           </div>
           <div className="offer-text">
-            <div className="offer-title" style={{ color }}>
-              {offerData.coupon.description}
-            </div>
-            <div className="offer-description">
+            <div className="offer-title" style={{ color, fontSize: '15px', fontWeight: '600' }}>
               {needsPaymentChange ? (
-                <>Select <strong>{offerData.coupon.paymentModeRestriction === 'prepaid' ? 'Prepaid' : 'COD'}</strong> and add <strong>{offerData.remaining} more item{offerData.remaining > 1 ? 's' : ''}</strong> to get ₹{offerData.discount} OFF!</>
+                <>Select {offerData.coupon.paymentModeRestriction === 'prepaid' ? 'Prepaid' : 'COD'} and add ₹{offerData.remaining.toFixed(0)} more to get ₹{offerData.discount} OFF</>
               ) : (
-                <>Add <strong>{offerData.remaining} more item{offerData.remaining > 1 ? 's' : ''}</strong> to get ₹{offerData.discount} OFF!</>
+                <>Add ₹{offerData.remaining.toFixed(0)} more to get ₹{offerData.discount} OFF</>
               )}
+            </div>
+            <div className="offer-description" style={{ fontSize: '12px', marginTop: '4px' }}>
+              Use code {offerData.coupon.code} to get discount
             </div>
           </div>
         </div>
@@ -275,7 +392,7 @@ const QuantityOfferBar = ({ onCouponApply, selectedPaymentMode = 'cod', appliedC
             <div className="progress-fill" style={{ width: `${Math.min(offerData.progress, 100)}%`, backgroundColor: color }} />
           </div>
           <div className="progress-text">
-            {offerData.currentQty} / {offerData.requiredQty} items
+            ₹{offerData.currentValue.toFixed(0)} / ₹{offerData.requiredValue.toFixed(0)}
           </div>
         </div>
 
