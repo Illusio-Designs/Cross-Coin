@@ -4,6 +4,8 @@ import { FiTrash2 } from "react-icons/fi";
 import { FaBoxOpen } from "react-icons/fa";
 import { useCart } from "../../context/CartContext";
 import { useState, useEffect } from "react";
+import QuantityOfferBar from "../cart/QuantityOfferBar";
+import { showSuccessToast, showErrorToast } from "../../utils/toast";
 
 // Utility function to normalize image URLs (same logic as ProductCard.jsx)
 function getNormalizedImageUrl(imageUrl) {
@@ -120,7 +122,7 @@ function formatSizeDisplay(item) {
   return 'N/A';
 }
 
-export default function CartStep() {
+export default function CartStep({ selectedPaymentMode: propPaymentMode, onPaymentModeChange, onCouponApplied, appliedCoupon: propAppliedCoupon }) {
   const router = useRouter();
   const { 
     cartItems, 
@@ -136,6 +138,10 @@ export default function CartStep() {
   } = useCart();
   const [inputValues, setInputValues] = useState({});
   const [imageLoaded, setImageLoaded] = useState({});
+  const [selectedPaymentMode, setSelectedPaymentMode] = useState(propPaymentMode || 'cod');
+  
+  // Use prop appliedCoupon if provided, otherwise use local state
+  const appliedCoupon = propAppliedCoupon || null;
 
   useEffect(() => {
     const initialInputValues = {};
@@ -144,6 +150,51 @@ export default function CartStep() {
     });
     setInputValues(initialInputValues);
   }, [cartItems]);
+
+  // Handle coupon application from offer bar
+  const handleCouponApply = (couponData) => {
+    // Call parent callback to update appliedCoupon in UnifiedCheckout
+    if (onCouponApplied) {
+      onCouponApplied(couponData);
+    }
+    showSuccessToast(`Coupon ${couponData.code} applied! You saved ₹${couponData.discountAmount}`);
+  };
+
+  // Handle payment mode change
+  const handlePaymentModeChange = (mode) => {
+    setSelectedPaymentMode(mode);
+    if (onPaymentModeChange) {
+      onPaymentModeChange(mode);
+    }
+    console.log('CartStep: Payment mode changed to:', mode);
+  };
+
+  // Sync with prop changes
+  useEffect(() => {
+    if (propPaymentMode && propPaymentMode !== selectedPaymentMode) {
+      setSelectedPaymentMode(propPaymentMode);
+    }
+  }, [propPaymentMode]);
+
+  // Remove coupon if payment mode changes and coupon is not compatible
+  useEffect(() => {
+    if (appliedCoupon && appliedCoupon.paymentMode) {
+      // Check if applied coupon's payment mode matches current payment mode
+      if (appliedCoupon.paymentMode !== selectedPaymentMode) {
+        console.log('CartStep: Removing coupon due to payment mode change', {
+          couponPaymentMode: appliedCoupon.paymentMode,
+          currentPaymentMode: selectedPaymentMode
+        });
+        
+        // Remove the coupon
+        if (onCouponApplied) {
+          onCouponApplied(null);
+        }
+        sessionStorage.removeItem("appliedCoupon");
+        showErrorToast(`Coupon ${appliedCoupon.code} removed - not valid for ${selectedPaymentMode === 'cod' ? 'COD' : 'Prepaid'} payment`);
+      }
+    }
+  }, [selectedPaymentMode, appliedCoupon, onCouponApplied]);
 
   // Debug logging
   console.log('CartStep: cartItems:', cartItems, 'isCartLoading:', isCartLoading, 'buyNowItem:', buyNowItem);
@@ -176,6 +227,26 @@ export default function CartStep() {
   return (
     <div className="cart-items-list-container">
         <h2>Shopping Cart</h2>
+        
+        {/* Payment-Mode-Aware Offer Bar - Simple Version */}
+        <QuantityOfferBar 
+          onCouponApply={handleCouponApply}
+          selectedPaymentMode={selectedPaymentMode}
+          appliedCoupon={appliedCoupon}
+        />
+        
+        {/* Applied Coupon Display */}
+        {appliedCoupon && (
+          <div className="applied-coupon-display">
+            <div className="coupon-success">
+              Coupon <strong>{appliedCoupon.code}</strong> applied! 
+              You're saving <strong>₹{appliedCoupon.discountAmount}</strong>
+              {appliedCoupon.paymentMode && (
+                <span> with <strong>{appliedCoupon.paymentMode === 'prepaid' ? 'Prepaid' : 'COD'}</strong> payment</span>
+              )}
+            </div>
+          </div>
+        )}
         
         {/* Buy Now Item Section - Always show at top if exists */}
         {buyNowItem && (

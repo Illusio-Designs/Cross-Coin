@@ -337,25 +337,73 @@ const Home = () => {
   const handleAddToCart = (e, product) => {
     e.stopPropagation();
     console.log('Add to cart:', product);
-    // Get default color and size from the first variation
-    const variation = product.variations?.[0];
-    let defaultColor = '';
-    let defaultSize = '';
     
-    if (variation && variation.attributes) {
-      const attrs = typeof variation.attributes === 'string' ? JSON.parse(variation.attributes) : variation.attributes;
-      defaultColor = attrs.color?.[0] || '';
-      defaultSize = attrs.size?.[0] || '';
+    // Find the product index to get the current state
+    const productIndex = exclusiveProducts.findIndex(p => p.id === product.id);
+    const state = exclusiveStates[productIndex] || { selectedThumbnail: 0, selectedColor: '', selectedSize: '', quantity: 1 };
+    const selectedSku = exclusiveSelectedSkus[productIndex] || '';
+    
+    // Get the selected variation (same logic as in the UI)
+    const selectedVariation = product.variations?.find(v => v.sku === selectedSku) || product.variations?.[0];
+    
+    if (!selectedVariation) {
+      console.error('No variation found for product:', product);
+      return;
     }
     
-    addToCart(product, defaultColor, defaultSize, 1);
+    const attrs = selectedVariation && typeof selectedVariation.attributes === 'string'
+      ? JSON.parse(selectedVariation.attributes)
+      : selectedVariation?.attributes || {};
+    
+    // Get the actual selected size and color (same logic as Buy Now)
+    const selectedSizeForPack = state.selectedSize || (Array.isArray(attrs.size) ? attrs.size[0] : '');
+    const finalSelectedSize = selectedSizeForPack || (Array.isArray(attrs.size) ? attrs.size[0] : 'Free Size');
+    const finalSelectedColor = attrs.color ? (Array.isArray(attrs.color) ? attrs.color[0] : attrs.color) : '';
+    
+    // Get variation images
+    const variationImages = (() => {
+      if (selectedVariation?.images && selectedVariation.images.length > 0) {
+        return selectedVariation.images.map(img => img.image_url);
+      }
+      if (product?.images && product.images.length > 0 && selectedVariation?.id) {
+        const filteredImages = product.images.filter(img => img.product_variation_id === selectedVariation.id);
+        if (filteredImages.length > 0) {
+          return filteredImages.map(img => img.image_url);
+        }
+      }
+      if (product?.images && product.images.length > 0) {
+        return product.images.map(img => img.image_url);
+      }
+      return [];
+    })();
+    
+    console.log('Adding to cart with:', {
+      product: product.name,
+      selectedVariation: selectedVariation.id,
+      finalSelectedColor,
+      finalSelectedSize,
+      quantity: state.quantity,
+      variationImages
+    });
+    
+    // Add to cart with proper variation data (same as ProductDetails page)
+    addToCart(
+      product, 
+      finalSelectedColor, 
+      finalSelectedSize, 
+      state.quantity, 
+      selectedVariation.id, 
+      variationImages
+    );
+    
+    // Facebook tracking
     fbqTrack('AddToCart', {
       content_ids: [product.id],
       content_name: product.name,
       content_type: 'product',
-      value: product.price,
+      value: selectedVariation.price || product.price,
       currency: 'INR',
-      quantity: 1,
+      quantity: state.quantity,
     });
   };
 

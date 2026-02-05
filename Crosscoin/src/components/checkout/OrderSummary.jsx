@@ -4,7 +4,22 @@ import { useAuth } from "../../context/AuthContext";
 import { validateCoupon, getPublicCoupons } from "../../services/publicindex";
 import { useRouter } from "next/router";
 
-export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddress, shippingFee, isProcessing, isCartLoading, appliedCoupon, onCouponApplied, onCouponRemoved, buyNowItem, buyNowTotal }) {
+export default function OrderSummary({ 
+  step, 
+  onNext, 
+  onPlaceOrder, 
+  shippingAddress, 
+  shippingFee, 
+  isProcessing, 
+  isCartLoading, 
+  appliedCoupon, 
+  onCouponApplied, 
+  onCouponRemoved, 
+  buyNowItem, 
+  buyNowTotal,
+  shippingFees,
+  onSelectFee
+}) {
   const router = useRouter();
   const { user } = useAuth();
   const { cartItems, cartTotal } = useCart();
@@ -39,6 +54,10 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
 
   const deliveryFee = shippingFee ? parseFloat(shippingFee.fee || 0) : 0;
   const discountAmount = appliedCoupon ? parseFloat(appliedCoupon.discount || 0) : 0;
+  
+  // Debug logging
+  console.log('OrderSummary: appliedCoupon:', appliedCoupon);
+  console.log('OrderSummary: discountAmount:', discountAmount);
   
   // Calculate total including Buy Now items
   const subtotal = (cartTotal || 0) + (buyNowTotal || 0);
@@ -198,6 +217,41 @@ export default function OrderSummary({ step, onNext, onPlaceOrder, shippingAddre
   return (
     <div className="order-summary-box">
       <div className="order-summary-title">Order Summary</div>
+      
+      {/* Delivery Methods Section - Moved to top of order summary */}
+      {shippingFees && shippingFees.length > 0 && (
+        <div className="delivery-methods-in-summary">
+          <h4 style={{ marginBottom: '12px', fontSize: '1rem', fontWeight: '600' }}>Delivery Method</h4>
+          <div className="delivery-methods-compact">
+            {shippingFees.map((fee) => (
+              <label
+                key={fee.id}
+                className={`delivery-option-compact ${shippingFee?.id === fee.id ? "selected" : ""}`}
+              >
+                <input
+                  type="radio"
+                  name="delivery"
+                  checked={shippingFee?.id === fee.id}
+                  onChange={() => onSelectFee && onSelectFee(fee)}
+                />
+                <div className="delivery-content-compact">
+                  <div className="delivery-title-compact">
+                    {fee.orderType === "cod" ? "Cash on Delivery" : fee.orderType === "prepaid" ? "Prepaid Payment" : fee.orderType}
+                  </div>
+                  <div className="delivery-desc-compact">
+                    {fee.orderType === "cod" ? "Pay when you receive" : fee.orderType === "prepaid" ? "Better discounts available" : "Standard delivery"}
+                  </div>
+                </div>
+                <div className={`delivery-fee-compact ${parseFloat(fee.fee || 0) === 0 ? "free" : "paid"}`}>
+                  {parseFloat(fee.fee || 0) === 0 ? "Free" : `₹${parseFloat(fee.fee || 0).toFixed(2)}`}
+                </div>
+              </label>
+            ))}
+          </div>
+          <div style={{ height: '1px', background: '#e9ecef', margin: '16px 0' }}></div>
+        </div>
+      )}
+
       <div className="order-summary-row">
         <span>Subtotal</span>
         <span>{formatCurrency(subtotal)}</span>

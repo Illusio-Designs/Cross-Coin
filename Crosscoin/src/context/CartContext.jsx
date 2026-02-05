@@ -20,14 +20,28 @@ const CartContext = createContext();
 function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
   const [cartCount, setCartCount] = useState(0);
-  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const [isCartLoading, setIsCartLoading] = useState(true);
+
+  // Initialize authentication state
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem('token');
+      console.log('CartContext: Initial auth check, token exists:', !!token);
+      setIsAuthenticated(!!token);
+      setAuthChecked(true);
+    };
+    
+    checkAuth();
+  }, []);
 
   // Sync isAuthenticated on token change
   useEffect(() => {
     const handleStorage = () => {
       console.log('CartContext: storage event, token changed');
-      setIsAuthenticated(!!localStorage.getItem('token'));
+      const token = localStorage.getItem('token');
+      setIsAuthenticated(!!token);
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
@@ -35,41 +49,88 @@ function CartProvider({ children }) {
 
   // Load cart from backend or localStorage on initial render or auth change
   useEffect(() => {
+    // Don't fetch cart until auth is checked
+    if (!authChecked) {
+      console.log('CartContext: Auth not checked yet, waiting...');
+      return;
+    }
+
     console.log('API BEING CALLED: Cart data fetch');
     const fetchCart = async () => {
       console.log('CartContext: useEffect fetchCart, isAuthenticated:', isAuthenticated);
       setIsCartLoading(true);
+      
       if (isAuthenticated) {
         try {
           console.log('CartContext: fetching cart from backend');
           const backendCart = await apiGetCart();
           console.log('CartContext: backend cart received', backendCart);
-          setCartItems(backendCart);
+          setCartItems(Array.isArray(backendCart) ? backendCart : []);
         } catch (error){
           console.error('CartContext: error fetching backend cart', error);
-          setCartItems([]);
+          // Fallback to localStorage if backend fails
+          const savedCartItems = localStorage.getItem('cartItems');
+          if (savedCartItems) {
+            try {
+              const parsedItems = JSON.parse(savedCartItems);
+              setCartItems(Array.isArray(parsedItems) ? parsedItems : []);
+            } catch (parseError) {
+              console.error('Error parsing saved cart items:', parseError);
+              setCartItems([]);
+              localStorage.removeItem('cartItems'); // Clear corrupted data
+            }
+          } else {
+            setCartItems([]);
+          }
         }
       } else {
-        console.log('CartContext: loading cart from localStorage');
+        console.log('CartContext: loading cart from localStorage for guest user');
         const savedCartItems = localStorage.getItem('cartItems');
         if (savedCartItems) {
-          setCartItems(JSON.parse(savedCartItems));
+          try {
+            const parsedItems = JSON.parse(savedCartItems);
+            console.log('CartContext: Parsed cart items from localStorage:', parsedItems);
+            setCartItems(Array.isArray(parsedItems) ? parsedItems : []);
+          } catch (parseError) {
+            console.error('Error parsing saved cart items:', parseError);
+            setCartItems([]);
+            localStorage.removeItem('cartItems'); // Clear corrupted data
+          }
         } else {
+          console.log('CartContext: No saved cart items found in localStorage');
           setCartItems([]);
         }
       }
       setIsCartLoading(false);
     };
+    
     fetchCart();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, authChecked]);
 
   // Save cart items to localStorage whenever they change (for guests)
   useEffect(() => {
-    if (!isAuthenticated) {
-      localStorage.setItem('cartItems', JSON.stringify(cartItems));
+    // Don't save until auth is checked and cart is loaded
+    if (!authChecked || isCartLoading) {
+      console.log('CartContext: Skipping save - auth not checked or cart loading');
+      return;
     }
-    setCartCount(cartItems.reduce((total, item) => total + item.quantity, 0));
-  }, [cartItems, isAuthenticated]);
+
+    console.log('CartContext: Save effect triggered, isAuthenticated:', isAuthenticated, 'cartItems.length:', cartItems.length);
+    
+    if (!isAuthenticated) {
+      try {
+        const cartData = JSON.stringify(cartItems);
+        localStorage.setItem('cartItems', cartData);
+        console.log('CartContext: Saved cart to localStorage:', cartData);
+      } catch (error) {
+        console.error('CartContext: Error saving cart to localStorage:', error);
+      }
+    }
+    
+    const newCartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+    setCartCount(newCartCount);
+    console.log('CartContext: Updated cart count:', newCartCount);
+  }, [cartItems, isAuthenticated, authChecked, isCartLoading]);
 
   const addToCart = async (product, selectedColor, selectedSize, quantity = 1, variationId = null, variationImages = null) => {
     console.log('CartContext: addToCart called with:', { 
@@ -82,6 +143,7 @@ function CartProvider({ children }) {
       productVariations: product.variations
     });
     console.log('CartContext: isAuthenticated:', isAuthenticated);
+    
     if (isAuthenticated) {
       try {
         console.log('CartContext: addToCart for authenticated user');
@@ -100,6 +162,8 @@ function CartProvider({ children }) {
       console.log('CartContext: addToCart for guest user');
       return new Promise((resolve) => {
         setCartItems(prevItems => {
+          console.log('CartContext: Previous cart items:', prevItems);
+          
           const existingItem = prevItems.find(
             item =>
               item.productId === product.id &&
@@ -107,31 +171,33 @@ function CartProvider({ children }) {
               item.color === selectedColor &&
               item.size === selectedSize
           );
-        if (existingItem) {
-          // Get variation price if available
-          const variationPrice = variationId && product.variations ? 
-            product.variations.find(v => v.id === variationId)?.price || product.price : 
-            product.price;
-            
-          const newItems = prevItems.map(item =>
-            item.productId === product.id && 
-            item.variationId === variationId &&
-            item.color === selectedColor && 
-            item.size === selectedSize
-              ? { 
-                  ...item, 
-                  quantity: item.quantity + quantity,
-                  price: variationPrice, // Update price to variation price
-                  variation: variationId && product.variations ? 
-                    product.variations.find(v => v.id === variationId) : item.variation
-                }
-              : item
-          );
-          console.log('CartContext: updated existing item in guest cart', newItems);
-          showAddToCartSuccessToast(product.name);
-          resolve(newItems);
-          return newItems;
-        }
+          
+          if (existingItem) {
+            // Get variation price if available
+            const variationPrice = variationId && product.variations ? 
+              product.variations.find(v => v.id === variationId)?.price || product.price : 
+              product.price;
+              
+            const newItems = prevItems.map(item =>
+              item.productId === product.id && 
+              item.variationId === variationId &&
+              item.color === selectedColor && 
+              item.size === selectedSize
+                ? { 
+                    ...item, 
+                    quantity: item.quantity + quantity,
+                    price: variationPrice, // Update price to variation price
+                    variation: variationId && product.variations ? 
+                      product.variations.find(v => v.id === variationId) : item.variation
+                  }
+                : item
+            );
+            console.log('CartContext: updated existing item in guest cart', newItems);
+            showAddToCartSuccessToast(product.name);
+            resolve(newItems);
+            return newItems;
+          }
+          
           // Get variation price if available
           const selectedVariation = variationId && product.variations ? 
             product.variations.find(v => v.id === variationId) : null;
@@ -146,26 +212,27 @@ function CartProvider({ children }) {
             selectedSize
           });
           
-          const newItems = [
-            ...prevItems,
-            {
-              id: Date.now() + Math.random(), // Generate unique ID for guest cart items
-              productId: product.id,
-              name: product.name,
-              image: variationImages && variationImages.length > 0 ? variationImages[0] : product.images[0],
-              images: variationImages && variationImages.length > 0 ? variationImages : product.images,
-              price: variationPrice, // Use variation price if available
-              color: selectedColor,
-              size: selectedSize,
-              quantity: quantity,
-              variationId: variationId, // Store variationId for guest cart items
-              variation: selectedVariation // Store full variation data
-            }
-          ];
-          console.log('CartContext: added new item to guest cart with final data:', {
-            newItem: newItems[newItems.length - 1],
+          const newItem = {
+            id: Date.now() + Math.random(), // Generate unique ID for guest cart items
+            productId: product.id,
+            name: product.name,
+            image: variationImages && variationImages.length > 0 ? variationImages[0] : product.images[0],
+            images: variationImages && variationImages.length > 0 ? variationImages : product.images,
+            price: variationPrice, // Use variation price if available
+            color: selectedColor,
+            size: selectedSize,
+            quantity: quantity,
+            variationId: variationId, // Store variationId for guest cart items
+            variation: selectedVariation // Store full variation data
+          };
+          
+          const newItems = [...prevItems, newItem];
+          
+          console.log('CartContext: added new item to guest cart:', {
+            newItem,
             allItems: newItems
           });
+          
           showAddToCartSuccessToast(product.name);
           resolve(newItems);
           return newItems;
