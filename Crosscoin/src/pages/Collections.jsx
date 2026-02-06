@@ -116,13 +116,9 @@ const Collections = () => {
                       e.target.style.display = 'none';
                     }}
                   />
-                  <div className="category-card-wishlist"></div>
                 </div>
                 <div className="category-card-info">
                   <div className="category-card-name">{cat.name}</div>
-                  <div className="category-card-footer">
-                    <div className="category-card-view"></div>
-                  </div>
                 </div>
               </Link>
             );
