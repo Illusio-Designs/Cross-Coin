@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { FiUser, FiHeart, FiSearch, FiMenu, FiX } from "react-icons/fi";
 import { BsCart } from "react-icons/bs";
 import SafeImage from "./common/SafeImage";
+import CouponStrip from "./CouponStrip";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCart } from "../context/CartContext";
@@ -153,8 +154,10 @@ const Header = () => {
   }, [handleScroll]);
 
   return (
-    <header className={`header ${isSticky ? "header--sticky" : ""} ${!isHeaderVisible ? "header--hidden" : ""}`}>
-      <div className="header__top">
+    <>
+      <CouponStrip />
+      <header className={`header ${isSticky ? "header--sticky" : ""} ${!isHeaderVisible ? "header--hidden" : ""}`}>
+        <div className="header__top">
         <div className="header__logo">
           <Link href="/">
             <SafeImage
@@ -496,6 +499,7 @@ const Header = () => {
         </div>
       )}
     </header>
+    </>
   );
 };
 
