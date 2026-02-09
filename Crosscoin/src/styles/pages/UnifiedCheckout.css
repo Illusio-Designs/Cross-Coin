@@ -1207,9 +1207,12 @@
     font-size: 0.95rem;
   }
 }
-@media (max-width: 376px){
+@media (max-width: 384px){
   .promo-row {
     flex-direction: column;
+}
+.cart-item{
+  flex-direction: column;
 }
 .order-summary-section {
   max-width: 320px;
@@ -1651,7 +1654,6 @@ div.guest-checkout-actions button.btn.btn-secondary:hover {
   }
   
   .coupons-list {
-    max-height: 200px;
     gap: 0.5rem;
   }
   
@@ -1678,7 +1680,6 @@ div.guest-checkout-actions button.btn.btn-secondary:hover {
   .promo-input,
   .promo-apply,
   .promo-remove {
-    width: 100%;
     padding: 0.75rem;
   }
   
@@ -1689,9 +1690,5 @@ div.guest-checkout-actions button.btn.btn-secondary:hover {
   
   .available-coupons-title {
     font-size: 0.95rem;
-  }
-  
-  .coupons-list {
-    max-height: 150px;
   }
 }
