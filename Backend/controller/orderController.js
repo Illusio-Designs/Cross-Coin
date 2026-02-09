@@ -822,7 +822,7 @@ module.exports.createGuestOrder = async (req, res) => {
           return_Address_ID: parseInt(process.env.FSHIP_DEFAULT_WAREHOUSE_ID) || 12191,
           products: validatedItems.map((item) => ({
             productName: item.product.name,
-            sku: item.product.sku || `PROD-${item.product.id}`,
+            sku: item.variation?.sku || item.product.sku || `PROD-${item.product.id}`,
             quantity: item.quantity,
             unitPrice: item.price,
             productCategory: "Socks",
