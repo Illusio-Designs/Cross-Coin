@@ -23,6 +23,8 @@ function CartProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [isCartLoading, setIsCartLoading] = useState(true);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [lastAddedItem, setLastAddedItem] = useState(null);
 
   // Initialize authentication state
   useEffect(() => {
@@ -154,6 +156,13 @@ function CartProvider({ children }) {
         setCartItems(backendCart);
         console.log('CartContext: cart updated from backend after adding item');
         showAddToCartSuccessToast(product.name);
+        
+        // Open drawer and set last added item
+        const addedItem = backendCart.find(item => 
+          item.product_id === product.id && item.variation_id === variationId
+        );
+        setLastAddedItem(addedItem || { id: Date.now(), name: product.name });
+        setIsDrawerOpen(true);
       } catch(error) {
         console.error('CartContext: error adding to cart for authenticated user', error);
         showAddToCartErrorToast(error.message);
@@ -234,6 +243,11 @@ function CartProvider({ children }) {
           });
           
           showAddToCartSuccessToast(product.name);
+          
+          // Open drawer and set last added item
+          setLastAddedItem(newItem);
+          setIsDrawerOpen(true);
+          
           resolve(newItems);
           return newItems;
         });
@@ -377,7 +391,10 @@ function CartProvider({ children }) {
       setIsAuthenticated,
       isCartLoading,
       setQuantity,
-      buyNow
+      buyNow,
+      isDrawerOpen,
+      setIsDrawerOpen,
+      lastAddedItem
     }}>
       {children}
     </CartContext.Provider>
