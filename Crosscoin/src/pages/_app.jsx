@@ -3,11 +3,12 @@ import Head from "next/head";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AuthProvider } from "../context/AuthContext";
-import { CartProvider } from "../context/CartContext";
+import { CartProvider, useCart } from "../context/CartContext";
 import { WishlistProvider } from "../context/WishlistContext";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import Loader from "../components/Loader";
+import CartDrawer from "../components/cart/CartDrawer";
 import "../styles/globals.css";
 import "../styles/responsive.css";
 import "../styles/mobile-utilities.css";
@@ -30,6 +31,61 @@ import "../styles/pages/auth/adminlogin.css";
 import Analytics from "../components/common/Analytics";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
+
+function AppContent({ Component, pageProps, loading, progressRef }) {
+  const { isDrawerOpen, setIsDrawerOpen, lastAddedItem } = useCart();
+
+  return (
+    <>
+      {/* Custom vertical scroll progress bar */}
+      <div className="custom-scrollbar-progress">
+        <div
+          className="custom-scrollbar-progress-fill"
+          ref={progressRef}
+          style={{ height: 0 }}
+        />
+      </div>
+      {loading && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(255, 255, 255, 1)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999,
+            backdropFilter: "blur(5px)",
+            pointerEvents: "auto",
+          }}
+        >
+          <Loader />
+        </div>
+      )}
+      <Component {...pageProps} />
+      <CartDrawer 
+        isOpen={isDrawerOpen} 
+        onClose={() => setIsDrawerOpen(false)}
+        lastAddedItem={lastAddedItem}
+      />
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+    </>
+  );
+}
 
 function App({ Component, pageProps }) {
   const [loading, setLoading] = useState(false); // Start with false to allow immediate paint
@@ -106,46 +162,11 @@ function App({ Component, pageProps }) {
       <AuthProvider>
         <CartProvider>
           <WishlistProvider>
-            {/* Custom vertical scroll progress bar */}
-            <div className="custom-scrollbar-progress">
-              <div
-                className="custom-scrollbar-progress-fill"
-                ref={progressRef}
-                style={{ height: 0 }}
-              />
-            </div>
-            {loading && (
-              <div
-                style={{
-                  position: "fixed",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  backgroundColor: "rgba(255, 255, 255, 1)",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  zIndex: 9999,
-                  backdropFilter: "blur(5px)",
-                  pointerEvents: "auto",
-                }}
-              >
-                <Loader />
-              </div>
-            )}
-            <Component {...pageProps} />
-            <ToastContainer
-              position="top-right"
-              autoClose={3000}
-              hideProgressBar={false}
-              newestOnTop={false}
-              closeOnClick
-              rtl={false}
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-              theme="light"
+            <AppContent 
+              Component={Component} 
+              pageProps={pageProps}
+              loading={loading}
+              progressRef={progressRef}
             />
           </WishlistProvider>
         </CartProvider>
