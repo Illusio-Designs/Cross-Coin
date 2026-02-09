@@ -243,43 +243,28 @@
 @media (max-width: 768px) {
   .quantity-offer-bar {
     flex-direction: column;
+    align-items: flex-start;
     gap: 12px;
-    padding: 16px;
-    text-align: center;
+    padding: 14px;
   }
 
   .offer-content {
-    justify-content: center;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .offer-text {
+    text-align: left;
   }
 
   .offer-progress {
     width: 100%;
     margin: 0;
+    align-items: flex-start;
   }
 
-  .offer-title {
-    font-size: 15px;
-  }
-
-  .offer-description {
-    font-size: 13px;
-  }
-
-  .offer-badge {
-    align-self: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .quantity-offer-bar {
-    margin: 12px 0;
-    padding: 12px;
-  }
-
-  .offer-icon {
-    width: 36px;
-    height: 36px;
-    font-size: 20px;
+  .progress-text {
+    text-align: left;
   }
 
   .offer-title {
@@ -290,11 +275,46 @@
     font-size: 12px;
   }
 
+  .offer-badge {
+    align-self: flex-start;
+  }
+
+  .offer-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .quantity-offer-bar {
+    margin: 10px 0;
+    padding: 12px;
+  }
+
+  .offer-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+  }
+
+  .offer-title {
+    font-size: 13px;
+  }
+
+  .offer-description {
+    font-size: 11px;
+  }
+
   .progress-bar {
     height: 6px;
   }
 
   .offer-badge {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .auto-applied-badge {
     padding: 6px 12px;
     font-size: 12px;
   }
