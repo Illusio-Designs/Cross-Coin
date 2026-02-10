@@ -3,6 +3,7 @@ import { FiX, FiShoppingBag, FiTrash2, FiCheck } from 'react-icons/fi';
 import { useCart } from '../../context/CartContext';
 import { useRouter } from 'next/router';
 import SafeImage from '../common/SafeImage';
+import QuantityOfferBar from './QuantityOfferBar';
 import './CartDrawer.css';
 
 // Helper functions from CartStep
@@ -81,6 +82,8 @@ const CartDrawer = ({ isOpen, onClose, lastAddedItem }) => {
   const { cartItems, cartTotal, removeFromCart, updateQuantity } = useCart();
   const router = useRouter();
   const [isVisible, setIsVisible] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [selectedPaymentMode, setSelectedPaymentMode] = useState('prepaid');
 
   useEffect(() => {
     if (isOpen) {
@@ -90,6 +93,41 @@ const CartDrawer = ({ isOpen, onClose, lastAddedItem }) => {
       return () => clearTimeout(timer);
     }
   }, [isOpen]);
+
+  // Load applied coupon from session storage
+  useEffect(() => {
+    const savedCoupon = sessionStorage.getItem('appliedCoupon');
+    if (savedCoupon) {
+      try {
+        const coupon = JSON.parse(savedCoupon);
+        setAppliedCoupon(coupon);
+        if (coupon.paymentMode) {
+          setSelectedPaymentMode(coupon.paymentMode);
+        }
+      } catch (e) {
+        console.error('Failed to parse applied coupon', e);
+      }
+    }
+  }, [isOpen]);
+
+  const handleCouponApplied = (coupon) => {
+    setAppliedCoupon(coupon);
+    if (coupon) {
+      sessionStorage.setItem('appliedCoupon', JSON.stringify(coupon));
+      if (coupon.paymentMode) {
+        setSelectedPaymentMode(coupon.paymentMode);
+      }
+    }
+  };
+
+  const handleCouponRemoved = () => {
+    setAppliedCoupon(null);
+    sessionStorage.removeItem('appliedCoupon');
+  };
+
+  // Calculate discount
+  const discountAmount = appliedCoupon ? parseFloat(appliedCoupon.discount || appliedCoupon.discountAmount || 0) : 0;
+  const finalTotal = Math.max(0, cartTotal - discountAmount);
 
   const handleCheckout = () => {
     onClose();
@@ -129,6 +167,20 @@ const CartDrawer = ({ isOpen, onClose, lastAddedItem }) => {
           <div className="cart-drawer-success">
             <span className="success-icon"><FiCheck /></span>
             <span>Item added to cart!</span>
+          </div>
+        )}
+
+        {/* Quantity Offer Bar - Shows both bars in minimal style */}
+        {cartItems.length > 0 && (
+          <div className="cart-drawer-offer-wrapper">
+            <QuantityOfferBar
+              cartItems={cartItems}
+              cartTotal={cartTotal}
+              selectedPaymentMode={selectedPaymentMode}
+              appliedCoupon={appliedCoupon}
+              onCouponApply={handleCouponApplied}
+              onCouponRemoved={handleCouponRemoved}
+            />
           </div>
         )}
 
@@ -214,14 +266,28 @@ const CartDrawer = ({ isOpen, onClose, lastAddedItem }) => {
               <span>Subtotal ({cartItems.reduce((sum, item) => sum + item.quantity, 0)} items):</span>
               <span className="subtotal-amount">₹{cartTotal.toFixed(2)}</span>
             </div>
+
+            {discountAmount > 0 && (
+              <div className="cart-drawer-discount">
+                <span>Discount:</span>
+                <span className="discount-amount">-₹{discountAmount.toFixed(2)}</span>
+              </div>
+            )}
+
+            <div className="cart-drawer-total">
+              <span>Total:</span>
+              <span className="total-amount">₹{finalTotal.toFixed(2)}</span>
+            </div>
             
-            <button className="cart-drawer-btn primary" onClick={handleCheckout}>
-              Proceed to Checkout
-            </button>
-            
-            <button className="cart-drawer-btn secondary" onClick={handleViewCart}>
-              View Cart
-            </button>
+            <div className="cart-drawer-buttons">
+              <button className="cart-drawer-btn primary" onClick={handleCheckout}>
+                Proceed to Checkout
+              </button>
+              
+              <button className="cart-drawer-btn secondary" onClick={handleViewCart}>
+                View Cart
+              </button>
+            </div>
           </div>
         )}
       </div>
