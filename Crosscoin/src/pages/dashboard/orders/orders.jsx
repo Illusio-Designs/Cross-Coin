@@ -47,6 +47,9 @@ const Orders = () => {
     const [allOrdersData, setAllOrdersData] = useState([]); // Add this to store all orders for charts
     const [syncingOrders, setSyncingOrders] = useState(new Set());
     const [syncingAll, setSyncingAll] = useState(false);
+    const [exportStartDate, setExportStartDate] = useState('');
+    const [exportEndDate, setExportEndDate] = useState('');
+    const [isExporting, setIsExporting] = useState(false);
 
     const fetchOrders = async (page = currentPage) => {
         setLoading(true);
@@ -352,6 +355,30 @@ const Orders = () => {
             }
             
             toast.error(errorMessage);
+        }
+    };
+
+    // Export delivered orders to Excel
+    const handleExportDeliveredOrders = async () => {
+        if (!exportStartDate || !exportEndDate) {
+            toast.error('Please select both start and end dates');
+            return;
+        }
+
+        if (new Date(exportStartDate) > new Date(exportEndDate)) {
+            toast.error('Start date must be before end date');
+            return;
+        }
+
+        setIsExporting(true);
+        try {
+            await orderService.exportDeliveredOrders(exportStartDate, exportEndDate);
+            toast.success('Delivered orders exported successfully!');
+        } catch (error) {
+            console.error('Export error:', error);
+            toast.error(error.message || 'Failed to export delivered orders');
+        } finally {
+            setIsExporting(false);
         }
     };
 
@@ -808,6 +835,107 @@ const Orders = () => {
                             }
                         }
                     `}</style>
+                    
+                    {/* Export Section */}
+                    <div className="export-section" style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '16px 20px',
+                        background: 'linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%)',
+                        borderRadius: '8px',
+                        marginBottom: '20px',
+                        border: '2px solid #180D3E',
+                        flexWrap: 'wrap'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto' }}>
+                            <svg width="20" height="20" fill="none" stroke="#180D3E" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span style={{ fontWeight: '600', color: '#180D3E', fontSize: '14px' }}>Export Delivered Orders</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <label style={{ fontSize: '13px', color: '#180D3E', fontWeight: '500' }}>From:</label>
+                            <input 
+                                type="date" 
+                                value={exportStartDate}
+                                onChange={(e) => setExportStartDate(e.target.value)}
+                                style={{
+                                    padding: '6px 10px',
+                                    border: '2px solid #180D3E',
+                                    borderRadius: '6px',
+                                    fontSize: '13px',
+                                    outline: 'none',
+                                    cursor: 'pointer'
+                                }}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <label style={{ fontSize: '13px', color: '#180D3E', fontWeight: '500' }}>To:</label>
+                            <input 
+                                type="date" 
+                                value={exportEndDate}
+                                onChange={(e) => setExportEndDate(e.target.value)}
+                                style={{
+                                    padding: '6px 10px',
+                                    border: '2px solid #180D3E',
+                                    borderRadius: '6px',
+                                    fontSize: '13px',
+                                    outline: 'none',
+                                    cursor: 'pointer'
+                                }}
+                            />
+                        </div>
+                        <button 
+                            onClick={handleExportDeliveredOrders}
+                            disabled={isExporting || !exportStartDate || !exportEndDate}
+                            style={{
+                                padding: '8px 16px',
+                                background: isExporting || !exportStartDate || !exportEndDate ? '#ccc' : 'linear-gradient(135deg, #180D3E 0%, #2a1a4d 100%)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: isExporting || !exportStartDate || !exportEndDate ? 'not-allowed' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                transition: 'all 0.3s ease',
+                                boxShadow: isExporting || !exportStartDate || !exportEndDate ? 'none' : '0 2px 8px rgba(24, 13, 62, 0.2)'
+                            }}
+                            onMouseOver={(e) => {
+                                if (!isExporting && exportStartDate && exportEndDate) {
+                                    e.target.style.background = 'linear-gradient(135deg, #CE1E36 0%, #b71c1c 100%)';
+                                    e.target.style.transform = 'translateY(-2px)';
+                                    e.target.style.boxShadow = '0 4px 12px rgba(206, 30, 54, 0.3)';
+                                }
+                            }}
+                            onMouseOut={(e) => {
+                                if (!isExporting && exportStartDate && exportEndDate) {
+                                    e.target.style.background = 'linear-gradient(135deg, #180D3E 0%, #2a1a4d 100%)';
+                                    e.target.style.transform = 'translateY(0)';
+                                    e.target.style.boxShadow = '0 2px 8px rgba(24, 13, 62, 0.2)';
+                                }
+                            }}
+                        >
+                            {isExporting ? (
+                                <>
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="animate-spin">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                    Exporting...
+                                </>
+                            ) : (
+                                <>
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    Export to Excel
+                                </>
+                            )}
+                        </button>
+                    </div>
                     
                     <div className="adding-button">
                         <button 

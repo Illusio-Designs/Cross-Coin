@@ -11,6 +11,7 @@ const { GuestUser } = require("../model/guestUserModel.js");
 const { ProductImage } = require("../model/productImageModel.js");
 const { Op } = require("sequelize");
 const { sequelize } = require("../config/db.js");
+const XLSX = require('xlsx');
 // Import FShip service for shipping integration
 const fshipService = require("../services/fshipService.js");
 const { setImmediate } = require("timers");
@@ -3756,6 +3757,326 @@ module.exports.getStockRestorationHistory = async (req, res) => {
       success: false,
       message: "Failed to get stock restoration history",
       error: error.message
+    });
+  }
+};
+
+
+// Export delivered orders to Excel
+module.exports.exportDeliveredOrders = async (req, res) => {
+  console.log('=== Export Delivered Orders Endpoint Hit ===');
+  
+  try {
+    const { startDate, endDate } = req.query;
+    
+    console.log('Start Date:', startDate);
+    console.log('End Date:', endDate);
+
+    // Build query conditions
+    const whereConditions = {
+      status: 'delivered'
+    };
+
+    // Add date filter if provided
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999); // Include the entire end date
+      
+      whereConditions.createdAt = {
+        [Op.between]: [start, end]
+      };
+      console.log('Date range filter applied:', start, 'to', end);
+    } else if (startDate) {
+      whereConditions.createdAt = {
+        [Op.gte]: new Date(startDate)
+      };
+    } else if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      whereConditions.createdAt = {
+        [Op.lte]: end
+      };
+    }
+
+    console.log('Query conditions:', JSON.stringify(whereConditions, null, 2));
+
+    console.log('Query conditions:', JSON.stringify(whereConditions, null, 2));
+
+    // Fetch delivered orders with all related data
+    console.log('Fetching orders from database...');
+    let orders;
+    try {
+      orders = await Order.findAll({
+        where: whereConditions,
+        include: [
+          {
+            model: User,
+            as: 'User',
+            attributes: ['id', 'username', 'email'],
+            required: false
+          },
+          {
+            model: GuestUser,
+            as: 'GuestUser',
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+            required: false
+          },
+          {
+            model: ShippingAddress,
+            as: 'ShippingAddress',
+            attributes: ['full_name', 'phone', 'address', 'city', 'state', 'pincode', 'country'],
+            required: false
+          },
+          {
+            model: OrderItem,
+            as: 'OrderItems',
+            required: false,
+            include: [
+              {
+                model: Product,
+                as: 'Product',
+                attributes: ['id', 'name', 'slug'],
+                required: false
+              },
+              {
+                model: ProductVariation,
+                as: 'ProductVariation',
+                attributes: ['id', 'sku', 'attributes'],
+                required: false
+              }
+            ]
+          }
+        ],
+        order: [['createdAt', 'DESC']]
+      });
+      console.log('Database query successful. Found orders:', orders.length);
+    } catch (dbError) {
+      console.error('Database query error:', dbError.message);
+      console.error('Database error stack:', dbError.stack);
+      throw new Error(`Database query failed: ${dbError.message}`);
+    }
+
+    if (orders.length === 0) {
+      console.log('No orders found, returning empty response');
+      return res.status(200).json({
+        success: true,
+        message: 'No delivered orders found for the selected date range',
+        count: 0
+      });
+    }
+
+    console.log('Processing orders for Excel export...');
+
+    // Prepare data for Excel
+    const excelData = [];
+
+    orders.forEach(order => {
+      const customerName = order.User?.username || 
+                          (order.GuestUser ? `${order.GuestUser.firstName} ${order.GuestUser.lastName}` : 'N/A');
+      const customerEmail = order.User?.email || order.GuestUser?.email || 'N/A';
+      const customerPhone = order.GuestUser?.phone || order.ShippingAddress?.phone || 'N/A';
+      const customerType = order.GuestUser ? 'Guest' : 'Registered';
+
+      // Shipping address
+      const shippingName = order.ShippingAddress?.full_name || 'N/A';
+      const shippingPhone = order.ShippingAddress?.phone || 'N/A';
+      const shippingAddress = order.ShippingAddress?.address || 'N/A';
+      const shippingCity = order.ShippingAddress?.city || 'N/A';
+      const shippingState = order.ShippingAddress?.state || 'N/A';
+      const shippingPincode = order.ShippingAddress?.pincode || 'N/A';
+      const shippingCountry = order.ShippingAddress?.country || 'India';
+
+      // Order details
+      const orderNumber = order.order_number;
+      const orderDate = new Date(order.createdAt).toLocaleDateString('en-IN');
+      const deliveryDate = order.updatedAt ? new Date(order.updatedAt).toLocaleDateString('en-IN') : 'N/A';
+      
+      // Payment details
+      const paymentType = order.payment_type === 'cod' ? 'COD' : 'Prepaid';
+      const paymentStatus = order.payment_status === 'paid' ? 'Paid' : 'Pending';
+      
+      // Shipping details
+      const awbNumber = order.fship_waybill || 'N/A';
+      const courierName = order.courier_name || 'N/A';
+      const trackingNumber = order.tracking_number || 'N/A';
+
+      // Order totals
+      const subtotal = parseFloat(order.subtotal || 0).toFixed(2);
+      const shippingFee = parseFloat(order.shipping_fee || 0).toFixed(2);
+      const discountAmount = parseFloat(order.discount_amount || 0).toFixed(2);
+      const finalAmount = parseFloat(order.final_amount || 0).toFixed(2);
+
+      // Add each order item as a separate row
+      if (order.OrderItems && order.OrderItems.length > 0) {
+        order.OrderItems.forEach((item, index) => {
+          const productName = item.Product?.name || 'N/A';
+          const sku = item.ProductVariation?.sku || 'N/A';
+          const quantity = item.quantity || 0;
+          const price = parseFloat(item.price || 0).toFixed(2);
+          const itemSubtotal = parseFloat(item.subtotal || 0).toFixed(2);
+
+          // Parse attributes
+          let attributes = '';
+          if (item.ProductVariation?.attributes) {
+            try {
+              const attrs = typeof item.ProductVariation.attributes === 'string' 
+                ? JSON.parse(item.ProductVariation.attributes) 
+                : item.ProductVariation.attributes;
+              
+              const attrParts = [];
+              if (attrs.size) attrParts.push(`Size: ${Array.isArray(attrs.size) ? attrs.size.join(', ') : attrs.size}`);
+              if (attrs.color) attrParts.push(`Color: ${Array.isArray(attrs.color) ? attrs.color.join(', ') : attrs.color}`);
+              attributes = attrParts.join(' | ');
+            } catch (e) {
+              attributes = 'N/A';
+            }
+          }
+
+          excelData.push({
+            'Order Number': orderNumber,
+            'Order Date': orderDate,
+            'Delivery Date': deliveryDate,
+            'Customer Name': customerName,
+            'Customer Email': customerEmail,
+            'Customer Phone': customerPhone,
+            'Customer Type': customerType,
+            'Shipping Name': shippingName,
+            'Shipping Phone': shippingPhone,
+            'Shipping Address': shippingAddress,
+            'City': shippingCity,
+            'State': shippingState,
+            'Pincode': shippingPincode,
+            'Country': shippingCountry,
+            'Product Name': productName,
+            'SKU': sku,
+            'Attributes': attributes,
+            'Quantity': quantity,
+            'Price per Unit': price,
+            'Item Subtotal': itemSubtotal,
+            'Order Subtotal': index === 0 ? subtotal : '',
+            'Shipping Fee': index === 0 ? shippingFee : '',
+            'Discount': index === 0 ? discountAmount : '',
+            'Final Amount': index === 0 ? finalAmount : '',
+            'Payment Type': paymentType,
+            'Payment Status': paymentStatus,
+            'AWB Number': awbNumber,
+            'Courier': courierName,
+            'Tracking Number': trackingNumber,
+            'Order Status': 'Delivered'
+          });
+        });
+      } else {
+        // If no items, add order without product details
+        excelData.push({
+          'Order Number': orderNumber,
+          'Order Date': orderDate,
+          'Delivery Date': deliveryDate,
+          'Customer Name': customerName,
+          'Customer Email': customerEmail,
+          'Customer Phone': customerPhone,
+          'Customer Type': customerType,
+          'Shipping Name': shippingName,
+          'Shipping Phone': shippingPhone,
+          'Shipping Address': shippingAddress,
+          'City': shippingCity,
+          'State': shippingState,
+          'Pincode': shippingPincode,
+          'Country': shippingCountry,
+          'Product Name': 'N/A',
+          'SKU': 'N/A',
+          'Attributes': 'N/A',
+          'Quantity': 0,
+          'Price per Unit': '0.00',
+          'Item Subtotal': '0.00',
+          'Order Subtotal': subtotal,
+          'Shipping Fee': shippingFee,
+          'Discount': discountAmount,
+          'Final Amount': finalAmount,
+          'Payment Type': paymentType,
+          'Payment Status': paymentStatus,
+          'AWB Number': awbNumber,
+          'Courier': courierName,
+          'Tracking Number': trackingNumber,
+          'Order Status': 'Delivered'
+        });
+      }
+    });
+
+    console.log('Excel data prepared. Total rows:', excelData.length);
+
+    // Create workbook and worksheet
+    console.log('Creating Excel workbook...');
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    console.log('Worksheet created successfully');
+
+    // Set column widths
+    const colWidths = [
+      { wch: 15 }, // Order Number
+      { wch: 12 }, // Order Date
+      { wch: 12 }, // Delivery Date
+      { wch: 20 }, // Customer Name
+      { wch: 25 }, // Customer Email
+      { wch: 15 }, // Customer Phone
+      { wch: 12 }, // Customer Type
+      { wch: 20 }, // Shipping Name
+      { wch: 15 }, // Shipping Phone
+      { wch: 35 }, // Shipping Address
+      { wch: 15 }, // City
+      { wch: 15 }, // State
+      { wch: 10 }, // Pincode
+      { wch: 10 }, // Country
+      { wch: 30 }, // Product Name
+      { wch: 15 }, // SKU
+      { wch: 25 }, // Attributes
+      { wch: 10 }, // Quantity
+      { wch: 12 }, // Price per Unit
+      { wch: 12 }, // Item Subtotal
+      { wch: 12 }, // Order Subtotal
+      { wch: 12 }, // Shipping Fee
+      { wch: 10 }, // Discount
+      { wch: 12 }, // Final Amount
+      { wch: 12 }, // Payment Type
+      { wch: 12 }, // Payment Status
+      { wch: 15 }, // AWB Number
+      { wch: 15 }, // Courier
+      { wch: 15 }, // Tracking Number
+      { wch: 12 }  // Order Status
+    ];
+    ws['!cols'] = colWidths;
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Delivered Orders');
+    console.log('Worksheet added to workbook');
+
+    // Generate buffer
+    console.log('Generating Excel buffer...');
+    const excelBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    console.log('Excel buffer generated. Size:', excelBuffer.length, 'bytes');
+
+    // Set response headers
+    const filename = `Delivered_Orders_${startDate || 'All'}_to_${endDate || 'All'}.xlsx`;
+    console.log('Setting response headers. Filename:', filename);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    // Send the file
+    console.log('Sending Excel file...');
+    res.send(excelBuffer);
+    console.log('Export completed successfully!');
+
+  } catch (error) {
+    console.error('=== Error exporting delivered orders ===');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', error);
+    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to export delivered orders',
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };

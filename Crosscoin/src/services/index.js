@@ -361,6 +361,43 @@ export const orderService = {
     }
   },
 
+  // Export delivered orders to Excel
+  exportDeliveredOrders: async (startDate, endDate) => {
+    try {
+      const params = {};
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+
+      const response = await api.get('/api/orders/export/delivered', {
+        params,
+        responseType: 'blob', // Important for file download
+        timeout: 60000 // 60 seconds timeout for large exports
+      });
+
+      // Create a download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Generate filename
+      const filename = `Delivered_Orders_${startDate || 'All'}_to_${endDate || 'All'}.xlsx`;
+      link.setAttribute('download', filename);
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      return { success: true, message: 'Export downloaded successfully' };
+    } catch (error) {
+      console.error('Export error:', error);
+      throw error.response?.data || error.message;
+    }
+  },
+
 };
 
 // Payment Services
