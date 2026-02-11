@@ -26,24 +26,32 @@ export const getStatusDisplayText = (status) => {
     
     const statusMap = {
         'pending': 'Order Pending',
+        'confirmed': 'Order Confirmed',
         'processing': 'Processing',
         'booked': 'Booked',
+        'pickup_initiated': 'Pickup Initiated',
         'pickup initiated': 'Pickup Initiated',
         'manifested': 'Manifested',
+        'in_transit': 'In Transit',
         'in transit': 'In Transit',
         'shipped': 'Shipped',
+        'out_for_delivery': 'Out for Delivery',
         'out for delivery': 'Out for Delivery',
         'delivered': 'Delivered',
         'undelivered': 'Undelivered',
         'rto': 'Return to Origin',
         'cancelled': 'Cancelled',
+        'order_cancelled': 'Order Cancelled',
         'order cancelled': 'Order Cancelled',
         'exception': 'Exception',
         'returned': 'Returned'
     };
     
-    const lowerStatus = status.toLowerCase();
-    return statusMap[lowerStatus] || status.charAt(0).toUpperCase() + status.slice(1);
+    const lowerStatus = status.toLowerCase().replace(/\s+/g, '_');
+    const normalizedStatus = status.toLowerCase();
+    
+    return statusMap[lowerStatus] || statusMap[normalizedStatus] || 
+           status.split(/[_\s]+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 
 /**
@@ -56,24 +64,31 @@ export const getStatusColor = (status) => {
     
     const colorMap = {
         'pending': '#F59E0B',
+        'confirmed': '#3B82F6',
         'processing': '#180D3E',
         'booked': '#3B82F6',
+        'pickup_initiated': '#8B5CF6',
         'pickup initiated': '#8B5CF6',
         'manifested': '#06B6D4',
+        'in_transit': '#F97316',
         'in transit': '#F97316',
         'shipped': '#CE1E36',
+        'out_for_delivery': '#EF4444',
         'out for delivery': '#EF4444',
         'delivered': '#10B981',
         'undelivered': '#DC2626',
         'rto': '#F59E0B',
         'cancelled': '#EF4444',
+        'order_cancelled': '#EF4444',
         'order cancelled': '#EF4444',
         'exception': '#DC2626',
         'returned': '#6B7280'
     };
     
-    const lowerStatus = status.toLowerCase();
-    return colorMap[lowerStatus] || '#6B7280';
+    const lowerStatus = status.toLowerCase().replace(/\s+/g, '_');
+    const normalizedStatus = status.toLowerCase();
+    
+    return colorMap[lowerStatus] || colorMap[normalizedStatus] || '#6B7280';
 };
 
 /**
