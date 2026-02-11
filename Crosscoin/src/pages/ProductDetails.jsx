@@ -288,6 +288,38 @@ export default function ProductDetails() {
     }
   }, [colorsForSelectedType, selectedColor]);
 
+  // Desktop: Show fixed Buy Now button at bottom when product details scroll out
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const handleScroll = () => {
+      // Only for desktop (above 426px)
+      if (window.innerWidth <= 426) return;
+      
+      const buyNowBtn = document.querySelector('.buy-now-btn');
+      const actionButtonsRow = document.querySelector('.action-buttons-row');
+      
+      if (!buyNowBtn || !actionButtonsRow) return;
+      
+      const rect = actionButtonsRow.getBoundingClientRect();
+      const isScrolledPast = rect.bottom < 0;
+      
+      if (isScrolledPast) {
+        buyNowBtn.classList.add('fixed-bottom');
+      } else {
+        buyNowBtn.classList.remove('fixed-bottom');
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('resize', handleScroll);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, []);
+
   const generateCouponDescription = (coupon) => {
     const value = parseFloat(coupon.value);
     const minPurchase = parseFloat(coupon.minPurchase);
