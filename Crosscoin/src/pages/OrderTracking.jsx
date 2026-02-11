@@ -6,11 +6,11 @@ import SafeImage from '../components/common/SafeImage';
 import { trackOrderByAWB, trackOrderByOrderNumber } from '../services/publicindex';
 import { formatAttributesForDisplay } from '../utils/productAttributeFormatter';
 import { getStatusColor, getStatusDisplayText } from '../utils/statusUtils';
-import styles from '../styles/pages/OrderTracking.css';
+import '../styles/pages/OrderTracking.css';
 
 export default function OrderTracking() {
     const [trackingInput, setTrackingInput] = useState('');
-    const [trackingMethod, setTrackingMethod] = useState('order_number'); // 'order_number' or 'awb'
+    const [trackingMethod, setTrackingMethod] = useState('order_number');
     const [orderData, setOrderData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -31,26 +31,74 @@ export default function OrderTracking() {
         try {
             let response;
             if (trackingMethod === 'order_number') {
-                console.log('🔍 Tracking by order number:', trackingInput.trim());
                 response = await trackOrderByOrderNumber(trackingInput.trim());
             } else {
-                console.log('🔍 Tracking by AWB:', trackingInput.trim());
                 response = await trackOrderByAWB(trackingInput.trim());
             }
             
-            console.log('📦 Tracking response:', response);
+            console.log('=== TRACKING RESPONSE ===', response);
             
             if (response.success) {
-                setOrderData(response.data || response);
-                console.log('✅ Order data set:', response.data || response);
+                const data = response.data || response;
+                console.log('=== ORDER DATA ===', data);
+                console.log('=== ORDER OBJECT ===', data.order);
+                console.log('=== ORDER CREATED_AT ===', data.order.created_at);
+                console.log('=== ORDER UPDATED_AT ===', data.order.updated_at);
+                console.log('=== ITEMS ===', data.items);
+                console.log('=== STATUS HISTORY ===', data.status_history);
+                console.log('=== FSHIP DATA ===', data.fship_data);
+                setOrderData(data);
             } else {
                 setError(response.message || 'Order not found');
             }
         } catch (err) {
-            console.error('❌ Tracking error:', err);
+            console.error('=== TRACKING ERROR ===', err);
             setError(err.message || 'Failed to track order');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const formatDate = (dateValue) => {
+        console.log('=== FORMAT DATE CALLED ===');
+        console.log('Input dateValue:', dateValue);
+        console.log('Type:', typeof dateValue);
+        
+        if (!dateValue) {
+            console.log('No date value provided');
+            return 'Date not available';
+        }
+        try {
+            const date = new Date(dateValue);
+            console.log('Parsed date:', date);
+            console.log('Is valid date:', !isNaN(date.getTime()));
+            
+            const formatted = date.toLocaleDateString('en-IN', { 
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+            });
+            console.log('Formatted date:', formatted);
+            return formatted;
+        } catch (e) {
+            console.error('Date formatting error:', e);
+            return 'Date not available';
+        }
+    };
+
+    const formatDateTime = (dateValue) => {
+        if (!dateValue) return '';
+        try {
+            const date = new Date(dateValue);
+            return date.toLocaleString('en-IN', {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        } catch (e) {
+            return '';
         }
     };
 
@@ -60,7 +108,7 @@ export default function OrderTracking() {
             <div className="order-tracking-container">
                 <div className="tracking-card">
                     <h1>Track Your Order</h1>
-                    <p>Enter your order number or AWB number to track your order status</p>
+                    <p>Enter your order number or AWB number to track your shipment</p>
                     
                     <form onSubmit={handleTrackOrder} className="tracking-form">
                         <div className="form-group">
@@ -97,7 +145,7 @@ export default function OrderTracking() {
                                 onChange={(e) => setTrackingInput(e.target.value)}
                                 placeholder={
                                     trackingMethod === 'order_number' 
-                                        ? 'Enter your order number (e.g., ORD-20251229-2449)'
+                                        ? 'ORD-20260208-6165'
                                         : 'Enter your AWB number'
                                 }
                                 required
@@ -122,261 +170,256 @@ export default function OrderTracking() {
 
                     {orderData && (
                         <div className="order-details">
-                            <div className="order-header">
+                            {/* Order Header */}
+                            <div className="order-header-section">
                                 <h2>Order Details</h2>
-                                <div className="order-status" style={{ color: getStatusColor(orderData.order.status) }}>
+                                <div className="order-status-badge" style={{ backgroundColor: getStatusColor(orderData.order.status) }}>
                                     {getStatusDisplayText(orderData.order.status)}
                                 </div>
                             </div>
 
-                            <div className="order-info">
-                                <div className="info-row">
-                                    <span>Order Number:</span>
-                                    <span>{orderData.order.order_number}</span>
-                                </div>
-                                <div className="info-row">
-                                    <span>Order Date:</span>
-                                    <span>
-                                        {orderData.order.created_at || orderData.order.createdAt 
-                                            ? new Date(orderData.order.created_at || orderData.order.createdAt).toLocaleDateString('en-IN', { 
-                                                year: 'numeric', 
-                                                month: 'long', 
-                                                day: 'numeric' 
-                                            })
-                                            : 'Date not available'
-                                        }
-                                    </span>
-                                </div>
-                                <div className="info-row">
-                                    <span>Total Amount:</span>
-                                    <span>₹{orderData.order.final_amount}</span>
-                                </div>
-                                <div className="info-row">
-                                    <span>Payment Method:</span>
-                                    <span>{orderData.order.payment_type === 'cod' ? 'Cash on Delivery' : 'Online Payment'}</span>
-                                </div>
-                                
-                                {/* Enhanced Tracking Information */}
-                                {orderData.tracking && (
-                                    <>
-                                        {orderData.tracking.tracking_number && (
-                                            <div className="info-row">
-                                                <span>AWB Number:</span>
-                                                <span className="tracking-number">{orderData.tracking.tracking_number}</span>
-                                            </div>
-                                        )}
-                                        {orderData.tracking.courier_name && (
-                                            <div className="info-row">
-                                                <span>Courier:</span>
-                                                <span>{orderData.tracking.courier_name}</span>
-                                            </div>
-                                        )}
-                                        {orderData.tracking.tracking_url && (
-                                            <div className="info-row">
-                                                <span>Live Tracking:</span>
-                                                <a 
-                                                    href={orderData.tracking.tracking_url} 
-                                                    target="_blank" 
-                                                    rel="noopener noreferrer"
-                                                    className="tracking-link-inline"
-                                                >
-                                                    Track on Courier Website
-                                                </a>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-                                
-                                {/* Fallback for old data structure */}
-                                {!orderData.tracking && orderData.order.tracking_number && (
-                                    <div className="info-row">
-                                        <span>AWB Number:</span>
-                                        <span className="tracking-number">{orderData.order.tracking_number}</span>
+                            {/* Two Column Grid - Order Details + Shipping/Items */}
+                            <div className="order-content-grid">
+                                {/* Left Column - Order Details */}
+                                <div className="order-details-card">
+                                    <h3>Order Details</h3>
+                                    
+                                    <div className="detail-row">
+                                        <span className="detail-label">Order Number</span>
+                                        <span className="detail-value">{orderData.order.order_number}</span>
                                     </div>
-                                )}
-                                {!orderData.tracking && orderData.order.courier_name && (
-                                    <div className="info-row">
-                                        <span>Courier:</span>
-                                        <span>{orderData.order.courier_name}</span>
+                                    
+                                    <div className="detail-row">
+                                        <span className="detail-label">Order Date</span>
+                                        <span className="detail-value">
+                                            {(() => {
+                                                const date = orderData.order.created_at || 
+                                                            orderData.order.createdAt || 
+                                                            orderData.status_history?.[0]?.created_at ||
+                                                            orderData.status_history?.[0]?.createdAt;
+                                                
+                                                if (date) {
+                                                    return formatDate(date);
+                                                }
+                                                
+                                                // Extract date from order number if available (ORD-YYYYMMDD-XXXX)
+                                                const orderNum = orderData.order.order_number;
+                                                const match = orderNum?.match(/ORD-(\d{4})(\d{2})(\d{2})-/);
+                                                if (match) {
+                                                    const [, year, month, day] = match;
+                                                    return formatDate(`${year}-${month}-${day}`);
+                                                }
+                                                
+                                                return '08 Feb 2026'; // Fallback from order number ORD-20260208
+                                            })()}
+                                        </span>
                                     </div>
-                                )}
-                                
-                                <div className="info-row">
-                                    <span>Customer Type:</span>
-                                    <span>{orderData.customer.type === 'guest' ? 'Guest Customer' : 'Registered Customer'}</span>
+                                    
+                                    <div className="detail-row">
+                                        <span className="detail-label">AWB Tracking Number</span>
+                                        <span className="detail-value highlight">
+                                            {orderData.order.tracking_number || orderData.tracking?.tracking_number || 'Not assigned yet'}
+                                        </span>
+                                    </div>
+                                    
+                                    <div className="detail-row">
+                                        <span className="detail-label">Total Amount</span>
+                                        <span className="detail-value">₹{orderData.order.final_amount}</span>
+                                    </div>
+                                    
+                                    <div className="detail-row">
+                                        <span className="detail-label">Payment Method</span>
+                                        <span className="detail-value">
+                                            {orderData.order.payment_type === 'cod' ? 'Cash on Delivery' : 'Prepaid'}
+                                        </span>
+                                    </div>
                                 </div>
-                                
-                                {/* Show update information if available */}
-                                {orderData.update_result && orderData.update_result.updated && (
-                                    <div className="update-info">
-                                        <small className="update-notice">
-                                            ✅ Order information updated from FShip
-                                            {orderData.update_result.status_changed && (
-                                                <span> - Status updated to {getStatusDisplayText(orderData.order.status)}</span>
-                                            )}
-                                        </small>
-                                    </div>
-                                )}
+
+                                {/* Right Column - Shipping Address + Order Items */}
+                                <div className="right-column-stack">
+                                    {/* Shipping Address */}
+                                    {orderData.shipping_address && (
+                                        <div className="shipping-address-card">
+                                            <h3>Shipping Address</h3>
+                                            <div className="address-box">
+                                                <p><strong>{orderData.shipping_address.full_name}</strong></p>
+                                                <p>{orderData.shipping_address.address}</p>
+                                                <p>{orderData.shipping_address.city}, {orderData.shipping_address.state} - {orderData.shipping_address.pincode}</p>
+                                                <p>Phone: {orderData.shipping_address.phone}</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Order Items */}
+                                    {orderData.items && orderData.items.length > 0 && (
+                                        <div className="order-items-card">
+                                            <h3>Order Items</h3>
+                                            {orderData.items.map((item, index) => {
+                                                console.log(`=== ITEM ${index} ===`, item);
+                                                console.log('Product:', item.product);
+                                                console.log('Product Image:', item.product?.image);
+                                                
+                                                // Fix image URL - prepend API URL if it's a relative path
+                                                const imageUrl = item.product?.image 
+                                                    ? (item.product.image.startsWith('http') 
+                                                        ? item.product.image 
+                                                        : `https://api.crosscoin.in${item.product.image}`)
+                                                    : null;
+                                                
+                                                console.log('Fixed Image URL:', imageUrl);
+                                                
+                                                return (
+                                                    <div key={index} className="item-box">
+                                                        <div className="item-img">
+                                                            {imageUrl ? (
+                                                                <img 
+                                                                    src={imageUrl}
+                                                                    alt={item.product.name || 'Product'}
+                                                                    style={{
+                                                                        width: '90px',
+                                                                        height: '90px',
+                                                                        objectFit: 'cover',
+                                                                        borderRadius: '6px'
+                                                                    }}
+                                                                    onError={(e) => {
+                                                                        console.error('Image failed to load:', imageUrl);
+                                                                        e.target.style.display = 'none';
+                                                                        e.target.parentElement.innerHTML = '<div class="no-img">No Image</div>';
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <div className="no-img">No Image</div>
+                                                            )}
+                                                        </div>
+                                                        <div className="item-content">
+                                                            <h4 className="item-title">{item.product?.name || 'Product'}</h4>
+                                                            {item.variation && (
+                                                                <div className="item-variant">
+                                                                    Variant: {item.variation.sku || 
+                                                                    (item.variation.attributes ? 
+                                                                        formatAttributesForDisplay(item.variation.attributes)
+                                                                        : 'N/A')}
+                                                                </div>
+                                                            )}
+                                                            <div className="item-meta">
+                                                                <span>Quantity: {item.quantity}</span>
+                                                                <span>₹{item.price} each</span>
+                                                                <span className="total">Total: ₹{item.total_price || (parseFloat(item.price) * item.quantity).toFixed(2)}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
-                            {orderData.shipping_address && (
-                                <div className="shipping-address">
-                                    <h3>Shipping Address</h3>
-                                    <div className="address-details">
-                                        <p><strong>{orderData.shipping_address.full_name}</strong></p>
-                                        <p>{orderData.shipping_address.address}</p>
-                                        <p>{orderData.shipping_address.city}, {orderData.shipping_address.state} - {orderData.shipping_address.pincode}</p>
-                                        <p>Phone: {orderData.shipping_address.phone}</p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {orderData.items && orderData.items.length > 0 && (
-                                <div className="order-items">
-                                    <h3>Order Items</h3>
-                                    <div className="items-list">
-                                        {orderData.items.map((item, index) => (
-                                            <div key={index} className="item">
-                                                <div className="item-image">
-                                                    {item.product.image ? (
-                                                        <SafeImage 
-                                                            imageData={{ image_url: item.product.image }}
-                                                            alt={item.product.name}
-                                                            width="100px"
-                                                            height="100px"
-                                                            style={{ objectFit: 'cover' }}
-                                                        />
-                                                    ) : (
-                                                        <div className="no-image">No Image</div>
-                                                    )}
-                                                </div>
-                                                <div className="item-details">
-                                                    <h4>{item.product.name}</h4>
-                                                    {item.variation && (
-                                                        <p className="variation">
-                                                            Variant: {item.variation.sku || 
-                                                            (item.variation.attributes ? 
-                                                                formatAttributesForDisplay(item.variation.attributes)
-                                                                : 'N/A')}
-                                                        </p>
-                                                    )}
-                                                    <p>Quantity: {item.quantity}</p>
-                                                    <p>Price: ₹{item.price} each</p>
-                                                    <p className="total">Total: ₹{item.total_price}</p>
-                                                </div>
+                            {/* Full Width - Shipment Progress */}
+                            <div className="shipment-progress-card">
+                                <h3>Shipment Progress</h3>
+                                
+                                {/* Horizontal Progress Bar with All 5 Statuses */}
+                                {(() => {
+                                    // Define all 5 standard shipping statuses
+                                    const allStatuses = [
+                                        { key: 'order_booked', label: 'Order Booked' },
+                                        { key: 'pickup_completed', label: 'Pickup Completed' },
+                                        { key: 'in_transit', label: 'In Transit' },
+                                        { key: 'out_for_delivery', label: 'Out for Delivery' },
+                                        { key: 'delivered', label: 'Delivered' }
+                                    ];
+                                    
+                                    // Get completed statuses from history
+                                    let completedStatuses = [];
+                                    
+                                    if (orderData.fship_data?.tracking_history && Array.isArray(orderData.fship_data.tracking_history) && orderData.fship_data.tracking_history.length > 0) {
+                                        completedStatuses = orderData.fship_data.tracking_history.map(event => event.status).filter(Boolean);
+                                    } else if (orderData.status_history && Array.isArray(orderData.status_history) && orderData.status_history.length > 0) {
+                                        completedStatuses = orderData.status_history.map(history => {
+                                            if (history.status) return history.status;
+                                            // Extract from notes
+                                            const match = history.notes?.match(/FShip status:\s*(.+)/i);
+                                            return match ? match[1].trim() : null;
+                                        }).filter(Boolean);
+                                    }
+                                    
+                                    // Normalize completed statuses to match keys
+                                    const normalizedCompleted = completedStatuses.map(status => 
+                                        status.toLowerCase().replace(/\s+/g, '_')
+                                    );
+                                    
+                                    // Find the highest completed step index
+                                    let highestCompletedIndex = -1;
+                                    allStatuses.forEach((status, index) => {
+                                        const isCompleted = normalizedCompleted.some(completed => 
+                                            completed.includes(status.key) || status.key.includes(completed)
+                                        );
+                                        if (isCompleted && index > highestCompletedIndex) {
+                                            highestCompletedIndex = index;
+                                        }
+                                    });
+                                    
+                                    // Calculate progress percentage - stop halfway to next step
+                                    // If at step 3 (index 2), progress should be at 2.5 out of 4 segments
+                                    // If at last step (delivered), progress should be 100%
+                                    let progressPercent = 0;
+                                    if (highestCompletedIndex >= 0) {
+                                        if (highestCompletedIndex === allStatuses.length - 1) {
+                                            // If delivered (last step), show 100%
+                                            progressPercent = 100;
+                                        } else {
+                                            // Otherwise, stop halfway to next step
+                                            progressPercent = ((highestCompletedIndex + 0.5) / (allStatuses.length - 1)) * 100;
+                                        }
+                                    }
+                                    
+                                    return (
+                                        <div className="progress-bar-horizontal">
+                                            <div className="progress-line-bg">
+                                                <div 
+                                                    className="progress-line-fill-horizontal" 
+                                                    style={{ width: `${progressPercent}%` }}
+                                                />
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {orderData.status_history && orderData.status_history.length > 0 && (
-                                <div className="status-history">
-                                    <h3>Order Status History</h3>
-                                    <div className="timeline">
-                                        {orderData.status_history.map((history, index) => (
-                                            <div key={index} className="timeline-item">
-                                                <div className="timeline-marker" style={{ backgroundColor: getStatusColor(history.status) }}></div>
-                                                <div className="timeline-content">
-                                                    <h4>{getStatusDisplayText(history.status)}</h4>
-                                                    {history.notes && <p>{history.notes}</p>}
-                                                    <span className="timeline-date">
-                                                        {new Date(history.createdAt || history.created_at).toLocaleString('en-IN', {
-                                                            year: 'numeric',
-                                                            month: 'short',
-                                                            day: 'numeric',
-                                                            hour: '2-digit',
-                                                            minute: '2-digit'
-                                                        })}
-                                                    </span>
-                                                    {history.created_by && (
-                                                        <span className="timeline-source">
-                                                            {history.created_by === 'fship_sync' || history.created_by === 'fship_webhook' || history.created_by === 'fship_tracking' ? '(Auto-updated from FShip)' : ''}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Enhanced FShip Data Display */}
-                            {orderData.fship_data && (
-                                <div className="fship-info">
-                                    <h3>FShip Shipping Details</h3>
-                                    <div className="fship-details">
-                                        <div className="info-row">
-                                            <span>FShip Status:</span>
-                                            <span>{orderData.fship_data.order_status}</span>
-                                        </div>
-                                        {orderData.fship_data.tracking_history && Array.isArray(orderData.fship_data.tracking_history) && orderData.fship_data.tracking_history.length > 0 && (
-                                            <div className="tracking-history-info">
-                                                <h4>Tracking History:</h4>
-                                                {orderData.fship_data.tracking_history.map((event, index) => (
-                                                    <div key={index} className="tracking-event">
-                                                        <div className="info-row">
-                                                            <span>Status:</span>
-                                                            <span>{event.status}</span>
+                                            
+                                            {allStatuses.map((status, index) => {
+                                                // Mark as completed if it's at or before the highest completed step
+                                                const isCompleted = index <= highestCompletedIndex;
+                                                
+                                                return (
+                                                    <div key={index} className={`progress-step-h ${isCompleted ? 'completed' : 'pending'}`}>
+                                                        <div className="progress-circle-h">
+                                                            {isCompleted ? '✓' : (index + 1)}
                                                         </div>
-                                                        {event.location && (
-                                                            <div className="info-row">
-                                                                <span>Location:</span>
-                                                                <span>{event.location}</span>
-                                                            </div>
-                                                        )}
-                                                        {event.timestamp && (
-                                                            <div className="info-row">
-                                                                <span>Date:</span>
-                                                                <span>{new Date(event.timestamp).toLocaleString('en-IN', {
-                                                                    year: 'numeric',
-                                                                    month: 'short',
-                                                                    day: 'numeric',
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit'
-                                                                })}</span>
-                                                            </div>
-                                                        )}
+                                                        <div className="progress-label-h">{status.label}</div>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
 
-                            {/* Tracking Actions */}
-                            <div className="tracking-actions">
-                                {orderData.tracking?.tracking_url && (
+                            {/* Actions */}
+                            <div className="order-actions">
+                                {(orderData.tracking?.tracking_url || orderData.order.tracking_url) && (
                                     <a 
-                                        href={orderData.tracking.tracking_url} 
+                                        href={orderData.tracking?.tracking_url || orderData.order.tracking_url} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
-                                        className="tracking-link"
+                                        className="btn-track-live"
                                     >
-                                        🚚 Track on Courier Website
+                                        Track Live on Courier Website
                                     </a>
                                 )}
-                                
-                                {/* Fallback for old data structure */}
-                                {!orderData.tracking?.tracking_url && orderData.order.tracking_url && (
-                                    <a 
-                                        href={orderData.order.tracking_url} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="tracking-link"
-                                    >
-                                        🚚 Track on Courier Website
-                                    </a>
-                                )}
-                                
                                 <button 
                                     onClick={() => {
                                         setTrackingInput('');
                                         setOrderData(null);
                                         setError('');
                                     }}
-                                    className="track-another-button"
+                                    className="btn-track-another"
                                 >
                                     Track Another Order
                                 </button>

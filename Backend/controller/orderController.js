@@ -1009,7 +1009,16 @@ module.exports.getGuestOrder = async (req, res) => {
             {
               model: ProductVariation,
               as: "ProductVariation",
-              attributes: ["id", "name", "price"],
+              attributes: ["id", "sku", "price", "attributes"],
+              required: false,
+              include: [
+                {
+                  model: ProductImage,
+                  as: "VariationImages",
+                  attributes: ["image_url"],
+                  limit: 1,
+                },
+              ],
             },
           ],
         },
@@ -1052,7 +1061,7 @@ module.exports.getGuestOrder = async (req, res) => {
             id: item.Product.id,
             name: item.Product.name,
             slug: item.Product.slug,
-            image: item.Product.ProductImages?.[0]?.image_url || null,
+            image: item.ProductVariation?.VariationImages?.[0]?.image_url || item.Product.ProductImages?.[0]?.image_url || null,
           },
           variation: item.ProductVariation
             ? {
@@ -1064,7 +1073,7 @@ module.exports.getGuestOrder = async (req, res) => {
             : null,
           quantity: item.quantity,
           price: item.price,
-          total_price: item.total_price,
+          total_price: item.subtotal,
         })),
         status_history: order.OrderStatusHistories.map((history) => ({
           id: history.id,
@@ -1148,6 +1157,14 @@ module.exports.trackOrderByAWB = async (req, res) => {
               as: "ProductVariation",
               attributes: ["id", "sku", "price", "attributes"],
               required: false,
+              include: [
+                {
+                  model: ProductImage,
+                  as: "VariationImages",
+                  attributes: ["image_url"],
+                  limit: 1,
+                },
+              ],
             },
           ],
         },
@@ -1201,7 +1218,7 @@ module.exports.trackOrderByAWB = async (req, res) => {
             id: item.Product.id,
             name: item.Product.name,
             slug: item.Product.slug,
-            image: item.Product.ProductImages?.[0]?.image_url || null,
+            image: item.ProductVariation?.VariationImages?.[0]?.image_url || item.Product.ProductImages?.[0]?.image_url || null,
           },
           variation: item.ProductVariation
             ? {
@@ -1213,7 +1230,7 @@ module.exports.trackOrderByAWB = async (req, res) => {
             : null,
           quantity: item.quantity,
           price: item.price,
-          total_price: item.total_price,
+          total_price: item.subtotal,
         })),
         status_history: order.OrderStatusHistories.map((history) => ({
           id: history.id,
@@ -2846,6 +2863,14 @@ module.exports.trackOrderByOrderNumber = async (req, res) => {
               as: "ProductVariation",
               attributes: ["id", "sku", "price", "attributes"],
               required: false,
+              include: [
+                {
+                  model: ProductImage,
+                  as: "VariationImages",
+                  attributes: ["image_url"],
+                  limit: 1,
+                },
+              ],
             },
           ],
         },
@@ -2900,7 +2925,7 @@ module.exports.trackOrderByOrderNumber = async (req, res) => {
             id: item.Product.id,
             name: item.Product.name,
             slug: item.Product.slug,
-            image: item.Product.ProductImages?.[0]?.image_url || null,
+            image: item.ProductVariation?.VariationImages?.[0]?.image_url || item.Product.ProductImages?.[0]?.image_url || null,
           },
           variation: item.ProductVariation
             ? {
@@ -2912,7 +2937,7 @@ module.exports.trackOrderByOrderNumber = async (req, res) => {
             : null,
           quantity: item.quantity,
           price: item.price,
-          total_price: item.total_price,
+          total_price: item.subtotal,
         })),
         status_history: order.OrderStatusHistories.map((history) => ({
           id: history.id,
