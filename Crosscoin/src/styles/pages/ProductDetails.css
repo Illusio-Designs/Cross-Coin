@@ -1614,6 +1614,42 @@
   gap: 1.5rem;
   margin: 2rem 0;
 }
+
+/* Desktop: Sticky buttons in content, then fixed Buy Now at bottom when scrolled */
+@media (min-width: 427px) {
+  .action-buttons-row {
+    position: sticky !important;
+    top: 100px;
+    z-index: 100;
+    background: white;
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    margin: 2rem 0;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+  }
+  
+  /* Fixed Buy Now button at bottom when scrolled past product details */
+  .buy-now-btn.fixed-bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    padding: 16px 40px;
+    z-index: 1001;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    border-radius: 0;
+    margin: 0;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 .add-to-cart-btn, .buy-now-btn {
   flex: 1 1 0;
   padding: 16px 0;
@@ -1627,11 +1663,16 @@
   cursor: pointer;
   transition: background 0.18s, color 0.18s, box-shadow 0.18s;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border-radius: 8px;
 }
+
 .add-to-cart-btn:hover, .buy-now-btn:hover {
   background: #e60000;
   color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(230, 0, 0, 0.3);
 }
+
 .buy-now-btn {
   margin-left: 0;
 }
@@ -2214,25 +2255,43 @@
   }
   .product-tabs-container {
     padding: 0px;
-}
-.action-buttons-row {
-  flex-direction: column;
-  gap: 10px;
-}
-.add-to-cart-btn, .buy-now-btn {
-  padding: 10px 0;
-  font-size: 0.9rem;
-}
-.review-header-row {
-gap: 0px;
-}
-.product-reviews-section h2 {
-  margin-bottom: 0px;
-}
-.write-review-btn {
-  margin-top: 10px;
-  margin-bottom: 10px;
-}
+  }
+  
+  .action-buttons-row {
+    flex-direction: row;
+    gap: 8px;
+    /* Mobile: Fixed sticky bar at bottom */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    padding: 10px 12px;
+    margin: 0;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1;
+    border-top: 1px solid #e0e0e0;
+  }
+
+  .add-to-cart-btn, .buy-now-btn {
+    flex: 1;
+    padding: 10px 8px;
+    font-size: 0.8rem;
+    border-radius: 6px;
+  }
+  
+  .review-header-row {
+    gap: 0px;
+  }
+  
+  .product-reviews-section h2 {
+    margin-bottom: 0px;
+  }
+  
+  .write-review-btn {
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
 }
 
 /* 320px and below (smallest mobile) */
