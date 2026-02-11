@@ -51,6 +51,7 @@
 
 .tracking-card p {
     color: #6b7280;
+    text-align: center;
     margin-bottom: 2.5rem;
     font-size: 1.1rem;
     line-height: 1.6;
@@ -506,6 +507,7 @@
 }
 
 .address-box p {
+    text-align: left;
     margin: 0.375rem 0;
     color: #333;
     font-size: 0.9375rem;
