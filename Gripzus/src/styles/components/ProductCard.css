@@ -1,0 +1,218 @@
+.card {
+  position: relative;
+  background-color: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all var(--transition-base);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Image Container */
+.imageContainer {
+  position: relative;
+  display: block;
+  aspect-ratio: 3/4;
+  overflow: hidden;
+  background-color: var(--bg-secondary);
+}
+
+.imageWrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.image {
+  object-fit: cover;
+  transition: opacity var(--transition-slow);
+}
+
+.imagePrimary {
+  opacity: 1;
+}
+
+.imageSecondary {
+  opacity: 0;
+}
+
+.imageHidden {
+  opacity: 0;
+}
+
+.imageVisible {
+  opacity: 1;
+}
+
+/* Badges */
+.badge {
+  position: absolute;
+  top: var(--spacing-md);
+  left: var(--spacing-md);
+  z-index: 2;
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  border-radius: var(--radius-sm);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-md);
+}
+
+.badgeSale {
+  background-color: var(--color-error);
+}
+
+.badgeNew {
+  background-color: var(--color-info);
+}
+
+.badgeBestseller {
+  background-color: var(--color-accent);
+  color: var(--color-primary);
+}
+
+.badgeSoldOut {
+  background-color: var(--color-gray-500);
+}
+
+/* Quick Actions */
+.quickActions {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  opacity: 0;
+  transform: translateX(10px);
+  transition: all var(--transition-base);
+}
+
+.quickActionsVisible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.quickBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background-color: var(--bg-primary);
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-md);
+}
+
+.quickBtn:hover {
+  background-color: var(--color-primary);
+  color: var(--text-inverse);
+  transform: scale(1.1);
+}
+
+/* Product Info */
+.info {
+  padding: var(--spacing-md);
+}
+
+.brand {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--text-muted);
+  margin-bottom: var(--spacing-xs);
+}
+
+.name {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+  line-height: var(--line-height-tight);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color var(--transition-base);
+}
+
+.name:hover {
+  color: var(--color-accent);
+}
+
+/* Price */
+.priceContainer {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.price {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+}
+
+.salePrice {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-error);
+}
+
+.originalPrice {
+  font-size: var(--font-size-base);
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+/* Add to Cart Button */
+.addToCart {
+  width: 100%;
+  padding: var(--spacing-sm);
+  background-color: var(--color-primary);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.addToCartVisible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.addToCart:hover {
+  background-color: var(--color-primary-light);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .quickActions {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .addToCart {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
