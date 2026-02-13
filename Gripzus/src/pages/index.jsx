@@ -13,7 +13,7 @@ const featuredProducts = [
     brand: 'Gripzus',
     price: 299,
     salePrice: 249,
-    images: ['https://placehold.co/600x800/1a1a1a/d4af37/png?text=Leather+Jacket', 'https://placehold.co/600x800/2d2d2d/d4af37/png?text=Leather+Jacket'],
+    images: ['https://images.unsplash.com/photo-1551028719-00167b16eac5?w=600&h=800&fit=crop', 'https://images.unsplash.com/photo-1520975954732-35dd22299614?w=600&h=800&fit=crop'],
     badge: 'Sale',
     slug: 'premium-leather-jacket'
   },
@@ -22,7 +22,7 @@ const featuredProducts = [
     name: 'Classic Denim Jeans',
     brand: 'Gripzus',
     price: 89,
-    images: ['https://placehold.co/600x800/8b7355/ffffff/png?text=Denim+Jeans', 'https://placehold.co/600x800/a68968/ffffff/png?text=Denim+Jeans'],
+    images: ['https://images.unsplash.com/photo-1542272604-787c3835535d?w=600&h=800&fit=crop', 'https://images.unsplash.com/photo-1475178626620-a4d074967452?w=600&h=800&fit=crop'],
     badge: 'New',
     slug: 'classic-denim-jeans'
   },
@@ -31,7 +31,7 @@ const featuredProducts = [
     name: 'Luxury Watch',
     brand: 'Gripzus',
     price: 599,
-    images: ['https://placehold.co/600x800/1a1a1a/d4af37/png?text=Luxury+Watch', 'https://placehold.co/600x800/2d2d2d/d4af37/png?text=Luxury+Watch'],
+    images: ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&h=800&fit=crop', 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=600&h=800&fit=crop'],
     badge: 'Bestseller',
     slug: 'luxury-watch'
   },
@@ -40,7 +40,7 @@ const featuredProducts = [
     name: 'Designer Sneakers',
     brand: 'Gripzus',
     price: 159,
-    images: ['https://placehold.co/600x800/8b7355/ffffff/png?text=Sneakers', 'https://placehold.co/600x800/a68968/ffffff/png?text=Sneakers'],
+    images: ['https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=600&h=800&fit=crop', 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&h=800&fit=crop'],
     slug: 'designer-sneakers'
   },
   {
@@ -49,7 +49,7 @@ const featuredProducts = [
     brand: 'Gripzus',
     price: 399,
     salePrice: 299,
-    images: ['https://placehold.co/600x800/1a1a1a/d4af37/png?text=Wool+Coat', 'https://placehold.co/600x800/2d2d2d/d4af37/png?text=Wool+Coat'],
+    images: ['https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=600&h=800&fit=crop', 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=600&h=800&fit=crop'],
     badge: 'Sale',
     slug: 'wool-coat'
   },
@@ -58,7 +58,7 @@ const featuredProducts = [
     name: 'Silk Scarf',
     brand: 'Gripzus',
     price: 79,
-    images: ['https://placehold.co/600x800/8b7355/ffffff/png?text=Silk+Scarf', 'https://placehold.co/600x800/a68968/ffffff/png?text=Silk+Scarf'],
+    images: ['https://images.unsplash.com/photo-1601924994987-69e26d50dc26?w=600&h=800&fit=crop', 'https://images.unsplash.com/photo-1590736969955-71cc94901144?w=600&h=800&fit=crop'],
     slug: 'silk-scarf'
   },
   {
@@ -66,7 +66,7 @@ const featuredProducts = [
     name: 'Leather Bag',
     brand: 'Gripzus',
     price: 249,
-    images: ['https://placehold.co/600x800/1a1a1a/d4af37/png?text=Leather+Bag', 'https://placehold.co/600x800/2d2d2d/d4af37/png?text=Leather+Bag'],
+    images: ['https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600&h=800&fit=crop', 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=600&h=800&fit=crop'],
     badge: 'New',
     slug: 'leather-bag'
   },
@@ -75,7 +75,7 @@ const featuredProducts = [
     name: 'Cashmere Sweater',
     brand: 'Gripzus',
     price: 189,
-    images: ['https://placehold.co/600x800/8b7355/ffffff/png?text=Cashmere+Sweater', 'https://placehold.co/600x800/a68968/ffffff/png?text=Cashmere+Sweater'],
+    images: ['https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=600&h=800&fit=crop', 'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=600&h=800&fit=crop'],
     slug: 'cashmere-sweater'
   }
 ];
@@ -92,7 +92,7 @@ const slides = [
     description: 'Discover the latest trends in luxury fashion',
     cta: 'Shop Now',
     link: '/collections/new-arrivals',
-    image: 'https://placehold.co/1920x1080/1a1a1a/d4af37/png?text=New+Collection',
+    image: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1920&h=1080&fit=crop',
     theme: 'dark'
   },
   {
@@ -102,7 +102,7 @@ const slides = [
     description: 'Limited time offer on selected items',
     cta: 'Shop Sale',
     link: '/collections/sale',
-    image: 'https://placehold.co/1920x1080/8b7355/ffffff/png?text=Summer+Sale',
+    image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1920&h=1080&fit=crop',
     theme: 'light'
   },
   {
@@ -112,7 +112,7 @@ const slides = [
     description: 'Timeless pieces for your wardrobe',
     cta: 'Explore',
     link: '/collections/all',
-    image: 'https://placehold.co/1920x1080/2d2d2d/d4af37/png?text=Luxury+Essentials',
+    image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1920&h=1080&fit=crop',
     theme: 'dark'
   }
 ];
@@ -215,7 +215,7 @@ export default function Home() {
             <div className="categoriesGrid">
               <a href="/collections/men" className="categoryCard">
                 <div className="categoryImage">
-                  <img src="https://placehold.co/800x1000/1a1a1a/d4af37/png?text=Men's+Collection" alt="Men's Collection" />
+                  <img src="https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=800&h=1000&fit=crop" alt="Men's Collection" />
                 </div>
                 <div className="categoryOverlay">
                   <h3>Men's Collection</h3>
@@ -224,7 +224,7 @@ export default function Home() {
               </a>
               <a href="/collections/women" className="categoryCard">
                 <div className="categoryImage">
-                  <img src="https://placehold.co/800x1000/8b7355/ffffff/png?text=Women's+Collection" alt="Women's Collection" />
+                  <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&h=1000&fit=crop" alt="Women's Collection" />
                 </div>
                 <div className="categoryOverlay">
                   <h3>Women's Collection</h3>
@@ -233,7 +233,7 @@ export default function Home() {
               </a>
               <a href="/collections/accessories" className="categoryCard">
                 <div className="categoryImage">
-                  <img src="https://placehold.co/800x1000/2d2d2d/d4af37/png?text=Accessories" alt="Accessories" />
+                  <img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=1000&fit=crop" alt="Accessories" />
                 </div>
                 <div className="categoryOverlay">
                   <h3>Accessories</h3>

@@ -62,10 +62,9 @@ export default function Footer() {
             <h4 className="footer-title">Customer Service</h4>
             <ul className="footer-links">
               <li><Link href="/contact">Contact Us</Link></li>
-              <li><Link href="/shipping">Shipping Info</Link></li>
-              <li><Link href="/returns">Returns & Exchanges</Link></li>
-              <li><Link href="/size-guide">Size Guide</Link></li>
               <li><Link href="/faq">FAQ</Link></li>
+              <li><Link href="/account">My Account</Link></li>
+              <li><Link href="/wishlist">Wishlist</Link></li>
             </ul>
           </div>
 
@@ -74,8 +73,6 @@ export default function Footer() {
             <h4 className="footer-title">Company</h4>
             <ul className="footer-links">
               <li><Link href="/about">About Us</Link></li>
-              <li><Link href="/careers">Careers</Link></li>
-              <li><Link href="/sustainability">Sustainability</Link></li>
               <li><Link href="/privacy">Privacy Policy</Link></li>
               <li><Link href="/terms">Terms & Conditions</Link></li>
             </ul>
@@ -87,15 +84,12 @@ export default function Footer() {
           <p className="copyright">
             © {new Date().getFullYear()} Gripzus. All rights reserved.
           </p>
-          <div className="payment-methods">
-            <span>We Accept:</span>
-            <div className="payment-icons">
-              <span>💳</span>
-              <span>💳</span>
-              <span>💳</span>
-              <span>💳</span>
-            </div>
-          </div>
+          <p className="footer-credit">
+            Design & Develop with <span role="img" aria-label="love">❤️</span> by - 
+            <a href="https://illusiodesigns.agency/" target="_blank" rel="noopener noreferrer">
+              Illusio Designs
+            </a>
+          </p>
         </div>
       </div>
     </footer>
