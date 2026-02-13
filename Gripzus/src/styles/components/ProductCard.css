@@ -82,12 +82,12 @@
 /* Quick Actions */
 .quickActions {
   position: absolute;
-  top: var(--spacing-sm);
-  right: var(--spacing-sm);
+  top: var(--spacing-md);
+  right: var(--spacing-md);
   z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-sm);
   opacity: 0;
   transform: translateX(10px);
   transition: all var(--transition-base);
@@ -102,8 +102,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   background-color: var(--bg-primary);
   border: none;
   border-radius: var(--radius-full);
@@ -111,6 +111,13 @@
   cursor: pointer;
   transition: all var(--transition-base);
   box-shadow: var(--shadow-md);
+  padding: var(--spacing-xs);
+}
+
+.quickBtn svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
 }
 
 .quickBtn:hover {
