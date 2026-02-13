@@ -1,89 +1,139 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useCurrency } from '../context/CurrencyContext';
 
 export default function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
+  const { currency, changeCurrency, currencies } = useCurrency();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
-      <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-20">
-          {/* Left Navigation */}
-          <div className="hidden lg:flex items-center space-x-8">
-            <Link href="/shop" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
-              SHOP
+    <>
+      <header className={`header ${isScrolled ? 'scrolled' : ''}`}>
+        <div className="container">
+          <div className="headerContent">
+            <Link href="/" className="logo">
+              <Image 
+                src="/assets/Knitwink.jpg.jpeg" 
+                alt="Knitwink" 
+                width={120} 
+                height={40}
+                style={{ objectFit: 'contain' }}
+              />
             </Link>
-            <Link href="/men" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
-              MEN
-            </Link>
-            <Link href="/women" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
-              WOMEN
-            </Link>
-            <Link href="/trending" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
-              TRENDING
-            </Link>
-          </div>
 
-          {/* Logo */}
-          <Link href="/" className="flex items-center">
-            <Image 
-              src="/assets/Knitwink.jpg.jpeg" 
-              alt="KNITWINK" 
-              width={120} 
-              height={60}
-              className="h-12 lg:h-14 w-auto object-contain"
-            />
-          </Link>
+            <nav className="nav">
+              <Link href="/shop" className="navLink">Shop All</Link>
+              <Link href="/collections/men" className="navLink">Men</Link>
+              <Link href="/collections/women" className="navLink">Women</Link>
+              <Link href="/collections/kids" className="navLink">Kids</Link>
+              <Link href="/about" className="navLink">About</Link>
+              <Link href="/contact" className="navLink">Contact</Link>
+            </nav>
 
-          {/* Right Navigation */}
-          <div className="hidden lg:flex items-center space-x-8">
-            <Link href="/seasonal" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
-              SEASONAL
-            </Link>
-            <Link href="/accessories" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
-              ACCESSORIES
-            </Link>
-            <Link href="/auth/login" className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
-              SIGN IN/UP
-            </Link>
-            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
-            </button>
-          </div>
+            <div className="headerIcons">
+              <div className="currencySelector">
+                <button 
+                  className="currencyBtn"
+                  onClick={() => setIsCurrencyOpen(!isCurrencyOpen)}
+                  aria-label="Select currency"
+                >
+                  <span className="currencyFlag">{currencies[currency].flag}</span>
+                  <span className="currencyCode">{currency}</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ transform: isCurrencyOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                    <polyline points="6 9 12 15 18 9" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                </button>
+                {isCurrencyOpen && (
+                  <>
+                    <div className="currencyOverlay" onClick={() => setIsCurrencyOpen(false)}></div>
+                    <div className="currencyDropdown">
+                      {Object.keys(currencies).map((code) => (
+                        <button
+                          key={code}
+                          className={`currencyOption ${currency === code ? 'active' : ''}`}
+                          onClick={() => {
+                            changeCurrency(code);
+                            setIsCurrencyOpen(false);
+                          }}
+                        >
+                          <span className="optionFlag">{currencies[code].flag}</span>
+                          <div className="optionInfo">
+                            <span className="optionName">{currencies[code].name}</span>
+                            <span className="optionCode">{code} ({currencies[code].symbol})</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
 
-          {/* Mobile Menu Button */}
-          <button 
-            className="lg:hidden p-2"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {isMenuOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
-        </div>
-
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="lg:hidden py-4 border-t border-gray-100">
-            <div className="flex flex-col space-y-4">
-              <Link href="/shop" className="text-sm font-medium text-gray-700 hover:text-black">SHOP</Link>
-              <Link href="/men" className="text-sm font-medium text-gray-700 hover:text-black">MEN</Link>
-              <Link href="/women" className="text-sm font-medium text-gray-700 hover:text-black">WOMEN</Link>
-              <Link href="/trending" className="text-sm font-medium text-gray-700 hover:text-black">TRENDING</Link>
-              <Link href="/seasonal" className="text-sm font-medium text-gray-700 hover:text-black">SEASONAL</Link>
-              <Link href="/accessories" className="text-sm font-medium text-gray-700 hover:text-black">ACCESSORIES</Link>
-              <Link href="/auth/login" className="text-sm font-medium text-gray-700 hover:text-black">SIGN IN/UP</Link>
+              <button className="iconBtn" aria-label="Search">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
+                  <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </button>
+              <Link href="/account" className="iconBtn" aria-label="Account">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2"/>
+                  <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </Link>
+              <Link href="/cart" className="iconBtn cartBtn" aria-label="Cart">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 2L7 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M15 2l2 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M3 6h18l-2 13H5L3 6z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="cartBadge">0</span>
+              </Link>
+              
+              <button 
+                className="mobileMenuBtn"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                aria-label="Menu"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </button>
             </div>
           </div>
-        )}
-      </nav>
-    </header>
+        </div>
+      </header>
+
+      <div className={`mobileMenu ${isMobileMenuOpen ? 'open' : ''}`}>
+        <div className="mobileMenuContent">
+          <button 
+            className="mobileMenuClose"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
+          <nav className="mobileNav">
+            <Link href="/shop" className="mobileNavLink">Shop All</Link>
+            <Link href="/collections/men" className="mobileNavLink">Men</Link>
+            <Link href="/collections/women" className="mobileNavLink">Women</Link>
+            <Link href="/collections/kids" className="mobileNavLink">Kids</Link>
+            <Link href="/about" className="mobileNavLink">About</Link>
+            <Link href="/contact" className="mobileNavLink">Contact</Link>
+          </nav>
+        </div>
+      </div>
+    </>
   );
 }

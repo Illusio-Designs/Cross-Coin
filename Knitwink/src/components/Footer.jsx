@@ -1,84 +1,119 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Footer() {
   return (
-    <footer className="bg-black text-white">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
-          {/* Brand */}
-          <div>
-            <div className="flex items-center mb-4">
-              <img 
-                src="/assets/Knitwink.jpg.jpeg" 
-                alt="KNITWINK" 
-                className="h-16 w-auto object-contain invert"
-              />
+    <footer className="footer">
+      <div className="newsletter">
+        <div className="container">
+          <div className="newsletterContent">
+            <div className="newsletterText">
+              <h3 className="newsletterTitle">Join Our Community</h3>
+              <p className="newsletterDescription">
+                Get exclusive offers, new arrivals, and style inspiration
+              </p>
             </div>
-            <p className="text-sm text-gray-400 mb-4">
-              Luxury in every step
-            </p>
-            <div className="flex space-x-4">
-              <a href="#" className="hover:text-gray-300 transition-colors">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-              </a>
-              <a href="#" className="hover:text-gray-300 transition-colors">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073z"/>
-                </svg>
-              </a>
-              <a href="#" className="hover:text-gray-300 transition-colors">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-                </svg>
-              </a>
-            </div>
-          </div>
-
-          {/* Shop */}
-          <div>
-            <h3 className="text-sm font-semibold mb-4 tracking-wider">SHOP</h3>
-            <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link href="/men" className="hover:text-white transition-colors">Men's Collection</Link></li>
-              <li><Link href="/women" className="hover:text-white transition-colors">Women's Collection</Link></li>
-              <li><Link href="/new-arrivals" className="hover:text-white transition-colors">New Arrivals</Link></li>
-              <li><Link href="/sale" className="hover:text-white transition-colors">Sale</Link></li>
-            </ul>
-          </div>
-
-          {/* Help */}
-          <div>
-            <h3 className="text-sm font-semibold mb-4 tracking-wider">HELP</h3>
-            <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link href="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
-              <li><Link href="/shipping" className="hover:text-white transition-colors">Shipping Info</Link></li>
-              <li><Link href="/returns" className="hover:text-white transition-colors">Returns</Link></li>
-              <li><Link href="/faq" className="hover:text-white transition-colors">FAQ</Link></li>
-            </ul>
-          </div>
-
-          {/* Newsletter */}
-          <div>
-            <h3 className="text-sm font-semibold mb-4 tracking-wider">NEWSLETTER</h3>
-            <p className="text-sm text-gray-400 mb-4">
-              Subscribe for exclusive offers and updates
-            </p>
-            <div className="flex">
+            <form className="newsletterForm">
               <input 
                 type="email" 
-                placeholder="Your email"
-                className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-l-md focus:outline-none focus:border-white text-sm"
+                placeholder="Enter your email" 
+                className="newsletterInput"
+                required
               />
-              <button className="px-4 py-2 bg-white text-black rounded-r-md hover:bg-gray-200 transition-colors text-sm font-medium">
+              <button type="submit" className="btn btn-primary">
                 Subscribe
               </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div className="footerMain">
+        <div className="container">
+          <div className="footerGrid">
+            <div className="footerColumn">
+              <Link href="/" className="footerLogo">
+                <Image 
+                  src="/assets/Knitwink.jpg.jpeg" 
+                  alt="Knitwink" 
+                  width={140} 
+                  height={45}
+                  style={{ objectFit: 'contain' }}
+                />
+              </Link>
+              <p className="footerBrand">
+                Premium comfort in every step. Handcrafted socks made with the finest materials.
+              </p>
+              <div className="socialLinks">
+                <a href="https://facebook.com" className="socialLink" aria-label="Facebook">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+                  </svg>
+                </a>
+                <a href="https://instagram.com" className="socialLink" aria-label="Instagram">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                  </svg>
+                </a>
+                <a href="https://twitter.com" className="socialLink" aria-label="Twitter">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/>
+                  </svg>
+                </a>
+                <a href="https://pinterest.com" className="socialLink" aria-label="Pinterest">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12c0 4.26 2.68 7.9 6.44 9.34-.09-.8-.17-2.03.03-2.91.19-.78 1.23-5.22 1.23-5.22s-.31-.63-.31-1.56c0-1.46.85-2.55 1.9-2.55.9 0 1.33.67 1.33 1.48 0 .9-.57 2.25-.87 3.5-.25 1.04.52 1.89 1.55 1.89 1.86 0 3.29-1.96 3.29-4.79 0-2.5-1.8-4.25-4.37-4.25-2.98 0-4.73 2.23-4.73 4.54 0 .9.35 1.86.78 2.38.09.1.1.19.07.3-.08.31-.25 1.04-.29 1.18-.05.19-.17.23-.39.14-1.39-.65-2.26-2.68-2.26-4.31 0-3.51 2.55-6.73 7.36-6.73 3.87 0 6.87 2.76 6.87 6.44 0 3.84-2.42 6.93-5.78 6.93-1.13 0-2.19-.59-2.55-1.28l-.69 2.64c-.25.97-.93 2.19-1.39 2.93C9.58 21.85 10.77 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/>
+                  </svg>
+                </a>
+              </div>
+            </div>
+
+            <div className="footerColumn">
+              <h4 className="footerTitle">Shop</h4>
+              <ul className="footerLinks">
+                <li><Link href="/shop">All Products</Link></li>
+                <li><Link href="/collections/men">Men's Collection</Link></li>
+                <li><Link href="/collections/women">Women's Collection</Link></li>
+                <li><Link href="/collections/kids">Kids Collection</Link></li>
+              </ul>
+            </div>
+
+            <div className="footerColumn">
+              <h4 className="footerTitle">Customer Service</h4>
+              <ul className="footerLinks">
+                <li><Link href="/contact">Contact Us</Link></li>
+                <li><Link href="/faq">FAQ</Link></li>
+                <li><Link href="/account">My Account</Link></li>
+              </ul>
+            </div>
+
+            <div className="footerColumn">
+              <h4 className="footerTitle">Company</h4>
+              <ul className="footerLinks">
+                <li><Link href="/about">About Us</Link></li>
+                <li><Link href="/privacy">Privacy Policy</Link></li>
+                <li><Link href="/terms">Terms & Conditions</Link></li>
+              </ul>
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="border-t border-white/10 mt-12 pt-8 text-center text-sm text-gray-400">
-          <p>&copy; 2026 KNITWINK. All rights reserved.</p>
+      <div className="footerBottom">
+        <div className="container">
+          <div className="footerBottomContent">
+            <p className="copyright">
+              © 2026 Knitwink. All rights reserved.
+            </p>
+            <p className="credit">
+              Design & Develop with <span className="heart">❤️</span> by{' '}
+              <a href="https://illusiodesigns.agency/" target="_blank" rel="noopener noreferrer">
+                Illusio Designs
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </footer>
