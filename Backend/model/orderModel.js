@@ -79,7 +79,8 @@ const Order = sequelize.define('Order', {
             'out for delivery', 
             'delivered', 
             'undelivered',
-            'rto', 
+            'rto',
+            'rto delivered',
             'cancelled', 
             'order cancelled', 
             'exception'

@@ -645,7 +645,8 @@ class FShipService {
             'out for delivery', 
             'delivered', 
             'undelivered',
-            'rto', 
+            'rto',
+            'rto delivered',
             'cancelled', 
             'order cancelled', 
             'exception'
@@ -659,7 +660,9 @@ class FShipService {
         // Legacy mapping for any edge cases
         const legacyMapping = {
             'shipped': 'in transit',
-            'processing': 'booked'
+            'processing': 'booked',
+            'rto_delivered': 'rto delivered',
+            'rtodelivered': 'rto delivered'
         };
 
         const mappedStatus = legacyMapping[status];
