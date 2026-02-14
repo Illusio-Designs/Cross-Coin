@@ -64,7 +64,7 @@ const Order = sequelize.define('Order', {
         onDelete: 'SET NULL'
     },
     payment_status: {
-        type: DataTypes.ENUM('pending', 'paid', 'failed', 'refunded'),
+        type: DataTypes.ENUM('pending', 'paid', 'failed', 'refunded', 'cancelled', 'refund_pending'),
         defaultValue: 'pending'
     },
     status: {
