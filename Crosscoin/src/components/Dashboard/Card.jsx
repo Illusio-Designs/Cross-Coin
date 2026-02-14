@@ -239,6 +239,28 @@ function CardGrid() {
           </div>
         )}
 
+        {/* Payment Status Chart */}
+        {stats.paymentStatusDistribution && stats.paymentStatusDistribution.chart && stats.paymentStatusDistribution.chart.length > 0 && (
+          <div className="dashboard-section dashboard-chart-section">
+            <div className="dashboard-section-title">
+              <FaCreditCard style={{marginRight: 8}} />
+              Payment Status
+            </div>
+            <div className="dashboard-chart-container">
+              <DonutChart
+                data={stats.paymentStatusDistribution.chart}
+                title="Payment Status"
+                subtitle="All payment statuses"
+                totalValue={`${stats.orders.total}`}
+                totalLabel="Total Orders"
+                size={180}
+                strokeWidth={25}
+                showLegend={true}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Order Status Chart */}
         {stats.orders && stats.orders.statusChart && stats.orders.statusChart.length > 0 && (
           <div className="dashboard-section dashboard-chart-section">

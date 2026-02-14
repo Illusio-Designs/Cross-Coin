@@ -1463,6 +1463,7 @@ module.exports.getAllOrders = async (req, res) => {
     const {
       status,
       payment_status,
+      payment_type,
       start_date,
       end_date,
       page = 1,
@@ -1476,6 +1477,7 @@ module.exports.getAllOrders = async (req, res) => {
     console.log("Query parameters:", {
       status,
       payment_status,
+      payment_type,
       start_date,
       end_date,
       page,
@@ -1496,6 +1498,18 @@ module.exports.getAllOrders = async (req, res) => {
     // Payment status filter
     if (payment_status && payment_status !== 'all') {
       filter.payment_status = payment_status;
+    }
+    
+    // Payment type filter
+    if (payment_type && payment_type !== 'all') {
+      if (payment_type === 'prepaid') {
+        // Prepaid includes all payment types except COD
+        filter.payment_type = {
+          [Op.in]: ['credit_card', 'debit_card', 'upi', 'wallet', 'razorpay']
+        };
+      } else {
+        filter.payment_type = payment_type;
+      }
     }
 
     // Date range filter
@@ -2491,8 +2505,6 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
           created_by: 'fship_sync_system'
         }, { transaction });
 
-        // Handle payment records for delivered COD orders
-        if (newStatus === 'delivered' && order.payment_type === 'cod') {
         // Handle payment records for delivered COD orders
         if (newStatus === 'delivered' && order.payment_type === 'cod') {
           
