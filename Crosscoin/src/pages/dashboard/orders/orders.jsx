@@ -50,6 +50,10 @@ const Orders = () => {
     const [exportStartDate, setExportStartDate] = useState('');
     const [exportEndDate, setExportEndDate] = useState('');
     const [isExporting, setIsExporting] = useState(false);
+    const [isAwbModalOpen, setIsAwbModalOpen] = useState(false);
+    const [awbOrderId, setAwbOrderId] = useState(null);
+    const [awbNumber, setAwbNumber] = useState('');
+    const [courierName, setCourierName] = useState('');
 
     const fetchOrders = async (page = currentPage) => {
         setLoading(true);
@@ -355,6 +359,40 @@ const Orders = () => {
             }
             
             toast.error(errorMessage);
+        }
+    };
+
+    // Manual AWB Update Handler
+    const handleAwbUpdate = (orderId, currentAwb, currentCourier) => {
+        setAwbOrderId(orderId);
+        setAwbNumber(currentAwb || '');
+        setCourierName(currentCourier || '');
+        setIsAwbModalOpen(true);
+    };
+
+    const submitAwbUpdate = async () => {
+        if (!awbNumber.trim()) {
+            toast.error('Please enter AWB number');
+            return;
+        }
+
+        try {
+            await orderService.updateAwbNumber(awbOrderId, {
+                awbNumber: awbNumber.trim(),
+                courierName: courierName.trim() || 'Manual Entry'
+            });
+            
+            toast.success('AWB number updated successfully!');
+            setIsAwbModalOpen(false);
+            setAwbNumber('');
+            setCourierName('');
+            setAwbOrderId(null);
+            
+            // Refresh orders
+            fetchOrders(currentPage);
+        } catch (error) {
+            console.error('AWB update error:', error);
+            toast.error(error.message || 'Failed to update AWB number');
         }
     };
 
@@ -696,6 +734,31 @@ const Orders = () => {
                                 </svg>
                             </button>
                         )}
+
+                        {/* Manual AWB Update button */}
+                        <button 
+                            className="action-btn awb" 
+                            title="Update AWB Number" 
+                            onClick={() => handleAwbUpdate(row.id, row.fship_waybill, row.courier_name)}
+                            style={{
+                                backgroundColor: '#6f42c1',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '6px 8px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.2s ease'
+                            }}
+                            onMouseOver={(e) => e.target.style.backgroundColor = '#5a32a3'}
+                            onMouseOut={(e) => e.target.style.backgroundColor = '#6f42c1'}
+                        >
+                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                        </button>
 
                         {/* Cancel button for pending/processing orders */}
                         {(row.status === 'pending' || row.status === 'processing') && (
@@ -1351,6 +1414,94 @@ const Orders = () => {
                         </div>
                     </div>
                 )}
+            </Modal>
+
+            {/* AWB Update Modal */}
+            <Modal 
+                isOpen={isAwbModalOpen} 
+                onClose={() => {
+                    setIsAwbModalOpen(false);
+                    setAwbNumber('');
+                    setCourierName('');
+                    setAwbOrderId(null);
+                }} 
+                title="Update AWB Number"
+            >
+                <div style={{ padding: '20px' }}>
+                    <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#333' }}>
+                            AWB Number <span style={{ color: 'red' }}>*</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={awbNumber}
+                            onChange={(e) => setAwbNumber(e.target.value)}
+                            placeholder="Enter AWB/Tracking Number"
+                            style={{
+                                width: '100%',
+                                padding: '10px',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                fontSize: '14px'
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#333' }}>
+                            Courier Name
+                        </label>
+                        <input
+                            type="text"
+                            value={courierName}
+                            onChange={(e) => setCourierName(e.target.value)}
+                            placeholder="Enter Courier Name (Optional)"
+                            style={{
+                                width: '100%',
+                                padding: '10px',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                fontSize: '14px'
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                        <button
+                            onClick={() => {
+                                setIsAwbModalOpen(false);
+                                setAwbNumber('');
+                                setCourierName('');
+                                setAwbOrderId(null);
+                            }}
+                            style={{
+                                padding: '10px 20px',
+                                backgroundColor: '#6c757d',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '14px'
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={submitAwbUpdate}
+                            style={{
+                                padding: '10px 20px',
+                                backgroundColor: '#6f42c1',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '14px'
+                            }}
+                        >
+                            Update AWB
+                        </button>
+                    </div>
+                </div>
             </Modal>
         </>
     );

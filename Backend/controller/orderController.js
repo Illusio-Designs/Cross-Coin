@@ -1951,31 +1951,39 @@ module.exports.cancelOrder = async (req, res) => {
     order.status = "cancelled";
     await order.save({ transaction });
 
+    // Update payment status based on payment type
+    if (order.payment_type === 'cod') {
+      order.payment_status = 'cancelled';
+      await order.save({ transaction });
+    } else if (order.payment_status === 'paid') {
+      order.payment_status = 'refund_pending';
+      await order.save({ transaction });
+      
+      // Update payment record
+      const payment = await Payment.findOne({
+        where: { order_id: order.id }
+      });
+
+      if (payment) {
+        payment.status = 'refund_pending';
+        payment.notes = 'Refund pending - Order cancelled by customer';
+        await payment.save({ transaction });
+      }
+    } else {
+      order.payment_status = 'cancelled';
+      await order.save({ transaction });
+    }
+
     // Create status history entry with user's reason
     await OrderStatusHistory.create(
       {
         order_id: order.id,
         status: "cancelled",
         updated_by: userId,
-        notes: reason,
+        notes: `${reason}. Payment status: ${order.payment_status}`,
       },
       { transaction }
     );
-
-    // If payment is 'paid', mark for refund
-    if (order.payment_status === "paid") {
-      const payment = await Payment.findOne({
-        where: { order_id: order.id, status: "successful" },
-      });
-
-      if (payment) {
-        payment.status = "refunded";
-        await payment.save({ transaction });
-
-        order.payment_status = "refunded";
-        await order.save({ transaction });
-      }
-    }
 
     // Cancel order in FShip if it exists
     if (order.fship_waybill) {
@@ -2448,22 +2456,45 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
       const statusChanged = order.status !== newStatus;
       
       if (statusChanged) {
-        // Update order status
-        await order.update({
+        // Prepare update data
+        const updateData = {
           status: newStatus
-        }, { transaction });
+        };
+
+        // SPECIAL HANDLING: Update payment status based on order status
+        if (newStatus === 'delivered' && order.payment_type === 'cod') {
+          // COD orders: mark as paid when delivered
+          updateData.payment_status = 'paid';
+          console.log(`💰 Order ${order.order_number} is delivered COD. Updating payment status to paid...`);
+        } else if (newStatus === 'cancelled' || newStatus === 'rto') {
+          // Cancelled or RTO orders: update payment status
+          if (order.payment_type === 'cod') {
+            updateData.payment_status = 'cancelled';
+            console.log(`❌ Order ${order.order_number} is ${newStatus}. Updating COD payment status to cancelled...`);
+          } else if (order.payment_status === 'paid') {
+            updateData.payment_status = 'refund_pending';
+            console.log(`💸 Order ${order.order_number} is ${newStatus}. Updating prepaid payment status to refund_pending...`);
+          } else {
+            updateData.payment_status = 'cancelled';
+            console.log(`❌ Order ${order.order_number} is ${newStatus}. Updating payment status to cancelled...`);
+          }
+        }
+
+        // Update order status and payment status
+        await order.update(updateData, { transaction });
 
         // Create status history
         await OrderStatusHistory.create({
           order_id: order.id,
           status: newStatus,
-          notes: `Status updated from FShip. FShip status: ${fshipStatus}`,
+          notes: `Status updated from FShip. FShip status: ${fshipStatus}${updateData.payment_status ? `. Payment status: ${updateData.payment_status}` : ''}`,
           created_by: 'fship_sync_system'
         }, { transaction });
 
-        // SPECIAL HANDLING: If order is delivered and COD, mark payment as paid
+        // Handle payment records for delivered COD orders
         if (newStatus === 'delivered' && order.payment_type === 'cod') {
-          console.log(`💰 Order ${order.order_number} is delivered COD. Updating payment status to paid...`);
+        // Handle payment records for delivered COD orders
+        if (newStatus === 'delivered' && order.payment_type === 'cod') {
           
           await order.update({
             payment_status: 'paid'
@@ -2493,7 +2524,21 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
           }
 
           console.log(`✅ Payment status updated to paid for COD order ${order.order_number}`);
-          console.log(`✅ Payment status updated to paid for COD order ${order.order_number}`);
+        }
+
+        // Handle payment records for cancelled/RTO orders
+        if ((newStatus === 'cancelled' || newStatus === 'rto') && order.payment_type !== 'cod' && order.payment_status === 'paid') {
+          const existingPayment = await Payment.findOne({
+            where: { order_id: order.id }
+          });
+
+          if (existingPayment) {
+            await existingPayment.update({
+              status: 'refund_pending',
+              notes: `Refund pending due to order ${newStatus}`
+            }, { transaction });
+            console.log(`💸 Payment marked for refund for order ${order.order_number}`);
+          }
         }
 
         console.log(`✅ Order ${order.order_number} status updated: ${order.status} → ${newStatus}`);
@@ -2730,32 +2775,40 @@ module.exports.adminCancelOrder = async (req, res) => {
     order.status = "cancelled";
     await order.save({ transaction });
 
+    // Update payment status based on payment type
+    if (order.payment_type === 'cod') {
+      order.payment_status = 'cancelled';
+      await order.save({ transaction });
+    } else if (order.payment_status === 'paid') {
+      order.payment_status = 'refund_pending';
+      await order.save({ transaction });
+      
+      // Update payment record
+      const payment = await Payment.findOne({
+        where: { order_id: order.id }
+      });
+
+      if (payment) {
+        payment.status = 'refund_pending';
+        payment.notes = `Refund pending - Admin cancelled: ${reason || 'No reason provided'}`;
+        await payment.save({ transaction });
+      }
+    } else {
+      order.payment_status = 'cancelled';
+      await order.save({ transaction });
+    }
+
     // Create status history entry with admin's reason
     await OrderStatusHistory.create(
       {
         order_id: order.id,
         status: "cancelled",
         updated_by: adminId,
-        notes: `Admin cancelled: ${reason || 'No reason provided'}`,
+        notes: `Admin cancelled: ${reason || 'No reason provided'}. Payment status: ${order.payment_status}`,
         created_by: "admin"
       },
       { transaction }
     );
-
-    // If payment is 'paid', mark for refund
-    if (order.payment_status === "paid") {
-      const payment = await Payment.findOne({
-        where: { order_id: order.id, status: "completed" },
-      });
-
-      if (payment) {
-        payment.status = "refunded";
-        await payment.save({ transaction });
-
-        order.payment_status = "refunded";
-        await order.save({ transaction });
-      }
-    }
 
     // Cancel order in FShip if it exists
     if (order.fship_waybill) {
@@ -2791,13 +2844,78 @@ module.exports.adminCancelOrder = async (req, res) => {
   } catch (error) {
     await transaction.rollback();
     console.error("Error cancelling order (admin):", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: "Failed to cancel order", 
       error: error.message 
     });
   }
 };
+
+// Update AWB number manually
+module.exports.updateAwbNumber = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const { awbNumber, courierName } = req.body;
+
+    if (!awbNumber || !awbNumber.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "AWB number is required"
+      });
+    }
+
+    const order = await Order.findByPk(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    // Update AWB and courier information
+    order.fship_waybill = awbNumber.trim();
+    if (courierName && courierName.trim()) {
+      order.courier_name = courierName.trim();
+    }
+    order.tracking_number = awbNumber.trim(); // Also update tracking number
+    
+    await order.save();
+
+    // Create status history entry
+    await OrderStatusHistory.create({
+      order_id: order.id,
+      status: order.status,
+      updated_by: req.user?.id || null,
+      notes: `AWB number manually updated to: ${awbNumber.trim()}${courierName ? ` (Courier: ${courierName.trim()})` : ''}`,
+      created_by: "admin"
+    });
+
+    console.log(`✅ AWB updated for order ${order.order_number}: ${awbNumber.trim()}`);
+
+    res.status(200).json({
+      success: true,
+      message: "AWB number updated successfully",
+      data: {
+        order: {
+          id: order.id,
+          order_number: order.order_number,
+          fship_waybill: order.fship_waybill,
+          courier_name: order.courier_name,
+          tracking_number: order.tracking_number
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Error updating AWB number:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update AWB number",
+      error: error.message
+    });
+  }
+};
+
 // Track order by order number (works for both registered and guest orders)
 module.exports.trackOrderByOrderNumber = async (req, res) => {
   try {
@@ -3797,36 +3915,40 @@ module.exports.exportDeliveredOrders = async (req, res) => {
     console.log('Start Date:', startDate);
     console.log('End Date:', endDate);
 
-    // Build query conditions
+    // Build query conditions for orders with delivered status
     const whereConditions = {
       status: 'delivered'
     };
 
-    // Add date filter if provided
+    // Build date filter for OrderStatusHistory (delivery date)
+    let statusHistoryWhere = {
+      status: 'delivered'
+    };
+
+    // Add date filter for delivery date if provided
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999); // Include the entire end date
       
-      whereConditions.createdAt = {
+      statusHistoryWhere.createdAt = {
         [Op.between]: [start, end]
       };
-      console.log('Date range filter applied:', start, 'to', end);
+      console.log('Delivery date range filter applied:', start, 'to', end);
     } else if (startDate) {
-      whereConditions.createdAt = {
+      statusHistoryWhere.createdAt = {
         [Op.gte]: new Date(startDate)
       };
     } else if (endDate) {
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
-      whereConditions.createdAt = {
+      statusHistoryWhere.createdAt = {
         [Op.lte]: end
       };
     }
 
     console.log('Query conditions:', JSON.stringify(whereConditions, null, 2));
-
-    console.log('Query conditions:', JSON.stringify(whereConditions, null, 2));
+    console.log('Status history conditions:', JSON.stringify(statusHistoryWhere, null, 2));
 
     // Fetch delivered orders with all related data
     console.log('Fetching orders from database...');
@@ -3871,6 +3993,14 @@ module.exports.exportDeliveredOrders = async (req, res) => {
                 required: false
               }
             ]
+          },
+          {
+            model: OrderStatusHistory,
+            as: 'OrderStatusHistories',
+            where: statusHistoryWhere,
+            required: true, // Only include orders with matching delivery date
+            attributes: ['status', 'createdAt'],
+            separate: false
           }
         ],
         order: [['createdAt', 'DESC']]
@@ -3915,7 +4045,12 @@ module.exports.exportDeliveredOrders = async (req, res) => {
       // Order details
       const orderNumber = order.order_number;
       const orderDate = new Date(order.createdAt).toLocaleDateString('en-IN');
-      const deliveryDate = order.updatedAt ? new Date(order.updatedAt).toLocaleDateString('en-IN') : 'N/A';
+      
+      // Get actual delivery date from status history
+      const deliveredStatusHistory = order.OrderStatusHistories?.find(h => h.status === 'delivered');
+      const deliveryDate = deliveredStatusHistory 
+        ? new Date(deliveredStatusHistory.createdAt).toLocaleDateString('en-IN') 
+        : 'N/A';
       
       // Payment details
       const paymentType = order.payment_type === 'cod' ? 'COD' : 'Prepaid';
