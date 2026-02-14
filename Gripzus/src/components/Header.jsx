@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/router';
 import { useCurrency } from '../context/CurrencyContext';
 
 export default function Header() {
@@ -8,6 +9,11 @@ export default function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
   const { currency, changeCurrency, currencies } = useCurrency();
+  const router = useRouter();
+
+  const isActive = (path) => {
+    return router.pathname === path || router.pathname.startsWith(path);
+  };
 
   return (
     <>
@@ -51,11 +57,11 @@ export default function Header() {
 
             {/* Desktop Navigation */}
             <nav className={`nav ${isMenuOpen ? 'nav-open' : ''}`}>
-              <Link href="/collections/new-arrivals">New Arrivals</Link>
-              <Link href="/collections/men">Men</Link>
-              <Link href="/collections/women">Women</Link>
-              <Link href="/collections/accessories">Accessories</Link>
-              <Link href="/collections/sale">Sale</Link>
+              <Link href="/collections/new-arrivals" className={isActive('/collections/new-arrivals') ? 'active' : ''}>New Arrivals</Link>
+              <Link href="/collections/men" className={isActive('/collections/men') ? 'active' : ''}>Men</Link>
+              <Link href="/collections/women" className={isActive('/collections/women') ? 'active' : ''}>Women</Link>
+              <Link href="/collections/accessories" className={isActive('/collections/accessories') ? 'active' : ''}>Accessories</Link>
+              <Link href="/collections/sale" className={isActive('/collections/sale') ? 'active' : ''}>Sale</Link>
             </nav>
 
             {/* Header Actions */}

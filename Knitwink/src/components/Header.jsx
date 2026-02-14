@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/router';
 import { useCurrency } from '../context/CurrencyContext';
 
 export default function Header() {
@@ -9,6 +10,11 @@ export default function Header() {
   const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { currency, changeCurrency, currencies } = useCurrency();
+  const router = useRouter();
+
+  const isActive = (path) => {
+    return router.pathname === path || router.pathname.startsWith(path);
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -34,12 +40,12 @@ export default function Header() {
             </Link>
 
             <nav className="nav">
-              <Link href="/shop" className="navLink">Shop All</Link>
-              <Link href="/collections/men" className="navLink">Men</Link>
-              <Link href="/collections/women" className="navLink">Women</Link>
-              <Link href="/collections/kids" className="navLink">Kids</Link>
-              <Link href="/about" className="navLink">About</Link>
-              <Link href="/contact" className="navLink">Contact</Link>
+              <Link href="/shop" className={`navLink ${isActive('/shop') ? 'active' : ''}`}>Shop All</Link>
+              <Link href="/collections/men" className={`navLink ${isActive('/collections/men') ? 'active' : ''}`}>Men</Link>
+              <Link href="/collections/women" className={`navLink ${isActive('/collections/women') ? 'active' : ''}`}>Women</Link>
+              <Link href="/collections/kids" className={`navLink ${isActive('/collections/kids') ? 'active' : ''}`}>Kids</Link>
+              <Link href="/about" className={`navLink ${isActive('/about') ? 'active' : ''}`}>About</Link>
+              <Link href="/contact" className={`navLink ${isActive('/contact') ? 'active' : ''}`}>Contact</Link>
             </nav>
 
             <div className="headerIcons">
@@ -167,12 +173,12 @@ export default function Header() {
             </svg>
           </button>
           <nav className="mobileNav">
-            <Link href="/shop" className="mobileNavLink">Shop All</Link>
-            <Link href="/collections/men" className="mobileNavLink">Men</Link>
-            <Link href="/collections/women" className="mobileNavLink">Women</Link>
-            <Link href="/collections/kids" className="mobileNavLink">Kids</Link>
-            <Link href="/about" className="mobileNavLink">About</Link>
-            <Link href="/contact" className="mobileNavLink">Contact</Link>
+            <Link href="/shop" className={`mobileNavLink ${isActive('/shop') ? 'active' : ''}`}>Shop All</Link>
+            <Link href="/collections/men" className={`mobileNavLink ${isActive('/collections/men') ? 'active' : ''}`}>Men</Link>
+            <Link href="/collections/women" className={`mobileNavLink ${isActive('/collections/women') ? 'active' : ''}`}>Women</Link>
+            <Link href="/collections/kids" className={`mobileNavLink ${isActive('/collections/kids') ? 'active' : ''}`}>Kids</Link>
+            <Link href="/about" className={`mobileNavLink ${isActive('/about') ? 'active' : ''}`}>About</Link>
+            <Link href="/contact" className={`mobileNavLink ${isActive('/contact') ? 'active' : ''}`}>Contact</Link>
           </nav>
         </div>
       </div>
