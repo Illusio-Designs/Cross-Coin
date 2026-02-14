@@ -398,6 +398,16 @@ export const orderService = {
     }
   },
 
+  // Update AWB number manually
+  updateAwbNumber: async (orderId, data) => {
+    try {
+      const response = await api.put(`/api/orders/${orderId}/awb`, data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
 };
 
 // Payment Services
