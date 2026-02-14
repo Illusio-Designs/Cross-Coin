@@ -74,7 +74,7 @@ export default function Home() {
             <div className="heroContent">
               <span className="heroLabel">Premium Comfort</span>
               <h1 className="heroTitle">
-                Luxury in <span className="gradientText">Every Step</span>
+                Luxury in Every Step
               </h1>
               <p className="heroDescription">
                 Experience unparalleled comfort with our handcrafted premium socks collection
@@ -228,19 +228,23 @@ export default function Home() {
         <section className="newsletter">
           <div className="container">
             <div className="newsletterContent">
-              <h2>Join Our Community</h2>
-              <p>Get exclusive offers, new arrivals, and style inspiration</p>
-              <form className="newsletterForm">
-                <input 
-                  type="email" 
-                  placeholder="Enter your email" 
-                  className="newsletterInput"
-                  required
-                />
-                <button type="submit" className="btn btn-primary">
-                  Subscribe
-                </button>
-              </form>
+              <div className="newsletterTop">
+                <div className="newsletterText">
+                  <h2>Join Our Community</h2>
+                  <p>Get exclusive offers, new arrivals, and style inspiration</p>
+                </div>
+                <form className="newsletterForm">
+                  <input 
+                    type="email" 
+                    placeholder="Enter your email" 
+                    className="newsletterInput"
+                    required
+                  />
+                  <button type="submit" className="btn btn-primary">
+                    Subscribe
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         </section>

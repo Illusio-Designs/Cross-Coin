@@ -1,100 +1,97 @@
+/* KNITWINK - UNIQUE PREMIUM PRODUCT CARD */
+
 .productCard {
   display: block;
   position: relative;
-  transition: transform var(--transition-base);
+  background: var(--color-white);
+  transition: all var(--transition-base);
+  border: 1px solid var(--color-gray-200);
 }
 
 .productCard:hover {
-  transform: translateY(-8px);
+  border-color: var(--color-dark);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
 }
 
 .productImage {
   position: relative;
   aspect-ratio: 3/4;
   overflow: hidden;
-  border-radius: var(--radius-xl);
   background: var(--color-gray-100);
-  margin-bottom: var(--spacing-md);
 }
 
 .productImage img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform var(--transition-slow);
+  filter: grayscale(100%);
+  transition: all var(--transition-slow);
 }
 
 .productCard:hover .productImage img {
-  transform: scale(1.05);
+  filter: grayscale(0%);
+  transform: scale(1.02);
 }
 
 .badge {
   position: absolute;
-  top: var(--spacing-md);
-  left: var(--spacing-md);
-  padding: var(--spacing-sm) var(--spacing-md);
+  top: var(--spacing-lg);
+  left: var(--spacing-lg);
+  padding: var(--spacing-xs) var(--spacing-md);
   font-family: var(--font-heading);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-radius: var(--radius-full);
+  letter-spacing: 1px;
+  background: var(--color-dark);
   color: var(--color-white);
   z-index: 2;
 }
 
-.badge-new {
-  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-}
-
-.badge-sale {
-  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
-}
-
+.badge-new,
+.badge-sale,
 .badge-bestseller {
-  background: linear-gradient(135deg, #2d2d2d 0%, #000000 100%);
+  background: var(--color-dark);
 }
 
 .quickActions {
   position: absolute;
-  bottom: var(--spacing-md);
-  right: var(--spacing-md);
+  top: var(--spacing-lg);
+  right: var(--spacing-lg);
   display: flex;
+  flex-direction: column;
   gap: var(--spacing-sm);
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateX(10px);
   transition: all var(--transition-base);
 }
 
 .productCard:hover .quickActions {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateX(0);
 }
 
 .quickBtn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border: none;
+  width: 44px;
+  height: 44px;
+  background: var(--color-white);
+  border: 1px solid var(--color-dark);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-dark);
   transition: all var(--transition-base);
-  box-shadow: var(--shadow-md);
 }
 
 .quickBtn:hover {
-  background: var(--color-white);
-  transform: scale(1.1);
-  color: var(--color-dark);
+  background: var(--color-dark);
+  color: var(--color-white);
 }
 
 .productInfo {
-  text-align: center;
+  padding: var(--spacing-xl);
+  text-align: left;
 }
 
 .productName {
@@ -103,25 +100,28 @@
   font-weight: var(--font-weight-bold);
   margin-bottom: var(--spacing-xs);
   color: var(--color-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .productCategory {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   color: var(--color-gray-600);
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .productPrice {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
   font-family: var(--font-heading);
   font-weight: var(--font-weight-bold);
 }
 
 .price {
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-2xl);
   color: var(--color-dark);
 }
 
@@ -132,18 +132,21 @@
 }
 
 .priceSale {
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-2xl);
   color: var(--color-dark);
-  font-weight: var(--font-weight-extrabold);
 }
 
 @media (max-width: 768px) {
+  .productInfo {
+    padding: var(--spacing-lg);
+  }
+
   .productName {
     font-size: var(--font-size-base);
   }
 
   .price,
   .priceSale {
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-xl);
   }
 }
