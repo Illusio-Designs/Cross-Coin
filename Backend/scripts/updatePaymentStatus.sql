@@ -31,6 +31,26 @@ MODIFY COLUMN status ENUM(
     'completed'
 ) DEFAULT 'pending';
 
+-- Add 'rto delivered' status to orders table status ENUM
+ALTER TABLE orders 
+MODIFY COLUMN status ENUM(
+    'pending', 
+    'processing', 
+    'booked', 
+    'pickup initiated', 
+    'manifested', 
+    'in transit', 
+    'shipped', 
+    'out for delivery', 
+    'delivered', 
+    'undelivered',
+    'rto',
+    'rto delivered',
+    'cancelled', 
+    'order cancelled', 
+    'exception'
+) DEFAULT 'pending';
+
 -- =====================================================
 -- Step 2: Update payment_status for existing orders
 -- =====================================================
@@ -38,21 +58,21 @@ MODIFY COLUMN status ENUM(
 -- Update COD orders that are cancelled or RTO to have payment_status = 'cancelled'
 UPDATE orders 
 SET payment_status = 'cancelled'
-WHERE (status = 'cancelled' OR status = 'rto' OR status = 'order cancelled')
+WHERE (status IN ('cancelled', 'rto', 'rto delivered', 'order cancelled'))
   AND payment_type = 'cod'
-  AND payment_status NOT IN ('cancelled');
+  AND payment_status != 'cancelled';
 
 -- Update prepaid orders that are cancelled or RTO and were paid to have payment_status = 'refund_pending'
 UPDATE orders 
 SET payment_status = 'refund_pending'
-WHERE (status = 'cancelled' OR status = 'rto' OR status = 'order cancelled')
+WHERE (status IN ('cancelled', 'rto', 'rto delivered', 'order cancelled'))
   AND payment_type != 'cod'
   AND payment_status = 'paid';
 
 -- Update prepaid orders that are cancelled or RTO and were NOT paid to have payment_status = 'cancelled'
 UPDATE orders 
 SET payment_status = 'cancelled'
-WHERE (status = 'cancelled' OR status = 'rto' OR status = 'order cancelled')
+WHERE (status IN ('cancelled', 'rto', 'rto delivered', 'order cancelled'))
   AND payment_type != 'cod'
   AND payment_status NOT IN ('paid', 'refund_pending', 'cancelled');
 
@@ -64,28 +84,26 @@ WHERE (status = 'cancelled' OR status = 'rto' OR status = 'order cancelled')
 UPDATE payments p
 INNER JOIN orders o ON p.order_id = o.id
 SET p.status = 'refund_pending',
-    p.notes = CONCAT(
-        COALESCE(p.notes, ''), 
-        IF(p.notes IS NOT NULL AND p.notes != '', ' | ', ''),
-        'Refund pending - Order ', o.status
-    )
-WHERE (o.status = 'cancelled' OR o.status = 'rto' OR o.status = 'order cancelled')
+    p.notes = CASE 
+        WHEN p.notes IS NULL OR p.notes = '' THEN CONCAT('Refund pending - Order ', o.status)
+        ELSE CONCAT(p.notes, ' | Refund pending - Order ', o.status)
+    END
+WHERE o.status IN ('cancelled', 'rto', 'rto delivered', 'order cancelled')
   AND o.payment_type != 'cod'
-  AND o.payment_status = 'paid'
+  AND o.payment_status = 'refund_pending'
   AND p.status IN ('successful', 'completed');
 
 -- Update payment records for COD orders that are cancelled
 UPDATE payments p
 INNER JOIN orders o ON p.order_id = o.id
 SET p.status = 'cancelled',
-    p.notes = CONCAT(
-        COALESCE(p.notes, ''), 
-        IF(p.notes IS NOT NULL AND p.notes != '', ' | ', ''),
-        'Order ', o.status
-    )
-WHERE (o.status = 'cancelled' OR o.status = 'rto' OR o.status = 'order cancelled')
+    p.notes = CASE 
+        WHEN p.notes IS NULL OR p.notes = '' THEN CONCAT('Order ', o.status)
+        ELSE CONCAT(p.notes, ' | Order ', o.status)
+    END
+WHERE o.status IN ('cancelled', 'rto', 'rto delivered', 'order cancelled')
   AND o.payment_type = 'cod'
-  AND p.status NOT IN ('cancelled');
+  AND p.status != 'cancelled';
 
 -- =====================================================
 -- Step 4: Verification Queries
@@ -103,7 +121,7 @@ SELECT
     p.notes as payment_notes
 FROM orders o
 LEFT JOIN payments p ON o.id = p.order_id
-WHERE o.status IN ('cancelled', 'rto', 'order cancelled')
+WHERE o.status IN ('cancelled', 'rto', 'rto delivered', 'order cancelled')
 ORDER BY o.created_at DESC
 LIMIT 50;
 
@@ -115,7 +133,7 @@ SELECT
     COUNT(*) as count,
     SUM(o.final_amount) as total_amount
 FROM orders o
-WHERE o.status IN ('cancelled', 'rto', 'order cancelled')
+WHERE o.status IN ('cancelled', 'rto', 'rto delivered', 'order cancelled')
 GROUP BY o.status, o.payment_type, o.payment_status
 ORDER BY o.status, o.payment_type, o.payment_status;
 
@@ -128,13 +146,14 @@ ORDER BY o.status, o.payment_type, o.payment_status;
 -- Rollback payment_status updates
 UPDATE orders 
 SET payment_status = 'pending'
-WHERE (status = 'cancelled' OR status = 'rto' OR status = 'order cancelled')
+WHERE status IN ('cancelled', 'rto', 'rto delivered', 'order cancelled')
   AND payment_status IN ('cancelled', 'refund_pending');
 
 -- Rollback payment records
 UPDATE payments p
 INNER JOIN orders o ON p.order_id = o.id
-SET p.status = 'pending'
-WHERE (o.status = 'cancelled' OR o.status = 'rto' OR o.status = 'order cancelled')
+SET p.status = 'pending',
+    p.notes = REGEXP_REPLACE(p.notes, ' \\| (Refund pending - Order|Order) [^|]*', '')
+WHERE o.status IN ('cancelled', 'rto', 'rto delivered', 'order cancelled')
   AND p.status IN ('cancelled', 'refund_pending');
 */
