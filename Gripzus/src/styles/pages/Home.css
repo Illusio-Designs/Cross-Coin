@@ -51,6 +51,7 @@
   z-index: 2;
   max-width: 700px;
   animation: slideIn 0.8s ease-out;
+  padding: 0 80px;
 }
 
 @keyframes slideIn {
@@ -111,7 +112,7 @@
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 3;
+  z-index: 10;
   width: 56px;
   height: 56px;
   background-color: rgba(255, 255, 255, 0.95);
@@ -147,7 +148,7 @@
   bottom: var(--spacing-2xl);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 3;
+  z-index: 10;
   display: flex;
   gap: var(--spacing-md);
   background-color: rgba(0, 0, 0, 0.3);
@@ -450,6 +451,19 @@
 .newsletterContent {
   position: relative;
   z-index: 1;
+  margin: 0 auto;
+}
+
+.newsletterTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3xl);
+}
+
+.newsletterText {
+  flex: 1;
+  text-align: left;
 }
 
 .newsletterContent h2 {
@@ -457,22 +471,21 @@
   font-size: var(--font-size-4xl);
   font-weight: var(--font-weight-bold);
   color: var(--text-inverse);
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
   letter-spacing: var(--letter-spacing-tight);
 }
 
 .newsletterContent p {
   font-size: var(--font-size-lg);
   color: rgba(255, 255, 255, 0.9);
-  margin-bottom: var(--spacing-2xl);
+  margin-bottom: 0;
   font-weight: var(--font-weight-medium);
 }
 
 .newsletterForm {
   display: flex;
   gap: var(--spacing-md);
-  max-width: 600px;
-  margin: 0 auto;
+  min-width: 500px;
   background-color: rgba(255, 255, 255, 0.1);
   padding: var(--spacing-sm);
   border-radius: var(--radius-xl);
@@ -510,6 +523,10 @@
 
   .description {
     font-size: var(--font-size-lg);
+  }
+
+  .slideContent {
+    padding: 0 70px;
   }
 
   .arrow {
@@ -552,6 +569,10 @@
     margin-bottom: var(--spacing-xl);
   }
 
+  .slideContent {
+    padding: 0 var(--spacing-xl);
+  }
+
   .arrow {
     display: none;
   }
@@ -584,8 +605,19 @@
     gap: var(--spacing-lg);
   }
 
+  .newsletterTop {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .newsletterText {
+    text-align: center;
+  }
+
   .newsletterForm {
     flex-direction: column;
+    min-width: 100%;
+    width: 100%;
   }
 
   .promoContent h2 {
