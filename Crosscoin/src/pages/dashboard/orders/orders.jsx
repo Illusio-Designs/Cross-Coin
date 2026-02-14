@@ -1124,6 +1124,7 @@ const Orders = () => {
                             <option value="delivered">Delivered</option>
                             <option value="undelivered">Undelivered</option>
                             <option value="rto">RTO</option>
+                            <option value="rto delivered">RTO Delivered</option>
                             <option value="cancelled">Cancelled</option>
                             <option value="order cancelled">Order Cancelled</option>
                             <option value="exception">Exception</option>

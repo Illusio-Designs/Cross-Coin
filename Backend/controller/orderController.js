@@ -2480,8 +2480,8 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
           // COD orders: mark as paid when delivered
           updateData.payment_status = 'paid';
           console.log(`💰 Order ${order.order_number} is delivered COD. Updating payment status to paid...`);
-        } else if (newStatus === 'cancelled' || newStatus === 'rto') {
-          // Cancelled or RTO orders: update payment status
+        } else if (newStatus === 'cancelled' || newStatus === 'rto' || newStatus === 'rto delivered') {
+          // Cancelled, RTO, or RTO Delivered orders: update payment status
           if (order.payment_type === 'cod') {
             updateData.payment_status = 'cancelled';
             console.log(`❌ Order ${order.order_number} is ${newStatus}. Updating COD payment status to cancelled...`);
@@ -2539,7 +2539,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
         }
 
         // Handle payment records for cancelled/RTO orders
-        if ((newStatus === 'cancelled' || newStatus === 'rto') && order.payment_type !== 'cod' && order.payment_status === 'paid') {
+        if ((newStatus === 'cancelled' || newStatus === 'rto' || newStatus === 'rto delivered') && order.payment_type !== 'cod' && order.payment_status === 'paid') {
           const existingPayment = await Payment.findOne({
             where: { order_id: order.id }
           });
