@@ -30,6 +30,7 @@ const Orders = () => {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [paymentTypeFilter, setPaymentTypeFilter] = useState("all");
     const [statusFilter, setStatusFilter] = useState("all");
+    const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
     const [sortBy, setSortBy] = useState("createdAt");
     const [sortOrder, setSortOrder] = useState("desc");
     const [notification, setNotification] = useState(null);
@@ -42,7 +43,14 @@ const Orders = () => {
         totalRevenue: 0,
         averageOrderValue: 0,
         deliveredOrders: 0,
-        cancelledOrders: 0
+        cancelledOrders: 0,
+        // Payment status breakdown (from Order model)
+        paymentStatusPending: 0,
+        paymentStatusPaid: 0,
+        paymentStatusFailed: 0,
+        paymentStatusRefunded: 0,
+        paymentStatusCancelled: 0,
+        paymentStatusRefundPending: 0
     });
     const [allOrdersData, setAllOrdersData] = useState([]); // Add this to store all orders for charts
     const [syncingOrders, setSyncingOrders] = useState(new Set());
@@ -63,7 +71,8 @@ const Orders = () => {
                 page,
                 limit: itemsPerPage,
                 status: statusFilter !== 'all' ? statusFilter : undefined,
-                payment_status: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
+                payment_type: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
+                payment_status: paymentStatusFilter !== 'all' ? paymentStatusFilter : undefined,
                 search: filterValue || undefined, // Add search parameter
                 sort: sortBy,
                 order: sortOrder
@@ -98,7 +107,8 @@ const Orders = () => {
                 page: 1,
                 limit: 10000, // Get all orders
                 status: statusFilter !== 'all' ? statusFilter : undefined,
-                payment_status: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
+                payment_type: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
+                payment_status: paymentStatusFilter !== 'all' ? paymentStatusFilter : undefined,
                 search: filterValue || undefined // Add search parameter
             };
             
@@ -125,7 +135,14 @@ const Orders = () => {
                 totalRevenue: 0,
                 averageOrderValue: 0,
                 deliveredOrders: 0,
-                cancelledOrders: 0
+                cancelledOrders: 0,
+                // Payment status breakdown (from Order model)
+                paymentStatusPending: 0,
+                paymentStatusPaid: 0,
+                paymentStatusFailed: 0,
+                paymentStatusRefunded: 0,
+                paymentStatusCancelled: 0,
+                paymentStatusRefundPending: 0
             };
 
             allOrders.forEach(order => {
@@ -148,7 +165,29 @@ const Orders = () => {
                     stats.deliveredOrders++;
                 }
                 
-                // Count payment types and statuses
+                // Count payment status breakdown (all statuses from Order model)
+                switch (paymentStatus) {
+                    case 'pending':
+                        stats.paymentStatusPending++;
+                        break;
+                    case 'paid':
+                        stats.paymentStatusPaid++;
+                        break;
+                    case 'failed':
+                        stats.paymentStatusFailed++;
+                        break;
+                    case 'refunded':
+                        stats.paymentStatusRefunded++;
+                        break;
+                    case 'cancelled':
+                        stats.paymentStatusCancelled++;
+                        break;
+                    case 'refund_pending':
+                        stats.paymentStatusRefundPending++;
+                        break;
+                }
+                
+                // Count payment types and statuses (legacy logic for backward compatibility)
                 if (['credit_card', 'debit_card', 'upi', 'wallet'].includes(paymentType)) {
                     stats.prepaid++;
                     if (paymentStatus === 'paid') {
@@ -432,7 +471,7 @@ const Orders = () => {
         setCurrentPage(1);
         fetchOrders(1);
         fetchAllOrdersForStats();
-    }, [filterValue, paymentTypeFilter, statusFilter, sortBy, sortOrder, itemsPerPage]);
+    }, [filterValue, paymentTypeFilter, paymentStatusFilter, statusFilter, sortBy, sortOrder, itemsPerPage]);
 
     // Load orders when page changes
     useEffect(() => {
@@ -491,33 +530,35 @@ const Orders = () => {
     };
 
     const getPaymentStatusDisplay = (order) => {
-        const paymentType = order.payment_type?.toLowerCase();
         const paymentStatus = order.payment_status?.toLowerCase();
         
-        if (['credit_card', 'debit_card', 'upi', 'wallet'].includes(paymentType)) {
-            return 'Paid';
-        }
+        // Map payment status to display text (all statuses from Order model)
+        const statusMap = {
+            'pending': 'Pending',
+            'paid': 'Paid',
+            'failed': 'Failed',
+            'refunded': 'Refunded',
+            'cancelled': 'Cancelled',
+            'refund_pending': 'Refund Pending'
+        };
         
-        if (paymentType === 'cod') {
-            return paymentStatus === 'paid' ? 'Paid' : 'Pending';
-        }
-        
-        return paymentStatus === 'paid' ? 'Paid' : 'Pending';
+        return statusMap[paymentStatus] || 'Unknown';
     };
 
     const getPaymentStatusClass = (order) => {
-        const paymentType = order.payment_type?.toLowerCase();
         const paymentStatus = order.payment_status?.toLowerCase();
         
-        if (['credit_card', 'debit_card', 'upi', 'wallet'].includes(paymentType)) {
-            return 'paid';
-        }
+        // Map payment status to CSS class (all statuses from Order model)
+        const classMap = {
+            'pending': 'pending',
+            'paid': 'paid',
+            'failed': 'failed',
+            'refunded': 'refunded',
+            'cancelled': 'cancelled',
+            'refund_pending': 'refund-pending'
+        };
         
-        if (paymentType === 'cod') {
-            return paymentStatus === 'paid' ? 'paid' : 'pending';
-        }
-        
-        return paymentStatus === 'paid' ? 'paid' : 'pending';
+        return classMap[paymentStatus] || 'unknown';
     };
 
     const formatPaymentType = (paymentType) => {
@@ -568,7 +609,7 @@ const Orders = () => {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [filterValue, paymentTypeFilter, statusFilter]);
+    }, [filterValue, paymentTypeFilter, paymentStatusFilter, statusFilter]);
 
     const columns = [
         { header: "S/N", accessor: "serial_number" },
@@ -1049,16 +1090,29 @@ const Orders = () => {
                             onChange={(e) => setPaymentTypeFilter(e.target.value)}
                             className="payment-filter-dropdown"
                         >
-                            <option value="all">All Payments</option>
+                            <option value="all">All Payment Types</option>
                             <option value="prepaid">Prepaid</option>
                             <option value="cod">Cash on Delivery</option>
+                        </select>
+                        <select 
+                            value={paymentStatusFilter} 
+                            onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                            className="payment-filter-dropdown"
+                        >
+                            <option value="all">All Payment Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="paid">Paid</option>
+                            <option value="failed">Failed</option>
+                            <option value="refunded">Refunded</option>
+                            <option value="refund_pending">Refund Pending</option>
+                            <option value="cancelled">Cancelled</option>
                         </select>
                         <select 
                             value={statusFilter} 
                             onChange={(e) => setStatusFilter(e.target.value)}
                             className="payment-filter-dropdown"
                         >
-                            <option value="all">All Status</option>
+                            <option value="all">All Order Status</option>
                             <option value="pending">Pending</option>
                             <option value="processing">Processing</option>
                             <option value="booked">Booked</option>
