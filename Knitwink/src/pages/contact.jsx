@@ -13,173 +13,100 @@ export default function Contact() {
       <Header />
 
       <main className="main">
-        <section className="pageHeader">
+        {/* Hero Section */}
+        <section className="contactHero">
           <div className="container">
-            <h1>Contact Us</h1>
-            <p>We'd love to hear from you</p>
+            <h1>Get In Touch</h1>
+            <p>We'd love to hear from you. Send us a message and we'll respond within 24 hours.</p>
           </div>
         </section>
 
-        <section className="section">
+        {/* Contact Section */}
+        <section className="contactSection">
           <div className="container">
             <div className="contactGrid">
+              {/* Contact Info */}
               <div className="contactInfo">
-                <h2>Get in Touch</h2>
-                <p>Have a question or feedback? Fill out the form and we'll get back to you within 24 hours.</p>
+                <h2>Contact Information</h2>
+                <p>
+                  Have a question or feedback? We're here to help. Reach out to us through 
+                  any of the channels below.
+                </p>
                 
                 <div className="infoItem">
                   <h3>Email</h3>
-                  <p>support@knitwink.com</p>
+                  <p><a href="mailto:support@knitwink.com">support@knitwink.com</a></p>
                 </div>
                 
                 <div className="infoItem">
                   <h3>Phone</h3>
-                  <p>+1 (555) 123-4567</p>
+                  <p><a href="tel:+15551234567">+1 (555) 123-4567</a></p>
                 </div>
                 
                 <div className="infoItem">
-                  <h3>Hours</h3>
-                  <p>Monday - Friday: 9am - 6pm EST</p>
+                  <h3>Address</h3>
+                  <p>123 Fashion Street<br />New York, NY 10001<br />United States</p>
                 </div>
               </div>
 
-              <form className="contactForm">
-                <div className="formGroup">
-                  <label htmlFor="name">Name</label>
-                  <input type="text" id="name" required />
-                </div>
-                
-                <div className="formGroup">
-                  <label htmlFor="email">Email</label>
-                  <input type="email" id="email" required />
-                </div>
-                
-                <div className="formGroup">
-                  <label htmlFor="subject">Subject</label>
-                  <input type="text" id="subject" required />
-                </div>
-                
-                <div className="formGroup">
-                  <label htmlFor="message">Message</label>
-                  <textarea id="message" rows="6" required></textarea>
-                </div>
-                
-                <button type="submit" className="btn btn-primary btn-lg">
-                  Send Message
-                </button>
-              </form>
+              {/* Contact Form */}
+              <div className="contactFormWrapper">
+                <h2>Send Us A Message</h2>
+                <form className="contactForm">
+                  <div className="formRow">
+                    <div className="formGroup">
+                      <label htmlFor="firstName">First Name</label>
+                      <input type="text" id="firstName" required />
+                    </div>
+                    
+                    <div className="formGroup">
+                      <label htmlFor="lastName">Last Name</label>
+                      <input type="text" id="lastName" required />
+                    </div>
+                  </div>
+                  
+                  <div className="formRow">
+                    <div className="formGroup">
+                      <label htmlFor="email">Email Address</label>
+                      <input type="email" id="email" required />
+                    </div>
+                    
+                    <div className="formGroup">
+                      <label htmlFor="phone">Phone Number</label>
+                      <input type="tel" id="phone" />
+                    </div>
+                  </div>
+                  
+                  <div className="formGroup">
+                    <label htmlFor="subject">Subject</label>
+                    <select id="subject" required>
+                      <option value="">Select a subject</option>
+                      <option value="general">General Inquiry</option>
+                      <option value="order">Order Support</option>
+                      <option value="product">Product Question</option>
+                      <option value="wholesale">Wholesale Inquiry</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  
+                  <div className="formGroup">
+                    <label htmlFor="message">Message</label>
+                    <textarea id="message" required></textarea>
+                  </div>
+                  
+                  <div className="formSubmit">
+                    <button type="submit">
+                      Send Message
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         </section>
       </main>
 
       <Footer />
-
-      <style jsx>{`
-        .main {
-          min-height: 60vh;
-        }
-
-        .pageHeader {
-          padding: var(--spacing-4xl) 0 var(--spacing-3xl);
-          text-align: center;
-          background: var(--color-gray-100);
-        }
-
-        .pageHeader h1 {
-          font-size: var(--font-size-5xl);
-          font-weight: var(--font-weight-black);
-          margin-bottom: var(--spacing-md);
-        }
-
-        .pageHeader p {
-          font-size: var(--font-size-lg);
-          color: var(--color-gray-600);
-        }
-
-        .contactGrid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: var(--spacing-4xl);
-          max-width: 1200px;
-          margin: 0 auto;
-        }
-
-        .contactInfo h2 {
-          font-size: var(--font-size-3xl);
-          margin-bottom: var(--spacing-lg);
-        }
-
-        .contactInfo p {
-          font-size: var(--font-size-lg);
-          color: var(--color-gray-600);
-          line-height: 1.8;
-          margin-bottom: var(--spacing-2xl);
-        }
-
-        .infoItem {
-          margin-bottom: var(--spacing-xl);
-        }
-
-        .infoItem h3 {
-          font-size: var(--font-size-lg);
-          font-weight: var(--font-weight-bold);
-          margin-bottom: var(--spacing-sm);
-        }
-
-        .infoItem p {
-          margin: 0;
-          color: var(--color-gray-700);
-        }
-
-        .contactForm {
-          background: var(--color-gray-100);
-          padding: var(--spacing-2xl);
-          border-radius: var(--radius-xl);
-        }
-
-        .formGroup {
-          margin-bottom: var(--spacing-lg);
-        }
-
-        .formGroup label {
-          display: block;
-          font-weight: var(--font-weight-semibold);
-          margin-bottom: var(--spacing-sm);
-        }
-
-        .formGroup input,
-        .formGroup textarea {
-          width: 100%;
-          padding: var(--spacing-md);
-          border: 2px solid var(--color-gray-300);
-          border-radius: var(--radius-md);
-          font-size: var(--font-size-base);
-          font-family: var(--font-body);
-          transition: border-color var(--transition-base);
-        }
-
-        .formGroup input:focus,
-        .formGroup textarea:focus {
-          outline: none;
-          border-color: var(--color-dark);
-        }
-
-        .contactForm button {
-          width: 100%;
-        }
-
-        @media (max-width: 768px) {
-          .contactGrid {
-            grid-template-columns: 1fr;
-            gap: var(--spacing-2xl);
-          }
-
-          .pageHeader h1 {
-            font-size: var(--font-size-4xl);
-          }
-        }
-      `}</style>
     </>
   );
 }

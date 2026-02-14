@@ -2,7 +2,7 @@
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
-  background: rgba(255, 255, 255, 0.95);
+  background: #FFFFFF;
   backdrop-filter: blur(10px);
   border-bottom: 1px solid transparent;
   transition: all var(--transition-base);
@@ -77,10 +77,10 @@
   padding: var(--spacing-sm) var(--spacing-md);
   background: none;
   border: 1px solid var(--color-gray-300);
-  border-radius: var(--radius-full);
+  border-radius: 0;
   cursor: pointer;
   font-family: var(--font-heading);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   color: var(--color-dark);
   transition: all var(--transition-base);
@@ -92,11 +92,11 @@
 }
 
 .currencyFlag {
-  font-size: 1.2rem;
+  font-size: 1rem;
 }
 
 .currencyCode {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
 }
 
 .currencyOverlay {
@@ -112,10 +112,10 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  min-width: 280px;
+  min-width: 240px;
   background: var(--color-white);
   border: 1px solid var(--color-gray-200);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   box-shadow: var(--shadow-2xl);
   overflow: hidden;
   z-index: 1000;
@@ -146,14 +146,14 @@
 }
 
 .optionFlag {
-  font-size: 1.5rem;
-  width: 40px;
-  height: 40px;
+  font-size: 1.25rem;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--color-gray-100);
-  border-radius: var(--radius-md);
+  border-radius: 0;
 }
 
 .currencyOption.active .optionFlag {
@@ -168,13 +168,13 @@
 
 .optionName {
   font-family: var(--font-heading);
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-dark);
 }
 
 .optionCode {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   color: var(--color-gray-600);
 }
 
@@ -205,9 +205,9 @@
   color: var(--color-white);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -260,11 +260,106 @@
 
 .mobileNavLink {
   font-family: var(--font-heading);
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
   color: var(--color-dark);
   padding: var(--spacing-md) 0;
   border-bottom: 1px solid var(--color-gray-200);
+}
+
+/* Search Overlay */
+.searchOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: var(--z-modal);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.searchOverlayBg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+.searchContainer {
+  position: relative;
+  z-index: 1;
+  padding-top: 120px;
+}
+
+.searchContent {
+  position: relative;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.searchClose {
+  position: absolute;
+  top: -60px;
+  right: 0;
+  background: none;
+  border: none;
+  color: var(--color-white);
+  cursor: pointer;
+  padding: var(--spacing-sm);
+  transition: opacity var(--transition-base);
+}
+
+.searchClose:hover {
+  opacity: 0.7;
+}
+
+.searchForm {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  background: var(--color-white);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border: 2px solid var(--color-dark);
+}
+
+.searchIcon {
+  color: var(--color-gray-600);
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-family: var(--font-body);
+  font-size: var(--font-size-lg);
+  color: var(--color-dark);
+  background: transparent;
+}
+
+.searchInput::placeholder {
+  color: var(--color-gray-500);
+}
+
+.searchSubmit {
+  padding: var(--spacing-sm) var(--spacing-xl);
+  background: var(--color-dark);
+  color: var(--color-white);
+  border: none;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.searchSubmit:hover {
+  background: var(--color-gray-900);
 }
 
 @media (max-width: 1024px) {
@@ -292,5 +387,21 @@
 
   .currencyCode {
     display: none;
+  }
+
+  .searchContainer {
+    padding-top: 100px;
+  }
+
+  .searchForm {
+    padding: var(--spacing-md) var(--spacing-lg);
+  }
+
+  .searchInput {
+    font-size: var(--font-size-base);
+  }
+
+  .searchSubmit {
+    padding: var(--spacing-sm) var(--spacing-lg);
   }
 }

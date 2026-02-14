@@ -7,6 +7,7 @@ export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { currency, changeCurrency, currencies } = useCurrency();
 
   useEffect(() => {
@@ -79,7 +80,11 @@ export default function Header() {
                 )}
               </div>
 
-              <button className="iconBtn" aria-label="Search">
+              <button 
+                className="iconBtn" 
+                onClick={() => setIsSearchOpen(!isSearchOpen)}
+                aria-label="Search"
+              >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                   <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
                   <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -113,6 +118,43 @@ export default function Header() {
           </div>
         </div>
       </header>
+
+      {/* Search Bar */}
+      {isSearchOpen && (
+        <div className="searchOverlay">
+          <div className="searchOverlayBg" onClick={() => setIsSearchOpen(false)}></div>
+          <div className="searchContainer">
+            <div className="container">
+              <div className="searchContent">
+                <button 
+                  className="searchClose"
+                  onClick={() => setIsSearchOpen(false)}
+                  aria-label="Close search"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </button>
+                <form className="searchForm">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="searchIcon">
+                    <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                  <input 
+                    type="text" 
+                    placeholder="Search for products..." 
+                    className="searchInput"
+                    autoFocus
+                  />
+                  <button type="submit" className="searchSubmit">
+                    Search
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className={`mobileMenu ${isMobileMenuOpen ? 'open' : ''}`}>
         <div className="mobileMenuContent">
