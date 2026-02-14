@@ -97,6 +97,7 @@ const getDashboardStats = async (req, res) => {
           cancelledRevenue += orderTotal;
           break;
         case 'rto':
+        case 'rto delivered':
           rtoRevenue += orderTotal;
           totalRevenue += orderTotal; // Include RTO in total as it was attempted
           break;
@@ -461,11 +462,14 @@ const getDashboardStats = async (req, res) => {
     ].filter(item => item.value > 0);
 
     // 6. RTO STATISTICS
-    const rtoOrders = allOrders.filter(o => o.status?.toLowerCase() === 'rto');
+    const rtoOrders = allOrders.filter(o => {
+      const status = o.status?.toLowerCase();
+      return status === 'rto' || status === 'rto delivered';
+    });
     const rtoStats = {
-      totalRTO: statusCounts['rto'] || 0,
+      totalRTO: statusCounts['rto'] + (statusCounts['rto delivered'] || 0),
       rtoRevenue: parseFloat(rtoRevenue.toFixed(2)),
-      rtoRate: totalOrders > 0 ? parseFloat(((statusCounts['rto'] / totalOrders) * 100).toFixed(2)) : 0,
+      rtoRate: totalOrders > 0 ? parseFloat((((statusCounts['rto'] + (statusCounts['rto delivered'] || 0)) / totalOrders) * 100).toFixed(2)) : 0,
       rtoPercentageOfRevenue: allOrdersRevenue > 0 ? parseFloat(((rtoRevenue / allOrdersRevenue) * 100).toFixed(2)) : 0,
       averageRTOValue: rtoOrders.length > 0 ? parseFloat((rtoRevenue / rtoOrders.length).toFixed(2)) : 0
     };

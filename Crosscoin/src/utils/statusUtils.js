@@ -40,6 +40,8 @@ export const getStatusDisplayText = (status) => {
         'delivered': 'Delivered',
         'undelivered': 'Undelivered',
         'rto': 'Return to Origin',
+        'rto_delivered': 'RTO Delivered',
+        'rto delivered': 'RTO Delivered',
         'cancelled': 'Cancelled',
         'order_cancelled': 'Order Cancelled',
         'order cancelled': 'Order Cancelled',
@@ -78,6 +80,8 @@ export const getStatusColor = (status) => {
         'delivered': '#10B981',
         'undelivered': '#DC2626',
         'rto': '#F59E0B',
+        'rto_delivered': '#8B5CF6',
+        'rto delivered': '#8B5CF6',
         'cancelled': '#EF4444',
         'order_cancelled': '#EF4444',
         'order cancelled': '#EF4444',
@@ -99,7 +103,7 @@ export const getStatusColor = (status) => {
 export const isFinalStatus = (status) => {
     if (!status) return false;
     
-    const finalStatuses = ['delivered', 'cancelled', 'order cancelled', 'rto', 'returned'];
+    const finalStatuses = ['delivered', 'cancelled', 'order cancelled', 'rto', 'rto delivered', 'returned'];
     return finalStatuses.includes(status.toLowerCase());
 };
 
@@ -134,10 +138,11 @@ export const getStatusPriority = (status) => {
         'out for delivery': 8,
         'delivered': 9,
         'rto': 10,
-        'cancelled': 11,
-        'order cancelled': 12,
-        'exception': 13,
-        'returned': 14
+        'rto delivered': 11,
+        'cancelled': 12,
+        'order cancelled': 13,
+        'exception': 14,
+        'returned': 15
     };
     
     const lowerStatus = status.toLowerCase();
