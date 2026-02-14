@@ -347,19 +347,23 @@ export default function Home() {
         <section className="newsletter">
           <div className="container">
             <div className="newsletterContent">
-              <h2>Join Our Style Circle</h2>
-              <p>Get exclusive offers, early access, and style inspiration</p>
-              <form className="newsletterForm">
-                <input 
-                  type="email" 
-                  placeholder="Enter your email" 
-                  className="newsletterInput"
-                  required
-                />
-                <button type="submit" className="btn btn-primary">
-                  Subscribe
-                </button>
-              </form>
+              <div className="newsletterTop">
+                <div className="newsletterText">
+                  <h2>Join Our Style Circle</h2>
+                  <p>Get exclusive offers, early access, and style inspiration</p>
+                </div>
+                <form className="newsletterForm">
+                  <input 
+                    type="email" 
+                    placeholder="Enter your email" 
+                    className="newsletterInput"
+                    required
+                  />
+                  <button type="submit" className="btn btn-primary">
+                    Subscribe
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         </section>

@@ -37,7 +37,7 @@ body {
 
 /* Image loading optimization */
 img {
-  max-width: 100%;
+  width: auto !important;
   height: auto;
   display: block;
 }

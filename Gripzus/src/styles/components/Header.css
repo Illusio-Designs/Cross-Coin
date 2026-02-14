@@ -21,7 +21,6 @@
 /* Main Header */
 .header {
   background-color: var(--bg-primary);
-  border-bottom: 1px solid var(--border-light);
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
@@ -81,11 +80,13 @@
   transition: width var(--transition-base);
 }
 
-.nav a:hover {
+.nav a:hover,
+.nav a.active {
   color: var(--color-accent);
 }
 
-.nav a:hover::after {
+.nav a:hover::after,
+.nav a.active::after {
   width: 100%;
 }
 
