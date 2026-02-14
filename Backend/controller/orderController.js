@@ -2798,6 +2798,71 @@ module.exports.adminCancelOrder = async (req, res) => {
     });
   }
 };
+
+// Update AWB number manually
+module.exports.updateAwbNumber = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const { awbNumber, courierName } = req.body;
+
+    if (!awbNumber || !awbNumber.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "AWB number is required"
+      });
+    }
+
+    const order = await Order.findByPk(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    // Update AWB and courier information
+    order.fship_waybill = awbNumber.trim();
+    if (courierName && courierName.trim()) {
+      order.courier_name = courierName.trim();
+    }
+    order.tracking_number = awbNumber.trim(); // Also update tracking number
+    
+    await order.save();
+
+    // Create status history entry
+    await OrderStatusHistory.create({
+      order_id: order.id,
+      status: order.status,
+      updated_by: req.user?.id || null,
+      notes: `AWB number manually updated to: ${awbNumber.trim()}${courierName ? ` (Courier: ${courierName.trim()})` : ''}`,
+      created_by: "admin"
+    });
+
+    console.log(`✅ AWB updated for order ${order.order_number}: ${awbNumber.trim()}`);
+
+    res.status(200).json({
+      success: true,
+      message: "AWB number updated successfully",
+      data: {
+        order: {
+          id: order.id,
+          order_number: order.order_number,
+          fship_waybill: order.fship_waybill,
+          courier_name: order.courier_name,
+          tracking_number: order.tracking_number
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Error updating AWB number:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update AWB number",
+      error: error.message
+    });
+  }
+};
+
 // Track order by order number (works for both registered and guest orders)
 module.exports.trackOrderByOrderNumber = async (req, res) => {
   try {
@@ -3797,36 +3862,40 @@ module.exports.exportDeliveredOrders = async (req, res) => {
     console.log('Start Date:', startDate);
     console.log('End Date:', endDate);
 
-    // Build query conditions
+    // Build query conditions for orders with delivered status
     const whereConditions = {
       status: 'delivered'
     };
 
-    // Add date filter if provided
+    // Build date filter for OrderStatusHistory (delivery date)
+    let statusHistoryWhere = {
+      status: 'delivered'
+    };
+
+    // Add date filter for delivery date if provided
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999); // Include the entire end date
       
-      whereConditions.createdAt = {
+      statusHistoryWhere.createdAt = {
         [Op.between]: [start, end]
       };
-      console.log('Date range filter applied:', start, 'to', end);
+      console.log('Delivery date range filter applied:', start, 'to', end);
     } else if (startDate) {
-      whereConditions.createdAt = {
+      statusHistoryWhere.createdAt = {
         [Op.gte]: new Date(startDate)
       };
     } else if (endDate) {
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
-      whereConditions.createdAt = {
+      statusHistoryWhere.createdAt = {
         [Op.lte]: end
       };
     }
 
     console.log('Query conditions:', JSON.stringify(whereConditions, null, 2));
-
-    console.log('Query conditions:', JSON.stringify(whereConditions, null, 2));
+    console.log('Status history conditions:', JSON.stringify(statusHistoryWhere, null, 2));
 
     // Fetch delivered orders with all related data
     console.log('Fetching orders from database...');
@@ -3871,6 +3940,14 @@ module.exports.exportDeliveredOrders = async (req, res) => {
                 required: false
               }
             ]
+          },
+          {
+            model: OrderStatusHistory,
+            as: 'OrderStatusHistories',
+            where: statusHistoryWhere,
+            required: true, // Only include orders with matching delivery date
+            attributes: ['status', 'createdAt'],
+            separate: false
           }
         ],
         order: [['createdAt', 'DESC']]
@@ -3915,7 +3992,12 @@ module.exports.exportDeliveredOrders = async (req, res) => {
       // Order details
       const orderNumber = order.order_number;
       const orderDate = new Date(order.createdAt).toLocaleDateString('en-IN');
-      const deliveryDate = order.updatedAt ? new Date(order.updatedAt).toLocaleDateString('en-IN') : 'N/A';
+      
+      // Get actual delivery date from status history
+      const deliveredStatusHistory = order.OrderStatusHistories?.find(h => h.status === 'delivered');
+      const deliveryDate = deliveredStatusHistory 
+        ? new Date(deliveredStatusHistory.createdAt).toLocaleDateString('en-IN') 
+        : 'N/A';
       
       // Payment details
       const paymentType = order.payment_type === 'cod' ? 'COD' : 'Prepaid';

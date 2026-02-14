@@ -150,6 +150,7 @@ OrderItem.belongsTo(Order, {
 
 Order.hasMany(OrderStatusHistory, {
   foreignKey: "order_id",
+  as: "OrderStatusHistories",
   onDelete: "CASCADE",
 });
 OrderStatusHistory.belongsTo(Order, {
