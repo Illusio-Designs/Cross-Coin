@@ -41,7 +41,7 @@ const MediaGallery = () => {
       console.log('Media gallery image check results:', results);
       return results;
     };
-  }, []);
+  }, [images]);
 
   const fetchImages = async () => {
     setLoading(true);

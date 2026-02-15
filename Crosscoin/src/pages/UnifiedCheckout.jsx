@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { useCart } from "../context/CartContext";
@@ -537,10 +537,10 @@ export default function UnifiedCheckout() {
     }
   };
 
-  const handleCouponRemoved = () => {
+  const handleCouponRemoved = useCallback(() => {
     setAppliedCoupon(null);
     sessionStorage.removeItem("appliedCoupon");
-  };
+  }, []);
 
   // Render address section - simplified for all users
   const renderAddressSection = () => {
