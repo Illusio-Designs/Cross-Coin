@@ -480,10 +480,13 @@ const Orders = () => {
         }
     }, [currentPage]);
 
-    const debouncedSearch = useCallback(debounce((searchTerm) => {
-        setFilterValue(searchTerm);
-        setCurrentPage(1); // Reset to first page when searching
-    }, 300), []);
+    const debouncedSearch = useCallback(
+        debounce((searchTerm) => {
+            setCurrentPage(1); // Reset to first page when searching
+            fetchOrders(1); // Trigger fetch with new search term
+        }, 500),
+        [itemsPerPage, statusFilter, paymentTypeFilter, paymentStatusFilter, sortBy, sortOrder]
+    );
     
     const handleSearchChange = (e) => {
         const value = e.target.value;
@@ -620,7 +623,8 @@ const Orders = () => {
                 <div className="customer-info">
                     <div className="customer-name">
                         {row.User?.username || 
-                         (row.GuestUser ? `${row.GuestUser.firstName} ${row.GuestUser.lastName}` : 'N/A')}
+                         (row.GuestUser ? `${row.GuestUser.firstName} ${row.GuestUser.lastName}` : 
+                         row.ShippingAddress?.full_name || 'N/A')}
                     </div>
                     <div className="customer-email">
                         {row.User?.email || row.GuestUser?.email || ''}
@@ -1227,7 +1231,8 @@ const Orders = () => {
                             <div className="order-info-grid">
                                 <div><strong>Name:</strong> {
                                     selectedOrder.User?.username || 
-                                    (selectedOrder.GuestUser ? `${selectedOrder.GuestUser.firstName} ${selectedOrder.GuestUser.lastName}` : 'N/A')
+                                    (selectedOrder.GuestUser ? `${selectedOrder.GuestUser.firstName} ${selectedOrder.GuestUser.lastName}` : 
+                                    selectedOrder.ShippingAddress?.full_name || 'N/A')
                                 } {selectedOrder.GuestUser && <span className="guest-badge" style={{
                                   background: '#e3f2fd',
                                   color: '#1976d2',

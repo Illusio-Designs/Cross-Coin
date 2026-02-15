@@ -131,7 +131,9 @@ function App({ Component, pageProps }) {
   }, []);
 
   useEffect(() => {
-    // Scroll progress bar logic
+    // Scroll progress bar logic with throttling to prevent excessive re-renders
+    let ticking = false;
+    
     function updateScrollProgress() {
       const scrollTop = window.scrollY || document.documentElement.scrollTop;
       const docHeight =
@@ -140,10 +142,19 @@ function App({ Component, pageProps }) {
       if (progressRef.current) {
         progressRef.current.style.height = `${percent * 100}%`;
       }
+      ticking = false;
     }
-    window.addEventListener("scroll", updateScrollProgress);
+    
+    function requestTick() {
+      if (!ticking) {
+        window.requestAnimationFrame(updateScrollProgress);
+        ticking = true;
+      }
+    }
+    
+    window.addEventListener("scroll", requestTick, { passive: true });
     updateScrollProgress();
-    return () => window.removeEventListener("scroll", updateScrollProgress);
+    return () => window.removeEventListener("scroll", requestTick);
   }, []);
 
   return (

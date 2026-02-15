@@ -1128,8 +1128,10 @@ export default function ProductDetails() {
                         variationImages[selectedThumbnail]
                     }}
                     alt={variationImages[selectedThumbnail]?.alt_text || product?.name || "Product Image"}
-                    width="100%"
-                    height="auto"
+                    width={600}
+                    height={600}
+                    priority={true}
+                    quality={80}
                     style={{
                       objectFit: "contain",
                       boxShadow: "0 2px 8px #eee",
@@ -1191,8 +1193,10 @@ export default function ProductDetails() {
                         image_url: image.image_url || image.url || image
                       }}
                       alt={image.alt_text || `${product.name} thumbnail ${idx + 1}`}
-                      width="80px"
-                      height="80px"
+                      width={80}
+                      height={80}
+                      priority={idx < 4}
+                      quality={70}
                       style={{
                         objectFit: "cover",
                         border:
@@ -1221,6 +1225,10 @@ export default function ProductDetails() {
                     variationImages[selectedThumbnail]
                   }}
                   alt="Zoomed"
+                  width={1200}
+                  height={1200}
+                  priority={true}
+                  quality={90}
                   style={{ width: '100%', maxWidth: 700, objectFit: 'contain', borderRadius: 8 }}
                 />
               </Modal>

@@ -209,8 +209,9 @@ const CartDrawer = ({ isOpen, onClose, lastAddedItem }) => {
                       <SafeImage
                         imageData={{ image_url: imageUrl }}
                         alt={item.name}
-                        width="100%"
-                        height="100%"
+                        width={100}
+                        height={100}
+                        quality={70}
                         style={{ objectFit: 'cover' }}
                         isProductCard={true}
                       />

@@ -17,6 +17,7 @@ const fs = require('fs');
 const { setupDatabase } = require('./scripts/setupDatabase.js');
 const corsOptions = require('./config/corsConfig.js');
 const { sendFacebookEvent } = require('./integration/facebookPixel.js');
+const { initializeCronJobs } = require('./config/cronJobs.js');
 
 // Import routes
 const googleAnalyticsRouter = require('./integration/googleAnalytics.js');
@@ -267,6 +268,11 @@ const startServer = async () => {
         console.log('Initializing SEO data...');
         await initializeSeoData();
         console.log('✓ SEO data initialized');
+        
+        // Initialize cron jobs
+        console.log('Initializing cron jobs...');
+        initializeCronJobs();
+        console.log('✓ Cron jobs initialized');
         
         // Start server
         const server = app.listen(PORT, () => {
