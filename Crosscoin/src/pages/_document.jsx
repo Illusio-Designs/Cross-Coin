@@ -4,19 +4,19 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
+        {/* DNS Prefetch and Preconnect for faster resource loading */}
+        <link rel="dns-prefetch" href="https://api.crosscoin.in" />
+        <link rel="preconnect" href="https://api.crosscoin.in" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://www.clarity.ms" />
+        
         {/* Prevent zoom on form inputs on iOS */}
         <meta name="format-detection" content="telephone=no" />
 
         {/* Theme color for mobile browsers */}
         <meta name="theme-color" content="#180D3E" />
-
-        {/* Preload critical fonts */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
 
         {/* Favicon */}
         <link rel="icon" href="/crosscoin icon.png" />
@@ -25,9 +25,10 @@ export default function Document() {
         <meta name="color-scheme" content="light" />
         <meta name="supported-color-schemes" content="light" />
 
-        {/* Microsoft Clarity */}
+        {/* Microsoft Clarity - Load async */}
         <script
           type="text/javascript"
+          async
           dangerouslySetInnerHTML={{
             __html: `
               (function(c,l,a,r,i,t,y){

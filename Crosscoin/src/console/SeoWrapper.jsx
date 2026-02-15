@@ -54,7 +54,7 @@ const SeoWrapper = ({ pageName, children, seoData }) => {
     const getFullImageUrl = (imagePath) => {
         if (!imagePath) return null;
         if (imagePath.startsWith('http')) return imagePath;
-        return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${imagePath}`;
+        return `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}${imagePath}`;
     };
     const fullImageUrl = getFullImageUrl(data.meta_image);
     return (

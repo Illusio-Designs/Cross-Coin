@@ -10,38 +10,36 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { getPublicSliders, getPublicCategories, getPublicCategoryByName, getPublicProductReviews } from '../services/publicindex';
 import SeoWrapper from '../console/SeoWrapper';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/router';
 import { fbqTrack } from '../components/common/Analytics';
 import { showValidationErrorToast } from '../utils/toast';
 import DOMPurify from 'dompurify';
 import colorMap from '../components/products/colorMap';
 import { seoService } from '../services/index';
 
-const formatTwoDigits = (num) => num.toString().padStart(2, '0');
-
-function forceEnvImageBase(url) {
-  if (!url || typeof url !== 'string') return null; // Return null instead of fallback
-  
-  // Use live backend URL
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-  
-  if (url.startsWith('http')) {
-    // Replace localhost with live URL
-    if (url.includes('localhost:5000') || url.includes('localhost')) {
-      const path = url.replace(/^https?:\/\/[^/]+/, '');
-      return `${baseUrl}${path}`;
-    }
-    return url;
-  }
-  
-  // Ensure proper path formatting
-  if (url.startsWith('/')) {
-    return `${baseUrl}${url}`;
-  }
-  return `${baseUrl}/${url}`;
-}
-
+// Helper functions moved inside component for Fast Refresh compatibility
 const Home = () => {
+  // Helper functions
+  const formatTwoDigits = (num) => num.toString().padStart(2, '0');
+
+  const forceEnvImageBase = (url) => {
+    if (!url || typeof url !== 'string') return null;
+    
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+    
+    if (url.startsWith('http')) {
+      if (url.includes('localhost:5000') || url.includes('localhost')) {
+        const path = url.replace(/^https?:\/\/[^/]+/, '');
+        return `${baseUrl}${path}`;
+      }
+      return url;
+    }
+    
+    if (url.startsWith('/')) {
+      return `${baseUrl}${url}`;
+    }
+    return `${baseUrl}/${url}`;
+  };
   const router = useRouter();
   const [current, setCurrent] = useState(0);
   const [slides, setSlides] = useState([]);
@@ -99,12 +97,8 @@ const Home = () => {
   }, [currentCategoryProducts, latestProducts]);
 
   // Reset thumbnail when selected SKU changes for exclusive products
-  useEffect(() => {
-    setExclusiveStates(prev => prev.map((state, index) => ({
-      ...state,
-      selectedThumbnail: 0
-    })));
-  }, [exclusiveSelectedSkus]);
+  // Removed this useEffect as it causes infinite re-renders
+  // The thumbnail reset is now handled directly in the SKU change handler
 
   useEffect(() => {
     if (apiCalledRef.current) return; // Prevent multiple calls
@@ -142,7 +136,7 @@ const Home = () => {
       try {
         setLatestProductsLoading(true);
         // Fetch latest products from all categories
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/products/public?limit=15&sort=newest`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/public?limit=15&sort=newest`);
         const data = await response.json();
         if (data.success && data.data.products) {
           setLatestProducts(data.data.products);
@@ -160,7 +154,7 @@ const Home = () => {
     const fetchExclusiveProducts = async () => {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/products/public?sort=featured&limit=3`
+          `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/public?sort=featured&limit=3`
         );
         const data = await response.json();
         if (data.success && data.data.products) {
@@ -570,7 +564,11 @@ const Home = () => {
               <div className="hero-slide__image">
                 <SafeImage 
                   imageData={{ image_url: slides[current].image }}
-                  alt={slides[current].title} 
+                  alt={slides[current].title}
+                  width={1920}
+                  height={600}
+                  priority={true}
+                  quality={85}
                   style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                 />
               </div>
@@ -827,8 +825,10 @@ const Home = () => {
                           className="main-image"
                           imageData={{ image_url: variationImages[state.selectedThumbnail] }}
                           alt={product.name}
-                          width="100%"
-                          height="auto"
+                          width={500}
+                          height={500}
+                          priority={index < 2}
+                          quality={75}
                           style={{ objectFit: 'contain', boxShadow: '0 2px 8px #eee', background: '#eee', display: 'block' }}
                           isProductCard={true}
                         />
@@ -840,8 +840,9 @@ const Home = () => {
                             <SafeImage
                               imageData={{ image_url: src }}
                               alt={`${product.name} thumbnail ${idx + 1}`}
-                              width="80px"
-                              height="80px"
+                              width={80}
+                              height={80}
+                              quality={70}
                               style={{
                                 objectFit: 'cover',
                                 border: state.selectedThumbnail === idx ? '2px solid #222' : '1px solid #eee',

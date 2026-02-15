@@ -46,12 +46,14 @@
 }
 
 .header__logo {
-  width: 15%;
+  width: 120px;
+  max-width: 120px;
 }
 
 .header__logo img {
-  width: auto !important;
-  height: 100%;
+  width: 100% !important;
+  height: auto !important;
+  max-height: 48px;
 }
 
 .header__nav {
@@ -239,8 +241,9 @@
     padding: 12px 5%;
   }
   .header__logo {
-    width: 35%;
-    min-width: 120px;
+    width: 100px;
+    max-width: 100px;
+    min-width: 100px;
   }
   .header__nav {
     display: none;

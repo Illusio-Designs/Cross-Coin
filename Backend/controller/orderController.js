@@ -2233,7 +2233,7 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
     
     const ordersToSync = await Order.findAll({
       where: {
-        status: { [Op.notIn]: ['cancelled', 'delivered'] }, // Skip final states
+        status: { [Op.notIn]: ['cancelled', 'delivered', 'rto delivered'] }, // Skip final states
         order_number: { [Op.notLike]: '%TEST%' } // Exclude test orders
       },
       include: [
@@ -2242,7 +2242,7 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
         { model: GuestUser, as: "GuestUser", attributes: ["id", "email", "firstName", "lastName", "phone"], required: false },
         { model: ShippingAddress, as: "ShippingAddress" },
       ],
-      limit: 50, // Process in batches
+      // No limit - process all orders
       order: [['created_at', 'DESC']]
     });
 

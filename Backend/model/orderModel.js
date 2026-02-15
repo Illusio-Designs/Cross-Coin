@@ -123,6 +123,16 @@ const Order = sequelize.define('Order', {
     tracking_url: {
         type: DataTypes.TEXT,
         allowNull: true
+    },
+    shipping_address_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'shipping_addresses',
+            key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
     }
 }, {
     tableName: 'orders',

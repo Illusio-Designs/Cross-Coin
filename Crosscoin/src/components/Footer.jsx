@@ -37,8 +37,9 @@ const Footer = () => {
             <SafeImage 
               imageData={{ image_url: "/assets/crosscoin_logo.webp" }}
               alt="logo" 
-              width="120px" 
-              height="40px" 
+              width={200} 
+              height={80}
+              quality={90}
               style={{ objectFit: 'contain' }}
               isLogo={true}
             />

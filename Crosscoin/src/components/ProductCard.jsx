@@ -22,7 +22,7 @@ export const filterOptions = {
   genders: ["Men", "Women", "Kids"],
 };
 
-const ProductCard = ({ product, onProductClick, onAddToCart }) => {
+const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
   const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
   const router = useRouter();
 
@@ -106,8 +106,10 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
         <SafeImage
           imageData={imageData}
           alt={product?.name || "Product Image"}
-          width="300px"
-          height="300px"
+          width={400}
+          height={400}
+          priority={index < 6}
+          quality={75}
           style={{ background: "#ffffff" }}
           isProductCard={true}
         />
