@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import Testimonials from "../components/Testimonials";
@@ -218,7 +218,7 @@ const Home = () => {
     fetchExclusiveProducts();
   }, []);
 
-  const fetchCategoryProducts = async (categoryName) => {
+  const fetchCategoryProducts = useCallback(async (categoryName) => {
     try {
       setCategoryLoading(true);
       const data = await getPublicCategoryByName(categoryName);
@@ -229,7 +229,7 @@ const Home = () => {
     } finally {
       setCategoryLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (slides.length > 0) {
@@ -245,8 +245,7 @@ const Home = () => {
     if (categories.length > 0 && categories[currentCategoryIndex]) {
       fetchCategoryProducts(categories[currentCategoryIndex].name);
     }
-    // Only run when categories are loaded and currentCategoryIndex changes
-  }, [currentCategoryIndex, categories.length]);
+  }, [currentCategoryIndex, categories, fetchCategoryProducts]);
 
   useEffect(() => {
     // Set your target date here (e.g., 7 days from now)

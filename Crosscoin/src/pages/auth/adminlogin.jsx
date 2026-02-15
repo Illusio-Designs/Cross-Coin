@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import { useAuth } from "../../context/AuthContext";
 import "../../styles/pages/auth/adminlogin.css";
 
@@ -89,7 +90,7 @@ export default function Login() {
           </button>
         </form>
         <div className="login-links">
-          <a href="/auth/forgot-password" className="login-link">Forgot Password?</a>
+          <Link href="/auth/forgot-password" className="login-link">Forgot Password?</Link>
         </div>
       </div>
     </div>

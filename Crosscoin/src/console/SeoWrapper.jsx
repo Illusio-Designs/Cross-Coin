@@ -46,7 +46,7 @@ const SeoWrapper = ({ pageName, children, seoData }) => {
         };
 
         fetchSeoData();
-    }, [pageName, seoData]);
+    }, [pageName, seoData, defaultSeoData]);
 
     // Use provided seoData, fetched seoData, or default
     const data = seoData || seoDataState || defaultSeoData;
