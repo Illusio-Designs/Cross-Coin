@@ -26,12 +26,12 @@ export default function Reviews() {
   });
 
   // Debounced search function
-  const debouncedSearch = useCallback(
-    debounce((searchTerm) => {
+  const debouncedSearch = useCallback((searchTerm) => {
+    const timeoutId = setTimeout(() => {
       setFilterValue(searchTerm);
-    }, 300),
-    []
-  );
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   // Handle search input change
   const handleSearchChange = (e) => {

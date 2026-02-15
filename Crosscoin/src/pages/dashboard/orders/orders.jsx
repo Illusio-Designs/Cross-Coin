@@ -463,7 +463,7 @@ const Orders = () => {
     useEffect(() => {
         fetchOrders(1);
         fetchAllOrdersForStats();
-    }, []);
+    }, [fetchOrders, fetchAllOrdersForStats]);
 
 
     // Reset to page 1 when filters change
@@ -471,22 +471,22 @@ const Orders = () => {
         setCurrentPage(1);
         fetchOrders(1);
         fetchAllOrdersForStats();
-    }, [filterValue, paymentTypeFilter, paymentStatusFilter, statusFilter, sortBy, sortOrder, itemsPerPage]);
+    }, [filterValue, paymentTypeFilter, paymentStatusFilter, statusFilter, sortBy, sortOrder, itemsPerPage, fetchOrders, fetchAllOrdersForStats]);
 
     // Load orders when page changes
     useEffect(() => {
         if (currentPage > 1) {
             fetchOrders(currentPage);
         }
-    }, [currentPage]);
+    }, [currentPage, fetchOrders]);
 
-    const debouncedSearch = useCallback(
-        debounce((searchTerm) => {
-            setCurrentPage(1); // Reset to first page when searching
-            fetchOrders(1); // Trigger fetch with new search term
-        }, 500),
-        [itemsPerPage, statusFilter, paymentTypeFilter, paymentStatusFilter, sortBy, sortOrder]
-    );
+    const debouncedSearch = useCallback((searchTerm) => {
+        const timeoutId = setTimeout(() => {
+            setCurrentPage(1);
+            fetchOrders(1);
+        }, 500);
+        return () => clearTimeout(timeoutId);
+    }, [fetchOrders]);
     
     const handleSearchChange = (e) => {
         const value = e.target.value;

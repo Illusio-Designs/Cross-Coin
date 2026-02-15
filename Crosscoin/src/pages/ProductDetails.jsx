@@ -226,7 +226,7 @@ export default function ProductDetails() {
     };
     
     fetchAllReviews();
-  }, [product?.id]);
+  }, [product?.id, product?.reviews]);
 
   // Get all unique color names from variations
   const colorOptions = product?.variations
@@ -245,26 +245,30 @@ export default function ProductDetails() {
     : null;
 
   // Get all unique types from variations
-  const typeOptions = product?.variations
-    ? Array.from(new Set(product.variations.flatMap(v => {
-        const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
-        return attrs && attrs.type ? attrs.type : [];
-      })))
-    : [];
+  const typeOptions = useMemo(() => 
+    product?.variations
+      ? Array.from(new Set(product.variations.flatMap(v => {
+          const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+          return attrs && attrs.type ? attrs.type : [];
+        })))
+      : []
+  , [product?.variations]);
 
   // Get all colors for the selected type
-  const colorsForSelectedType = product?.variations
-    ? Array.from(new Set(product.variations
-        .filter(v => {
-          const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
-          return attrs && attrs.type && attrs.type.includes(selectedType || typeOptions[0]);
+  const colorsForSelectedType = useMemo(() => 
+    product?.variations
+      ? Array.from(new Set(product.variations
+          .filter(v => {
+            const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+            return attrs && attrs.type && attrs.type.includes(selectedType || typeOptions[0]);
         })
         .flatMap(v => {
           const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
           return attrs && attrs.color ? attrs.color : [];
         })
       ))
-    : [];
+    : []
+  , [product?.variations, selectedType, typeOptions]);
 
   // Find the variation for the selected type and color
   const selectedTypeColorVariation = product?.variations

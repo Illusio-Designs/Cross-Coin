@@ -174,7 +174,7 @@ export default function CartStep({ selectedPaymentMode: propPaymentMode, onPayme
     if (propPaymentMode && propPaymentMode !== selectedPaymentMode) {
       setSelectedPaymentMode(propPaymentMode);
     }
-  }, [propPaymentMode]);
+  }, [propPaymentMode, selectedPaymentMode]);
 
   // Remove coupon if payment mode changes and coupon is not compatible
   useEffect(() => {

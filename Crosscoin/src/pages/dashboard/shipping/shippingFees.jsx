@@ -25,12 +25,12 @@ export default function ShippingFees() {
     fee: ""
   });
 
-  const debouncedSearch = useCallback(
-    debounce((searchTerm) => {
+  const debouncedSearch = useCallback((searchTerm) => {
+    const timeoutId = setTimeout(() => {
       setFilterValue(searchTerm);
-    }, 300),
-    []
-  );
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   const handleSearchChange = (e) => {
     const value = e.target.value;

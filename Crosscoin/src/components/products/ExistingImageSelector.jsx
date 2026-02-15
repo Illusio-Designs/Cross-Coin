@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Modal from '@/components/common/Modal';
 import { productService } from '@/services';
 
@@ -13,9 +13,9 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
     if (isOpen) {
       fetchExistingImages();
     }
-  }, [isOpen, imageSource]);
+  }, [isOpen, imageSource, fetchExistingImages]);
 
-  const fetchExistingImages = async () => {
+  const fetchExistingImages = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -77,7 +77,7 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
     } finally {
       setLoading(false);
     }
-  };
+  }, [imageSource, productId]);
 
   const toggleImageSelection = (imagePath) => {
     setSelectedImages(prev => {

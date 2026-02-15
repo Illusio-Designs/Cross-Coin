@@ -50,7 +50,7 @@ export default function UnifiedCheckout() {
         handleCouponRemoved();
       }
     }
-  }, [shippingFee]);
+  }, [shippingFee, appliedCoupon, handleCouponRemoved]);
 
   // Address management state
   const [addresses, setAddresses] = useState([]);
@@ -117,7 +117,7 @@ export default function UnifiedCheckout() {
         sessionStorage.removeItem("paymentSuccess");
       }
     }
-  }, []);
+  }, [orderPlaced, router]);
 
   // Load addresses and shipping fees on mount
   useEffect(() => {
@@ -152,7 +152,7 @@ export default function UnifiedCheckout() {
     };
 
     loadInitialData();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, shippingFee]);
 
   const handleSelectAddress = (address) => {
     setShippingAddress(address);

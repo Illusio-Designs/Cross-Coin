@@ -37,12 +37,11 @@ const Header = () => {
   );
 
   // Debounced search function with useCallback optimization
-  const debouncedSearch = useCallback(
-    debounce(async (query) => {
-      if (!query.trim()) {
-        setSearchResults([]);
-        return;
-      }
+  const debouncedSearch = useCallback(async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
 
       try {
         setIsSearching(true);
@@ -62,9 +61,7 @@ const Header = () => {
       } finally {
         setIsSearching(false);
       }
-    }, 300),
-    [apiUrl]
-  );
+    }, [apiUrl]);
 
   // Handle search input change
   const handleSearchChange = (e) => {
