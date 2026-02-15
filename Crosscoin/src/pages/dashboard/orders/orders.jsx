@@ -461,7 +461,7 @@ const Orders = () => {
     useEffect(() => {
         fetchOrders(1);
         fetchAllOrdersForStats();
-    }, [fetchOrders, fetchAllOrdersForStats]);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
 
     // Reset to page 1 when filters change
@@ -469,7 +469,7 @@ const Orders = () => {
         setCurrentPage(1);
         fetchOrders(1);
         fetchAllOrdersForStats();
-    }, [filterValue, paymentTypeFilter, paymentStatusFilter, statusFilter, sortBy, sortOrder, itemsPerPage, fetchOrders, fetchAllOrdersForStats]);
+    }, [filterValue, paymentTypeFilter, paymentStatusFilter, statusFilter, sortBy, sortOrder, itemsPerPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Load orders when page changes
     useEffect(() => {
@@ -484,7 +484,7 @@ const Orders = () => {
             fetchOrders(1);
         }, 500);
         return () => clearTimeout(timeoutId);
-    }, [fetchOrders]);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
     
     const handleSearchChange = (e) => {
         const value = e.target.value;
