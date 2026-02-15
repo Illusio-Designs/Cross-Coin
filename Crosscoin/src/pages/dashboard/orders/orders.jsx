@@ -63,7 +63,7 @@ const Orders = () => {
     const [awbNumber, setAwbNumber] = useState('');
     const [courierName, setCourierName] = useState('');
 
-    const fetchOrders = async (page = currentPage) => {
+    const fetchOrders = useCallback(async (page = currentPage) => {
         setLoading(true);
         setError(null);
         try {
@@ -73,12 +73,11 @@ const Orders = () => {
                 status: statusFilter !== 'all' ? statusFilter : undefined,
                 payment_type: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
                 payment_status: paymentStatusFilter !== 'all' ? paymentStatusFilter : undefined,
-                search: filterValue || undefined, // Add search parameter
+                search: filterValue || undefined,
                 sort: sortBy,
                 order: sortOrder
             };
             
-            // Remove undefined values
             Object.keys(params).forEach(key => {
                 if (params[key] === undefined) {
                     delete params[key];
@@ -88,7 +87,6 @@ const Orders = () => {
             const data = await orderService.getAllOrders(params);
             
             setOrders(data.orders || data.data || []);
-            // Always calculate totalPages correctly on frontend to avoid backend errors
             const totalOrdersCount = data.total || 0;
             const calculatedTotalPages = Math.ceil(totalOrdersCount / itemsPerPage);
             setTotalPages(calculatedTotalPages);
@@ -98,10 +96,10 @@ const Orders = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [currentPage, itemsPerPage, statusFilter, paymentTypeFilter, paymentStatusFilter, filterValue, sortBy, sortOrder]);
 
     // Fetch all orders for stats calculation
-    const fetchAllOrdersForStats = async () => {
+    const fetchAllOrdersForStats = useCallback(async () => {
         try {
             const params = {
                 page: 1,
@@ -220,7 +218,7 @@ const Orders = () => {
         } catch (err) {
             console.error('Failed to fetch stats:', err);
         }
-    };
+    }, [statusFilter, paymentTypeFilter, paymentStatusFilter, filterValue]);
 
 
 

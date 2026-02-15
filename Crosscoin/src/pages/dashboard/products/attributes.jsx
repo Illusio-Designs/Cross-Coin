@@ -271,7 +271,7 @@ export default function Attributes() {
     return () => {
       document.head.removeChild(styleSheet);
     };
-  }, []);
+  }, [styles]);
 
   return (
     <div className="dashboard-page">

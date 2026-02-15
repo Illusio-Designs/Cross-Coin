@@ -40,12 +40,11 @@ export default function Reviews() {
   };
 
   // Fetch reviews data with backend pagination
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Update service call to include pagination params
       const params = {
         page: currentPage,
         limit: itemsPerPage,
@@ -71,7 +70,6 @@ export default function Reviews() {
         setTotalReviews(response.pagination?.total || mappedReviews.length);
         setTotalPages(response.pagination?.totalPages || Math.ceil(mappedReviews.length / itemsPerPage));
       } else {
-        // Fallback for old API format
         const mappedReviews = response.map(review => ({
           id: review.id,
           customerName: review.customerName || 'Guest',
@@ -93,11 +91,11 @@ export default function Reviews() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, itemsPerPage]);
 
   useEffect(() => {
     fetchReviews();
-  }, [currentPage, itemsPerPage]);
+  }, [currentPage, itemsPerPage, fetchReviews]);
 
   // Enhanced filter function - now just for display, backend handles actual filtering
   const filteredData = reviews.filter(item => {

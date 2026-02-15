@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { useRouter } from 'next/router';
 import { getSeoByPageName } from '../services/publicindex';
@@ -10,13 +10,13 @@ const SeoWrapper = ({ pageName, children, seoData }) => {
     const [isLoading, setIsLoading] = useState(false);
     const hasFetchedRef = useRef(false);
 
-    const defaultSeoData = {
+    const defaultSeoData = useMemo(() => ({
         meta_title: 'Cross-Coin - Your Trusted Shopping Partner',
         meta_description: 'Discover amazing products at Cross-Coin, your one-stop shop for all your needs.',
         meta_keywords: 'cross-coin, shopping, online store, products',
         canonical_url: typeof window !== 'undefined' ? window.location.href : '',
         meta_image: null,
-    };
+    }), []);
 
     // Fetch SEO data automatically if not provided
     useEffect(() => {
