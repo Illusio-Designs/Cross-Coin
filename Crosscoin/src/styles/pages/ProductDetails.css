@@ -41,6 +41,8 @@
   margin: 0 auto;
   position: relative;
   display: block;
+  min-height: 400px;
+  height: auto;
 }
 
 .thumbnail-images {
@@ -2268,6 +2270,8 @@
     width: 100%;
     max-width: 100%;
     overflow: hidden;
+    min-height: 350px;
+    height: auto;
   }
   
   .main-product-image,
@@ -2478,6 +2482,8 @@
     box-sizing: border-box !important;
     overflow: visible !important;
     margin: 0 auto !important;
+    min-height: 350px !important;
+    height: auto !important;
   }
   
   /* Fix the main product image to display fully without cropping */

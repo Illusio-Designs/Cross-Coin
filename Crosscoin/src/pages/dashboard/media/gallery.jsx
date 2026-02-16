@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { productService } from '@/services';
 import Loader from '@/components/Loader';
+import Pagination from '@/components/common/Pagination';
 import '../../../styles/dashboard/media.css';
 
 const MediaGallery = () => {
@@ -12,61 +13,18 @@ const MediaGallery = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('name'); // 'name', 'date', 'size'
   const [uploading, setUploading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [imagesPerPage] = useState(24); // Show 24 images per page
 
   useEffect(() => {
     fetchImages();
-    
-    // Add test functions to window for debugging
-    window.testMediaGalleryImage = async (imagePath) => {
-      console.log('Testing media gallery image:', imagePath);
-      const url = getImageUrl(imagePath);
-      console.log('Constructed URL:', url);
-      
-      const info = await getImageInfo(imagePath);
-      console.log('Image info:', info);
-      
-      return { url, info };
-    };
-    
-    window.checkAllMediaImages = async () => {
-      console.log('Checking all media gallery images...');
-      const results = [];
-      
-      for (let i = 0; i < Math.min(images.length, 10); i++) {
-        const imagePath = images[i];
-        const result = await window.testMediaGalleryImage(imagePath);
-        results.push({ imagePath, ...result });
-      }
-      
-      console.log('Media gallery image check results:', results);
-      return results;
-    };
-  }, [images]);
+  }, []); // Only fetch once on mount
 
   const fetchImages = async () => {
     setLoading(true);
     setError(null);
     try {
-      console.log('=== MEDIA GALLERY FETCH DEBUG ===');
-      console.log('Fetching images from API...');
-      
       const data = await productService.getExistingImages('products');
-      
-      console.log('API Response:', data);
-      console.log('Images received:', data.images?.length || 0);
-      
-      if (data.images && data.images.length > 0) {
-        console.log('Sample image paths:', data.images.slice(0, 5));
-        data.images.forEach((imagePath, index) => {
-          if (index < 5) { // Log first 5 images
-            console.log(`Image ${index}:`, imagePath);
-            console.log(`Constructed URL ${index}:`, getImageUrl(imagePath));
-          }
-        });
-      }
-      
-      console.log('=== END MEDIA GALLERY FETCH DEBUG ===');
-      
       setImages(data.images || []);
     } catch (err) {
       console.error('Media Gallery fetch error:', err);
@@ -78,68 +36,31 @@ const MediaGallery = () => {
 
   const getImageUrl = (imagePath) => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-    console.log('Media Gallery - constructing URL for:', imagePath);
     
     if (!imagePath || typeof imagePath !== 'string') {
-      console.warn('Media Gallery - Invalid image path:', imagePath);
       return null;
     }
     
-    let finalUrl;
     if (imagePath.startsWith('http')) {
-      finalUrl = imagePath;
+      return imagePath;
     } else if (imagePath.startsWith('/uploads/')) {
-      finalUrl = `${baseUrl}${imagePath}`;
+      return `${baseUrl}${imagePath}`;
     } else {
-      // Remove any leading slash and ensure proper path construction
       const cleanPath = imagePath.replace(/^\/+/, '');
-      finalUrl = `${baseUrl}/uploads/products/${cleanPath}`;
+      return `${baseUrl}/uploads/products/${cleanPath}`;
     }
-    
-    console.log('Media Gallery - final URL:', finalUrl);
-    return finalUrl;
   };
 
   const getImageName = (imagePath) => {
     return imagePath.split('/').pop();
   };
 
-  // Function to check if image URL is valid
   const isValidImageUrl = (imagePath) => {
     if (!imagePath || typeof imagePath !== 'string') return false;
     if (imagePath.length < 5) return false;
     
-    // Check for image extensions
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
-    const hasValidExtension = imageExtensions.some(ext => 
-      imagePath.toLowerCase().includes(ext)
-    );
-    
-    return hasValidExtension;
-  };
-
-  // Function to get image size info (for debugging)
-  const getImageInfo = async (imagePath) => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        resolve({
-          width: img.naturalWidth,
-          height: img.naturalHeight,
-          size: `${img.naturalWidth}x${img.naturalHeight}`,
-          loaded: true
-        });
-      };
-      img.onerror = () => {
-        resolve({
-          width: 0,
-          height: 0,
-          size: 'Failed to load',
-          loaded: false
-        });
-      };
-      img.src = getImageUrl(imagePath);
-    });
+    return imageExtensions.some(ext => imagePath.toLowerCase().includes(ext));
   };
 
   const toggleImageSelection = (imagePath) => {
@@ -153,10 +74,21 @@ const MediaGallery = () => {
   };
 
   const selectAllImages = () => {
-    if (selectedImages.length === filteredImages.length) {
+    if (selectedImages.length === paginatedImages.length) {
       setSelectedImages([]);
     } else {
-      setSelectedImages(filteredImages.map(img => img));
+      setSelectedImages(paginatedImages.map(img => img));
+    }
+  };
+
+  const selectAllOnPage = () => {
+    const pageImagePaths = paginatedImages.map(img => img);
+    const allSelected = pageImagePaths.every(path => selectedImages.includes(path));
+    
+    if (allSelected) {
+      setSelectedImages(prev => prev.filter(path => !pageImagePaths.includes(path)));
+    } else {
+      setSelectedImages(prev => [...new Set([...prev, ...pageImagePaths])]);
     }
   };
 
@@ -261,45 +193,31 @@ const MediaGallery = () => {
   // Filter and sort images
   const filteredImages = images
     .filter(imagePath => {
-      // First check if it's a valid image path
-      if (!isValidImageUrl(imagePath)) {
-        console.warn('Media Gallery - Filtering out invalid image path:', imagePath);
-        return false;
-      }
-      
-      // Then check search term
+      if (!isValidImageUrl(imagePath)) return false;
       const imageName = getImageName(imagePath).toLowerCase();
-      const matchesSearch = imageName.includes(searchTerm.toLowerCase());
-      
-      if (!matchesSearch) {
-        console.log('Media Gallery - Filtering out due to search:', imagePath);
-      }
-      
-      return matchesSearch;
+      return imageName.includes(searchTerm.toLowerCase());
     })
     .sort((a, b) => {
       const nameA = getImageName(a).toLowerCase();
       const nameB = getImageName(b).toLowerCase();
-      
-      switch (sortBy) {
-        case 'name':
-          return nameA.localeCompare(nameB);
-        case 'date':
-          // For now, sort by name as we don't have date info
-          return nameA.localeCompare(nameB);
-        case 'size':
-          // For now, sort by name as we don't have size info
-          return nameA.localeCompare(nameB);
-        default:
-          return 0;
-      }
+      return nameA.localeCompare(nameB);
     });
 
-  console.log('Media Gallery - Filtered images:', {
-    total: images.length,
-    filtered: filteredImages.length,
-    searchTerm: searchTerm
-  });
+  // Pagination logic
+  const totalPages = Math.ceil(filteredImages.length / imagesPerPage);
+  const startIndex = (currentPage - 1) * imagesPerPage;
+  const endIndex = startIndex + imagesPerPage;
+  const paginatedImages = filteredImages.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, sortBy]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   if (loading) {
     return (
@@ -435,14 +353,16 @@ const MediaGallery = () => {
       {/* Selection Controls */}
       {filteredImages.length > 0 && (
         <div className="selection-controls" style={{
-          padding: '15px 0',
-          borderBottom: '1px solid #eee',
-          marginBottom: '20px'
+          padding: '15px 20px',
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          marginBottom: '20px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <button
-                onClick={selectAllImages}
+                onClick={selectAllOnPage}
                 style={{
                   padding: '6px 12px',
                   border: '1px solid #ddd',
@@ -452,7 +372,7 @@ const MediaGallery = () => {
                   marginRight: '10px'
                 }}
               >
-                {selectedImages.length === filteredImages.length ? 'Deselect All' : 'Select All'}
+                {paginatedImages.every(path => selectedImages.includes(path)) ? 'Deselect Page' : 'Select Page'}
               </button>
               
               {selectedImages.length > 0 && (
@@ -472,8 +392,9 @@ const MediaGallery = () => {
               )}
             </div>
             
-            <div style={{ color: '#666' }}>
-              {selectedImages.length} of {filteredImages.length} selected
+            <div style={{ color: '#666', fontSize: '14px' }}>
+              Showing {startIndex + 1}-{Math.min(endIndex, filteredImages.length)} of {filteredImages.length} images
+              {selectedImages.length > 0 && ` • ${selectedImages.length} selected`}
             </div>
           </div>
         </div>
@@ -484,20 +405,23 @@ const MediaGallery = () => {
         <div className="no-images" style={{
           textAlign: 'center',
           padding: '60px 20px',
-          color: '#666'
+          color: '#666',
+          backgroundColor: 'white',
+          borderRadius: '8px'
         }}>
           <h3>No images found</h3>
           <p>No images found in the uploads/products folder.</p>
         </div>
       ) : (
-        <div className={`media-gallery-content ${viewMode}`}>
-          {viewMode === 'grid' ? (
-            <div className="media-grid" style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: '20px'
-            }}>
-              {filteredImages.map((imagePath, index) => (
+        <>
+          <div className={`media-gallery-content ${viewMode}`}>
+            {viewMode === 'grid' ? (
+              <div className="media-grid" style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                gap: '20px'
+              }}>
+                {paginatedImages.map((imagePath, index) => (
                 <div
                   key={index}
                   className={`media-item ${selectedImages.includes(imagePath) ? 'selected' : ''}`}
@@ -562,16 +486,9 @@ const MediaGallery = () => {
                             zIndex: 2
                           }}
                           onError={(e) => {
-                            console.error('Media Gallery - Failed to load image:', imageUrl);
-                            console.error('Original image path:', imagePath);
-                            
-                            // Hide the loading text
                             const loadingDiv = e.target.previousElementSibling;
-                            if (loadingDiv) {
-                              loadingDiv.style.display = 'none';
-                            }
+                            if (loadingDiv) loadingDiv.style.display = 'none';
                             
-                            // Replace with error placeholder
                             e.target.style.display = 'none';
                             const errorDiv = document.createElement('div');
                             errorDiv.style.cssText = `
@@ -595,13 +512,8 @@ const MediaGallery = () => {
                             e.target.parentNode.appendChild(errorDiv);
                           }}
                           onLoad={(e) => {
-                            console.log('Media Gallery - Successfully loaded image:', imageUrl);
-                            
-                            // Hide the loading text
                             const loadingDiv = e.target.previousElementSibling;
-                            if (loadingDiv) {
-                              loadingDiv.style.display = 'none';
-                            }
+                            if (loadingDiv) loadingDiv.style.display = 'none';
                           }}
                         />
                       );
@@ -667,7 +579,7 @@ const MediaGallery = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredImages.map((imagePath, index) => (
+                  {paginatedImages.map((imagePath, index) => (
                     <tr key={index} style={{ borderBottom: '1px solid #ddd' }}>
                       <td style={{ padding: '12px', border: '1px solid #ddd' }}>
                         <input
@@ -709,10 +621,6 @@ const MediaGallery = () => {
                                 backgroundColor: '#f5f5f5'
                               }}
                               onError={(e) => {
-                                console.error('Media Gallery List - Failed to load image:', imageUrl);
-                                console.error('Original image path:', imagePath);
-                                
-                                // Replace with error placeholder
                                 e.target.style.display = 'none';
                                 const errorDiv = document.createElement('div');
                                 errorDiv.style.cssText = `
@@ -728,9 +636,6 @@ const MediaGallery = () => {
                                 `;
                                 errorDiv.textContent = 'Not found';
                                 e.target.parentNode.appendChild(errorDiv);
-                              }}
-                              onLoad={() => {
-                                console.log('Media Gallery List - Successfully loaded image:', imageUrl);
                               }}
                             />
                           );
@@ -782,7 +687,19 @@ const MediaGallery = () => {
               </table>
             </div>
           )}
-        </div>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'center' }}>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
+            </div>
+          )}
+        </>
       )}
 
       {/* Stats */}
