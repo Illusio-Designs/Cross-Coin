@@ -430,7 +430,7 @@
 
 /* Newsletter */
 .newsletter {
-  padding: var(--spacing-4xl) 0;
+  padding: var(--spacing-2xl) 0;
   background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-secondary-light) 100%);
   text-align: center;
   position: relative;
@@ -468,7 +468,7 @@
 
 .newsletterContent h2 {
   font-family: var(--font-heading);
-  font-size: var(--font-size-4xl);
+  font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
   color: var(--text-inverse);
   margin-bottom: var(--spacing-sm);
@@ -476,7 +476,7 @@
 }
 
 .newsletterContent p {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-base);
   color: rgba(255, 255, 255, 0.9);
   margin-bottom: 0;
   font-weight: var(--font-weight-medium);
