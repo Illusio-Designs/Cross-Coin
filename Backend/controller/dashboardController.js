@@ -97,6 +97,7 @@ const getDashboardStats = async (req, res) => {
           cancelledRevenue += orderTotal;
           break;
         case 'rto':
+        case 'rto delivered':
           rtoRevenue += orderTotal;
           totalRevenue += orderTotal; // Include RTO in total as it was attempted
           break;
@@ -391,6 +392,57 @@ const getDashboardStats = async (req, res) => {
       }
     };
 
+    // 5a. PAYMENT STATUS DISTRIBUTION (All statuses from Order model)
+    const paymentStatusCounts = {
+      pending: 0,
+      paid: 0,
+      failed: 0,
+      refunded: 0,
+      cancelled: 0,
+      refund_pending: 0
+    };
+
+    allOrders.forEach(order => {
+      const paymentStatus = order.payment_status?.toLowerCase();
+      if (paymentStatusCounts.hasOwnProperty(paymentStatus)) {
+        paymentStatusCounts[paymentStatus]++;
+      }
+    });
+
+    // Format payment status for chart
+    const paymentStatusChart = [
+      {
+        label: 'Paid',
+        value: paymentStatusCounts['paid'],
+        color: '#10b981'
+      },
+      {
+        label: 'Pending',
+        value: paymentStatusCounts['pending'],
+        color: '#f59e0b'
+      },
+      {
+        label: 'Failed',
+        value: paymentStatusCounts['failed'],
+        color: '#ef4444'
+      },
+      {
+        label: 'Refunded',
+        value: paymentStatusCounts['refunded'],
+        color: '#8b5cf6'
+      },
+      {
+        label: 'Refund Pending',
+        value: paymentStatusCounts['refund_pending'],
+        color: '#a78bfa'
+      },
+      {
+        label: 'Cancelled',
+        value: paymentStatusCounts['cancelled'],
+        color: '#6b7280'
+      }
+    ].filter(item => item.value > 0);
+
     // Format for chart
     const paymentChart = [
       {
@@ -410,11 +462,14 @@ const getDashboardStats = async (req, res) => {
     ].filter(item => item.value > 0);
 
     // 6. RTO STATISTICS
-    const rtoOrders = allOrders.filter(o => o.status?.toLowerCase() === 'rto');
+    const rtoOrders = allOrders.filter(o => {
+      const status = o.status?.toLowerCase();
+      return status === 'rto' || status === 'rto delivered';
+    });
     const rtoStats = {
-      totalRTO: statusCounts['rto'] || 0,
+      totalRTO: statusCounts['rto'] + (statusCounts['rto delivered'] || 0),
       rtoRevenue: parseFloat(rtoRevenue.toFixed(2)),
-      rtoRate: totalOrders > 0 ? parseFloat(((statusCounts['rto'] / totalOrders) * 100).toFixed(2)) : 0,
+      rtoRate: totalOrders > 0 ? parseFloat((((statusCounts['rto'] + (statusCounts['rto delivered'] || 0)) / totalOrders) * 100).toFixed(2)) : 0,
       rtoPercentageOfRevenue: allOrdersRevenue > 0 ? parseFloat(((rtoRevenue / allOrdersRevenue) * 100).toFixed(2)) : 0,
       averageRTOValue: rtoOrders.length > 0 ? parseFloat((rtoRevenue / rtoOrders.length).toFixed(2)) : 0
     };
@@ -509,6 +564,10 @@ const getDashboardStats = async (req, res) => {
           cod: paymentDistribution.cod,
           prepaid: paymentDistribution.prepaid,
           chart: paymentChart
+        },
+        paymentStatusDistribution: {
+          counts: paymentStatusCounts,
+          chart: paymentStatusChart
         },
         rtoStats: rtoStats
       },

@@ -55,7 +55,7 @@ const TableWithControls = ({
     setFilteredData(result);
     // Reset to first page when filters change
     setCurrentPage(1);
-  }, [data, searchTerm, selectedFilters]);
+  }, [data, searchTerm, selectedFilters, searchFields]);
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);

@@ -243,7 +243,7 @@ const QuantityOfferBar = ({ selectedPaymentMode = 'cod', appliedCoupon, onCoupon
     };
 
     fetchAndProcessOffers();
-  }, [cartItems, cartTotal, selectedPaymentMode, appliedCoupon, onCouponApply]);
+  }, [cartItems, cartTotal, selectedPaymentMode, appliedCoupon, autoAppliedCoupons, onCouponApply]);
 
   // No offers or no cart
   if (!offerData || offerData.type === 'no_offers') {

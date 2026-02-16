@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function ForgotPassword() {
   return (
     <div className="login-bg">
@@ -11,7 +13,7 @@ export default function ForgotPassword() {
         />
         <button className="login-btn">Send Reset Link</button>
         <div className="login-back-link">
-          <a href="/auth/adminlogin" className="login-link">Back to Login</a>
+          <Link href="/auth/adminlogin" className="login-link">Back to Login</Link>
         </div>
       </div>
     </div>

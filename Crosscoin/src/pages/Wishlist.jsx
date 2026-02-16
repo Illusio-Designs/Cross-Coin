@@ -151,8 +151,9 @@ const Wishlist = () => {
                     <SafeImage
                       imageData={{ image_url: imageUrl }}
                       alt={item.name}
-                      width="300px"
-                      height="250px"
+                      width={400}
+                      height={400}
+                      quality={75}
                       style={{ objectFit: 'cover' }}
                       isProductCard={true}
                     />

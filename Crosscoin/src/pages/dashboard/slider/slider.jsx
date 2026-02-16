@@ -56,12 +56,12 @@ export default function Slider() {
   }, []);
 
   // Debounced search function
-  const debouncedSearch = useCallback(
-    debounce((searchTerm) => {
+  const debouncedSearch = useCallback((searchTerm) => {
+    const timeoutId = setTimeout(() => {
       setFilterValue(searchTerm);
-    }, 300),
-    []
-  );
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   // Handle search input change
   const handleSearchChange = (e) => {
@@ -135,8 +135,8 @@ export default function Slider() {
     console.log('Processing image path:', imagePath);
     
     // If the image path contains localhost, replace it with the production URL
-    if (imagePath.includes('localhost:5000')) {
-      const productionUrl = imagePath.replace('http://localhost:5000', 'https://api.crosscoin.in');
+    if (imagePath.includes('localhost:5000') || imagePath.includes('localhost')) {
+      const productionUrl = imagePath.replace(/http:\/\/localhost(:\d+)?/, 'https://api.crosscoin.in');
       return productionUrl;
     }
     

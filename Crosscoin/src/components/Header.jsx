@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { FiUser, FiHeart, FiSearch, FiMenu, FiX } from "react-icons/fi";
 import { BsCart } from "react-icons/bs";
 import SafeImage from "./common/SafeImage";
@@ -23,7 +23,6 @@ const Header = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {
     setActivePage(router.pathname);
@@ -33,17 +32,16 @@ const Header = () => {
 
   // Memoized API URL to prevent unnecessary re-renders
   const apiUrl = useMemo(
-    () => process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000",
+    () => process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in",
     []
   );
 
   // Debounced search function with useCallback optimization
-  const debouncedSearch = useCallback(
-    debounce(async (query) => {
-      if (!query.trim()) {
-        setSearchResults([]);
-        return;
-      }
+  const debouncedSearch = useCallback(async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
 
       try {
         setIsSearching(true);
@@ -63,9 +61,7 @@ const Header = () => {
       } finally {
         setIsSearching(false);
       }
-    }, 300),
-    [apiUrl]
-  );
+    }, [apiUrl]);
 
   // Handle search input change
   const handleSearchChange = (e) => {
@@ -114,26 +110,28 @@ const Header = () => {
     };
   }, [isMobileMenuOpen]);
 
-  // Optimized scroll handler with throttling
+  // Optimized scroll handler with throttling using useRef to avoid re-renders
+  const lastScrollYRef = useRef(0);
+  
   const handleScroll = useCallback(() => {
     const scrollPosition = window.scrollY;
     setIsSticky(scrollPosition > 100);
     
     // Hide header on scroll down, show on scroll up (mobile only)
     if (window.innerWidth <= 768) {
-      if (scrollPosition > lastScrollY && scrollPosition > 100) {
+      if (scrollPosition > lastScrollYRef.current && scrollPosition > 100) {
         // Scrolling down
         setIsHeaderVisible(false);
       } else {
         // Scrolling up
         setIsHeaderVisible(true);
       }
-      setLastScrollY(scrollPosition);
+      lastScrollYRef.current = scrollPosition;
     } else {
       // Always show header on desktop
       setIsHeaderVisible(true);
     }
-  }, [lastScrollY]);
+  }, []);
 
   useEffect(() => {
     let ticking = false;
@@ -163,8 +161,10 @@ const Header = () => {
             <SafeImage
               imageData={{ image_url: "/assets/crosscoin_logo.webp" }}
               alt="logo"
-              width="120px"
-              height="40px"
+              width={120}
+              height={48}
+              priority={true}
+              quality={90}
               style={{ objectFit: 'contain' }}
               isLogo={true}
             />

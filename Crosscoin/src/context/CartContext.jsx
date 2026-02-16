@@ -373,11 +373,13 @@ function CartProvider({ children }) {
     await addToCart(product, selectedColor, selectedSize, quantity, variationId, variationImages);
   };
 
-  const cartTotal = cartItems.reduce((total, item) => {
-    // Use variation price if available, otherwise fallback to item price
-    const price = item.variation?.price || item.price || 0;
-    return total + (parseFloat(price) || 0) * (item.quantity || 1);
-  }, 0);
+  const cartTotal = React.useMemo(() => {
+    return cartItems.reduce((total, item) => {
+      // Use variation price if available, otherwise fallback to item price
+      const price = item.variation?.price || item.price || 0;
+      return total + (parseFloat(price) || 0) * (item.quantity || 1);
+    }, 0);
+  }, [cartItems]);
 
   return (
     <CartContext.Provider value={{
