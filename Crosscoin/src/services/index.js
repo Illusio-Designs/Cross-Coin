@@ -455,12 +455,12 @@ export const orderService = {
         }
       );
 
-      // Create download link for ZIP file
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      // Create download link for merged PDF file
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
       const link = document.createElement('a');
       link.href = url;
       const timestamp = new Date().toISOString().split('T')[0];
-      link.setAttribute('download', `shipping_labels_${timestamp}.zip`);
+      link.setAttribute('download', `shipping_labels_${timestamp}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);

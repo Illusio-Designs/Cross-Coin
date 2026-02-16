@@ -9,7 +9,7 @@ const { Payment } = require("../model/paymentModel.js");
 const { User } = require("../model/userModel.js");
 const { GuestUser } = require("../model/guestUserModel.js");
 const { ProductImage } = require("../model/productImageModel.js");
-const { FShipLabelDownload } = require("../model/fshipLabelDownloadModel.js");
+const FShipLabelDownload = require("../model/fshipLabelDownloadModel.js");
 const { Op } = require("sequelize");
 const { sequelize } = require("../config/db.js");
 const XLSX = require('xlsx');
@@ -4395,6 +4395,9 @@ module.exports.bulkDownloadLabels = async (req, res) => {
     // Import pdf-lib for merging PDFs
     const { PDFDocument } = require('pdf-lib');
     
+    console.log('=== Starting PDF merge process ===');
+    console.log(`Merging ${orders.length} labels`);
+    
     // Create a new merged PDF document
     const mergedPdf = await PDFDocument.create();
 
@@ -4436,6 +4439,9 @@ module.exports.bulkDownloadLabels = async (req, res) => {
 
     // Save the merged PDF
     const mergedPdfBytes = await mergedPdf.save();
+    
+    console.log('=== PDF merge completed ===');
+    console.log(`Merged PDF size: ${mergedPdfBytes.length} bytes`);
     
     // Send the merged PDF as response
     res.setHeader('Content-Type', 'application/pdf');
@@ -4532,7 +4538,7 @@ module.exports.getLabelDownloadStats = async (req, res) => {
         { 
           model: User, 
           as: 'DownloadedBy',
-          attributes: ['id', 'name', 'email'] 
+          attributes: ['id', 'username', 'email'] 
         }
       ]
     });
