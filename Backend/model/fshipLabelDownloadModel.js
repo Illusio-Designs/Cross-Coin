@@ -47,4 +47,4 @@ const FShipLabelDownload = sequelize.define('FShipLabelDownload', {
   ]
 });
 
-module.exports = { FShipLabelDownload };
+module.exports = FShipLabelDownload;

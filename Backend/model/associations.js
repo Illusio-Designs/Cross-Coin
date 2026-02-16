@@ -23,7 +23,7 @@ const { ReviewImage } = require("./reviewImageModel.js");
 const { SeoMetadata } = require("./seoMetadataModel.js");
 const { CouponUsage } = require("./couponUsageModel.js");
 const { GuestUser } = require("./guestUserModel.js");
-const { FShipLabelDownload } = require("./fshipLabelDownloadModel.js");
+const FShipLabelDownload = require("./fshipLabelDownloadModel.js");
 
 // Export all models
 module.exports = {
