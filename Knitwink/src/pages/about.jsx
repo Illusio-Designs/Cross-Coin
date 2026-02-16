@@ -82,7 +82,7 @@ export default function About() {
                   </svg>
                 </div>
                 <h3>Sustainable</h3>
-                <p>Eco-friendly practices in every step of production. We care about our planet's future.</p>
+                <p>Eco-friendly practices in every step of production. We care about our planet&apos;s future.</p>
               </div>
               <div className="valueCard">
                 <div className="valueIcon">
