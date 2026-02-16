@@ -2234,12 +2234,24 @@
     margin-bottom: 1rem;
   }
   
+  /* Create rounded container for image */
+  .product-gallery > div {
+    background: #f8f9fa;
+    border-radius: 16px;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  
   .main-image {
     width: 100%;
     height: auto;
     max-height: 400px;
     object-fit: contain !important; /* Prevent cropping on mobile */
-    background: #f8f9fa; /* Light background to show full image */
+    object-position: center;
+    background: white !important;
+    border-radius: 12px;
+    padding: 10px;
+    box-sizing: border-box;
   }
   
   .product-info {
@@ -2409,7 +2421,7 @@
 
 /* ========================================
    MOBILE PRODUCT PAGE FIX - February 2026
-   Fix title overlaying product image
+   Fix title overlaying product image & image cropping
    ======================================== */
 
 @media (max-width: 426px) {
@@ -2419,18 +2431,35 @@
     position: relative;
     z-index: 1;
     width: 100%;
-    padding: 0;
+    padding: 0 10px;
   }
   
-  /* Fix image container to prevent cropping */
-  .main-image {
+  /* Create a container with border radius for the image */
+  .product-gallery > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    background: #f8f9fa !important;
+    border-radius: 16px !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+  
+  /* Fix image to display fully without cropping */
+  .product-gallery img,
+  .product-gallery .main-image {
     width: 100% !important;
     height: auto !important;
     max-height: 400px !important;
     object-fit: contain !important;
-    background: #f8f9fa !important;
-    padding: 10px;
-    box-sizing: border-box;
+    object-position: center !important;
+    border-radius: 12px !important;
+    background: white !important;
+    padding: 10px !important;
+    box-sizing: border-box !important;
+    display: block !important;
+    margin: 0 auto !important;
   }
   
   .product-info {
@@ -2458,7 +2487,7 @@
     z-index: 2;
   }
   
-  /* Ensure thumbnails don't overlap */
+  /* Ensure thumbnails don't overlap and have border radius */
   .thumbnail-images {
     margin-top: 12px;
     margin-bottom: 20px;
@@ -2470,7 +2499,10 @@
   
   .thumbnail-images img {
     object-fit: contain !important;
-    background: #f8f9fa;
+    background: #f8f9fa !important;
+    border-radius: 8px !important;
+    padding: 5px !important;
+    box-sizing: border-box !important;
   }
   
   /* Add padding to prevent overlap */
@@ -2487,9 +2519,17 @@
   
   .product-gallery {
     margin-bottom: 15px !important;
+    padding: 0 5px !important;
   }
   
-  .main-image {
+  .product-gallery > div {
+    padding: 15px !important;
+    border-radius: 12px !important;
+  }
+  
+  .product-gallery img,
+  .product-gallery .main-image {
     max-height: 350px !important;
+    border-radius: 8px !important;
   }
 }
