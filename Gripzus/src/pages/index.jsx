@@ -218,7 +218,7 @@ export default function Home() {
                   <img src="https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=800&h=1000&fit=crop" alt="Men's Collection" />
                 </div>
                 <div className="categoryOverlay">
-                  <h3>Men's Collection</h3>
+                  <h3>Men&apos;s Collection</h3>
                   <span>Shop Now →</span>
                 </div>
               </a>
@@ -227,7 +227,7 @@ export default function Home() {
                   <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&h=1000&fit=crop" alt="Women's Collection" />
                 </div>
                 <div className="categoryOverlay">
-                  <h3>Women's Collection</h3>
+                  <h3>Women&apos;s Collection</h3>
                   <span>Shop Now →</span>
                 </div>
               </a>

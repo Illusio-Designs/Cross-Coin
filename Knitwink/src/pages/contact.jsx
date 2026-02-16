@@ -17,7 +17,7 @@ export default function Contact() {
         <section className="contactHero">
           <div className="container">
             <h1>Get In Touch</h1>
-            <p>We'd love to hear from you. Send us a message and we'll respond within 24 hours.</p>
+            <p>We&apos;d love to hear from you. Send us a message and we&apos;ll respond within 24 hours.</p>
           </div>
         </section>
 
@@ -29,7 +29,7 @@ export default function Contact() {
               <div className="contactInfo">
                 <h2>Contact Information</h2>
                 <p>
-                  Have a question or feedback? We're here to help. Reach out to us through 
+                  Have a question or feedback? We&apos;re here to help. Reach out to us through 
                   any of the channels below.
                 </p>
                 

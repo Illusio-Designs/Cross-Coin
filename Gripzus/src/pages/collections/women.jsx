@@ -42,7 +42,7 @@ export default function Women() {
   return (
     <>
       <Head>
-        <title>Women's Collection - Gripzus</title>
+        <title>Women&apos;s Collection - Gripzus</title>
         <meta name="description" content="Shop women's fashion at Gripzus" />
       </Head>
 
@@ -54,7 +54,7 @@ export default function Women() {
             <div className="sectionHeader">
               <div>
                 <span className="sectionSubtitle">For Her</span>
-                <h1 className="sectionTitle">Women's Collection</h1>
+                <h1 className="sectionTitle">Women&apos;s Collection</h1>
               </div>
             </div>
             <div className="productsGrid">
