@@ -80,10 +80,10 @@ export default function Home() {
                 Experience unparalleled comfort with our handcrafted premium socks collection
               </p>
               <div className="heroButtons">
-                <Link href="/shop" className="btn btn-primary btn-lg">
+                <Link href="/shop" className="btn btn-primary">
                   Shop Collection
                 </Link>
-                <Link href="/about" className="btn btn-outline btn-lg">
+                <Link href="/about" className="btn btn-outline">
                   Our Story
                 </Link>
               </div>

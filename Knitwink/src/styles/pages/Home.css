@@ -363,7 +363,7 @@
 
 /* Newsletter Section - Bold CTA */
 .newsletter {
-  padding: var(--spacing-3xl) 0;
+  padding: var(--spacing-2xl) 0;
   background: var(--color-dark);
   color: var(--color-white);
   text-align: center;
@@ -384,14 +384,14 @@
 }
 
 .newsletterContent h2 {
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: clamp(2rem, 4vw, 2.5rem);
   font-weight: var(--font-weight-black);
   margin-bottom: var(--spacing-sm);
   letter-spacing: -1px;
 }
 
 .newsletterContent p {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-base);
   margin-bottom: 0;
   opacity: 0.85;
 }
