@@ -49,6 +49,7 @@
     "nodemailer": "^6.10.0",
     "passport": "^0.6.0",
     "passport-google-oauth20": "^2.0.0",
+    "pdf-lib": "^1.17.1",
     "razorpay": "^2.9.6",
     "sequelize": "^6.31.0",
     "sharp": "^0.33.5",

@@ -2487,8 +2487,7 @@
   }
   
   /* Fix the main product image to display fully without cropping */
-  .main-product-image,
-  .product-gallery img {
+  .main-product-image {
     width: 100% !important;
     height: auto !important;
     max-height: none !important;
@@ -2532,22 +2531,29 @@
   }
   
   /* Ensure thumbnails don't overlap and have clean styling */
-  .thumbnail-images {
-    margin-top: 12px;
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    flex-wrap: wrap;
+  .thumbnail-gallery {
+    margin-top: 12px !important;
+    margin-bottom: 20px !important;
+    display: flex !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
   }
   
-  .thumbnail-images img {
-    object-fit: contain !important;
+  .thumbnail-wrapper {
+    width: 80px !important;
+    height: 80px !important;
+    flex-shrink: 0 !important;
+  }
+  
+  .thumbnail-image {
+    width: 80px !important;
+    height: 80px !important;
+    object-fit: cover !important;
     background: #ffffff !important;
     border-radius: 8px !important;
     padding: 5px !important;
     box-sizing: border-box !important;
-    border: 1px solid #e5e7eb !important;
   }
   
   /* Add padding to prevent overlap */
@@ -2572,8 +2578,7 @@
     border-radius: 0 !important;
   }
   
-  .main-product-image,
-  .product-gallery img {
+  .main-product-image {
     min-height: 250px !important;
     border-radius: 0 !important;
     padding: 0 !important;

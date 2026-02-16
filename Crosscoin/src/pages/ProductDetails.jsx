@@ -1193,10 +1193,10 @@ export default function ProductDetails() {
               </button>
             </div>
             {/* Thumbnails */}
-            <div style={{ display: 'flex', flexWrap: 'wrap' , justifyContent: 'center', gap: 16, marginTop: 16 }}>
+            <div className="thumbnail-gallery" style={{ display: 'flex', flexWrap: 'wrap' , justifyContent: 'center', gap: 16, marginTop: 16 }}>
               {variationImages.map((image, idx) => (
                 (image && (image.image_url || image.url || image)) ? (
-                  <div key={image.id || idx} style={{ position: 'relative', width: 80, height: 80 }}>
+                  <div key={image.id || idx} className="thumbnail-wrapper" style={{ position: 'relative', width: 80, height: 80 }}>
                     <SafeImage
                       imageData={{
                         image_url: image.image_url || image.url || image
@@ -1206,6 +1206,7 @@ export default function ProductDetails() {
                       height={80}
                       priority={idx < 4}
                       quality={70}
+                      className="thumbnail-image"
                       style={{
                         objectFit: "cover",
                         border:

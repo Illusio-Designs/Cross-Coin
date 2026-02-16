@@ -9,9 +9,11 @@ const { Payment } = require("../model/paymentModel.js");
 const { User } = require("../model/userModel.js");
 const { GuestUser } = require("../model/guestUserModel.js");
 const { ProductImage } = require("../model/productImageModel.js");
+const { FShipLabelDownload } = require("../model/fshipLabelDownloadModel.js");
 const { Op } = require("sequelize");
 const { sequelize } = require("../config/db.js");
 const XLSX = require('xlsx');
+const axios = require('axios');
 // Import FShip service for shipping integration
 const fshipService = require("../services/fshipService.js");
 const { setImmediate } = require("timers");
@@ -4257,10 +4259,6 @@ module.exports.exportDeliveredOrders = async (req, res) => {
 // FShip Label Management Functions
 // ============================================
 
-const { FShipLabelDownload } = require("../model/fshipLabelDownloadModel.js");
-const axios = require('axios');
-const archiver = require('archiver');
-
 // Mark label as downloaded
 module.exports.markLabelDownloaded = async (req, res) => {
   try {
@@ -4394,15 +4392,13 @@ module.exports.bulkDownloadLabels = async (req, res) => {
       });
     }
 
-    // Create zip archive
-    const archive = archiver('zip', { zlib: { level: 9 } });
+    // Import pdf-lib for merging PDFs
+    const { PDFDocument } = require('pdf-lib');
     
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename=labels-${Date.now()}.zip`);
-    
-    archive.pipe(res);
+    // Create a new merged PDF document
+    const mergedPdf = await PDFDocument.create();
 
-    // Download and add each label to zip
+    // Download and merge each label
     for (const order of orders) {
       try {
         const response = await axios.get(order.fship_label_url, {
@@ -4410,8 +4406,13 @@ module.exports.bulkDownloadLabels = async (req, res) => {
           timeout: 30000
         });
 
-        archive.append(Buffer.from(response.data), {
-          name: `label-${order.order_number}.pdf`
+        // Load the PDF
+        const pdfDoc = await PDFDocument.load(response.data);
+        
+        // Copy all pages from this PDF to the merged PDF
+        const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+        copiedPages.forEach((page) => {
+          mergedPdf.addPage(page);
         });
 
         // Mark as downloaded
@@ -4433,7 +4434,14 @@ module.exports.bulkDownloadLabels = async (req, res) => {
       }
     }
 
-    archive.finalize();
+    // Save the merged PDF
+    const mergedPdfBytes = await mergedPdf.save();
+    
+    // Send the merged PDF as response
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=merged-labels-${Date.now()}.pdf`);
+    res.send(Buffer.from(mergedPdfBytes));
+
   } catch (error) {
     console.error('Error bulk downloading labels:', error);
     res.status(500).json({
