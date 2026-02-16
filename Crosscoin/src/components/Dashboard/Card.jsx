@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../../styles/dashboard/Card.css';
-import { FaBox, FaShoppingCart, FaDollarSign, FaUsers, FaStar, FaClock, FaRupeeSign, FaExclamationTriangle, FaCreditCard, FaUndo } from "react-icons/fa";
+import { FaBox, FaShoppingCart, FaDollarSign, FaUsers, FaStar, FaClock, FaRupeeSign, FaExclamationTriangle, FaCreditCard, FaUndo, FaChartBar } from "react-icons/fa";
 import { dashboardService } from '../../services';
 import Loader from '../Loader';
 import DonutChart from '../common/DonutChart';
@@ -315,6 +315,114 @@ function CardGrid() {
               <div className="dashboard-card-description">Per RTO order</div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* UTM Tracking Overview */}
+      {stats.utmTracking && (stats.utmTracking.topSources?.length > 0 || stats.utmTracking.conversions?.length > 0) && (
+        <div className="dashboard-section">
+          <div className="dashboard-section-title">
+            <FaChartBar style={{marginRight: 8, color: '#3b82f6'}} />
+            Marketing Performance (Last 30 Days)
+          </div>
+          
+          {/* Top Traffic Sources */}
+          {stats.utmTracking.topSources && stats.utmTracking.topSources.length > 0 && (
+            <div className="dashboard-subsection">
+              <h3 className="dashboard-subsection-title">Top Traffic Sources</h3>
+              <div className="dashboard-table-container">
+                <table className="dashboard-table">
+                  <thead>
+                    <tr>
+                      <th>Source</th>
+                      <th>Medium</th>
+                      <th>Campaign</th>
+                      <th>Sessions</th>
+                      <th>Registered</th>
+                      <th>Guests</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.utmTracking.topSources.slice(0, 5).map((source, index) => (
+                      <tr key={index}>
+                        <td>
+                          <span className="utm-badge source">{source.source}</span>
+                        </td>
+                        <td>
+                          <span className="utm-badge medium">{source.medium}</span>
+                        </td>
+                        <td>
+                          <span className="utm-badge campaign">{source.campaign}</span>
+                        </td>
+                        <td>{source.sessions}</td>
+                        <td>{source.registeredUsers}</td>
+                        <td>{source.guestUsers}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Conversion Performance */}
+          {stats.utmTracking.conversions && stats.utmTracking.conversions.length > 0 && (
+            <div className="dashboard-subsection">
+              <h3 className="dashboard-subsection-title">Conversion Performance</h3>
+              <div className="dashboard-table-container">
+                <table className="dashboard-table">
+                  <thead>
+                    <tr>
+                      <th>Source</th>
+                      <th>Medium</th>
+                      <th>Sessions</th>
+                      <th>Orders</th>
+                      <th>Conversion Rate</th>
+                      <th>Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.utmTracking.conversions.slice(0, 5).map((conv, index) => (
+                      <tr key={index}>
+                        <td>
+                          <span className="utm-badge source">{conv.source}</span>
+                        </td>
+                        <td>
+                          <span className="utm-badge medium">{conv.medium}</span>
+                        </td>
+                        <td>{conv.sessions}</td>
+                        <td>{conv.orders}</td>
+                        <td>
+                          <span className={`conversion-badge ${conv.conversionRate > 5 ? 'high' : conv.conversionRate > 2 ? 'medium' : 'low'}`}>
+                            {conv.conversionRate}%
+                          </span>
+                        </td>
+                        <td className="table-revenue">
+                          ₹{conv.revenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* UTM Source Chart */}
+          {stats.utmTracking.sourceChart && stats.utmTracking.sourceChart.length > 0 && (
+            <div className="dashboard-chart-container" style={{marginTop: '20px'}}>
+              <DonutChart
+                data={stats.utmTracking.sourceChart}
+                title="Traffic Sources"
+                subtitle="Top 5 sources"
+                totalValue={stats.utmTracking.sourceChart.reduce((sum, item) => sum + item.value, 0).toString()}
+                totalLabel="Total Sessions"
+                size={180}
+                strokeWidth={25}
+                showLegend={true}
+              />
+            </div>
+          )}
         </div>
       )}
 

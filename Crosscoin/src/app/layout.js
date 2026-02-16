@@ -1,4 +1,5 @@
 import Analytics from "@/components/common/Analytics";
+import UTMTracker from "@/components/common/UTMTracker";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 
@@ -12,6 +13,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body>
         {children}
+        <UTMTracker />
         <Analytics />
         <SpeedInsights />
         <VercelAnalytics />

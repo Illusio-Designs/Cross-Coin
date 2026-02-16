@@ -21,6 +21,7 @@ import SEO from "./seo/seo";
 import Slider from "./slider/slider";
 import MediaGallery from "./media/gallery";
 import Policies from "./policies";
+import UTMAnalytics from "./analytics/utmAnalytics";
 
 function Dashboard() {
   const [currentView, setCurrentView] = useState('main');
@@ -154,6 +155,8 @@ function Dashboard() {
         return <Slider />;
       case 'media-gallery':
         return <MediaGallery />;
+      case 'utm-analytics':
+        return <UTMAnalytics />;
       default:
         return <CardGrid />;
     }
