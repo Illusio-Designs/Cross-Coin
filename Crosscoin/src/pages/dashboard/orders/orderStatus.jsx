@@ -42,7 +42,10 @@ const OrderStatus = () => {
         fetchOrdersAndHistory();
     }, []);
 
-    const debouncedSearch = useCallback(debounce((searchTerm) => setFilterValue(searchTerm), 300), []);
+    const debouncedSearch = useCallback((searchTerm) => {
+        const timeoutId = setTimeout(() => setFilterValue(searchTerm), 300);
+        return () => clearTimeout(timeoutId);
+    }, []);
     const handleSearchChange = (e) => debouncedSearch(e.target.value);
 
     const formatDate = (dateString) => {

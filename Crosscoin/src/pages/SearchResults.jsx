@@ -24,15 +24,14 @@ const SearchResults = () => {
   const itemsPerPage = 20;
 
   // Debounced search function
-  const debouncedSearch = useCallback(
-    debounce(async (searchTerm, categoryFilter, sortOption) => {
-      if (!searchTerm.trim()) {
-        setProducts([]);
-        setTotalProducts(0);
-        return;
-      }
+  const debouncedSearch = useCallback(async (searchTerm, categoryFilter, sortOption) => {
+    if (!searchTerm.trim()) {
+      setProducts([]);
+      setTotalProducts(0);
+      return;
+    }
 
-      try {
+    try {
         setLoading(true);
         setError(null);
         
@@ -62,9 +61,7 @@ const SearchResults = () => {
       } finally {
         setLoading(false);
       }
-    }, 500),
-    []
-  );
+  }, []);
 
   // Update URL when search parameters change
   const updateURL = (newQuery, newCategory, newSort) => {

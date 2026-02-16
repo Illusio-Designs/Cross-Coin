@@ -278,7 +278,7 @@ const Products = () => {
         fetchProductsData();
       }
     }
-  }, [categories, router.query.category]); // Use specific query parameter to prevent infinite loops
+  }, [categories, router.query.category, fetchProductsData]);
 
   // After products and categories are loaded, compute dynamic filters
   useEffect(() => {

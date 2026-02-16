@@ -75,7 +75,7 @@ export default function ShippingStep({
       setLoading(false);
     };
     fetchInitialData();
-  }, [isGuestCheckout, guestInfo?.email]);
+  }, [isGuestCheckout, guestInfo?.email, onSelectAddress, onSelectFee, selectedAddress, selectedFee]);
 
   const fetchAddresses = async () => {
     setLoading(true);

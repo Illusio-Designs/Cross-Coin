@@ -24,12 +24,12 @@ export default function Payments() {
   const [totalPages, setTotalPages] = useState(0);
 
   // Debounced search function
-  const debouncedSearch = useCallback(
-    debounce((searchTerm) => {
+  const debouncedSearch = useCallback((searchTerm) => {
+    const timeoutId = setTimeout(() => {
       setFilterValue(searchTerm);
-    }, 300),
-    []
-  );
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   // Handle search input change
   const handleSearchChange = (e) => {
@@ -38,7 +38,7 @@ export default function Payments() {
   };
 
   // Fetch payments data
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -46,29 +46,23 @@ export default function Payments() {
       console.log('Payment API Response:', response);
       
       if (response.success && response.payments) {
-        // Transform payments to include customer name properly
         const transformedPayments = response.payments.map(payment => {
           let customerName = 'Guest User';
           
-          // Check if order has a registered user
           if (payment.Order?.User?.username) {
             customerName = payment.Order.User.username;
           } 
-          // Check if order has a guest user
           else if (payment.Order?.GuestUser) {
             const guest = payment.Order.GuestUser;
             customerName = `${guest.firstName || ''} ${guest.lastName || ''}`.trim() || guest.email || 'Guest User';
           }
           
-          // Determine actual payment method - use Payment table first, then Order table
           let paymentMethod = payment.payment_type || payment.Order?.payment_type;
           
-          // If still missing but we have payment_gateway, use that
           if (!paymentMethod && payment.payment_gateway) {
             paymentMethod = payment.payment_gateway.toLowerCase();
           }
           
-          // If transaction_id exists and starts with certain patterns, infer the method
           if (!paymentMethod && payment.transaction_id) {
             if (payment.transaction_id.startsWith('pay_')) {
               paymentMethod = 'razorpay';
@@ -103,11 +97,11 @@ export default function Payments() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [itemsPerPage]);
 
   useEffect(() => {
     fetchPayments();
-  }, []);
+  }, [fetchPayments]);
 
   // Filter data based on search
   const filteredData = payments.filter(item => {

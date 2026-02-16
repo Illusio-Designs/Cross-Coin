@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { AiOutlineMail } from "react-icons/ai";
 import { FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn } from "react-icons/fa";
 import { MdOutlinePhoneInTalk } from "react-icons/md"; 
@@ -37,8 +38,9 @@ const Footer = () => {
             <SafeImage 
               imageData={{ image_url: "/assets/crosscoin_logo.webp" }}
               alt="logo" 
-              width="120px" 
-              height="40px" 
+              width={200} 
+              height={80}
+              quality={90}
               style={{ objectFit: 'contain' }}
               isLogo={true}
             />
@@ -132,10 +134,10 @@ const Footer = () => {
         </span>
       </div>
       <div className="footer__links">
-        <a href="/policy?name=terms-and-conditions">Terms and Conditions</a>
-        <a href="/policy?name=privacy-policy">Privacy Policy</a>
-        <a href="/policy?name=shipping-policy">Shipping Policy</a>
-        <a href="/policy?name=cancellation-and-refund">Cancellation & Refund</a>
+        <Link href="/policy?name=terms-and-conditions">Terms and Conditions</Link>
+        <Link href="/policy?name=privacy-policy">Privacy Policy</Link>
+        <Link href="/policy?name=shipping-policy">Shipping Policy</Link>
+        <Link href="/policy?name=cancellation-and-refund">Cancellation & Refund</Link>
       </div>
     </footer>
   );

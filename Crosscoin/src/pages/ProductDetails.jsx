@@ -226,7 +226,7 @@ export default function ProductDetails() {
     };
     
     fetchAllReviews();
-  }, [product?.id]);
+  }, [product?.id, product?.reviews]);
 
   // Get all unique color names from variations
   const colorOptions = product?.variations
@@ -245,26 +245,30 @@ export default function ProductDetails() {
     : null;
 
   // Get all unique types from variations
-  const typeOptions = product?.variations
-    ? Array.from(new Set(product.variations.flatMap(v => {
-        const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
-        return attrs && attrs.type ? attrs.type : [];
-      })))
-    : [];
+  const typeOptions = useMemo(() => 
+    product?.variations
+      ? Array.from(new Set(product.variations.flatMap(v => {
+          const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+          return attrs && attrs.type ? attrs.type : [];
+        })))
+      : []
+  , [product?.variations]);
 
   // Get all colors for the selected type
-  const colorsForSelectedType = product?.variations
-    ? Array.from(new Set(product.variations
-        .filter(v => {
-          const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
-          return attrs && attrs.type && attrs.type.includes(selectedType || typeOptions[0]);
+  const colorsForSelectedType = useMemo(() => 
+    product?.variations
+      ? Array.from(new Set(product.variations
+          .filter(v => {
+            const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+            return attrs && attrs.type && attrs.type.includes(selectedType || typeOptions[0]);
         })
         .flatMap(v => {
           const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
           return attrs && attrs.color ? attrs.color : [];
         })
       ))
-    : [];
+    : []
+  , [product?.variations, selectedType, typeOptions]);
 
   // Find the variation for the selected type and color
   const selectedTypeColorVariation = product?.variations
@@ -288,7 +292,7 @@ export default function ProductDetails() {
     }
   }, [colorsForSelectedType, selectedColor]);
 
-  // Desktop: Show fixed Buy Now button at bottom when product details scroll out
+  // Desktop: Show fixed action buttons at bottom when product details scroll out
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
@@ -296,23 +300,25 @@ export default function ProductDetails() {
       // Only for desktop (above 426px)
       if (window.innerWidth <= 426) return;
       
-      const buyNowBtn = document.querySelector('.buy-now-btn');
       const actionButtonsRow = document.querySelector('.action-buttons-row');
       
-      if (!buyNowBtn || !actionButtonsRow) return;
+      if (!actionButtonsRow) return;
       
       const rect = actionButtonsRow.getBoundingClientRect();
       const isScrolledPast = rect.bottom < 0;
       
       if (isScrolledPast) {
-        buyNowBtn.classList.add('fixed-bottom');
+        actionButtonsRow.classList.add('fixed-bottom-desktop');
       } else {
-        buyNowBtn.classList.remove('fixed-bottom');
+        actionButtonsRow.classList.remove('fixed-bottom-desktop');
       }
     };
     
     window.addEventListener('scroll', handleScroll);
     window.addEventListener('resize', handleScroll);
+    
+    // Initial check
+    handleScroll();
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
@@ -579,7 +585,7 @@ export default function ProductDetails() {
   if (loading) {
     return (
       <SeoWrapper
-        pageName="product-details"
+        pageName={productSlug || "product-details"}
         seo={null}
       >
         <div className="product-details-container">
@@ -598,7 +604,7 @@ export default function ProductDetails() {
   if (error) {
     return (
       <SeoWrapper
-        pageName="product-details"
+        pageName={productSlug || "product-details"}
         seo={null}
       >
         <div className="product-details-container">
@@ -632,7 +638,7 @@ export default function ProductDetails() {
   if (!product) {
     return (
       <SeoWrapper
-        pageName="product-details"
+        pageName={productSlug || "product-details"}
         seo={null}
       >
         <div className="product-details-container">
@@ -1111,14 +1117,14 @@ export default function ProductDetails() {
 
   return (
     <SeoWrapper
-      pageName={product?.slug || "product-details"}
-      seo={product?.seo}
+      pageName={product?.slug || productSlug || "product-details"}
+      seoData={null}
     >
       <div className="product-details-container">
         <Header />
         <div className="product-details">
           <div className="product-gallery" style={{ textAlign: 'center' }}>
-            <div style={{ position: 'relative', display: 'inline-block' }}>
+            <div className="product-image-container" style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '600px' }}>
               {variationImages.length > 0 && variationImages[selectedThumbnail] ? (
                 <>
                   <SafeImage
@@ -1128,14 +1134,19 @@ export default function ProductDetails() {
                         variationImages[selectedThumbnail]
                     }}
                     alt={variationImages[selectedThumbnail]?.alt_text || product?.name || "Product Image"}
-                    width="100%"
-                    height="auto"
+                    width={600}
+                    height={600}
+                    priority={true}
+                    quality={80}
+                    className="main-product-image"
                     style={{
                       objectFit: "contain",
                       boxShadow: "0 2px 8px #eee",
                       background: "#eee",
                       display: "block",
-                      cursor: "pointer"
+                      cursor: "pointer",
+                      width: "100%",
+                      height: "auto"
                     }}
                     onClick={() => setIsZoomOpen(true)}
                   />
@@ -1182,17 +1193,20 @@ export default function ProductDetails() {
               </button>
             </div>
             {/* Thumbnails */}
-            <div style={{ display: 'flex', flexWrap: 'wrap' , justifyContent: 'center', gap: 16, marginTop: 16 }}>
+            <div className="thumbnail-gallery" style={{ display: 'flex', flexWrap: 'wrap' , justifyContent: 'center', gap: 16, marginTop: 16 }}>
               {variationImages.map((image, idx) => (
                 (image && (image.image_url || image.url || image)) ? (
-                  <div key={image.id || idx} style={{ position: 'relative', width: 80, height: 80 }}>
+                  <div key={image.id || idx} className="thumbnail-wrapper" style={{ position: 'relative', width: 80, height: 80 }}>
                     <SafeImage
                       imageData={{
                         image_url: image.image_url || image.url || image
                       }}
                       alt={image.alt_text || `${product.name} thumbnail ${idx + 1}`}
-                      width="80px"
-                      height="80px"
+                      width={80}
+                      height={80}
+                      priority={idx < 4}
+                      quality={70}
+                      className="thumbnail-image"
                       style={{
                         objectFit: "cover",
                         border:
@@ -1221,6 +1235,10 @@ export default function ProductDetails() {
                     variationImages[selectedThumbnail]
                   }}
                   alt="Zoomed"
+                  width={1200}
+                  height={1200}
+                  priority={true}
+                  quality={90}
                   style={{ width: '100%', maxWidth: 700, objectFit: 'contain', borderRadius: 8 }}
                 />
               </Modal>

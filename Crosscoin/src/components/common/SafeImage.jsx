@@ -5,11 +5,13 @@ const SafeImage = ({
   alt = "Product Image", 
   className = "", 
   style = {},
-  fallbackSrc = null, // No default fallback image
+  fallbackSrc = null,
   width,
   height,
-  isLogo = false, // New prop to identify logo images
-  isProductCard = false, // New prop to identify product card images
+  isLogo = false,
+  isProductCard = false,
+  priority = false, // Accept but don't use for now
+  quality = 75, // Accept but don't use for now
   ...props 
 }) => {
   const [imageError, setImageError] = useState(false);
@@ -17,13 +19,11 @@ const SafeImage = ({
   const [imageSrc, setImageSrc] = useState(null);
 
   useEffect(() => {
-    // Build URL when imageData changes
     let newSrc = null;
     
     if (imageData) {
       let rawUrl = null;
       
-      // Handle different image data formats
       if (typeof imageData === 'string') {
         rawUrl = imageData;
       } else if (imageData.image_url) {
@@ -32,22 +32,17 @@ const SafeImage = ({
         rawUrl = imageData.url;
       }
       
-      // Process the URL
       if (rawUrl && rawUrl.trim() !== '') {
-        // If already a full URL, use it
         if (rawUrl.startsWith("http")) {
           newSrc = rawUrl;
         } 
-        // If it's an assets path, use it directly
         else if (rawUrl.startsWith("/assets/")) {
           newSrc = rawUrl;
         } 
-        // If it starts with /uploads/, prepend the API URL
         else if (rawUrl.startsWith("/uploads/")) {
           const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
           newSrc = `${apiUrl}${rawUrl}`;
         } 
-        // Otherwise assume it's just a filename in products folder
         else {
           const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
           newSrc = `${apiUrl}/uploads/products/${rawUrl}`;
@@ -55,7 +50,6 @@ const SafeImage = ({
       }
     }
     
-    // If no valid image source and it's not a logo or product card, use fallback
     if (!newSrc && !isLogo && !isProductCard) {
       newSrc = fallbackSrc;
     }
@@ -69,12 +63,9 @@ const SafeImage = ({
     if (!imageError) {
       setImageError(true);
       setImageLoading(false);
-      // For product cards, we'll show gray placeholder in the render logic
-      // For logos, we set imageSrc to null to hide completely
       if (isLogo) {
         setImageSrc(null);
       }
-      // For other images (not product cards or logos), show fallback
       else if (!isProductCard && imageSrc !== fallbackSrc) {
         setImageSrc(fallbackSrc);
       }
@@ -82,16 +73,13 @@ const SafeImage = ({
   };
 
   const handleLoad = () => {
-    // Image loaded successfully
     setImageLoading(false);
   };
 
-  // Don't render anything if it's a logo and there's no valid image
   if (isLogo && (!imageSrc || imageError)) {
     return null;
   }
 
-  // For product cards, show gray placeholder only when no image source exists
   if (isProductCard && !imageSrc) {
     return (
       <div
@@ -113,7 +101,6 @@ const SafeImage = ({
     );
   }
 
-  // For product cards with error after trying to load, show gray placeholder
   if (isProductCard && imageError) {
     return (
       <div
@@ -135,23 +122,38 @@ const SafeImage = ({
     );
   }
 
-  // Don't render if no image source
   if (!imageSrc) {
     return null;
   }
+
+  // Convert width/height for img tag
+  const getNumericValue = (val) => {
+    if (typeof val === 'number') return val;
+    if (typeof val === 'string') {
+      return parseInt(val.replace(/px|%/g, '')) || undefined;
+    }
+    return undefined;
+  };
+
+  const imgWidth = getNumericValue(width);
+  const imgHeight = getNumericValue(height);
 
   return (
     <img
       src={imageSrc}
       alt={alt}
+      width={imgWidth}
+      height={imgHeight}
+      loading={priority ? 'eager' : 'lazy'}
       onError={handleError}
       onLoad={handleLoad}
       className={`${className} ${isProductCard ? 'product-card-image-contain' : ''}`}
       style={{
-        width: width || '100%',
-        height: height || 'auto',
-        objectFit: isProductCard ? 'contain' : 'cover',
-        ...style
+        ...style,
+        width: width || style.width || '100%',
+        height: height === 'auto' ? 'auto' : (height || style.height || 'auto'),
+        objectFit: isProductCard ? 'contain' : (style.objectFit || 'cover'),
+        display: 'block'
       }}
       {...props}
     />

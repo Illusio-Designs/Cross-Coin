@@ -9,8 +9,29 @@
     display: flex;
     flex-direction: column;
     max-width: 100%;
-    overflow: hidden !important; /* Prevent overflow */
+    overflow: hidden !important;
     box-sizing: border-box;
+    cursor: pointer;
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+    position: relative;
+}
+
+.donut-chart-container:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.donut-chart-expand-hint {
+    text-align: center;
+    font-size: 10px;
+    color: #9ca3af;
+    margin-top: 8px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.donut-chart-container:hover .donut-chart-expand-hint {
+    opacity: 1;
 }
 
 .donut-chart-header {
@@ -57,11 +78,11 @@
 }
 
 .donut-segment {
-    transition: stroke-width 0.3s ease, opacity 0.3s ease;
+    transition: opacity 0.3s ease;
+    cursor: pointer;
 }
 
 .donut-segment:hover {
-    stroke-width: 35;
     opacity: 0.8;
 }
 
@@ -202,5 +223,242 @@
     
     .donut-legend-item {
         padding: 6px;
+    }
+}
+
+
+/* Modal Styles */
+.donut-chart-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.donut-chart-modal {
+    background: white;
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 700px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.donut-chart-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: #f3f4f6;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 1;
+    padding: 0;
+}
+
+.donut-chart-modal-close:hover {
+    background: #e5e7eb;
+    color: #111827;
+    transform: rotate(90deg);
+}
+
+.donut-chart-modal-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.donut-chart-modal-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 8px 0;
+}
+
+.donut-chart-modal-subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.donut-chart-modal-content {
+    display: flex;
+    gap: 32px;
+    align-items: center;
+    justify-content: center;
+}
+
+.donut-chart-modal-chart {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.donut-segment-modal {
+    transition: opacity 0.3s ease;
+    cursor: pointer;
+}
+
+.donut-chart-modal-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+}
+
+.donut-chart-modal-total-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.2;
+}
+
+.donut-chart-modal-total-label {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.donut-chart-modal-legend {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.donut-modal-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: 1px solid #e5e7eb;
+}
+
+.donut-modal-legend-item:hover {
+    background-color: #f9fafb;
+    border-color: #d1d5db;
+    transform: translateX(4px);
+}
+
+.donut-modal-legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.donut-modal-legend-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.donut-modal-legend-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    line-height: 1.4;
+}
+
+.donut-modal-legend-value {
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+/* Responsive Modal */
+@media (max-width: 768px) {
+    .donut-chart-modal {
+        padding: 24px;
+        max-width: 95%;
+    }
+    
+    .donut-chart-modal-content {
+        flex-direction: column;
+        gap: 24px;
+    }
+    
+    .donut-chart-modal-chart svg {
+        width: 240px;
+        height: 240px;
+    }
+    
+    .donut-chart-modal-legend {
+        width: 100%;
+        max-height: 300px;
+    }
+    
+    .donut-chart-modal-title {
+        font-size: 20px;
+    }
+    
+    .donut-chart-modal-total-value {
+        font-size: 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    .donut-chart-modal {
+        padding: 20px;
+    }
+    
+    .donut-chart-modal-chart svg {
+        width: 200px;
+        height: 200px;
+    }
+    
+    .donut-modal-legend-item {
+        padding: 10px;
     }
 }

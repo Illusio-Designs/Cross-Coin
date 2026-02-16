@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { useCart } from "../context/CartContext";
@@ -47,10 +47,12 @@ export default function UnifiedCheckout() {
           couponPaymentMode: appliedCoupon.paymentMode,
           newPaymentMode: paymentMode
         });
-        handleCouponRemoved();
+        // Remove coupon directly without calling handleCouponRemoved to avoid dependency issues
+        setAppliedCoupon(null);
+        sessionStorage.removeItem("appliedCoupon");
       }
     }
-  }, [shippingFee]);
+  }, [shippingFee, appliedCoupon]); // Removed handleCouponRemoved from dependencies
 
   // Address management state
   const [addresses, setAddresses] = useState([]);
@@ -117,7 +119,7 @@ export default function UnifiedCheckout() {
         sessionStorage.removeItem("paymentSuccess");
       }
     }
-  }, []);
+  }, [orderPlaced, router]);
 
   // Load addresses and shipping fees on mount
   useEffect(() => {
@@ -152,7 +154,7 @@ export default function UnifiedCheckout() {
     };
 
     loadInitialData();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, shippingFee]);
 
   const handleSelectAddress = (address) => {
     setShippingAddress(address);
@@ -537,10 +539,10 @@ export default function UnifiedCheckout() {
     }
   };
 
-  const handleCouponRemoved = () => {
+  const handleCouponRemoved = useCallback(() => {
     setAppliedCoupon(null);
     sessionStorage.removeItem("appliedCoupon");
-  };
+  }, []);
 
   // Render address section - simplified for all users
   const renderAddressSection = () => {
