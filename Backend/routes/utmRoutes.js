@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const utmController = require('../controller/utmController');
-const { authenticateToken } = require('../middleware/authMiddleware');
+const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware');
 
 // Public route - track UTM
 router.post('/track', utmController.trackUTM);
@@ -10,7 +10,7 @@ router.post('/track', utmController.trackUTM);
 router.get('/session', utmController.getUTMBySession);
 
 // Admin routes - get analytics
-router.get('/analytics', authenticateToken, utmController.getUTMAnalytics);
-router.get('/all', authenticateToken, utmController.getAllUTMData);
+router.get('/analytics', isAuthenticated, isAdmin, utmController.getUTMAnalytics);
+router.get('/all', isAuthenticated, isAdmin, utmController.getAllUTMData);
 
 module.exports = router;
