@@ -62,6 +62,14 @@ const Orders = () => {
     const [awbOrderId, setAwbOrderId] = useState(null);
     const [awbNumber, setAwbNumber] = useState('');
     const [courierName, setCourierName] = useState('');
+    const [selectedOrders, setSelectedOrders] = useState(new Set());
+    const [isDownloadingBulk, setIsDownloadingBulk] = useState(false);
+    const [labelStats, setLabelStats] = useState({
+        totalLabels: 0,
+        downloadedLabels: 0,
+        pendingLabels: 0,
+        downloadRate: 0
+    });
 
     const fetchOrders = useCallback(async (page = currentPage) => {
         setLoading(true);
@@ -461,7 +469,90 @@ const Orders = () => {
     useEffect(() => {
         fetchOrders(1);
         fetchAllOrdersForStats();
+        fetchLabelStats();
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Fetch label download statistics
+    const fetchLabelStats = async () => {
+        try {
+            const stats = await orderService.getLabelDownloadStats();
+            setLabelStats(stats.stats || {
+                totalLabels: 0,
+                downloadedLabels: 0,
+                pendingLabels: 0,
+                downloadRate: 0
+            });
+        } catch (error) {
+            console.error('Failed to fetch label stats:', error);
+        }
+    };
+
+    // Handle label download with tracking
+    const handleLabelDownload = async (orderId, labelUrl) => {
+        try {
+            // Open the label URL in a new tab
+            window.open(labelUrl, '_blank');
+            
+            // Mark as downloaded in the backend
+            await orderService.markLabelDownloaded(orderId);
+            
+            // Refresh orders and stats
+            fetchOrders(currentPage);
+            fetchLabelStats();
+            
+            toast.success('Label opened successfully!');
+        } catch (error) {
+            console.error('Error tracking label download:', error);
+            // Still allow the download even if tracking fails
+        }
+    };
+
+    // Toggle order selection
+    const toggleOrderSelection = (orderId) => {
+        setSelectedOrders(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(orderId)) {
+                newSet.delete(orderId);
+            } else {
+                newSet.add(orderId);
+            }
+            return newSet;
+        });
+    };
+
+    // Select all orders with labels
+    const selectAllOrdersWithLabels = () => {
+        const ordersWithLabels = orders.filter(order => order.fship_label_url);
+        if (selectedOrders.size === ordersWithLabels.length) {
+            setSelectedOrders(new Set());
+        } else {
+            setSelectedOrders(new Set(ordersWithLabels.map(order => order.id)));
+        }
+    };
+
+    // Bulk download labels
+    const handleBulkDownload = async () => {
+        if (selectedOrders.size === 0) {
+            toast.error('Please select orders to download labels');
+            return;
+        }
+
+        setIsDownloadingBulk(true);
+        try {
+            await orderService.bulkDownloadLabels(Array.from(selectedOrders));
+            toast.success(`Downloaded ${selectedOrders.size} labels successfully!`);
+            
+            // Clear selection and refresh
+            setSelectedOrders(new Set());
+            fetchOrders(currentPage);
+            fetchLabelStats();
+        } catch (error) {
+            console.error('Bulk download error:', error);
+            toast.error(error.message || 'Failed to download labels');
+        } finally {
+            setIsDownloadingBulk(false);
+        }
+    };
 
 
     // Reset to page 1 when filters change
@@ -614,6 +705,25 @@ const Orders = () => {
     }, [filterValue, paymentTypeFilter, paymentStatusFilter, statusFilter]);
 
     const columns = [
+        { 
+            header: (
+                <input 
+                    type="checkbox" 
+                    className="bulk-select-checkbox"
+                    checked={selectedOrders.size > 0 && selectedOrders.size === orders.filter(o => o.fship_label_url).length}
+                    onChange={selectAllOrdersWithLabels}
+                    title="Select all orders with labels"
+                />
+            ), 
+            cell: (row) => row.fship_label_url ? (
+                <input 
+                    type="checkbox" 
+                    className="order-select-checkbox"
+                    checked={selectedOrders.has(row.id)}
+                    onChange={() => toggleOrderSelection(row.id)}
+                />
+            ) : null
+        },
         { header: "S/N", accessor: "serial_number" },
         { header: "Order ID", accessor: "order_number" },
         { 
@@ -659,10 +769,72 @@ const Orders = () => {
                     : <span className="status-badge status-unsynced">Not Synced</span>
         },
         {
+            header: "Label",
+            cell: (row) => {
+                if (row.fship_label_url) {
+                    const isDownloaded = row.fship_label_downloaded;
+                    return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                            <button
+                                onClick={() => handleLabelDownload(row.id, row.fship_label_url)}
+                                className="download-label-link"
+                                title="Download Shipping Label"
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '6px 12px',
+                                    backgroundColor: isDownloaded ? '#6c757d' : '#28a745',
+                                    color: 'white',
+                                    borderRadius: '6px',
+                                    textDecoration: 'none',
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    transition: 'all 0.2s ease',
+                                    boxShadow: '0 2px 4px rgba(40, 167, 69, 0.2)',
+                                    border: 'none',
+                                    cursor: 'pointer'
+                                }}
+                                onMouseOver={(e) => {
+                                    if (!isDownloaded) {
+                                        e.currentTarget.style.backgroundColor = '#218838';
+                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(40, 167, 69, 0.3)';
+                                    }
+                                }}
+                                onMouseOut={(e) => {
+                                    if (!isDownloaded) {
+                                        e.currentTarget.style.backgroundColor = '#28a745';
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(40, 167, 69, 0.2)';
+                                    }
+                                }}
+                            >
+                                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                {isDownloaded ? 'Downloaded' : 'Download'}
+                            </button>
+                            {isDownloaded && row.fship_label_downloaded_at && (
+                                <span style={{ 
+                                    fontSize: '10px', 
+                                    color: '#6c757d',
+                                    fontStyle: 'italic'
+                                }}>
+                                    {new Date(row.fship_label_downloaded_at).toLocaleDateString()}
+                                </span>
+                            )}
+                        </div>
+                    );
+                }
+                return <span style={{ color: '#6c757d', fontSize: '12px', fontStyle: 'italic' }}>No Label</span>;
+            }
+        },
+        {
             header: "Actions",
             cell: (row) => {
                 return (
-                    <div className="action-buttons" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    <div className="action-buttons" style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
                         {/* View button - always visible */}
                         <button 
                             className="action-btn view" 
@@ -1044,20 +1216,19 @@ const Orders = () => {
                         </button>
                     </div>
                     
-                    <div className="adding-button">
-                        <button 
-                            className="sync-button"
-                            onClick={syncOrders}
-                            title="Comprehensive FShip sync - Syncs new orders and updates statuses"
-                            disabled={loading || syncingAll || syncingOrders.size > 0}
-                        >
-                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            {syncingAll ? 'Syncing All...' : loading ? 'Loading...' : 'FShip Sync'}
-                        </button>
-                        
-                        <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
+                    {/* Search and Filters Section */}
+                    <div className="filters-section" style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '12px',
+                        marginBottom: '20px',
+                        padding: '16px',
+                        background: '#fff',
+                        borderRadius: '12px',
+                        border: '2px solid #e2e8f0',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                    }}>
+                        <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()} style={{ gridColumn: '1 / -1' }}>
                             <div className="modern-searchbar-group">
                                 <span className="modern-searchbar-icon">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1088,28 +1259,7 @@ const Orders = () => {
                                 )}
                             </div>
                         </form>
-                        <select 
-                            value={paymentTypeFilter} 
-                            onChange={(e) => setPaymentTypeFilter(e.target.value)}
-                            className="payment-filter-dropdown"
-                        >
-                            <option value="all">All Payment Types</option>
-                            <option value="prepaid">Prepaid</option>
-                            <option value="cod">Cash on Delivery</option>
-                        </select>
-                        <select 
-                            value={paymentStatusFilter} 
-                            onChange={(e) => setPaymentStatusFilter(e.target.value)}
-                            className="payment-filter-dropdown"
-                        >
-                            <option value="all">All Payment Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="paid">Paid</option>
-                            <option value="failed">Failed</option>
-                            <option value="refunded">Refunded</option>
-                            <option value="refund_pending">Refund Pending</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
+                        
                         <select 
                             value={statusFilter} 
                             onChange={(e) => setStatusFilter(e.target.value)}
@@ -1132,6 +1282,100 @@ const Orders = () => {
                             <option value="order cancelled">Order Cancelled</option>
                             <option value="exception">Exception</option>
                         </select>
+                        
+                        <select 
+                            value={paymentTypeFilter} 
+                            onChange={(e) => setPaymentTypeFilter(e.target.value)}
+                            className="payment-filter-dropdown"
+                        >
+                            <option value="all">All Payment Types</option>
+                            <option value="prepaid">Prepaid</option>
+                            <option value="cod">Cash on Delivery</option>
+                        </select>
+                        
+                        <select 
+                            value={paymentStatusFilter} 
+                            onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                            className="payment-filter-dropdown"
+                        >
+                            <option value="all">All Payment Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="paid">Paid</option>
+                            <option value="failed">Failed</option>
+                            <option value="refunded">Refunded</option>
+                            <option value="refund_pending">Refund Pending</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+
+                    {/* Action Buttons Section */}
+                    <div className="action-buttons-section" style={{
+                        display: 'flex',
+                        gap: '12px',
+                        marginBottom: '20px',
+                        flexWrap: 'wrap',
+                        alignItems: 'center'
+                    }}>
+                        <button 
+                            className="sync-button"
+                            onClick={syncOrders}
+                            title="Comprehensive FShip sync - Syncs new orders and updates statuses"
+                            disabled={loading || syncingAll || syncingOrders.size > 0}
+                        >
+                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            {syncingAll ? 'Syncing All...' : loading ? 'Loading...' : 'FShip Sync'}
+                        </button>
+
+                        {selectedOrders.size > 0 && (
+                            <button 
+                                className="bulk-download-button"
+                                onClick={handleBulkDownload}
+                                disabled={isDownloadingBulk}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '8px 16px',
+                                    backgroundColor: isDownloadingBulk ? '#6c757d' : '#28a745',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                    fontWeight: '500',
+                                    cursor: isDownloadingBulk ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                {isDownloadingBulk ? 'Downloading...' : `Download ${selectedOrders.size} Labels`}
+                            </button>
+                        )}
+
+                        {/* Label Stats */}
+                        <div style={{
+                            marginLeft: 'auto',
+                            display: 'flex',
+                            gap: '16px',
+                            padding: '8px 16px',
+                            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                            borderRadius: '8px',
+                            border: '1px solid #e2e8f0',
+                            fontSize: '13px'
+                        }}>
+                            <span style={{ color: '#374151', fontWeight: '600' }}>
+                                Labels: <strong style={{ color: '#3b82f6' }}>{labelStats.totalLabels}</strong>
+                            </span>
+                            <span style={{ color: '#374151', fontWeight: '600' }}>
+                                Downloaded: <strong style={{ color: '#10b981' }}>{labelStats.downloadedLabels}</strong>
+                            </span>
+                            <span style={{ color: '#374151', fontWeight: '600' }}>
+                                Pending: <strong style={{ color: '#ef4444' }}>{labelStats.pendingLabels}</strong>
+                            </span>
+                        </div>
                     </div>
                 </div>
 

@@ -292,7 +292,7 @@ export default function ProductDetails() {
     }
   }, [colorsForSelectedType, selectedColor]);
 
-  // Desktop: Show fixed Buy Now button at bottom when product details scroll out
+  // Desktop: Show fixed action buttons at bottom when product details scroll out
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
@@ -300,23 +300,25 @@ export default function ProductDetails() {
       // Only for desktop (above 426px)
       if (window.innerWidth <= 426) return;
       
-      const buyNowBtn = document.querySelector('.buy-now-btn');
       const actionButtonsRow = document.querySelector('.action-buttons-row');
       
-      if (!buyNowBtn || !actionButtonsRow) return;
+      if (!actionButtonsRow) return;
       
       const rect = actionButtonsRow.getBoundingClientRect();
       const isScrolledPast = rect.bottom < 0;
       
       if (isScrolledPast) {
-        buyNowBtn.classList.add('fixed-bottom');
+        actionButtonsRow.classList.add('fixed-bottom-desktop');
       } else {
-        buyNowBtn.classList.remove('fixed-bottom');
+        actionButtonsRow.classList.remove('fixed-bottom-desktop');
       }
     };
     
     window.addEventListener('scroll', handleScroll);
     window.addEventListener('resize', handleScroll);
+    
+    // Initial check
+    handleScroll();
     
     return () => {
       window.removeEventListener('scroll', handleScroll);

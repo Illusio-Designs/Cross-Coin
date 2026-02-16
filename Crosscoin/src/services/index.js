@@ -408,6 +408,92 @@ export const orderService = {
     }
   },
 
+  // Label Download Management
+  
+  // Mark label as downloaded
+  markLabelDownloaded: async (orderId) => {
+    try {
+      const response = await api.post(`/api/orders/labels/${orderId}/mark-downloaded`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Download single label
+  downloadLabel: async (orderId) => {
+    try {
+      const response = await api.get(`/api/orders/labels/${orderId}/download`, {
+        responseType: 'blob',
+        timeout: 30000
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `label_${orderId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      return { success: true, message: 'Label downloaded successfully' };
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Bulk download labels
+  bulkDownloadLabels: async (orderIds) => {
+    try {
+      const response = await api.post('/api/orders/labels/bulk-download', 
+        { orderIds },
+        {
+          responseType: 'blob',
+          timeout: 60000
+        }
+      );
+
+      // Create download link for ZIP file
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      const timestamp = new Date().toISOString().split('T')[0];
+      link.setAttribute('download', `shipping_labels_${timestamp}.zip`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      return { success: true, message: 'Labels downloaded successfully' };
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Get pending labels (not yet downloaded)
+  getPendingLabels: async (page = 1, limit = 50) => {
+    try {
+      const response = await api.get('/api/orders/labels/pending', {
+        params: { page, limit }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Get label download statistics
+  getLabelDownloadStats: async () => {
+    try {
+      const response = await api.get('/api/orders/labels/stats');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
 };
 
 // Payment Services
