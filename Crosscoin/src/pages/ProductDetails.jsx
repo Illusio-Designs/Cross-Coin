@@ -1115,20 +1115,14 @@ export default function ProductDetails() {
 
   return (
     <SeoWrapper
-      pageName={product?.slug || "product-details"}
-      seoData={product?.ProductSEO || product?.seo || {
-        meta_title: `${product?.name || 'Product'} - CrossCoin`,
-        meta_description: product?.description || 'Shop quality products at CrossCoin',
-        meta_keywords: `${product?.name || 'product'}, buy online, crosscoin`,
-        canonical_url: typeof window !== 'undefined' ? window.location.href : '',
-        meta_image: product?.images?.[0]?.image_url || null
-      }}
+      pageName={product?.slug || productSlug || "product-details"}
+      seoData={null}
     >
       <div className="product-details-container">
         <Header />
         <div className="product-details">
           <div className="product-gallery" style={{ textAlign: 'center' }}>
-            <div style={{ position: 'relative', display: 'inline-block' }}>
+            <div className="product-image-container" style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '600px' }}>
               {variationImages.length > 0 && variationImages[selectedThumbnail] ? (
                 <>
                   <SafeImage
@@ -1142,12 +1136,15 @@ export default function ProductDetails() {
                     height={600}
                     priority={true}
                     quality={80}
+                    className="main-product-image"
                     style={{
                       objectFit: "contain",
                       boxShadow: "0 2px 8px #eee",
                       background: "#eee",
                       display: "block",
-                      cursor: "pointer"
+                      cursor: "pointer",
+                      width: "100%",
+                      height: "auto"
                     }}
                     onClick={() => setIsZoomOpen(true)}
                   />

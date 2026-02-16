@@ -180,6 +180,7 @@ module.exports.getSEOData = async (req, res) => {
         console.log('[SEO] SeoMetadata lookup result:', seoData);
         if (!seoData) {
             // Try to find a product by name or slug, including ProductSEO
+            console.log('[SEO] Trying to find product by slug:', page_name);
             const product = await Product.findOne({
                 where: {
                     [Op.or]: [
@@ -196,13 +197,26 @@ module.exports.getSEOData = async (req, res) => {
             });
             console.log('[SEO] Product lookup result:', product);
             if (product && product.ProductSEO) {
-                console.log('[SEO] Returning ProductSEO:', product.ProductSEO);
+                console.log('[SEO] Returning ProductSEO for slug:', page_name);
                 return res.json({ success: true, data: product.ProductSEO });
             }
             // fallback: if product.seo exists (legacy)
             if (product && product.seo) {
                 console.log('[SEO] Returning legacy product.seo:', product.seo);
                 return res.json({ success: true, data: product.seo });
+            }
+            // Return default SEO for product if found but no SEO data
+            if (product) {
+                console.log('[SEO] Product found but no SEO data, returning default');
+                return res.json({
+                    success: true,
+                    data: {
+                        meta_title: `${product.name} - CrossCoin`,
+                        meta_description: product.description || `Buy ${product.name} online at CrossCoin`,
+                        meta_keywords: `${product.name}, buy online, crosscoin, shopping`,
+                        canonical_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/ProductDetails?slug=${product.slug}`
+                    }
+                });
             }
         }
         if (!seoData) {
