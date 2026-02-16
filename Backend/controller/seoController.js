@@ -142,6 +142,39 @@ module.exports.getSEOData = async (req, res) => {
         if (!page_name) {
             return res.status(400).json({ message: 'Missing page_name parameter' });
         }
+        
+        // Handle product-details:ID format
+        if (page_name && page_name.startsWith('product-details:')) {
+            const productId = page_name.split(':')[1];
+            console.log('[SEO] Looking for product with ID:', productId);
+            
+            const product = await Product.findByPk(productId, {
+                include: [
+                    {
+                        model: ProductSEO,
+                        as: 'ProductSEO'
+                    }
+                ]
+            });
+            
+            if (product && product.ProductSEO) {
+                console.log('[SEO] Returning ProductSEO for product ID:', productId);
+                return res.json({ success: true, data: product.ProductSEO });
+            }
+            
+            // Return default SEO for product details page
+            console.log('[SEO] No ProductSEO found, returning default for product:', product?.name);
+            return res.json({
+                success: true,
+                data: {
+                    meta_title: product ? `${product.name} - CrossCoin` : 'Product Details - CrossCoin',
+                    meta_description: product ? (product.description || `Buy ${product.name} online at CrossCoin`) : 'View product details and shop online',
+                    meta_keywords: product ? `${product.name}, buy online, crosscoin, shopping` : 'products, shopping, online store',
+                    canonical_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/ProductDetails${product?.slug ? '?slug=' + product.slug : ''}`
+                }
+            });
+        }
+        
         // First try to find existing SEO data using exact page_name
         let seoData = await SeoMetadata.findOne({ where: { page_name } });
         console.log('[SEO] SeoMetadata lookup result:', seoData);
