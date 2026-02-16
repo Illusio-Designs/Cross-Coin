@@ -585,7 +585,7 @@ export default function ProductDetails() {
   if (loading) {
     return (
       <SeoWrapper
-        pageName="product-details"
+        pageName={productSlug || "product-details"}
         seo={null}
       >
         <div className="product-details-container">
@@ -604,7 +604,7 @@ export default function ProductDetails() {
   if (error) {
     return (
       <SeoWrapper
-        pageName="product-details"
+        pageName={productSlug || "product-details"}
         seo={null}
       >
         <div className="product-details-container">
@@ -638,7 +638,7 @@ export default function ProductDetails() {
   if (!product) {
     return (
       <SeoWrapper
-        pageName="product-details"
+        pageName={productSlug || "product-details"}
         seo={null}
       >
         <div className="product-details-container">
