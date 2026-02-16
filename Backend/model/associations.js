@@ -24,7 +24,7 @@ const { SeoMetadata } = require("./seoMetadataModel.js");
 const { CouponUsage } = require("./couponUsageModel.js");
 const { GuestUser } = require("./guestUserModel.js");
 const FShipLabelDownload = require("./fshipLabelDownloadModel.js");
-const UTMTracking = require("./utmModel.js");
+const { UTMTracking } = require("./utmModel.js");
 
 // Export all models
 module.exports = {
