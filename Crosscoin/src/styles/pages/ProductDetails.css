@@ -1615,24 +1615,20 @@
   margin: 2rem 0;
 }
 
-/* Desktop: Sticky buttons in content, then fixed Buy Now at bottom when scrolled */
+/* Desktop: Sticky buttons in content, then fixed at bottom when scrolled */
 @media (min-width: 427px) {
   .action-buttons-row {
-    position: sticky !important;
-    top: 100px;
+    position: relative;
     z-index: 100;
     background: white;
     padding: 20px;
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     margin: 2rem 0;
-    bottom: auto !important;
-    left: auto !important;
-    right: auto !important;
   }
   
-  /* Fixed Buy Now button at bottom when scrolled past product details */
-  .buy-now-btn.fixed-bottom {
+  /* Fixed action buttons at bottom when scrolled past product details */
+  .action-buttons-row.fixed-bottom-desktop {
     position: fixed;
     bottom: 0;
     left: 0;
@@ -1643,10 +1639,16 @@
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
     border-radius: 0;
     margin: 0;
-    text-align: center;
     display: flex;
-    align-items: center;
+    gap: 1.5rem;
     justify-content: center;
+    align-items: center;
+    max-width: 100%;
+  }
+  
+  .action-buttons-row.fixed-bottom-desktop .add-to-cart-btn,
+  .action-buttons-row.fixed-bottom-desktop .buy-now-btn {
+    max-width: 300px;
   }
 }
 
@@ -2226,7 +2228,7 @@
   .product-details {
     flex-direction: column;
     gap: 0.7rem;
-    padding: 15px 1rem;
+    padding: 15px 1rem 80px 1rem; /* Added bottom padding for fixed buttons */
   }
   
   .product-gallery {
@@ -2310,7 +2312,7 @@
     padding: 10px 12px;
     margin: 0;
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
-    z-index: 1;
+    z-index: 1000;
     border-top: 1px solid #e0e0e0;
   }
 
