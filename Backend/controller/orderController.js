@@ -259,6 +259,31 @@ module.exports.createOrder = async (req, res) => {
     console.log("appliedDiscount:", appliedDiscount);
     console.log("shippingFee:", shippingFee);
     console.log("finalAmount:", finalAmount);
+    
+    // Handle UTM tracking
+    const UTMTracking = require("../model/utmModel.js");
+    let utmTrackingId = null;
+    
+    if (req.body.utm_data || req.cookies?.session_id) {
+      try {
+        const sessionId = req.cookies?.session_id;
+        if (sessionId) {
+          const utmRecord = await UTMTracking.findOne({
+            where: { session_id: sessionId },
+            order: [['created_at', 'DESC']]
+          });
+          
+          if (utmRecord) {
+            utmTrackingId = utmRecord.id;
+            console.log("createOrder: Associated with UTM tracking ID:", utmTrackingId);
+          }
+        }
+      } catch (utmError) {
+        console.error("Error fetching UTM data:", utmError);
+        // Continue with order creation even if UTM fails
+      }
+    }
+    
     // Create order
     const order = await Order.create(
       {
@@ -273,6 +298,7 @@ module.exports.createOrder = async (req, res) => {
         payment_status: "pending",
         status: "pending",
         notes: notes || null,
+        utm_tracking_id: utmTrackingId,
       },
       { transaction }
     );
@@ -673,6 +699,30 @@ module.exports.createGuestOrder = async (req, res) => {
     const orderNumber = generateOrderNumber();
     console.log("createGuestOrder: Order number generated:", orderNumber);
 
+    // Handle UTM tracking
+    const UTMTracking = require("../model/utmModel.js");
+    let utmTrackingId = null;
+    
+    if (req.body.utm_data || req.cookies?.session_id) {
+      try {
+        const sessionId = req.cookies?.session_id;
+        if (sessionId) {
+          const utmRecord = await UTMTracking.findOne({
+            where: { session_id: sessionId },
+            order: [['created_at', 'DESC']]
+          });
+          
+          if (utmRecord) {
+            utmTrackingId = utmRecord.id;
+            console.log("createGuestOrder: Associated with UTM tracking ID:", utmTrackingId);
+          }
+        }
+      } catch (utmError) {
+        console.error("Error fetching UTM data:", utmError);
+        // Continue with order creation even if UTM fails
+      }
+    }
+
     // Create order
     const order = await Order.create(
       {
@@ -687,6 +737,7 @@ module.exports.createGuestOrder = async (req, res) => {
         status: "pending",
         payment_status: payment_type === "cod" ? "pending" : "pending",
         notes: notes || null,
+        utm_tracking_id: utmTrackingId,
       },
       { transaction }
     );

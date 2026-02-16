@@ -24,6 +24,7 @@ const googleAnalyticsRouter = require('./integration/googleAnalytics.js');
 const facebookPixelRouter = require('./integration/facebookPixel.js');
 const facebookCatalogRouter = require('./integration/facebookCatalog.js');
 const dashboardAnalyticsRouter = require('./integration/dashboardAnalytics.js');
+const utmRoutes = require('./routes/utmRoutes.js');
 
 // Initialize dotenv
 dotenv.config();
@@ -176,6 +177,7 @@ app.use('/api/facebook-pixel', facebookPixelRouter);
 app.use('/api/facebook-catalog', facebookCatalogRouter);
 // Dashboard analytics moved to /api/analytics to avoid conflict with /api/dashboard/stats
 app.use('/api/analytics', dashboardAnalyticsRouter);
+app.use('/api/utm', utmRoutes);
 
 // Endpoint to receive Facebook Pixel events from frontend and sync server-side
 app.post('/api/facebook-pixel', async (req, res) => {
