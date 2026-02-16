@@ -4252,3 +4252,299 @@ module.exports.exportDeliveredOrders = async (req, res) => {
     });
   }
 };
+
+// ============================================
+// FShip Label Management Functions
+// ============================================
+
+const { FShipLabelDownload } = require("../model/fshipLabelDownloadModel.js");
+const axios = require('axios');
+const archiver = require('archiver');
+
+// Mark label as downloaded
+module.exports.markLabelDownloaded = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user.id;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+
+    const order = await Order.findByPk(orderId);
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    if (!order.fship_label_url) {
+      return res.status(400).json({
+        success: false,
+        message: 'No shipping label available for this order'
+      });
+    }
+
+    // Update order
+    await order.update({
+      fship_label_downloaded: true,
+      fship_label_downloaded_at: new Date(),
+      fship_label_downloaded_by: userId
+    });
+
+    // Create download history record
+    await FShipLabelDownload.create({
+      order_id: orderId,
+      user_id: userId,
+      download_type: 'single',
+      ip_address: ipAddress
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Label marked as downloaded',
+      data: order
+    });
+  } catch (error) {
+    console.error('Error marking label as downloaded:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error marking label as downloaded',
+      error: error.message
+    });
+  }
+};
+
+// Download single label
+module.exports.downloadLabel = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user.id;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+
+    const order = await Order.findByPk(orderId);
+    
+    if (!order || !order.fship_label_url) {
+      return res.status(404).json({
+        success: false,
+        message: 'Label not found'
+      });
+    }
+
+    // Download the label from FShip URL
+    const response = await axios.get(order.fship_label_url, {
+      responseType: 'arraybuffer',
+      timeout: 30000 // 30 second timeout
+    });
+
+    // Mark as downloaded
+    await order.update({
+      fship_label_downloaded: true,
+      fship_label_downloaded_at: new Date(),
+      fship_label_downloaded_by: userId
+    });
+
+    // Create download history
+    await FShipLabelDownload.create({
+      order_id: orderId,
+      user_id: userId,
+      download_type: 'single',
+      ip_address: ipAddress
+    });
+
+    // Send file to client
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=label-${order.order_number}.pdf`);
+    res.send(Buffer.from(response.data));
+  } catch (error) {
+    console.error('Error downloading label:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error downloading label',
+      error: error.message
+    });
+  }
+};
+
+// Bulk download labels
+module.exports.bulkDownloadLabels = async (req, res) => {
+  try {
+    const { orderIds } = req.body; // Array of order IDs
+    const userId = req.user.id;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+
+    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide order IDs'
+      });
+    }
+
+    // Fetch orders with labels
+    const orders = await Order.findAll({
+      where: {
+        id: orderIds,
+        fship_label_url: { [Op.ne]: null }
+      }
+    });
+
+    if (orders.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No labels found for selected orders'
+      });
+    }
+
+    // Create zip archive
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename=labels-${Date.now()}.zip`);
+    
+    archive.pipe(res);
+
+    // Download and add each label to zip
+    for (const order of orders) {
+      try {
+        const response = await axios.get(order.fship_label_url, {
+          responseType: 'arraybuffer',
+          timeout: 30000
+        });
+
+        archive.append(Buffer.from(response.data), {
+          name: `label-${order.order_number}.pdf`
+        });
+
+        // Mark as downloaded
+        await order.update({
+          fship_label_downloaded: true,
+          fship_label_downloaded_at: new Date(),
+          fship_label_downloaded_by: userId
+        });
+
+        // Create download history
+        await FShipLabelDownload.create({
+          order_id: order.id,
+          user_id: userId,
+          download_type: 'bulk',
+          ip_address: ipAddress
+        });
+      } catch (error) {
+        console.error(`Error downloading label for order ${order.id}:`, error);
+      }
+    }
+
+    archive.finalize();
+  } catch (error) {
+    console.error('Error bulk downloading labels:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error bulk downloading labels',
+      error: error.message
+    });
+  }
+};
+
+// Get orders with pending labels
+module.exports.getPendingLabels = async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await Order.findAndCountAll({
+      where: {
+        fship_label_url: { [Op.ne]: null },
+        fship_label_downloaded: false
+      },
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['created_at', 'DESC']],
+      include: [
+        { 
+          model: User, 
+          as: 'User',
+          attributes: ['id', 'name', 'email'] 
+        },
+        { 
+          model: GuestUser, 
+          as: 'GuestUser',
+          attributes: ['id', 'name', 'email'] 
+        },
+        { 
+          model: ShippingAddress, 
+          as: 'ShippingAddress' 
+        }
+      ]
+    });
+
+    res.status(200).json({
+      success: true,
+      data: rows,
+      pagination: {
+        total: count,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(count / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching pending labels:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching pending labels',
+      error: error.message
+    });
+  }
+};
+
+// Get label download statistics
+module.exports.getLabelDownloadStats = async (req, res) => {
+  try {
+    const totalLabels = await Order.count({
+      where: { fship_label_url: { [Op.ne]: null } }
+    });
+
+    const downloadedLabels = await Order.count({
+      where: {
+        fship_label_url: { [Op.ne]: null },
+        fship_label_downloaded: true
+      }
+    });
+
+    const pendingLabels = totalLabels - downloadedLabels;
+
+    const recentDownloads = await FShipLabelDownload.findAll({
+      limit: 10,
+      order: [['downloaded_at', 'DESC']],
+      include: [
+        { 
+          model: Order, 
+          as: 'Order',
+          attributes: ['id', 'order_number'] 
+        },
+        { 
+          model: User, 
+          as: 'DownloadedBy',
+          attributes: ['id', 'name', 'email'] 
+        }
+      ]
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalLabels,
+        downloadedLabels,
+        pendingLabels,
+        downloadRate: totalLabels > 0 ? ((downloadedLabels / totalLabels) * 100).toFixed(2) : 0,
+        recentDownloads
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching label stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching label statistics',
+      error: error.message
+    });
+  }
+};

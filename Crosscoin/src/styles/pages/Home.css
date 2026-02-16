@@ -1978,3 +1978,66 @@
 .footer__copyright {
   color: #222;
 }
+
+
+/* ========================================
+   SLIDER ARROW FIXES - February 2026
+   Force arrows to be clickable and visible
+   ======================================== */
+
+/* Force all slider arrows to be clickable */
+.slider-arrow {
+  pointer-events: auto !important;
+  z-index: 100 !important;
+  cursor: pointer !important;
+}
+
+.category-products .slider-arrow,
+.featured-products-container .slider-arrow,
+.latest-products-container .slider-arrow {
+  pointer-events: auto !important;
+  z-index: 100 !important;
+}
+
+/* Ensure slider containers don't block arrows */
+.products-slider,
+.featured-products-slider {
+  position: relative;
+  z-index: 1;
+}
+
+/* Category section arrows */
+.category-section {
+  position: relative;
+}
+
+.category-section .slider-arrow {
+  z-index: 100 !important;
+  pointer-events: auto !important;
+}
+
+/* Make sure arrows are visible and clickable on mobile */
+@media (max-width: 768px) {
+  .slider-arrow {
+    display: flex !important;
+    pointer-events: auto !important;
+    z-index: 100 !important;
+  }
+  
+  .category-products .slider-arrow,
+  .featured-products-container .slider-arrow {
+    pointer-events: auto !important;
+  }
+}
+
+/* Ensure arrows appear above product cards */
+.product-card {
+  z-index: 1;
+}
+
+/* Force visibility for category sidebar arrows */
+.category-sidebar .slider-arrow {
+  pointer-events: auto !important;
+  z-index: 100 !important;
+  display: flex !important;
+}

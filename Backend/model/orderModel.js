@@ -112,6 +112,27 @@ const Order = sequelize.define('Order', {
         type: DataTypes.TEXT,
         allowNull: true
     },
+    fship_label_downloaded: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    fship_label_downloaded_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    fship_label_downloaded_by: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'users',
+            key: 'id'
+        },
+        onDelete: 'SET NULL'
+    },
+    fship_tracking_number: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+    },
     tracking_number: {
         type: DataTypes.STRING,
         allowNull: true
