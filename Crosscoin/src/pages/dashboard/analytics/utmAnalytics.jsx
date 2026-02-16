@@ -1,0 +1,283 @@
+import { useState, useEffect } from 'react';
+import '../../../styles/dashboard/utmAnalytics.css';
+
+const UTMAnalytics = () => {
+  const [utmData, setUtmData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [dateRange, setDateRange] = useState({
+    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0]
+  });
+  const [stats, setStats] = useState({
+    totalVisits: 0,
+    totalOrders: 0,
+    conversionRate: 0,
+    totalRevenue: 0
+  });
+
+  useEffect(() => {
+    fetchUTMData();
+  }, [dateRange]);
+
+  const fetchUTMData = async () => {
+    try {
+      setLoading(true);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+      
+      // Fetch UTM analytics
+      const analyticsResponse = await fetch(
+        `${apiUrl}/api/utm/analytics?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`,
+        {
+          credentials: 'include',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      if (!analyticsResponse.ok) {
+        throw new Error('Failed to fetch UTM analytics');
+      }
+
+      const analyticsData = await analyticsResponse.json();
+      
+      // Fetch all UTM tracking data with order information
+      const trackingResponse = await fetch(
+        `${apiUrl}/api/utm/all?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`,
+        {
+          credentials: 'include',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      let trackingData = [];
+      if (trackingResponse.ok) {
+        const trackingResult = await trackingResponse.json();
+        trackingData = trackingResult.data || [];
+      }
+
+      // Process data
+      const processedData = processUTMData(analyticsData.data || [], trackingData);
+      setUtmData(processedData);
+      
+      // Calculate stats
+      calculateStats(trackingData);
+      
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching UTM data:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const processUTMData = (analyticsData, trackingData) => {
+    // Group by campaign
+    const campaignMap = new Map();
+
+    trackingData.forEach(item => {
+      const key = `${item.utm_source || 'direct'}_${item.utm_campaign || 'none'}`;
+      
+      if (!campaignMap.has(key)) {
+        campaignMap.set(key, {
+          utm_source: item.utm_source || 'direct',
+          utm_medium: item.utm_medium || 'none',
+          utm_campaign: item.utm_campaign || 'none',
+          visits: 0,
+          orders: 0,
+          revenue: 0
+        });
+      }
+
+      const campaign = campaignMap.get(key);
+      campaign.visits += 1;
+      
+      if (item.Orders && item.Orders.length > 0) {
+        campaign.orders += item.Orders.length;
+        campaign.revenue += item.Orders.reduce((sum, order) => sum + parseFloat(order.final_amount || 0), 0);
+      }
+    });
+
+    return Array.from(campaignMap.values()).map(campaign => ({
+      ...campaign,
+      conversionRate: campaign.visits > 0 ? ((campaign.orders / campaign.visits) * 100).toFixed(2) : 0
+    }));
+  };
+
+  const calculateStats = (trackingData) => {
+    const totalVisits = trackingData.length;
+    let totalOrders = 0;
+    let totalRevenue = 0;
+
+    trackingData.forEach(item => {
+      if (item.Orders && item.Orders.length > 0) {
+        totalOrders += item.Orders.length;
+        totalRevenue += item.Orders.reduce((sum, order) => sum + parseFloat(order.final_amount || 0), 0);
+      }
+    });
+
+    const conversionRate = totalVisits > 0 ? ((totalOrders / totalVisits) * 100).toFixed(2) : 0;
+
+    setStats({
+      totalVisits,
+      totalOrders,
+      conversionRate,
+      totalRevenue: totalRevenue.toFixed(2)
+    });
+  };
+
+  const handleDateChange = (e) => {
+    setDateRange({
+      ...dateRange,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="utm-analytics">
+        <div className="utm-header">
+          <h1>UTM Analytics</h1>
+        </div>
+        <div className="loading-container">
+          <div className="loader"></div>
+          <p>Loading UTM data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="utm-analytics">
+        <div className="utm-header">
+          <h1>UTM Analytics</h1>
+        </div>
+        <div className="error-container">
+          <p className="error-message">Error: {error}</p>
+          <button onClick={fetchUTMData} className="retry-button">Retry</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="utm-analytics">
+      <div className="utm-header">
+        <h1>UTM Analytics</h1>
+        <p className="utm-subtitle">Track marketing campaign performance</p>
+      </div>
+
+      {/* Date Range Filter */}
+      <div className="date-filter">
+        <div className="date-input-group">
+          <label>Start Date:</label>
+          <input
+            type="date"
+            name="startDate"
+            value={dateRange.startDate}
+            onChange={handleDateChange}
+          />
+        </div>
+        <div className="date-input-group">
+          <label>End Date:</label>
+          <input
+            type="date"
+            name="endDate"
+            value={dateRange.endDate}
+            onChange={handleDateChange}
+          />
+        </div>
+        <button onClick={fetchUTMData} className="apply-filter-btn">
+          Apply Filter
+        </button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-icon visits">📊</div>
+          <div className="stat-content">
+            <h3>Total Visits</h3>
+            <p className="stat-value">{stats.totalVisits}</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon orders">🛒</div>
+          <div className="stat-content">
+            <h3>Total Orders</h3>
+            <p className="stat-value">{stats.totalOrders}</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon conversion">📈</div>
+          <div className="stat-content">
+            <h3>Conversion Rate</h3>
+            <p className="stat-value">{stats.conversionRate}%</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon revenue">💰</div>
+          <div className="stat-content">
+            <h3>Total Revenue</h3>
+            <p className="stat-value">₹{stats.totalRevenue}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Campaign Performance Table */}
+      <div className="utm-table-container">
+        <h2>Campaign Performance</h2>
+        {utmData.length === 0 ? (
+          <div className="no-data">
+            <p>No UTM data available for the selected date range.</p>
+            <p className="hint">Try adjusting the date range or check if UTM tracking is working correctly.</p>
+          </div>
+        ) : (
+          <table className="utm-table">
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th>Medium</th>
+                <th>Campaign</th>
+                <th>Visits</th>
+                <th>Orders</th>
+                <th>Conversion Rate</th>
+                <th>Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              {utmData.map((row, index) => (
+                <tr key={index}>
+                  <td>
+                    <span className="utm-badge source">{row.utm_source}</span>
+                  </td>
+                  <td>
+                    <span className="utm-badge medium">{row.utm_medium}</span>
+                  </td>
+                  <td>
+                    <span className="utm-badge campaign">{row.utm_campaign}</span>
+                  </td>
+                  <td>{row.visits}</td>
+                  <td>{row.orders}</td>
+                  <td>
+                    <span className={`conversion-badge ${parseFloat(row.conversionRate) > 5 ? 'high' : parseFloat(row.conversionRate) > 2 ? 'medium' : 'low'}`}>
+                      {row.conversionRate}%
+                    </span>
+                  </td>
+                  <td className="revenue">₹{row.revenue.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default UTMAnalytics;

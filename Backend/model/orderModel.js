@@ -154,6 +154,16 @@ const Order = sequelize.define('Order', {
         },
         onDelete: 'SET NULL',
         onUpdate: 'CASCADE'
+    },
+    utm_tracking_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'utm_tracking',
+            key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
     }
 }, {
     tableName: 'orders',

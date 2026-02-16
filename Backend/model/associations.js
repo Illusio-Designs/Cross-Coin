@@ -24,6 +24,7 @@ const { SeoMetadata } = require("./seoMetadataModel.js");
 const { CouponUsage } = require("./couponUsageModel.js");
 const { GuestUser } = require("./guestUserModel.js");
 const FShipLabelDownload = require("./fshipLabelDownloadModel.js");
+const { UTMTracking } = require("./utmModel.js");
 
 // Export all models
 module.exports = {
@@ -52,6 +53,7 @@ module.exports = {
   CouponUsage,
   GuestUser,
   FShipLabelDownload,
+  UTMTracking,
 };
 
 // User Associations
@@ -326,5 +328,40 @@ Order.belongsTo(User, {
 User.hasMany(Order, {
   foreignKey: "fship_label_downloaded_by",
   as: "DownloadedLabels",
+  onDelete: "SET NULL",
+});
+
+// UTM Tracking Associations
+UTMTracking.belongsTo(User, {
+  foreignKey: "user_id",
+  as: "User",
+  onDelete: "SET NULL",
+});
+User.hasMany(UTMTracking, {
+  foreignKey: "user_id",
+  as: "UTMTrackings",
+  onDelete: "SET NULL",
+});
+
+UTMTracking.belongsTo(GuestUser, {
+  foreignKey: "guest_user_id",
+  as: "GuestUser",
+  onDelete: "SET NULL",
+});
+GuestUser.hasMany(UTMTracking, {
+  foreignKey: "guest_user_id",
+  as: "UTMTrackings",
+  onDelete: "SET NULL",
+});
+
+// Order -> UTM Tracking
+Order.belongsTo(UTMTracking, {
+  foreignKey: "utm_tracking_id",
+  as: "UTMTracking",
+  onDelete: "SET NULL",
+});
+UTMTracking.hasMany(Order, {
+  foreignKey: "utm_tracking_id",
+  as: "Orders",
   onDelete: "SET NULL",
 });

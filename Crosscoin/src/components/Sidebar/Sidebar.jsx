@@ -57,6 +57,10 @@ const menu = [
     icon: <FaFileAlt />, view: "policies"
   },
   {
+    label: "UTM Analytics",
+    icon: <FaChartBar />, view: "utm-analytics"
+  },
+  {
     label: "Consumers",
     icon: <FaUser />, view: "consumers"
   },

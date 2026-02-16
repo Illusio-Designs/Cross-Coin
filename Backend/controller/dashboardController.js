@@ -1,4 +1,4 @@
-const { Product, Order, User, Payment, Review, OrderItem, ProductVariation, GuestUser } = require("../model/associations.js");
+const { Product, Order, User, Payment, Review, OrderItem, ProductVariation, GuestUser, UTMTracking } = require("../model/associations.js");
 const { sequelize } = require("../config/db.js");
 const { Op, QueryTypes } = require("sequelize");
 
@@ -474,6 +474,69 @@ const getDashboardStats = async (req, res) => {
       averageRTOValue: rtoOrders.length > 0 ? parseFloat((rtoRevenue / rtoOrders.length).toFixed(2)) : 0
     };
 
+    // 7. UTM TRACKING ANALYTICS
+    const utmStats = await sequelize.query(`
+      SELECT 
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        COUNT(DISTINCT session_id) as sessions,
+        COUNT(DISTINCT CASE WHEN user_id IS NOT NULL THEN user_id END) as registered_users,
+        COUNT(DISTINCT CASE WHEN guest_user_id IS NOT NULL THEN guest_user_id END) as guest_users
+      FROM utm_tracking
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+      GROUP BY utm_source, utm_medium, utm_campaign
+      ORDER BY sessions DESC
+      LIMIT 10
+    `, { type: QueryTypes.SELECT });
+
+    // Get UTM conversion data (sessions that led to orders)
+    const utmConversions = await sequelize.query(`
+      SELECT 
+        utm.utm_source,
+        utm.utm_medium,
+        COUNT(DISTINCT utm.session_id) as total_sessions,
+        COUNT(DISTINCT o.id) as orders,
+        SUM(CASE WHEN o.status NOT IN ('cancelled') THEN o.final_amount ELSE 0 END) as revenue
+      FROM utm_tracking utm
+      LEFT JOIN orders o ON utm.id = o.utm_tracking_id
+      WHERE utm.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+      GROUP BY utm.utm_source, utm.utm_medium
+      ORDER BY revenue DESC
+      LIMIT 10
+    `, { type: QueryTypes.SELECT });
+
+    // Format UTM data
+    const formattedUTMStats = utmStats.map(stat => ({
+      source: stat.utm_source || 'Direct',
+      medium: stat.utm_medium || 'None',
+      campaign: stat.utm_campaign || 'N/A',
+      sessions: parseInt(stat.sessions || 0),
+      registeredUsers: parseInt(stat.registered_users || 0),
+      guestUsers: parseInt(stat.guest_users || 0)
+    }));
+
+    const formattedUTMConversions = utmConversions.map(conv => ({
+      source: conv.utm_source || 'Direct',
+      medium: conv.utm_medium || 'None',
+      sessions: parseInt(conv.total_sessions || 0),
+      orders: parseInt(conv.orders || 0),
+      revenue: parseFloat(conv.revenue || 0),
+      conversionRate: parseInt(conv.total_sessions || 0) > 0 
+        ? parseFloat(((parseInt(conv.orders || 0) / parseInt(conv.total_sessions || 0)) * 100).toFixed(2))
+        : 0
+    }));
+
+    // UTM Source Chart (Top 5 sources by sessions)
+    const utmSourceChart = formattedUTMStats.slice(0, 5).map((stat, index) => {
+      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
+      return {
+        label: stat.source,
+        value: stat.sessions,
+        color: colors[index % colors.length]
+      };
+    });
+
     res.status(200).json({
       success: true,
       stats: {
@@ -569,7 +632,13 @@ const getDashboardStats = async (req, res) => {
           counts: paymentStatusCounts,
           chart: paymentStatusChart
         },
-        rtoStats: rtoStats
+        rtoStats: rtoStats,
+        // UTM TRACKING
+        utmTracking: {
+          topSources: formattedUTMStats,
+          conversions: formattedUTMConversions,
+          sourceChart: utmSourceChart
+        }
       },
     });
   } catch (error) {
