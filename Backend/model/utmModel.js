@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
+const { sequelize } = require('../config/db');
 
 const UTMTracking = sequelize.define('UTMTracking', {
   id: {
@@ -70,4 +70,4 @@ const UTMTracking = sequelize.define('UTMTracking', {
   updatedAt: false
 });
 
-module.exports = UTMTracking;
+module.exports = { UTMTracking };
