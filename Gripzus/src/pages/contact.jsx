@@ -25,7 +25,7 @@ export default function Contact() {
                 marginBottom: 'var(--spacing-sm)'
               }}>Contact Us</h1>
               <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-base)' }}>
-                We're here to help and answer any question you might have
+                We&apos;re here to help and answer any question you might have
               </p>
             </div>
 

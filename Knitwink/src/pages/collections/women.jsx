@@ -56,7 +56,7 @@ export default function WomenCollection() {
   return (
     <>
       <Head>
-        <title>Women's Collection - Knitwink</title>
+        <title>Women&apos;s Collection - Knitwink</title>
         <meta name="description" content="Elegant styles, exceptional quality" />
       </Head>
 
@@ -65,7 +65,7 @@ export default function WomenCollection() {
       <main className="main">
         <section className="pageHeader">
           <div className="container">
-            <h1>Women's Collection</h1>
+            <h1>Women&apos;s Collection</h1>
             <p>Elegant styles, exceptional quality</p>
           </div>
         </section>

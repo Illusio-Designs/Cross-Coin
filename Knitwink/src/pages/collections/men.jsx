@@ -56,7 +56,7 @@ export default function MenCollection() {
   return (
     <>
       <Head>
-        <title>Men's Collection - Knitwink</title>
+        <title>Men&apos;s Collection - Knitwink</title>
         <meta name="description" content="Premium socks for men" />
       </Head>
 
@@ -65,7 +65,7 @@ export default function MenCollection() {
       <main className="main">
         <section className="pageHeader">
           <div className="container">
-            <h1>Men's Collection</h1>
+            <h1>Men&apos;s Collection</h1>
             <p>Premium comfort for every occasion</p>
           </div>
         </section>

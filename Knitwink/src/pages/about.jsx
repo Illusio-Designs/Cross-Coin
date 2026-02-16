@@ -92,7 +92,7 @@ export default function About() {
                   </svg>
                 </div>
                 <h3>Customer Focus</h3>
-                <p>Your comfort and satisfaction drive everything we do. We're here for you 24/7.</p>
+                <p>Your comfort and satisfaction drive everything we do. We&apos;re here for you 24/7.</p>
               </div>
             </div>
           </div>

@@ -158,7 +158,7 @@ export default function Home() {
                   <div className="categoryOverlay"></div>
                 </div>
                 <div className="categoryContent">
-                  <h3 className="categoryName">Men's Collection</h3>
+                  <h3 className="categoryName">Men&apos;s Collection</h3>
                   <p className="categoryDescription">Premium comfort for every occasion</p>
                   <span className="categoryLink">
                     Shop Now
@@ -174,7 +174,7 @@ export default function Home() {
                   <div className="categoryOverlay"></div>
                 </div>
                 <div className="categoryContent">
-                  <h3 className="categoryName">Women's Collection</h3>
+                  <h3 className="categoryName">Women&apos;s Collection</h3>
                   <p className="categoryDescription">Elegant styles, exceptional quality</p>
                   <span className="categoryLink">
                     Shop Now

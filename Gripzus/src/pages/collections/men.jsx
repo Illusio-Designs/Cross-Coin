@@ -42,7 +42,7 @@ export default function Men() {
   return (
     <>
       <Head>
-        <title>Men's Collection - Gripzus</title>
+        <title>Men&apos;s Collection - Gripzus</title>
         <meta name="description" content="Shop men's fashion at Gripzus" />
       </Head>
 
@@ -54,7 +54,7 @@ export default function Men() {
             <div className="sectionHeader">
               <div>
                 <span className="sectionSubtitle">For Him</span>
-                <h1 className="sectionTitle">Men's Collection</h1>
+                <h1 className="sectionTitle">Men&apos;s Collection</h1>
               </div>
             </div>
             <div className="productsGrid">
