@@ -47,10 +47,12 @@ export default function UnifiedCheckout() {
           couponPaymentMode: appliedCoupon.paymentMode,
           newPaymentMode: paymentMode
         });
-        handleCouponRemoved();
+        // Remove coupon directly without calling handleCouponRemoved to avoid dependency issues
+        setAppliedCoupon(null);
+        sessionStorage.removeItem("appliedCoupon");
       }
     }
-  }, [shippingFee, appliedCoupon, handleCouponRemoved]);
+  }, [shippingFee, appliedCoupon]); // Removed handleCouponRemoved from dependencies
 
   // Address management state
   const [addresses, setAddresses] = useState([]);
