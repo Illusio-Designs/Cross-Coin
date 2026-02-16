@@ -1116,7 +1116,13 @@ export default function ProductDetails() {
   return (
     <SeoWrapper
       pageName={product?.slug || "product-details"}
-      seo={product?.seo}
+      seoData={product?.ProductSEO || product?.seo || {
+        meta_title: `${product?.name || 'Product'} - CrossCoin`,
+        meta_description: product?.description || 'Shop quality products at CrossCoin',
+        meta_keywords: `${product?.name || 'product'}, buy online, crosscoin`,
+        canonical_url: typeof window !== 'undefined' ? window.location.href : '',
+        meta_image: product?.images?.[0]?.image_url || null
+      }}
     >
       <div className="product-details-container">
         <Header />
