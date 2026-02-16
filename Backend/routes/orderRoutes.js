@@ -20,7 +20,13 @@ const {
     handleFShipWebhook,
     syncSingleOrderWithFShip,
     exportDeliveredOrders,
-    updateAwbNumber
+    updateAwbNumber,
+    // Label management functions
+    markLabelDownloaded,
+    downloadLabel,
+    bulkDownloadLabels,
+    getPendingLabels,
+    getLabelDownloadStats
 } = require('../controller/orderController.js');
 const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
 
@@ -44,6 +50,14 @@ router.get('/export/delivered', isAuthenticated, authorize(['admin']), exportDel
 router.post('/fship/sync', isAuthenticated, authorize(['admin']), syncOrdersWithFShip);
 router.post('/fship/cancel', isAuthenticated, authorize(['admin']), cancelOrdersInFShip);
 router.get('/fship/couriers', isAuthenticated, authorize(['admin']), getFShipCouriers);
+
+// Label management routes
+router.get('/labels/pending', isAuthenticated, authorize(['admin']), getPendingLabels);
+router.get('/labels/stats', isAuthenticated, authorize(['admin']), getLabelDownloadStats);
+router.post('/labels/bulk-download', isAuthenticated, authorize(['admin']), bulkDownloadLabels);
+router.post('/labels/:orderId/mark-downloaded', isAuthenticated, authorize(['admin']), markLabelDownloaded);
+router.get('/labels/:orderId/download', isAuthenticated, authorize(['admin']), downloadLabel);
+
 router.put('/:id/fship/sync', isAuthenticated, authorize(['admin']), syncSingleOrderWithFShip);
 router.put('/:id/admin/cancel', isAuthenticated, authorize(['admin']), adminCancelOrder);
 router.put('/:id/awb', isAuthenticated, authorize(['admin']), updateAwbNumber);

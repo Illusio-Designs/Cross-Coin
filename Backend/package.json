@@ -28,6 +28,7 @@
   "email": "info@illusiodesigns.agency",
   "website": "https://www.illusiodesigns.agency",
   "dependencies": {
+    "archiver": "^7.0.1",
     "axios": "^1.8.4",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^2.4.3",

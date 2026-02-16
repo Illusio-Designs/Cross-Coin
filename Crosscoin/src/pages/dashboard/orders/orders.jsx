@@ -478,18 +478,19 @@ const Orders = () => {
         }
     }, [currentPage, fetchOrders]);
 
-    const debouncedSearch = useCallback((searchTerm) => {
-        const timeoutId = setTimeout(() => {
+    // Properly debounced search using lodash
+    const debouncedFetchOrders = useCallback(
+        debounce(() => {
             setCurrentPage(1);
             fetchOrders(1);
-        }, 500);
-        return () => clearTimeout(timeoutId);
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+        }, 500),
+        [fetchOrders]
+    );
     
     const handleSearchChange = (e) => {
         const value = e.target.value;
         setFilterValue(value); // Update immediately for UI responsiveness
-        debouncedSearch(value); // Debounced API call
+        debouncedFetchOrders(); // Debounced API call
     };
 
     // Remove manual status change - now handled automatically by FShip sync
