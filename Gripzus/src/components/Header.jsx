@@ -8,11 +8,30 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
+  const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
+  const [isMegaMenuPinned, setIsMegaMenuPinned] = useState(false);
   const { currency, changeCurrency, currencies } = useCurrency();
   const router = useRouter();
 
   const isActive = (path) => {
     return router.pathname === path || router.pathname.startsWith(path);
+  };
+
+  const handleMegaMenuClick = () => {
+    const newPinnedState = !isMegaMenuPinned;
+    setIsMegaMenuPinned(newPinnedState);
+    setIsMegaMenuOpen(newPinnedState);
+  };
+
+  const handleMegaMenuHover = (isHovering) => {
+    if (!isMegaMenuPinned) {
+      setIsMegaMenuOpen(isHovering);
+    }
+  };
+
+  const closeMegaMenu = () => {
+    setIsMegaMenuPinned(false);
+    setIsMegaMenuOpen(false);
   };
 
   return (
@@ -57,11 +76,83 @@ export default function Header() {
 
             {/* Desktop Navigation */}
             <nav className={`nav ${isMenuOpen ? 'nav-open' : ''}`}>
-              <Link href="/collections/new-arrivals" className={isActive('/collections/new-arrivals') ? 'active' : ''}>New Arrivals</Link>
-              <Link href="/collections/men" className={isActive('/collections/men') ? 'active' : ''}>Men</Link>
-              <Link href="/collections/women" className={isActive('/collections/women') ? 'active' : ''}>Women</Link>
-              <Link href="/collections/accessories" className={isActive('/collections/accessories') ? 'active' : ''}>Accessories</Link>
-              <Link href="/collections/sale" className={isActive('/collections/sale') ? 'active' : ''}>Sale</Link>
+              <Link href="/" className={isActive('/') && router.pathname === '/' ? 'active' : ''}>Home</Link>
+              <Link href="/products" className={isActive('/products') ? 'active' : ''}>Products</Link>
+              <div 
+                className="nav-item-with-mega"
+                onMouseEnter={() => handleMegaMenuHover(true)}
+                onMouseLeave={() => handleMegaMenuHover(false)}
+              >
+                <button 
+                  className={`nav-link-btn ${isActive('/collections') ? 'active' : ''}`}
+                  onClick={handleMegaMenuClick}
+                >
+                  Collections
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ marginLeft: '4px' }}>
+                    <polyline points="6 9 12 15 18 9" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                </button>
+                {isMegaMenuOpen && (
+                  <>
+                    {isMegaMenuPinned && <div className="mega-menu-overlay" onClick={closeMegaMenu}></div>}
+                    <div className="mega-menu">
+                      <div className="container">
+                        <div className="mega-menu-grid">
+                          <div className="mega-menu-col">
+                            <h3>Men&apos;s Socks</h3>
+                            <ul>
+                              <li><Link href="/products?filter=men" onClick={closeMegaMenu}>All Men&apos;s</Link></li>
+                              <li><Link href="/collections/men" onClick={closeMegaMenu}>Dress Socks</Link></li>
+                              <li><Link href="/collections/men" onClick={closeMegaMenu}>Athletic Socks</Link></li>
+                              <li><Link href="/collections/men" onClick={closeMegaMenu}>Casual Socks</Link></li>
+                              <li><Link href="/collections/men" onClick={closeMegaMenu}>Winter Socks</Link></li>
+                            </ul>
+                          </div>
+                          <div className="mega-menu-col">
+                            <h3>Women&apos;s Socks</h3>
+                            <ul>
+                              <li><Link href="/products?filter=women" onClick={closeMegaMenu}>All Women&apos;s</Link></li>
+                              <li><Link href="/collections/women" onClick={closeMegaMenu}>Ankle Socks</Link></li>
+                              <li><Link href="/collections/women" onClick={closeMegaMenu}>Knee High</Link></li>
+                              <li><Link href="/collections/women" onClick={closeMegaMenu}>Compression</Link></li>
+                              <li><Link href="/collections/women" onClick={closeMegaMenu}>Cozy Socks</Link></li>
+                            </ul>
+                          </div>
+                          <div className="mega-menu-col">
+                            <h3>Kids Socks</h3>
+                            <ul>
+                              <li><Link href="/products?filter=accessories" onClick={closeMegaMenu}>All Kids</Link></li>
+                              <li><Link href="/collections/accessories" onClick={closeMegaMenu}>School Socks</Link></li>
+                              <li><Link href="/collections/accessories" onClick={closeMegaMenu}>Sports Socks</Link></li>
+                              <li><Link href="/collections/accessories" onClick={closeMegaMenu}>Fun Patterns</Link></li>
+                              <li><Link href="/collections/accessories" onClick={closeMegaMenu}>Character Socks</Link></li>
+                            </ul>
+                          </div>
+                          <div className="mega-menu-col">
+                            <h3>Shop by Type</h3>
+                            <ul>
+                              <li><Link href="/products?filter=new-arrivals" onClick={closeMegaMenu}>New Arrivals</Link></li>
+                              <li><Link href="/products?filter=sale" onClick={closeMegaMenu}>Sale Items</Link></li>
+                              <li><Link href="/products" onClick={closeMegaMenu}>Bestsellers</Link></li>
+                              <li><Link href="/products" onClick={closeMegaMenu}>Gift Sets</Link></li>
+                            </ul>
+                          </div>
+                          <div className="mega-menu-featured">
+                            <img src="https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=600" alt="Featured Collection" />
+                            <div className="mega-menu-featured-content">
+                              <h4>New Arrivals</h4>
+                              <p>Premium Comfort Collection</p>
+                              <Link href="/products" className="btn btn-sm btn-primary" onClick={closeMegaMenu}>Shop Now</Link>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+              <Link href="/about" className={isActive('/about') ? 'active' : ''}>About</Link>
+              <Link href="/contact" className={isActive('/contact') ? 'active' : ''}>Contact</Link>
             </nav>
 
             {/* Header Actions */}
