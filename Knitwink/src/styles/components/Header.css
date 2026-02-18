@@ -416,3 +416,199 @@
     padding: var(--spacing-sm) var(--spacing-lg);
   }
 }
+
+/* Mega Menu Overlay */
+.megaMenuOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 997;
+}
+
+/* Mega Menu Styles */
+.navLinkBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--spacing-sm) 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-dark);
+  position: relative;
+}
+
+.navLinkBtn::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 3px;
+  background: var(--color-dark);
+  transition: width var(--transition-base);
+}
+
+.navLinkBtn:hover::after,
+.navLinkBtn.active::after {
+  width: 100%;
+}
+
+.navLinkBtn:hover,
+.navLinkBtn.active {
+  color: var(--color-dark);
+}
+
+.megaMenu {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 80px;
+  width: 100%;
+  background: var(--color-white);
+  border-top: 2px solid var(--color-gray-200);
+  border-bottom: 2px solid var(--color-gray-200);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  z-index: 998;
+  animation: megaSlideDown 0.3s ease-out;
+  border-radius: 0;
+}
+
+@keyframes megaSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.megaMenu .container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-xl);
+}
+
+.megaMenuGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr) 350px;
+  gap: var(--spacing-2xl);
+  padding: var(--spacing-3xl) var(--spacing-xl);
+}
+
+.megaMenuCol h3 {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-dark);
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 2px solid var(--color-dark);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.megaMenuCol ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.megaMenuCol ul li {
+  margin-bottom: var(--spacing-xs);
+}
+
+.megaMenuCol ul li a {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-600);
+  transition: all var(--transition-base);
+  display: block;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: 0;
+  text-decoration: none;
+}
+
+.megaMenuCol ul li a:hover {
+  color: var(--color-dark);
+  background: var(--color-gray-100);
+  text-decoration: underline;
+}
+
+.megaMenuFeatured {
+  position: relative;
+  border-radius: 0;
+  overflow: hidden;
+  height: 350px;
+  border: 2px solid var(--color-dark);
+}
+
+.megaMenuFeatured img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.5);
+  transition: all var(--transition-slow);
+}
+
+.megaMenuFeatured:hover img {
+  transform: scale(1.08);
+  filter: brightness(0.4);
+}
+
+.megaMenuFeaturedContent {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--spacing-xl);
+  background: linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.85) 70%, transparent 100%);
+  color: var(--color-white);
+  z-index: 2;
+}
+
+.megaMenuFeaturedContent h4 {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-extrabold);
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-white);
+}
+
+.megaMenuFeaturedContent p {
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--spacing-md);
+  opacity: 1;
+  color: var(--color-white);
+}
+
+.megaMenuFeaturedContent .btn {
+  background: var(--color-white);
+  color: var(--color-dark);
+  border: none;
+  font-weight: var(--font-weight-bold);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.megaMenuFeaturedContent .btn:hover {
+  background: var(--color-dark);
+  color: var(--color-white);
+  border: none;
+}
+
+@media (max-width: 1024px) {
+  .megaMenu {
+    display: none;
+  }
+}

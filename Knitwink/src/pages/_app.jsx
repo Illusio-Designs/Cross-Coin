@@ -5,6 +5,7 @@ import '../styles/components/ProductCard.css';
 import '../styles/pages/Home.css';
 import '../styles/pages/About.css';
 import '../styles/pages/Contact.css';
+import '../styles/pages/Products.css';
 import { CurrencyProvider } from '../context/CurrencyContext';
 
 export default function App({ Component, pageProps }) {
