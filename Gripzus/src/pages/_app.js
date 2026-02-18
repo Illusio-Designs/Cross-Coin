@@ -3,6 +3,7 @@ import '../styles/components/Header.css'
 import '../styles/components/Footer.css'
 import '../styles/components/ProductCard.css'
 import '../styles/pages/Home.css'
+import '../styles/pages/Products.css'
 import { CurrencyProvider } from '../context/CurrencyContext'
 
 function MyApp({ Component, pageProps }) {
