@@ -6,12 +6,17 @@ import '../styles/pages/Home.css';
 import '../styles/pages/About.css';
 import '../styles/pages/Contact.css';
 import '../styles/pages/Products.css';
+import '../styles/pages/Auth.css';
+import '../styles/pages/Account.css';
 import { CurrencyProvider } from '../context/CurrencyContext';
+import { AuthProvider } from '../context/AuthContext';
 
 export default function App({ Component, pageProps }) {
   return (
-    <CurrencyProvider>
-      <Component {...pageProps} />
-    </CurrencyProvider>
+    <AuthProvider>
+      <CurrencyProvider>
+        <Component {...pageProps} />
+      </CurrencyProvider>
+    </AuthProvider>
   );
 }
