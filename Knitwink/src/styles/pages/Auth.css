@@ -76,6 +76,38 @@
   transition: all var(--transition-base);
 }
 
+.passwordInput {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.passwordInput input {
+  padding-right: 40px;
+}
+
+.passwordToggle {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--color-gray-600);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.passwordToggle:hover {
+  color: var(--color-dark);
+}
+
+.passwordToggle svg {
+  display: block;
+}
+
 .formGroup input::placeholder {
   color: var(--color-gray-400);
 }

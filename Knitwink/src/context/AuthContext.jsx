@@ -104,12 +104,33 @@ export function AuthProvider({ children }) {
     router.push('/');
   };
 
+  const updateProfile = async (data) => {
+    try {
+      // Simulate API call - replace with actual API
+      const updatedUser = {
+        ...user,
+        name: data.name,
+        email: data.email
+      };
+
+      // Update localStorage
+      localStorage.setItem('userData', JSON.stringify(updatedUser));
+      
+      setUser(updatedUser);
+      return { success: true };
+    } catch (error) {
+      console.error('Update profile error:', error);
+      return { success: false, error: 'Failed to update profile' };
+    }
+  };
+
   const value = {
     user,
     loading,
     login,
     register,
     logout,
+    updateProfile,
     isAuthenticated: !!user
   };
 

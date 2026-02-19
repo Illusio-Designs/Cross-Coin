@@ -53,7 +53,6 @@ export default function Footer() {
             <ul className="footer-links">
               <li><Link href="/contact">Contact Us</Link></li>
               <li><Link href="/faq">FAQ</Link></li>
-              <li><Link href="/account">My Account</Link></li>
               <li><Link href="/wishlist">Wishlist</Link></li>
             </ul>
           </div>
