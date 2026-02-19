@@ -37,10 +37,10 @@ export default function Footer() {
             <div className="footerColumn">
               <h4 className="footerTitle">Shop</h4>
               <ul className="footerLinks">
-                <li><Link href="/products">All Products</Link></li>
-                <li><Link href="/products?filter=men">Men&apos;s Socks</Link></li>
-                <li><Link href="/products?filter=women">Women&apos;s Socks</Link></li>
-                <li><Link href="/products?filter=accessories">Kids Socks</Link></li>
+                <li><Link href="/products/all">All Products</Link></li>
+                <li><Link href="/products/men">Men&apos;s Socks</Link></li>
+                <li><Link href="/products/women">Women&apos;s Socks</Link></li>
+                <li><Link href="/products/accessories">Kids Socks</Link></li>
               </ul>
             </div>
 

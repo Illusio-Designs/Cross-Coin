@@ -39,11 +39,11 @@ export default function Footer() {
           <div className="footer-column">
             <h4 className="footer-title">Shop</h4>
             <ul className="footer-links">
-              <li><Link href="/products?filter=new-arrivals">New Arrivals</Link></li>
-              <li><Link href="/products?filter=men">Men&apos;s Socks</Link></li>
-              <li><Link href="/products?filter=women">Women&apos;s Socks</Link></li>
-              <li><Link href="/products?filter=accessories">Kids Socks</Link></li>
-              <li><Link href="/products?filter=sale">Sale</Link></li>
+              <li><Link href="/products/new-arrivals">New Arrivals</Link></li>
+              <li><Link href="/products/men">Men&apos;s Socks</Link></li>
+              <li><Link href="/products/women">Women&apos;s Socks</Link></li>
+              <li><Link href="/products/accessories">Kids Socks</Link></li>
+              <li><Link href="/products/sale">Sale</Link></li>
             </ul>
           </div>
 
