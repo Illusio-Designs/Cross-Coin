@@ -405,7 +405,7 @@
 
 .newsletterInput {
   flex: 1;
-  padding: var(--spacing-lg) var(--spacing-xl);
+  padding: var(--spacing-md) var(--spacing-lg);
   border: none;
   font-size: var(--font-size-base);
   background: transparent;
@@ -422,7 +422,7 @@
 }
 
 .newsletterForm .btn {
-  padding: var(--spacing-lg) var(--spacing-3xl);
+  padding: var(--spacing-md) var(--spacing-2xl);
   background: var(--color-white);
   color: var(--color-dark);
   border: none;
