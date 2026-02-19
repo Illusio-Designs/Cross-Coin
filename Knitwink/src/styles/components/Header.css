@@ -1,10 +1,11 @@
 .header {
   position: sticky;
   top: 0;
-  z-index: var(--z-sticky);
+  z-index: 1020;
   background: #FFFFFF;
   backdrop-filter: blur(10px);
   transition: all var(--transition-base);
+  width: 100%;
 }
 
 .header.scrolled {
@@ -425,10 +426,15 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.3);
-  z-index: 997;
+  z-index: 1018;
 }
 
 /* Mega Menu Styles */
+.navItemWithMega {
+  position: relative;
+  display: inline-block;
+}
+
 .navLinkBtn {
   background: none;
   border: none;
@@ -477,7 +483,7 @@
   border-top: 2px solid var(--color-gray-200);
   border-bottom: 2px solid var(--color-gray-200);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-  z-index: 998;
+  z-index: 1019;
   animation: megaSlideDown 0.3s ease-out;
   border-radius: 0;
 }

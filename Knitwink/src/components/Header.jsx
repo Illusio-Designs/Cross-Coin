@@ -45,26 +45,27 @@ export default function Header() {
 
   return (
     <>
-      <div 
-        onMouseEnter={() => handleMegaMenuHover(true)}
-        onMouseLeave={() => handleMegaMenuHover(false)}
-      >
-        <header className={`header ${isScrolled ? 'scrolled' : ''}`}>
-          <div className="container">
-            <div className="headerContent">
-              <Link href="/" className="logo">
-                <Image 
-                  src="/assets/Knitwink.jpg.jpeg" 
-                  alt="Knitwink" 
-                  width={120} 
-                  height={40}
-                  style={{ objectFit: 'contain' }}
-                />
-              </Link>
+      <header className={`header ${isScrolled ? 'scrolled' : ''}`}>
+        <div className="container">
+          <div className="headerContent">
+            <Link href="/" className="logo">
+              <Image 
+                src="/assets/Knitwink.jpg.jpeg" 
+                alt="Knitwink" 
+                width={120} 
+                height={40}
+                style={{ objectFit: 'contain' }}
+              />
+            </Link>
 
-              <nav className="nav">
-                <Link href="/" className={`navLink ${isActive('/') && router.pathname === '/' ? 'active' : ''}`}>Home</Link>
-                <Link href="/products" className={`navLink ${isActive('/products') ? 'active' : ''}`}>Products</Link>
+            <nav className="nav">
+              <Link href="/" className={`navLink ${isActive('/') && router.pathname === '/' ? 'active' : ''}`}>Home</Link>
+              <Link href="/products" className={`navLink ${isActive('/products') ? 'active' : ''}`}>Products</Link>
+              <div 
+                className="navItemWithMega"
+                onMouseEnter={() => handleMegaMenuHover(true)}
+                onMouseLeave={() => handleMegaMenuHover(false)}
+              >
                 <button 
                   className={`navLinkBtn ${isActive('/collections') ? 'active' : ''}`}
                   onClick={handleMegaMenuClick}
@@ -74,9 +75,10 @@ export default function Header() {
                     <polyline points="6 9 12 15 18 9" stroke="currentColor" strokeWidth="2"/>
                   </svg>
                 </button>
-                <Link href="/about" className={`navLink ${isActive('/about') ? 'active' : ''}`}>About</Link>
-                <Link href="/contact" className={`navLink ${isActive('/contact') ? 'active' : ''}`}>Contact</Link>
-              </nav>
+              </div>
+              <Link href="/about" className={`navLink ${isActive('/about') ? 'active' : ''}`}>About</Link>
+              <Link href="/contact" className={`navLink ${isActive('/contact') ? 'active' : ''}`}>Contact</Link>
+            </nav>
 
               <div className="headerIcons">
                 <div className="currencySelector">
@@ -157,7 +159,10 @@ export default function Header() {
 
         {/* Mega Menu */}
         {isMegaMenuOpen && (
-          <>
+          <div 
+            onMouseEnter={() => handleMegaMenuHover(true)}
+            onMouseLeave={() => handleMegaMenuHover(false)}
+          >
             {isMegaMenuPinned && <div className="megaMenuOverlay" onClick={closeMegaMenu}></div>}
             <div className="megaMenu">
               <div className="container">
@@ -212,9 +217,8 @@ export default function Header() {
                 </div>
               </div>
             </div>
-          </>
+          </div>
         )}
-      </div>
 
       {/* Search Bar */}
       {isSearchOpen && (
