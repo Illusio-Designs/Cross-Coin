@@ -1,201 +1,402 @@
-/* Account Page - Minimal */
+/* Account Page - Sidebar Layout */
 
 .accountPage {
   min-height: 80vh;
-  padding: var(--spacing-4xl) 0;
+  padding: 40px 0;
+  background: #fafafa;
 }
 
 .accountHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-3xl);
-  padding-bottom: var(--spacing-xl);
+  margin-bottom: 32px;
+  padding-bottom: 16px;
   border-bottom: 2px solid var(--color-dark);
 }
 
 .accountHeader h1 {
   font-family: var(--font-heading);
-  font-size: var(--font-size-4xl);
+  font-size: 20px;
   font-weight: var(--font-weight-extrabold);
   color: var(--color-dark);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  margin: 0;
+  letter-spacing: 1px;
 }
 
-.btnSecondary {
+.logoutBtn {
   background: transparent;
   color: var(--color-dark);
-  padding: var(--spacing-xs) var(--spacing-lg);
+  padding: 6px 16px;
   border: 2px solid var(--color-dark);
   font-family: var(--font-heading);
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   font-weight: var(--font-weight-bold);
   text-transform: uppercase;
   letter-spacing: 1px;
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: all 0.2s;
 }
 
-.btnSecondary:hover {
+.logoutBtn:hover {
   background: var(--color-dark);
   color: var(--color-white);
 }
 
-.accountGrid {
+.accountLayout {
   display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: var(--spacing-3xl);
+  grid-template-columns: 200px 1fr;
+  gap: 24px;
 }
 
-.accountSidebar {
-  position: sticky;
-  top: 100px;
-  height: fit-content;
-}
-
-.accountNav {
+.sidebar {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 4px;
 }
 
-.accountNavLink {
-  padding: var(--spacing-md) 0;
+.tabBtn {
+  background: var(--color-white);
+  color: var(--color-gray-600);
+  padding: 12px 16px;
+  border: 2px solid var(--color-dark);
   font-family: var(--font-heading);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-gray-500);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid var(--color-gray-200);
-  transition: all var(--transition-base);
-  text-decoration: none;
-  display: block;
-}
-
-.accountNavLink:hover {
-  color: var(--color-dark);
-}
-
-.accountNavLink.active {
-  color: var(--color-dark);
+  font-size: 11px;
   font-weight: var(--font-weight-bold);
-  border-bottom-color: var(--color-dark);
-}
-
-.accountContent {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-3xl);
-}
-
-.accountSection {
-  padding: 0;
-}
-
-.accountSection h2 {
-  font-family: var(--font-heading);
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-extrabold);
-  color: var(--color-dark);
-  margin-bottom: var(--spacing-xl);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.profileInfo {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--spacing-xl);
-  margin-bottom: var(--spacing-xl);
-}
-
-.profileItem {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
-
-.profileItem label {
-  font-family: var(--font-heading);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-gray-500);
-  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
   letter-spacing: 1px;
 }
 
-.profileItem p {
-  font-size: var(--font-size-base);
+.tabBtn:hover {
+  background: #f5f5f5;
+}
+
+.tabBtn.active {
+  background: var(--color-dark);
+  color: var(--color-white);
+}
+
+.content {
+  background: var(--color-white);
+  border: 2px solid var(--color-dark);
+  min-height: 400px;
+}
+
+.tabContent {
+  padding: 24px;
+}
+
+.contentHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--color-dark);
+}
+
+.tabContent h2 {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-dark);
+  margin: 0 0 20px 0;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--color-dark);
+  letter-spacing: 1px;
+}
+
+.contentHeader h2 {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.editBtn {
+  background: var(--color-dark);
+  color: var(--color-white);
+  padding: 6px 14px;
+  border: none;
+  font-family: var(--font-heading);
+  font-size: 9px;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.editBtn:hover {
+  background: #000;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.infoItem label {
+  font-family: var(--font-heading);
+  font-size: 9px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-gray-600);
+  letter-spacing: 1px;
+}
+
+.infoItem p {
+  font-size: 13px;
   color: var(--color-dark);
   font-weight: var(--font-weight-semibold);
+  margin: 0;
 }
 
 .emptyState {
   text-align: center;
-  padding: var(--spacing-3xl) 0;
+  padding: 48px 24px;
+  background: #f5f5f5;
 }
 
 .emptyState p {
-  color: var(--color-gray-500);
-  margin-bottom: var(--spacing-lg);
+  color: var(--color-gray-600);
+  margin: 0 0 12px 0;
+  font-size: 13px;
 }
 
-.btnPrimary {
+.emptyState a {
+  display: inline-block;
   background: var(--color-dark);
   color: var(--color-white);
-  padding: var(--spacing-sm) var(--spacing-xl);
-  border: none;
+  padding: 8px 20px;
   font-family: var(--font-heading);
-  font-size: var(--font-size-xs);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.emptyState a:hover {
+  background: #000;
+}
+
+/* Modal */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modalContent {
+  background: var(--color-white);
+  width: 90%;
+  max-width: 440px;
+  border: 2px solid var(--color-dark);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 2px solid var(--color-dark);
+  background: var(--color-dark);
+}
+
+.modalHeader h2 {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-white);
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--color-white);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closeBtn:hover {
+  opacity: 0.7;
+}
+
+.modalContent form {
+  padding: 20px;
+}
+
+.errorMsg {
+  background: #fee;
+  color: #c33;
+  padding: 8px 10px;
+  font-size: 11px;
+  margin-bottom: 16px;
+  border: 1px solid #fcc;
+  font-weight: var(--font-weight-semibold);
+}
+
+.formGroup {
+  margin-bottom: 14px;
+}
+
+.formGroup label {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: 9px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-gray-600);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.formGroup input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 2px solid var(--color-dark);
+  font-size: 12px;
+  font-family: var(--font-primary);
+}
+
+.passwordInput {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.passwordInput input {
+  padding-right: 40px;
+}
+
+.passwordToggle {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--color-gray-600);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.passwordToggle:hover {
+  color: var(--color-dark);
+}
+
+.passwordToggle svg {
+  display: block;
+}
+
+.formGroup input:focus {
+  outline: none;
+}
+
+.modalActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.cancelBtn {
+  flex: 1;
+  background: transparent;
+  color: var(--color-dark);
+  padding: 8px;
+  border: 2px solid var(--color-dark);
+  font-family: var(--font-heading);
+  font-size: 10px;
   font-weight: var(--font-weight-bold);
   text-transform: uppercase;
   letter-spacing: 1px;
   cursor: pointer;
-  transition: all var(--transition-base);
-  text-decoration: none;
-  display: inline-block;
+  transition: all 0.2s;
 }
 
-.btnPrimary:hover {
+.cancelBtn:hover {
+  background: #f5f5f5;
+}
+
+.saveBtn {
+  flex: 1;
+  background: var(--color-dark);
+  color: var(--color-white);
+  padding: 8px;
+  border: none;
+  font-family: var(--font-heading);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.saveBtn:hover {
   background: #000;
 }
 
-@media (max-width: 1024px) {
-  .accountGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .accountSidebar {
-    position: static;
-  }
-
-  .accountNav {
-    flex-direction: row;
-    overflow-x: auto;
-    border-bottom: 1px solid var(--color-gray-200);
-  }
-
-  .accountNavLink {
-    border-bottom: none;
-    padding: var(--spacing-md) var(--spacing-lg);
-    white-space: nowrap;
-  }
-}
-
 @media (max-width: 768px) {
+  .accountPage {
+    padding: 24px 0;
+  }
+
   .accountHeader {
     flex-direction: column;
-    gap: var(--spacing-md);
+    gap: 12px;
     align-items: flex-start;
   }
 
-  .accountHeader h1 {
-    font-size: var(--font-size-3xl);
+  .accountLayout {
+    grid-template-columns: 1fr;
   }
 
-  .profileInfo {
+  .sidebar {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .tabBtn {
+    white-space: nowrap;
+  }
+
+  .infoGrid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .tabContent {
+    padding: 16px;
+  }
+
+  .modalContent {
+    width: 95%;
   }
 }
