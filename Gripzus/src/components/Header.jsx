@@ -101,7 +101,7 @@ export default function Header() {
                           <div className="mega-menu-col">
                             <h3>Men&apos;s Socks</h3>
                             <ul>
-                              <li><Link href="/products?filter=men" onClick={closeMegaMenu}>All Men&apos;s</Link></li>
+                              <li><Link href="/products/men" onClick={closeMegaMenu}>All Men&apos;s</Link></li>
                               <li><Link href="/collections/men" onClick={closeMegaMenu}>Dress Socks</Link></li>
                               <li><Link href="/collections/men" onClick={closeMegaMenu}>Athletic Socks</Link></li>
                               <li><Link href="/collections/men" onClick={closeMegaMenu}>Casual Socks</Link></li>
@@ -111,7 +111,7 @@ export default function Header() {
                           <div className="mega-menu-col">
                             <h3>Women&apos;s Socks</h3>
                             <ul>
-                              <li><Link href="/products?filter=women" onClick={closeMegaMenu}>All Women&apos;s</Link></li>
+                              <li><Link href="/products/women" onClick={closeMegaMenu}>All Women&apos;s</Link></li>
                               <li><Link href="/collections/women" onClick={closeMegaMenu}>Ankle Socks</Link></li>
                               <li><Link href="/collections/women" onClick={closeMegaMenu}>Knee High</Link></li>
                               <li><Link href="/collections/women" onClick={closeMegaMenu}>Compression</Link></li>
@@ -121,7 +121,7 @@ export default function Header() {
                           <div className="mega-menu-col">
                             <h3>Kids Socks</h3>
                             <ul>
-                              <li><Link href="/products?filter=accessories" onClick={closeMegaMenu}>All Kids</Link></li>
+                              <li><Link href="/products/accessories" onClick={closeMegaMenu}>All Kids</Link></li>
                               <li><Link href="/collections/accessories" onClick={closeMegaMenu}>School Socks</Link></li>
                               <li><Link href="/collections/accessories" onClick={closeMegaMenu}>Sports Socks</Link></li>
                               <li><Link href="/collections/accessories" onClick={closeMegaMenu}>Fun Patterns</Link></li>
@@ -131,10 +131,10 @@ export default function Header() {
                           <div className="mega-menu-col">
                             <h3>Shop by Type</h3>
                             <ul>
-                              <li><Link href="/products?filter=new-arrivals" onClick={closeMegaMenu}>New Arrivals</Link></li>
-                              <li><Link href="/products?filter=sale" onClick={closeMegaMenu}>Sale Items</Link></li>
-                              <li><Link href="/products" onClick={closeMegaMenu}>Bestsellers</Link></li>
-                              <li><Link href="/products" onClick={closeMegaMenu}>Gift Sets</Link></li>
+                              <li><Link href="/products/new-arrivals" onClick={closeMegaMenu}>New Arrivals</Link></li>
+                              <li><Link href="/products/sale" onClick={closeMegaMenu}>Sale Items</Link></li>
+                              <li><Link href="/products/all" onClick={closeMegaMenu}>Bestsellers</Link></li>
+                              <li><Link href="/products/all" onClick={closeMegaMenu}>Gift Sets</Link></li>
                             </ul>
                           </div>
                           <div className="mega-menu-featured">
