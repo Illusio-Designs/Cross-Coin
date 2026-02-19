@@ -1,8 +1,36 @@
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import { useAuth } from '../context/AuthContext';
 
 export default function Account() {
+  const router = useRouter();
+  const { user, loading, logout, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [loading, isAuthenticated, router]);
+
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <div className="loadingContainer">
+          <p>Loading...</p>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <>
       <Head>
@@ -12,68 +40,59 @@ export default function Account() {
 
       <Header />
 
-      <main className="main">
-        <section className="pageHeader">
-          <div className="container">
+      <main className="accountPage">
+        <div className="container">
+          <div className="accountHeader">
             <h1>My Account</h1>
+            <button onClick={logout} className="btn btnSecondary">
+              Logout
+            </button>
           </div>
-        </section>
 
-        <section className="section">
-          <div className="container">
+          <div className="accountGrid">
+            <div className="accountSidebar">
+              <nav className="accountNav">
+                <a href="#profile" className="accountNavLink active">Profile</a>
+                <a href="#orders" className="accountNavLink">Orders</a>
+                <a href="#addresses" className="accountNavLink">Addresses</a>
+                <a href="#wishlist" className="accountNavLink">Wishlist</a>
+                <a href="#settings" className="accountNavLink">Settings</a>
+              </nav>
+            </div>
+
             <div className="accountContent">
-              <p className="message">Please sign in to view your account.</p>
-              <div className="actions">
-                <button className="btn btn-primary btn-lg">Sign In</button>
-                <button className="btn btn-outline btn-lg">Create Account</button>
+              <div className="accountSection">
+                <h2>Profile Information</h2>
+                <div className="profileInfo">
+                  <div className="profileItem">
+                    <label>Name</label>
+                    <p>{user.name}</p>
+                  </div>
+                  <div className="profileItem">
+                    <label>Email</label>
+                    <p>{user.email}</p>
+                  </div>
+                  <div className="profileItem">
+                    <label>Member Since</label>
+                    <p>{new Date(user.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <button className="btn btnPrimary">Edit Profile</button>
+              </div>
+
+              <div className="accountSection">
+                <h2>Recent Orders</h2>
+                <div className="emptyState">
+                  <p>You haven&apos;t placed any orders yet.</p>
+                  <a href="/products/all" className="btn btnPrimary">Start Shopping</a>
+                </div>
               </div>
             </div>
           </div>
-        </section>
+        </div>
       </main>
 
       <Footer />
-
-      <style jsx>{`
-        .main {
-          min-height: 60vh;
-        }
-
-        .pageHeader {
-          padding: var(--spacing-4xl) 0 var(--spacing-3xl);
-          text-align: center;
-          background: var(--color-gray-100);
-        }
-
-        .pageHeader h1 {
-          font-size: var(--font-size-5xl);
-          font-weight: var(--font-weight-black);
-        }
-
-        .accountContent {
-          max-width: 500px;
-          margin: 0 auto;
-          text-align: center;
-        }
-
-        .message {
-          font-size: var(--font-size-lg);
-          color: var(--color-gray-600);
-          margin-bottom: var(--spacing-2xl);
-        }
-
-        .actions {
-          display: flex;
-          flex-direction: column;
-          gap: var(--spacing-md);
-        }
-
-        @media (max-width: 768px) {
-          .pageHeader h1 {
-            font-size: var(--font-size-4xl);
-          }
-        }
-      `}</style>
     </>
   );
 }
