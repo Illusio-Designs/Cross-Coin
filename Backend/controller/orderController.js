@@ -2660,7 +2660,7 @@ module.exports.prepareFShipOrderData = async (order) => {
       unitPrice: parseFloat(item.price) || 0,
       quantity: item.quantity || 1,
       productCategory: 'Socks',
-      sku: item.Product?.sku || '',
+      sku: item.ProductVariation?.sku || item.Product?.sku || `PROD-${item.Product?.id || ''}`,
       hsnCode: item.Product?.hsn_code || '',
       taxRate: 0,
       productDiscount: 0
