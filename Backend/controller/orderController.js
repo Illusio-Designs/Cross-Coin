@@ -2464,6 +2464,7 @@ module.exports.createOrderInFShip = async (order, transaction) => {
         fship_order_id: result.orderId,
         fship_waybill: result.waybill,
         fship_route_code: result.routeCode,
+        fship_label_url: result.labelUrl,
         tracking_number: result.waybill,
         status: 'processing' // Update status to processing when synced
       }, { transaction });
