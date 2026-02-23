@@ -2458,13 +2458,56 @@ module.exports.createOrderInFShip = async (order, transaction) => {
     // Create order using enhanced FShip service
     const result = await fshipService.createOrUpdateForwardOrder(fshipOrderData);
     
+    console.log('=== FShip Create Order Result ===');
+    console.log('Success:', result.success);
+    console.log('Order ID:', result.orderId);
+    console.log('Waybill:', result.waybill);
+    console.log('Label URL:', result.labelUrl);
+    console.log('Full Result:', JSON.stringify(result, null, 2));
+    
     if (result.success) {
+      // Always fetch label URL separately using waybill
+      let labelUrl = result.labelUrl || null;
+      
+      if (result.waybill) {
+        console.log(`📄 Fetching shipping label for waybill: ${result.waybill}`);
+        try {
+          const labelData = await fshipService.getShippingLabel(result.waybill);
+          console.log('📦 Label API Response:', JSON.stringify(labelData, null, 2));
+          
+          // Try multiple possible response structures
+          if (labelData) {
+            // Check if data is in array format
+            if (Array.isArray(labelData.data) && labelData.data.length > 0) {
+              labelUrl = labelData.data[0].labelurl || labelData.data[0].label_url || labelData.data[0].LabelUrl;
+            }
+            // Check if data is direct object
+            else if (labelData.data && typeof labelData.data === 'object') {
+              labelUrl = labelData.data.labelurl || labelData.data.label_url || labelData.data.LabelUrl;
+            }
+            // Check root level
+            else if (labelData.labelurl || labelData.label_url || labelData.LabelUrl) {
+              labelUrl = labelData.labelurl || labelData.label_url || labelData.LabelUrl;
+            }
+            
+            if (labelUrl) {
+              console.log(`✅ Label URL found: ${labelUrl}`);
+            } else {
+              console.log('⚠️ Label URL not found in response. Full response:', JSON.stringify(labelData, null, 2));
+            }
+          }
+        } catch (labelError) {
+          console.error('❌ Failed to fetch label URL:', labelError.message);
+          console.error('Error details:', labelError);
+        }
+      }
+      
       // Update order with FShip details
       await order.update({
         fship_order_id: result.orderId,
         fship_waybill: result.waybill,
         fship_route_code: result.routeCode,
-        fship_label_url: result.labelUrl,
+        fship_label_url: labelUrl,
         tracking_number: result.waybill,
         status: 'processing' // Update status to processing when synced
       }, { transaction });

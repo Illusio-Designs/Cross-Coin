@@ -196,6 +196,8 @@ class FShipService {
                         action: 'existing',
                         orderId: existingOrder.data.apiorderid || existingOrder.data.order_id,
                         waybill: existingOrder.data.waybill || existingOrder.data.awb_number,
+                        labelUrl: existingOrder.data.labelurl || existingOrder.data.label_url || null,
+                        routeCode: existingOrder.data.route_code || null,
                         status: currentStatus,
                         message: `Order already exists with status: ${currentStatus}`,
                         existingData: existingOrder.data
