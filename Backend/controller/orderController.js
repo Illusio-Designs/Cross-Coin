@@ -2563,6 +2563,9 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
         const labelData = await fshipService.getShippingLabel(waybill);
         console.log('📦 Label API Response:', JSON.stringify(labelData, null, 2));
         
+        // SAVE API RESPONSE TO ORDER NOTES FOR DEBUGGING
+        const apiResponseNote = `FShip Label API Response: ${JSON.stringify(labelData).substring(0, 500)}`;
+        
         let labelUrl = null;
         if (labelData) {
           // Check if data is in array format
@@ -2580,14 +2583,25 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
           
           if (labelUrl) {
             console.log(`✅ Label URL found: ${labelUrl}`);
-            await order.update({ fship_label_url: labelUrl }, { transaction });
+            await order.update({ 
+              fship_label_url: labelUrl,
+              notes: order.notes ? `${order.notes}\n${apiResponseNote}` : apiResponseNote
+            }, { transaction });
             console.log(`💾 Label URL saved to database`);
           } else {
             console.log('⚠️ Label URL not found in response');
+            // Save the response even if no URL found
+            await order.update({ 
+              notes: order.notes ? `${order.notes}\n${apiResponseNote} - NO LABEL URL FOUND` : `${apiResponseNote} - NO LABEL URL FOUND`
+            }, { transaction });
           }
         }
       } catch (labelError) {
         console.error('❌ Failed to fetch label URL:', labelError.message);
+        // Save error to notes
+        await order.update({ 
+          notes: order.notes ? `${order.notes}\nLabel fetch error: ${labelError.message}` : `Label fetch error: ${labelError.message}`
+        }, { transaction });
       }
     } else {
       console.log(`✓ Label URL already exists: ${order.fship_label_url}`);
