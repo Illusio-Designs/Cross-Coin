@@ -2587,6 +2587,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
               fship_label_url: labelUrl,
               notes: order.notes ? `${order.notes}\n${apiResponseNote}` : apiResponseNote
             }, { transaction });
+            await order.reload({ transaction }); // Reload to get updated values
             console.log(`💾 Label URL saved to database`);
           } else {
             console.log('⚠️ Label URL not found in response');
@@ -2594,6 +2595,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
             await order.update({ 
               notes: order.notes ? `${order.notes}\n${apiResponseNote} - NO LABEL URL FOUND` : `${apiResponseNote} - NO LABEL URL FOUND`
             }, { transaction });
+            await order.reload({ transaction }); // Reload to get updated values
           }
         }
       } catch (labelError) {
