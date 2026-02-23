@@ -2545,6 +2545,7 @@ module.exports.createOrderInFShip = async (order, transaction) => {
 module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
   try {
     console.log(`🔄 Updating status for order ${order.order_number} from FShip...`);
+    console.log(`📋 Current order details - Label URL: ${order.fship_label_url || 'MISSING'}, Waybill: ${order.fship_waybill || 'MISSING'}`);
 
     const waybill = order.fship_waybill || order.tracking_number;
     
@@ -2580,6 +2581,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
           if (labelUrl) {
             console.log(`✅ Label URL found: ${labelUrl}`);
             await order.update({ fship_label_url: labelUrl }, { transaction });
+            console.log(`💾 Label URL saved to database`);
           } else {
             console.log('⚠️ Label URL not found in response');
           }
@@ -2587,6 +2589,8 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
       } catch (labelError) {
         console.error('❌ Failed to fetch label URL:', labelError.message);
       }
+    } else {
+      console.log(`✓ Label URL already exists: ${order.fship_label_url}`);
     }
 
     // Get tracking history from FShip
@@ -2694,6 +2698,11 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
         };
       } else {
         console.log(`📋 Order ${order.order_number} status unchanged: ${order.status}`);
+        
+        // Even if status unchanged, ensure we have label URL
+        if (!order.fship_label_url && waybill) {
+          console.log(`📄 Status unchanged but label URL missing. Already fetched above.`);
+        }
         
         return {
           success: true,
