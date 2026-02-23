@@ -2555,6 +2555,40 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
       };
     }
 
+    // Fetch label URL if not already present
+    if (!order.fship_label_url && waybill) {
+      console.log(`📄 Label URL missing. Fetching for waybill: ${waybill}`);
+      try {
+        const labelData = await fshipService.getShippingLabel(waybill);
+        console.log('📦 Label API Response:', JSON.stringify(labelData, null, 2));
+        
+        let labelUrl = null;
+        if (labelData) {
+          // Check if data is in array format
+          if (Array.isArray(labelData.data) && labelData.data.length > 0) {
+            labelUrl = labelData.data[0].labelurl || labelData.data[0].label_url || labelData.data[0].LabelUrl;
+          }
+          // Check if data is direct object
+          else if (labelData.data && typeof labelData.data === 'object') {
+            labelUrl = labelData.data.labelurl || labelData.data.label_url || labelData.data.LabelUrl;
+          }
+          // Check root level
+          else if (labelData.labelurl || labelData.label_url || labelData.LabelUrl) {
+            labelUrl = labelData.labelurl || labelData.label_url || labelData.LabelUrl;
+          }
+          
+          if (labelUrl) {
+            console.log(`✅ Label URL found: ${labelUrl}`);
+            await order.update({ fship_label_url: labelUrl }, { transaction });
+          } else {
+            console.log('⚠️ Label URL not found in response');
+          }
+        }
+      } catch (labelError) {
+        console.error('❌ Failed to fetch label URL:', labelError.message);
+      }
+    }
+
     // Get tracking history from FShip
     const trackingResult = await fshipService.getTrackingHistory(waybill);
     
