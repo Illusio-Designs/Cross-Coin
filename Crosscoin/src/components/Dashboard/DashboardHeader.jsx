@@ -1,10 +1,9 @@
 import { FiMaximize, FiMinimize, FiMenu } from "react-icons/fi";
-import { FaUserCircle } from "react-icons/fa";
 import { getPageTitle } from "../../utils/dashboardRouting";
 import { useState, useEffect } from "react";
 import "../../styles/dashboard/header.css";
 
-function DashboardHeader({ isCollapsed, isFullscreen, onToggleFullscreen, currentView, sidebarWidth, isMobile, onMobileMenuToggle }) {
+function DashboardHeader({ isCollapsed, isFullscreen, onToggleFullscreen, currentView,  sidebarWidth, isMobile, onMobileMenuToggle }) {
   const [isSmallMobile, setIsSmallMobile] = useState(false);
   
   useEffect(() => {
@@ -20,8 +19,6 @@ function DashboardHeader({ isCollapsed, isFullscreen, onToggleFullscreen, curren
   const headerHeight = isSmallMobile ? 60 : 80;
   const fontSize = isSmallMobile ? '1rem' : '1.7rem';
   const iconSize = isSmallMobile ? 18 : 24;
-  const profileSize = isSmallMobile ? 22 : 28;
-  const labelSize = isSmallMobile ? '0.9rem' : '1.15rem';
   const padding = isSmallMobile ? '0 10px' : '0 20px';
 
   return (
@@ -31,9 +28,10 @@ function DashboardHeader({ isCollapsed, isFullscreen, onToggleFullscreen, curren
         position: 'fixed',
         top: 0,
         left: isMobile ? 0 : sidebarWidth,
-        width: isMobile ? '100%' : `calc(100% - ${sidebarWidth}px)`,
+        right: 0,
+        width: isMobile ? '100%' : 'auto',
         zIndex: 100,
-        transition: 'left 0.3s cubic-bezier(.4,0,.2,1), width 0.3s cubic-bezier(.4,0,.2,1)',
+        transition: 'left 0.3s cubic-bezier(.4,0,.2,1)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -42,10 +40,11 @@ function DashboardHeader({ isCollapsed, isFullscreen, onToggleFullscreen, curren
         borderBottom: '1px solid #E6E6E6',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
         padding: padding,
+        boxSizing: 'border-box',
       }}
     >
       {/* Left group: Hamburger (mobile) + Title */}
-      <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, gap: isSmallMobile ? 8 : 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', minWidth: 0, gap: isSmallMobile ? 8 : 14, marginRight: 20, flex: '1 1 auto', maxWidth: 'calc(100% - 80px)' }}>
         {isMobile && (
           <button
             onClick={onMobileMenuToggle}
@@ -88,46 +87,38 @@ function DashboardHeader({ isCollapsed, isFullscreen, onToggleFullscreen, curren
           {getPageTitle(currentView)}
         </div>
       </div>
-      {/* Right group: Fullscreen button + Profile icon + Admin label */}
+      {/* Right group: Fullscreen button only */}
       <div 
         className="header-actions" 
         style={{ 
           display: 'flex', 
           alignItems: 'center', 
-          gap: isSmallMobile ? 6 : 14, 
-          minWidth: isSmallMobile ? 60 : 120, 
           justifyContent: 'flex-end',
-          flexShrink: 0
+          flexShrink: 0,
+          minWidth: 50,
+          paddingRight: 10
         }}
       >
-        {!isSmallMobile && (
-          <button
-            onClick={onToggleFullscreen}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: iconSize,
-              color: '#180D3E',
-              outline: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              marginRight: 0,
-              transition: 'transform 0.2s ease',
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-          >
-            {isFullscreen ? <FiMinimize /> : <FiMaximize />}
-          </button>
-        )}
-        <FaUserCircle style={{ fontSize: profileSize, color: '#180D3E' }} />
-        {!isSmallMobile && (
-          <span style={{ fontWeight: 600, color: '#180D3E', fontSize: labelSize, letterSpacing: 0.2 }}>
-            Admin
-          </span>
-        )}
+        <button
+          onClick={onToggleFullscreen}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: iconSize,
+            color: '#180D3E',
+            outline: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            marginRight: 0,
+            transition: 'transform 0.2s ease',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+        >
+          {isFullscreen ? <FiMinimize /> : <FiMaximize />}
+        </button>
       </div>
     </header>
   );
