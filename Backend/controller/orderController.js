@@ -2556,54 +2556,30 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
       };
     }
 
-    // Fetch label URL if not already present
-    if (!order.fship_label_url && waybill) {
-      console.log(`📄 Label URL missing. Fetching for waybill: ${waybill}`);
-      try {
-        const labelData = await fshipService.getShippingLabel(waybill);
-        console.log('📦 Label API Response:', JSON.stringify(labelData, null, 2));
+    // Fetch label URL if not already present (check for both NULL and empty string)
+    if ((!order.fship_label_url || order.fship_label_url.trim() === '') && waybill) {
+      console.log(`📄 Label URL missing. Constructing label URL for waybill: ${waybill}`);
+      
+      // FShip label URL format: https://manifest.fship.in/files/label_html/label_{WAYBILL}_{FSHIP_ORDER_ID}_TH.pdf
+      const fshipOrderId = order.fship_order_id;
+      
+      if (fshipOrderId) {
+        const labelUrl = `https://manifest.fship.in/files/label_html/label_${waybill}_${fshipOrderId}_TH.pdf`;
         
-        // SAVE API RESPONSE TO ORDER NOTES FOR DEBUGGING
-        const apiResponseNote = `FShip Label API Response: ${JSON.stringify(labelData).substring(0, 500)}`;
+        console.log(`✅ Label URL constructed: ${labelUrl}`);
         
-        let labelUrl = null;
-        if (labelData) {
-          // Check if data is in array format
-          if (Array.isArray(labelData.data) && labelData.data.length > 0) {
-            labelUrl = labelData.data[0].labelurl || labelData.data[0].label_url || labelData.data[0].LabelUrl;
-          }
-          // Check if data is direct object
-          else if (labelData.data && typeof labelData.data === 'object') {
-            labelUrl = labelData.data.labelurl || labelData.data.label_url || labelData.data.LabelUrl;
-          }
-          // Check root level
-          else if (labelData.labelurl || labelData.label_url || labelData.LabelUrl) {
-            labelUrl = labelData.labelurl || labelData.label_url || labelData.LabelUrl;
-          }
-          
-          if (labelUrl) {
-            console.log(`✅ Label URL found: ${labelUrl}`);
-            await order.update({ 
-              fship_label_url: labelUrl,
-              notes: order.notes ? `${order.notes}\n${apiResponseNote}` : apiResponseNote
-            }, { transaction });
-            await order.reload({ transaction }); // Reload to get updated values
-            console.log(`💾 Label URL saved to database`);
-          } else {
-            console.log('⚠️ Label URL not found in response');
-            // Save the response even if no URL found
-            await order.update({ 
-              notes: order.notes ? `${order.notes}\n${apiResponseNote} - NO LABEL URL FOUND` : `${apiResponseNote} - NO LABEL URL FOUND`
-            }, { transaction });
-            await order.reload({ transaction }); // Reload to get updated values
-          }
+        try {
+          await order.update({ 
+            fship_label_url: labelUrl,
+            notes: order.notes ? `${order.notes}\nLabel URL constructed from waybill and FShip order ID` : 'Label URL constructed from waybill and FShip order ID'
+          }, { transaction });
+          await order.reload({ transaction });
+          console.log(`💾 Label URL saved to database`);
+        } catch (updateError) {
+          console.error('❌ Failed to save label URL:', updateError.message);
         }
-      } catch (labelError) {
-        console.error('❌ Failed to fetch label URL:', labelError.message);
-        // Save error to notes
-        await order.update({ 
-          notes: order.notes ? `${order.notes}\nLabel fetch error: ${labelError.message}` : `Label fetch error: ${labelError.message}`
-        }, { transaction });
+      } else {
+        console.log('⚠️ FShip order ID not found, cannot construct label URL');
       }
     } else {
       console.log(`✓ Label URL already exists: ${order.fship_label_url}`);
