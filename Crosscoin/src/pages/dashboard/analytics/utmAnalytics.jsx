@@ -139,9 +139,9 @@ const UTMAnalytics = () => {
 
   if (loading) {
     return (
-      <div className="utm-analytics">
-        <div className="utm-header">
-          <h1>UTM Analytics</h1>
+      <div className="dashboard-page">
+        <div className="orders-header-container">
+          <h1 className="seo-title" style={{ margin: 0 }}>UTM Analytics</h1>
         </div>
         <div className="loading-container">
           <div className="loader"></div>
@@ -153,9 +153,9 @@ const UTMAnalytics = () => {
 
   if (error) {
     return (
-      <div className="utm-analytics">
-        <div className="utm-header">
-          <h1>UTM Analytics</h1>
+      <div className="dashboard-page">
+        <div className="orders-header-container">
+          <h1 className="seo-title" style={{ margin: 0 }}>UTM Analytics</h1>
         </div>
         <div className="error-container">
           <p className="error-message">Error: {error}</p>
@@ -166,65 +166,75 @@ const UTMAnalytics = () => {
   }
 
   return (
-    <div className="utm-analytics">
-      <div className="utm-header">
-        <h1>UTM Analytics</h1>
-        <p className="utm-subtitle">Track marketing campaign performance</p>
-      </div>
+    <div className="dashboard-page">
+      {/* Header Section */}
+      <div className="orders-header-container">
+        {/* Top Row: Title */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px',
+          gap: '20px',
+          flexWrap: 'wrap'
+        }}>
+          <h1 className="seo-title" style={{ margin: 0 }}>UTM Analytics</h1>
+        </div>
 
-      {/* Date Range Filter */}
-      <div className="date-filter">
-        <div className="date-input-group">
-          <label>Start Date:</label>
-          <input
-            type="date"
-            name="startDate"
-            value={dateRange.startDate}
-            onChange={handleDateChange}
-          />
+        {/* Date Range Filter */}
+        <div className="date-filter">
+          <div className="date-input-group">
+            <label>Start Date:</label>
+            <input
+              type="date"
+              name="startDate"
+              value={dateRange.startDate}
+              onChange={handleDateChange}
+            />
+          </div>
+          <div className="date-input-group">
+            <label>End Date:</label>
+            <input
+              type="date"
+              name="endDate"
+              value={dateRange.endDate}
+              onChange={handleDateChange}
+            />
+          </div>
+          <button onClick={fetchUTMData} className="apply-filter-btn">
+            Apply Filter
+          </button>
         </div>
-        <div className="date-input-group">
-          <label>End Date:</label>
-          <input
-            type="date"
-            name="endDate"
-            value={dateRange.endDate}
-            onChange={handleDateChange}
-          />
-        </div>
-        <button onClick={fetchUTMData} className="apply-filter-btn">
-          Apply Filter
-        </button>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon visits">📊</div>
-          <div className="stat-content">
-            <h3>Total Visits</h3>
-            <p className="stat-value">{stats.totalVisits}</p>
+        {/* Stats Cards */}
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-icon visits">📊</div>
+            <div className="stat-content">
+              <h3>Total Visits</h3>
+              <p className="stat-value">{stats.totalVisits}</p>
+            </div>
           </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon orders">🛒</div>
-          <div className="stat-content">
-            <h3>Total Orders</h3>
-            <p className="stat-value">{stats.totalOrders}</p>
+          <div className="stat-card">
+            <div className="stat-icon orders">🛒</div>
+            <div className="stat-content">
+              <h3>Total Orders</h3>
+              <p className="stat-value">{stats.totalOrders}</p>
+            </div>
           </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon conversion">📈</div>
-          <div className="stat-content">
-            <h3>Conversion Rate</h3>
-            <p className="stat-value">{stats.conversionRate}%</p>
+          <div className="stat-card">
+            <div className="stat-icon conversion">📈</div>
+            <div className="stat-content">
+              <h3>Conversion Rate</h3>
+              <p className="stat-value">{stats.conversionRate}%</p>
+            </div>
           </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon revenue">💰</div>
-          <div className="stat-content">
-            <h3>Total Revenue</h3>
-            <p className="stat-value">₹{stats.totalRevenue}</p>
+          <div className="stat-card">
+            <div className="stat-icon revenue">💰</div>
+            <div className="stat-content">
+              <h3>Total Revenue</h3>
+              <p className="stat-value">₹{stats.totalRevenue}</p>
+            </div>
           </div>
         </div>
       </div>
