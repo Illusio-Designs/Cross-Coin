@@ -390,20 +390,37 @@
   grid-template-columns: repeat(3, 1fr) !important;
   gap: 16px !important;
   margin: 24px 0 32px 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure chart containers fit properly */
+.orders-analytics > div {
+  min-width: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 @media (max-width: 1024px) {
   .orders-analytics {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 12px !important;
+    margin: 20px 0 24px 0 !important;
   }
 }
 
 @media (max-width: 768px) {
   .orders-analytics {
     grid-template-columns: 1fr !important;
-    gap: 16px !important;
-    margin: 16px 0 !important;
+    gap: 12px !important;
+    margin: 16px 0 20px 0 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .orders-analytics {
+    gap: 10px !important;
+    margin: 12px 0 16px 0 !important;
   }
 }
 
@@ -787,12 +804,12 @@
   }
   
   .action-buttons {
-    flex-direction: column;
-    gap: 0.25rem;
+    flex-direction: row;
+    gap: 4px;
   }
   
   .action-btn {
-    width: 100%;
+    min-width: 32px;
     justify-content: center;
   }
   
@@ -1480,12 +1497,12 @@
   }
   
   .action-buttons {
-    flex-direction: column;
-    gap: 0.25rem;
+    flex-direction: row;
+    gap: 4px;
   }
   
   .action-btn {
-    width: 100%;
+    min-width: 32px;
     justify-content: center;
   }
 }
@@ -2113,17 +2130,17 @@
     box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
 }
 
-/* Responsive Action Buttons */
+/* Responsive Action Buttons - Keep in Row */
 @media (max-width: 768px) {
     .action-buttons {
-        flex-direction: column;
-        gap: 2px;
-        align-items: stretch;
+        flex-direction: row;
+        gap: 4px;
+        align-items: center;
+        justify-content: flex-start;
     }
     
     .action-btn {
-        width: 100%;
-        min-width: auto;
+        min-width: 32px;
         height: 28px;
         padding: 4px 6px;
     }
@@ -2136,12 +2153,14 @@
 
 @media (max-width: 480px) {
     .action-buttons {
-        gap: 1px;
+        flex-direction: row;
+        gap: 3px;
     }
     
     .action-btn {
-        height: 24px;
-        padding: 2px 4px;
+        min-width: 28px;
+        height: 26px;
+        padding: 3px 5px;
     }
     
     .action-btn svg {
@@ -2193,4 +2212,107 @@
   background: linear-gradient(135deg, #fb923c 0%, #f97316 100%); 
   color: #fff; 
   box-shadow: 0 2px 4px rgba(251, 146, 60, 0.3);
+}
+
+
+/* ===================================
+   ENHANCED MOBILE RESPONSIVENESS
+   =================================== */
+
+@media (max-width: 768px) {
+  .orders-header-container {
+    padding: 0;
+    gap: 12px !important;
+  }
+
+  .orders-header-container > div:first-child {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .seo-title {
+    font-size: 20px !important;
+  }
+
+  .total-orders {
+    font-size: 14px !important;
+    padding: 6px 12px !important;
+  }
+
+  .sync-button {
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+  }
+
+  .orders-analytics {
+    gap: 12px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .filters-section {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .action-buttons-section {
+    gap: 8px;
+  }
+
+  .action-buttons-section button {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .seo-title {
+    font-size: 18px !important;
+  }
+
+  .total-orders {
+    font-size: 13px !important;
+    padding: 5px 10px !important;
+  }
+
+  .sync-button {
+    padding: 7px 14px !important;
+    font-size: 12px !important;
+  }
+
+  .sync-button svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .orders-analytics {
+    gap: 10px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .filters-section {
+    padding: 10px;
+  }
+
+  .action-buttons-section button {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .seo-title {
+    font-size: 16px !important;
+  }
+
+  .total-orders {
+    font-size: 12px !important;
+    padding: 4px 8px !important;
+  }
+
+  .sync-button {
+    padding: 6px 12px !important;
+    font-size: 11px !important;
+  }
 }
