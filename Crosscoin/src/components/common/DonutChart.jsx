@@ -95,7 +95,7 @@ const DonutChart = ({
                                 strokeWidth={strokeWidth}
                             />
                             
-                            {/* Data segments */}
+                            {/* Data segments with rounded caps for separation */}
                             {segments.map((segment, index) => (
                                 <circle
                                     key={index}
@@ -104,7 +104,7 @@ const DonutChart = ({
                                     r={radius}
                                     fill="none"
                                     stroke={segment.color}
-                                    strokeWidth={strokeWidth}
+                                    strokeWidth={strokeWidth - 4}
                                     strokeDasharray={segment.strokeDasharray}
                                     strokeDashoffset={segment.strokeDashoffset}
                                     strokeLinecap="round"
@@ -115,7 +115,7 @@ const DonutChart = ({
                                         transform: 'rotate(-90deg)',
                                         transformOrigin: `${center}px ${center}px`,
                                         transition: 'all 0.3s ease',
-                                        opacity: hoveredSegment === null || hoveredSegment === index ? 1 : 0.5,
+                                        opacity: hoveredSegment === null || hoveredSegment === index ? 1 : 0.6,
                                         cursor: 'pointer'
                                     }}
                                 />
