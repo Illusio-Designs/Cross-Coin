@@ -389,7 +389,7 @@
   display: grid !important;
   grid-template-columns: repeat(3, 1fr) !important;
   gap: 16px !important;
-  margin: 24px 0 !important;
+  margin: 24px 0 32px 0 !important;
 }
 
 @media (max-width: 1024px) {
