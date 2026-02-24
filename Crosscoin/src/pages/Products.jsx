@@ -686,7 +686,7 @@ const Products = () => {
         console.log("Loading timeout reached, setting loading to false");
         setLoading(false);
         if (products.length === 0) {
-          setError("Loading timeout - please refresh the page");
+          setError("");
         }
       }
     }, 10000); // 10 second timeout
