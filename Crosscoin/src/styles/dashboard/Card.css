@@ -567,11 +567,11 @@ html, body {
 /* Tablet Portrait */
 @media (max-width: 1200px) {
   .revenue-hero-value {
-    font-size: 36px;
+    font-size: 32px;
   }
   
   .revenue-stat-value {
-    font-size: 20px;
+    font-size: 18px;
   }
   
   .dashboard-card-grid {
@@ -591,11 +591,11 @@ html, body {
   }
   
   .revenue-hero-card {
-    padding: 24px;
+    padding: 20px;
   }
   
   .revenue-hero-value {
-    font-size: 34px;
+    font-size: 30px;
   }
   
   .dashboard-card-grid {
@@ -609,11 +609,11 @@ html, body {
   }
   
   .dashboard-section {
-    padding: 18px;
+    padding: 16px;
   }
   
   .dashboard-section-title {
-    font-size: 16px;
+    font-size: 14px;
   }
 }
 
@@ -621,39 +621,55 @@ html, body {
 @media (max-width: 768px) {
   .dashboard-sections {
     padding: 12px;
-    gap: 14px;
+    gap: 12px;
   }
   
   .revenue-hero-card {
-    padding: 20px;
+    padding: 16px;
   }
   
   .revenue-hero-content {
     flex-direction: column;
     text-align: center;
-    gap: 14px;
+    gap: 12px;
   }
   
   .revenue-hero-icon {
-    width: 56px;
-    height: 56px;
-    font-size: 28px;
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
     margin: 0 auto;
   }
   
   .revenue-hero-value {
-    font-size: 32px;
+    font-size: 28px;
+  }
+
+  .revenue-hero-title {
+    font-size: 11px;
+  }
+
+  .revenue-hero-subtitle {
+    font-size: 12px;
   }
   
   .revenue-hero-stats {
     flex-direction: column;
-    gap: 14px;
-    padding-top: 16px;
+    gap: 12px;
+    padding-top: 14px;
   }
   
   .revenue-stat-item {
     min-width: 100%;
     text-align: center;
+  }
+
+  .revenue-stat-label {
+    font-size: 10px;
+  }
+
+  .revenue-stat-value {
+    font-size: 16px;
   }
   
   .revenue-stat-divider {
@@ -663,127 +679,12 @@ html, body {
   .dashboard-card-grid,
   .dashboard-card-grid-3 {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 10px;
   }
   
   .dashboard-charts-row {
     grid-template-columns: 1fr;
-    gap: 14px;
-  }
-  
-  .dashboard-section {
-    padding: 16px;
-  }
-  
-  .dashboard-card {
-    padding: 16px;
-    min-height: 120px;
-  }
-  
-  .dashboard-card-icon {
-    font-size: 24px;
-  }
-  
-  .dashboard-card-value {
-    font-size: 24px;
-  }
-  
-  .dashboard-card-title {
-    font-size: 12px;
-  }
-  
-  .dashboard-card-description {
-    font-size: 11px;
-  }
-  
-  .dashboard-table-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    margin-left: -16px;
-    margin-right: -16px;
-    padding: 0 16px;
-  }
-  
-  .dashboard-table {
-    font-size: 12px;
-  }
-  
-  .dashboard-table th {
-    padding: 8px 10px;
-    font-size: 10px;
-  }
-  
-  .dashboard-table td {
-    padding: 10px;
-  }
-  
-  .dashboard-alert-cards {
-    grid-template-columns: 1fr;
     gap: 12px;
-  }
-  
-  .dashboard-alert-card {
-    padding: 14px;
-  }
-  
-  .alert-icon {
-    font-size: 24px;
-  }
-  
-  .alert-value {
-    font-size: 20px;
-  }
-  
-  .dashboard-chart-container {
-    padding: 16px;
-    min-height: 280px;
-  }
-  
-  .dashboard-chart-section {
-    min-height: 320px;
-  }
-  
-  .dashboard-section-title {
-    font-size: 15px;
-    margin-bottom: 14px;
-  }
-}
-
-/* Small Mobile */
-@media (max-width: 480px) {
-  .dashboard-sections {
-    padding: 10px;
-    gap: 12px;
-  }
-  
-  .revenue-hero-card {
-    padding: 16px;
-  }
-  
-  .revenue-hero-icon {
-    width: 48px;
-    height: 48px;
-    font-size: 24px;
-  }
-  
-  .revenue-hero-value {
-    font-size: 28px;
-  }
-  
-  .revenue-hero-title {
-    font-size: 12px;
-  }
-  
-  .revenue-hero-subtitle {
-    font-size: 11px;
-  }
-  
-  .revenue-stat-label {
-    font-size: 11px;
-  }
-  
-  .revenue-stat-value {
-    font-size: 18px;
   }
   
   .dashboard-section {
@@ -796,7 +697,7 @@ html, body {
   }
   
   .dashboard-card-icon {
-    font-size: 22px;
+    font-size: 20px;
   }
   
   .dashboard-card-value {
@@ -804,69 +705,139 @@ html, body {
   }
   
   .dashboard-card-title {
+    font-size: 10px;
+  }
+  
+  .dashboard-card-description {
     font-size: 11px;
   }
   
-  .dashboard-section-title {
-    font-size: 14px;
-    margin-bottom: 12px;
+  .dashboard-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-left: -14px;
+    margin-right: -14px;
+    padding: 0 14px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  
+  .dashboard-table {
+    font-size: 12px;
+    min-width: 600px;
+  }
+  
+  .dashboard-table th {
+    padding: 8px 10px;
+    font-size: 9px;
+  }
+  
+  .dashboard-table td {
+    padding: 10px;
+  }
+  
+  .dashboard-alert-cards {
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
   
   .dashboard-alert-card {
     padding: 12px;
-    gap: 10px;
   }
   
   .alert-icon {
-    font-size: 22px;
-  }
-  
-  .alert-title {
-    font-size: 11px;
+    font-size: 20px;
   }
   
   .alert-value {
     font-size: 18px;
   }
-  
-  .alert-description {
+
+  .alert-title {
     font-size: 10px;
+  }
+
+  .alert-description {
+    font-size: 11px;
   }
   
   .dashboard-chart-container {
-    padding: 12px;
-    min-height: 260px;
+    padding: 14px;
+    min-height: 280px;
   }
   
   .dashboard-chart-section {
-    min-height: 300px;
+    min-height: 320px;
   }
   
+  .dashboard-section-title {
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+
+  .dashboard-subsection-title {
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+
+  .table-product-name {
+    max-width: 150px;
+  }
+
   .status-badge,
   .payment-badge,
   .stock-badge {
     font-size: 10px;
-    padding: 3px 8px;
+    padding: 3px 7px;
+  }
+
+  .utm-badge {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+
+  .conversion-badge {
+    font-size: 10px;
+    padding: 3px 6px;
   }
 }
 
-/* Extra Small Mobile */
-@media (max-width: 360px) {
+/* Small Mobile */
+@media (max-width: 480px) {
   .dashboard-sections {
-    padding: 8px;
+    padding: 10px;
     gap: 10px;
+  }
+  
+  .revenue-hero-card {
+    padding: 14px;
+  }
+  
+  .revenue-hero-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
   }
   
   .revenue-hero-value {
     font-size: 24px;
   }
   
-  .revenue-stat-value {
-    font-size: 16px;
+  .revenue-hero-title {
+    font-size: 10px;
   }
   
-  .dashboard-card-value {
-    font-size: 20px;
+  .revenue-hero-subtitle {
+    font-size: 11px;
+  }
+  
+  .revenue-stat-label {
+    font-size: 9px;
+  }
+  
+  .revenue-stat-value {
+    font-size: 15px;
   }
   
   .dashboard-section {
@@ -875,6 +846,142 @@ html, body {
   
   .dashboard-card {
     padding: 12px;
+    min-height: 100px;
+  }
+  
+  .dashboard-card-icon {
+    font-size: 18px;
+  }
+  
+  .dashboard-card-value {
+    font-size: 20px;
+  }
+  
+  .dashboard-card-title {
+    font-size: 9px;
+  }
+
+  .dashboard-card-description {
+    font-size: 10px;
+  }
+  
+  .dashboard-section-title {
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+  
+  .dashboard-alert-card {
+    padding: 10px;
+    gap: 10px;
+  }
+  
+  .alert-icon {
+    font-size: 18px;
+  }
+  
+  .alert-title {
+    font-size: 9px;
+  }
+  
+  .alert-value {
+    font-size: 16px;
+  }
+  
+  .alert-description {
+    font-size: 10px;
+  }
+  
+  .dashboard-chart-container {
+    padding: 10px;
+    min-height: 240px;
+  }
+  
+  .dashboard-chart-section {
+    min-height: 280px;
+  }
+  
+  .status-badge,
+  .payment-badge,
+  .stock-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+
+  .dashboard-table {
+    font-size: 11px;
+    min-width: 550px;
+  }
+
+  .dashboard-table th {
+    padding: 6px 8px;
+    font-size: 8px;
+  }
+
+  .dashboard-table td {
+    padding: 8px;
+  }
+
+  .table-product-name {
+    max-width: 120px;
+  }
+
+  .utm-badge {
+    font-size: 9px;
+    padding: 2px 5px;
+  }
+
+  .conversion-badge {
+    font-size: 9px;
+    padding: 2px 5px;
+  }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 360px) {
+  .dashboard-sections {
+    padding: 8px;
+    gap: 8px;
+  }
+  
+  .revenue-hero-value {
+    font-size: 22px;
+  }
+  
+  .revenue-stat-value {
+    font-size: 14px;
+  }
+  
+  .dashboard-card-value {
+    font-size: 18px;
+  }
+  
+  .dashboard-section {
+    padding: 10px;
+  }
+  
+  .dashboard-card {
+    padding: 10px;
+    min-height: 90px;
+  }
+
+  .dashboard-card-icon {
+    font-size: 16px;
+  }
+
+  .dashboard-card-title {
+    font-size: 8px;
+  }
+
+  .dashboard-section-title {
+    font-size: 11px;
+  }
+
+  .alert-value {
+    font-size: 15px;
+  }
+
+  .dashboard-table {
+    min-width: 500px;
   }
 }
 

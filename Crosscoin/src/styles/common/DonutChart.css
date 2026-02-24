@@ -7,8 +7,11 @@
   box-shadow: none;
   border: 1px solid #e5e7eb;
   height: 100%;
+  min-height: 300px;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Header */
@@ -36,15 +39,22 @@
   align-items: center;
   gap: 16px;
   flex: 1;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .donut-chart-wrapper {
   position: relative;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .donut-chart-svg {
   display: block;
+  max-width: 100%;
+  height: auto;
 }
 
 .donut-segment {
@@ -345,5 +355,347 @@
   .donut-chart-modal-chart svg {
     width: 180px;
     height: 180px;
+  }
+}
+
+
+/* ===================================
+   MOBILE RESPONSIVE STYLES
+   =================================== */
+
+@media (max-width: 768px) {
+  .donut-chart-container {
+    padding: 12px;
+  }
+
+  .donut-chart-content {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .donut-chart-wrapper {
+    width: 100%;
+  }
+
+  .donut-chart-wrapper svg {
+    max-width: 200px;
+    height: auto;
+  }
+
+  .donut-chart-legend {
+    width: 100%;
+    max-height: none;
+  }
+
+  .donut-chart-title {
+    font-size: 13px;
+  }
+
+  .donut-chart-subtitle {
+    font-size: 11px;
+  }
+
+  .donut-chart-center-text {
+    font-size: 11px;
+  }
+
+  .donut-chart-center-value {
+    font-size: 18px;
+  }
+
+  .legend-item {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .legend-color {
+    width: 10px;
+    height: 10px;
+  }
+
+  .legend-label {
+    font-size: 11px;
+  }
+
+  .legend-value {
+    font-size: 12px;
+  }
+
+  .legend-percentage {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .donut-chart-container {
+    padding: 10px;
+  }
+
+  .donut-chart-content {
+    gap: 12px;
+  }
+
+  .donut-chart-wrapper svg {
+    max-width: 180px;
+  }
+
+  .donut-chart-title {
+    font-size: 12px;
+  }
+
+  .donut-chart-subtitle {
+    font-size: 10px;
+  }
+
+  .donut-chart-center-text {
+    font-size: 10px;
+  }
+
+  .donut-chart-center-value {
+    font-size: 16px;
+  }
+
+  .legend-item {
+    padding: 6px;
+    gap: 6px;
+  }
+
+  .legend-color {
+    width: 8px;
+    height: 8px;
+  }
+
+  .legend-label {
+    font-size: 10px;
+  }
+
+  .legend-value {
+    font-size: 11px;
+  }
+
+  .legend-percentage {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 360px) {
+  .donut-chart-wrapper svg {
+    max-width: 160px;
+  }
+
+  .donut-chart-title {
+    font-size: 11px;
+  }
+
+  .donut-chart-center-value {
+    font-size: 14px;
+  }
+
+  .legend-label {
+    font-size: 9px;
+  }
+
+  .legend-value {
+    font-size: 10px;
+  }
+}
+
+
+/* ===================================
+   MODAL MOBILE RESPONSIVE ENHANCEMENTS
+   =================================== */
+
+@media (max-width: 768px) {
+  .donut-chart-modal-overlay {
+    padding: 16px;
+  }
+
+  .donut-chart-modal {
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: 12px;
+  }
+
+  .donut-chart-modal-header {
+    padding: 20px;
+  }
+
+  .donut-chart-modal-title {
+    font-size: 1.375rem;
+    padding-right: 40px;
+    margin-bottom: 4px;
+  }
+
+  .donut-chart-modal-subtitle {
+    font-size: 0.875rem;
+  }
+
+  .donut-chart-modal-close {
+    top: 16px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    font-size: 22px;
+  }
+
+  .donut-chart-modal-content {
+    padding: 24px;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .donut-chart-modal-chart {
+    justify-content: center;
+    margin: 0 auto;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .donut-chart-modal-chart svg {
+    width: 260px !important;
+    height: 260px !important;
+  }
+
+  .donut-chart-modal-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .donut-chart-modal-total-value {
+    font-size: 1.875rem;
+  }
+
+  .donut-chart-modal-total-label {
+    font-size: 0.75rem;
+  }
+
+  .donut-chart-modal-legend {
+    max-height: none;
+    padding-right: 0;
+    width: 100%;
+  }
+
+  .donut-modal-legend-item {
+    padding: 12px 14px;
+  }
+
+  .donut-modal-legend-color {
+    width: 14px;
+    height: 14px;
+  }
+
+  .donut-modal-legend-label,
+  .donut-modal-legend-value {
+    font-size: 0.9375rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .donut-chart-modal-overlay {
+    padding: 12px;
+  }
+
+  .donut-chart-modal {
+    border-radius: 10px;
+  }
+
+  .donut-chart-modal-header {
+    padding: 18px;
+  }
+
+  .donut-chart-modal-title {
+    font-size: 1.25rem;
+  }
+
+  .donut-chart-modal-subtitle {
+    font-size: 0.8125rem;
+  }
+
+  .donut-chart-modal-close {
+    top: 14px;
+    right: 14px;
+    width: 30px;
+    height: 30px;
+    font-size: 20px;
+  }
+
+  .donut-chart-modal-content {
+    padding: 20px;
+    gap: 20px;
+  }
+
+  .donut-chart-modal-chart svg {
+    width: 280px !important;
+    height: 280px !important;
+  }
+
+  .donut-chart-modal-total-value {
+    font-size: 1.625rem;
+  }
+
+  .donut-chart-modal-total-label {
+    font-size: 0.6875rem;
+  }
+
+  .donut-modal-legend-item {
+    padding: 10px 12px;
+    gap: 12px;
+  }
+
+  .donut-modal-legend-color {
+    width: 12px;
+    height: 12px;
+  }
+
+  .donut-modal-legend-label,
+  .donut-modal-legend-value {
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .donut-chart-modal-overlay {
+    padding: 10px;
+  }
+
+  .donut-chart-modal-header {
+    padding: 16px;
+  }
+
+  .donut-chart-modal-title {
+    font-size: 1.125rem;
+  }
+
+  .donut-chart-modal-content {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .donut-chart-modal-chart svg {
+    width: 200px !important;
+    height: 200px !important;
+  }
+
+  .donut-chart-modal-total-value {
+    font-size: 1.5rem;
+  }
+
+  .donut-chart-modal-total-label {
+    font-size: 0.625rem;
+  }
+
+  .donut-modal-legend-item {
+    padding: 9px 10px;
+  }
+
+  .donut-modal-legend-label,
+  .donut-modal-legend-value {
+    font-size: 0.8125rem;
   }
 }
