@@ -1032,54 +1032,56 @@ const Orders = () => {
                     </div>
                 )}
 
-                <div className="seo-header-container">
-                    <h1 className="seo-title">Manage Orders</h1>
-                    <div className="orders-summary" style={{
+                <div className="orders-header-container">
+                    {/* Top Row: Title + Total Orders + FShip Sync */}
+                    <div style={{
                         display: 'flex',
-                        gap: '20px',
-                        marginBottom: '20px',
-                        padding: '10px',
-                        backgroundColor: '#f8f9fa',
-                        borderRadius: '8px',
-                        fontSize: '14px',
+                        justifyContent: 'space-between',
                         alignItems: 'center',
+                        marginBottom: '20px',
+                        gap: '20px',
                         flexWrap: 'wrap'
                     }}>
-                        <span className="total-orders" style={{color: '#007bff', fontWeight: 'bold'}}>
-                            Total Orders: <strong>{totalOrders}</strong>
-                        </span>
-                        <span className="page-info" style={{color: '#6c757d'}}>
-                            Page {currentPage} of {totalPages}
-                        </span>
-                        <span className="showing-info" style={{color: '#28a745'}}>
-                            Showing {orders.length} orders
-                        </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
-                            <label style={{ color: '#495057', fontWeight: '600', fontSize: '13px' }}>Show:</label>
-                            <select 
-                                value={itemsPerPage} 
-                                onChange={(e) => {
-                                    setItemsPerPage(Number(e.target.value));
-                                    setCurrentPage(1);
-                                }}
+                        <h1 className="seo-title" style={{ margin: 0 }}>Manage Orders</h1>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            <span className="total-orders" style={{
+                                color: '#007bff',
+                                fontWeight: 'bold',
+                                fontSize: '16px',
+                                padding: '8px 16px',
+                                background: '#f0f8ff',
+                                borderRadius: '8px',
+                                border: '2px solid #007bff'
+                            }}>
+                                Total Orders: <strong>{totalOrders}</strong>
+                            </span>
+                            <button 
+                                className="sync-button"
+                                onClick={syncOrders}
+                                title="Comprehensive FShip sync - Syncs new orders and updates statuses"
+                                disabled={loading || syncingAll || syncingOrders.size > 0}
                                 style={{
-                                    padding: '6px 12px',
-                                    borderRadius: '6px',
-                                    border: '2px solid #180D3E',
-                                    background: '#fff',
-                                    color: '#374151',
-                                    fontSize: '13px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '10px 20px',
+                                    background: 'linear-gradient(135deg, #00bcd4 0%, #0097a7 100%)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
                                     fontWeight: '600',
-                                    cursor: 'pointer',
-                                    outline: 'none'
+                                    cursor: loading || syncingAll || syncingOrders.size > 0 ? 'not-allowed' : 'pointer',
+                                    opacity: loading || syncingAll || syncingOrders.size > 0 ? 0.6 : 1,
+                                    transition: 'all 0.3s ease',
+                                    boxShadow: '0 2px 8px rgba(0, 188, 212, 0.3)'
                                 }}
                             >
-                                <option value={10}>10</option>
-                                <option value={25}>25</option>
-                                <option value={50}>50</option>
-                                <option value={100}>100</option>
-                            </select>
-                            <span style={{ color: '#6c757d', fontSize: '13px' }}>per page</span>
+                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                {syncingAll ? 'Syncing All...' : loading ? 'Loading...' : 'FShip Sync'}
+                            </button>
                         </div>
                     </div>
                     
@@ -1216,19 +1218,21 @@ const Orders = () => {
                         </button>
                     </div>
                     
-                    {/* Search and Filters Section */}
+                    {/* Search and Filters Section - All in One Row */}
                     <div className="filters-section" style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        display: 'flex',
+                        flexDirection: 'row',
                         gap: '12px',
                         marginBottom: '20px',
                         padding: '16px',
                         background: '#fff',
                         borderRadius: '12px',
                         border: '2px solid #e2e8f0',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                        alignItems: 'center',
+                        flexWrap: 'wrap'
                     }}>
-                        <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()} style={{ gridColumn: '1 / -1' }}>
+                        <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()} style={{ flex: '1 1 300px', minWidth: '250px' }}>
                             <div className="modern-searchbar-group">
                                 <span className="modern-searchbar-icon">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1316,18 +1320,6 @@ const Orders = () => {
                         flexWrap: 'wrap',
                         alignItems: 'center'
                     }}>
-                        <button 
-                            className="sync-button"
-                            onClick={syncOrders}
-                            title="Comprehensive FShip sync - Syncs new orders and updates statuses"
-                            disabled={loading || syncingAll || syncingOrders.size > 0}
-                        >
-                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            {syncingAll ? 'Syncing All...' : loading ? 'Loading...' : 'FShip Sync'}
-                        </button>
-
                         {selectedOrders.size > 0 && (
                             <button 
                                 className="bulk-download-button"

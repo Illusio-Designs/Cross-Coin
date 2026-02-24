@@ -201,14 +201,21 @@
   width: 100% !important;
   max-width: none !important;
   display: flex !important;
+  flex-direction: row !important;
   justify-content: space-between !important;
   align-items: center !important;
   margin-bottom: 1.5rem !important;
   padding: 0 !important;
+  gap: 1rem !important;
 }
 
 .seo-title {
   margin-bottom: 0 !important;
+  text-align: left !important;
+}
+
+.dashboard-title {
+  text-align: left !important;
 }
 
 .adding-button {
