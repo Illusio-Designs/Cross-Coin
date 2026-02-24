@@ -9,12 +9,6 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
   const [error, setError] = useState(null);
   const [imageSource, setImageSource] = useState('products'); // Always default to 'products' to show all images
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchExistingImages();
-    }
-  }, [isOpen, imageSource, fetchExistingImages]);
-
   const fetchExistingImages = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -78,6 +72,12 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
       setLoading(false);
     }
   }, [imageSource, productId]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchExistingImages();
+    }
+  }, [isOpen, fetchExistingImages]);
 
   const toggleImageSelection = (imagePath) => {
     setSelectedImages(prev => {
