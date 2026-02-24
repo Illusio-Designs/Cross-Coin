@@ -564,8 +564,6 @@ const Home = () => {
                 <SafeImage 
                   imageData={{ image_url: slides[current].image }}
                   alt={slides[current].title}
-                  width={1920}
-                  height={600}
                   priority={true}
                   quality={85}
                   style={{ objectFit: 'cover', width: '100%', height: '100%' }}
