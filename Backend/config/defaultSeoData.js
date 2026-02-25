@@ -5,7 +5,7 @@ const defaultSeoData = [
         meta_title: 'Cross Coin - Your Trusted Shopping Partner',
         meta_description: 'Discover a wide range of products at competitive prices. Shop the latest trends in fashion, electronics, home goods, and more.',
         meta_keywords: 'online shopping, ecommerce, retail, fashion, electronics, home goods',
-        canonical_url: '/',
+        canonical_url: `${process.env.FRONTEND_URL || 'https://crosscoin.in'}/`,
         meta_image: '/images/seo/home-meta.jpg'
     },
     {
@@ -14,7 +14,7 @@ const defaultSeoData = [
         meta_title: 'Browse Our Products - Quality Products at Great Prices',
         meta_description: 'Explore our extensive collection of products. Find the best deals on top brands and discover new favorites.',
         meta_keywords: 'products, shopping, deals, brands, online store',
-        canonical_url: '/products',
+        canonical_url: `${process.env.FRONTEND_URL || 'https://crosscoin.in'}/products`,
         meta_image: '/images/seo/products-meta.jpg'
     },
     {
@@ -23,7 +23,7 @@ const defaultSeoData = [
         meta_title: 'Shop by Category - Find What You Need',
         meta_description: 'Browse our product categories to find exactly what you\'re looking for. From fashion to electronics, we have it all.',
         meta_keywords: 'categories, product categories, shopping categories, browse products',
-        canonical_url: '/categories',
+        canonical_url: `${process.env.FRONTEND_URL || 'https://crosscoin.in'}/categories`,
         meta_image: '/images/seo/categories-meta.jpg'
     },
     {
@@ -32,7 +32,7 @@ const defaultSeoData = [
         meta_title: 'About Us - Your One-Stop Shopping Destination',
         meta_description: 'Learn about our company, our mission, and our commitment to providing the best shopping experience.',
         meta_keywords: 'about us, company info, our story, shopping partner',
-        canonical_url: '/about',
+        canonical_url: `${process.env.FRONTEND_URL || 'https://crosscoin.in'}/about`,
         meta_image: '/images/seo/about-meta.jpg'
     },
     {
@@ -41,7 +41,7 @@ const defaultSeoData = [
         meta_title: 'Contact Us - We\'re Here to Help',
         meta_description: 'Get in touch with our customer service team. We\'re here to answer your questions and provide support.',
         meta_keywords: 'contact us, customer service, support, help',
-        canonical_url: '/contact',
+        canonical_url: `${process.env.FRONTEND_URL || 'https://crosscoin.in'}/contact`,
         meta_image: '/images/seo/contact-meta.jpg'
     },
     {
@@ -50,7 +50,7 @@ const defaultSeoData = [
         meta_title: 'Your Shopping Cart - Review Your Items',
         meta_description: 'Review your shopping cart, update quantities, and proceed to checkout.',
         meta_keywords: 'shopping cart, cart, checkout, review items',
-        canonical_url: '/cart',
+        canonical_url: `${process.env.FRONTEND_URL || 'https://crosscoin.in'}/cart`,
         meta_image: '/images/seo/cart-meta.jpg'
     },
     {
@@ -59,7 +59,7 @@ const defaultSeoData = [
         meta_title: 'Your Wishlist - Save Items for Later',
         meta_description: 'View and manage your wishlist. Save items you love for later purchase.',
         meta_keywords: 'wishlist, saved items, favorites, save for later',
-        canonical_url: '/wishlist',
+        canonical_url: `${process.env.FRONTEND_URL || 'https://crosscoin.in'}/wishlist`,
         meta_image: '/images/seo/wishlist-meta.jpg'
     },
     {
@@ -68,7 +68,7 @@ const defaultSeoData = [
         meta_title: 'My Account - Manage Your Profile',
         meta_description: 'Access your account settings, view order history, and manage your profile.',
         meta_keywords: 'my account, account settings, profile, order history',
-        canonical_url: '/account',
+        canonical_url: `${process.env.FRONTEND_URL || 'https://crosscoin.in'}/account`,
         meta_image: '/images/seo/account-meta.jpg'
     },
     {
@@ -77,7 +77,7 @@ const defaultSeoData = [
         meta_title: 'My Profile - Your Personal Details',
         meta_description: 'View and manage your personal details, shipping addresses, and other settings.',
         meta_keywords: 'profile, my profile, user profile, account details',
-        canonical_url: '/profile',
+        canonical_url: `${process.env.FRONTEND_URL || 'https://crosscoin.in'}/profile`,
         meta_image: '/images/seo/profile-meta.jpg'
     },
     {
@@ -86,7 +86,7 @@ const defaultSeoData = [
         meta_title: 'My Orders - Track Your Purchases',
         meta_description: 'View your order history, track your shipments, and manage your returns.',
         meta_keywords: 'my orders, order history, track shipment, returns',
-        canonical_url: '/orders',
+        canonical_url: `${process.env.FRONTEND_URL || 'https://crosscoin.in'}/orders`,
         meta_image: '/images/seo/orders-meta.jpg'
     }
 ];

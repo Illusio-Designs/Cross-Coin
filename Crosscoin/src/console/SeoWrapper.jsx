@@ -10,13 +10,17 @@ const SeoWrapper = ({ pageName, children, seoData }) => {
     const [isLoading, setIsLoading] = useState(false);
     const hasFetchedRef = useRef(false);
 
-    const defaultSeoData = useMemo(() => ({
-        meta_title: 'Cross-Coin - Your Trusted Shopping Partner',
-        meta_description: 'Discover amazing products at Cross-Coin, your one-stop shop for all your needs.',
-        meta_keywords: 'cross-coin, shopping, online store, products',
-        canonical_url: typeof window !== 'undefined' ? window.location.href : '',
-        meta_image: null,
-    }), []);
+    const defaultSeoData = useMemo(() => {
+        const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://crosscoin.in';
+        const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+        return {
+            meta_title: 'Cross-Coin - Your Trusted Shopping Partner',
+            meta_description: 'Discover amazing products at Cross-Coin, your one-stop shop for all your needs.',
+            meta_keywords: 'cross-coin, shopping, online store, products',
+            canonical_url: `${baseUrl}${currentPath}`,
+            meta_image: null,
+        };
+    }, []);
 
     // Fetch SEO data automatically if not provided
     useEffect(() => {
@@ -58,7 +62,28 @@ const SeoWrapper = ({ pageName, children, seoData }) => {
         return `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}${imagePath}`;
     };
     
+    // Generate absolute canonical URL
+    const getAbsoluteCanonicalUrl = (url) => {
+        if (!url) {
+            // If no URL provided, use current page URL
+            const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://crosscoin.in';
+            const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+            return `${baseUrl}${currentPath}`;
+        }
+        
+        // If already absolute URL, return as is
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            return url;
+        }
+        
+        // If relative URL, make it absolute
+        const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://crosscoin.in';
+        const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+        return `${baseUrl}${cleanUrl}`;
+    };
+    
     const fullImageUrl = getFullImageUrl(data.meta_image);
+    const canonicalUrl = getAbsoluteCanonicalUrl(data.canonical_url);
     const ogTitle = data.og_title || data.meta_title;
     const ogDescription = data.og_description || data.meta_description;
     return (
@@ -67,11 +92,11 @@ const SeoWrapper = ({ pageName, children, seoData }) => {
                 <title>{data.meta_title || pageName || 'Cross Coin'}</title>
                 <meta name="description" content={data.meta_description} />
                 <meta name="keywords" content={data.meta_keywords} />
-                <link rel="canonical" href={data.canonical_url} />
+                <link rel="canonical" href={canonicalUrl} />
                 {/* Open Graph tags */}
                 <meta property="og:title" content={ogTitle} />
                 <meta property="og:description" content={ogDescription} />
-                <meta property="og:url" content={data.canonical_url} />
+                <meta property="og:url" content={canonicalUrl} />
                 <meta property="og:type" content="website" />
                 {fullImageUrl && <meta property="og:image" content={fullImageUrl} />}
                 {/* Twitter Card tags */}

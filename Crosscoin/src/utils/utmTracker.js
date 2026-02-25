@@ -19,8 +19,11 @@ export const captureUTMParameters = () => {
     .some(([, value]) => value !== null);
 
   if (hasUTMParams) {
+    console.log('✅ UTM Parameters Captured:', utmData);
     localStorage.setItem('utm_data', JSON.stringify(utmData));
     return utmData;
+  } else {
+    console.log('ℹ️ No UTM parameters found in URL');
   }
   
   return null;
@@ -40,8 +43,14 @@ export const clearUTMData = () => {
 // Send UTM data to backend
 export const sendUTMToBackend = async (utmData) => {
   try {
+    console.log('📤 Sending UTM data to backend...', utmData);
+    
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-    const response = await fetch(`${apiUrl}/api/utm/track`, {
+    const url = `${apiUrl}/api/utm/track`;
+    
+    console.log('🔗 API URL:', url);
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -51,10 +60,17 @@ export const sendUTMToBackend = async (utmData) => {
     });
     
     const result = await response.json();
-    console.log('UTM tracking response:', result);
+    
+    if (response.ok && result.success) {
+      console.log('✅ UTM data successfully sent to backend:', result);
+      console.log('📊 Stored with ID:', result.data?.id);
+    } else {
+      console.error('❌ Failed to send UTM data:', result);
+    }
+    
     return result;
   } catch (error) {
-    console.error('Error sending UTM data:', error);
+    console.error('❌ Error sending UTM data to backend:', error);
     return null;
   }
 };
