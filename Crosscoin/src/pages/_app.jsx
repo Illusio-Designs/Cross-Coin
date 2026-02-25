@@ -129,6 +129,9 @@ function App({ Component, pageProps }) {
     if (typeof window !== 'undefined' && !window.__turbopack_load_page_chunks__) {
       window.__turbopack_load_page_chunks__ = () => {};
     }
+    
+    // Test UTM Tracker is loaded
+    console.log('🚀 App mounted - UTMTracker should be active');
   }, []);
 
   useEffect(() => {

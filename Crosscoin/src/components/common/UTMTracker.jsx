@@ -1,12 +1,10 @@
-'use client';
-
 import { useEffect } from 'react';
 import { captureUTMParameters, sendUTMToBackend } from '@/utils/utmTracker';
 
 export default function UTMTracker() {
   useEffect(() => {
     // Add a small delay to ensure DOM is ready
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       console.log('=== UTM TRACKER START ===');
       console.log('🔍 UTM Tracker initialized');
       console.log('📍 Current URL:', window.location.href);
@@ -30,6 +28,8 @@ export default function UTMTracker() {
       }
       console.log('=== UTM TRACKER END ===');
     }, 100);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return null; // This component doesn't render anything
