@@ -40,7 +40,7 @@ export const clearUTMData = () => {
 // Send UTM data to backend
 export const sendUTMToBackend = async (utmData) => {
   try {
-    const apiUrl = process.env.REACT_APP_API_URL || 'https://api.crosscoin.in';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
     const response = await fetch(`${apiUrl}/api/utm/track`, {
       method: 'POST',
       headers: {
@@ -49,7 +49,10 @@ export const sendUTMToBackend = async (utmData) => {
       credentials: 'include',
       body: JSON.stringify(utmData),
     });
-    return await response.json();
+    
+    const result = await response.json();
+    console.log('UTM tracking response:', result);
+    return result;
   } catch (error) {
     console.error('Error sending UTM data:', error);
     return null;

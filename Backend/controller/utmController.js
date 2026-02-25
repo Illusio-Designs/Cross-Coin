@@ -144,10 +144,20 @@ exports.getAllUTMData = async (req, res) => {
 
     const whereClause = {};
     if (startDate && endDate) {
+      // Set start date to beginning of day
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      
+      // Set end date to end of day
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      
       whereClause.created_at = {
-        [Op.between]: [new Date(startDate), new Date(endDate)]
+        [Op.between]: [start, end]
       };
     }
+
+    console.log('getAllUTMData whereClause:', whereClause);
 
     const utmData = await UTMTracking.findAll({
       where: whereClause,
@@ -155,11 +165,14 @@ exports.getAllUTMData = async (req, res) => {
         {
           model: Order,
           as: 'Orders',
-          attributes: ['id', 'order_number', 'final_amount', 'status', 'created_at']
+          attributes: ['id', 'order_number', 'final_amount', 'status', 'created_at'],
+          required: false
         }
       ],
       order: [['created_at', 'DESC']]
     });
+
+    console.log('getAllUTMData result count:', utmData.length);
 
     res.status(200).json({
       success: true,
