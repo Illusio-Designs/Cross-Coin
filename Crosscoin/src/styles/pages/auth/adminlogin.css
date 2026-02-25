@@ -9,6 +9,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px;
 }
 .login-card {
   background: #fff;
@@ -159,4 +160,173 @@
 .login-back-link {
   text-align: center;
   margin-top: 1.2rem;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  .login-bg {
+    padding: 16px;
+    align-items: center;
+  }
+
+  .login-card {
+    max-width: 100%;
+    padding: 2.5rem 1.5rem 2rem 1.5rem;
+    border-radius: 20px;
+    border-top-width: 6px;
+  }
+
+  .login-title {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .login-subtitle {
+    font-size: 1rem;
+    margin-bottom: 1.8rem;
+  }
+
+  .login-input {
+    padding: 1rem 1.2rem;
+    font-size: 1rem;
+    margin-bottom: 1.2rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .login-password-wrapper .login-input {
+    padding-right: 3rem;
+  }
+
+  .login-eye {
+    right: 0.8rem;
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .login-btn {
+    padding: 1rem;
+    font-size: 1.05rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .login-link {
+    font-size: 0.95rem;
+  }
+
+  .login-signup {
+    font-size: 0.95rem;
+  }
+
+  .login-error {
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-bg {
+    padding: 12px;
+  }
+
+  .login-card {
+    padding: 2rem 1.2rem 1.5rem 1.2rem;
+    border-radius: 16px;
+    border-top-width: 5px;
+  }
+
+  .login-title {
+    font-size: 1.5rem;
+    letter-spacing: 0.5px;
+  }
+
+  .login-subtitle {
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .login-input {
+    padding: 0.9rem 1rem;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+    border-radius: 10px;
+  }
+
+  .login-password-wrapper .login-input {
+    padding-right: 2.8rem;
+  }
+
+  .login-eye {
+    right: 0.6rem;
+    width: 1.8rem;
+    height: 1.8rem;
+  }
+
+  .login-eye svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .login-btn {
+    padding: 0.9rem;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 10px;
+  }
+
+  .login-link {
+    font-size: 0.9rem;
+  }
+
+  .login-signup {
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+  }
+
+  .login-error {
+    font-size: 0.9rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .login-google-btn {
+    padding: 0.8rem 0.5rem;
+    font-size: 0.95rem;
+    border-radius: 10px;
+  }
+
+  .login-google-icon {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (max-width: 360px) {
+  .login-bg {
+    padding: 10px;
+  }
+
+  .login-card {
+    padding: 1.5rem 1rem 1.2rem 1rem;
+    border-radius: 14px;
+  }
+
+  .login-title {
+    font-size: 1.3rem;
+  }
+
+  .login-subtitle {
+    font-size: 0.85rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .login-input {
+    padding: 0.8rem 0.9rem;
+    font-size: 0.9rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .login-btn {
+    padding: 0.85rem;
+    font-size: 0.95rem;
+  }
 }
