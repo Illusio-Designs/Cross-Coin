@@ -29,6 +29,7 @@ import "../styles/dashboard/full-width-fix.css";
 import "../styles/dashboard/mobile.css";
 import "../styles/pages/auth/adminlogin.css";
 import Analytics from "../components/common/Analytics";
+import UTMTracker from "../components/common/UTMTracker";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 
@@ -167,6 +168,7 @@ function App({ Component, pageProps }) {
         <title>Cross Coin</title>
         <link rel="icon" href="/crosscoin icon.png" />
       </Head>
+      <UTMTracker />
       <Analytics />
       <SpeedInsights />
       <VercelAnalytics />
