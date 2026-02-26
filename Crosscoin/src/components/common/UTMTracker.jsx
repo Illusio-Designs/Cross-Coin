@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect } from 'react';
 import { captureUTMParameters, sendUTMToBackend } from '@/utils/utmTracker';
 

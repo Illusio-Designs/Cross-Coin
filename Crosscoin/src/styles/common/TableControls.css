@@ -125,9 +125,9 @@
 }
 
 .pagination-btn.active {
-  background-color: #180D3E;
+  background-color: #3b82f6;
   color: white;
-  border-color: #180D3E;
+  border-color: #3b82f6;
 }
 
 .pagination-btn:disabled {

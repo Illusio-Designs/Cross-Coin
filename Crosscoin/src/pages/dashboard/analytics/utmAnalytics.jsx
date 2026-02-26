@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
+import Pagination from '../../../components/common/Pagination';
 import '../../../styles/dashboard/utmAnalytics.css';
 
 const UTMAnalytics = () => {
   const [utmData, setUtmData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [dateRange, setDateRange] = useState({
-    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0]
+    startDate: '',
+    endDate: ''
   });
   const [stats, setStats] = useState({
     totalVisits: 0,
@@ -16,26 +19,41 @@ const UTMAnalytics = () => {
     totalRevenue: 0
   });
 
+  // Load all data on mount
   useEffect(() => {
     fetchUTMData();
-  }, [dateRange]);
+  }, []);
 
   const fetchUTMData = async () => {
     try {
       setLoading(true);
+      setError(null);
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
       
-      // Fetch UTM analytics
-      const analyticsResponse = await fetch(
-        `${apiUrl}/api/utm/analytics?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`,
-        {
-          credentials: 'include',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
+      // Build URL with optional date filters
+      let analyticsUrl = `${apiUrl}/api/utm/analytics`;
+      let trackingUrl = `${apiUrl}/api/utm/all`;
+      
+      // Only add date filters if both dates are selected
+      if (dateRange.startDate && dateRange.endDate) {
+        // Validate start date is before end date
+        if (new Date(dateRange.startDate) > new Date(dateRange.endDate)) {
+          setError('Start date must be before end date');
+          setLoading(false);
+          return;
         }
-      );
+        analyticsUrl += `?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`;
+        trackingUrl += `?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`;
+      }
+      
+      // Fetch UTM analytics
+      const analyticsResponse = await fetch(analyticsUrl, {
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
       if (!analyticsResponse.ok) {
         const errorText = await analyticsResponse.text();
@@ -47,16 +65,13 @@ const UTMAnalytics = () => {
       console.log('Analytics Data:', analyticsData);
       
       // Fetch all UTM tracking data with order information
-      const trackingResponse = await fetch(
-        `${apiUrl}/api/utm/all?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`,
-        {
-          credentials: 'include',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
+      const trackingResponse = await fetch(trackingUrl, {
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
         }
-      );
+      });
 
       let trackingData = [];
       if (trackingResponse.ok) {
@@ -74,6 +89,9 @@ const UTMAnalytics = () => {
       
       // Calculate stats
       calculateStats(trackingData);
+      
+      // Reset to page 1 when new data is loaded
+      setCurrentPage(1);
       
       setError(null);
     } catch (err) {
@@ -144,7 +162,23 @@ const UTMAnalytics = () => {
       ...dateRange,
       [e.target.name]: e.target.value
     });
+    // Don't fetch data automatically - wait for Apply Filter button
   };
+
+  // Remove the useEffect that resets page on date change
+  // User must click Apply Filter to load data
+
+  // Calculate pagination
+  const totalPages = Math.ceil(utmData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = utmData.slice(startIndex, endIndex);
+
+  // Add serial numbers
+  const currentItemsWithSN = currentItems.map((item, idx) => ({
+    ...item,
+    serial_number: startIndex + idx + 1
+  }));
 
   if (loading) {
     return (
@@ -155,20 +189,6 @@ const UTMAnalytics = () => {
         <div className="loading-container">
           <div className="loader"></div>
           <p>Loading UTM data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="dashboard-page">
-        <div className="orders-header-container">
-          <h1 className="seo-title" style={{ margin: 0 }}>UTM Analytics</h1>
-        </div>
-        <div className="error-container">
-          <p className="error-message">Error: {error}</p>
-          <button onClick={fetchUTMData} className="retry-button">Retry</button>
         </div>
       </div>
     );
@@ -217,18 +237,27 @@ const UTMAnalytics = () => {
             />
           </div>
           <button 
-            onClick={(e) => {
-              e.preventDefault();
-              fetchUTMData();
-            }} 
             className="apply-filter-btn"
-            type="button"
+            type="submit"
           >
             Apply Filter
           </button>
         </form>
 
-        {/* Stats Cards */}
+        {/* Error Message */}
+        {error && (
+          <div className="error-container" style={{ 
+            padding: '12px', 
+            background: '#fee2e2', 
+            color: '#dc2626', 
+            borderRadius: '8px',
+            marginTop: '12px'
+          }}>
+            <p style={{ margin: 0 }}>{error}</p>
+          </div>
+        )}
+
+        {/* Stats Cards - Always show */}
         <div className="stats-grid">
           <div className="stat-card">
             <div className="stat-icon visits">📊</div>
@@ -266,46 +295,61 @@ const UTMAnalytics = () => {
         <h2>Campaign Performance</h2>
         {utmData.length === 0 ? (
           <div className="no-data">
-            <p>No UTM data available for the selected date range.</p>
+            <p>No UTM data available{dateRange.startDate && dateRange.endDate ? ' for the selected date range' : ''}.</p>
             <p className="hint">Try adjusting the date range or check if UTM tracking is working correctly.</p>
           </div>
         ) : (
-          <table className="utm-table">
-            <thead>
-              <tr>
-                <th>Source</th>
-                <th>Medium</th>
-                <th>Campaign</th>
-                <th>Visits</th>
-                <th>Orders</th>
-                <th>Conversion Rate</th>
-                <th>Revenue</th>
-              </tr>
-            </thead>
-            <tbody>
-              {utmData.map((row, index) => (
-                <tr key={index}>
-                  <td>
-                    <span className="utm-badge source">{row.utm_source}</span>
-                  </td>
-                  <td>
-                    <span className="utm-badge medium">{row.utm_medium}</span>
-                  </td>
-                  <td>
-                    <span className="utm-badge campaign">{row.utm_campaign}</span>
-                  </td>
-                  <td>{row.visits}</td>
-                  <td>{row.orders}</td>
-                  <td>
-                    <span className={`conversion-badge ${parseFloat(row.conversionRate) > 5 ? 'high' : parseFloat(row.conversionRate) > 2 ? 'medium' : 'low'}`}>
-                      {row.conversionRate}%
-                    </span>
-                  </td>
-                  <td className="revenue">₹{row.revenue.toFixed(2)}</td>
+          <>
+            <table className="utm-table">
+              <thead>
+                <tr>
+                  <th>S/N</th>
+                  <th>Source</th>
+                  <th>Medium</th>
+                  <th>Campaign</th>
+                  <th>Visits</th>
+                  <th>Orders</th>
+                  <th>Conversion Rate</th>
+                  <th>Revenue</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {currentItemsWithSN.map((row) => (
+                  <tr key={row.serial_number}>
+                    <td>{row.serial_number}</td>
+                    <td>
+                      <span className="utm-badge source">{row.utm_source}</span>
+                    </td>
+                    <td>
+                      <span className="utm-badge medium">{row.utm_medium}</span>
+                    </td>
+                    <td>
+                      <span className="utm-badge campaign">{row.utm_campaign}</span>
+                    </td>
+                    <td>{row.visits}</td>
+                    <td>{row.orders}</td>
+                    <td>
+                      <span className={`conversion-badge ${parseFloat(row.conversionRate) > 5 ? 'high' : parseFloat(row.conversionRate) > 2 ? 'medium' : 'low'}`}>
+                        {row.conversionRate}%
+                      </span>
+                    </td>
+                    <td className="revenue">₹{row.revenue.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="seo-pagination-container">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
