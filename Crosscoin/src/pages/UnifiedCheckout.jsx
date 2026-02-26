@@ -22,6 +22,7 @@ import {
 } from "../utils/toast";
 import { fbqTrack } from "../components/common/Analytics";
 import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
+import MagicCheckoutIntegration from "../components/checkout/MagicCheckoutIntegration";
 
 export default function UnifiedCheckout() {
   const { user, isAuthenticated } = useAuth();
@@ -53,6 +54,10 @@ export default function UnifiedCheckout() {
       }
     }
   }, [shippingFee, appliedCoupon]); // Removed handleCouponRemoved from dependencies
+
+  // Magic Checkout feature flag
+  const MAGIC_CHECKOUT_ENABLED = process.env.NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED === "true";
+  const [useMagicCheckout, setUseMagicCheckout] = useState(false);
 
   // Address management state
   const [addresses, setAddresses] = useState([]);
@@ -90,6 +95,11 @@ export default function UnifiedCheckout() {
       }
     }
 
+    // Check if Magic Checkout should be used
+    if (MAGIC_CHECKOUT_ENABLED) {
+      setUseMagicCheckout(true);
+    }
+
     // Check for successful payment that might have been blocked from redirecting
     const paymentSuccess = sessionStorage.getItem("paymentSuccess");
     if (paymentSuccess && !orderPlaced) {
@@ -119,7 +129,7 @@ export default function UnifiedCheckout() {
         sessionStorage.removeItem("paymentSuccess");
       }
     }
-  }, [orderPlaced, router]);
+  }, [MAGIC_CHECKOUT_ENABLED, orderPlaced, router]);
 
   // Load addresses and shipping fees on mount
   useEffect(() => {
@@ -284,6 +294,138 @@ export default function UnifiedCheckout() {
       script.onerror = () => resolve(false);
       document.body.appendChild(script);
     });
+  };
+
+  /**
+   * Handle Magic Checkout success callback
+   */
+  const handleMagicCheckoutSuccess = async (paymentResponse) => {
+    try {
+      console.log("Magic Checkout payment success:", paymentResponse);
+      
+      // Prepare order data
+      const orderData = !isAuthenticated ? {
+        guest_info: guestInfo,
+        shipping_address: {
+          fullName: shippingAddress.full_name || shippingAddress.fullName,
+          address: shippingAddress.address,
+          city: shippingAddress.city,
+          state: shippingAddress.state,
+          pincode: shippingAddress.postal_code || shippingAddress.postalCode,
+          phone: shippingAddress.phone_number || shippingAddress.phoneNumber,
+        },
+        items: [
+          ...(buyNowItem ? [{
+            product_id: buyNowItem.productId || buyNowItem.id,
+            variation_id: buyNowItem.variationId || buyNowItem.variation?.id || null,
+            quantity: buyNowItem.quantity,
+          }] : []),
+          ...cartItems.map((item) => ({
+            product_id: item.productId || item.id,
+            variation_id: item.variationId || item.variation?.id || null,
+            quantity: item.quantity,
+          }))
+        ],
+        payment_type: "upi",
+        notes: "Magic Checkout Payment",
+        discount_amount: appliedCoupon?.discount || 0,
+        coupon_id: appliedCoupon?.id || null,
+        session_id: typeof window !== "undefined" ? sessionStorage.getItem("sessionId") || "guest-" + Date.now() : "guest-" + Date.now(),
+        ip_address: typeof window !== "undefined" ? window.location.hostname : "localhost",
+        user_agent: typeof window !== "undefined" ? window.navigator.userAgent : "unknown",
+      } : {
+        shipping_address_id: shippingAddress.id,
+        items: [
+          ...(buyNowItem ? [{
+            product_id: buyNowItem.productId || buyNowItem.id,
+            variation_id: buyNowItem.variationId || buyNowItem.variation?.id || null,
+            quantity: buyNowItem.quantity,
+          }] : []),
+          ...cartItems.map((item) => ({
+            product_id: item.productId || item.id,
+            variation_id: item.variationId || item.variation?.id || null,
+            quantity: item.quantity,
+          }))
+        ],
+        payment_type: "upi",
+        notes: "Magic Checkout Payment",
+        discount_amount: appliedCoupon?.discount || 0,
+        coupon_id: appliedCoupon?.id || null,
+      };
+
+      // Create order
+      const orderResult = !isAuthenticated ? await createGuestOrder(orderData) : await createOrder(orderData);
+      
+      // Update order with payment details
+      await updateOrderPayment({
+        orderId: orderResult.data.order.id,
+        razorpayPaymentId: paymentResponse.razorpay_payment_id,
+        razorpayOrderId: paymentResponse.razorpay_order_id,
+        razorpaySignature: paymentResponse.razorpay_signature
+      });
+
+      // Track purchase
+      try {
+        const totalAmount = cartItems.reduce((sum, item) => {
+          const price = parseFloat(item.price || 0);
+          return sum + price * (item.quantity || 1);
+        }, 0);
+        const shippingFeeAmount = parseFloat(shippingFee?.fee || 0);
+        const discountAmount = appliedCoupon?.discount || 0;
+        const finalAmount = totalAmount + shippingFeeAmount - discountAmount;
+
+        const orderNumber = orderResult?.data?.order?.order_number;
+        const purchaseTracked = fbqTrack("Purchase", {
+          value: Number(finalAmount.toFixed(2)),
+          currency: "INR",
+          content_type: "product",
+          contents: cartItems.filter((item) => item.productId || item.id).map((item) => ({
+            id: String(item.productId || item.id),
+            quantity: item.quantity || 1,
+          })),
+        });
+
+        if (purchaseTracked && orderNumber) {
+          sessionStorage.setItem(`fb_purchase_tracked_${orderNumber}`, "true");
+        }
+      } catch (e) {
+        console.warn("Purchase tracking (Magic Checkout): failed to send fbq Purchase", e);
+      }
+
+      // Clear cart and redirect
+      clearCart();
+      clearBuyNow();
+      sessionStorage.removeItem("shippingAddress");
+      sessionStorage.removeItem("appliedCoupon");
+      showOrderPlacedSuccessToast(orderResult.data.order.order_number);
+      
+      const redirectUrl = !isAuthenticated 
+        ? `/ThankYou?order_number=${orderResult.data.order.order_number}&guest_email=${encodeURIComponent(guestInfo.email)}&is_guest=true`
+        : `/ThankYou?order_number=${orderResult.data.order.order_number}`;
+      
+      router.push(redirectUrl);
+    } catch (error) {
+      console.error("Error handling Magic Checkout success:", error);
+      showOrderPlacedErrorToast("Payment successful but order creation failed. Please contact support.");
+      setIsProcessing(false);
+    }
+  };
+
+  /**
+   * Handle Magic Checkout error callback
+   */
+  const handleMagicCheckoutError = (error) => {
+    console.error("Magic Checkout error:", error);
+    
+    // Check if error is fallback to standard checkout
+    if (error.message === "FALLBACK_TO_STANDARD") {
+      console.log("Falling back to standard checkout");
+      setUseMagicCheckout(false);
+      return;
+    }
+    
+    showOrderPlacedErrorToast("Magic Checkout failed. Please try again or use standard checkout.");
+    setIsProcessing(false);
   };
 
   const handlePlaceOrder = async () => {
@@ -1093,6 +1235,25 @@ export default function UnifiedCheckout() {
             <>
               {renderAddressSection()}
               {isAuthenticated && renderAddressForm()}
+              
+              {/* Delivery Methods Section */}
+              {renderDeliveryMethods()}
+
+              {/* Magic Checkout Integration */}
+              {MAGIC_CHECKOUT_ENABLED && useMagicCheckout && shippingAddress && (
+                <div className="magic-checkout-section" style={{ marginBottom: '30px' }}>
+                  <h3 style={{ marginBottom: '20px' }}>Magic Checkout</h3>
+                  <MagicCheckoutIntegration
+                    cartItems={cartItems}
+                    user={user}
+                    onSuccess={handleMagicCheckoutSuccess}
+                    onError={handleMagicCheckoutError}
+                    shippingAddress={shippingAddress}
+                    shippingFee={shippingFee}
+                    appliedCoupon={appliedCoupon}
+                  />
+                </div>
+              )}
             </>
           )}
         </div>
