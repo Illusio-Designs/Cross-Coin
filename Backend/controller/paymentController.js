@@ -617,4 +617,171 @@ module.exports.razorpayCallback = async (req, res) => {
 
     return res.redirect('/UnifiedCheckout?payment=failed');
   }
+};
+
+// Create Magic Checkout order
+module.exports.createMagicCheckoutOrder = async (req, res) => {
+  try {
+    const { amount, currency = 'INR', receipt, customer, items } = req.body;
+    
+    console.log('Backend: Creating Magic Checkout order with amount:', amount);
+    
+    // Validate request parameters
+    if (!amount) {
+      return res.status(400).json({ message: 'Amount is required' });
+    }
+
+    if (!customer || !customer.email || !customer.phone) {
+      return res.status(400).json({ message: 'Customer email and phone are required' });
+    }
+
+    // Initialize Razorpay instance
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET
+    });
+
+    // Create order with Magic Checkout flag
+    const options = {
+      amount: amount, // amount is already in paise (frontend sends it in paise)
+      currency,
+      receipt: receipt || `rcpt_magic_${Date.now()}`,
+      notes: {
+        magic_checkout: 'true',
+        customer_email: customer.email,
+        customer_phone: customer.phone,
+        customer_name: customer.name || ''
+      }
+    };
+
+    console.log('Backend: Sending these options to Razorpay for Magic Checkout:', options);
+    
+    // Create Razorpay order
+    const order = await razorpay.orders.create(options);
+    
+    // Return order details with Magic Checkout context
+    res.json({ 
+      order,
+      magic_checkout_context: {
+        order_id: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        customer: {
+          email: customer.email,
+          phone: customer.phone,
+          name: customer.name || ''
+        },
+        items: items || []
+      }
+    });
+  } catch (error) {
+    console.error('Error creating Magic Checkout order:', error);
+    res.status(500).json({ 
+      message: 'Failed to create Magic Checkout order', 
+      error: error.message 
+    });
+  }
+};
+
+// Verify Magic Checkout payment
+module.exports.verifyMagicCheckoutPayment = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { 
+      orderId, 
+      razorpayPaymentId, 
+      razorpayOrderId, 
+      razorpaySignature 
+    } = req.body;
+    
+    console.log('Verifying Magic Checkout payment:', { 
+      orderId, 
+      razorpayPaymentId, 
+      razorpayOrderId 
+    });
+
+    // Validate required fields
+    if (!orderId || !razorpayPaymentId || !razorpayOrderId || !razorpaySignature) {
+      await transaction.rollback();
+      return res.status(400).json({ 
+        success: false,
+        message: 'All payment fields are required' 
+      });
+    }
+
+    // Verify payment signature using PaymentService
+    const isValidSignature = PaymentService.verifyMagicCheckoutSignature(
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature
+    );
+
+    if (!isValidSignature) {
+      await transaction.rollback();
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid payment signature' 
+      });
+    }
+
+    // Find the order
+    const order = await Order.findByPk(orderId, { transaction });
+    if (!order) {
+      await transaction.rollback();
+      return res.status(404).json({ 
+        success: false,
+        message: 'Order not found' 
+      });
+    }
+
+    // Validate payment amount matches order amount
+    // Note: Razorpay amounts are in paise, order amounts are in rupees
+    const orderAmountInPaise = Math.round(parseFloat(order.final_amount) * 100);
+    
+    // Update order status
+    order.payment_status = 'paid';
+    order.status = 'processing';
+    await order.save({ transaction });
+
+    // Create payment record using PaymentService
+    const payment = await PaymentService.createMagicCheckoutPayment({
+      order_id: order.id,
+      user_id: order.user_id,
+      guest_user_id: order.guest_user_id,
+      payment_type: 'razorpay',
+      amount_paid: order.final_amount,
+      status: 'successful',
+      magic_checkout_order_id: razorpayOrderId,
+      magic_checkout_payment_id: razorpayPaymentId,
+      magic_checkout_signature: razorpaySignature
+    }, transaction);
+
+    await transaction.commit();
+
+    res.json({ 
+      success: true, 
+      message: 'Payment verified successfully',
+      order: {
+        id: order.id,
+        order_number: order.order_number,
+        payment_status: order.payment_status,
+        status: order.status
+      },
+      payment: {
+        id: payment.id,
+        amount_paid: payment.amount_paid,
+        status: payment.status
+      }
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error verifying Magic Checkout payment:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to verify payment', 
+      error: error.message 
+    });
+  }
 }; 
