@@ -18,14 +18,26 @@ exports.trackUTM = async (req, res) => {
 
     // Get session ID from cookie or create new one
     let sessionId = req.cookies?.session_id;
+    console.log('🍪 UTM Tracking - Cookies received:', req.cookies);
+    console.log('🔑 UTM Tracking - Session ID from cookie:', sessionId);
+    
     if (!sessionId) {
       sessionId = uuidv4();
-      res.cookie('session_id', sessionId, {
+      console.log('🆕 UTM Tracking - Creating new session ID:', sessionId);
+      
+      // Set cookie with proper domain for cross-subdomain sharing
+      const cookieOptions = {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax'
-      });
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-domain in production
+        domain: process.env.NODE_ENV === 'production' ? '.crosscoin.in' : undefined // Share across subdomains
+      };
+      
+      res.cookie('session_id', sessionId, cookieOptions);
+      console.log('🍪 UTM Tracking - Cookie set with options:', cookieOptions);
+    } else {
+      console.log('✅ UTM Tracking - Using existing session ID:', sessionId);
     }
 
     // Get user info

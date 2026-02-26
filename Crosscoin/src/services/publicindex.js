@@ -489,6 +489,7 @@ export const createOrder = async (orderData) => {
 
     const response = await axios.post(`${API_URL}/api/orders`, orderData, {
       headers: { Authorization: `Bearer ${token}` },
+      withCredentials: true, // ✅ SEND COOKIES (including session_id for UTM tracking)
       timeout: 30000, // 30 second timeout
     });
     console.log("createOrder: Response received:", response.data);
@@ -829,7 +830,9 @@ export const getPublicPolicyByName = async (name) => {
 export const createGuestOrder = async (orderData) => {
   try {
     console.log("GUEST CHECKOUT API CALL: Creating guest order:", orderData);
-    const response = await axios.post(`${API_URL}/api/orders/guest`, orderData);
+    const response = await axios.post(`${API_URL}/api/orders/guest`, orderData, {
+      withCredentials: true, // ✅ SEND COOKIES (including session_id for UTM tracking)
+    });
     console.log("GUEST CHECKOUT API RESPONSE:", response.data);
     return response.data;
   } catch (error) {
