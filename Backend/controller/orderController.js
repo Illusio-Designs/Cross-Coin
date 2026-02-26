@@ -265,35 +265,34 @@ module.exports.createOrder = async (req, res) => {
     let utmTrackingId = null;
     
     console.log('🍪 createOrder - Cookies received:', req.cookies);
-    console.log('🔑 createOrder - Session ID from cookie:', req.cookies?.session_id);
+    console.log('📦 createOrder - Request body utm_session_id:', req.body.utm_session_id);
     
-    if (req.body.utm_data || req.cookies?.session_id) {
+    // Try to get session_id from request body first, then cookies
+    const sessionId = req.body.utm_session_id || req.cookies?.session_id;
+    console.log('🔑 createOrder - Session ID (body or cookie):', sessionId);
+    
+    if (sessionId) {
       try {
-        const sessionId = req.cookies?.session_id;
         console.log('🔍 createOrder - Looking for UTM record with session_id:', sessionId);
         
-        if (sessionId) {
-          const utmRecord = await UTMTracking.findOne({
-            where: { session_id: sessionId },
-            order: [['created_at', 'DESC']]
-          });
-          
-          if (utmRecord) {
-            utmTrackingId = utmRecord.id;
-            console.log("✅ createOrder: Associated with UTM tracking ID:", utmTrackingId);
-            console.log("📊 createOrder: UTM Campaign:", utmRecord.utm_campaign);
-          } else {
-            console.log("❌ createOrder: No UTM record found for session_id:", sessionId);
-          }
+        const utmRecord = await UTMTracking.findOne({
+          where: { session_id: sessionId },
+          order: [['created_at', 'DESC']]
+        });
+        
+        if (utmRecord) {
+          utmTrackingId = utmRecord.id;
+          console.log("✅ createOrder: Associated with UTM tracking ID:", utmTrackingId);
+          console.log("📊 createOrder: UTM Campaign:", utmRecord.utm_campaign);
         } else {
-          console.log("❌ createOrder: No session_id cookie found");
+          console.log("❌ createOrder: No UTM record found for session_id:", sessionId);
         }
       } catch (utmError) {
         console.error("❌ createOrder: Error fetching UTM data:", utmError);
         // Continue with order creation even if UTM fails
       }
     } else {
-      console.log("⚠️ createOrder: No UTM data or session_id provided");
+      console.log("⚠️ createOrder: No session_id provided in body or cookies");
     }
     
     // Create order
@@ -716,35 +715,34 @@ module.exports.createGuestOrder = async (req, res) => {
     let utmTrackingId = null;
     
     console.log('🍪 createGuestOrder - Cookies received:', req.cookies);
-    console.log('🔑 createGuestOrder - Session ID from cookie:', req.cookies?.session_id);
+    console.log('📦 createGuestOrder - Request body utm_session_id:', req.body.utm_session_id);
     
-    if (req.body.utm_data || req.cookies?.session_id) {
+    // Try to get session_id from request body first, then cookies
+    const sessionId = req.body.utm_session_id || req.cookies?.session_id;
+    console.log('🔑 createGuestOrder - Session ID (body or cookie):', sessionId);
+    
+    if (sessionId) {
       try {
-        const sessionId = req.cookies?.session_id;
         console.log('🔍 createGuestOrder - Looking for UTM record with session_id:', sessionId);
         
-        if (sessionId) {
-          const utmRecord = await UTMTracking.findOne({
-            where: { session_id: sessionId },
-            order: [['created_at', 'DESC']]
-          });
-          
-          if (utmRecord) {
-            utmTrackingId = utmRecord.id;
-            console.log("✅ createGuestOrder: Associated with UTM tracking ID:", utmTrackingId);
-            console.log("📊 createGuestOrder: UTM Campaign:", utmRecord.utm_campaign);
-          } else {
-            console.log("❌ createGuestOrder: No UTM record found for session_id:", sessionId);
-          }
+        const utmRecord = await UTMTracking.findOne({
+          where: { session_id: sessionId },
+          order: [['created_at', 'DESC']]
+        });
+        
+        if (utmRecord) {
+          utmTrackingId = utmRecord.id;
+          console.log("✅ createGuestOrder: Associated with UTM tracking ID:", utmTrackingId);
+          console.log("📊 createGuestOrder: UTM Campaign:", utmRecord.utm_campaign);
         } else {
-          console.log("❌ createGuestOrder: No session_id cookie found");
+          console.log("❌ createGuestOrder: No UTM record found for session_id:", sessionId);
         }
       } catch (utmError) {
         console.error("❌ createGuestOrder: Error fetching UTM data:", utmError);
         // Continue with order creation even if UTM fails
       }
     } else {
-      console.log("⚠️ createGuestOrder: No UTM data or session_id provided");
+      console.log("⚠️ createGuestOrder: No session_id provided in body or cookies");
     }
 
     // Create order
