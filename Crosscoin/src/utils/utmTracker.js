@@ -64,6 +64,12 @@ export const sendUTMToBackend = async (utmData) => {
     if (response.ok && result.success) {
       console.log('✅ UTM data successfully sent to backend:', result);
       console.log('📊 Stored with ID:', result.data?.id);
+      
+      // Store session_id in localStorage for order tracking
+      if (result.data?.session_id) {
+        localStorage.setItem('utm_session_id', result.data.session_id);
+        console.log('💾 Session ID stored in localStorage:', result.data.session_id);
+      }
     } else {
       console.error('❌ Failed to send UTM data:', result);
     }
@@ -73,4 +79,9 @@ export const sendUTMToBackend = async (utmData) => {
     console.error('❌ Error sending UTM data to backend:', error);
     return null;
   }
+};
+
+// Get session ID for order tracking
+export const getUTMSessionId = () => {
+  return localStorage.getItem('utm_session_id');
 };

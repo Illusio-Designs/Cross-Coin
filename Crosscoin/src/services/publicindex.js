@@ -485,6 +485,14 @@ export const createOrder = async (orderData) => {
     const token = localStorage.getItem("token");
     console.log("createOrder: Token available:", !!token);
     console.log("createOrder: Order data:", orderData);
+    
+    // Add UTM session_id to order data
+    const utmSessionId = localStorage.getItem('utm_session_id');
+    if (utmSessionId) {
+      orderData.utm_session_id = utmSessionId;
+      console.log("createOrder: Adding UTM session_id:", utmSessionId);
+    }
+    
     console.log("createOrder: Making API call to:", `${API_URL}/api/orders`);
 
     const response = await axios.post(`${API_URL}/api/orders`, orderData, {
@@ -830,6 +838,14 @@ export const getPublicPolicyByName = async (name) => {
 export const createGuestOrder = async (orderData) => {
   try {
     console.log("GUEST CHECKOUT API CALL: Creating guest order:", orderData);
+    
+    // Add UTM session_id to order data
+    const utmSessionId = localStorage.getItem('utm_session_id');
+    if (utmSessionId) {
+      orderData.utm_session_id = utmSessionId;
+      console.log("GUEST CHECKOUT: Adding UTM session_id:", utmSessionId);
+    }
+    
     const response = await axios.post(`${API_URL}/api/orders/guest`, orderData, {
       withCredentials: true, // ✅ SEND COOKIES (including session_id for UTM tracking)
     });
