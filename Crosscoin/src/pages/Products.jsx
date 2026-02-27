@@ -66,7 +66,7 @@ const Products = () => {
   const itemsPerPage = 20;
   const [totalProducts, setTotalProducts] = useState(0);
 
-  // Dynamic Filter Options
+  // Dynamic Filter Options - Initialize with safe defaults
   const [filterOptionsDynamic, setFilterOptionsDynamic] = useState({
     categories: [],
     materials: [],
@@ -552,7 +552,9 @@ const Products = () => {
     let min = Infinity,
       max = 0;
     products.forEach((product) => {
+      if (!product || !Array.isArray(product.variations)) return;
       (product.variations || []).forEach((variation) => {
+        if (!variation || typeof variation.price !== 'number') return;
         if (variation.price < min) min = variation.price;
         if (variation.price > max) max = variation.price;
       });
@@ -570,135 +572,7 @@ const Products = () => {
     // eslint-disable-next-line
   }, [products.length]);
 
-  // Add a function to filter products according to all selected filters
-  const getFilteredProducts = () => {
-    // Safety check: return empty array if products is not initialized
-    if (!products || !Array.isArray(products)) {
-      return [];
-    }
-    
-    return products.filter((product) => {
-      // Category filter - skip if we're viewing a specific category (all products are already from that category)
-      if (selectedCategory.length > 0) {
-        const catId =
-          product.category_id || (product.category && product.category.id);
-        console.log("Category filter check:", {
-          productId: product.id,
-          catId,
-          selectedCategory,
-        });
-        if (!selectedCategory.includes(String(catId))) return false;
-      }
-      // Material filter
-      if (selectedMaterial.length > 0) {
-        const hasMaterial = (product.variations || []).some((variation) => {
-          let attrs = variation.attributes;
-          if (typeof attrs === "string") {
-            try {
-              attrs = JSON.parse(attrs);
-            } catch {
-              attrs = {};
-            }
-          }
-          return (
-            attrs &&
-            selectedMaterial.some((m) => (attrs.material || []).includes(m))
-          );
-        });
-        if (!hasMaterial) return false;
-      }
-      // Color filter
-      if (selectedColors.length > 0) {
-        const hasColor = (product.variations || []).some((variation) => {
-          let attrs = variation.attributes;
-          if (typeof attrs === "string") {
-            try {
-              attrs = JSON.parse(attrs);
-            } catch {
-              attrs = {};
-            }
-          }
-          return (
-            attrs && selectedColors.some((c) => (attrs.color || []).includes(c))
-          );
-        });
-        if (!hasColor) return false;
-      }
-      // Size filter
-      if (selectedSizes.length > 0) {
-        const hasSize = (product.variations || []).some((variation) => {
-          let attrs = variation.attributes;
-          if (typeof attrs === "string") {
-            try {
-              attrs = JSON.parse(attrs);
-            } catch {
-              attrs = {};
-            }
-          }
-          return (
-            attrs && selectedSizes.some((s) => (attrs.size || []).includes(s))
-          );
-        });
-        if (!hasSize) return false;
-      }
-      // Gender filter
-      if (selectedGender.length > 0) {
-        const hasGender = (product.variations || []).some((variation) => {
-          let attrs = variation.attributes;
-          if (typeof attrs === "string") {
-            try {
-              attrs = JSON.parse(attrs);
-            } catch {
-              attrs = {};
-            }
-          }
-          return (
-            attrs &&
-            selectedGender.some((g) => (attrs.gender || []).includes(g))
-          );
-        });
-        if (!hasGender) return false;
-      }
-      // Price filter (only if user changed slider)
-      if (priceRange[0] !== minPrice || priceRange[1] !== maxPrice) {
-        const inPriceRange = (product.variations || []).some((variation) => {
-          return (
-            variation.price >= priceRange[0] && variation.price <= priceRange[1]
-          );
-        });
-        if (!inPriceRange) return false;
-      }
-      return true;
-    });
-  };
-
-  // Add this function inside the Products component
-  const sortProducts = (products) => {
-    // Safety check: return empty array if products is not valid
-    if (!products || !Array.isArray(products)) {
-      return [];
-    }
-    
-    switch (sortBy) {
-      case "price-low":
-        return [...products].sort(
-          (a, b) =>
-            (a.variations?.[0]?.price || 0) - (b.variations?.[0]?.price || 0)
-        );
-      case "price-high":
-        return [...products].sort(
-          (a, b) =>
-            (b.variations?.[0]?.price || 0) - (a.variations?.[0]?.price || 0)
-        );
-      case "rating":
-        return [...products].sort((a, b) => (b.rating || 0) - (a.rating || 0));
-      case "featured":
-      default:
-        return products; // Default order or implement your own featured logic
-    }
-  };
-
-  // Get filtered products with useMemo to prevent unnecessary recalculations
+  // Get filtered products - memoized for performance
   const filteredProducts = useMemo(() => {
     // Safety check: return empty array if products is not initialized
     if (!products || !Array.isArray(products)) {
@@ -706,15 +580,20 @@ const Products = () => {
     }
     
     return products.filter((product) => {
+      // Safety check for product object
+      if (!product) return false;
+      
       // Category filter - skip if we're viewing a specific category (all products are already from that category)
-      if (selectedCategory.length > 0) {
+      if (Array.isArray(selectedCategory) && selectedCategory.length > 0) {
         const catId =
           product.category_id || (product.category && product.category.id);
         if (!selectedCategory.includes(String(catId))) return false;
       }
+      
       // Material filter
-      if (selectedMaterial.length > 0) {
+      if (Array.isArray(selectedMaterial) && selectedMaterial.length > 0) {
         const hasMaterial = (product.variations || []).some((variation) => {
+          if (!variation) return false;
           let attrs = variation.attributes;
           if (typeof attrs === "string") {
             try {
@@ -730,9 +609,11 @@ const Products = () => {
         });
         if (!hasMaterial) return false;
       }
+      
       // Color filter
-      if (selectedColors.length > 0) {
+      if (Array.isArray(selectedColors) && selectedColors.length > 0) {
         const hasColor = (product.variations || []).some((variation) => {
+          if (!variation) return false;
           let attrs = variation.attributes;
           if (typeof attrs === "string") {
             try {
@@ -747,9 +628,11 @@ const Products = () => {
         });
         if (!hasColor) return false;
       }
+      
       // Size filter
-      if (selectedSizes.length > 0) {
+      if (Array.isArray(selectedSizes) && selectedSizes.length > 0) {
         const hasSize = (product.variations || []).some((variation) => {
+          if (!variation) return false;
           let attrs = variation.attributes;
           if (typeof attrs === "string") {
             try {
@@ -764,9 +647,11 @@ const Products = () => {
         });
         if (!hasSize) return false;
       }
+      
       // Gender filter
-      if (selectedGender.length > 0) {
+      if (Array.isArray(selectedGender) && selectedGender.length > 0) {
         const hasGender = (product.variations || []).some((variation) => {
+          if (!variation) return false;
           let attrs = variation.attributes;
           if (typeof attrs === "string") {
             try {
@@ -782,22 +667,63 @@ const Products = () => {
         });
         if (!hasGender) return false;
       }
+      
       // Price filter (only if user changed slider)
-      if (priceRange[0] !== minPrice || priceRange[1] !== maxPrice) {
+      if (Array.isArray(priceRange) && priceRange.length === 2 && 
+          (priceRange[0] !== minPrice || priceRange[1] !== maxPrice)) {
         const inPriceRange = (product.variations || []).some((variation) => {
+          if (!variation || typeof variation.price !== 'number') return false;
           return (
             variation.price >= priceRange[0] && variation.price <= priceRange[1]
           );
         });
         if (!inPriceRange) return false;
       }
+      
       return true;
     });
   }, [products, selectedCategory, selectedMaterial, selectedColors, selectedSizes, selectedGender, priceRange, minPrice, maxPrice]);
+
+  // Sort products - memoized for performance
+  const sortedProducts = useMemo(() => {
+    // Safety check: return empty array if filteredProducts is not valid
+    if (!filteredProducts || !Array.isArray(filteredProducts)) {
+      return [];
+    }
+    
+    switch (sortBy) {
+      case "price-low":
+        return [...filteredProducts].sort(
+          (a, b) =>
+            (a.variations?.[0]?.price || 0) - (b.variations?.[0]?.price || 0)
+        );
+      case "price-high":
+        return [...filteredProducts].sort(
+          (a, b) =>
+            (b.variations?.[0]?.price || 0) - (a.variations?.[0]?.price || 0)
+        );
+      case "rating":
+        return [...filteredProducts].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      case "featured":
+      default:
+        return filteredProducts; // Default order or implement your own featured logic
+    }
+  }, [filteredProducts, sortBy]);
+
+  // Paginate sorted products - memoized for performance
+  const paginatedProducts = useMemo(() => {
+    if (!Array.isArray(sortedProducts)) {
+      return [];
+    }
+    const startIdx = (currentPage - 1) * itemsPerPage;
+    return sortedProducts.slice(startIdx, startIdx + itemsPerPage);
+  }, [sortedProducts, currentPage, itemsPerPage]);
   
   console.log("Filtering results:", {
     totalProducts: Array.isArray(products) ? products.length : 0,
     filteredProducts: Array.isArray(filteredProducts) ? filteredProducts.length : 0,
+    sortedProducts: Array.isArray(sortedProducts) ? sortedProducts.length : 0,
+    paginatedProducts: Array.isArray(paginatedProducts) ? paginatedProducts.length : 0,
     selectedCategory,
     selectedColors,
     selectedSizes,
@@ -805,13 +731,6 @@ const Products = () => {
     selectedMaterial,
     priceRange,
   });
-
-  // Paginate filtered and sorted products
-  const getPaginatedProducts = () => {
-    const filtered = sortProducts(filteredProducts);
-    const startIdx = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(startIdx, startIdx + itemsPerPage);
-  };
 
   // Compute total pages based on filtered products
   const totalPages = useMemo(() => {
@@ -828,14 +747,8 @@ const Products = () => {
     totalPages,
     totalProducts: Array.isArray(products) ? products.length : 0,
     filteredProducts: Array.isArray(filteredProducts) ? filteredProducts.length : 0,
-    paginatedProducts: (() => {
-      try {
-        const paginated = getPaginatedProducts();
-        return Array.isArray(paginated) ? paginated.length : 0;
-      } catch {
-        return 0;
-      }
-    })(),
+    sortedProducts: Array.isArray(sortedProducts) ? sortedProducts.length : 0,
+    paginatedProducts: Array.isArray(paginatedProducts) ? paginatedProducts.length : 0,
     itemsPerPage,
     loading,
     error,
@@ -1395,8 +1308,8 @@ const Products = () => {
                     : "No products found matching your criteria. Try adjusting your filters."}
                 </div>
               ) : (
-                // Apply sorting to filtered products before rendering, then paginate
-                getPaginatedProducts().map((product) => (
+                // Render paginated products
+                paginatedProducts.map((product) => (
                   <ProductCard
                     key={product.id}
                     product={product}
