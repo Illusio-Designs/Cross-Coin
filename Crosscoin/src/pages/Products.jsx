@@ -112,15 +112,11 @@ const Products = () => {
   // Main data fetching function - optimized to prevent multiple calls
   const fetchProductsData = useCallback(
     async (categoryName = null, isCategorySpecific = false) => {
+      console.log('fetchProductsData called:', { categoryName, isCategorySpecific, isLoading: isLoadingRef.current });
+      
       // Prevent multiple simultaneous API calls
       if (isLoadingRef.current) {
         console.log("API call already in progress, skipping...");
-        return;
-      }
-
-      // Prevent loading products if already loaded for general products
-      if (!isCategorySpecific && productsLoadedRef.current) {
-        console.log("Products already loaded, skipping...");
         return;
       }
 
@@ -292,17 +288,12 @@ const Products = () => {
     }
   }, [categories, router.query.category, fetchProductsData]);
   
-  // Safety check: If categories loaded but products didn't load after 2 seconds
+  // Safety check: If categories loaded but products didn't load
   useEffect(() => {
-    if (categories.length > 0 && products.length === 0 && !loading && !isLoadingRef.current) {
-      const timer = setTimeout(() => {
-        if (products.length === 0 && !isLoadingRef.current) {
-          console.log("Safety timeout: No products loaded, fetching...");
-          fetchProductsData();
-        }
-      }, 2000);
-      
-      return () => clearTimeout(timer);
+    // Only run if categories exist, no products, not currently loading, and initial load is done
+    if (categories.length > 0 && products.length === 0 && !loading && !isLoadingRef.current && !initialLoadRef.current) {
+      console.log("Safety check: Categories loaded but no products, fetching immediately...");
+      fetchProductsData();
     }
   }, [categories.length, products.length, loading, fetchProductsData]);
 
