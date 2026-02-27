@@ -1232,22 +1232,6 @@ export default function UnifiedCheckout() {
               
               {/* Delivery Methods Section */}
               {renderDeliveryMethods()}
-
-              {/* Magic Checkout Integration */}
-              {useMagicCheckout && shippingAddress && (
-                <div className="magic-checkout-section" style={{ marginBottom: '30px' }}>
-                  <h3 style={{ marginBottom: '20px' }}>Magic Checkout</h3>
-                  <MagicCheckoutIntegration
-                    cartItems={cartItems}
-                    user={user}
-                    onSuccess={handleMagicCheckoutSuccess}
-                    onError={handleMagicCheckoutError}
-                    shippingAddress={shippingAddress}
-                    shippingFee={shippingFee}
-                    appliedCoupon={appliedCoupon}
-                  />
-                </div>
-              )}
             </>
           )}
         </div>
@@ -1273,6 +1257,31 @@ export default function UnifiedCheckout() {
               shippingFees={shippingFees}
               onSelectFee={handleSelectFee}
             />
+
+            {/* Magic Checkout Integration */}
+            {useMagicCheckout && shippingAddress && (
+              <div className="magic-checkout-section" style={{ marginTop: '20px' }}>
+                <div style={{ 
+                  padding: '20px', 
+                  backgroundColor: '#f8f9fa', 
+                  borderRadius: '8px',
+                  border: '1px solid #e0e0e0'
+                }}>
+                  <h3 style={{ marginBottom: '15px', fontSize: '18px', fontWeight: '600' }}>
+                    Express Checkout
+                  </h3>
+                  <MagicCheckoutIntegration
+                    cartItems={cartItems}
+                    user={user}
+                    onSuccess={handleMagicCheckoutSuccess}
+                    onError={handleMagicCheckoutError}
+                    shippingAddress={shippingAddress}
+                    shippingFee={shippingFee}
+                    appliedCoupon={appliedCoupon}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
