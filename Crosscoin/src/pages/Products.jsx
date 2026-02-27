@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Header from "../components/Header";
 import ProductCard, { filterOptions } from "../components/ProductCard";
@@ -301,7 +301,8 @@ const Products = () => {
 
   // After products and categories are loaded, compute dynamic filters
   useEffect(() => {
-    if (products.length > 0 && categories.length > 0) {
+    if (Array.isArray(products) && products.length > 0 && 
+        Array.isArray(categories) && categories.length > 0) {
       const newFilters = computeDynamicFilters(products, categories);
       setFilterOptionsDynamic(ensureValidFilterOptions(newFilters));
     }
@@ -684,11 +685,14 @@ const Products = () => {
     }
   };
 
-  // Get filtered products
-  const filteredProducts = getFilteredProducts();
+  // Get filtered products with useMemo to prevent unnecessary recalculations
+  const filteredProducts = useMemo(() => {
+    return getFilteredProducts();
+  }, [products, selectedCategory, selectedMaterial, selectedColors, selectedSizes, selectedGender, priceRange, minPrice, maxPrice]);
+  
   console.log("Filtering results:", {
-    totalProducts: products.length,
-    filteredProducts: filteredProducts.length,
+    totalProducts: Array.isArray(products) ? products.length : 0,
+    filteredProducts: Array.isArray(filteredProducts) ? filteredProducts.length : 0,
     selectedCategory,
     selectedColors,
     selectedSizes,
