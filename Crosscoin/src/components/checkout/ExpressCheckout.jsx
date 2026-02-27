@@ -264,7 +264,7 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
 
       console.log("Order created successfully:", orderData);
 
-      // Step 4: Open Razorpay Checkout
+      // Step 4: Open Razorpay Checkout with Magic Checkout enabled
       const options = {
         key: RAZORPAY_KEY,
         amount: Math.round(totalAmount * 100), // Convert to paise
@@ -272,21 +272,36 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
         name: "Cross Coin",
         description: "Express Checkout",
         order_id: orderData.order_id,
+        
+        // CRITICAL: Enable Magic Checkout with customer_details
+        customer_details: {
+          contact: user?.phone || "",
+          email: user?.email || "",
+          name: user?.name || "",
+        },
+        
         prefill: {
           name: user?.name || "",
           email: user?.email || "",
           contact: user?.phone || "",
         },
+        
         theme: {
           color: "#180D3E",
         },
+        
         handler: handlePaymentSuccess,
+        
         modal: {
           ondismiss: function() {
             console.log("Express Checkout dismissed by user");
             setIsProcessing(false);
-          }
+          },
+          // Enable Magic Checkout modal
+          confirm_close: true,
         },
+        
+        // CRITICAL: Enable 1-Click Checkout (Magic Checkout)
         config: {
           display: {
             blocks: {
@@ -313,7 +328,12 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
               show_default_blocks: true
             }
           }
-        }
+        },
+        
+        // Enable Magic Checkout features
+        remember_customer: true,
+        send_sms_hash: true,
+        allow_rotation: true,
       };
 
       const rzp = new window.Razorpay(options);
