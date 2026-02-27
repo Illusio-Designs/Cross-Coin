@@ -188,7 +188,6 @@ const UTMAnalytics = () => {
         </div>
         <div className="loading-container">
           <div className="loader"></div>
-          <p>Loading UTM data...</p>
         </div>
       </div>
     );

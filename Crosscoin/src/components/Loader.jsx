@@ -18,8 +18,6 @@ const Loader = ({ className = "" }) => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        flexDirection: "column",
-        gap: 12,
         zIndex: 9999,
       }}
     >
@@ -35,9 +33,6 @@ const Loader = ({ className = "" }) => {
           animation: "cc-spin 0.9s linear infinite",
         }}
       />
-      <div style={{ fontSize: 14, color: "#180D3E", fontWeight: 500 }}>
-        Loading…
-      </div>
       <style jsx>{`
         @keyframes cc-spin {
           0% {

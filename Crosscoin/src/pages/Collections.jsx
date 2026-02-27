@@ -4,6 +4,7 @@ import { getPublicCategories } from '../services/publicindex';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import SeoWrapper from '../console/SeoWrapper';
+import Loader from '../components/Loader';
 import '../styles/pages/Collections.css';
 
 const Collections = () => {
@@ -49,7 +50,7 @@ const Collections = () => {
         <div className="collections-container">
           <h1 className="section-title">Collections</h1>
           <div className="loading-state">
-            <p>Loading collections...</p>
+            <Loader />
           </div>
         </div>
         <Footer />
