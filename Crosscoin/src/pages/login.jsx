@@ -5,6 +5,11 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { useAuth } from '../context/AuthContext';
 
+// Load page-specific CSS
+import "../styles/pages/Login.css";
+import "../styles/components/Header.css";
+import "../styles/components/Footer.css";
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
 import Header from "../components/Header";
-import Footer from "../components/Footer";
+import ProductCard, { filterOptions } from "../components/ProductCard";
+import ProductSkeleton from "../components/common/ProductSkeleton";
 import {
   FiFilter,
   FiChevronDown,
@@ -9,7 +11,6 @@ import {
 } from "react-icons/fi";
 import { useRouter } from "next/router";
 import { useCart } from "../context/CartContext";
-import ProductCard, { filterOptions } from "../components/ProductCard";
 import {
   getAllPublicProducts,
   getPublicCategories,
@@ -21,6 +22,16 @@ import { fbqTrack } from "../components/common/Analytics";
 import colorMap from "../components/products/colorMap";
 import Pagination from "../components/common/Pagination";
 import "../styles/common/TableControls.css";
+
+// Load page-specific CSS
+import "../styles/pages/products.css";
+import "../styles/components/Header.css";
+import "../styles/components/Footer.css";
+
+// Lazy load Footer
+const Footer = dynamic(() => import("../components/Footer"), {
+  loading: () => <div style={{ minHeight: '200px', background: '#f9fafb' }} />
+});
 
 const Products = () => {
   const router = useRouter();
@@ -1185,7 +1196,11 @@ const Products = () => {
           <div className="product-listing">
             <div className="products-grid">
               {loading ? (
-                <div className="loading">Loading products...</div>
+                <>
+                  {Array(12).fill(0).map((_, idx) => (
+                    <ProductSkeleton key={`products-skeleton-${idx}`} />
+                  ))}
+                </>
               ) : error ? (
                 <div className="error">{error}</div>
               ) : filteredProducts.length === 0 ? (

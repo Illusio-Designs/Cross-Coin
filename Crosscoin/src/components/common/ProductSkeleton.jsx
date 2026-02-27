@@ -1,53 +1,68 @@
-/**
- * Skeleton loader for product cards
- * Prevents layout shift while content loads
- */
-export default function ProductSkeleton({ count = 1 }) {
-  return (
-    <>
-      {[...Array(count)].map((_, index) => (
-        <div key={index} className="animate-pulse">
-          {/* Image skeleton */}
-          <div className="bg-gray-200 aspect-square rounded-lg mb-4"></div>
-          
-          {/* Title skeleton */}
-          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-          
-          {/* Price skeleton */}
-          <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-          
-          {/* Button skeleton */}
-          <div className="h-10 bg-gray-200 rounded w-full mt-4"></div>
-        </div>
-      ))}
-    </>
-  );
-}
+import React from 'react';
 
-export function ProductDetailSkeleton() {
+/**
+ * Product Card Skeleton Loader
+ * Shows while products are loading
+ */
+const ProductSkeleton = () => {
   return (
-    <div className="animate-pulse">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Image gallery skeleton */}
-        <div>
-          <div className="bg-gray-200 aspect-square rounded-lg mb-4"></div>
-          <div className="flex gap-2">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-gray-200 w-20 h-20 rounded"></div>
-            ))}
-          </div>
+    <div className="product-card" style={{ pointerEvents: 'none' }}>
+      <div className="product-image" style={{ position: 'relative' }}>
+        <div
+          style={{
+            width: '100%',
+            height: '400px',
+            background: 'linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%)',
+            backgroundSize: '200% 100%',
+            animation: 'shimmer-skeleton 1.5s infinite linear'
+          }}
+        />
+      </div>
+      <div className="product-info">
+        <div className="product-main-info">
+          <div
+            style={{
+              width: '80%',
+              height: '20px',
+              background: 'linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%)',
+              backgroundSize: '200% 100%',
+              animation: 'shimmer-skeleton 1.5s infinite linear',
+              borderRadius: '4px',
+              marginBottom: '8px'
+            }}
+          />
+          <div
+            style={{
+              width: '60%',
+              height: '16px',
+              background: 'linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%)',
+              backgroundSize: '200% 100%',
+              animation: 'shimmer-skeleton 1.5s infinite linear',
+              borderRadius: '4px'
+            }}
+          />
         </div>
-        
-        {/* Product info skeleton */}
-        <div>
-          <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
-          <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-2/3 mb-8"></div>
-          <div className="h-12 bg-gray-200 rounded w-full"></div>
+        <div className="product-meta" style={{ marginTop: '12px' }}>
+          <div
+            style={{
+              width: '40%',
+              height: '24px',
+              background: 'linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%)',
+              backgroundSize: '200% 100%',
+              animation: 'shimmer-skeleton 1.5s infinite linear',
+              borderRadius: '4px'
+            }}
+          />
         </div>
       </div>
+      <style jsx>{`
+        @keyframes shimmer-skeleton {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      `}</style>
     </div>
   );
-}
+};
+
+export default ProductSkeleton;

@@ -7,6 +7,12 @@ import { useState, useEffect } from "react";
 import Loader from "@/components/Loader";
 import { handleViewChange, getViewFromPath } from "@/utils/dashboardRouting";
 
+// Load dashboard-specific CSS
+import "@/styles/dashboard/layout.css";
+import "@/styles/dashboard/sidebar.css";
+import "@/styles/dashboard/full-width-fix.css";
+import "@/styles/dashboard/mobile.css";
+
 // Import all dashboard pages
 import Products from "./products/products";
 import Categories from "./products/categories";

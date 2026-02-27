@@ -18,6 +18,11 @@ import {
 import {
   showOrderPlacedSuccessToast,
   showOrderPlacedErrorToast,
+
+// Load page-specific CSS
+import "../styles/pages/UnifiedCheckout.css";
+import "../styles/components/Header.css";
+import "../styles/components/Footer.css";
   showValidationErrorToast,
 } from "../utils/toast";
 import { fbqTrack } from "../components/common/Analytics";

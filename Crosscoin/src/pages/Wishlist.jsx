@@ -7,10 +7,14 @@ import SafeImage from '../components/common/SafeImage';
 import { useRouter } from 'next/router';
 import { FiHeart, FiShoppingCart, FiTrash2 } from 'react-icons/fi';
 import { AiFillHeart } from 'react-icons/ai';
-import '../styles/pages/Wishlist.css';
 import SeoWrapper from '../console/SeoWrapper';
 import { getProductImageSrc } from '../utils/imageUtils';
 import { seoService } from '../services/index';
+
+// Load page-specific CSS
+import '../styles/pages/Wishlist.css';
+import '../styles/components/Header.css';
+import '../styles/components/Footer.css';
 
 // Helper to pick the best image for a wishlist item
 function pickWishlistItemImage(item) {
