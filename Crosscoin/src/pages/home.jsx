@@ -5,6 +5,7 @@ import Header from "../components/Header";
 import ProductCard from "../components/ProductCard";
 import SafeImage from "../components/common/SafeImage";
 import ProductSkeleton from "../components/common/ProductSkeleton";
+import FeaturedProductSkeleton from "../components/common/FeaturedProductSkeleton";
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -73,6 +74,7 @@ const Home = () => {
   const [latestProducts, setLatestProducts] = useState([]);
   const [latestProductsLoading, setLatestProductsLoading] = useState(false);
   const [exclusiveProducts, setExclusiveProducts] = useState([]);
+  const [exclusiveProductsLoading, setExclusiveProductsLoading] = useState(true);
   const [exclusiveStates, setExclusiveStates] = useState([]);
   const [exclusiveReviewCounts, setExclusiveReviewCounts] = useState([]);
   const [exclusiveAvgRatings, setExclusiveAvgRatings] = useState([]);
@@ -167,6 +169,7 @@ const Home = () => {
     };
 
     const fetchExclusiveProducts = async () => {
+      setExclusiveProductsLoading(true);
       try {
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/public?sort=featured&limit=3`
@@ -224,6 +227,8 @@ const Home = () => {
         setExclusiveStates([]);
         setExclusiveReviewCounts([]);
         setExclusiveAvgRatings([]);
+      } finally {
+        setExclusiveProductsLoading(false);
       }
     };
 
@@ -762,10 +767,7 @@ const Home = () => {
                 </>
               )}
               {!categoryLoading && currentCategoryProducts.length === 0 && (
-                <div className="no-products-center">
-                  <p style={{ color: '#CE1E36', fontSize: '1.2rem', fontWeight: '500' }}>
-                    No products available in this category
-                  </p>
+                <div className="no-products-center" style={{ display: 'none' }}>
                 </div>
               )}
               </div>
@@ -775,13 +777,22 @@ const Home = () => {
         <div className="featured-products-section">
           <h2 className="section-title">Unlocked Exclusives</h2>
           <div className="featured-products-container">
-            {exclusiveProducts.length > 0 && (
+            {!exclusiveProductsLoading && exclusiveProducts.length > 0 && (
               <button className="slider-arrow slider-arrow-left" aria-label="Previous exclusive product" onClick={() => scrollExclusiveSlider('left')}>
                 <IoIosArrowBack />
               </button>
             )}
             <div className="featured-products-slider" ref={exclusiveSliderRef}>
-              {exclusiveProducts.map((product, index) => {
+              {exclusiveProductsLoading ? (
+                // Show skeleton loaders while loading
+                <>
+                  {[1, 2, 3].map((idx) => (
+                    <FeaturedProductSkeleton key={`exclusive-skeleton-${idx}`} />
+                  ))}
+                </>
+              ) : exclusiveProducts.length > 0 ? (
+                // Show actual products when loaded
+                exclusiveProducts.map((product, index) => {
                 const state = exclusiveStates[index] || { selectedThumbnail: 0, selectedColor: '', selectedSize: '', quantity: 1 };
                 const selectedSku = exclusiveSelectedSkus[index] || '';
                 const selectedVariation = product.variations?.find(v => v.sku === selectedSku) || product.variations?.[0];
@@ -1039,13 +1050,13 @@ const Home = () => {
                   </div>
                 );
               })}
+              ) : null}
             </div>
-            {exclusiveProducts.length > 0 && (
+            {!exclusiveProductsLoading && exclusiveProducts.length > 0 && (
               <button className="slider-arrow slider-arrow-right" aria-label="Next exclusive product" onClick={() => scrollExclusiveSlider('right')}>
                 <IoIosArrowForward />
               </button>
             )}
-            {exclusiveProducts.length === 0 && <div>No exclusive products available.</div>}
           </div>
         </div>
         <div className="shop-by-category">
