@@ -852,7 +852,7 @@ const Home = () => {
                   <div key={product.id} className={`featured-product-card ${expandedCards[index] ? 'expanded' : ''}`}>
                     <div className="product-images">
                       {/* Main image */}
-                      <div style={{ position: 'relative', display: 'inline-block', width: '100%', textAlign: 'center' }}>
+                      <div style={{ position: 'relative', width: '100%', textAlign: 'center' }}>
                         <SafeImage
                           className="main-image"
                           imageData={{ image_url: variationImages[state.selectedThumbnail] }}
