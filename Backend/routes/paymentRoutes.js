@@ -15,7 +15,9 @@ const {
 const {
     getPromotions,
     applyPromotion,
-    getShippingInfo
+    getShippingInfo,
+    createOrder,
+    verifyPayment
 } = require('../controller/magicCheckoutController.js');
 const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
 
@@ -33,8 +35,8 @@ router.post('/razorpay-callback', razorpayCallback);
 router.post('/guest/razorpay-order', createRazorpayOrder);
 
 // Magic Checkout routes (support both authenticated and guest access)
-router.post('/magic-checkout/create-order', createMagicCheckoutOrder);
-router.post('/magic-checkout/verify-payment', verifyMagicCheckoutPayment);
+router.post('/magic-checkout/create-order', createOrder);
+router.post('/magic-checkout/verify-payment', verifyPayment);
 router.get('/magic-checkout/promotions', getPromotions);
 router.post('/magic-checkout/apply-promotion', applyPromotion);
 router.post('/magic-checkout/shipping-info', getShippingInfo);

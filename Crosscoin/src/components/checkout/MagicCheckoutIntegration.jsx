@@ -82,35 +82,23 @@ const MagicCheckoutIntegration = ({
   }, []);
 
   /**
-   * Initialize Magic Checkout SDK
+   * Initialize Magic Checkout SDK with order_id
    */
-  const initializeMagicCheckout = useCallback(async () => {
+  const initializeMagicCheckout = useCallback(async (orderId) => {
     if (!sdkLoaded || !window.RazorpayMagicCheckout) {
       console.error("Magic Checkout SDK not loaded");
       return null;
     }
 
-    try {
-      const orderContext = {
-        amount: calculateTotalAmount(),
-        currency: "INR",
-        customer: {
-          id: user?.id || null,
-          email: user?.email || "",
-          phone: user?.phone || "",
-          name: user?.name || "",
-        },
-        items: cartItems.map((item) => ({
-          productId: item.productId || item.id,
-          name: item.name || item.title,
-          quantity: item.quantity,
-          price: item.price,
-        })),
-      };
+    if (!orderId) {
+      console.error("Order ID is required to initialize Magic Checkout");
+      return null;
+    }
 
+    try {
       const instance = new window.RazorpayMagicCheckout({
         key: RAZORPAY_KEY,
-        order_context: orderContext,
+        order_id: orderId, // Use the created order ID
         handler: handlePaymentSuccess,
         modal: {
           ondismiss: handlePaymentDismiss,
@@ -124,7 +112,7 @@ const MagicCheckoutIntegration = ({
       setError("Failed to initialize Magic Checkout");
       return null;
     }
-  }, [sdkLoaded, user, cartItems, RAZORPAY_KEY]);
+  }, [sdkLoaded, RAZORPAY_KEY]);
 
   /**
    * Calculate total amount in paise
@@ -316,32 +304,93 @@ const MagicCheckoutIntegration = ({
   };
 
   /**
-   * Process payment through Magic Checkout
+   * Create Razorpay order and process payment through Magic Checkout
    */
   const processPayment = useCallback(async () => {
-    if (!magicCheckoutInstance) {
-      console.error("Magic Checkout not initialized");
-      setError("Magic Checkout not initialized");
-      return false;
-    }
-
     try {
       setIsProcessing(true);
       setError(null);
 
-      // Open Magic Checkout payment modal
-      magicCheckoutInstance.open();
+      // Step 1: Calculate total amount
+      const totalAmount = calculateTotalAmount() / 100; // Convert from paise to rupees
+
+      // Step 2: Create Razorpay order
+      console.log("Creating Razorpay order for Magic Checkout...");
+      const orderResponse = await fetch(
+        `${API_URL}/api/payments/magic-checkout/create-order`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(user ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
+          },
+          body: JSON.stringify({
+            amount: totalAmount,
+            currency: "INR",
+            customer_id: user?.id || null,
+            cart_items: cartItems.map((item) => ({
+              product_id: item.productId || item.id,
+              variation_id: item.variationId || item.variation?.id || null,
+              quantity: item.quantity,
+              price: parseFloat(item.price || 0),
+            })),
+            shipping_address: {
+              full_name: shippingAddress?.full_name || shippingAddress?.fullName,
+              address: shippingAddress?.address,
+              city: shippingAddress?.city,
+              state: shippingAddress?.state,
+              postal_code: shippingAddress?.postal_code || shippingAddress?.postalCode,
+              phone_number: shippingAddress?.phone_number || shippingAddress?.phoneNumber,
+            },
+            notes: {
+              shipping_fee: shippingFee?.fee || 0,
+              coupon_code: appliedCoupon?.code || null,
+              discount_amount: appliedCoupon?.discount || 0,
+            },
+          }),
+        }
+      );
+
+      if (!orderResponse.ok) {
+        throw new Error("Failed to create order");
+      }
+
+      const orderData = await orderResponse.json();
+      console.log("Order created successfully:", orderData);
+
+      // Step 3: Initialize Magic Checkout with order_id
+      const instance = await initializeMagicCheckout(orderData.order_id);
+      
+      if (!instance) {
+        throw new Error("Failed to initialize Magic Checkout");
+      }
+
+      // Step 4: Fetch promotions for the order
+      await fetchPromotions(orderData.order_id);
+
+      // Step 5: Open Magic Checkout payment modal
+      instance.open();
       return true;
     } catch (err) {
       console.error("Error processing payment:", err);
-      setError("Failed to process payment");
+      setError(err.message || "Failed to process payment");
       setIsProcessing(false);
       if (onError) {
         onError(err);
       }
       return false;
     }
-  }, [magicCheckoutInstance, onError]);
+  }, [
+    cartItems,
+    user,
+    shippingAddress,
+    shippingFee,
+    appliedCoupon,
+    API_URL,
+    initializeMagicCheckout,
+    fetchPromotions,
+    onError,
+  ]);
 
   /**
    * Fallback to standard checkout - Removed, open SDK directly
@@ -369,13 +418,14 @@ const MagicCheckoutIntegration = ({
   }, [MAGIC_CHECKOUT_ENABLED, loadMagicCheckoutSDK, fallbackToStandardCheckout]);
 
   /**
-   * Initialize SDK when loaded
+   * Expose processPayment function to parent component
    */
   useEffect(() => {
-    if (sdkLoaded && !magicCheckoutInstance) {
-      initializeMagicCheckout();
+    // Make processPayment available to parent via ref or callback
+    if (typeof window !== 'undefined') {
+      window.magicCheckoutProcessPayment = processPayment;
     }
-  }, [sdkLoaded, magicCheckoutInstance, initializeMagicCheckout]);
+  }, [processPayment]);
 
   /**
    * Fetch shipping info when address changes
@@ -408,24 +458,75 @@ const MagicCheckoutIntegration = ({
   return (
     <div className="magic-checkout-container">
       {sdkLoading && (
-        <div className="magic-checkout-loading">
-          <p>Loading Magic Checkout...</p>
+        <div className="magic-checkout-loading" style={{ 
+          padding: '20px', 
+          textAlign: 'center',
+          backgroundColor: '#f8f9fa',
+          borderRadius: '8px'
+        }}>
+          <p style={{ margin: 0, color: '#666' }}>Loading Magic Checkout...</p>
         </div>
       )}
 
       {error && (
-        <div className="magic-checkout-error">
-          <p>{error}</p>
+        <div className="magic-checkout-error" style={{ 
+          padding: '15px', 
+          backgroundColor: '#fee', 
+          border: '1px solid #fcc',
+          borderRadius: '8px',
+          marginBottom: '20px'
+        }}>
+          <p style={{ margin: 0, color: '#c00' }}>{error}</p>
         </div>
       )}
 
       {sdkLoaded && !error && (
         <div className="magic-checkout-ready">
+          <button
+            onClick={processPayment}
+            disabled={isProcessing || !shippingAddress}
+            style={{
+              width: '100%',
+              padding: '15px',
+              backgroundColor: isProcessing || !shippingAddress ? '#ccc' : '#5469d4',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: isProcessing || !shippingAddress ? 'not-allowed' : 'pointer',
+              transition: 'background-color 0.3s ease',
+            }}
+            onMouseEnter={(e) => {
+              if (!isProcessing && shippingAddress) {
+                e.target.style.backgroundColor = '#4355c9';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isProcessing && shippingAddress) {
+                e.target.style.backgroundColor = '#5469d4';
+              }
+            }}
+          >
+            {isProcessing ? "Processing..." : "Pay with Magic Checkout"}
+          </button>
+
+          {!shippingAddress && (
+            <p style={{ 
+              marginTop: '10px', 
+              fontSize: '14px', 
+              color: '#666',
+              textAlign: 'center'
+            }}>
+              Please add a shipping address to continue
+            </p>
+          )}
+
           {/* Promotions Section */}
           {promotions.length > 0 && (
-            <div className="magic-checkout-promotions">
-              <h4>Available Promotions</h4>
-              <div className="promotions-list">
+            <div className="magic-checkout-promotions" style={{ marginTop: '20px' }}>
+              <h4 style={{ marginBottom: '10px', fontSize: '16px' }}>Available Promotions</h4>
+              <div className="promotions-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {promotions.map((promo) => (
                   <div
                     key={promo.code}
@@ -433,10 +534,21 @@ const MagicCheckoutIntegration = ({
                       selectedPromotion?.code === promo.code ? "selected" : ""
                     }`}
                     onClick={() => applyPromotion(promo.code)}
+                    style={{
+                      padding: '12px',
+                      border: selectedPromotion?.code === promo.code ? '2px solid #5469d4' : '1px solid #ddd',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      backgroundColor: selectedPromotion?.code === promo.code ? '#f0f4ff' : 'white',
+                    }}
                   >
-                    <div className="promotion-code">{promo.code}</div>
-                    <div className="promotion-description">{promo.description}</div>
-                    <div className="promotion-value">
+                    <div className="promotion-code" style={{ fontWeight: '600', marginBottom: '4px' }}>
+                      {promo.code}
+                    </div>
+                    <div className="promotion-description" style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
+                      {promo.description}
+                    </div>
+                    <div className="promotion-value" style={{ fontSize: '14px', color: '#5469d4', fontWeight: '500' }}>
                       {promo.type === "percentage"
                         ? `${promo.value}% off`
                         : `₹${promo.value} off`}
@@ -449,33 +561,48 @@ const MagicCheckoutIntegration = ({
 
           {/* Shipping Info Section */}
           {shippingInfo.length > 0 && (
-            <div className="magic-checkout-shipping-info">
+            <div className="magic-checkout-shipping-info" style={{ marginTop: '20px' }}>
+              <h4 style={{ marginBottom: '10px', fontSize: '16px' }}>Shipping Information</h4>
               {shippingInfo.map((info) => (
-                <div key={info.address_id} className="shipping-info-card">
-                  <div className="shipping-serviceability">
+                <div key={info.address_id} className="shipping-info-card" style={{
+                  padding: '12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  backgroundColor: info.serviceable ? '#f0fff4' : '#fff5f5',
+                }}>
+                  <div className="shipping-serviceability" style={{ marginBottom: '8px' }}>
                     {info.serviceable ? (
-                      <span className="serviceable">✓ Delivery Available</span>
+                      <span className="serviceable" style={{ color: '#22c55e', fontWeight: '500' }}>
+                        ✓ Delivery Available
+                      </span>
                     ) : (
-                      <span className="not-serviceable">✗ Not Serviceable</span>
+                      <span className="not-serviceable" style={{ color: '#ef4444', fontWeight: '500' }}>
+                        ✗ Not Serviceable
+                      </span>
                     )}
                   </div>
                   {info.serviceable && (
                     <>
-                      <div className="shipping-cod">
+                      <div className="shipping-cod" style={{ fontSize: '14px', marginBottom: '4px' }}>
                         COD: {info.cod_available ? "Available" : "Not Available"}
                       </div>
-                      <div className="shipping-fees">
+                      <div className="shipping-fees" style={{ fontSize: '14px', marginBottom: '4px' }}>
                         Shipping Fee: ₹{(info.shipping_fee / 100).toFixed(2)}
                       </div>
                       {info.cod_available && info.cod_fee > 0 && (
-                        <div className="cod-fee">
+                        <div className="cod-fee" style={{ fontSize: '14px', marginBottom: '4px' }}>
                           COD Fee: ₹{(info.cod_fee / 100).toFixed(2)}
                         </div>
                       )}
-                      <div className="address-quality">
+                      <div className="address-quality" style={{ fontSize: '14px', color: '#666' }}>
                         Address Quality: {info.address_quality_score}/100
                       </div>
                     </>
+                  )}
+                  {!info.serviceable && info.reason && (
+                    <div className="shipping-reason" style={{ fontSize: '14px', color: '#666', marginTop: '4px' }}>
+                      Reason: {info.reason}
+                    </div>
                   )}
                 </div>
               ))}

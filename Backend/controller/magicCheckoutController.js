@@ -4,6 +4,13 @@ const { ShippingFee } = require('../model/shippingFeeModel.js');
 const { Op } = require('sequelize');
 const addressQualityService = require('../services/addressQualityService.js');
 const fshipService = require('../services/fshipService.js');
+const Razorpay = require('razorpay');
+
+// Initialize Razorpay instance
+const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+});
 
 /**
  * RAZORPAY DASHBOARD CONFIGURATION REQUIRED
@@ -442,6 +449,137 @@ module.exports.getShippingInfo = async (req, res) => {
         console.error('Error fetching shipping info:', error);
         res.status(500).json({ 
             message: 'Failed to fetch shipping info', 
+            error: error.message 
+        });
+    }
+};
+
+
+/**
+ * Create Razorpay Order for Magic Checkout
+ * Creates an order before opening Magic Checkout modal
+ * 
+ * Request Body:
+ * - amount: Order amount in rupees
+ * - currency: Currency code (default: INR)
+ * - customer_id: Customer identifier
+ * - cart_items: Array of cart items
+ * - shipping_address: Shipping address object
+ * - notes: Additional order notes
+ * 
+ * Returns: Razorpay order object with order_id
+ */
+module.exports.createOrder = async (req, res) => {
+    try {
+        const { 
+            amount, 
+            currency = 'INR', 
+            customer_id, 
+            cart_items = [],
+            shipping_address = {},
+            notes = {}
+        } = req.body;
+
+        // Validate required parameters
+        if (!amount || amount <= 0) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Valid amount is required' 
+            });
+        }
+
+        // Convert amount to paise (Razorpay expects amount in smallest currency unit)
+        const amountInPaise = Math.round(parseFloat(amount) * 100);
+
+        // Prepare order options
+        const orderOptions = {
+            amount: amountInPaise,
+            currency: currency,
+            receipt: `order_${Date.now()}_${customer_id || 'guest'}`,
+            notes: {
+                customer_id: customer_id || 'guest',
+                cart_items: JSON.stringify(cart_items),
+                shipping_address: JSON.stringify(shipping_address),
+                ...notes
+            }
+        };
+
+        // Create order using Razorpay API
+        const order = await razorpay.orders.create(orderOptions);
+
+        res.json({
+            success: true,
+            order_id: order.id,
+            amount: order.amount,
+            currency: order.currency,
+            receipt: order.receipt,
+            status: order.status
+        });
+
+    } catch (error) {
+        console.error('Error creating Razorpay order:', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Failed to create order', 
+            error: error.message 
+        });
+    }
+};
+
+/**
+ * Verify Payment Signature
+ * Verifies the payment signature from Razorpay
+ * 
+ * Request Body:
+ * - razorpay_order_id: Order ID from Razorpay
+ * - razorpay_payment_id: Payment ID from Razorpay
+ * - razorpay_signature: Signature from Razorpay
+ * 
+ * Returns: Verification result
+ */
+module.exports.verifyPayment = async (req, res) => {
+    try {
+        const { 
+            razorpay_order_id, 
+            razorpay_payment_id, 
+            razorpay_signature 
+        } = req.body;
+
+        // Validate required parameters
+        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'order_id, payment_id, and signature are required' 
+            });
+        }
+
+        // Create signature verification string
+        const crypto = require('crypto');
+        const generatedSignature = crypto
+            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+            .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+            .digest('hex');
+
+        // Compare signatures
+        if (generatedSignature === razorpay_signature) {
+            res.json({
+                success: true,
+                message: 'Payment verified successfully',
+                order_id: razorpay_order_id,
+                payment_id: razorpay_payment_id
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                message: 'Invalid payment signature'
+            });
+        }
+
+    } catch (error) {
+        console.error('Error verifying payment:', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Failed to verify payment', 
             error: error.message 
         });
     }
