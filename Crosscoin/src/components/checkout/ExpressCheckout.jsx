@@ -235,6 +235,14 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
     console.warn("🚀 EXPRESS CHECKOUT BUTTON CLICKED");
     console.log("Timestamp:", new Date().toISOString());
     
+    // Log the actual user object to see what's available
+    console.log("=== USER OBJECT DEBUG ===");
+    console.log("Full user object:", user);
+    console.log("user?.username:", user?.username);
+    console.log("user?.email:", user?.email);
+    console.log("isAuthenticated:", isAuthenticated);
+    console.log("=== END USER OBJECT DEBUG ===");
+    
     // Build debug info step by step with timing
     const totalAmount = calculateTotalAmount();
     console.log("✓ Total calculated:", totalAmount);
@@ -475,6 +483,12 @@ Processing Time: ${(endTime - startTime).toFixed(2)}ms
 
   // Don't render if cart is empty
   if (cartItems.length === 0 && !buyNowItem) {
+    return null;
+  }
+  
+  // Don't render if user is not logged in or doesn't have email
+  if (!isAuthenticated || !user || !user.email) {
+    console.log("Express Checkout hidden: User not logged in or no email");
     return null;
   }
 
