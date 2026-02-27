@@ -228,24 +228,50 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
    * Process Express Checkout
    */
   const processExpressCheckout = useCallback(async () => {
-    // TEMPORARY: Prevent gateway from opening - for debugging
-    console.log("=== EXPRESS CHECKOUT DEBUG ===");
-    console.log("1. SDK Loaded:", sdkLoaded);
-    console.log("2. Window.Razorpay exists:", !!window.Razorpay);
-    console.log("3. RAZORPAY_KEY:", RAZORPAY_KEY);
-    console.log("4. MAGIC_CHECKOUT_ENABLED:", MAGIC_CHECKOUT_ENABLED);
-    console.log("5. User data:", {
-      isAuthenticated,
-      userId: user?.id,
-      userName: user?.name,
-      userEmail: user?.email,
-      userPhone: user?.phone
-    });
-    console.log("6. Cart items:", cartItems.length);
-    console.log("7. Total amount:", calculateTotalAmount());
+    // Force logs to appear - use multiple methods
+    const debugInfo = {
+      timestamp: new Date().toISOString(),
+      sdkLoaded: sdkLoaded,
+      windowRazorpay: typeof window !== 'undefined' ? !!window.Razorpay : false,
+      razorpayKey: RAZORPAY_KEY,
+      magicCheckoutEnabled: MAGIC_CHECKOUT_ENABLED,
+      isAuthenticated: isAuthenticated,
+      userId: user?.id || 'guest',
+      userName: user?.name || 'not set',
+      userEmail: user?.email || 'not set',
+      userPhone: user?.phone || 'not set',
+      cartItemsCount: cartItems.length,
+      totalAmount: calculateTotalAmount(),
+      envVars: {
+        apiUrl: process.env.NEXT_PUBLIC_API_URL,
+        razorpayKey: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        magicCheckoutEnabled: process.env.NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED
+      }
+    };
+    
+    // Log to console
+    console.log("=== EXPRESS CHECKOUT DEBUG START ===");
+    console.table(debugInfo);
+    console.log("Full debug info:", JSON.stringify(debugInfo, null, 2));
+    console.log("=== EXPRESS CHECKOUT DEBUG END ===");
+    
+    // Also show in alert for visibility
+    const alertMessage = `
+EXPRESS CHECKOUT DEBUG:
+- SDK Loaded: ${debugInfo.sdkLoaded}
+- Razorpay Key: ${debugInfo.razorpayKey ? 'SET' : 'NOT SET'}
+- Magic Checkout: ${debugInfo.magicCheckoutEnabled}
+- User: ${debugInfo.userName} (${debugInfo.userEmail})
+- Cart Items: ${debugInfo.cartItemsCount}
+- Total: ₹${debugInfo.totalAmount}
+
+Check console for full details!
+    `.trim();
+    
+    alert(alertMessage);
     
     // TEMPORARY: Stop here to prevent gateway opening
-    alert("Express Checkout clicked! Check browser console for debug logs.");
+    console.warn("Gateway opening is currently disabled for debugging");
     return false;
     
     // Original code below (commented out temporarily)
