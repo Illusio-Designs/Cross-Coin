@@ -55,9 +55,15 @@ export default function UnifiedCheckout() {
     }
   }, [shippingFee, appliedCoupon]); // Removed handleCouponRemoved from dependencies
 
-  // Magic Checkout feature flag
+  // Magic Checkout - Only enable if environment variable is set
   const MAGIC_CHECKOUT_ENABLED = process.env.NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED === "true";
   const [useMagicCheckout, setUseMagicCheckout] = useState(false);
+  
+  useEffect(() => {
+    if (MAGIC_CHECKOUT_ENABLED) {
+      setUseMagicCheckout(true);
+    }
+  }, [MAGIC_CHECKOUT_ENABLED]);
 
   // Address management state
   const [addresses, setAddresses] = useState([]);
@@ -95,11 +101,6 @@ export default function UnifiedCheckout() {
       }
     }
 
-    // Check if Magic Checkout should be used
-    if (MAGIC_CHECKOUT_ENABLED) {
-      setUseMagicCheckout(true);
-    }
-
     // Check for successful payment that might have been blocked from redirecting
     const paymentSuccess = sessionStorage.getItem("paymentSuccess");
     if (paymentSuccess && !orderPlaced) {
@@ -129,7 +130,7 @@ export default function UnifiedCheckout() {
         sessionStorage.removeItem("paymentSuccess");
       }
     }
-  }, [MAGIC_CHECKOUT_ENABLED, orderPlaced, router]);
+  }, [orderPlaced, router]);
 
   // Load addresses and shipping fees on mount
   useEffect(() => {
@@ -1240,7 +1241,7 @@ export default function UnifiedCheckout() {
               {renderDeliveryMethods()}
 
               {/* Magic Checkout Integration */}
-              {MAGIC_CHECKOUT_ENABLED && useMagicCheckout && shippingAddress && (
+              {useMagicCheckout && shippingAddress && (
                 <div className="magic-checkout-section" style={{ marginBottom: '30px' }}>
                   <h3 style={{ marginBottom: '20px' }}>Magic Checkout</h3>
                   <MagicCheckoutIntegration
