@@ -852,7 +852,7 @@ const Products = () => {
       <div className="products-page">
         <div className="products-header">
           <h1>
-            {selectedCategory.length > 0
+            {Array.isArray(selectedCategory) && selectedCategory.length > 0
               ? `Products - ${getCategoryNameById(selectedCategory[0])}`
               : getCategoryNameFromUrl()
               ? `Products - ${getCategoryNameFromUrl()}`
@@ -904,7 +904,7 @@ const Products = () => {
                         <div className="checkbox-group">
                           <input
                             type="checkbox"
-                            checked={selectedMaterial.includes(material)}
+                            checked={Array.isArray(selectedMaterial) && selectedMaterial.includes(material)}
                             onChange={() =>
                               handleFilterChange("material", material)
                             }
@@ -1008,11 +1008,11 @@ const Products = () => {
                       <button
                         key={color}
                         className={`color-btn ${
-                          selectedColors.includes(color) ? "active" : ""
+                          Array.isArray(selectedColors) && selectedColors.includes(color) ? "active" : ""
                         }`}
                         style={{
                           backgroundColor:
-                            colorMap[color.toLowerCase()] || color,
+                            colorMap[color?.toLowerCase()] || color,
                           border: "1px solid #888",
                         }}
                         onClick={(e) => handleFilterChange("color", color)}
@@ -1038,7 +1038,7 @@ const Products = () => {
                         <div className="checkbox-group">
                           <input
                             type="checkbox"
-                            checked={selectedSizes.includes(size)}
+                            checked={Array.isArray(selectedSizes) && selectedSizes.includes(size)}
                             onChange={() => handleFilterChange("size", size)}
                           />
                           <p>{size} </p>
@@ -1068,7 +1068,7 @@ const Products = () => {
                         <div className="checkbox-group">
                           <input
                             type="checkbox"
-                            checked={selectedGender.includes(gender)}
+                            checked={Array.isArray(selectedGender) && selectedGender.includes(gender)}
                             onChange={() =>
                               handleFilterChange("gender", gender)
                             }
@@ -1120,7 +1120,7 @@ const Products = () => {
                             <div className="checkbox-group">
                               <input
                                 type="checkbox"
-                                checked={selectedMaterial.includes(material)}
+                                checked={Array.isArray(selectedMaterial) && selectedMaterial.includes(material)}
                                 onChange={() =>
                                   handleFilterChange("material", material)
                                 }
@@ -1227,11 +1227,11 @@ const Products = () => {
                           <button
                             key={color}
                             className={`color-btn ${
-                              selectedColors.includes(color) ? "active" : ""
+                              Array.isArray(selectedColors) && selectedColors.includes(color) ? "active" : ""
                             }`}
                             style={{
                               backgroundColor:
-                                colorMap[color.toLowerCase()] || color,
+                                colorMap[color?.toLowerCase()] || color,
                               border: "1px solid #888",
                             }}
                             onClick={() => handleFilterChange("color", color)}
@@ -1258,7 +1258,7 @@ const Products = () => {
                             <div className="checkbox-group">
                               <input
                                 type="checkbox"
-                                checked={selectedSizes.includes(size)}
+                                checked={Array.isArray(selectedSizes) && selectedSizes.includes(size)}
                                 onChange={() =>
                                   handleFilterChange("size", size)
                                 }
@@ -1291,7 +1291,7 @@ const Products = () => {
                             <div className="checkbox-group">
                               <input
                                 type="checkbox"
-                                checked={selectedGender.includes(gender)}
+                                checked={Array.isArray(selectedGender) && selectedGender.includes(gender)}
                                 onChange={() =>
                                   handleFilterChange("gender", gender)
                                 }
@@ -1325,7 +1325,7 @@ const Products = () => {
                 <div className="error">{error}</div>
               ) : (!filteredProducts || !Array.isArray(filteredProducts) || filteredProducts.length === 0) ? (
                 <div className="no-products">
-                  {selectedCategory.length > 0
+                  {Array.isArray(selectedCategory) && selectedCategory.length > 0
                     ? `No products available in "${getCategoryNameById(
                         selectedCategory[0]
                       )}" category. Try selecting a different category or clearing filters.`
