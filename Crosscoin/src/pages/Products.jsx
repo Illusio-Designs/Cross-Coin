@@ -810,15 +810,38 @@ const Products = () => {
     router.push("/Products");
   };
 
-  // Check if any filters are active
+  // Check if any filters are active - with safety checks
   const hasActiveFilters =
-    selectedCategory.length > 0 ||
-    selectedColors.length > 0 ||
-    selectedSizes.length > 0 ||
-    selectedGender.length > 0 ||
-    selectedMaterial.length > 0 ||
-    priceRange[0] !== minPrice ||
-    priceRange[1] !== maxPrice;
+    (Array.isArray(selectedCategory) && selectedCategory.length > 0) ||
+    (Array.isArray(selectedColors) && selectedColors.length > 0) ||
+    (Array.isArray(selectedSizes) && selectedSizes.length > 0) ||
+    (Array.isArray(selectedGender) && selectedGender.length > 0) ||
+    (Array.isArray(selectedMaterial) && selectedMaterial.length > 0) ||
+    (Array.isArray(priceRange) && priceRange.length === 2 && (priceRange[0] !== minPrice || priceRange[1] !== maxPrice));
+
+  // Don't render until component is mounted (prevents hydration mismatch)
+  if (!isMounted) {
+    return (
+      <SeoWrapper pageName="products">
+        <Header />
+        <div className="products-page">
+          <div className="products-header">
+            <h1>Our Products</h1>
+          </div>
+          <div className="products-container">
+            <div className="product-listing">
+              <div className="products-grid">
+                {Array(12).fill(0).map((_, idx) => (
+                  <ProductSkeleton key={`skeleton-${idx}`} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </SeoWrapper>
+    );
+  }
 
   return (
     <SeoWrapper pageName="products">
@@ -904,64 +927,64 @@ const Products = () => {
                 {showPrice && (
                   <div className="price-range custom-price-range enhanced-price-range">
                     <div className="price-slider-labels">
-                      <span>Min: ₹{minPrice}</span>
-                      <span>Max: ₹{maxPrice}</span>
+                      <span>Min: ₹{minPrice || 20}</span>
+                      <span>Max: ₹{maxPrice || 250}</span>
                     </div>
                     <div className="slider-wrapper">
                       <input
                         type="range"
-                        min={minPrice}
-                        max={maxPrice}
-                        value={priceRange[0]}
+                        min={minPrice || 20}
+                        max={maxPrice || 250}
+                        value={priceRange?.[0] || minPrice || 20}
                         onChange={(e) =>
                           handleFilterChange("price", [
                             Number(e.target.value),
-                            priceRange[1],
+                            priceRange?.[1] || maxPrice || 250,
                           ])
                         }
                         className="price-slider min-slider"
                         style={{
-                          zIndex: priceRange[0] === priceRange[1] ? 5 : 3,
+                          zIndex: (priceRange?.[0] || 0) === (priceRange?.[1] || 0) ? 5 : 3,
                         }}
                       />
                       <input
                         type="range"
-                        min={minPrice}
-                        max={maxPrice}
-                        value={priceRange[1]}
+                        min={minPrice || 20}
+                        max={maxPrice || 250}
+                        value={priceRange?.[1] || maxPrice || 250}
                         onChange={(e) =>
                           handleFilterChange("price", [
-                            priceRange[0],
+                            priceRange?.[0] || minPrice || 20,
                             Number(e.target.value),
                           ])
                         }
                         className="price-slider max-slider"
                         style={{
-                          zIndex: priceRange[0] === priceRange[1] ? 4 : 2,
+                          zIndex: (priceRange?.[0] || 0) === (priceRange?.[1] || 0) ? 4 : 2,
                           "--hide-max-thumb":
-                            priceRange[0] === priceRange[1] ? 0 : 1,
+                            (priceRange?.[0] || 0) === (priceRange?.[1] || 0) ? 0 : 1,
                         }}
                       />
                       <div
                         className="slider-track-highlight"
                         style={{
                           left:
-                            ((priceRange[0] - minPrice) /
-                              (maxPrice - minPrice)) *
+                            (((priceRange?.[0] || minPrice || 20) - (minPrice || 20)) /
+                              ((maxPrice || 250) - (minPrice || 20))) *
                               100 +
                             "%",
                           right:
                             100 -
-                            ((priceRange[1] - minPrice) /
-                              (maxPrice - minPrice)) *
+                            (((priceRange?.[1] || maxPrice || 250) - (minPrice || 20)) /
+                              ((maxPrice || 250) - (minPrice || 20))) *
                               100 +
                             "%",
                         }}
                       />
                     </div>
                     <div className="price-inputs">
-                      <span>₹{priceRange[0]}</span> -{" "}
-                      <span>₹{priceRange[1]}</span>
+                      <span>₹{priceRange?.[0] || minPrice || 20}</span> -{" "}
+                      <span>₹{priceRange?.[1] || maxPrice || 250}</span>
                     </div>
                   </div>
                 )}
@@ -1121,42 +1144,42 @@ const Products = () => {
                     {showPrice && (
                       <div className="price-range custom-price-range enhanced-price-range">
                         <div className="price-slider-labels">
-                          <span>Min: ₹{minPrice}</span>
-                          <span>Max: ₹{maxPrice}</span>
+                          <span>Min: ₹{minPrice || 20}</span>
+                          <span>Max: ₹{maxPrice || 250}</span>
                         </div>
                         <div className="slider-wrapper">
                           <input
                             type="range"
-                            min={minPrice}
-                            max={maxPrice}
-                            value={priceRange[0]}
+                            min={minPrice || 20}
+                            max={maxPrice || 250}
+                            value={priceRange?.[0] || minPrice || 20}
                             onChange={(e) =>
                               handleFilterChange("price", [
                                 Number(e.target.value),
-                                priceRange[1],
+                                priceRange?.[1] || maxPrice || 250,
                               ])
                             }
                             className="price-slider min-slider"
                             style={{
-                              zIndex: priceRange[0] === priceRange[1] ? 5 : 3,
+                              zIndex: (priceRange?.[0] || 0) === (priceRange?.[1] || 0) ? 5 : 3,
                             }}
                           />
                           <input
                             type="range"
-                            min={minPrice}
-                            max={maxPrice}
-                            value={priceRange[1]}
+                            min={minPrice || 20}
+                            max={maxPrice || 250}
+                            value={priceRange?.[1] || maxPrice || 250}
                             onChange={(e) =>
                               handleFilterChange("price", [
-                                priceRange[0],
+                                priceRange?.[0] || minPrice || 20,
                                 Number(e.target.value),
                               ])
                             }
                             className="price-slider max-slider"
                             style={{
-                              zIndex: priceRange[0] === priceRange[1] ? 4 : 2,
+                              zIndex: (priceRange?.[0] || 0) === (priceRange?.[1] || 0) ? 4 : 2,
                               "--hide-max-thumb":
-                                priceRange[0] === priceRange[1] ? 0 : 1,
+                                (priceRange?.[0] || 0) === (priceRange?.[1] || 0) ? 0 : 1,
                             }}
                           />
                           {/* Colored track between thumbs */}
@@ -1164,22 +1187,22 @@ const Products = () => {
                             className="slider-track-highlight"
                             style={{
                               left:
-                                ((priceRange[0] - minPrice) /
-                                  (maxPrice - minPrice)) *
+                                (((priceRange?.[0] || minPrice || 20) - (minPrice || 20)) /
+                                  ((maxPrice || 250) - (minPrice || 20))) *
                                   100 +
                                 "%",
                               right:
                                 100 -
-                                ((priceRange[1] - minPrice) /
-                                  (maxPrice - minPrice)) *
+                                (((priceRange?.[1] || maxPrice || 250) - (minPrice || 20)) /
+                                  ((maxPrice || 250) - (minPrice || 20))) *
                                   100 +
                                 "%",
                             }}
                           />
                         </div>
                         <div className="price-inputs">
-                          <span>₹{priceRange[0]}</span> -{" "}
-                          <span>₹{priceRange[1]}</span>
+                          <span>₹{priceRange?.[0] || minPrice || 20}</span> -{" "}
+                          <span>₹{priceRange?.[1] || maxPrice || 250}</span>
                         </div>
                       </div>
                     )}
