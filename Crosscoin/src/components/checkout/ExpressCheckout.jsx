@@ -247,9 +247,9 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
       magicCheckoutEnabled: MAGIC_CHECKOUT_ENABLED,
       isAuthenticated: isAuthenticated,
       userId: user?.id || 'guest',
-      userName: user?.name || 'not set',
+      userName: user?.username || 'not set', // Fixed: use username instead of name
       userEmail: user?.email || 'not set',
-      userPhone: user?.phone || 'not set',
+      userPhone: 'not available in user model', // Fixed: phone doesn't exist in user model
       cartItemsCount: cartItems.length,
       totalAmount: totalAmount,
     };
@@ -351,16 +351,17 @@ Processing Time: ${(endTime - startTime).toFixed(2)}ms
         order_id: orderData.order_id,
         
         // CRITICAL: Enable Magic Checkout with customer_details
+        // Note: Phone is not in user model, Razorpay will collect it during checkout
         customer_details: {
-          contact: user?.phone || "",
+          contact: "", // Will be collected by Razorpay during checkout
           email: user?.email || "",
-          name: user?.name || "",
+          name: user?.username || "",
         },
         
         prefill: {
-          name: user?.name || "",
+          name: user?.username || "",
           email: user?.email || "",
-          contact: user?.phone || "",
+          contact: "", // Will be collected by Razorpay during checkout
         },
         
         theme: {
