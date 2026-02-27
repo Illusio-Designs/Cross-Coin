@@ -58,7 +58,15 @@ const CartItem = sequelize.define('CartItem', {
         {
             fields: ['variation_id']
         }
-    ]
+    ],
+    // Prevent Sequelize from trying to drop non-existent constraints
+    hooks: {
+        beforeSync: async (options) => {
+            // Skip constraint operations during sync
+            options.force = false;
+            options.alter = false;
+        }
+    }
 });
 
 module.exports = { CartItem }; 
