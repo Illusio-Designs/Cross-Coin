@@ -106,8 +106,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
         <SafeImage
           imageData={imageData}
           alt={product?.name || "Product Image"}
-          width={400}
-          height={400}
           priority={index < 6}
           quality={75}
           style={{ background: "#ffffff" }}

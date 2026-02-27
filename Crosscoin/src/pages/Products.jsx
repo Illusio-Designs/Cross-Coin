@@ -289,12 +289,22 @@ const Products = () => {
         console.log("No category in URL, fetching all products...");
         fetchProductsData();
       }
-    } else if (categories.length > 0 && !initialLoadRef.current && products.length === 0 && !isLoadingRef.current) {
-      // Safety check: If categories loaded but no products, fetch them
-      console.log("Safety check: Categories loaded but no products, fetching...");
-      fetchProductsData();
     }
-  }, [categories, router.query.category, fetchProductsData, products.length]);
+  }, [categories, router.query.category, fetchProductsData]);
+  
+  // Safety check: If categories loaded but products didn't load after 2 seconds
+  useEffect(() => {
+    if (categories.length > 0 && products.length === 0 && !loading && !isLoadingRef.current) {
+      const timer = setTimeout(() => {
+        if (products.length === 0 && !isLoadingRef.current) {
+          console.log("Safety timeout: No products loaded, fetching...");
+          fetchProductsData();
+        }
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [categories.length, products.length, loading, fetchProductsData]);
 
   // After products and categories are loaded, compute dynamic filters
   useEffect(() => {
