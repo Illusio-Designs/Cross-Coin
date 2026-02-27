@@ -46,6 +46,7 @@ const Products = () => {
   const [showSizes, setShowSizes] = useState(false);
   const [showGender, setShowGender] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   // Filter State
   const [selectedCategory, setSelectedCategory] = useState([]);
@@ -308,13 +309,26 @@ const Products = () => {
     }
   }, [products, categories]);
 
+  // Fix hydration mismatch by checking window only on client side
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 500);
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    // Mark component as mounted
+    setIsMounted(true);
+    
+    // Only run on client side after mount
+    if (typeof window !== 'undefined') {
+      const handleResize = () => {
+        setIsMobile(window.innerWidth <= 500);
+      };
+      
+      // Set initial value
+      handleResize();
+      
+      // Add event listener
+      window.addEventListener("resize", handleResize);
+      
+      // Cleanup
+      return () => window.removeEventListener("resize", handleResize);
+    }
   }, []);
 
   // Debounced filter change handler
