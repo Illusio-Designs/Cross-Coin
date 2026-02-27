@@ -691,16 +691,15 @@ const Home = () => {
               </div>
             </div>
             <div className="category-products">
-              {categoryLoading && (
+              {categoryLoading ? (
                 <div className="products-slider" ref={categorySliderRef}>
                   {Array(6).fill(0).map((_, idx) => (
                     <ProductSkeleton key={`skeleton-${idx}`} />
                   ))}
                 </div>
-              )}
-              {!categoryLoading && currentCategoryProducts.length > 0 && (
+              ) : currentCategoryProducts.length > 0 ? (
                 <>
-                    {showCategoryArrows && (
+                  {showCategoryArrows && (
                     <button className="slider-arrow slider-arrow-left" aria-label="Previous slider" onClick={() => scrollSlider('left')}>
                       <IoIosArrowBack />
                     </button>
@@ -759,18 +758,20 @@ const Home = () => {
                       );
                     })}
                   </div>
-                    {showCategoryArrows && (
+                  {showCategoryArrows && (
                     <button className="slider-arrow slider-arrow-right" aria-label="Next slider" onClick={() => scrollSlider('right')}>
                       <IoIosArrowForward />
                     </button>
                   )}
                 </>
-              )}
-              {!categoryLoading && currentCategoryProducts.length === 0 && (
-                <div className="no-products-center" style={{ display: 'none' }}>
+              ) : (
+                <div className="no-products-center">
+                  <p style={{ color: '#CE1E36', fontSize: '1.2rem', fontWeight: '500' }}>
+                    No products available in this category
+                  </p>
                 </div>
               )}
-              </div>
+            </div>
             </div>
           </div>
         </div>
@@ -1067,21 +1068,21 @@ const Home = () => {
             </button>
           </div>
           <div className="category-products">
-            {latestProductsLoading && (
+            {latestProductsLoading ? (
               <div className="products-slider" ref={latestSliderRef}>
                 {Array(8).fill(0).map((_, idx) => (
                   <ProductSkeleton key={`latest-skeleton-${idx}`} />
                 ))}
               </div>
-            )}
-            {!latestProductsLoading && showLatestArrows && (
-              <button className="slider-arrow slider-arrow-left" aria-label="Previous latest product" onClick={() => scrollLatestSlider('left')}>
-                <IoIosArrowBack />
-              </button>
-            )}
-            {!latestProductsLoading && (
-              <div className="products-slider" ref={latestSliderRef}>
-                {latestProducts.slice(0, 15).map((product) => {
+            ) : (
+              <>
+                {showLatestArrows && (
+                  <button className="slider-arrow slider-arrow-left" aria-label="Previous latest product" onClick={() => scrollLatestSlider('left')}>
+                    <IoIosArrowBack />
+                  </button>
+                )}
+                <div className="products-slider" ref={latestSliderRef}>
+                  {latestProducts.slice(0, 15).map((product) => {
                 let imagesArr = [];
                 if (Array.isArray(product.images) && product.images.length > 0) {
                   imagesArr = product.images.map(img => {
@@ -1137,12 +1138,13 @@ const Home = () => {
                   />
                 );
               })}
-              </div>
-            )}
-            {!latestProductsLoading && showLatestArrows && (
-              <button className="slider-arrow slider-arrow-right" aria-label="Next latest product" onClick={() => scrollLatestSlider('right')}>
-                <IoIosArrowForward />
-              </button>
+                </div>
+                {showLatestArrows && (
+                  <button className="slider-arrow slider-arrow-right" aria-label="Next latest product" onClick={() => scrollLatestSlider('right')}>
+                    <IoIosArrowForward />
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
