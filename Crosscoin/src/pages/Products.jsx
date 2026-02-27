@@ -291,7 +291,9 @@ const Products = () => {
   // Safety check: If categories loaded but products didn't load
   useEffect(() => {
     // Only run if categories exist, no products, not currently loading, and initial load is done
-    if (categories.length > 0 && products.length === 0 && !loading && !isLoadingRef.current && !initialLoadRef.current) {
+    if (Array.isArray(categories) && categories.length > 0 && 
+        Array.isArray(products) && products.length === 0 && 
+        !loading && !isLoadingRef.current && !initialLoadRef.current) {
       console.log("Safety check: Categories loaded but no products, fetching immediately...");
       fetchProductsData();
     }
@@ -413,6 +415,25 @@ const Products = () => {
   };
 
   const computeDynamicFilters = (products, categoriesList) => {
+    // Safety checks
+    if (!Array.isArray(products) || !Array.isArray(categoriesList)) {
+      return {
+        categories: [],
+        materials: [],
+        colors: [],
+        sizes: [],
+        genders: [],
+        price: [20, 250],
+        counts: {
+          categories: {},
+          materials: {},
+          colors: {},
+          sizes: {},
+          genders: {},
+        },
+      };
+    }
+    
     const materialsSet = new Set();
     const colorsSet = new Set();
     const sizesSet = new Set();
@@ -508,6 +529,11 @@ const Products = () => {
 
   // Compute min and max price from all products for the slider
   const getMinMaxPrice = () => {
+    // Safety check
+    if (!Array.isArray(products) || products.length === 0) {
+      return [20, 250];
+    }
+    
     let min = Infinity,
       max = 0;
     products.forEach((product) => {
@@ -532,6 +558,11 @@ const Products = () => {
 
   // Add a function to filter products according to all selected filters
   const getFilteredProducts = () => {
+    // Safety check: return empty array if products is not initialized
+    if (!products || !Array.isArray(products)) {
+      return [];
+    }
+    
     return products.filter((product) => {
       // Category filter - skip if we're viewing a specific category (all products are already from that category)
       if (selectedCategory.length > 0) {
@@ -629,6 +660,11 @@ const Products = () => {
 
   // Add this function inside the Products component
   const sortProducts = (products) => {
+    // Safety check: return empty array if products is not valid
+    if (!products || !Array.isArray(products)) {
+      return [];
+    }
+    
     switch (sortBy) {
       case "price-low":
         return [...products].sort(
