@@ -294,7 +294,8 @@ const Products = () => {
   // After products and categories are loaded, compute dynamic filters
   useEffect(() => {
     if (products.length > 0 && categories.length > 0) {
-      setFilterOptionsDynamic(computeDynamicFilters(products, categories));
+      const newFilters = computeDynamicFilters(products, categories);
+      setFilterOptionsDynamic(ensureValidFilterOptions(newFilters));
     }
   }, [products, categories]);
 
@@ -384,6 +385,25 @@ const Products = () => {
   // Handle page change
   const handlePageChange = (page) => {
     setCurrentPage(page);
+  };
+
+  // Safety function to ensure filterOptionsDynamic is always valid
+  const ensureValidFilterOptions = (filters) => {
+    return {
+      categories: Array.isArray(filters?.categories) ? filters.categories : [],
+      materials: Array.isArray(filters?.materials) ? filters.materials : [],
+      colors: Array.isArray(filters?.colors) ? filters.colors : [],
+      sizes: Array.isArray(filters?.sizes) ? filters.sizes : [],
+      genders: Array.isArray(filters?.genders) ? filters.genders : [],
+      price: Array.isArray(filters?.price) ? filters.price : [20, 250],
+      counts: filters?.counts || {
+        categories: {},
+        materials: {},
+        colors: {},
+        sizes: {},
+        genders: {},
+      },
+    };
   };
 
   const computeDynamicFilters = (products, categoriesList) => {
@@ -765,7 +785,7 @@ const Products = () => {
 
         <div className="products-container">
           {/* Desktop Sidebar */}
-          {!isMobile && showFilters && (
+          {!isMobile && showFilters && filterOptionsDynamic && (
             <div className="filters-sidebar">
               <div className="filter-section">
                 <h3
@@ -966,7 +986,7 @@ const Products = () => {
             </div>
           )}
           {/* Mobile Modal */}
-          {isMobile && showFilters && (
+          {isMobile && showFilters && filterOptionsDynamic && (
             <div className="mobile-filter-modal-overlay">
               <div className="mobile-filter-modal">
                 <div className="mobile-filter-modal-header">
