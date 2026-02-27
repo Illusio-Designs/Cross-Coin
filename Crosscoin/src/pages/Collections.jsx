@@ -11,28 +11,33 @@ const Collections = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
+    
     const fetchCategories = async () => {
       try {
+        setLoading(true);
+        setError(null);
+        
         const response = await getPublicCategories();
         console.log('Categories response received:', response);
         
-        // Handle both direct data and response object formats
-        let data;
-        if (response && response.data && Array.isArray(response.data)) {
-          // Response object format: {data: [...], status: 200, ...}
-          data = response.data;
-        } else if (Array.isArray(response)) {
-          // Direct array format
-          data = response;
+        // The API service already returns response.data, so response should be an array
+        if (Array.isArray(response)) {
+          setCategories(response);
+        } else if (response && response.data && Array.isArray(response.data)) {
+          // Fallback: if response has a data property
+          setCategories(response.data);
+        } else if (response && typeof response === 'object') {
+          // If response is an object but not an array, log it and show error
+          console.error('Unexpected response format:', response);
+          setError('Invalid data format received from server');
         } else {
           console.error('Categories data is not in expected format:', response);
           setError('Invalid data format received from server');
-          return;
         }
-        
-        setCategories(data);
       } catch (err) {
         console.error('Error fetching categories:', err);
         setError(err.message || 'Failed to fetch categories');
@@ -40,10 +45,11 @@ const Collections = () => {
         setLoading(false);
       }
     };
+    
     fetchCategories();
   }, []);
 
-  if (loading) {
+  if (loading || !isMounted) {
     return (
       <SeoWrapper pageName="categories">
         <Header />
@@ -66,7 +72,15 @@ const Collections = () => {
           <h1 className="section-title">Collections</h1>
           <div className="error-state">
             <p>Error: {error}</p>
-            <button onClick={() => window.location.reload()}>Retry</button>
+            <button 
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                window.location.reload();
+              }}
+            >
+              Retry
+            </button>
           </div>
         </div>
         <Footer />
@@ -82,6 +96,12 @@ const Collections = () => {
         <div className="collections-grid">
           {categories && Array.isArray(categories) && categories.length > 0 ? (
             categories.map((cat) => {
+            // Safety check for category object
+            if (!cat || !cat.name) {
+              console.warn('Invalid category object:', cat);
+              return null;
+            }
+            
             // Simple image URL construction
             let imageUrl = null; // No fallback image
             
@@ -102,28 +122,30 @@ const Collections = () => {
             
             return (
               <Link
-                key={cat.id || cat._id}
+                key={cat.id || cat._id || cat.name}
                 href={`/Products?category=${encodeURIComponent(cat.name)}`}
                 className="category-card"
                 onClick={() => console.log('Navigating to category:', cat.name)}
               >
                 <div className="category-card-image-wrapper">
-                  <img
-                    src={imageUrl}
-                    alt={cat.name}
-                    className="category-card-image"
-                    onError={(e) => {
-                      console.error('Failed to load image:', imageUrl);
-                      e.target.style.display = 'none';
-                    }}
-                  />
+                  {imageUrl && (
+                    <img
+                      src={imageUrl}
+                      alt={cat.name}
+                      className="category-card-image"
+                      onError={(e) => {
+                        console.error('Failed to load image:', imageUrl);
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  )}
                 </div>
                 <div className="category-card-info">
                   <div className="category-card-name">{cat.name}</div>
                 </div>
               </Link>
             );
-          })
+          }).filter(Boolean) // Remove null entries
           ) : (
             <div className="no-categories-state">
               <p>No collections available at the moment.</p>
