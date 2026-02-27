@@ -88,6 +88,23 @@ function AppContent({ Component, pageProps, loading, progressRef }) {
   );
 }
 
+function AppWrapper({ Component, pageProps, loading, progressRef }) {
+  return (
+    <AuthProvider>
+      <CartProvider>
+        <WishlistProvider>
+          <AppContent 
+            Component={Component} 
+            pageProps={pageProps}
+            loading={loading}
+            progressRef={progressRef}
+          />
+        </WishlistProvider>
+      </CartProvider>
+    </AuthProvider>
+  );
+}
+
 function App({ Component, pageProps }) {
   const [loading, setLoading] = useState(false); // Start with false to allow immediate paint
   const router = useRouter();
@@ -175,18 +192,12 @@ function App({ Component, pageProps }) {
       <Analytics />
       <SpeedInsights />
       <VercelAnalytics />
-      <AuthProvider>
-        <CartProvider>
-          <WishlistProvider>
-            <AppContent 
-              Component={Component} 
-              pageProps={pageProps}
-              loading={loading}
-              progressRef={progressRef}
-            />
-          </WishlistProvider>
-        </CartProvider>
-      </AuthProvider>
+      <AppWrapper 
+        Component={Component} 
+        pageProps={pageProps}
+        loading={loading}
+        progressRef={progressRef}
+      />
     </>
   );
 }
