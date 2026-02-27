@@ -491,7 +491,7 @@ module.exports.createOrder = async (req, res) => {
         // Convert amount to paise (Razorpay expects amount in smallest currency unit)
         const amountInPaise = Math.round(parseFloat(amount) * 100);
 
-        // Prepare order options
+        // Prepare order options with Magic Checkout parameters
         const orderOptions = {
             amount: amountInPaise,
             currency: currency,
@@ -501,7 +501,9 @@ module.exports.createOrder = async (req, res) => {
                 cart_items: JSON.stringify(cart_items),
                 shipping_address: JSON.stringify(shipping_address),
                 ...notes
-            }
+            },
+            // Enable partial payment (required for Magic Checkout)
+            partial_payment: false,
         };
 
         // Create order using Razorpay API
