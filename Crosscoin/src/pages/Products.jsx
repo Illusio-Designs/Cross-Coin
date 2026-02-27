@@ -529,7 +529,7 @@ const Products = () => {
   };
 
   // Compute min and max price from all products for the slider
-  const getMinMaxPrice = () => {
+  const [minPrice, maxPrice] = useMemo(() => {
     // Safety check
     if (!Array.isArray(products) || products.length === 0) {
       return [20, 250];
@@ -546,8 +546,7 @@ const Products = () => {
     if (min === Infinity) min = 20;
     if (max === 0) max = 250;
     return [Math.floor(min), Math.ceil(max)];
-  };
-  const [minPrice, maxPrice] = getMinMaxPrice();
+  }, [products]);
 
   // On products load, set priceRange to [minPrice, maxPrice]
   useEffect(() => {
@@ -770,8 +769,7 @@ const Products = () => {
         if (!hasGender) return false;
       }
       // Price filter (only if user changed slider)
-      const [minP, maxP] = getMinMaxPrice();
-      if (priceRange[0] !== minP || priceRange[1] !== maxP) {
+      if (priceRange[0] !== minPrice || priceRange[1] !== maxPrice) {
         const inPriceRange = (product.variations || []).some((variation) => {
           return (
             variation.price >= priceRange[0] && variation.price <= priceRange[1]
@@ -781,7 +779,7 @@ const Products = () => {
       }
       return true;
     });
-  }, [products, selectedCategory, selectedMaterial, selectedColors, selectedSizes, selectedGender, priceRange]);
+  }, [products, selectedCategory, selectedMaterial, selectedColors, selectedSizes, selectedGender, priceRange, minPrice, maxPrice]);
   
   console.log("Filtering results:", {
     totalProducts: Array.isArray(products) ? products.length : 0,
