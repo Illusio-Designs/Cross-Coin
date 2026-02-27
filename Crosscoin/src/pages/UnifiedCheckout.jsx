@@ -55,15 +55,8 @@ export default function UnifiedCheckout() {
     }
   }, [shippingFee, appliedCoupon]); // Removed handleCouponRemoved from dependencies
 
-  // Magic Checkout - Only enable if environment variable is set
-  const MAGIC_CHECKOUT_ENABLED = process.env.NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED === "true";
-  const [useMagicCheckout, setUseMagicCheckout] = useState(false);
-  
-  useEffect(() => {
-    if (MAGIC_CHECKOUT_ENABLED) {
-      setUseMagicCheckout(true);
-    }
-  }, [MAGIC_CHECKOUT_ENABLED]);
+  // Magic Checkout - Always show
+  const [useMagicCheckout, setUseMagicCheckout] = useState(true);
 
   // Address management state
   const [addresses, setAddresses] = useState([]);
