@@ -28,9 +28,14 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
    * Load Razorpay Magic Checkout SDK
    */
   const loadMagicCheckoutSDK = useCallback(() => {
+    console.log("=== LOADING RAZORPAY SDK ===");
+    console.log("MAGIC_CHECKOUT_ENABLED:", MAGIC_CHECKOUT_ENABLED);
+    console.log("RAZORPAY_KEY:", RAZORPAY_KEY);
+    
     return new Promise((resolve, reject) => {
       // Check if SDK is already loaded
       if (window.Razorpay) {
+        console.log("✓ Razorpay SDK already loaded");
         setSDKLoaded(true);
         resolve(true);
         return;
@@ -38,9 +43,11 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
 
       // Check if script tag already exists
       if (document.getElementById("razorpay-checkout-script")) {
+        console.log("Script tag exists, waiting for SDK to load...");
         const checkInterval = setInterval(() => {
           if (window.Razorpay) {
             clearInterval(checkInterval);
+            console.log("✓ Razorpay SDK loaded from existing script");
             setSDKLoaded(true);
             resolve(true);
           }
@@ -49,12 +56,14 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
         setTimeout(() => {
           clearInterval(checkInterval);
           if (!window.Razorpay) {
+            console.error("✗ SDK load timeout");
             reject(new Error("SDK load timeout"));
           }
         }, 10000);
         return;
       }
 
+      console.log("Creating new script tag for Razorpay SDK...");
       setSDKLoading(true);
       const script = document.createElement("script");
       script.id = "razorpay-checkout-script";
@@ -62,20 +71,23 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
       script.async = true;
 
       script.onload = () => {
+        console.log("✓ Razorpay SDK loaded successfully");
         setSDKLoaded(true);
         setSDKLoading(false);
         resolve(true);
       };
 
       script.onerror = () => {
+        console.error("✗ Failed to load Razorpay SDK");
         setSDKLoading(false);
         setError("Failed to load payment gateway");
         reject(new Error("Failed to load Razorpay SDK"));
       };
 
       document.body.appendChild(script);
+      console.log("Script tag appended to body");
     });
-  }, []);
+  }, [RAZORPAY_KEY, MAGIC_CHECKOUT_ENABLED]);
 
   /**
    * Calculate total amount in rupees
@@ -216,6 +228,28 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
    * Process Express Checkout
    */
   const processExpressCheckout = useCallback(async () => {
+    // TEMPORARY: Prevent gateway from opening - for debugging
+    console.log("=== EXPRESS CHECKOUT DEBUG ===");
+    console.log("1. SDK Loaded:", sdkLoaded);
+    console.log("2. Window.Razorpay exists:", !!window.Razorpay);
+    console.log("3. RAZORPAY_KEY:", RAZORPAY_KEY);
+    console.log("4. MAGIC_CHECKOUT_ENABLED:", MAGIC_CHECKOUT_ENABLED);
+    console.log("5. User data:", {
+      isAuthenticated,
+      userId: user?.id,
+      userName: user?.name,
+      userEmail: user?.email,
+      userPhone: user?.phone
+    });
+    console.log("6. Cart items:", cartItems.length);
+    console.log("7. Total amount:", calculateTotalAmount());
+    
+    // TEMPORARY: Stop here to prevent gateway opening
+    alert("Express Checkout clicked! Check browser console for debug logs.");
+    return false;
+    
+    // Original code below (commented out temporarily)
+    /*
     if (!sdkLoaded || !window.Razorpay) {
       console.error("Razorpay SDK not loaded");
       setError("Payment gateway not loaded. Please refresh the page.");
@@ -356,19 +390,33 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
       }
       return false;
     }
-  }, [sdkLoaded, cartItems, buyNowItem, user, RAZORPAY_KEY, calculateTotalAmount, handlePaymentSuccess, onError]);
+    */
+  }, [sdkLoaded, cartItems, buyNowItem, user, RAZORPAY_KEY, MAGIC_CHECKOUT_ENABLED, isAuthenticated, calculateTotalAmount]);
 
   /**
    * Load SDK on mount
    */
   useEffect(() => {
+    console.log("=== EXPRESS CHECKOUT COMPONENT MOUNTED ===");
+    console.log("Environment variables:");
+    console.log("- NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED:", process.env.NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED);
+    console.log("- NEXT_PUBLIC_RAZORPAY_KEY_ID:", process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
+    console.log("- NEXT_PUBLIC_API_URL:", process.env.NEXT_PUBLIC_API_URL);
+    console.log("Component state:");
+    console.log("- MAGIC_CHECKOUT_ENABLED:", MAGIC_CHECKOUT_ENABLED);
+    console.log("- Cart items:", cartItems.length);
+    console.log("- Buy now item:", !!buyNowItem);
+    
     if (MAGIC_CHECKOUT_ENABLED) {
+      console.log("Magic Checkout is enabled, loading SDK...");
       loadMagicCheckoutSDK().catch((err) => {
         console.error("Failed to load Razorpay SDK:", err);
         setError("Failed to load payment gateway");
       });
+    } else {
+      console.warn("Magic Checkout is NOT enabled in environment variables");
     }
-  }, [MAGIC_CHECKOUT_ENABLED, loadMagicCheckoutSDK]);
+  }, [MAGIC_CHECKOUT_ENABLED, loadMagicCheckoutSDK, cartItems.length, buyNowItem]);
 
   // Don't render if Magic Checkout is not enabled
   if (!MAGIC_CHECKOUT_ENABLED) {
