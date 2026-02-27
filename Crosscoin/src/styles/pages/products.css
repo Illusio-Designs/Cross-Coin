@@ -287,10 +287,8 @@
 }
 
 .product-image img {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   transition: transform 0.3s ease;
 }
@@ -298,10 +296,8 @@
 /* Force contain for product card images - highest priority */
 .product-card-image-contain {
   object-fit: contain !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
-  width: auto !important;
-  height: auto !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 /* Shimmer loading animation */
@@ -500,18 +496,21 @@
   cursor: pointer;
   transition: all 0.3s ease;
   z-index: 1;
+  color: #666;
 }
 
 .wishlist-btn svg {
   width: 20px;
   height: 20px;
-  stroke: #666;
+  stroke: currentColor;
+  fill: none;
   transition: all 0.3s ease;
 }
 
 .wishlist-btn:hover {
   background: #f8f8f8;
   transform: scale(1.1);
+  color: #ce1e36;
 }
 
 .wishlist-btn:hover svg {
