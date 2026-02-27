@@ -1147,6 +1147,7 @@ export default function ProductDetails() {
                     height={600}
                     priority={true}
                     quality={80}
+                    isProductCard={true}
                     className="main-product-image"
                     style={{
                       objectFit: "contain",
@@ -1155,7 +1156,8 @@ export default function ProductDetails() {
                       display: "block",
                       cursor: "pointer",
                       width: "100%",
-                      height: "auto"
+                      height: "auto",
+                      maxHeight: "600px"
                     }}
                     onClick={() => setIsZoomOpen(true)}
                   />
@@ -1299,6 +1301,46 @@ export default function ProductDetails() {
                 </svg>
               </button>
             </div>
+
+            {/* Divider */}
+            <hr style={{ border: 'none', borderTop: '1px solid #e6e6e6', margin: '1.5rem 0' }} />
+
+            {/* Quantity and Action Buttons Section - Moved here after title */}
+            <div className="quantity-section">
+              <div className="details-heading">Quantity:</div>
+              <div className="quantity-box">
+                <button className="quantity-btn" onClick={() => setQuantity(q => Math.max(1, q - 1))}>-</button>
+                <span className="quantity-value">{quantity}</span>
+                <button className="quantity-btn" onClick={() => setQuantity(q => q + 1)}>+</button>
+              </div>
+            </div>
+            {/* Action Buttons Row */}
+            <div className="action-buttons-row">
+              <button className="add-to-cart-btn" onClick={handleAddToCart}>
+                ADD TO CART
+              </button>
+              <button 
+                className="buy-now-btn" 
+                onClick={handleBuyNow}
+                disabled={isBuyNowLoading}
+                style={{
+                  opacity: isBuyNowLoading ? 0.7 : 1,
+                  cursor: isBuyNowLoading ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {isBuyNowLoading ? (
+                  <>
+                    <svg className="loading-spinner" viewBox="0 0 24 24" style={{ width: '16px', height: '16px', marginRight: '8px' }}>
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
+                    </svg>
+                    PROCESSING...
+                  </>
+                ) : (
+                  'BUY IT NOW'
+                )}
+              </button>
+            </div>
+
             {/* D. Details section */}
             <div className="product-details-section">
               <h3 className="details-heading">Details</h3>
@@ -1353,41 +1395,6 @@ export default function ProductDetails() {
                 </div>
               </div>
             )}
-            {/* Quantity and Action Buttons Section */}
-            <div className="quantity-section">
-              <div className="details-heading">Quantity:</div>
-              <div className="quantity-box">
-                <button className="quantity-btn" onClick={() => setQuantity(q => Math.max(1, q - 1))}>-</button>
-                <span className="quantity-value">{quantity}</span>
-                <button className="quantity-btn" onClick={() => setQuantity(q => q + 1)}>+</button>
-              </div>
-            </div>
-            {/* Action Buttons Row */}
-            <div className="action-buttons-row">
-              <button className="add-to-cart-btn" onClick={handleAddToCart}>
-                ADD TO CART
-              </button>
-              <button 
-                className="buy-now-btn" 
-                onClick={handleBuyNow}
-                disabled={isBuyNowLoading}
-                style={{
-                  opacity: isBuyNowLoading ? 0.7 : 1,
-                  cursor: isBuyNowLoading ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {isBuyNowLoading ? (
-                  <>
-                    <svg className="loading-spinner" viewBox="0 0 24 24" style={{ width: '16px', height: '16px', marginRight: '8px' }}>
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
-                    </svg>
-                    PROCESSING...
-                  </>
-                ) : (
-                  'BUY IT NOW'
-                )}
-              </button>
-            </div>
             {/* Description row added below */}
             <div className="details-row">
               <div>
