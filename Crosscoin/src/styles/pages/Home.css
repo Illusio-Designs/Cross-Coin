@@ -687,15 +687,35 @@
   cursor: pointer;
   transition: all 0.3s ease;
   z-index: 1;
+  color: #666;
+}
+
+.products-slider .wishlist-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  transition: all 0.3s ease;
 }
 
 .products-slider .wishlist-btn:hover {
   background: #f8f8f8;
   transform: scale(1.1);
+  color: #ce1e36;
+}
+
+.products-slider .wishlist-btn:hover svg {
+  fill: #ce1e36;
+  stroke: #ce1e36;
 }
 
 .products-slider .wishlist-btn.active {
   color: #ce1e36;
+}
+
+.products-slider .wishlist-btn.active svg {
+  fill: #ce1e36;
+  stroke: #ce1e36;
 }
 
 .featured-products-section {

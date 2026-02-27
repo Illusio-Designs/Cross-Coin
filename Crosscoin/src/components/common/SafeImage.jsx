@@ -151,8 +151,8 @@ const SafeImage = ({
       className={`${className} ${isProductCard ? 'product-card-image-contain' : ''}`}
       style={{
         ...style,
-        width: width || style.width || '100%',
-        height: height === 'auto' ? 'auto' : (height || style.height || 'auto'),
+        width: isProductCard ? '100%' : (width || style.width || '100%'),
+        height: isProductCard ? '100%' : (height === 'auto' ? 'auto' : (height || style.height || 'auto')),
         objectFit: isProductCard ? 'contain' : (style.objectFit || 'cover'),
         display: 'block'
       }}
