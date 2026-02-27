@@ -302,29 +302,43 @@ export default function ProductDetails() {
   }, [colorsForSelectedType, selectedColor]);
 
   // Desktop: Show fixed action buttons at bottom when product details scroll out
+  const [showFixedButtons, setShowFixedButtons] = useState(false);
+  
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
+    let ticking = false;
+    
     const handleScroll = () => {
-      // Only for desktop (above 426px)
-      if (window.innerWidth <= 426) return;
+      if (ticking) return;
       
-      const actionButtonsRow = document.querySelector('.action-buttons-row');
-      
-      if (!actionButtonsRow) return;
-      
-      const rect = actionButtonsRow.getBoundingClientRect();
-      const isScrolledPast = rect.bottom < 0;
-      
-      if (isScrolledPast) {
-        actionButtonsRow.classList.add('fixed-bottom-desktop');
-      } else {
-        actionButtonsRow.classList.remove('fixed-bottom-desktop');
-      }
+      ticking = true;
+      requestAnimationFrame(() => {
+        // Only for desktop (above 426px)
+        if (window.innerWidth <= 426) {
+          setShowFixedButtons(false);
+          ticking = false;
+          return;
+        }
+        
+        const actionButtonsRow = document.querySelector('.action-buttons-row');
+        
+        if (!actionButtonsRow) {
+          ticking = false;
+          return;
+        }
+        
+        const rect = actionButtonsRow.getBoundingClientRect();
+        // Show fixed buttons when original buttons scroll past the top of viewport
+        const isScrolledPast = rect.bottom < 0;
+        
+        setShowFixedButtons(isScrolledPast);
+        ticking = false;
+      });
     };
     
-    window.addEventListener('scroll', handleScroll);
-    window.addEventListener('resize', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll, { passive: true });
     
     // Initial check
     handleScroll();
@@ -1459,6 +1473,38 @@ export default function ProductDetails() {
             </div>
           )}
         </div>
+        
+        {/* Fixed Action Buttons Footer - Desktop Only */}
+        {showFixedButtons && (
+          <div className="fixed-action-footer">
+            <div className="fixed-action-container">
+              <button className="add-to-cart-btn" onClick={handleAddToCart}>
+                ADD TO CART
+              </button>
+              <button 
+                className="buy-now-btn" 
+                onClick={handleBuyNow}
+                disabled={isBuyNowLoading}
+                style={{
+                  opacity: isBuyNowLoading ? 0.7 : 1,
+                  cursor: isBuyNowLoading ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {isBuyNowLoading ? (
+                  <>
+                    <svg className="loading-spinner" viewBox="0 0 24 24" style={{ width: '16px', height: '16px', marginRight: '8px' }}>
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
+                    </svg>
+                    PROCESSING...
+                  </>
+                ) : (
+                  'BUY IT NOW'
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+        
         <Footer />
       </div>
     </SeoWrapper>
