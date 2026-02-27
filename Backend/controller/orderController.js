@@ -373,7 +373,13 @@ module.exports.createOrder = async (req, res) => {
     console.log("createOrder: Fetching created order with details...");
     const createdOrder = await Order.findByPk(order.id, {
       include: [
-        { model: OrderItem, include: [Product] },
+        { 
+          model: OrderItem, 
+          include: [
+            Product,
+            ProductVariation  // ✅ Include ProductVariation to get SKU
+          ] 
+        },
         { model: User, attributes: ["id", "username", "email"] },
         { model: OrderStatusHistory, order: [["updated_at", "DESC"]] },
       ],
@@ -2312,7 +2318,14 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
         order_number: { [Op.notLike]: '%TEST%' } // Exclude test orders
       },
       include: [
-        { model: OrderItem, as: "OrderItems", include: [{ model: Product, as: "Product" }] },
+        { 
+          model: OrderItem, 
+          as: "OrderItems", 
+          include: [
+            { model: Product, as: "Product" },
+            { model: ProductVariation, as: "ProductVariation" }  // ✅ Include ProductVariation for SKU
+          ] 
+        },
         { model: User, as: "User", attributes: ["id", "username", "email"], required: false },
         { model: GuestUser, as: "GuestUser", attributes: ["id", "email", "firstName", "lastName", "phone"], required: false },
         { model: ShippingAddress, as: "ShippingAddress" },
@@ -2817,7 +2830,14 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
     // Find the order
     const order = await Order.findByPk(id, {
       include: [
-        { model: OrderItem, as: "OrderItems", include: [{ model: Product, as: "Product" }] },
+        { 
+          model: OrderItem, 
+          as: "OrderItems", 
+          include: [
+            { model: Product, as: "Product" },
+            { model: ProductVariation, as: "ProductVariation" }  // ✅ Include ProductVariation for SKU
+          ] 
+        },
         { model: User, as: "User", attributes: ["id", "username", "email"], required: false },
         { model: GuestUser, as: "GuestUser", attributes: ["id", "email", "firstName", "lastName", "phone"], required: false },
         { model: ShippingAddress, as: "ShippingAddress" },
