@@ -84,20 +84,23 @@ const SafeImage = ({
   if (isProductCard && !imageSrc) {
     return (
       <div
-        className={className}
+        className={`${className} image-skeleton`}
         style={{
           width: width || '100%',
           height: height || 'auto',
-          backgroundColor: '#f5f5f5',
+          backgroundColor: '#e0e0e0',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#ccc',
-          fontSize: '14px',
+          position: 'relative',
+          overflow: 'hidden',
           ...style
         }}
         {...props}
       >
+        <div className="shimmer-wrapper">
+          <div className="shimmer"></div>
+        </div>
       </div>
     );
   }
@@ -105,7 +108,7 @@ const SafeImage = ({
   if (isProductCard && imageError) {
     return (
       <div
-        className={className}
+        className={`${className} image-skeleton`}
         style={{
           width: width || '100%',
           height: height || 'auto',
@@ -140,26 +143,49 @@ const SafeImage = ({
   const imgHeight = getNumericValue(height);
 
   return (
-    <img
-      src={imageSrc}
-      alt={alt}
-      width={imgWidth}
-      height={imgHeight}
-      loading={priority ? 'eager' : 'lazy'}
-      onError={handleError}
-      onLoad={handleLoad}
-      className={`${className} ${isProductCard ? 'product-card-image-contain' : ''} ${imageLoading ? 'image-loading' : 'image-loaded'}`}
-      style={{
-        ...style,
-        width: isProductCard ? '100%' : (width || style.width || '100%'),
-        height: isProductCard ? '100%' : (height === 'auto' ? 'auto' : (height || style.height || 'auto')),
-        objectFit: isProductCard ? 'contain' : (style.objectFit || 'cover'),
-        display: 'block',
-        filter: imageLoading ? 'grayscale(100%)' : 'grayscale(0%)',
-        transition: 'filter 0.3s ease-in-out'
-      }}
-      {...props}
-    />
+    <div style={{ position: 'relative', width: width || '100%', height: height || 'auto', display: 'inline-block' }}>
+      {imageLoading && (
+        <div
+          className="image-skeleton"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: '#e0e0e0',
+            overflow: 'hidden',
+            zIndex: 1
+          }}
+        >
+          <div className="shimmer-wrapper">
+            <div className="shimmer"></div>
+          </div>
+        </div>
+      )}
+      <img
+        src={imageSrc}
+        alt={alt}
+        width={imgWidth}
+        height={imgHeight}
+        loading={priority ? 'eager' : 'lazy'}
+        onError={handleError}
+        onLoad={handleLoad}
+        className={`${className} ${isProductCard ? 'product-card-image-contain' : ''}`}
+        style={{
+          ...style,
+          width: isProductCard ? '100%' : (width || style.width || '100%'),
+          height: isProductCard ? '100%' : (height === 'auto' ? 'auto' : (height || style.height || 'auto')),
+          objectFit: isProductCard ? 'contain' : (style.objectFit || 'cover'),
+          display: 'block',
+          opacity: imageLoading ? 0 : 1,
+          transition: 'opacity 0.3s ease-in-out',
+          position: 'relative',
+          zIndex: 2
+        }}
+        {...props}
+      />
+    </div>
   );
 };
 

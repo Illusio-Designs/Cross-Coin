@@ -2307,3 +2307,42 @@
   z-index: 100 !important;
   display: flex !important;
 }
+
+/* Featured Product Skeleton Styles */
+.featured-product-card.skeleton-card {
+  pointer-events: none;
+  user-select: none;
+}
+
+.skeleton-card * {
+  pointer-events: none;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Ensure skeleton cards have proper sizing */
+.featured-product-card.skeleton-card {
+  min-width: 1070px;
+  display: flex;
+  gap: 2rem;
+  background: white;
+  padding: 2rem;
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.featured-product-card.skeleton-card .product-images {
+  flex: 1;
+}
+
+.featured-product-card.skeleton-card .product-info {
+  flex: 1;
+}
