@@ -800,7 +800,10 @@ const Products = () => {
   };
 
   // Compute total pages based on filtered products
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
+  const totalPages = useMemo(() => {
+    if (!Array.isArray(filteredProducts)) return 1;
+    return Math.ceil(filteredProducts.length / itemsPerPage) || 1;
+  }, [filteredProducts, itemsPerPage]);
 
   // Debug logs (moved after totalPages is defined)
   console.log("Products Component State:", {
@@ -809,9 +812,16 @@ const Products = () => {
     priceRange,
     currentPage,
     totalPages,
-    totalProducts: products.length,
-    filteredProducts: filteredProducts.length,
-    paginatedProducts: getPaginatedProducts().length,
+    totalProducts: Array.isArray(products) ? products.length : 0,
+    filteredProducts: Array.isArray(filteredProducts) ? filteredProducts.length : 0,
+    paginatedProducts: (() => {
+      try {
+        const paginated = getPaginatedProducts();
+        return Array.isArray(paginated) ? paginated.length : 0;
+      } catch {
+        return 0;
+      }
+    })(),
     itemsPerPage,
     loading,
     error,
@@ -1360,7 +1370,7 @@ const Products = () => {
                 </>
               ) : error ? (
                 <div className="error">{error}</div>
-              ) : filteredProducts.length === 0 ? (
+              ) : (filteredProducts && filteredProducts.length === 0) ? (
                 <div className="no-products">
                   {selectedCategory.length > 0
                     ? `No products available in "${getCategoryNameById(
@@ -1384,7 +1394,7 @@ const Products = () => {
             </div>
 
             {/* Pagination controls */}
-            {filteredProducts.length > itemsPerPage && totalPages > 1 && (
+            {filteredProducts && filteredProducts.length > itemsPerPage && totalPages > 1 && (
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
