@@ -981,25 +981,6 @@
   align-items: center;
 }
 
-.featured-product-card .quantity-box {
-  display: flex;
-  align-items: center;
-  border: 1px solid #e6e6e6;
-  border-radius: 4px;
-}
-
-.featured-product-card .quantity-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.featured-product-card .quantity-value {
-  padding: 0.5rem 1rem;
-  border-left: 1px solid #e6e6e6;
-  border-right: 1px solid #e6e6e6;
-}
-
 .featured-product-card .add-to-cart {
   padding: 0.75rem 2rem;
   background: #ce1e36;
@@ -1150,6 +1131,46 @@
 
 .featured-product-card .quantity-section {
   margin-bottom: 1.5rem;
+}
+
+.featured-product-card .quantity-section .details-heading {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.75rem;
+}
+
+.featured-product-card .quantity-box {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #e6e6e6;
+  border-radius: 4px;
+  background: white;
+}
+
+.featured-product-card .quantity-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+  transition: background 0.2s ease;
+}
+
+.featured-product-card .quantity-btn:hover {
+  background: #f5f5f5;
+}
+
+.featured-product-card .quantity-value {
+  padding: 0.5rem 1rem;
+  border-left: 1px solid #e6e6e6;
+  border-right: 1px solid #e6e6e6;
+  min-width: 50px;
+  text-align: center;
+  font-weight: 600;
+  color: #333;
 }
 
 .featured-product-card .action-buttons-row {
