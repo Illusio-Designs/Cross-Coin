@@ -12,6 +12,10 @@ const Collections = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  
+  // Safety guard: Ensure categories is always an array
+  const safeCategories = Array.isArray(categories) ? categories : [];
 
   useEffect(() => {
     setIsMounted(true);
@@ -22,32 +26,69 @@ const Collections = () => {
         setError(null);
         
         const response = await getPublicCategories();
-        console.log('Categories response received:', response);
+        console.log('Categories response received:', response, 'Type:', typeof response, 'IsArray:', Array.isArray(response));
         
-        // The API service already returns response.data, so response should be an array
+        // More flexible response handling
+        let categoriesData = [];
+        
         if (Array.isArray(response)) {
-          setCategories(response);
-        } else if (response && response.data && Array.isArray(response.data)) {
-          // Fallback: if response has a data property
-          setCategories(response.data);
-        } else if (response && typeof response === 'object') {
-          // If response is an object but not an array, log it and show error
-          console.error('Unexpected response format:', response);
-          setError('Invalid data format received from server');
-        } else {
-          console.error('Categories data is not in expected format:', response);
-          setError('Invalid data format received from server');
+          // Direct array response (expected format)
+          categoriesData = response;
+        } else if (response && Array.isArray(response.data)) {
+          // Response with data property
+          categoriesData = response.data;
+        } else if (response && response.categories && Array.isArray(response.categories)) {
+          // Response with categories property
+          categoriesData = response.categories;
+        } else if (response && typeof response === 'object' && Object.keys(response).length > 0) {
+          // Try to extract array from response object
+          const possibleArrays = Object.values(response).filter(val => Array.isArray(val));
+          if (possibleArrays.length > 0) {
+            categoriesData = possibleArrays[0];
+          } else {
+            // If response is an object but not an array, it might be an error response
+            console.error('Unexpected response format:', response);
+            // Don't set error immediately, wait for retry
+            categoriesData = [];
+          }
         }
+        
+        // Always set categories, even if empty
+        setCategories(categoriesData);
+        
+        // Only set error if we explicitly got an error response
+        if (categoriesData.length === 0 && response && response.message) {
+          setError(response.message);
+        }
+        
       } catch (err) {
         console.error('Error fetching categories:', err);
         setError(err.message || 'Failed to fetch categories');
+        setCategories([]); // Ensure categories is set to empty array on error
       } finally {
         setLoading(false);
       }
     };
     
     fetchCategories();
-  }, []);
+  }, [retryCount]);
+  
+  // Safety timeout: If still loading after 8 seconds, show error
+  useEffect(() => {
+    if (loading) {
+      const timeout = setTimeout(() => {
+        if (loading && categories.length === 0) {
+          console.log('Loading timeout reached');
+          setLoading(false);
+          if (!error) {
+            setError('Request timed out. Please try again.');
+          }
+        }
+      }, 8000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [loading, categories.length, error]);
 
   if (loading || !isMounted) {
     return (
@@ -75,8 +116,7 @@ const Collections = () => {
             <button 
               onClick={() => {
                 setError(null);
-                setLoading(true);
-                window.location.reload();
+                setRetryCount(prev => prev + 1);
               }}
             >
               Retry
@@ -94,8 +134,8 @@ const Collections = () => {
       <div className="collections-container">
         <h1 className="section-title">Collections</h1>
         <div className="collections-grid">
-          {categories && Array.isArray(categories) && categories.length > 0 ? (
-            categories.map((cat) => {
+          {safeCategories.length > 0 ? (
+            safeCategories.map((cat) => {
             // Safety check for category object
             if (!cat || !cat.name) {
               console.warn('Invalid category object:', cat);
