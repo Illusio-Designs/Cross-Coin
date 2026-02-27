@@ -687,8 +687,101 @@ const Products = () => {
 
   // Get filtered products with useMemo to prevent unnecessary recalculations
   const filteredProducts = useMemo(() => {
-    return getFilteredProducts();
-  }, [products, selectedCategory, selectedMaterial, selectedColors, selectedSizes, selectedGender, priceRange, minPrice, maxPrice]);
+    // Safety check: return empty array if products is not initialized
+    if (!products || !Array.isArray(products)) {
+      return [];
+    }
+    
+    return products.filter((product) => {
+      // Category filter - skip if we're viewing a specific category (all products are already from that category)
+      if (selectedCategory.length > 0) {
+        const catId =
+          product.category_id || (product.category && product.category.id);
+        if (!selectedCategory.includes(String(catId))) return false;
+      }
+      // Material filter
+      if (selectedMaterial.length > 0) {
+        const hasMaterial = (product.variations || []).some((variation) => {
+          let attrs = variation.attributes;
+          if (typeof attrs === "string") {
+            try {
+              attrs = JSON.parse(attrs);
+            } catch {
+              attrs = {};
+            }
+          }
+          return (
+            attrs &&
+            selectedMaterial.some((m) => (attrs.material || []).includes(m))
+          );
+        });
+        if (!hasMaterial) return false;
+      }
+      // Color filter
+      if (selectedColors.length > 0) {
+        const hasColor = (product.variations || []).some((variation) => {
+          let attrs = variation.attributes;
+          if (typeof attrs === "string") {
+            try {
+              attrs = JSON.parse(attrs);
+            } catch {
+              attrs = {};
+            }
+          }
+          return (
+            attrs && selectedColors.some((c) => (attrs.color || []).includes(c))
+          );
+        });
+        if (!hasColor) return false;
+      }
+      // Size filter
+      if (selectedSizes.length > 0) {
+        const hasSize = (product.variations || []).some((variation) => {
+          let attrs = variation.attributes;
+          if (typeof attrs === "string") {
+            try {
+              attrs = JSON.parse(attrs);
+            } catch {
+              attrs = {};
+            }
+          }
+          return (
+            attrs && selectedSizes.some((s) => (attrs.size || []).includes(s))
+          );
+        });
+        if (!hasSize) return false;
+      }
+      // Gender filter
+      if (selectedGender.length > 0) {
+        const hasGender = (product.variations || []).some((variation) => {
+          let attrs = variation.attributes;
+          if (typeof attrs === "string") {
+            try {
+              attrs = JSON.parse(attrs);
+            } catch {
+              attrs = {};
+            }
+          }
+          return (
+            attrs &&
+            selectedGender.some((g) => (attrs.gender || []).includes(g))
+          );
+        });
+        if (!hasGender) return false;
+      }
+      // Price filter (only if user changed slider)
+      const [minP, maxP] = getMinMaxPrice();
+      if (priceRange[0] !== minP || priceRange[1] !== maxP) {
+        const inPriceRange = (product.variations || []).some((variation) => {
+          return (
+            variation.price >= priceRange[0] && variation.price <= priceRange[1]
+          );
+        });
+        if (!inPriceRange) return false;
+      }
+      return true;
+    });
+  }, [products, selectedCategory, selectedMaterial, selectedColors, selectedSizes, selectedGender, priceRange]);
   
   console.log("Filtering results:", {
     totalProducts: Array.isArray(products) ? products.length : 0,
