@@ -36,13 +36,9 @@
 }
 
 .product-image-container {
-  width: 100%;
-  max-width: 600px;
   margin: 0 auto;
   position: relative;
   display: block;
-  min-height: 400px;
-  height: auto;
 }
 
 .thumbnail-images {
