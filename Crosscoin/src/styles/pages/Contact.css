@@ -18,7 +18,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: url('/pattern.png');
+  background: linear-gradient(135deg, rgba(206, 30, 54, 0.05) 0%, rgba(206, 30, 54, 0.02) 100%);
   opacity: 0.1;
   pointer-events: none;
 }

@@ -884,7 +884,7 @@ const Products = () => {
                 </h3>
                 {showColors && (
                   <div className="color-options">
-                    {filterOptionsDynamic.colors.map((color) => (
+                    {(filterOptionsDynamic.colors || []).map((color) => (
                       <button
                         key={color}
                         className={`color-btn ${
@@ -913,7 +913,7 @@ const Products = () => {
                 </h3>
                 {showSizes && (
                   <div className="size-options">
-                    {filterOptionsDynamic.sizes.map((size) => (
+                    {(filterOptionsDynamic.sizes || []).map((size) => (
                       <label key={size} className="checkbox-label">
                         <div className="checkbox-group">
                           <input
@@ -924,7 +924,7 @@ const Products = () => {
                           <p>{size} </p>
                         </div>
                         <span>
-                          [{filterOptionsDynamic.counts.sizes[size] || 0}]
+                          [{filterOptionsDynamic.counts?.sizes?.[size] || 0}]
                         </span>
                       </label>
                     ))}
@@ -943,7 +943,7 @@ const Products = () => {
                 </h3>
                 {showGender && (
                   <div className="gender-options">
-                    {filterOptionsDynamic.genders.map((gender) => (
+                    {(filterOptionsDynamic.genders || []).map((gender) => (
                       <label key={gender} className="checkbox-label">
                         <div className="checkbox-group">
                           <input
@@ -956,7 +956,7 @@ const Products = () => {
                           <p>{gender} </p>
                         </div>
                         <span>
-                          [{filterOptionsDynamic.counts.genders[gender] || 0}]
+                          [{filterOptionsDynamic.counts?.genders?.[gender] || 0}]
                         </span>
                       </label>
                     ))}
@@ -1103,7 +1103,7 @@ const Products = () => {
                     </div>
                     {showColors && (
                       <div className="color-options">
-                        {filterOptionsDynamic.colors.map((color) => (
+                        {(filterOptionsDynamic.colors || []).map((color) => (
                           <button
                             key={color}
                             className={`color-btn ${
@@ -1133,7 +1133,7 @@ const Products = () => {
                     </div>
                     {showSizes && (
                       <div className="size-options">
-                        {filterOptionsDynamic.sizes.map((size) => (
+                        {(filterOptionsDynamic.sizes || []).map((size) => (
                           <label key={size} className="checkbox-label">
                             <div className="checkbox-group">
                               <input
@@ -1146,7 +1146,7 @@ const Products = () => {
                               <p>{size} </p>
                             </div>
                             <span>
-                              [{filterOptionsDynamic.counts.sizes[size] || 0}]
+                              [{filterOptionsDynamic.counts?.sizes?.[size] || 0}]
                             </span>
                           </label>
                         ))}
@@ -1166,7 +1166,7 @@ const Products = () => {
                     </div>
                     {showGender && (
                       <div className="gender-options">
-                        {filterOptionsDynamic.genders.map((gender) => (
+                        {(filterOptionsDynamic.genders || []).map((gender) => (
                           <label key={gender} className="checkbox-label">
                             <div className="checkbox-group">
                               <input
@@ -1180,7 +1180,7 @@ const Products = () => {
                             </div>
                             <span>
                               [
-                              {filterOptionsDynamic.counts.genders[gender] || 0}
+                              {filterOptionsDynamic.counts?.genders?.[gender] || 0}
                               ]
                             </span>
                           </label>
