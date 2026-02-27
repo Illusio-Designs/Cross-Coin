@@ -409,6 +409,8 @@ module.exports.createOrder = async (req, res) => {
           productDiscount: 0
         }));
 
+        console.log('📦 Order items for FShip:', JSON.stringify(orderItems, null, 2));
+
         const fshipOrderData = {
           customer_Name: String(user.username),
           customer_Mobile: String(address.phone),
