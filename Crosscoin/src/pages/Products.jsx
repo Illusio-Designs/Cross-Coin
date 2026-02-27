@@ -1297,7 +1297,7 @@ const Products = () => {
                 </>
               ) : error ? (
                 <div className="error">{error}</div>
-              ) : (filteredProducts && filteredProducts.length === 0) ? (
+              ) : (!filteredProducts || !Array.isArray(filteredProducts) || filteredProducts.length === 0) ? (
                 <div className="no-products">
                   {selectedCategory.length > 0
                     ? `No products available in "${getCategoryNameById(
@@ -1321,7 +1321,7 @@ const Products = () => {
             </div>
 
             {/* Pagination controls */}
-            {filteredProducts && filteredProducts.length > itemsPerPage && totalPages > 1 && (
+            {filteredProducts && Array.isArray(filteredProducts) && filteredProducts.length > itemsPerPage && totalPages > 1 && (
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
