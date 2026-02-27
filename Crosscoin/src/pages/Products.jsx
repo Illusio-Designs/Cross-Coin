@@ -57,7 +57,7 @@ const Products = () => {
   const [selectedGender, setSelectedGender] = useState([]);
   const [selectedMaterial, setSelectedMaterial] = useState([]);
 
-  // Data State
+  // Data State - CRITICAL: Initialize with empty array to prevent undefined errors
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -65,6 +65,9 @@ const Products = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   const [totalProducts, setTotalProducts] = useState(0);
+  
+  // Safety guard: Ensure products is always an array
+  const safeProducts = Array.isArray(products) ? products : [];
 
   // Dynamic Filter Options - Initialize with safe defaults
   const [filterOptionsDynamic, setFilterOptionsDynamic] = useState({
@@ -293,21 +296,21 @@ const Products = () => {
   useEffect(() => {
     // Only run if categories exist, no products, not currently loading, and initial load is done
     if (Array.isArray(categories) && categories.length > 0 && 
-        Array.isArray(products) && products.length === 0 && 
+        Array.isArray(safeProducts) && safeProducts.length === 0 && 
         !loading && !isLoadingRef.current && !initialLoadRef.current) {
       console.log("Safety check: Categories loaded but no products, fetching immediately...");
       fetchProductsData();
     }
-  }, [categories.length, products.length, loading, fetchProductsData]);
+  }, [categories.length, safeProducts.length, loading, fetchProductsData]);
 
   // After products and categories are loaded, compute dynamic filters
   useEffect(() => {
-    if (Array.isArray(products) && products.length > 0 && 
+    if (Array.isArray(safeProducts) && safeProducts.length > 0 && 
         Array.isArray(categories) && categories.length > 0) {
-      const newFilters = computeDynamicFilters(products, categories);
+      const newFilters = computeDynamicFilters(safeProducts, categories);
       setFilterOptionsDynamic(ensureValidFilterOptions(newFilters));
     }
-  }, [products, categories]);
+  }, [safeProducts, categories]);
 
   // Fix hydration mismatch by checking window only on client side
   useEffect(() => {
@@ -545,13 +548,13 @@ const Products = () => {
   // Compute min and max price from all products for the slider
   const [minPrice, maxPrice] = useMemo(() => {
     // Safety check
-    if (!Array.isArray(products) || products.length === 0) {
+    if (!Array.isArray(safeProducts) || safeProducts.length === 0) {
       return [20, 250];
     }
     
     let min = Infinity,
       max = 0;
-    products.forEach((product) => {
+    safeProducts.forEach((product) => {
       if (!product || !Array.isArray(product.variations)) return;
       (product.variations || []).forEach((variation) => {
         if (!variation || typeof variation.price !== 'number') return;
@@ -562,24 +565,24 @@ const Products = () => {
     if (min === Infinity) min = 20;
     if (max === 0) max = 250;
     return [Math.floor(min), Math.ceil(max)];
-  }, [products]);
+  }, [safeProducts]);
 
   // On products load, set priceRange to [minPrice, maxPrice]
   useEffect(() => {
-    if (products.length > 0) {
+    if (safeProducts.length > 0) {
       setPriceRange([minPrice, maxPrice]);
     }
     // eslint-disable-next-line
-  }, [products.length]);
+  }, [safeProducts.length]);
 
   // Get filtered products - memoized for performance
   const filteredProducts = useMemo(() => {
     // Safety check: return empty array if products is not initialized
-    if (!products || !Array.isArray(products)) {
+    if (!safeProducts || !Array.isArray(safeProducts)) {
       return [];
     }
     
-    return products.filter((product) => {
+    return safeProducts.filter((product) => {
       // Safety check for product object
       if (!product) return false;
       
@@ -682,7 +685,7 @@ const Products = () => {
       
       return true;
     });
-  }, [products, selectedCategory, selectedMaterial, selectedColors, selectedSizes, selectedGender, priceRange, minPrice, maxPrice]);
+  }, [safeProducts, selectedCategory, selectedMaterial, selectedColors, selectedSizes, selectedGender, priceRange, minPrice, maxPrice]);
 
   // Sort products - memoized for performance
   const sortedProducts = useMemo(() => {
@@ -720,7 +723,7 @@ const Products = () => {
   }, [sortedProducts, currentPage, itemsPerPage]);
   
   console.log("Filtering results:", {
-    totalProducts: Array.isArray(products) ? products.length : 0,
+    totalProducts: Array.isArray(safeProducts) ? safeProducts.length : 0,
     filteredProducts: Array.isArray(filteredProducts) ? filteredProducts.length : 0,
     sortedProducts: Array.isArray(sortedProducts) ? sortedProducts.length : 0,
     paginatedProducts: Array.isArray(paginatedProducts) ? paginatedProducts.length : 0,
@@ -745,7 +748,7 @@ const Products = () => {
     priceRange,
     currentPage,
     totalPages,
-    totalProducts: Array.isArray(products) ? products.length : 0,
+    totalProducts: Array.isArray(safeProducts) ? safeProducts.length : 0,
     filteredProducts: Array.isArray(filteredProducts) ? filteredProducts.length : 0,
     sortedProducts: Array.isArray(sortedProducts) ? sortedProducts.length : 0,
     paginatedProducts: Array.isArray(paginatedProducts) ? paginatedProducts.length : 0,
@@ -778,7 +781,7 @@ const Products = () => {
 
   // Safety check: ensure loading is false when products are available or after timeout
   useEffect(() => {
-    if (products.length > 0 && loading) {
+    if (safeProducts.length > 0 && loading) {
       console.log(
         "Safety check: Setting loading to false because products are available"
       );
@@ -790,14 +793,14 @@ const Products = () => {
       if (loading) {
         console.log("Loading timeout reached, setting loading to false");
         setLoading(false);
-        if (products.length === 0) {
+        if (safeProducts.length === 0) {
           setError("");
         }
       }
     }, 10000); // 10 second timeout
 
     return () => clearTimeout(loadingTimeout);
-  }, [products, loading]);
+  }, [safeProducts, loading]);
 
   // Clear all filters
   const clearAllFilters = () => {
