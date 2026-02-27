@@ -66,7 +66,7 @@ export const getPublicCategories = async () => {
   // Check cache first
   if (apiCache.isValid(cacheKey)) {
     console.log("Categories data loaded from cache");
-    return apiCache.get(cacheKey).data;
+    return apiCache.get(cacheKey); // Fixed: removed .data since cache already stores the data
   }
 
   try {
@@ -171,13 +171,15 @@ export const getAllPublicProducts = async (params = {}) => {
   // Check if request is already pending
   if (apiCache.isPending(cacheKey)) {
     console.log("Products API call already in progress, waiting...");
-    return apiCache.pendingRequests.get(cacheKey);
+    const pendingPromise = apiCache.pendingRequests.get(cacheKey);
+    const response = await pendingPromise;
+    return response.data;
   }
 
   // Check cache first (only for general products, not category-specific)
   if (!params.category && apiCache.isValid(cacheKey)) {
     console.log("Products data loaded from cache");
-    return apiCache.get(cacheKey).data;
+    return apiCache.get(cacheKey); // Fixed: removed .data since cache already stores the data
   }
 
   try {
@@ -559,13 +561,16 @@ export const getSeoByPageName = async (pageName) => {
   // Check if request is already pending
   if (apiCache.isPending(cacheKey)) {
     console.log(`SEO API call for ${pageName} already in progress, waiting...`);
-    return apiCache.pendingRequests.get(cacheKey);
+    const pendingPromise = apiCache.pendingRequests.get(cacheKey);
+    const response = await pendingPromise;
+    const data = response.data;
+    return data.success ? data.data : data;
   }
 
   // Check cache first
   if (apiCache.isValid(cacheKey)) {
     console.log(`SEO data for ${pageName} loaded from cache`);
-    return apiCache.get(cacheKey).data;
+    return apiCache.get(cacheKey); // Fixed: removed .data since cache already stores the data
   }
 
   try {
