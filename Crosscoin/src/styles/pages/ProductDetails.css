@@ -423,31 +423,46 @@
 .quantity-box {
   display: flex;
   align-items: center;
-  border: 1px solid #E5E7EB;
+  border: 1px solid #e6e6e6;
   background: #fff;
   min-width: 140px;
   box-sizing: border-box;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 .quantity-btn {
-  background: none;
+  background: #f8f8f8;
   border: none;
-  color: #222;
-  font-size: 2rem;
+  color: #180D3E;
+  font-size: 1.8rem;
   cursor: pointer;
-  width: 36px;
-  height: 36px;
-  font-weight: 400;
-  transition: background 0.2s;
+  width: 40px;
+  height: 40px;
+  font-weight: 900;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .quantity-btn:hover {
-  background: #f3f3f3;
+  background: #CE1E36;
+  color: white;
+}
+
+.quantity-btn:active {
+  transform: scale(0.95);
 }
 
 .quantity-value {
   flex: 1;
   text-align: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #180D3E;
+  padding: 0 0.5rem;
   font-size: 1.3rem;
   font-weight: 500;
   color: #222;
@@ -1609,24 +1624,32 @@
 .quantity-box {
   display: flex;
   align-items: center;
-  border: 1.5px solid #ddd;
-  width: 140px;
+  border: 1px solid #e6e6e6;
   background: #fff;
   overflow: hidden;
+  border-radius: 4px;
 }
 .quantity-btn {
   width: 40px;
   height: 40px;
-  background: none;
+  background: #f8f8f8;
   border: none;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #222;
+  color: #180D3E;
+  font-size: 1.8rem;
+  font-weight: 900;
   cursor: pointer;
-  transition: background 0.18s;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 .quantity-btn:hover {
-  background: #f3f3f3;
+  background: #CE1E36;
+  color: white;
+}
+.quantity-btn:active {
+  transform: scale(0.95);
 }
 .quantity-value {
   flex: 1;
@@ -1654,6 +1677,83 @@
   }
   
   /* Fixed action buttons at bottom when scrolled past product details */
+  .fixed-action-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    background: #ffffff;
+    padding: 16px 40px;
+    z-index: 1001;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    animation: slideUpSmooth 0.3s ease-out;
+    transform: translateY(0);
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+  }
+  
+  @keyframes slideUpSmooth {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  .fixed-action-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .fixed-action-footer .add-to-cart-btn,
+  .fixed-action-footer .buy-now-btn {
+    flex: 1;
+    max-width: 300px;
+    padding: 16px 32px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .fixed-action-footer .add-to-cart-btn {
+    background: #180D3E;
+    color: #ffffff;
+  }
+  
+  .fixed-action-footer .add-to-cart-btn:hover {
+    background: #2a1a5e;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(24, 13, 62, 0.3);
+  }
+  
+  .fixed-action-footer .buy-now-btn {
+    background: #CE1E36;
+    color: #ffffff;
+  }
+  
+  .fixed-action-footer .buy-now-btn:hover {
+    background: #a0182b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(206, 30, 54, 0.3);
+  }
+  
+  /* Hide on mobile */
+  @media (max-width: 426px) {
+    .fixed-action-footer {
+      display: none;
+    }
+  }
+  
+  /* Old fixed-bottom-desktop class - keep for backwards compatibility but not used */
   .action-buttons-row.fixed-bottom-desktop {
     position: fixed;
     bottom: 0;
@@ -2716,21 +2816,32 @@
   border: 1px solid #e6e6e6;
   border-radius: 4px;
   background: white;
+  overflow: hidden;
 }
 
 .quantity-btn {
-  background: none;
+  background: #f8f8f8;
   border: none;
   cursor: pointer;
   padding: 0.5rem 1rem;
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #333;
-  transition: background 0.2s ease;
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #180D3E;
+  transition: all 0.2s ease;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .quantity-btn:hover {
-  background: #f5f5f5;
+  background: #CE1E36;
+  color: white;
+}
+
+.quantity-btn:active {
+  transform: scale(0.95);
 }
 
 .quantity-value {

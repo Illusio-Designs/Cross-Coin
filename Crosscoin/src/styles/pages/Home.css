@@ -1149,26 +1149,40 @@
 }
 
 .featured-product-card .quantity-btn {
-  background: none;
+  background: #f8f8f8;
   border: none;
   cursor: pointer;
   padding: 0.5rem 1rem;
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #333;
-  transition: background 0.2s ease;
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #180D3E;
+  transition: all 0.2s ease;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .featured-product-card .quantity-btn:hover {
-  background: #f5f5f5;
+  background: #CE1E36;
+  color: white;
+}
+
+.featured-product-card .quantity-btn:active {
+  transform: scale(0.95);
 }
 
 .featured-product-card .quantity-value {
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1.5rem;
   border-left: 1px solid #e6e6e6;
   border-right: 1px solid #e6e6e6;
-  min-width: 50px;
+  min-width: 60px;
   text-align: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #180D3E;
+  background: white;
   font-weight: 600;
   color: #333;
 }
