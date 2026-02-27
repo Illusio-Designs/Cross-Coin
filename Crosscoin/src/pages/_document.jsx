@@ -12,6 +12,20 @@ export default function Document() {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://www.clarity.ms" />
         
+        {/* Font Optimization - Preload critical fonts with font-display: swap */}
+        <link
+          rel="preload"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+          as="style"
+          onLoad="this.onload=null;this.rel='stylesheet'"
+        />
+        <noscript>
+          <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+          />
+        </noscript>
+        
         {/* Prevent zoom on form inputs on iOS */}
         <meta name="format-detection" content="telephone=no" />
 
