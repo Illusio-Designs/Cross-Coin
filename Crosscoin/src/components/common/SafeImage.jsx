@@ -55,10 +55,13 @@ const SafeImage = ({
       newSrc = fallbackSrc;
     }
     
-    setImageSrc(newSrc);
-    setImageError(false);
-    setImageLoading(true);
-  }, [imageData, fallbackSrc, isLogo, isProductCard]);
+    // Only reset loading state if the source URL actually changed
+    if (newSrc !== imageSrc) {
+      setImageSrc(newSrc);
+      setImageError(false);
+      setImageLoading(true);
+    }
+  }, [imageData, fallbackSrc, isLogo, isProductCard, imageSrc]);
 
   const handleError = (event) => {
     if (!imageError) {
