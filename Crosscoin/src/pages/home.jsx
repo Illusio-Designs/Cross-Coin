@@ -1049,7 +1049,7 @@ const Home = () => {
                     </div>
                   </div>
                 );
-              })}
+              })
               ) : null}
             </div>
             {!exclusiveProductsLoading && exclusiveProducts.length > 0 && (
