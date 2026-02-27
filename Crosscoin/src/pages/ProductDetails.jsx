@@ -1143,8 +1143,6 @@ export default function ProductDetails() {
                         variationImages[selectedThumbnail]
                     }}
                     alt={variationImages[selectedThumbnail]?.alt_text || product?.name || "Product Image"}
-                    width={600}
-                    height={600}
                     priority={true}
                     quality={80}
                     isProductCard={true}
