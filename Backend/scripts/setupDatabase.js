@@ -87,9 +87,9 @@ const setupDatabase = async () => {
     }
 
     // Sync all tables at once (this creates all tables and relationships)
-    // AUTOMATION: Always alter tables to match the latest model definitions (auto-migration)
+    // Use force: false and alter: false to prevent constraint issues
     console.log("Syncing all tables...");
-    await sequelize.sync({ alter: true, hooks: false });
+    await sequelize.sync({ force: false, alter: false, hooks: false });
     console.log("✓ All tables synced");
 
     // Fix shipping_addresses table constraints for guest users
