@@ -413,7 +413,6 @@ const Header = () => {
                 {isSearching ? (
                   <div className="search-loading">
                     <div className="loading-spinner"></div>
-                    <span>Searching...</span>
                   </div>
                 ) : searchResults.length > 0 ? (
                   <div className="search-results-list">

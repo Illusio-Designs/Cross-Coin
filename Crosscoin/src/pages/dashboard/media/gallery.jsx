@@ -312,7 +312,7 @@ const MediaGallery = () => {
                 fontWeight: '500'
               }}
             >
-              {uploading ? 'Uploading...' : 'Upload Images'}
+              {uploading ? <div className="loading-spinner"></div> : 'Upload Images'}
             </label>
           </div>
           
@@ -450,7 +450,7 @@ const MediaGallery = () => {
                       fontSize: '12px',
                       zIndex: 1
                     }}>
-                      Loading...
+                      <div className="loading-spinner" style={{ width: '20px', height: '20px' }}></div>
                     </div>
                     {(() => {
                       const imageUrl = getImageUrl(imagePath);
