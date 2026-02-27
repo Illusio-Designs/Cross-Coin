@@ -5,7 +5,11 @@ import { useState, useEffect } from "react";
 import { getGuestOrder, getUserOrders } from "../services/publicindex";
 import { useAuth } from "../context/AuthContext";
 import { fbqTrack } from "../components/common/Analytics";
-import "../styles/pages/ThankYou.css"; // Import new stylesheet
+
+// Load page-specific CSS
+import "../styles/pages/ThankYou.css";
+import "../styles/components/Header.css";
+import "../styles/components/Footer.css";
 
 export default function ThankYou() {
   const router = useRouter();

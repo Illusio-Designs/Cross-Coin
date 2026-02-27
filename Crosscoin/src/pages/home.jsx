@@ -1,10 +1,10 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import dynamic from 'next/dynamic';
 import Header from "../components/Header";
-import Footer from "../components/Footer";
-import Testimonials from "../components/Testimonials";
 import ProductCard from "../components/ProductCard";
 import SafeImage from "../components/common/SafeImage";
+import ProductSkeleton from "../components/common/ProductSkeleton";
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -16,6 +16,21 @@ import { showValidationErrorToast } from '../utils/toast';
 import DOMPurify from 'dompurify';
 import colorMap from '../components/products/colorMap';
 import { seoService } from '../services/index';
+
+// Load page-specific CSS
+import '../styles/components/Footer.css';
+import '../styles/components/Header.css';
+import '../styles/components/Testimonials.css';
+import '../styles/pages/Home.css';
+
+// Lazy load below-the-fold components for better performance
+const Footer = dynamic(() => import("../components/Footer"), {
+  loading: () => <div style={{ minHeight: '200px', background: '#f9fafb' }} />
+});
+
+const Testimonials = dynamic(() => import("../components/Testimonials"), {
+  loading: () => <div style={{ minHeight: '300px', background: '#fff' }} />
+});
 
 // Helper functions moved inside component for Fast Refresh compatibility
 const Home = () => {
@@ -566,6 +581,7 @@ const Home = () => {
                   alt={slides[current].title}
                   priority={true}
                   quality={85}
+                  isSlider={true}
                   style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                 />
               </div>
@@ -670,7 +686,14 @@ const Home = () => {
               </div>
             </div>
             <div className="category-products">
-              {currentCategoryProducts.length > 0 && (
+              {categoryLoading && (
+                <div className="products-slider" ref={categorySliderRef}>
+                  {Array(6).fill(0).map((_, idx) => (
+                    <ProductSkeleton key={`skeleton-${idx}`} />
+                  ))}
+                </div>
+              )}
+              {!categoryLoading && currentCategoryProducts.length > 0 && (
                 <>
                     {showCategoryArrows && (
                     <button className="slider-arrow slider-arrow-left" aria-label="Previous slider" onClick={() => scrollSlider('left')}>
@@ -1033,13 +1056,21 @@ const Home = () => {
             </button>
           </div>
           <div className="category-products">
-            {showLatestArrows && (
+            {latestProductsLoading && (
+              <div className="products-slider" ref={latestSliderRef}>
+                {Array(8).fill(0).map((_, idx) => (
+                  <ProductSkeleton key={`latest-skeleton-${idx}`} />
+                ))}
+              </div>
+            )}
+            {!latestProductsLoading && showLatestArrows && (
               <button className="slider-arrow slider-arrow-left" aria-label="Previous latest product" onClick={() => scrollLatestSlider('left')}>
                 <IoIosArrowBack />
               </button>
             )}
-            <div className="products-slider" ref={latestSliderRef}>
-              {latestProducts.slice(0, 15).map((product) => {
+            {!latestProductsLoading && (
+              <div className="products-slider" ref={latestSliderRef}>
+                {latestProducts.slice(0, 15).map((product) => {
                 let imagesArr = [];
                 if (Array.isArray(product.images) && product.images.length > 0) {
                   imagesArr = product.images.map(img => {
@@ -1095,8 +1126,9 @@ const Home = () => {
                   />
                 );
               })}
-            </div>
-            {showLatestArrows && (
+              </div>
+            )}
+            {!latestProductsLoading && showLatestArrows && (
               <button className="slider-arrow slider-arrow-right" aria-label="Next latest product" onClick={() => scrollLatestSlider('right')}>
                 <IoIosArrowForward />
               </button>

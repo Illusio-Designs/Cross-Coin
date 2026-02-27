@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import Footer from "../components/Footer";
+import dynamic from "next/dynamic";
 import Header from "../components/Header";
 import SafeImage from "../components/common/SafeImage";
 import { useCart } from '../context/CartContext';
@@ -18,7 +18,16 @@ import DOMPurify from 'dompurify';
 import Modal from "../components/common/Modal";
 import colorMap from '../components/products/colorMap';
 import { useRef } from "react";
-// Add image loaded state
+
+// Load page-specific CSS
+import "../styles/pages/ProductDetails.css";
+import "../styles/components/Header.css";
+import "../styles/components/Footer.css";
+
+// Lazy load Footer
+const Footer = dynamic(() => import("../components/Footer"), {
+  loading: () => <div style={{ minHeight: '200px', background: '#f9fafb' }} />
+});
 
 export default function ProductDetails() {
   const searchParams = useSearchParams();

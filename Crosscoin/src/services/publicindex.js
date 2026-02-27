@@ -103,12 +103,37 @@ export const getPublicCategoryByName = async (categoryName) => {
   }
 };
 
-// Get public sliders
+// Get public sliders with caching
 export const getPublicSliders = async () => {
+  const cacheKey = apiCache.getCacheKey(`${API_URL}/api/sliders/public`);
+  
+  // Check if request is already pending
+  if (apiCache.isPending(cacheKey)) {
+    const pendingPromise = apiCache.getPending(cacheKey);
+    const response = await pendingPromise;
+    return response.data.sliders || response.data;
+  }
+
+  // Check cache first (10 minutes TTL for sliders)
+  const cached = apiCache.get(cacheKey);
+  if (cached) {
+    console.log("Sliders data loaded from cache");
+    return cached;
+  }
+
   try {
-    const response = await axios.get(`${API_URL}/api/sliders/public/sliders`);
-    console.log("Public Sliders Response:", response.data);
-    return response.data.sliders || response.data; // Handle both response formats
+    console.log("Fetching sliders from API...");
+    const promise = axios.get(`${API_URL}/api/sliders/public/sliders`);
+    apiCache.addPending(cacheKey, promise);
+    
+    const response = await promise;
+    const data = response.data.sliders || response.data;
+    
+    // Cache for 10 minutes
+    apiCache.set(cacheKey, data, 10 * 60 * 1000);
+    console.log("Sliders data cached successfully");
+    
+    return data;
   } catch (error) {
     console.error("Error fetching public sliders:", error);
     throw error.response?.data || error.message;

@@ -10,8 +10,9 @@ const SafeImage = ({
   height,
   isLogo = false,
   isProductCard = false,
-  priority = false, // Accept but don't use for now
-  quality = 75, // Accept but don't use for now
+  isSlider = false, // NEW: Skip skeleton for sliders
+  priority = false,
+  quality = 75,
   ...props 
 }) => {
   const [imageError, setImageError] = useState(false);
