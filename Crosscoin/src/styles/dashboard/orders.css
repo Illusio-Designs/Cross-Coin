@@ -602,10 +602,6 @@
   background: #fff;
 }
 
-.product-image:hover {
-  transform: scale(1.1);
-}
-
 .product-image-container::before {
   content: '';
   position: absolute;
@@ -1859,10 +1855,6 @@
     object-fit: cover;
     transition: transform 0.3s ease;
     background: #fff;
-}
-
-.product-image:hover {
-    transform: scale(1.05);
 }
 
 /* SKU Display Enhancement */
