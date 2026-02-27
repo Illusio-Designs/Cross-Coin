@@ -1132,8 +1132,8 @@ export default function ProductDetails() {
       <div className="product-details-container">
         <Header />
         <div className="product-details">
-          <div className="product-gallery" style={{ textAlign: 'center' }}>
-            <div className="product-image-container" style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '600px' }}>
+          <div className="product-gallery">
+            <div className="product-image-container">
               {variationImages.length > 0 && variationImages[selectedThumbnail] ? (
                 <>
                   <SafeImage
