@@ -148,13 +148,15 @@ const SafeImage = ({
       loading={priority ? 'eager' : 'lazy'}
       onError={handleError}
       onLoad={handleLoad}
-      className={`${className} ${isProductCard ? 'product-card-image-contain' : ''}`}
+      className={`${className} ${isProductCard ? 'product-card-image-contain' : ''} ${imageLoading ? 'image-loading' : 'image-loaded'}`}
       style={{
         ...style,
         width: isProductCard ? '100%' : (width || style.width || '100%'),
         height: isProductCard ? '100%' : (height === 'auto' ? 'auto' : (height || style.height || 'auto')),
         objectFit: isProductCard ? 'contain' : (style.objectFit || 'cover'),
-        display: 'block'
+        display: 'block',
+        filter: imageLoading ? 'grayscale(100%)' : 'grayscale(0%)',
+        transition: 'filter 0.3s ease-in-out'
       }}
       {...props}
     />
