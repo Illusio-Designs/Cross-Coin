@@ -65,6 +65,18 @@ const Payment = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    magic_checkout_order_id: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    magic_checkout_payment_id: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    magic_checkout_signature: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
   },
   {
     tableName: "payments",
@@ -79,6 +91,12 @@ const Payment = sequelize.define(
       },
       {
         fields: ["status"],
+      },
+      {
+        fields: ["magic_checkout_order_id"],
+      },
+      {
+        fields: ["magic_checkout_payment_id"],
       },
     ],
   }

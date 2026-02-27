@@ -8,8 +8,15 @@ const {
     getUserPayments,
     createRazorpayOrder,
     updateOrderPayment,
-    razorpayCallback
+    razorpayCallback,
+    createMagicCheckoutOrder,
+    verifyMagicCheckoutPayment
 } = require('../controller/paymentController.js');
+const {
+    getPromotions,
+    applyPromotion,
+    getShippingInfo
+} = require('../controller/magicCheckoutController.js');
 const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
@@ -24,6 +31,13 @@ router.post('/razorpay-callback', razorpayCallback);
 
 // Guest routes (no authentication required)
 router.post('/guest/razorpay-order', createRazorpayOrder);
+
+// Magic Checkout routes (support both authenticated and guest access)
+router.post('/magic-checkout/create-order', createMagicCheckoutOrder);
+router.post('/magic-checkout/verify-payment', verifyMagicCheckoutPayment);
+router.get('/magic-checkout/promotions', getPromotions);
+router.post('/magic-checkout/apply-promotion', applyPromotion);
+router.post('/magic-checkout/shipping-info', getShippingInfo);
 
 // Public routes (no authentication required for payment updates)
 router.post('/update-order-payment', updateOrderPayment);

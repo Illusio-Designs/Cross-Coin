@@ -231,6 +231,157 @@ const setupDatabase = async () => {
       );
     }
 
+    // Run Magic Checkout migrations
+    console.log("Running Magic Checkout migrations...");
+    try {
+      // Migration 001: Add Magic Checkout fields to payments table
+      console.log("Running migration 001: Add Magic Checkout fields to payments...");
+      
+      // Check and add magic_checkout_order_id
+      const [orderIdExists] = await sequelize.query(`
+        SELECT COUNT(*) as count
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = DATABASE() 
+        AND TABLE_NAME = 'payments' 
+        AND COLUMN_NAME = 'magic_checkout_order_id'
+      `);
+      
+      if (orderIdExists[0].count === 0) {
+        await sequelize.query(`
+          ALTER TABLE payments 
+          ADD COLUMN magic_checkout_order_id VARCHAR(255) NULL 
+          COMMENT 'Razorpay Magic Checkout order identifier'
+        `);
+        console.log("  ✓ Added magic_checkout_order_id column");
+      } else {
+        console.log("  ✓ magic_checkout_order_id column already exists");
+      }
+      
+      // Check and add magic_checkout_payment_id
+      const [paymentIdExists] = await sequelize.query(`
+        SELECT COUNT(*) as count
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = DATABASE() 
+        AND TABLE_NAME = 'payments' 
+        AND COLUMN_NAME = 'magic_checkout_payment_id'
+      `);
+      
+      if (paymentIdExists[0].count === 0) {
+        await sequelize.query(`
+          ALTER TABLE payments 
+          ADD COLUMN magic_checkout_payment_id VARCHAR(255) NULL 
+          COMMENT 'Razorpay Magic Checkout payment identifier'
+        `);
+        console.log("  ✓ Added magic_checkout_payment_id column");
+      } else {
+        console.log("  ✓ magic_checkout_payment_id column already exists");
+      }
+      
+      // Check and add magic_checkout_signature
+      const [signatureExists] = await sequelize.query(`
+        SELECT COUNT(*) as count
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = DATABASE() 
+        AND TABLE_NAME = 'payments' 
+        AND COLUMN_NAME = 'magic_checkout_signature'
+      `);
+      
+      if (signatureExists[0].count === 0) {
+        await sequelize.query(`
+          ALTER TABLE payments 
+          ADD COLUMN magic_checkout_signature VARCHAR(255) NULL 
+          COMMENT 'Razorpay Magic Checkout payment signature for verification'
+        `);
+        console.log("  ✓ Added magic_checkout_signature column");
+      } else {
+        console.log("  ✓ magic_checkout_signature column already exists");
+      }
+      
+      // Check and add indexes
+      const [orderIndexExists] = await sequelize.query(`
+        SELECT COUNT(*) as count
+        FROM INFORMATION_SCHEMA.STATISTICS 
+        WHERE TABLE_SCHEMA = DATABASE() 
+        AND TABLE_NAME = 'payments' 
+        AND INDEX_NAME = 'idx_magic_checkout_order'
+      `);
+      
+      if (orderIndexExists[0].count === 0) {
+        await sequelize.query(`
+          ALTER TABLE payments 
+          ADD INDEX idx_magic_checkout_order (magic_checkout_order_id)
+        `);
+        console.log("  ✓ Added idx_magic_checkout_order index");
+      } else {
+        console.log("  ✓ idx_magic_checkout_order index already exists");
+      }
+      
+      const [paymentIndexExists] = await sequelize.query(`
+        SELECT COUNT(*) as count
+        FROM INFORMATION_SCHEMA.STATISTICS 
+        WHERE TABLE_SCHEMA = DATABASE() 
+        AND TABLE_NAME = 'payments' 
+        AND INDEX_NAME = 'idx_magic_checkout_payment'
+      `);
+      
+      if (paymentIndexExists[0].count === 0) {
+        await sequelize.query(`
+          ALTER TABLE payments 
+          ADD INDEX idx_magic_checkout_payment (magic_checkout_payment_id)
+        `);
+        console.log("  ✓ Added idx_magic_checkout_payment index");
+      } else {
+        console.log("  ✓ idx_magic_checkout_payment index already exists");
+      }
+      
+      console.log("✓ Migration 001 completed");
+      
+      // Migration 002: Create address_quality_scores table
+      console.log("Running migration 002: Create address_quality_scores table...");
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS address_quality_scores (
+          id INT PRIMARY KEY AUTO_INCREMENT COMMENT 'Primary key',
+          address_hash VARCHAR(64) NOT NULL UNIQUE COMMENT 'SHA256 hash of the address for tracking',
+          pincode VARCHAR(10) NOT NULL COMMENT 'Postal code of the address',
+          quality_score INT NOT NULL DEFAULT 50 COMMENT 'Address quality score (0-100)',
+          delivery_success_count INT NOT NULL DEFAULT 0 COMMENT 'Number of successful deliveries',
+          delivery_failure_count INT NOT NULL DEFAULT 0 COMMENT 'Number of failed deliveries',
+          last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          INDEX idx_pincode (pincode),
+          INDEX idx_quality_score (quality_score),
+          INDEX idx_address_hash (address_hash)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+      `);
+      console.log("✓ Migration 002 completed");
+      
+      // Migration 003: Ensure coupon_usage table exists
+      console.log("Running migration 003: Ensure coupon_usage table exists...");
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS coupon_usage (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          coupon_id INT NOT NULL,
+          user_id INT NULL,
+          guest_user_id INT NULL,
+          order_id INT NULL,
+          used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          INDEX idx_coupon_user (coupon_id, user_id),
+          INDEX idx_coupon_guest (coupon_id, guest_user_id),
+          INDEX idx_order (order_id),
+          CONSTRAINT fk_coupon_usage_coupon FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE CASCADE,
+          CONSTRAINT fk_coupon_usage_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+          CONSTRAINT fk_coupon_usage_guest FOREIGN KEY (guest_user_id) REFERENCES guest_users(id) ON DELETE SET NULL,
+          CONSTRAINT fk_coupon_usage_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+      `);
+      console.log("✓ Migration 003 completed");
+      
+      console.log("✓ All Magic Checkout migrations completed successfully");
+    } catch (migrationError) {
+      console.log("⚠️ Magic Checkout migration warning:", migrationError.message);
+      // Don't fail the entire setup if migrations have issues
+    }
+
     // Now it's safe to create the admin user
     if (models["User"]) {
       const bcrypt = require("bcryptjs");
