@@ -297,7 +297,7 @@
 .product-card-image-contain {
   object-fit: contain !important;
   width: 100% !important;
-  height: 100% !important;
+  height: auto !important;
 }
 
 /* Shimmer loading animation */
