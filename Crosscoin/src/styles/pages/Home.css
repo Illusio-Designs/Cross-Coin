@@ -758,6 +758,30 @@
 .featured-products-section {
   padding: 50px 10%;
   background-color: #fff;
+  display: block;
+  visibility: visible;
+  opacity: 1;
+}
+
+.featured-products-section .section-title {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #180d3e;
+  position: relative;
+  margin-bottom: 2rem;
+  display: block;
+}
+
+.featured-products-section .section-title::after {
+  content: "";
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  background: #ce1e36;
 }
 
 .featured-products-container {
