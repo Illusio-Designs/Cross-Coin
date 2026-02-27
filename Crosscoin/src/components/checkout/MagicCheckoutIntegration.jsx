@@ -344,16 +344,17 @@ const MagicCheckoutIntegration = ({
   }, [magicCheckoutInstance, onError]);
 
   /**
-   * Fallback to standard checkout
+   * Fallback to standard checkout - Removed, open SDK directly
    */
   const fallbackToStandardCheckout = useCallback(() => {
-    console.log("Falling back to standard checkout");
-    setError("Magic Checkout unavailable, using standard checkout");
+    console.log("Magic Checkout SDK failed to load");
+    setError("Magic Checkout is not available. Please check your Razorpay configuration.");
     
-    if (onError) {
-      onError(new Error("FALLBACK_TO_STANDARD"));
+    // Show notification to user
+    if (typeof window !== 'undefined' && window.alert) {
+      alert("Magic Checkout Error: SDK failed to load. Please check:\n1. NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED is set to 'true'\n2. NEXT_PUBLIC_RAZORPAY_KEY_ID is configured\n3. Magic Checkout is enabled in your Razorpay account");
     }
-  }, [onError]);
+  }, []);
 
   /**
    * Load SDK on mount if enabled
@@ -387,7 +388,21 @@ const MagicCheckoutIntegration = ({
 
   // Don't render anything if Magic Checkout is not enabled
   if (!MAGIC_CHECKOUT_ENABLED) {
-    return null;
+    return (
+      <div className="magic-checkout-container" style={{ 
+        padding: '20px', 
+        backgroundColor: '#fff3cd', 
+        border: '1px solid #ffc107',
+        borderRadius: '8px',
+        marginBottom: '20px'
+      }}>
+        <p style={{ margin: 0, color: '#856404', fontWeight: '500' }}>
+          ⚠️ Magic Checkout is not enabled. 
+          <br />
+          <small>Set NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED=true in .env.local to enable.</small>
+        </p>
+      </div>
+    );
   }
 
   return (

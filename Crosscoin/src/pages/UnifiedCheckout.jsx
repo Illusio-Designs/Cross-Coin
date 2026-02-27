@@ -411,14 +411,9 @@ export default function UnifiedCheckout() {
   const handleMagicCheckoutError = (error) => {
     console.error("Magic Checkout error:", error);
     
-    // Check if error is fallback to standard checkout
-    if (error.message === "FALLBACK_TO_STANDARD") {
-      console.log("Falling back to standard checkout");
-      setUseMagicCheckout(false);
-      return;
-    }
+    // Show error notification
+    alert(`Magic Checkout Error: ${error.message || 'Payment failed'}\n\nPlease try again or contact support.`);
     
-    showOrderPlacedErrorToast("Magic Checkout failed. Please try again or use standard checkout.");
     setIsProcessing(false);
   };
 
