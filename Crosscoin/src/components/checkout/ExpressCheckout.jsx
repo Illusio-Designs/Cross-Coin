@@ -683,21 +683,42 @@ Processing Time: ${(endTime - startTime).toFixed(2)}ms
             )}
           </div>
 
-          <button
-            onClick={() => setShowGuestForm(false)}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#f3f4f6',
-              color: '#666',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              cursor: 'pointer',
-              marginTop: '10px'
-            }}
-          >
-            Cancel
-          </button>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+            <button
+              onClick={processExpressCheckout}
+              disabled={isProcessing}
+              style={{
+                flex: 1,
+                padding: '12px 24px',
+                backgroundColor: isProcessing ? '#ccc' : '#CE1E36',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '15px',
+                fontWeight: '600',
+                cursor: isProcessing ? 'not-allowed' : 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              {isProcessing ? 'Processing...' : '⚡ Continue to Payment'}
+            </button>
+            
+            <button
+              onClick={() => setShowGuestForm(false)}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#f3f4f6',
+                color: '#666',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '15px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
