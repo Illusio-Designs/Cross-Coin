@@ -500,10 +500,11 @@ module.exports.createOrder = async (req, res) => {
                 customer_id: customer_id || 'guest',
                 cart_items: JSON.stringify(cart_items),
                 shipping_address: JSON.stringify(shipping_address),
+                checkout_type: 'magic_checkout',
                 ...notes
             },
-            // Enable partial payment (required for Magic Checkout)
-            partial_payment: false,
+            // Enable partial payment (set to true for Magic Checkout)
+            partial_payment: true,
         };
 
         // Create order using Razorpay API

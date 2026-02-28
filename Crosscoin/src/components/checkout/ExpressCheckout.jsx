@@ -397,13 +397,7 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
         description: "Express Checkout",
         order_id: orderData.order_id,
         
-        // CRITICAL: Enable Magic Checkout with customer_details
-        customer_details: {
-          contact: customerDetails.contact,
-          email: customerDetails.email,
-          name: customerDetails.name,
-        },
-        
+        // CRITICAL: Prefill customer details (required for Magic Checkout)
         prefill: {
           name: customerDetails.name,
           email: customerDetails.email,
@@ -435,43 +429,14 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
         send_sms_hash: true,
         allow_rotation: true,
         
-        // Retry configuration for Magic Checkout
+        // Retry configuration
         retry: {
           enabled: true,
           max_count: 3
         },
         
-        // Timeout for Magic Checkout
+        // Timeout
         timeout: 300,
-        
-        // Enable all payment methods for Magic Checkout
-        config: {
-          display: {
-            blocks: {
-              banks: {
-                name: "Pay using",
-                instruments: [
-                  {
-                    method: "upi"
-                  },
-                  {
-                    method: "card"
-                  },
-                  {
-                    method: "netbanking"
-                  },
-                  {
-                    method: "wallet"
-                  }
-                ]
-              }
-            },
-            sequence: ["block.banks"],
-            preferences: {
-              show_default_blocks: true
-            }
-          }
-        },
       };
 
       const rzp = new window.Razorpay(options);
