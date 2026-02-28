@@ -503,8 +503,8 @@ module.exports.createOrder = async (req, res) => {
                 checkout_type: 'magic_checkout',
                 ...notes
             },
-            // Enable partial payment (set to true for Magic Checkout)
-            partial_payment: true,
+            // Disable partial payment for cleaner Magic Checkout experience
+            partial_payment: false,
         };
 
         // Create order using Razorpay API
