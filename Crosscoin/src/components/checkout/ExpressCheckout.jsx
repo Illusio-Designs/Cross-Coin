@@ -135,12 +135,11 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
         return;
       }
 
-      console.log("Creating new script tag for Razorpay Magic Checkout SDK...");
+      console.log("Creating new script tag for Razorpay SDK...");
       setSDKLoading(true);
       const script = document.createElement("script");
       script.id = "razorpay-checkout-script";
-      // Use Magic Checkout specific script
-      script.src = "https://checkout.razorpay.com/v1/magic-checkout.js";
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
       script.async = true;
 
       script.onload = () => {
