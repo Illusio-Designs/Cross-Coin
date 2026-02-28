@@ -135,11 +135,12 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
         return;
       }
 
-      console.log("Creating new script tag for Razorpay SDK...");
+      console.log("Creating new script tag for Razorpay Magic Checkout SDK...");
       setSDKLoading(true);
       const script = document.createElement("script");
       script.id = "razorpay-checkout-script";
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      // Use Magic Checkout specific script
+      script.src = "https://checkout.razorpay.com/v1/magic-checkout.js";
       script.async = true;
 
       script.onload = () => {
@@ -300,41 +301,36 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
    * Process Express Checkout
    */
   const processExpressCheckout = useCallback(async () => {
+    console.log("=== PROCESS EXPRESS CHECKOUT CALLED ===");
+    console.log("isAuthenticated:", isAuthenticated);
+    console.log("showGuestForm:", showGuestForm);
+    
     // For guest users, show form first
     if (!isAuthenticated && !showGuestForm) {
+      console.log("Showing guest form...");
       setShowGuestForm(true);
       return;
     }
     
     // For guest users, validate form
     if (!isAuthenticated && !validateGuestDetails()) {
+      console.log("Guest form validation failed");
       return;
     }
     
+    console.log("Validation passed, proceeding with checkout...");
+    
     // Get customer details
     const customerDetails = getCustomerDetails();
+    console.log("Customer details:", customerDetails);
     
     // Calculate total amount
     const totalAmount = calculateTotalAmount();
+    console.log("Total amount:", totalAmount);
     
-    // Build debug info for console logging only
-    const debugInfo = {
-      timestamp: new Date().toISOString(),
-      sdkLoaded: sdkLoaded,
-      windowRazorpay: typeof window !== 'undefined' ? !!window.Razorpay : false,
-      razorpayKey: RAZORPAY_KEY ? 'SET (' + RAZORPAY_KEY.substring(0, 10) + '...)' : 'NOT SET',
-      magicCheckoutEnabled: MAGIC_CHECKOUT_ENABLED,
-      isAuthenticated: isAuthenticated,
-      userId: user?.id || 'guest',
-      userName: customerDetails.name || 'not set',
-      userEmail: customerDetails.email || 'not set',
-      userPhone: customerDetails.contact || 'not set',
-      cartItemsCount: cartItems.length,
-      totalAmount: totalAmount,
-    };
-    
-    // Log to console only (no alert popup)
-    console.log("Express Checkout Debug Info:", debugInfo);
+    // Check SDK loaded
+    console.log("SDK loaded:", sdkLoaded);
+    console.log("window.Razorpay exists:", typeof window !== 'undefined' ? !!window.Razorpay : false);
     
     // Proceed with payment gateway
     if (!sdkLoaded || !window.Razorpay) {
@@ -346,9 +342,7 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
     try {
       setIsProcessing(true);
       setError(null);
-
-      // Step 1: Calculate total amount (already calculated above)
-      // const totalAmount = calculateTotalAmount();
+      console.log("Processing started...");
 
       if (totalAmount <= 0) {
         throw new Error("Cart is empty");
@@ -370,8 +364,10 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
         }))
       ];
 
+      console.log("Cart items prepared:", allItems);
+
       // Step 3: Create Razorpay order
-      console.log("Creating Razorpay order for Express Checkout...");
+      console.log("Creating Razorpay order...");
       const orderData = await createMagicCheckoutOrder({
         amount: totalAmount,
         currency: "INR",
@@ -385,11 +381,8 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
 
       console.log("Order created successfully:", orderData);
 
-      // Get customer details
-      const customerDetails = getCustomerDetails();
-
       // Step 4: Open Razorpay Checkout
-      // Magic Checkout will activate automatically if configured in Dashboard
+      console.log("Opening Razorpay checkout...");
       const options = {
         key: RAZORPAY_KEY,
         amount: Math.round(totalAmount * 100), // Convert to paise
@@ -423,6 +416,9 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
         },
       };
 
+      console.log("Razorpay options:", options);
+      console.log("Creating Razorpay instance...");
+      
       const rzp = new window.Razorpay(options);
       
       rzp.on('payment.failed', function (response) {
@@ -431,10 +427,13 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
         setIsProcessing(false);
       });
 
+      console.log("Opening Razorpay modal...");
       rzp.open();
+      console.log("Razorpay modal opened successfully");
       return true;
     } catch (err) {
       console.error("Error processing Express Checkout:", err);
+      console.error("Error stack:", err.stack);
       setError(err.message || "Failed to process checkout");
       setIsProcessing(false);
       
@@ -443,7 +442,7 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
       }
       return false;
     }
-  }, [sdkLoaded, cartItems, buyNowItem, user, RAZORPAY_KEY, MAGIC_CHECKOUT_ENABLED, isAuthenticated, calculateTotalAmount, guestDetails, showGuestForm, validateGuestDetails, getCustomerDetails]);
+  }, [sdkLoaded, cartItems, buyNowItem, user, RAZORPAY_KEY, MAGIC_CHECKOUT_ENABLED, isAuthenticated, calculateTotalAmount, guestDetails, showGuestForm, validateGuestDetails, getCustomerDetails, handlePaymentSuccess, onError]);
 
   /**
    * Load SDK on mount
