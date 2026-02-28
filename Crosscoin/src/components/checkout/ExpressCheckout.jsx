@@ -421,16 +421,35 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
             console.log("Express Checkout dismissed by user");
             setIsProcessing(false);
           },
-          // Enable Magic Checkout modal
           confirm_close: true,
+          escape: false,
+          animation: true,
+          backdropclose: false,
         },
         
-        // CRITICAL: Enable 1-Click Checkout (Magic Checkout)
+        // CRITICAL: Enable Magic Checkout
+        "magic": true,
+        
+        // Enable 1-Click Checkout features
+        remember_customer: true,
+        send_sms_hash: true,
+        allow_rotation: true,
+        
+        // Retry configuration for Magic Checkout
+        retry: {
+          enabled: true,
+          max_count: 3
+        },
+        
+        // Timeout for Magic Checkout
+        timeout: 300,
+        
+        // Enable all payment methods for Magic Checkout
         config: {
           display: {
             blocks: {
               banks: {
-                name: "All payment methods",
+                name: "Pay using",
                 instruments: [
                   {
                     method: "upi"
@@ -453,11 +472,6 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
             }
           }
         },
-        
-        // Enable Magic Checkout features
-        remember_customer: true,
-        send_sms_hash: true,
-        allow_rotation: true,
       };
 
       const rzp = new window.Razorpay(options);
