@@ -19,10 +19,82 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
   const [sdkLoading, setSDKLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Guest user details state
+  const [showGuestForm, setShowGuestForm] = useState(false);
+  const [guestDetails, setGuestDetails] = useState({
+    name: '',
+    email: '',
+    phone: ''
+  });
+  const [guestFormErrors, setGuestFormErrors] = useState({});
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
   const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
   const MAGIC_CHECKOUT_ENABLED = process.env.NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED === "true";
+
+  /**
+   * Validate guest details
+   */
+  const validateGuestDetails = () => {
+    const errors = {};
+    
+    if (!guestDetails.name.trim()) {
+      errors.name = 'Name is required';
+    }
+    
+    if (!guestDetails.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestDetails.email)) {
+      errors.email = 'Invalid email format';
+    }
+    
+    if (!guestDetails.phone.trim()) {
+      errors.phone = 'Phone is required';
+    } else if (!/^[6-9]\d{9}$/.test(guestDetails.phone)) {
+      errors.phone = 'Invalid phone number (10 digits starting with 6-9)';
+    }
+    
+    setGuestFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  /**
+   * Handle guest form input change
+   */
+  const handleGuestInputChange = (field, value) => {
+    setGuestDetails(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    // Clear error for this field
+    if (guestFormErrors[field]) {
+      setGuestFormErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+  };
+
+  /**
+   * Get customer details (logged in user or guest)
+   */
+  const getCustomerDetails = () => {
+    if (isAuthenticated && user) {
+      return {
+        name: user.username || '',
+        email: user.email || '',
+        contact: '' // Will be collected by Razorpay
+      };
+    } else {
+      return {
+        name: guestDetails.name,
+        email: guestDetails.email,
+        contact: guestDetails.phone
+      };
+    }
+  };
+
 
   /**
    * Load Razorpay Magic Checkout SDK
@@ -228,6 +300,17 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
    * Process Express Checkout
    */
   const processExpressCheckout = useCallback(async () => {
+    // For guest users, show form first
+    if (!isAuthenticated && !showGuestForm) {
+      setShowGuestForm(true);
+      return;
+    }
+    
+    // For guest users, validate form
+    if (!isAuthenticated && !validateGuestDetails()) {
+      return;
+    }
+    
     // Use performance.now() to track timing
     const startTime = performance.now();
     
@@ -235,12 +318,14 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
     console.warn("🚀 EXPRESS CHECKOUT BUTTON CLICKED");
     console.log("Timestamp:", new Date().toISOString());
     
+    // Get customer details
+    const customerDetails = getCustomerDetails();
+    
     // Log the actual user object to see what's available
     console.log("=== USER OBJECT DEBUG ===");
-    console.log("Full user object:", user);
-    console.log("user?.username:", user?.username);
-    console.log("user?.email:", user?.email);
     console.log("isAuthenticated:", isAuthenticated);
+    console.log("Full user object:", user);
+    console.log("Customer details:", customerDetails);
     console.log("=== END USER OBJECT DEBUG ===");
     
     // Build debug info step by step with timing
@@ -255,9 +340,9 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
       magicCheckoutEnabled: MAGIC_CHECKOUT_ENABLED,
       isAuthenticated: isAuthenticated,
       userId: user?.id || 'guest',
-      userName: user?.username || 'not set', // Fixed: use username instead of name
-      userEmail: user?.email || 'not set',
-      userPhone: 'not available in user model', // Fixed: phone doesn't exist in user model
+      userName: customerDetails.name || 'not set',
+      userEmail: customerDetails.email || 'not set',
+      userPhone: customerDetails.contact || 'not set',
       cartItemsCount: cartItems.length,
       totalAmount: totalAmount,
     };
@@ -349,6 +434,9 @@ Processing Time: ${(endTime - startTime).toFixed(2)}ms
 
       console.log("Order created successfully:", orderData);
 
+      // Get customer details
+      const customerDetails = getCustomerDetails();
+
       // Step 4: Open Razorpay Checkout with Magic Checkout enabled
       const options = {
         key: RAZORPAY_KEY,
@@ -359,17 +447,16 @@ Processing Time: ${(endTime - startTime).toFixed(2)}ms
         order_id: orderData.order_id,
         
         // CRITICAL: Enable Magic Checkout with customer_details
-        // Note: Phone is not in user model, Razorpay will collect it during checkout
         customer_details: {
-          contact: "", // Will be collected by Razorpay during checkout
-          email: user?.email || "",
-          name: user?.username || "",
+          contact: customerDetails.contact,
+          email: customerDetails.email,
+          name: customerDetails.name,
         },
         
         prefill: {
-          name: user?.username || "",
-          email: user?.email || "",
-          contact: "", // Will be collected by Razorpay during checkout
+          name: customerDetails.name,
+          email: customerDetails.email,
+          contact: customerDetails.contact,
         },
         
         theme: {
@@ -443,7 +530,7 @@ Processing Time: ${(endTime - startTime).toFixed(2)}ms
       return false;
     }
     */
-  }, [sdkLoaded, cartItems, buyNowItem, user, RAZORPAY_KEY, MAGIC_CHECKOUT_ENABLED, isAuthenticated, calculateTotalAmount]);
+  }, [sdkLoaded, cartItems, buyNowItem, user, RAZORPAY_KEY, MAGIC_CHECKOUT_ENABLED, isAuthenticated, calculateTotalAmount, guestDetails, showGuestForm, validateGuestDetails, getCustomerDetails]);
 
   /**
    * Load SDK on mount
@@ -485,12 +572,6 @@ Processing Time: ${(endTime - startTime).toFixed(2)}ms
   if (cartItems.length === 0 && !buyNowItem) {
     return null;
   }
-  
-  // Don't render if user is not logged in or doesn't have email
-  if (!isAuthenticated || !user || !user.email) {
-    console.log("Express Checkout hidden: User not logged in or no email");
-    return null;
-  }
 
   return (
     <div className="express-checkout-container" style={{
@@ -515,9 +596,110 @@ Processing Time: ${(endTime - startTime).toFixed(2)}ms
           color: '#666',
           lineHeight: '1.5'
         }}>
-          Skip the forms! Complete your purchase in seconds with saved details.
+          Skip the forms! Complete your purchase in seconds{isAuthenticated ? ' with saved details' : ''}.
         </p>
       </div>
+
+      {/* Guest User Form */}
+      {!isAuthenticated && showGuestForm && (
+        <div style={{
+          backgroundColor: '#fff',
+          padding: '20px',
+          borderRadius: '8px',
+          marginBottom: '15px',
+          border: '1px solid #e0e0e0'
+        }}>
+          <h4 style={{ margin: '0 0 15px 0', fontSize: '16px', fontWeight: '600', color: '#180D3E' }}>
+            Enter Your Details
+          </h4>
+          
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500', color: '#333' }}>
+              Name *
+            </label>
+            <input
+              type="text"
+              value={guestDetails.name}
+              onChange={(e) => handleGuestInputChange('name', e.target.value)}
+              placeholder="Enter your full name"
+              style={{
+                width: '100%',
+                padding: '10px',
+                border: `1px solid ${guestFormErrors.name ? '#dc2626' : '#ddd'}`,
+                borderRadius: '6px',
+                fontSize: '14px',
+                boxSizing: 'border-box'
+              }}
+            />
+            {guestFormErrors.name && (
+              <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#dc2626' }}>{guestFormErrors.name}</p>
+            )}
+          </div>
+
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500', color: '#333' }}>
+              Email *
+            </label>
+            <input
+              type="email"
+              value={guestDetails.email}
+              onChange={(e) => handleGuestInputChange('email', e.target.value)}
+              placeholder="Enter your email"
+              style={{
+                width: '100%',
+                padding: '10px',
+                border: `1px solid ${guestFormErrors.email ? '#dc2626' : '#ddd'}`,
+                borderRadius: '6px',
+                fontSize: '14px',
+                boxSizing: 'border-box'
+              }}
+            />
+            {guestFormErrors.email && (
+              <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#dc2626' }}>{guestFormErrors.email}</p>
+            )}
+          </div>
+
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500', color: '#333' }}>
+              Phone Number *
+            </label>
+            <input
+              type="tel"
+              value={guestDetails.phone}
+              onChange={(e) => handleGuestInputChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+              placeholder="Enter 10-digit mobile number"
+              maxLength="10"
+              style={{
+                width: '100%',
+                padding: '10px',
+                border: `1px solid ${guestFormErrors.phone ? '#dc2626' : '#ddd'}`,
+                borderRadius: '6px',
+                fontSize: '14px',
+                boxSizing: 'border-box'
+              }}
+            />
+            {guestFormErrors.phone && (
+              <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#dc2626' }}>{guestFormErrors.phone}</p>
+            )}
+          </div>
+
+          <button
+            onClick={() => setShowGuestForm(false)}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#f3f4f6',
+              color: '#666',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '14px',
+              cursor: 'pointer',
+              marginTop: '10px'
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {sdkLoading && (
         <div style={{ 
@@ -543,7 +725,7 @@ Processing Time: ${(endTime - startTime).toFixed(2)}ms
         </div>
       )}
 
-      {sdkLoaded && !error && (
+      {sdkLoaded && !error && !showGuestForm && (
         <button
           onClick={processExpressCheckout}
           disabled={isProcessing || cartItems.length === 0}
