@@ -311,27 +311,13 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
       return;
     }
     
-    // Use performance.now() to track timing
-    const startTime = performance.now();
-    
-    // CRITICAL: Log immediately before any processing
-    console.warn("🚀 EXPRESS CHECKOUT BUTTON CLICKED");
-    console.log("Timestamp:", new Date().toISOString());
-    
     // Get customer details
     const customerDetails = getCustomerDetails();
     
-    // Log the actual user object to see what's available
-    console.log("=== USER OBJECT DEBUG ===");
-    console.log("isAuthenticated:", isAuthenticated);
-    console.log("Full user object:", user);
-    console.log("Customer details:", customerDetails);
-    console.log("=== END USER OBJECT DEBUG ===");
-    
-    // Build debug info step by step with timing
+    // Calculate total amount
     const totalAmount = calculateTotalAmount();
-    console.log("✓ Total calculated:", totalAmount);
     
+    // Build debug info for console logging only
     const debugInfo = {
       timestamp: new Date().toISOString(),
       sdkLoaded: sdkLoaded,
@@ -347,45 +333,10 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
       totalAmount: totalAmount,
     };
     
-    console.log("✓ Debug info built");
+    // Log to console only (no alert popup)
+    console.log("Express Checkout Debug Info:", debugInfo);
     
-    // Log to console with multiple methods
-    console.warn("=== EXPRESS CHECKOUT DEBUG START ===");
-    console.table(debugInfo);
-    console.dir(debugInfo);
-    console.log("Full debug info:", JSON.stringify(debugInfo, null, 2));
-    console.warn("=== EXPRESS CHECKOUT DEBUG END ===");
-    
-    const endTime = performance.now();
-    console.log(`⏱️ Debug info processing took: ${(endTime - startTime).toFixed(2)}ms`);
-    
-    // Show alert with key info
-    const alertMessage = `EXPRESS CHECKOUT DEBUG:
-
-SDK Status: ${debugInfo.sdkLoaded ? '✓ Loaded' : '✗ Not Loaded'}
-Razorpay Key: ${debugInfo.razorpayKey}
-Magic Checkout: ${debugInfo.magicCheckoutEnabled ? 'ENABLED' : 'DISABLED'}
-
-User: ${debugInfo.userName}
-Email: ${debugInfo.userEmail}
-Phone: ${debugInfo.userPhone}
-
-Cart Items: ${debugInfo.cartItemsCount}
-Total Amount: ₹${debugInfo.totalAmount}
-
-Processing Time: ${(endTime - startTime).toFixed(2)}ms
-
-✓ Check browser console for detailed logs!`;
-    
-    alert(alertMessage);
-    
-    // TEMPORARY: Stop here to prevent gateway opening
-    console.warn("⚠️ Gateway opening is currently DISABLED for debugging");
-    console.log("To enable gateway, remove the 'return false' statement");
-    return false;
-    
-    // Original code below (commented out temporarily)
-    /*
+    // Proceed with payment gateway
     if (!sdkLoaded || !window.Razorpay) {
       console.error("Razorpay SDK not loaded");
       setError("Payment gateway not loaded. Please refresh the page.");
@@ -396,8 +347,8 @@ Processing Time: ${(endTime - startTime).toFixed(2)}ms
       setIsProcessing(true);
       setError(null);
 
-      // Step 1: Calculate total amount
-      const totalAmount = calculateTotalAmount();
+      // Step 1: Calculate total amount (already calculated above)
+      // const totalAmount = calculateTotalAmount();
 
       if (totalAmount <= 0) {
         throw new Error("Cart is empty");
@@ -529,37 +480,17 @@ Processing Time: ${(endTime - startTime).toFixed(2)}ms
       }
       return false;
     }
-    */
   }, [sdkLoaded, cartItems, buyNowItem, user, RAZORPAY_KEY, MAGIC_CHECKOUT_ENABLED, isAuthenticated, calculateTotalAmount, guestDetails, showGuestForm, validateGuestDetails, getCustomerDetails]);
 
   /**
    * Load SDK on mount
    */
   useEffect(() => {
-    // Test if console is working
-    console.warn("🔥 EXPRESS CHECKOUT COMPONENT MOUNTED 🔥");
-    console.error("🔥 THIS IS AN ERROR LOG TEST 🔥");
-    console.info("🔥 THIS IS AN INFO LOG TEST 🔥");
-    console.log("🔥 THIS IS A REGULAR LOG TEST 🔥");
-    
-    console.log("=== EXPRESS CHECKOUT COMPONENT MOUNTED ===");
-    console.log("Environment variables:");
-    console.log("- NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED:", process.env.NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED);
-    console.log("- NEXT_PUBLIC_RAZORPAY_KEY_ID:", process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
-    console.log("- NEXT_PUBLIC_API_URL:", process.env.NEXT_PUBLIC_API_URL);
-    console.log("Component state:");
-    console.log("- MAGIC_CHECKOUT_ENABLED:", MAGIC_CHECKOUT_ENABLED);
-    console.log("- Cart items:", cartItems.length);
-    console.log("- Buy now item:", !!buyNowItem);
-    
     if (MAGIC_CHECKOUT_ENABLED) {
-      console.log("✓ Magic Checkout is enabled, loading SDK...");
       loadMagicCheckoutSDK().catch((err) => {
-        console.error("✗ Failed to load Razorpay SDK:", err);
+        console.error("Failed to load Razorpay SDK:", err);
         setError("Failed to load payment gateway");
       });
-    } else {
-      console.warn("⚠️ Magic Checkout is NOT enabled in environment variables");
     }
   }, [MAGIC_CHECKOUT_ENABLED, loadMagicCheckoutSDK, cartItems.length, buyNowItem]);
 
