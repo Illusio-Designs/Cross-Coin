@@ -1239,8 +1239,8 @@ export default function UnifiedCheckout() {
               {renderAddressSection()}
               {isAuthenticated && renderAddressForm()}
               
-              {/* Delivery Methods Section */}
-              {renderDeliveryMethods()}
+              {/* Delivery Methods Section - COMMENTED OUT - Showing only in Order Summary */}
+              {/* {renderDeliveryMethods()} */}
             </>
           )}
         </div>
