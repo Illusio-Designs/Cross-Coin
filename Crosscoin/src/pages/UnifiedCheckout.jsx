@@ -172,6 +172,12 @@ export default function UnifiedCheckout() {
 
   const handleSelectFee = (fee) => {
     setShippingFee(fee);
+    
+    // Remove coupon if COD is selected (coupons not valid for COD)
+    if (fee.orderType === 'cod' && appliedCoupon) {
+      handleCouponRemoved();
+      showValidationErrorToast("Coupons are not applicable for Cash on Delivery orders");
+    }
   };
 
   const handleAddressFormChange = (e) => {
