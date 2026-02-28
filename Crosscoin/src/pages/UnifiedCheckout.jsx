@@ -23,7 +23,7 @@ import {
 import { fbqTrack } from "../components/common/Analytics";
 import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 import MagicCheckoutIntegration from "../components/checkout/MagicCheckoutIntegration";
-import ExpressCheckout from "../components/checkout/ExpressCheckout";
+// import ExpressCheckout from "../components/checkout/ExpressCheckout"; // COMMENTED OUT - Using normal checkout only
 
 // Load page-specific CSS
 import "../styles/pages/UnifiedCheckout.css";
@@ -1217,13 +1217,13 @@ export default function UnifiedCheckout() {
       <Header />
       <div className="cart-main checkout-container">
         <div className="cart-section">
-          {/* Express Checkout - Show at top for quick access */}
-          {(cartItems.length > 0 || buyNowItem) && (
+          {/* Express Checkout - COMMENTED OUT - Using normal checkout only */}
+          {/* {(cartItems.length > 0 || buyNowItem) && (
             <ExpressCheckout
               onSuccess={handleMagicCheckoutSuccess}
               onError={handleMagicCheckoutError}
             />
-          )}
+          )} */}
 
           {/* Products Section */}
           <CartStep 
