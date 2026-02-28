@@ -388,7 +388,8 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
       // Get customer details
       const customerDetails = getCustomerDetails();
 
-      // Step 4: Open Razorpay Checkout with Magic Checkout enabled
+      // Step 4: Open Razorpay Checkout
+      // Magic Checkout will activate automatically if configured in Dashboard
       const options = {
         key: RAZORPAY_KEY,
         amount: Math.round(totalAmount * 100), // Convert to paise
@@ -397,7 +398,7 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
         description: "Express Checkout",
         order_id: orderData.order_id,
         
-        // CRITICAL: Prefill customer details (required for Magic Checkout)
+        // Prefill customer details
         prefill: {
           name: customerDetails.name,
           email: customerDetails.email,
@@ -420,23 +421,6 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
           animation: true,
           backdropclose: false,
         },
-        
-        // CRITICAL: Enable Magic Checkout
-        "magic": true,
-        
-        // Enable 1-Click Checkout features
-        remember_customer: true,
-        send_sms_hash: true,
-        allow_rotation: true,
-        
-        // Retry configuration
-        retry: {
-          enabled: true,
-          max_count: 3
-        },
-        
-        // Timeout
-        timeout: 300,
       };
 
       const rzp = new window.Razorpay(options);
