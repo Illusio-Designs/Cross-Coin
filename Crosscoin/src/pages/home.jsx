@@ -857,8 +857,6 @@ const Home = () => {
                           className="main-image"
                           imageData={{ image_url: variationImages[state.selectedThumbnail] }}
                           alt={product.name}
-                          width={500}
-                          height={500}
                           priority={index < 2}
                           quality={75}
                           style={{ objectFit: 'contain', boxShadow: '0 2px 8px #eee', background: '#eee', display: 'block' }}
