@@ -1760,7 +1760,14 @@ module.exports.getAllOrders = async (req, res) => {
             {
               model: Product,
               as: "Product",
-              include: [{ model: ProductImage, as: "ProductImages" }],
+              include: [
+                { model: ProductImage, as: "ProductImages" },
+                {
+                  model: Brand,
+                  as: "Brands",
+                  through: { attributes: ['status'] }
+                }
+              ],
             },
             {
               model: ProductVariation,

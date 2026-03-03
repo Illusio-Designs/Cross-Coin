@@ -592,7 +592,16 @@ module.exports.getAllReviews = async (req, res) => {
             where: whereClause,
             include: [
                 { model: User, as: 'User', attributes: ['id', 'username'] },
-                { model: Product, as: 'Product', attributes: ['id', 'name'] },
+                { 
+                    model: Product, 
+                    as: 'Product', 
+                    attributes: ['id', 'name'],
+                    include: [{
+                        model: Brand,
+                        as: 'Brands',
+                        through: { attributes: ['status'] }
+                    }]
+                },
                 { model: ReviewImage, as: 'ReviewImages'}
             ],
             order: order,

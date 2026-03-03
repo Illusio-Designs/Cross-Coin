@@ -5,6 +5,7 @@ import Modal from "@/components/common/Modal";
 import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
 import Loader from "@/components/Loader";
+import BrandTags from "@/components/Dashboard/BrandTags";
 import { reviewService } from "@/services";
 import { debounce } from 'lodash';
 import "../../../styles/dashboard/reviews.css";
@@ -59,6 +60,7 @@ export default function Reviews() {
           id: review.id,
           customerName: review.customerName || 'Guest',
           productName: review.productName || 'N/A',
+          Product: review.Product, // Keep full Product object for brands
           rating: review.rating,
           review: review.review,
           status: review.status,
@@ -74,6 +76,7 @@ export default function Reviews() {
           id: review.id,
           customerName: review.customerName || 'Guest',
           productName: review.productName || 'N/A',
+          Product: review.Product, // Keep full Product object for brands
           rating: review.rating,
           review: review.review,
           status: review.status,
@@ -131,6 +134,13 @@ export default function Reviews() {
     },
     { header: "Customer", accessor: "customerName" },
     { header: "Product", accessor: "productName" },
+    {
+      header: "Brands",
+      accessor: row => {
+        const brands = row.Product?.Brands || row.Product?.brands || [];
+        return <BrandTags brands={brands} />;
+      }
+    },
     { header: "Rating", accessor: "rating" },
     { header: "Review", accessor: "review" },
     { header: "Status", accessor: "status" },

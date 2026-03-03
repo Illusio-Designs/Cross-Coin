@@ -109,7 +109,12 @@ const getAllSliders = async (req, res) => {
             include: [{
                 model: Category,
                 as: 'category',
-                attributes: ['id', 'name']
+                attributes: ['id', 'name'],
+                include: [{
+                    model: Brand,
+                    as: 'Brands',
+                    through: { attributes: ['status'] }
+                }]
             }]
         });
 

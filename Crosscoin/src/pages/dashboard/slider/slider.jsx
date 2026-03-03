@@ -5,6 +5,7 @@ import Modal from "@/components/common/Modal";
 import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
 import Loader from "@/components/Loader";
+import BrandTags from "@/components/Dashboard/BrandTags";
 import { sliderService, categoryService } from "@/services";
 import { debounce } from 'lodash';
 import { useRouter } from 'next/router';
@@ -197,6 +198,13 @@ export default function Slider() {
     { header: "Title", accessor: "title" },
     { header: "Description", accessor: "description" },
     { header: "Category", accessor: "categoryName" },
+    {
+      header: "Brands",
+      accessor: row => {
+        const brands = row.category?.Brands || row.category?.brands || [];
+        return <BrandTags brands={brands} />;
+      }
+    },
     { 
       header: "Status", 
       accessor: "status",
