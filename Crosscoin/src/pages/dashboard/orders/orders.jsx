@@ -7,6 +7,7 @@ import Modal from "@/components/common/Modal";
 import Button from "@/components/common/Button";
 import SafeImage from "@/components/common/SafeImage";
 import Loader from "@/components/Loader";
+import BrandTags from "@/components/Dashboard/BrandTags";
 import '../../../styles/dashboard/orders.css';
 import "../../../styles/dashboard/seo.css"; // Reusing styles for consistency
 import { toast } from 'react-hot-toast';
@@ -749,6 +750,29 @@ const Orders = () => {
                     </div>
                 </div>
             )
+        },
+        {
+            header: "Brands",
+            cell: (row) => {
+                // Get unique brands from order items
+                const brands = [];
+                const brandIds = new Set();
+                
+                if (row.OrderItems && row.OrderItems.length > 0) {
+                    row.OrderItems.forEach(item => {
+                        if (item.Product && item.Product.brands) {
+                            item.Product.brands.forEach(brand => {
+                                if (!brandIds.has(brand.id)) {
+                                    brandIds.add(brand.id);
+                                    brands.push(brand);
+                                }
+                            });
+                        }
+                    });
+                }
+                
+                return <BrandTags brands={brands} />;
+            }
         },
         { header: "Date", cell: (row) => formatDate(row.createdAt) },
         { header: "Payment Type", cell: (row) => formatPaymentType(row.payment_type) },

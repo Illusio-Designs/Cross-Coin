@@ -5,6 +5,7 @@ import Modal from "@/components/common/Modal";
 import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
 import Loader from "@/components/Loader";
+import BrandTags from "@/components/Dashboard/BrandTags";
 import { categoryService } from "@/services";
 import { debounce } from 'lodash';
 import "../../../styles/dashboard/seo.css";
@@ -95,6 +96,10 @@ export default function Categories() {
     },
     { header: "Name", accessor: "name" },
     { header: "Description", accessor: "description" },
+    {
+      header: "Brands",
+      accessor: row => <BrandTags brands={row.brands || []} />
+    },
     { header: "Status", accessor: "status" },
     {
       header: "Actions",
