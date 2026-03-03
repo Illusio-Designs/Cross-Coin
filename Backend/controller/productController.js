@@ -265,6 +265,7 @@ module.exports.createProduct = async (req, res) => {
     const variations = JSON.parse(req.body.variations || "[]");
     const seo = JSON.parse(req.body.seo || "{}");
     const images = req.files;
+    const brandIds = JSON.parse(req.body.brandIds || "[1]"); // ✅ Array of brand IDs
 
     console.log("--- After parsing form data ---");
     console.log("Name:", name);
@@ -312,12 +313,23 @@ module.exports.createProduct = async (req, res) => {
           ? JSON.parse(req.body.dimensions)
           : null,
         dimensionUnit: req.body.dimensionUnit || "cm",
-        brand_id: req.brand ? req.brand.id : 1, // ✅ Multi-brand support
       },
       { transaction }
     );
     console.log("--- After Product.create ---");
     console.log("Product created with ID:", product.id);
+
+    // ✅ Assign product to multiple brands
+    console.log("--- Before assigning brands ---");
+    const { ProductBrand } = require('../model/productBrandModel.js');
+    for (const brandId of brandIds) {
+      await ProductBrand.create({
+        product_id: product.id,
+        brand_id: brandId,
+        status: 'active'
+      }, { transaction });
+    }
+    console.log("--- After assigning brands:", brandIds);
 
     // Create SEO record
     console.log("--- Before ProductSEO.create ---");
@@ -574,9 +586,10 @@ module.exports.getAllProducts = async (req, res) => {
     // Build filter options
     const whereOptions = {};
     
-    // ✅ Multi-brand filtering
+    // ✅ Filter by brand if X-Brand-Name header is present (for frontend)
+    let brandFilter = null;
     if (req.brand && req.brand.id) {
-      whereOptions.brand_id = req.brand.id;
+      brandFilter = req.brand.id;
     }
     
     if (search) {
@@ -586,26 +599,49 @@ module.exports.getAllProducts = async (req, res) => {
       ];
     }
 
+    const includeOptions = [
+      { model: Category },
+      {
+        model: ProductVariation,
+        as: "ProductVariations",
+        include: [{ model: ProductImage, as: "VariationImages" }],
+      },
+      { model: ProductImage, as: "ProductImages" },
+      { model: ProductSEO, as: "ProductSEO" },
+      {
+        model: Brand,
+        as: "Brands",
+        through: { attributes: ['status', 'price_override', 'stock_override'] },
+        ...(brandFilter && { where: { id: brandFilter } })
+      }
+    ];
+
     const { count, rows } = await Product.findAndCountAll({
       where: whereOptions,
       limit: parseInt(limit, 10),
       offset: offset,
       order: [["createdAt", "DESC"]],
-      include: [
-        { model: Category },
-        {
-          model: ProductVariation,
-          as: "ProductVariations",
-          include: [{ model: ProductImage, as: "VariationImages" }],
-        },
-        { model: ProductImage, as: "ProductImages" },
-        { model: ProductSEO, as: "ProductSEO" },
-      ],
+      include: includeOptions,
       distinct: true,
     });
 
+    // Format products with brand information
+    const formattedProducts = rows.map(product => {
+      const formatted = formatProductResponse(product);
+      formatted.brands = product.Brands ? product.Brands.map(brand => ({
+        id: brand.id,
+        name: brand.name,
+        slug: brand.slug,
+        display_name: brand.display_name,
+        status: brand.ProductBrand?.status,
+        price_override: brand.ProductBrand?.price_override,
+        stock_override: brand.ProductBrand?.stock_override
+      })) : [];
+      return formatted;
+    });
+
     res.json({
-      products: rows.map(formatProductResponse),
+      products: formattedProducts,
       totalProducts: count,
       currentPage: parseInt(page, 10),
       totalPages: Math.ceil(count / parseInt(limit, 10)),
@@ -623,14 +659,8 @@ module.exports.getProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // ✅ Multi-brand filtering
-    const whereOptions = { id };
-    if (req.brand && req.brand.id) {
-      whereOptions.brand_id = req.brand.id;
-    }
-
-    const product = await Product.findOne({
-      where: whereOptions,
+    // ✅ Include brand assignments
+    const product = await Product.findByPk(id, {
       include: [
         { model: Category },
         {
@@ -640,6 +670,11 @@ module.exports.getProduct = async (req, res) => {
         },
         { model: ProductImage, as: "ProductImages" },
         { model: ProductSEO, as: "ProductSEO" },
+        {
+          model: Brand,
+          as: "Brands",
+          through: { attributes: ['status', 'price_override', 'stock_override'] }
+        }
       ],
     });
 
@@ -648,6 +683,17 @@ module.exports.getProduct = async (req, res) => {
     }
 
     const formattedProduct = formatProductResponse(product);
+    
+    // Add brand assignments
+    formattedProduct.brands = product.Brands ? product.Brands.map(brand => ({
+      id: brand.id,
+      name: brand.name,
+      slug: brand.slug,
+      display_name: brand.display_name,
+      status: brand.ProductBrand?.status,
+      price_override: brand.ProductBrand?.price_override,
+      stock_override: brand.ProductBrand?.stock_override
+    })) : [];
 
     res.json(formattedProduct);
   } catch (error) {

@@ -39,17 +39,6 @@ const Category = sequelize.define('Category', {
     metaKeywords: {
         type: DataTypes.STRING,
         allowNull: true
-    },
-    brand_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 1,
-        references: {
-            model: 'brands',
-            key: 'id'
-        },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE'
     }
 }, {
     timestamps: true,
