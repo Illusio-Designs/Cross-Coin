@@ -39,6 +39,17 @@ const Slider = sequelize.define('Slider', {
     position: {
         type: DataTypes.INTEGER,
         defaultValue: 0
+    },
+    brand_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1,
+        references: {
+            model: 'brands',
+            key: 'id'
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
     }
 }, {
     timestamps: true,

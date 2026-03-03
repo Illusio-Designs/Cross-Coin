@@ -311,6 +311,7 @@ module.exports.createOrder = async (req, res) => {
         status: "pending",
         notes: notes || null,
         utm_tracking_id: utmTrackingId,
+        brand_id: req.brand ? req.brand.id : 1, // ✅ Multi-brand support
       },
       { transaction }
     );
@@ -769,6 +770,7 @@ module.exports.createGuestOrder = async (req, res) => {
         payment_status: payment_type === "cod" ? "pending" : "pending",
         notes: notes || null,
         utm_tracking_id: utmTrackingId,
+        brand_id: req.brand ? req.brand.id : 1, // ✅ Multi-brand support
       },
       { transaction }
     );

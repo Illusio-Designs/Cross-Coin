@@ -112,7 +112,8 @@ const createCategory = async (req, res) => {
             metaTitle: metaTitle || name,
             metaDescription: metaDescription || description,
             metaKeywords,
-            slug
+            slug,
+            brand_id: req.brand ? req.brand.id : 1, // ✅ Multi-brand support
         });
 
         // Get category with parent info
@@ -143,7 +144,14 @@ const createCategory = async (req, res) => {
 // Get All Categories
 const getAllCategories = async (req, res) => {
     try {
+        // ✅ Multi-brand filtering
+        const whereOptions = {};
+        if (req.brand && req.brand.id) {
+            whereOptions.brand_id = req.brand.id;
+        }
+
         const categories = await Category.findAll({
+            where: whereOptions,
             include: [{
                 model: Category,
                 as: 'parent',
@@ -210,7 +218,14 @@ const getCategoryById = async (req, res) => {
     try {
         const { id } = req.params;
         
-        const category = await Category.findByPk(id, {
+        // ✅ Multi-brand filtering
+        const whereOptions = { id };
+        if (req.brand && req.brand.id) {
+            whereOptions.brand_id = req.brand.id;
+        }
+
+        const category = await Category.findOne({
+            where: whereOptions,
             include: [{
                 model: Category,
                 as: 'parent',

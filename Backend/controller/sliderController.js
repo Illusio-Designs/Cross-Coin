@@ -76,7 +76,8 @@ const createSlider = async (req, res) => {
         const slider = await Slider.create({
             title,
             description,
-            image
+            image,
+            brand_id: req.brand ? req.brand.id : 1, // ✅ Multi-brand support
         });
 
         res.status(201).json({ 
@@ -97,7 +98,14 @@ const createSlider = async (req, res) => {
 // Get All Sliders
 const getAllSliders = async (req, res) => {
     try {
+        // ✅ Multi-brand filtering
+        const whereOptions = {};
+        if (req.brand && req.brand.id) {
+            whereOptions.brand_id = req.brand.id;
+        }
+
         const sliders = await Slider.findAll({
+            where: whereOptions,
             include: [{
                 model: Category,
                 as: 'category',

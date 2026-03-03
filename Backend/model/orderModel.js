@@ -164,6 +164,17 @@ const Order = sequelize.define('Order', {
         },
         onDelete: 'SET NULL',
         onUpdate: 'CASCADE'
+    },
+    brand_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1,
+        references: {
+            model: 'brands',
+            key: 'id'
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
     }
 }, {
     tableName: 'orders',
