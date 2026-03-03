@@ -121,7 +121,16 @@ exports.generateImages = async (req, res) => {
     console.log('Variations to process:', variations.length);
 
     // Get product info
-    const product = await Product.findByPk(productId, { transaction });
+    const product = await Product.findByPk(productId, { 
+      transaction,
+      include: [
+        {
+          model: require('../model/categoryModel').Category,
+          as: 'category',
+          attributes: ['id', 'name']
+        }
+      ]
+    });
     if (!product) {
       await transaction.rollback();
       return res.status(404).json({
@@ -129,6 +138,8 @@ exports.generateImages = async (req, res) => {
         message: 'Product not found'
       });
     }
+
+    console.log('Product found:', product.name, 'Category:', product.category?.name);
 
     const results = [];
     let totalImagesGenerated = 0;
@@ -209,7 +220,7 @@ exports.generateImages = async (req, res) => {
           baseImagePath,
           {
             name: product.name,
-            category: product.categoryId
+            category: product.category?.name || 'product' // Use category name, not ID
           },
           {
             id: variation.id,
