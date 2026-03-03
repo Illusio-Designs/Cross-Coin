@@ -1386,9 +1386,10 @@ export const brandService = {
 
 // Brand Settings Services
 export const brandSettingsService = {
-  getAllSettings: async (category = null) => {
+  getAllSettings: async (brandId, category = null) => {
     try {
-      const params = category ? { category } : {};
+      const params = { brandId };
+      if (category) params.category = category;
       const response = await api.get("/api/admin/brand-settings", { params });
       return response.data;
     } catch (error) {
@@ -1396,18 +1397,22 @@ export const brandSettingsService = {
     }
   },
 
-  getSettingsByCategory: async (category) => {
+  getSettingsByCategory: async (brandId, category) => {
     try {
-      const response = await api.get(`/api/admin/brand-settings/category/${category}`);
+      const response = await api.get(`/api/admin/brand-settings/category/${category}`, {
+        params: { brandId }
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
     }
   },
 
-  getSetting: async (key) => {
+  getSetting: async (brandId, key) => {
     try {
-      const response = await api.get(`/api/admin/brand-settings/${key}`);
+      const response = await api.get(`/api/admin/brand-settings/${key}`, {
+        params: { brandId }
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1423,18 +1428,22 @@ export const brandSettingsService = {
     }
   },
 
-  updateSetting: async (key, settingData) => {
+  updateSetting: async (brandId, key, settingData) => {
     try {
-      const response = await api.put(`/api/admin/brand-settings/${key}`, settingData);
+      const response = await api.put(`/api/admin/brand-settings/${key}`, settingData, {
+        params: { brandId }
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
     }
   },
 
-  deleteSetting: async (key) => {
+  deleteSetting: async (brandId, key) => {
     try {
-      const response = await api.delete(`/api/admin/brand-settings/${key}`);
+      const response = await api.delete(`/api/admin/brand-settings/${key}`, {
+        params: { brandId }
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

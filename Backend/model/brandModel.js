@@ -8,42 +8,41 @@ const Brand = sequelize.define('Brand', {
         autoIncrement: true
     },
     name: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.STRING(100),
         allowNull: false,
         unique: true,
         comment: 'Brand name'
     },
     slug: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.STRING(100),
         allowNull: false,
         unique: true,
         comment: 'URL-friendly brand identifier'
     },
+    display_name: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+        comment: 'Display name for the brand'
+    },
     domain: {
         type: DataTypes.STRING(255),
         allowNull: true,
-        unique: true,
         comment: 'Custom domain for the brand'
     },
-    logo: {
+    logo_url: {
         type: DataTypes.STRING(500),
         allowNull: true,
         comment: 'Brand logo URL'
     },
-    description: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        comment: 'Brand description'
-    },
-    is_active: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
-        comment: 'Whether the brand is active'
-    },
-    theme_color: {
+    primary_color: {
         type: DataTypes.STRING(7),
-        defaultValue: '#4CAF50',
+        allowNull: true,
         comment: 'Primary theme color (hex)'
+    },
+    secondary_color: {
+        type: DataTypes.STRING(7),
+        allowNull: true,
+        comment: 'Secondary theme color (hex)'
     },
     contact_email: {
         type: DataTypes.STRING(255),
@@ -55,10 +54,16 @@ const Brand = sequelize.define('Brand', {
         allowNull: true,
         comment: 'Brand contact phone'
     },
-    metadata: {
-        type: DataTypes.JSON,
+    settings: {
+        type: DataTypes.TEXT('long'),
         allowNull: true,
-        comment: 'Additional brand metadata'
+        comment: 'Brand settings as JSON string'
+    },
+    status: {
+        type: DataTypes.ENUM('active', 'inactive'),
+        allowNull: true,
+        defaultValue: 'active',
+        comment: 'Brand status'
     }
 }, {
     tableName: 'brands',
@@ -67,7 +72,7 @@ const Brand = sequelize.define('Brand', {
     indexes: [
         { fields: ['slug'] },
         { fields: ['domain'] },
-        { fields: ['is_active'] }
+        { fields: ['status'] }
     ]
 });
 

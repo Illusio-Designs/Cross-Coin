@@ -128,10 +128,99 @@ function clearBrandCache(brandId) {
     }
 }
 
+/**
+ * Get all settings for a brand
+ */
+async function getAllSettings(brandId) {
+    return await getAllBrandSettings(brandId);
+}
+
+/**
+ * Get settings by category
+ */
+async function getSettingsByCategory(brandId, category) {
+    return await getAllBrandSettings(brandId, category);
+}
+
+/**
+ * Get a single setting
+ */
+async function getSetting(brandId, key) {
+    const setting = await BrandSetting.findOne({
+        where: { brand_id: brandId, key }
+    });
+    return setting;
+}
+
+/**
+ * Create a new setting
+ */
+async function createSetting(data) {
+    let finalValue = data.value;
+    if (data.is_encrypted && finalValue) {
+        finalValue = encrypt(finalValue);
+    }
+    
+    const setting = await BrandSetting.create({
+        brand_id: data.brand_id,
+        key: data.key,
+        value: finalValue,
+        is_encrypted: data.is_encrypted || false,
+        category: data.category || 'general',
+        description: data.description || null,
+        updated_by: data.updated_by || null
+    });
+    
+    return setting;
+}
+
+/**
+ * Update a setting
+ */
+async function updateSetting(brandId, key, data) {
+    const setting = await BrandSetting.findOne({
+        where: { brand_id: brandId, key }
+    });
+    
+    if (!setting) {
+        return null;
+    }
+    
+    let finalValue = data.value;
+    if (data.is_encrypted && finalValue) {
+        finalValue = encrypt(finalValue);
+    }
+    
+    await setting.update({
+        value: finalValue,
+        is_encrypted: data.is_encrypted !== undefined ? data.is_encrypted : setting.is_encrypted,
+        updated_by: data.updated_by || null
+    });
+    
+    // Clear cache
+    const cacheKey = `${brandId}:${key}`;
+    settingsCache.delete(cacheKey);
+    
+    return setting;
+}
+
+/**
+ * Delete a setting
+ */
+async function deleteSetting(brandId, key) {
+    return await deleteBrandSetting(brandId, key);
+}
+
 module.exports = {
     getBrandSetting,
     getAllBrandSettings,
     setBrandSetting,
     deleteBrandSetting,
-    clearBrandCache
+    clearBrandCache,
+    getAllSettings,
+    getSettingsByCategory,
+    getSetting,
+    createSetting,
+    updateSetting,
+    deleteSetting
 };

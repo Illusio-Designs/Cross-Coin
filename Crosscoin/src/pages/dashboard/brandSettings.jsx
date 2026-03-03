@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { FiSave, FiEdit2, FiTrash2, FiX, FiLock, FiUnlock, FiPlus, FiRefreshCw } from 'react-icons/fi';
-import { brandSettingsService } from '@/services';
+import { brandSettingsService, brandService } from '@/services';
 import '@/styles/dashboard/brandSettings.css';
 
 export default function BrandSettingsManager() {
-    const [settings, setSettings] = useState({});
+    const [brands, setBrands] = useState([]);
+    const [selectedBrandId, setSelectedBrandId] = useState(null);
+    const [settings, setSettings] = useState([]);
     const [category, setCategory] = useState('all');
     const [editMode, setEditMode] = useState({});
     const [loading, setLoading] = useState(false);
@@ -13,6 +15,7 @@ export default function BrandSettingsManager() {
     const [newKey, setNewKey] = useState('');
     const [newValue, setNewValue] = useState('');
     const [newCategory, setNewCategory] = useState('general');
+    const [newDescription, setNewDescription] = useState('');
     const [showAddForm, setShowAddForm] = useState(false);
 
     const categories = {
@@ -29,20 +32,37 @@ export default function BrandSettingsManager() {
     };
 
     useEffect(() => {
-        fetchSettings();
+        fetchBrands();
     }, []);
 
+    useEffect(() => {
+        if (selectedBrandId) {
+            fetchSettings();
+        }
+    }, [selectedBrandId]);
+
+    const fetchBrands = async () => {
+        try {
+            const response = await brandService.getAllBrands(true);
+            if (response.success && response.data.length > 0) {
+                setBrands(response.data);
+                setSelectedBrandId(response.data[0].id); // Select first brand by default
+            }
+        } catch (error) {
+            console.error('Error fetching brands:', error);
+            toast.error('Failed to load brands');
+        }
+    };
+
     const fetchSettings = async () => {
+        if (!selectedBrandId) return;
+        
         setLoading(true);
         try {
-            const response = await brandSettingsService.getAllSettings();
+            const response = await brandSettingsService.getAllSettings(selectedBrandId);
             
             if (response.success) {
-                const settingsMap = {};
-                response.data.forEach(setting => {
-                    settingsMap[setting.setting_key] = setting;
-                });
-                setSettings(settingsMap);
+                setSettings(response.data || []);
             }
         } catch (error) {
             console.error('Error fetching settings:', error);
@@ -52,24 +72,24 @@ export default function BrandSettingsManager() {
         }
     };
 
-    const handleUpdate = async (key) => {
-        setSaving(prev => ({ ...prev, [key]: true }));
+    const handleUpdate = async (settingId, key) => {
+        setSaving(prev => ({ ...prev, [settingId]: true }));
         try {
-            const setting = settings[key];
+            const setting = settings.find(s => s.id === settingId);
             
-            await brandSettingsService.updateSetting(key, {
-                setting_value: setting.setting_value,
+            await brandSettingsService.updateSetting(selectedBrandId, key, {
+                value: setting.value,
                 is_encrypted: setting.is_encrypted
             });
             
             toast.success('Setting updated successfully');
-            setEditMode(prev => ({ ...prev, [key]: false }));
-            fetchSettings(); // Refresh to get updated data
+            setEditMode(prev => ({ ...prev, [settingId]: false }));
+            fetchSettings();
         } catch (error) {
             console.error('Error updating setting:', error);
             toast.error(error.message || 'Failed to update setting');
         } finally {
-            setSaving(prev => ({ ...prev, [key]: false }));
+            setSaving(prev => ({ ...prev, [settingId]: false }));
         }
     };
 
@@ -79,7 +99,7 @@ export default function BrandSettingsManager() {
         }
 
         try {
-            await brandSettingsService.deleteSetting(key);
+            await brandSettingsService.deleteSetting(selectedBrandId, key);
             toast.success('Setting deleted successfully');
             fetchSettings();
         } catch (error) {
@@ -96,9 +116,11 @@ export default function BrandSettingsManager() {
 
         try {
             await brandSettingsService.createSetting({
-                setting_key: newKey.trim(),
-                setting_value: newValue.trim(),
+                brand_id: selectedBrandId,
+                key: newKey.trim(),
+                value: newValue.trim(),
                 category: newCategory,
+                description: newDescription.trim() || null,
                 is_encrypted: false
             });
             
@@ -106,6 +128,7 @@ export default function BrandSettingsManager() {
             setNewKey('');
             setNewValue('');
             setNewCategory('general');
+            setNewDescription('');
             setShowAddForm(false);
             fetchSettings();
         } catch (error) {
@@ -114,58 +137,50 @@ export default function BrandSettingsManager() {
         }
     };
 
-    const handleValueChange = (key, value) => {
-        setSettings(prev => ({
-            ...prev,
-            [key]: {
-                ...prev[key],
-                setting_value: value
-            }
-        }));
+    const handleValueChange = (settingId, value) => {
+        setSettings(prev => prev.map(setting =>
+            setting.id === settingId ? { ...setting, value } : setting
+        ));
     };
 
-    const toggleEncryption = (key) => {
-        setSettings(prev => ({
-            ...prev,
-            [key]: {
-                ...prev[key],
-                is_encrypted: !prev[key].is_encrypted
-            }
-        }));
+    const toggleEncryption = (settingId) => {
+        setSettings(prev => prev.map(setting =>
+            setting.id === settingId ? { ...setting, is_encrypted: !setting.is_encrypted } : setting
+        ));
     };
 
-    const toggleEditMode = (key) => {
-        setEditMode(prev => ({ ...prev, [key]: !prev[key] }));
+    const toggleEditMode = (settingId) => {
+        setEditMode(prev => ({ ...prev, [settingId]: !prev[settingId] }));
     };
 
-    const filteredSettings = Object.entries(settings).filter(([key, setting]) => {
+    const filteredSettings = settings.filter(setting => {
         if (category === 'all') return true;
         return setting.category === category;
     });
 
-    const renderSettingValue = (key, setting) => {
-        if (editMode[key]) {
+    const renderSettingValue = (setting) => {
+        if (editMode[setting.id]) {
             return (
                 <div className="edit-container">
                     <textarea
                         className="setting-input"
-                        value={setting.setting_value || ''}
-                        onChange={(e) => handleValueChange(key, e.target.value)}
+                        value={setting.value || ''}
+                        onChange={(e) => handleValueChange(setting.id, e.target.value)}
                         rows={3}
                         placeholder="Enter value..."
                     />
                     <div className="edit-actions">
                         <button
                             className="btn-icon btn-save"
-                            onClick={() => handleUpdate(key)}
-                            disabled={saving[key]}
+                            onClick={() => handleUpdate(setting.id, setting.key)}
+                            disabled={saving[setting.id]}
                             title="Save"
                         >
-                            {saving[key] ? <FiRefreshCw className="spin" /> : <FiSave />}
+                            {saving[setting.id] ? <FiRefreshCw className="spin" /> : <FiSave />}
                         </button>
                         <button
                             className="btn-icon btn-cancel"
-                            onClick={() => toggleEditMode(key)}
+                            onClick={() => toggleEditMode(setting.id)}
                             title="Cancel"
                         >
                             <FiX />
@@ -178,7 +193,7 @@ export default function BrandSettingsManager() {
         return (
             <div className="value-display">
                 <span className={setting.is_encrypted ? 'encrypted-value' : ''}>
-                    {setting.is_encrypted ? '••••••••••••' : setting.setting_value}
+                    {setting.is_encrypted ? '••••••••••••' : setting.value}
                 </span>
             </div>
         );
@@ -199,12 +214,26 @@ export default function BrandSettingsManager() {
         <div className="brand-settings-manager">
             <div className="settings-header">
                 <h2>Brand Settings Manager</h2>
-                <button
-                    className="btn-primary"
-                    onClick={() => setShowAddForm(!showAddForm)}
-                >
-                    <FiPlus /> Add New Setting
-                </button>
+                <div className="header-actions">
+                    <select
+                        className="brand-selector"
+                        value={selectedBrandId || ''}
+                        onChange={(e) => setSelectedBrandId(Number(e.target.value))}
+                    >
+                        {brands.map(brand => (
+                            <option key={brand.id} value={brand.id}>
+                                {brand.display_name || brand.name}
+                            </option>
+                        ))}
+                    </select>
+                    <button
+                        className="btn-primary"
+                        onClick={() => setShowAddForm(!showAddForm)}
+                        disabled={!selectedBrandId}
+                    >
+                        <FiPlus /> Add New Setting
+                    </button>
+                </div>
             </div>
 
             {showAddForm && (
@@ -234,6 +263,15 @@ export default function BrandSettingsManager() {
                             </select>
                         </div>
                         <div className="form-group full-width">
+                            <label>Description</label>
+                            <input
+                                type="text"
+                                value={newDescription}
+                                onChange={(e) => setNewDescription(e.target.value)}
+                                placeholder="Description of this setting"
+                            />
+                        </div>
+                        <div className="form-group full-width">
                             <label>Setting Value</label>
                             <textarea
                                 value={newValue}
@@ -254,6 +292,7 @@ export default function BrandSettingsManager() {
                                 setNewKey('');
                                 setNewValue('');
                                 setNewCategory('general');
+                                setNewDescription('');
                             }}
                         >
                             <FiX /> Cancel
@@ -263,20 +302,20 @@ export default function BrandSettingsManager() {
             )}
 
             <div className="category-filter">
-                {Object.entries(categories).map(([key, label]) => (
-                    <button
-                        key={key}
-                        className={`category-btn ${category === key ? 'active' : ''}`}
-                        onClick={() => setCategory(key)}
-                    >
-                        {label}
-                        {key !== 'all' && (
-                            <span className="count">
-                                {Object.values(settings).filter(s => s.category === key).length}
-                            </span>
-                        )}
-                    </button>
-                ))}
+                        {Object.entries(categories).map(([key, label]) => (
+                            <button
+                                key={key}
+                                className={`category-btn ${category === key ? 'active' : ''}`}
+                                onClick={() => setCategory(key)}
+                            >
+                                {label}
+                                {key !== 'all' && (
+                                    <span className="count">
+                                        {settings.filter(s => s.category === key).length}
+                                    </span>
+                                )}
+                            </button>
+                        ))}
             </div>
 
             <div className="settings-grid">
@@ -291,35 +330,35 @@ export default function BrandSettingsManager() {
                         </button>
                     </div>
                 ) : (
-                    filteredSettings.map(([key, setting]) => (
-                        <div key={key} className="setting-card">
+                    filteredSettings.map(setting => (
+                        <div key={setting.id} className="setting-card">
                             <div className="setting-header">
                                 <div className="setting-info">
-                                    <h4>{key}</h4>
+                                    <h4>{setting.key}</h4>
                                     <span className={`category-badge ${setting.category}`}>
                                         {categories[setting.category] || setting.category}
                                     </span>
                                 </div>
                                 <div className="setting-actions">
-                                    {!editMode[key] && (
+                                    {!editMode[setting.id] && (
                                         <>
                                             <button
                                                 className="btn-icon"
-                                                onClick={() => toggleEncryption(key)}
+                                                onClick={() => toggleEncryption(setting.id)}
                                                 title={setting.is_encrypted ? 'Encrypted' : 'Not Encrypted'}
                                             >
                                                 {setting.is_encrypted ? <FiLock /> : <FiUnlock />}
                                             </button>
                                             <button
                                                 className="btn-icon"
-                                                onClick={() => toggleEditMode(key)}
+                                                onClick={() => toggleEditMode(setting.id)}
                                                 title="Edit"
                                             >
                                                 <FiEdit2 />
                                             </button>
                                             <button
                                                 className="btn-icon btn-danger"
-                                                onClick={() => handleDelete(key)}
+                                                onClick={() => handleDelete(setting.key)}
                                                 title="Delete"
                                             >
                                                 <FiTrash2 />
@@ -329,7 +368,7 @@ export default function BrandSettingsManager() {
                                 </div>
                             </div>
                             <div className="setting-body">
-                                {renderSettingValue(key, setting)}
+                                {renderSettingValue(setting)}
                             </div>
                             {setting.description && (
                                 <div className="setting-description">

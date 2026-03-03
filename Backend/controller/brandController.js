@@ -187,7 +187,7 @@ async function toggleBrandStatus(req, res) {
         
         res.json({
             success: true,
-            message: `Brand ${brand.is_active ? 'activated' : 'deactivated'} successfully`,
+            message: `Brand ${brand.status === 'active' ? 'activated' : 'deactivated'} successfully`,
             data: brand
         });
     } catch (error) {
