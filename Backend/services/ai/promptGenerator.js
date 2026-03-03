@@ -166,12 +166,17 @@ ${this.baseQuality}
     // Determine lifestyle context based on category
     let context = 'modern minimalist interior setting';
     
-    if (category?.toLowerCase().includes('sock')) {
+    // Convert category to string and handle null/undefined
+    const categoryStr = category ? String(category).toLowerCase() : '';
+    
+    if (categoryStr.includes('sock')) {
       context = 'worn on foot, casual lifestyle setting, person sitting comfortably';
-    } else if (category?.toLowerCase().includes('clothing')) {
+    } else if (categoryStr.includes('clothing') || categoryStr.includes('apparel')) {
       context = 'worn by model, natural indoor setting, lifestyle photography';
-    } else if (category?.toLowerCase().includes('home')) {
+    } else if (categoryStr.includes('home') || categoryStr.includes('decor')) {
       context = 'styled in modern home interior, natural daylight';
+    } else if (categoryStr.includes('accessory') || categoryStr.includes('accessories')) {
+      context = 'styled with complementary items, lifestyle flat lay';
     }
 
     return {
