@@ -12,8 +12,14 @@ const AIImageGenerator = ({ productId, productName, onSuccess }) => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
+  console.log('🎨 AIImageGenerator rendered for product:', productId, productName);
+
   // Fetch variations when modal opens
   const handleOpenModal = async () => {
+    console.log('🎨 === BUTTON CLICKED ===');
+    console.log('Product ID:', productId);
+    console.log('Product Name:', productName);
+    
     setLoading(true);
     setError(null);
     
@@ -228,13 +234,28 @@ const AIImageGenerator = ({ productId, productName, onSuccess }) => {
 
   return (
     <>
-      <Button
+      <button
         onClick={handleOpenModal}
         disabled={loading}
-        className="ai-generate-btn"
+        className="action-btn ai-generate"
+        data-tooltip="Generate AI Images"
+        style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          border: 'none',
+          padding: '8px 12px',
+          borderRadius: '6px',
+          cursor: loading ? 'not-allowed' : 'pointer',
+          fontSize: '12px',
+          fontWeight: '600',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px',
+          opacity: loading ? 0.6 : 1
+        }}
       >
-        {loading ? '⏳ Loading...' : '🎨 Generate AI Images'}
-      </Button>
+        {loading ? '⏳' : '🎨'}
+      </button>
 
       {showModal && (
         <Modal
