@@ -31,18 +31,36 @@ import UTMAnalytics from "./analytics/utmAnalytics";
 
 function Dashboard() {
   const [currentView, setCurrentView] = useState('main');
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    // Initialize from localStorage or default based on screen size
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sidebarCollapsed');
+      if (saved !== null) {
+        return JSON.parse(saved);
+      }
+      return window.innerWidth <= 900;
+    }
+    return false;
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Persist sidebar state to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sidebarCollapsed', JSON.stringify(isCollapsed));
+    }
+  }, [isCollapsed]);
 
   // Detect mobile screen size
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth <= 900;
       setIsMobile(mobile);
-      if (mobile) {
+      // On mobile, collapse sidebar but don't override user preference on desktop
+      if (mobile && !isCollapsed) {
         setIsCollapsed(true);
       }
     };
@@ -50,7 +68,7 @@ function Dashboard() {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  }, [isCollapsed]);
 
   // Handle URL-based routing on page load
   useEffect(() => {
