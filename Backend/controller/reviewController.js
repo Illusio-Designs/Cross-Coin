@@ -4,6 +4,7 @@ const { Product } = require('../model/productModel.js');
 const { Order } = require('../model/orderModel.js');
 const { OrderItem } = require('../model/orderItemModel.js');
 const { User } = require('../model/userModel.js');
+const Brand = require('../model/brandModel.js');
 const path = require('path');
 const fs = require('fs');
 const { Op } = require('sequelize');
@@ -898,13 +899,30 @@ module.exports.getAllPublicReviews = async (req, res) => {
 
         const offset = (parseInt(page) - 1) * parseInt(limit);
 
+        // Build include options with brand filtering
+        const includeOptions = [
+            { model: User, as: 'User', attributes: ['id', 'username', 'profileImage'] },
+            { 
+                model: Product, 
+                as: 'Product', 
+                attributes: ['id', 'name'],
+                include: [
+                    {
+                        model: Brand,
+                        as: 'Brands',
+                        attributes: ['id', 'name'],
+                        through: { attributes: [] },
+                        ...(req.brand && req.brand.id && { where: { id: req.brand.id } })
+                    }
+                ],
+                ...(req.brand && req.brand.id && { required: true })
+            },
+            { model: ReviewImage, as: 'ReviewImages' }
+        ];
+
         const reviewsData = await Review.findAndCountAll({
             where: { status: 'approved' },
-            include: [
-                { model: User, as: 'User', attributes: ['id', 'username', 'profileImage'] },
-                { model: Product, as: 'Product', attributes: ['id', 'name'] },
-                { model: ReviewImage, as: 'ReviewImages' }
-            ],
+            include: includeOptions,
             order,
             limit: parseInt(limit),
             offset: offset,
