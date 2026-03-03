@@ -1,18 +1,25 @@
 const brandSettingsService = require('../services/brandSettingsService');
 
 /**
- * Get all settings
- * GET /api/admin/brand-settings?category=payment
+ * Get all settings for a brand
+ * GET /api/admin/brand-settings?brandId=1&category=payment
  */
 async function getAllSettings(req, res) {
     try {
-        const { category } = req.query;
+        const { brandId, category } = req.query;
+        
+        if (!brandId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Brand ID is required'
+            });
+        }
         
         let settings;
         if (category) {
-            settings = await brandSettingsService.getSettingsByCategory(category);
+            settings = await brandSettingsService.getSettingsByCategory(brandId, category);
         } else {
-            settings = await brandSettingsService.getAllSettings();
+            settings = await brandSettingsService.getAllSettings(brandId);
         }
         
         res.json({
@@ -31,13 +38,21 @@ async function getAllSettings(req, res) {
 
 /**
  * Get settings by category
- * GET /api/admin/brand-settings/category/:category
+ * GET /api/admin/brand-settings/category/:category?brandId=1
  */
 async function getSettingsByCategory(req, res) {
     try {
         const { category } = req.params;
+        const { brandId } = req.query;
         
-        const settings = await brandSettingsService.getSettingsByCategory(category);
+        if (!brandId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Brand ID is required'
+            });
+        }
+        
+        const settings = await brandSettingsService.getSettingsByCategory(brandId, category);
         
         res.json({
             success: true,
@@ -55,13 +70,21 @@ async function getSettingsByCategory(req, res) {
 
 /**
  * Get a single setting
- * GET /api/admin/brand-settings/:key
+ * GET /api/admin/brand-settings/:key?brandId=1
  */
 async function getSingleSetting(req, res) {
     try {
         const { key } = req.params;
+        const { brandId } = req.query;
         
-        const setting = await brandSettingsService.getSetting(key);
+        if (!brandId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Brand ID is required'
+            });
+        }
+        
+        const setting = await brandSettingsService.getSetting(brandId, key);
         
         if (!setting) {
             return res.status(404).json({
@@ -90,21 +113,23 @@ async function getSingleSetting(req, res) {
  */
 async function createSetting(req, res) {
     try {
-        const { setting_key, setting_value, category, is_encrypted, description } = req.body;
+        const { brand_id, key, value, category, is_encrypted, description } = req.body;
         
-        if (!setting_key || setting_value === undefined) {
+        if (!brand_id || !key || value === undefined) {
             return res.status(400).json({
                 success: false,
-                message: 'Setting key and value are required'
+                message: 'Brand ID, key, and value are required'
             });
         }
         
         const setting = await brandSettingsService.createSetting({
-            setting_key,
-            setting_value,
+            brand_id,
+            key,
+            value,
             category: category || 'general',
             is_encrypted: is_encrypted || false,
-            description: description || null
+            description: description || null,
+            updated_by: req.user?.id || null
         });
         
         res.status(201).json({
@@ -118,7 +143,7 @@ async function createSetting(req, res) {
         if (error.name === 'SequelizeUniqueConstraintError') {
             return res.status(409).json({
                 success: false,
-                message: 'Setting with this key already exists'
+                message: 'Setting with this key already exists for this brand'
             });
         }
         
@@ -132,23 +157,32 @@ async function createSetting(req, res) {
 
 /**
  * Update an existing setting
- * PUT /api/admin/brand-settings/:key
+ * PUT /api/admin/brand-settings/:key?brandId=1
  */
 async function updateSetting(req, res) {
     try {
         const { key } = req.params;
-        const { setting_value, is_encrypted } = req.body;
+        const { brandId } = req.query;
+        const { value, is_encrypted } = req.body;
         
-        if (setting_value === undefined) {
+        if (!brandId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Brand ID is required'
+            });
+        }
+        
+        if (value === undefined) {
             return res.status(400).json({
                 success: false,
                 message: 'Setting value is required'
             });
         }
         
-        const updated = await brandSettingsService.updateSetting(key, {
-            setting_value,
-            is_encrypted
+        const updated = await brandSettingsService.updateSetting(brandId, key, {
+            value,
+            is_encrypted,
+            updated_by: req.user?.id || null
         });
         
         if (!updated) {
@@ -175,13 +209,21 @@ async function updateSetting(req, res) {
 
 /**
  * Delete a setting
- * DELETE /api/admin/brand-settings/:key
+ * DELETE /api/admin/brand-settings/:key?brandId=1
  */
 async function deleteSetting(req, res) {
     try {
         const { key } = req.params;
+        const { brandId } = req.query;
         
-        const deleted = await brandSettingsService.deleteSetting(key);
+        if (!brandId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Brand ID is required'
+            });
+        }
+        
+        const deleted = await brandSettingsService.deleteSetting(brandId, key);
         
         if (!deleted) {
             return res.status(404).json({

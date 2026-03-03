@@ -13,12 +13,15 @@ export default function BrandManager() {
     const [formData, setFormData] = useState({
         name: '',
         slug: '',
+        display_name: '',
         domain: '',
-        description: '',
-        theme_color: '#4CAF50',
+        logo_url: '',
+        primary_color: '#4CAF50',
+        secondary_color: '#2196F3',
         contact_email: '',
         contact_phone: '',
-        is_active: true
+        settings: '',
+        status: 'active'
     });
 
     useEffect(() => {
@@ -81,12 +84,15 @@ export default function BrandManager() {
         setFormData({
             name: brand.name,
             slug: brand.slug,
+            display_name: brand.display_name || brand.name,
             domain: brand.domain || '',
-            description: brand.description || '',
-            theme_color: brand.theme_color || '#4CAF50',
+            logo_url: brand.logo_url || '',
+            primary_color: brand.primary_color || '#4CAF50',
+            secondary_color: brand.secondary_color || '#2196F3',
             contact_email: brand.contact_email || '',
             contact_phone: brand.contact_phone || '',
-            is_active: brand.is_active
+            settings: brand.settings || '',
+            status: brand.status || 'active'
         });
         setShowAddForm(true);
     };
@@ -121,12 +127,15 @@ export default function BrandManager() {
         setFormData({
             name: '',
             slug: '',
+            display_name: '',
             domain: '',
-            description: '',
-            theme_color: '#4CAF50',
+            logo_url: '',
+            primary_color: '#4CAF50',
+            secondary_color: '#2196F3',
             contact_email: '',
             contact_phone: '',
-            is_active: true
+            settings: '',
+            status: 'active'
         });
         setEditingBrand(null);
         setShowAddForm(false);
@@ -185,6 +194,18 @@ export default function BrandManager() {
                             </div>
 
                             <div className="form-group">
+                                <label>Display Name *</label>
+                                <input
+                                    type="text"
+                                    name="display_name"
+                                    value={formData.display_name}
+                                    onChange={handleInputChange}
+                                    placeholder="e.g., CrossCoin Store"
+                                    required
+                                />
+                            </div>
+
+                            <div className="form-group">
                                 <label>Slug</label>
                                 <input
                                     type="text"
@@ -207,19 +228,48 @@ export default function BrandManager() {
                             </div>
 
                             <div className="form-group">
-                                <label>Theme Color</label>
+                                <label>Logo URL</label>
+                                <input
+                                    type="text"
+                                    name="logo_url"
+                                    value={formData.logo_url}
+                                    onChange={handleInputChange}
+                                    placeholder="https://example.com/logo.png"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Primary Color</label>
                                 <div className="color-input-group">
                                     <input
                                         type="color"
-                                        name="theme_color"
-                                        value={formData.theme_color}
+                                        name="primary_color"
+                                        value={formData.primary_color}
                                         onChange={handleInputChange}
                                     />
                                     <input
                                         type="text"
-                                        value={formData.theme_color}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, theme_color: e.target.value }))}
+                                        value={formData.primary_color}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, primary_color: e.target.value }))}
                                         placeholder="#4CAF50"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Secondary Color</label>
+                                <div className="color-input-group">
+                                    <input
+                                        type="color"
+                                        name="secondary_color"
+                                        value={formData.secondary_color}
+                                        onChange={handleInputChange}
+                                    />
+                                    <input
+                                        type="text"
+                                        value={formData.secondary_color}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, secondary_color: e.target.value }))}
+                                        placeholder="#2196F3"
                                     />
                                 </div>
                             </div>
@@ -246,27 +296,27 @@ export default function BrandManager() {
                                 />
                             </div>
 
-                            <div className="form-group full-width">
-                                <label>Description</label>
-                                <textarea
-                                    name="description"
-                                    value={formData.description}
+                            <div className="form-group">
+                                <label>Status</label>
+                                <select
+                                    name="status"
+                                    value={formData.status}
                                     onChange={handleInputChange}
-                                    placeholder="Brand description..."
-                                    rows={3}
-                                />
+                                >
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
                             </div>
 
                             <div className="form-group full-width">
-                                <label className="checkbox-label">
-                                    <input
-                                        type="checkbox"
-                                        name="is_active"
-                                        checked={formData.is_active}
-                                        onChange={handleInputChange}
-                                    />
-                                    <span>Active</span>
-                                </label>
+                                <label>Settings (JSON)</label>
+                                <textarea
+                                    name="settings"
+                                    value={formData.settings}
+                                    onChange={handleInputChange}
+                                    placeholder='{"key": "value"}'
+                                    rows={3}
+                                />
                             </div>
                         </div>
 
@@ -307,20 +357,20 @@ export default function BrandManager() {
                                 <div className="brand-info">
                                     <div
                                         className="brand-color"
-                                        style={{ backgroundColor: brand.theme_color }}
+                                        style={{ backgroundColor: brand.primary_color }}
                                     />
                                     <div>
-                                        <h4>{brand.name}</h4>
+                                        <h4>{brand.display_name || brand.name}</h4>
                                         <span className="brand-slug">{brand.slug}</span>
                                     </div>
                                 </div>
                                 <div className="brand-actions">
                                     <button
-                                        className={`btn-icon ${brand.is_active ? 'active' : 'inactive'}`}
+                                        className={`btn-icon ${brand.status === 'active' ? 'active' : 'inactive'}`}
                                         onClick={() => handleToggleStatus(brand.id)}
-                                        title={brand.is_active ? 'Active' : 'Inactive'}
+                                        title={brand.status === 'active' ? 'Active' : 'Inactive'}
                                     >
-                                        {brand.is_active ? <FiToggleRight /> : <FiToggleLeft />}
+                                        {brand.status === 'active' ? <FiToggleRight /> : <FiToggleLeft />}
                                     </button>
                                     <button
                                         className="btn-icon"
@@ -345,6 +395,11 @@ export default function BrandManager() {
                                         <strong>Domain:</strong> {brand.domain}
                                     </div>
                                 )}
+                                {brand.logo_url && (
+                                    <div className="brand-detail">
+                                        <strong>Logo:</strong> <img src={brand.logo_url} alt={brand.name} style={{maxHeight: '30px'}} />
+                                    </div>
+                                )}
                                 {brand.contact_email && (
                                     <div className="brand-detail">
                                         <strong>Email:</strong> {brand.contact_email}
@@ -355,16 +410,20 @@ export default function BrandManager() {
                                         <strong>Phone:</strong> {brand.contact_phone}
                                     </div>
                                 )}
-                                {brand.description && (
-                                    <div className="brand-description">
-                                        {brand.description}
+                                {brand.primary_color && brand.secondary_color && (
+                                    <div className="brand-detail">
+                                        <strong>Colors:</strong> 
+                                        <span style={{display: 'inline-flex', gap: '5px', marginLeft: '5px'}}>
+                                            <span style={{width: '20px', height: '20px', backgroundColor: brand.primary_color, border: '1px solid #ccc'}}></span>
+                                            <span style={{width: '20px', height: '20px', backgroundColor: brand.secondary_color, border: '1px solid #ccc'}}></span>
+                                        </span>
                                     </div>
                                 )}
                             </div>
 
                             <div className="brand-card-footer">
-                                <span className={`status-badge ${brand.is_active ? 'active' : 'inactive'}`}>
-                                    {brand.is_active ? 'Active' : 'Inactive'}
+                                <span className={`status-badge ${brand.status === 'active' ? 'active' : 'inactive'}`}>
+                                    {brand.status === 'active' ? 'Active' : 'Inactive'}
                                 </span>
                                 <small>Updated: {new Date(brand.updated_at).toLocaleDateString()}</small>
                             </div>

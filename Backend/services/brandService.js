@@ -6,7 +6,7 @@ const { Op } = require('sequelize');
  */
 async function getAllBrands(includeInactive = false) {
     try {
-        const where = includeInactive ? {} : { is_active: true };
+        const where = includeInactive ? {} : { status: 'active' };
         
         const brands = await Brand.findAll({
             where,
@@ -141,7 +141,7 @@ async function toggleBrandStatus(id) {
             return null;
         }
         
-        brand.is_active = !brand.is_active;
+        brand.status = brand.status === 'active' ? 'inactive' : 'active';
         await brand.save();
         
         return brand;

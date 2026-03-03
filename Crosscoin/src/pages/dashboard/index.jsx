@@ -30,8 +30,6 @@ import Policies from "./policies";
 import UTMAnalytics from "./analytics/utmAnalytics";
 import BrandSettingsManager from "./brandSettings";
 import BrandManager from "./brands";
-import BrandSettingsManager from "@/pages/dashboard/brandSettings";
-import BrandManager from "@/pages/dashboard/brands";
 
 function Dashboard() {
   const [currentView, setCurrentView] = useState('main');
