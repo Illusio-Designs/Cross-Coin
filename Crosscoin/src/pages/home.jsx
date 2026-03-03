@@ -153,7 +153,15 @@ const Home = () => {
       try {
         setLatestProductsLoading(true);
         // Fetch latest products from all categories
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/public?limit=15&sort=newest`);
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/public?limit=15&sort=newest`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Brand-Name': 'crosscoin'
+            }
+          }
+        );
         const data = await response.json();
         if (data.success && data.data.products) {
           setLatestProducts(data.data.products);
@@ -172,7 +180,13 @@ const Home = () => {
       setExclusiveProductsLoading(true);
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/public?sort=featured&limit=3`
+          `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/public?sort=featured&limit=3`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Brand-Name': 'crosscoin'
+            }
+          }
         );
         const data = await response.json();
         if (data.success && data.data.products) {

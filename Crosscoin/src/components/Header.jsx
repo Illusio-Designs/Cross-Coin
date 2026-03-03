@@ -46,7 +46,13 @@ const Header = () => {
       try {
         setIsSearching(true);
         const response = await fetch(
-          `${apiUrl}/api/products/search?query=${encodeURIComponent(query)}`
+          `${apiUrl}/api/products/search?query=${encodeURIComponent(query)}`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Brand-Name': 'crosscoin'
+            }
+          }
         );
         const data = await response.json();
 
