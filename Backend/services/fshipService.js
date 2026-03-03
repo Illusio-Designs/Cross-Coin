@@ -1,28 +1,39 @@
 const axios = require('axios');
+const settingsHelper = require('./settingsHelper');
 
 // FShip API Configuration
 const FSHIP_STAGING_URL = 'https://capi-qc.fship.in';
-const FSHIP_PRODUCTION_URL = 'https://capi.fship.in';
-const FSHIP_API_KEY = process.env.FSHIP_API_KEY;
-const FSHIP_ENVIRONMENT = process.env.FSHIP_ENVIRONMENT || 'staging';
-
-const BASE_URL = FSHIP_ENVIRONMENT === 'production' ? FSHIP_PRODUCTION_URL : FSHIP_STAGING_URL;
-
-console.log('FShip Configuration:', {
-    environment: FSHIP_ENVIRONMENT,
-    baseUrl: BASE_URL,
-    apiKey: FSHIP_API_KEY ? 'Present' : 'Missing'
-});
 
 /**
  * FShip Service Class
  * Handles all FShip API interactions for Cross-Coin platform
  */
 class FShipService {
-    constructor() {
-        this.baseURL = BASE_URL;
-        this.apiKey = FSHIP_API_KEY;
+    constructor(brandId = 1) {
+        this.brandId = brandId;
+        this.initialized = false;
+    }
+
+    /**
+     * Initialize service with brand settings
+     */
+    async initialize() {
+        if (this.initialized) return;
+        
+        const FSHIP_ENVIRONMENT = await settingsHelper.getSetting(this.brandId, 'FSHIP_ENVIRONMENT', 'staging');
+        const FSHIP_PRODUCTION_URL = await settingsHelper.getSetting(this.brandId, 'FSHIP_PRODUCTION_URL', 'https://capi.fship.in');
+        this.apiKey = await settingsHelper.getSetting(this.brandId, 'FSHIP_API_KEY');
+        this.baseURL = FSHIP_ENVIRONMENT === 'production' ? FSHIP_PRODUCTION_URL : FSHIP_STAGING_URL;
+        
+        console.log('FShip Configuration:', {
+            brandId: this.brandId,
+            environment: FSHIP_ENVIRONMENT,
+            baseUrl: this.baseURL,
+            apiKey: this.apiKey ? 'Present' : 'Missing'
+        });
+        
         this.axiosInstance = this.createAxiosInstance();
+        this.initialized = true;
     }
 
     /**
@@ -82,6 +93,7 @@ class FShipService {
      * Get list of available couriers
      */
     async getCourierList() {
+        await this.initialize();
         try {
             console.log('=== FShip Get Courier List ===');
             const response = await this.axiosInstance.get('/api/getallcourier');
@@ -96,6 +108,7 @@ class FShipService {
      * Add new warehouse/pickup location
      */
     async addWarehouse(warehouseData) {
+        await this.initialize();
         try {
             console.log('=== FShip Add Warehouse ===');
             console.log('Warehouse Data:', JSON.stringify(warehouseData, null, 2));
@@ -126,6 +139,7 @@ class FShipService {
      * Update existing warehouse
      */
     async updateWarehouse(warehouseData) {
+        await this.initialize();
         try {
             console.log('=== FShip Update Warehouse ===');
             const response = await this.axiosInstance.post('/api/updatewarehouse', warehouseData);
@@ -140,6 +154,7 @@ class FShipService {
      * Create forward order (seller to customer)
      */
     async createForwardOrder(orderData) {
+        await this.initialize();
         try {
             console.log('=== FShip Create Forward Order ===');
             console.log('Order Data:', JSON.stringify(orderData, null, 2));
@@ -171,6 +186,7 @@ class FShipService {
      * Create or update forward order with existence check
      */
     async createOrUpdateForwardOrder(orderData) {
+        await this.initialize();
         try {
             console.log('=== FShip Create or Update Forward Order ===');
             console.log('Order ID:', orderData.orderId);
@@ -221,6 +237,7 @@ class FShipService {
      * Update existing order in FShip
      */
     async updateExistingOrder(orderData, existingOrderData) {
+        await this.initialize();
         try {
             console.log('=== FShip Update Existing Order ===');
             
@@ -258,6 +275,7 @@ class FShipService {
      * Bulk create or update forward orders
      */
     async bulkCreateOrUpdateOrders(ordersArray) {
+        await this.initialize();
         try {
             console.log('=== FShip Bulk Create/Update Orders ===');
             console.log(`Processing ${ordersArray.length} orders...`);
@@ -455,6 +473,7 @@ class FShipService {
      * Cancel order
      */
     async cancelOrder(waybill, reason = 'Order cancelled by customer') {
+        await this.initialize();
         try {
             console.log('=== FShip Cancel Order ===');
             console.log('Waybill:', waybill, 'Reason:', reason);
@@ -476,6 +495,7 @@ class FShipService {
      * Ship order (generate AWB for created order)
      */
     async shipOrder(apiOrderId, courierId = null) {
+        await this.initialize();
         try {
             console.log('=== FShip Ship Order ===');
             console.log('API Order ID:', apiOrderId, 'Courier ID:', courierId);
@@ -497,6 +517,7 @@ class FShipService {
      * Register pickup for orders
      */
     async registerPickup(waybills) {
+        await this.initialize();
         try {
             console.log('=== FShip Register Pickup ===');
             console.log('Waybills:', waybills);
@@ -517,6 +538,7 @@ class FShipService {
      * Get shipping label details
      */
     async getShippingLabel(waybills) {
+        await this.initialize();
         try {
             console.log('=== FShip Get Shipping Label ===');
             console.log('Waybills:', waybills);
@@ -538,6 +560,7 @@ class FShipService {
      * Get tracking history for order
      */
     async getTrackingHistory(waybill) {
+        await this.initialize();
         try {
             console.log('=== FShip Get Tracking History ===');
             console.log('Waybill:', waybill);
@@ -558,6 +581,7 @@ class FShipService {
      * Get current shipment status
      */
     async getShipmentStatus(waybill) {
+        await this.initialize();
         try {
             console.log('=== FShip Get Shipment Status ===');
             console.log('Waybill:', waybill);
@@ -578,6 +602,7 @@ class FShipService {
      * Calculate shipping rates
      */
     async calculateRates(rateData) {
+        await this.initialize();
         try {
             console.log('=== FShip Calculate Rates ===');
             console.log('Rate Data:', JSON.stringify(rateData, null, 2));
@@ -613,6 +638,7 @@ class FShipService {
      * Check pincode serviceability
      */
     async checkServiceability(sourcePincode, destinationPincode) {
+        await this.initialize();
         try {
             console.log('=== FShip Check Serviceability ===');
             console.log('Source:', sourcePincode, 'Destination:', destinationPincode);
@@ -697,6 +723,7 @@ class FShipService {
      * Test API connectivity and credentials
      */
     async testConnection() {
+        await this.initialize();
         try {
             console.log('=== FShip Test Connection ===');
             const couriers = await this.getCourierList();
@@ -719,6 +746,7 @@ class FShipService {
      * Check if order exists in FShip by order ID
      */
     async checkOrderExists(orderId) {
+        await this.initialize();
         try {
             console.log('=== FShip Check Order Exists ===');
             console.log('Order ID:', orderId);
@@ -761,6 +789,7 @@ class FShipService {
      * Find order in FShip by order ID from all orders - gets the latest/best match
      */
     async findOrderByIdFromAll(orderId) {
+        await this.initialize();
         try {
             console.log('=== FShip Find Order by ID from All Orders ===');
             console.log('Looking for Order ID:', orderId);

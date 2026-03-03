@@ -20,7 +20,6 @@ export default function BrandManager() {
         secondary_color: '#2196F3',
         contact_email: '',
         contact_phone: '',
-        settings: '',
         status: 'active'
     });
 
@@ -91,7 +90,6 @@ export default function BrandManager() {
             secondary_color: brand.secondary_color || '#2196F3',
             contact_email: brand.contact_email || '',
             contact_phone: brand.contact_phone || '',
-            settings: brand.settings || '',
             status: brand.status || 'active'
         });
         setShowAddForm(true);
@@ -134,7 +132,6 @@ export default function BrandManager() {
             secondary_color: '#2196F3',
             contact_email: '',
             contact_phone: '',
-            settings: '',
             status: 'active'
         });
         setEditingBrand(null);
@@ -306,17 +303,6 @@ export default function BrandManager() {
                                     <option value="active">Active</option>
                                     <option value="inactive">Inactive</option>
                                 </select>
-                            </div>
-
-                            <div className="form-group full-width">
-                                <label>Settings (JSON)</label>
-                                <textarea
-                                    name="settings"
-                                    value={formData.settings}
-                                    onChange={handleInputChange}
-                                    placeholder='{"key": "value"}'
-                                    rows={3}
-                                />
                             </div>
                         </div>
 

@@ -18,6 +18,7 @@ const axios = require('axios');
 const fshipService = require("../services/fshipService.js");
 const { setImmediate } = require("timers");
 const { sendFacebookEvent } = require("../integration/facebookPixel.js");
+const settingsHelper = require("../services/settingsHelper");
 
 // Generate unique order number
 const generateOrderNumber = () => {
@@ -433,8 +434,8 @@ module.exports.createOrder = async (req, res) => {
           shipment_Length: 14,
           shipment_Width: 3,
           shipment_Height: 10,
-          pick_Address_ID: parseInt(process.env.FSHIP_DEFAULT_WAREHOUSE_ID) || 12191,
-          return_Address_ID: parseInt(process.env.FSHIP_DEFAULT_WAREHOUSE_ID) || 12191,
+          pick_Address_ID: parseInt(await settingsHelper.getSetting(1, 'FSHIP_DEFAULT_WAREHOUSE_ID', '12191')),
+          return_Address_ID: parseInt(await settingsHelper.getSetting(1, 'FSHIP_DEFAULT_WAREHOUSE_ID', '12191')),
           products: orderItems
         };
 
@@ -902,8 +903,8 @@ module.exports.createGuestOrder = async (req, res) => {
           shipment_Length: 14,
           shipment_Width: 3,
           shipment_Height: 10,
-          pick_Address_ID: parseInt(process.env.FSHIP_DEFAULT_WAREHOUSE_ID) || 12191,
-          return_Address_ID: parseInt(process.env.FSHIP_DEFAULT_WAREHOUSE_ID) || 12191,
+          pick_Address_ID: parseInt(await settingsHelper.getSetting(1, 'FSHIP_DEFAULT_WAREHOUSE_ID', '12191')),
+          return_Address_ID: parseInt(await settingsHelper.getSetting(1, 'FSHIP_DEFAULT_WAREHOUSE_ID', '12191')),
           products: validatedItems.map((item) => ({
             productName: item.product.name,
             sku: item.variation?.sku || item.product.sku || `PROD-${item.product.id}`,
@@ -2806,8 +2807,8 @@ module.exports.prepareFShipOrderData = async (order) => {
       shipment_Height: 10,
       latitude: 0,
       longitude: 0,
-      pick_Address_ID: process.env.FSHIP_DEFAULT_WAREHOUSE_ID || 227729,
-      return_Address_ID: process.env.FSHIP_DEFAULT_WAREHOUSE_ID || 227729,
+      pick_Address_ID: parseInt(await settingsHelper.getSetting(1, 'FSHIP_DEFAULT_WAREHOUSE_ID', '227729')),
+      return_Address_ID: parseInt(await settingsHelper.getSetting(1, 'FSHIP_DEFAULT_WAREHOUSE_ID', '227729')),
       products: products,
       courierId: 0 // Auto-selection
     };

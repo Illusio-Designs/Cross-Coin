@@ -54,11 +54,6 @@ const Brand = sequelize.define('Brand', {
         allowNull: true,
         comment: 'Brand contact phone'
     },
-    settings: {
-        type: DataTypes.TEXT('long'),
-        allowNull: true,
-        comment: 'Brand settings as JSON string'
-    },
     status: {
         type: DataTypes.ENUM('active', 'inactive'),
         allowNull: true,
