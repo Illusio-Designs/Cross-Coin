@@ -12,6 +12,7 @@ import { debounce } from 'lodash';
 import AttributeSelector from '@/components/products/AttributeSelector';
 import ExistingImageSelector from '@/components/products/ExistingImageSelector';
 import BrandTags from '@/components/Dashboard/BrandTags';
+import BrandAssignment from '@/components/admin/BrandAssignment';
 import "../../../styles/dashboard/products.css";
 import dynamic from 'next/dynamic';
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
@@ -46,6 +47,7 @@ const ProductsPage = () => {
     weightUnit: "g",
     dimensions: { length: "", width: "", height: "" },
     dimensionUnit: "cm",
+    brandIds: [1], // Default to CrossCoin brand
     variations: [{
       price: "",
       comparePrice: "",
@@ -331,6 +333,7 @@ const ProductsPage = () => {
         status: product.status,
         badge: product.badge || 'none',
         total_sold: product.total_sold || 0,
+        brandIds: product.brands?.map(b => b.id) || [1], // Extract brand IDs or default to CrossCoin
         imagesToDelete: [], // Reset deletion tracking
         variationImagesToDelete: [], // Reset deletion tracking
         images: product.images?.map(img => {
@@ -839,6 +842,9 @@ const ProductsPage = () => {
         formDataToSend.append('weightUnit', formData.weightUnit || 'g');
         formDataToSend.append('dimensions', JSON.stringify(formData.dimensions));
         formDataToSend.append('dimensionUnit', formData.dimensionUnit || 'cm');
+        
+        // Add brand IDs
+        formDataToSend.append('brandIds', JSON.stringify(formData.brandIds || [1]));
 
         // Add variations
         formDataToSend.append('variations', JSON.stringify(variationsWithAttributes));
@@ -1077,6 +1083,14 @@ const ProductsPage = () => {
                 { value: 'low_stock', label: 'Low Stock' }
               ]}
             />
+            
+            {/* Brand Assignment */}
+            <BrandAssignment
+              selectedBrands={formData.brandIds || []}
+              onChange={(brandIds) => setFormData(prev => ({ ...prev, brandIds }))}
+              disabled={loading}
+            />
+            
             {/* Product Images Upload */}
             <div className="product-images-section">
               <label>Product Images</label>

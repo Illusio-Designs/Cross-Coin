@@ -6,6 +6,7 @@ import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
 import Loader from "@/components/Loader";
 import BrandTags from "@/components/Dashboard/BrandTags";
+import BrandAssignment from "@/components/admin/BrandAssignment";
 import { categoryService } from "@/services";
 import { debounce } from 'lodash';
 import "../../../styles/dashboard/seo.css";
@@ -23,7 +24,8 @@ export default function Categories() {
     description: "",
     status: "active",
     metaKeywords: "",
-    image: null
+    image: null,
+    brandIds: [1] // Default to CrossCoin brand
   });
 
   // Debounced search function
@@ -139,7 +141,8 @@ export default function Categories() {
         description: data.description || "",
         status: data.status || "active",
         metaKeywords: data.metaKeywords || "",
-        image: data.image || null
+        image: data.image || null,
+        brandIds: data.brands?.map(b => b.id) || [1] // Extract brand IDs or default to CrossCoin
       });
       setIsModalOpen(true);
     } catch (err) {
@@ -257,6 +260,9 @@ export default function Categories() {
       Object.keys(formData).forEach(key => {
         if (key === 'image' && formData[key] instanceof File) {
           formDataToSend.append('image', formData[key]);
+        } else if (key === 'brandIds') {
+          // Handle brandIds as JSON array
+          formDataToSend.append('brandIds', JSON.stringify(formData[key] || [1]));
         } else if (key !== 'id' && formData[key] !== null && formData[key] !== undefined) {
           formDataToSend.append(key, formData[key]);
         }
@@ -278,7 +284,8 @@ export default function Categories() {
         description: "",
         status: "active",
         metaKeywords: "",
-        image: null
+        image: null,
+        brandIds: [1]
       });
     } catch (err) {
       console.error('Submit Error:', err);
@@ -401,6 +408,14 @@ export default function Categories() {
               value={formData.metaKeywords}
               onChange={handleInputChange}
             />
+            
+            {/* Brand Assignment */}
+            <BrandAssignment
+              selectedBrands={formData.brandIds || []}
+              onChange={(brandIds) => setFormData(prev => ({ ...prev, brandIds }))}
+              disabled={loading}
+            />
+            
             <div className="input-field">
               <label className="input-field-label">Category Image</label>
               <input
