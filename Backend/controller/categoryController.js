@@ -42,6 +42,8 @@ const createCategory = async (req, res) => {
             metaDescription, 
             metaKeywords
         } = req.body;
+        
+        const brandIds = JSON.parse(req.body.brandIds || "[1]"); // ✅ Array of brand IDs
 
         // Validate required fields
         if (!name) {
@@ -112,9 +114,18 @@ const createCategory = async (req, res) => {
             metaTitle: metaTitle || name,
             metaDescription: metaDescription || description,
             metaKeywords,
-            slug,
-            brand_id: req.brand ? req.brand.id : 1, // ✅ Multi-brand support
+            slug
         });
+
+        // ✅ Assign category to multiple brands
+        const { CategoryBrand } = require('../model/categoryBrandModel.js');
+        for (const brandId of brandIds) {
+            await CategoryBrand.create({
+                category_id: category.id,
+                brand_id: brandId,
+                status: 'active'
+            });
+        }
 
         // Get category with parent info
         const categoryWithParent = await Category.findByPk(category.id, {
@@ -144,19 +155,28 @@ const createCategory = async (req, res) => {
 // Get All Categories
 const getAllCategories = async (req, res) => {
     try {
-        // ✅ Multi-brand filtering
-        const whereOptions = {};
+        // ✅ Filter by brand if X-Brand-Name header is present (for frontend)
+        let brandFilter = null;
         if (req.brand && req.brand.id) {
-            whereOptions.brand_id = req.brand.id;
+            brandFilter = req.brand.id;
         }
 
-        const categories = await Category.findAll({
-            where: whereOptions,
-            include: [{
+        const includeOptions = [
+            {
                 model: Category,
                 as: 'parent',
                 attributes: ['id', 'name']
-            }],
+            },
+            {
+                model: Brand,
+                as: 'Brands',
+                through: { attributes: ['status'] },
+                ...(brandFilter && { where: { id: brandFilter } })
+            }
+        ];
+
+        const categories = await Category.findAll({
+            include: includeOptions,
             order: [['createdAt', 'DESC']]
         });
 
@@ -170,7 +190,17 @@ const getAllCategories = async (req, res) => {
                 categoryData.image = `/uploads/categories/${categoryData.image}`;
             }
             
+            // Add brand assignments
+            categoryData.brands = category.Brands ? category.Brands.map(brand => ({
+                id: brand.id,
+                name: brand.name,
+                slug: brand.slug,
+                display_name: brand.display_name,
+                status: brand.CategoryBrand?.status
+            })) : [];
+            
             delete categoryData.parent;
+            delete categoryData.Brands;
             return categoryData;
         });
 
@@ -218,19 +248,19 @@ const getCategoryById = async (req, res) => {
     try {
         const { id } = req.params;
         
-        // ✅ Multi-brand filtering
-        const whereOptions = { id };
-        if (req.brand && req.brand.id) {
-            whereOptions.brand_id = req.brand.id;
-        }
-
-        const category = await Category.findOne({
-            where: whereOptions,
-            include: [{
-                model: Category,
-                as: 'parent',
-                attributes: ['id', 'name']
-            }]
+        const category = await Category.findByPk(id, {
+            include: [
+                {
+                    model: Category,
+                    as: 'parent',
+                    attributes: ['id', 'name']
+                },
+                {
+                    model: Brand,
+                    as: 'Brands',
+                    through: { attributes: ['status'] }
+                }
+            ]
         });
 
         if (!category) {
@@ -239,6 +269,15 @@ const getCategoryById = async (req, res) => {
 
         // Format response
         const categoryResponse = formatCategoryResponse(category);
+        
+        // Add brand assignments
+        categoryResponse.brands = category.Brands ? category.Brands.map(brand => ({
+            id: brand.id,
+            name: brand.name,
+            slug: brand.slug,
+            display_name: brand.display_name,
+            status: brand.CategoryBrand?.status
+        })) : [];
 
         res.status(200).json(categoryResponse);
     } catch (error) {

@@ -27,6 +27,8 @@ const FShipLabelDownload = require("./fshipLabelDownloadModel.js");
 const { UTMTracking } = require("./utmModel.js");
 const { BrandSetting } = require("./brandSettingModel.js");
 const Brand = require("./brandModel.js");
+const { ProductBrand } = require("./productBrandModel.js");
+const { CategoryBrand } = require("./categoryBrandModel.js");
 
 // Export all models
 module.exports = {
@@ -58,6 +60,8 @@ module.exports = {
   UTMTracking,
   BrandSetting,
   Brand,
+  ProductBrand,
+  CategoryBrand,
 };
 
 // User Associations
@@ -370,29 +374,36 @@ UTMTracking.hasMany(Order, {
   onDelete: "SET NULL",
 });
 
-// Brand Associations
-Brand.hasMany(Product, {
+// Brand Associations - MANY-TO-MANY relationships
+// Products can belong to multiple brands
+Brand.belongsToMany(Product, {
+  through: ProductBrand,
   foreignKey: "brand_id",
+  otherKey: "product_id",
   as: "Products",
-  onDelete: "CASCADE",
 });
-Product.belongsTo(Brand, {
-  foreignKey: "brand_id",
-  as: "Brand",
-  onDelete: "CASCADE",
+Product.belongsToMany(Brand, {
+  through: ProductBrand,
+  foreignKey: "product_id",
+  otherKey: "brand_id",
+  as: "Brands",
 });
 
-Brand.hasMany(Category, {
+// Categories can belong to multiple brands
+Brand.belongsToMany(Category, {
+  through: CategoryBrand,
   foreignKey: "brand_id",
+  otherKey: "category_id",
   as: "Categories",
-  onDelete: "CASCADE",
 });
-Category.belongsTo(Brand, {
-  foreignKey: "brand_id",
-  as: "Brand",
-  onDelete: "CASCADE",
+Category.belongsToMany(Brand, {
+  through: CategoryBrand,
+  foreignKey: "category_id",
+  otherKey: "brand_id",
+  as: "Brands",
 });
 
+// Orders still belong to ONE brand (can't be shared)
 Brand.hasMany(Order, {
   foreignKey: "brand_id",
   as: "Orders",
@@ -404,6 +415,7 @@ Order.belongsTo(Brand, {
   onDelete: "CASCADE",
 });
 
+// Sliders can belong to multiple brands (optional - uncomment if needed)
 Brand.hasMany(Slider, {
   foreignKey: "brand_id",
   as: "Sliders",
@@ -415,6 +427,7 @@ Slider.belongsTo(Brand, {
   onDelete: "CASCADE",
 });
 
+// Coupons can belong to multiple brands (optional - uncomment if needed)
 Brand.hasMany(Coupon, {
   foreignKey: "brand_id",
   as: "Coupons",
