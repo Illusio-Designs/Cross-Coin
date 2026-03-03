@@ -118,7 +118,8 @@ export const getPublicCategories = async () => {
 export const getPublicCategoryByName = async (categoryName) => {
   try {
     const response = await axios.get(
-      `${API_URL}/api/categories/public/name/${categoryName}`
+      `${API_URL}/api/categories/public/name/${categoryName}`,
+      addBrandHeader()
     );
     return response.data;
   } catch (error) {
@@ -241,7 +242,8 @@ export const searchProducts = async (query, params = {}) => {
     if (params.limit) queryParams.append("limit", params.limit);
 
     const response = await axios.get(
-      `${API_URL}/api/products/search?${queryParams.toString()}`
+      `${API_URL}/api/products/search?${queryParams.toString()}`,
+      addBrandHeader()
     );
     console.log("SEARCH API RESPONSE:", response.data);
     return response.data;
@@ -254,7 +256,7 @@ export const searchProducts = async (query, params = {}) => {
 // Get all public coupons
 export const getPublicCoupons = async () => {
   try {
-    const response = await axios.get(`${API_URL}/api/coupons/public`);
+    const response = await axios.get(`${API_URL}/api/coupons/public`, addBrandHeader());
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -270,7 +272,8 @@ export const getPublicProductReviews = async (productId, params = {}) => {
     if (params.sort) queryParams.append("sort", params.sort);
 
     const response = await axios.get(
-      `${API_URL}/api/reviews/public/${productId}?${queryParams.toString()}`
+      `${API_URL}/api/reviews/public/${productId}?${queryParams.toString()}`,
+      addBrandHeader()
     );
     return response.data;
   } catch (error) {
@@ -598,7 +601,7 @@ export const getSeoByPageName = async (pageName) => {
 
   try {
     console.log(`Fetching SEO data for page: ${pageName}`);
-    const promise = axios.get(url);
+    const promise = axios.get(url, addBrandHeader());
     
     // Add to pending requests
     const cachedPromise = apiCache.addPending(cacheKey, promise);
@@ -870,7 +873,8 @@ export const getAllPublicReviews = async (params = {}) => {
     if (params.limit) queryParams.append("limit", params.limit);
     if (params.sort) queryParams.append("sort", params.sort);
     const response = await axios.get(
-      `${API_URL}/api/reviews/public/all?${queryParams.toString()}`
+      `${API_URL}/api/reviews/public/all?${queryParams.toString()}`,
+      addBrandHeader()
     );
     return response.data;
   } catch (error) {
@@ -880,7 +884,7 @@ export const getAllPublicReviews = async (params = {}) => {
 
 export const getPublicPolicyByName = async (name) => {
   try {
-    const response = await axios.get(`${API_URL}/api/policies/name/${name}`);
+    const response = await axios.get(`${API_URL}/api/policies/name/${name}`, addBrandHeader());
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
