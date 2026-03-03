@@ -2,6 +2,29 @@ import axios from "axios";
 import apiCache from "../utils/apiCache";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
+const BRAND_NAME = "crosscoin"; // ✅ CrossCoin brand identifier
+
+// Create axios instance with brand header
+const createPublicApiClient = () => {
+  return axios.create({
+    baseURL: API_URL,
+    headers: {
+      "Content-Type": "application/json",
+      "X-Brand-Name": BRAND_NAME, // ✅ Send brand header with all requests
+    },
+  });
+};
+
+// Helper to add brand header to axios config
+const addBrandHeader = (config = {}) => {
+  return {
+    ...config,
+    headers: {
+      ...config.headers,
+      "X-Brand-Name": BRAND_NAME,
+    },
+  };
+};
 
 // Authentication APIs
 export const registerUser = async (userData) => {
@@ -66,12 +89,12 @@ export const getPublicCategories = async () => {
   // Check cache first
   if (apiCache.isValid(cacheKey)) {
     console.log("Categories data loaded from cache");
-    return apiCache.get(cacheKey); // Fixed: removed .data since cache already stores the data
+    return apiCache.get(cacheKey);
   }
 
   try {
     console.log("Fetching categories from API...");
-    const promise = axios.get(`${API_URL}/api/categories/public`);
+    const promise = axios.get(`${API_URL}/api/categories/public`, addBrandHeader());
     
     // Add to pending requests
     const cachedPromise = apiCache.addPending(cacheKey, promise);
@@ -123,7 +146,7 @@ export const getPublicSliders = async () => {
 
   try {
     console.log("Fetching sliders from API...");
-    const promise = axios.get(`${API_URL}/api/sliders/public/sliders`);
+    const promise = axios.get(`${API_URL}/api/sliders/public/sliders`, addBrandHeader());
     apiCache.addPending(cacheKey, promise);
     
     const response = await promise;
@@ -145,7 +168,7 @@ export const getPublicProductBySlug = async (slug) => {
   try {
     console.log("API CALL: Fetching product with slug:", slug);
     console.log("API URL:", `${API_URL}/api/products/public/${slug}`);
-    const response = await axios.get(`${API_URL}/api/products/public/${slug}`);
+    const response = await axios.get(`${API_URL}/api/products/public/${slug}`, addBrandHeader());
     console.log("API RESPONSE:", response.data);
     return response.data;
   } catch (error) {
@@ -179,12 +202,12 @@ export const getAllPublicProducts = async (params = {}) => {
   // Check cache first (only for general products, not category-specific)
   if (!params.category && apiCache.isValid(cacheKey)) {
     console.log("Products data loaded from cache");
-    return apiCache.get(cacheKey); // Fixed: removed .data since cache already stores the data
+    return apiCache.get(cacheKey);
   }
 
   try {
     console.log("Fetching products from API...");
-    const promise = axios.get(url);
+    const promise = axios.get(url, addBrandHeader());
     
     // Add to pending requests
     const cachedPromise = apiCache.addPending(cacheKey, promise);
