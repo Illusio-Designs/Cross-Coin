@@ -16,6 +16,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
+    "X-Brand-Name": "crosscoin", // ✅ Brand identification for multi-brand system
   },
 });
 

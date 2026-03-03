@@ -26,6 +26,7 @@ const { GuestUser } = require("./guestUserModel.js");
 const FShipLabelDownload = require("./fshipLabelDownloadModel.js");
 const { UTMTracking } = require("./utmModel.js");
 const { BrandSetting } = require("./brandSettingModel.js");
+const Brand = require("./brandModel.js");
 
 // Export all models
 module.exports = {
@@ -56,6 +57,7 @@ module.exports = {
   FShipLabelDownload,
   UTMTracking,
   BrandSetting,
+  Brand,
 };
 
 // User Associations
@@ -366,4 +368,60 @@ UTMTracking.hasMany(Order, {
   foreignKey: "utm_tracking_id",
   as: "Orders",
   onDelete: "SET NULL",
+});
+
+// Brand Associations
+Brand.hasMany(Product, {
+  foreignKey: "brand_id",
+  as: "Products",
+  onDelete: "CASCADE",
+});
+Product.belongsTo(Brand, {
+  foreignKey: "brand_id",
+  as: "Brand",
+  onDelete: "CASCADE",
+});
+
+Brand.hasMany(Category, {
+  foreignKey: "brand_id",
+  as: "Categories",
+  onDelete: "CASCADE",
+});
+Category.belongsTo(Brand, {
+  foreignKey: "brand_id",
+  as: "Brand",
+  onDelete: "CASCADE",
+});
+
+Brand.hasMany(Order, {
+  foreignKey: "brand_id",
+  as: "Orders",
+  onDelete: "CASCADE",
+});
+Order.belongsTo(Brand, {
+  foreignKey: "brand_id",
+  as: "Brand",
+  onDelete: "CASCADE",
+});
+
+Brand.hasMany(Slider, {
+  foreignKey: "brand_id",
+  as: "Sliders",
+  onDelete: "CASCADE",
+});
+Slider.belongsTo(Brand, {
+  foreignKey: "brand_id",
+  as: "Brand",
+  onDelete: "CASCADE",
+});
+
+Brand.hasMany(Coupon, {
+  foreignKey: "brand_id",
+  as: "Coupons",
+  onDelete: "CASCADE",
+});
+Coupon.belongsTo(Brand, {
+  foreignKey: "brand_id",
+  as: "Brand",
+  onDelete: "CASCADE",
 });

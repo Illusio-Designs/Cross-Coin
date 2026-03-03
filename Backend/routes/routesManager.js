@@ -1,6 +1,7 @@
 // routes/routesManager.js
 const express = require('express');
 const router = express.Router();
+const { identifyBrand, optionalBrand } = require('../middleware/brandMiddleware.js');
 
 // Import all route modules
 const userRoutes = require('./userRoutes.js');
@@ -21,35 +22,30 @@ const cartRoutes = require('./cartRoutes.js');
 const policyRoutes = require('./policyRoutes.js');
 const dashboardRoutes = require('./dashboardRoutes.js');
 
-// Core Routes
-router.use('/users', userRoutes); // This now includes both auth and user routes
-router.use('/categories', categoryRoutes);
-router.use('/products', productRoutes);
-router.use('/orders', orderRoutes);
+// User routes - shared across brands (optional brand)
+router.use('/users', optionalBrand, userRoutes);
 
-// Feature Routes
-router.use('/sliders', sliderRoutes);
-router.use('/coupons', couponRoutes);
-router.use('/wishlist', wishlistRoutes);
-router.use('/shipping-addresses', shippingAddressRoutes);
-router.use('/payments', paymentRoutes);
-router.use('/shipping-fees', shippingFeeRoutes);
-router.use('/order-status-history', orderStatusHistoryRoutes);
-router.use('/seo', seoRoutes);
-router.use('/attributes', attributeRoutes);
+// Brand-specific routes (require brand identification)
+router.use('/categories', identifyBrand, categoryRoutes);
+router.use('/products', identifyBrand, productRoutes);
+router.use('/orders', identifyBrand, orderRoutes);
+router.use('/sliders', identifyBrand, sliderRoutes);
+router.use('/coupons', identifyBrand, couponRoutes);
+router.use('/policies', identifyBrand, policyRoutes);
+router.use('/seo', identifyBrand, seoRoutes);
+router.use('/reviews', identifyBrand, reviewRoutes);
+router.use('/attributes', identifyBrand, attributeRoutes);
 
+// User-specific routes (optional brand for cross-brand features)
+router.use('/wishlist', optionalBrand, wishlistRoutes);
+router.use('/cart', optionalBrand, cartRoutes);
+router.use('/shipping-addresses', optionalBrand, shippingAddressRoutes);
+router.use('/payments', identifyBrand, paymentRoutes);
+router.use('/shipping-fees', identifyBrand, shippingFeeRoutes);
+router.use('/order-status-history', identifyBrand, orderStatusHistoryRoutes);
 
-// Review routes
-router.use('/reviews', reviewRoutes);
-
-// Cart routes
-router.use('/cart', cartRoutes);
-
-// Policy routes
-router.use('/policies', policyRoutes);
-
-// Dashboard routes
-router.use('/dashboard', dashboardRoutes);
+// Dashboard routes (admin, can filter by brand)
+router.use('/dashboard', optionalBrand, dashboardRoutes);
 
 // Health Check Route
 router.get('/health', (req, res) => {

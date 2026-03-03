@@ -312,6 +312,7 @@ module.exports.createProduct = async (req, res) => {
           ? JSON.parse(req.body.dimensions)
           : null,
         dimensionUnit: req.body.dimensionUnit || "cm",
+        brand_id: req.brand ? req.brand.id : 1, // ✅ Multi-brand support
       },
       { transaction }
     );
@@ -572,6 +573,12 @@ module.exports.getAllProducts = async (req, res) => {
 
     // Build filter options
     const whereOptions = {};
+    
+    // ✅ Multi-brand filtering
+    if (req.brand && req.brand.id) {
+      whereOptions.brand_id = req.brand.id;
+    }
+    
     if (search) {
       whereOptions[Op.or] = [
         { name: { [Op.like]: `%${search.toLowerCase()}%` } },
@@ -616,7 +623,14 @@ module.exports.getProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const product = await Product.findByPk(id, {
+    // ✅ Multi-brand filtering
+    const whereOptions = { id };
+    if (req.brand && req.brand.id) {
+      whereOptions.brand_id = req.brand.id;
+    }
+
+    const product = await Product.findOne({
+      where: whereOptions,
       include: [
         { model: Category },
         {

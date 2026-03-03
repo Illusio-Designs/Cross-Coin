@@ -122,7 +122,8 @@ module.exports.createCoupon = async (req, res) => {
             paymentModeRestriction: paymentModeRestriction || 'all',
             firstOrderOnly: firstOrderOnly || false,
             tieredDiscounts: tieredDiscounts || null,
-            quantityBasedDiscounts: quantityBasedDiscounts || null
+            quantityBasedDiscounts: quantityBasedDiscounts || null,
+            brand_id: req.brand ? req.brand.id : 1, // ✅ Multi-brand support
         });
 
         res.status(201).json({
@@ -143,7 +144,14 @@ module.exports.createCoupon = async (req, res) => {
 // Get all coupons
 module.exports.getAllCoupons = async (req, res) => {
     try {
+        // ✅ Multi-brand filtering
+        const whereOptions = {};
+        if (req.brand && req.brand.id) {
+            whereOptions.brand_id = req.brand.id;
+        }
+
         const coupons = await Coupon.findAll({
+            where: whereOptions,
             include: [{
                 model: CouponUsage,
                 as: 'CouponUsages',
