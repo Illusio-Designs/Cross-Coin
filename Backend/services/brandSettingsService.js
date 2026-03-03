@@ -51,16 +51,7 @@ async function getAllBrandSettings(brandId, category = null) {
     
     const settings = await BrandSetting.findAll({ where });
     
-    const result = {};
-    for (const setting of settings) {
-        result[setting.key] = {
-            value: setting.value,
-            category: setting.category,
-            description: setting.description
-        };
-    }
-    
-    return result;
+    return settings;
 }
 
 /**
