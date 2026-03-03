@@ -1,0 +1,377 @@
+// AI Image Controller - Handles AI image generation requests
+const ImageGenerationService = require('../services/ai/imageGenerationService');
+const { Product, ProductVariation, ProductImage } = require('../model/associations');
+const { sequelize } = require('../config/db');
+const path = require('path');
+
+const imageGenService = new ImageGenerationService();
+
+/**
+ * Get all variations for a product with their current images
+ * GET /api/ai-images/products/:productId/variations
+ */
+exports.getProductVariations = async (req, res) => {
+  try {
+    const { productId } = req.params;
+
+    // Get product with variations and images
+    const product = await Product.findByPk(productId, {
+      include: [
+        {
+          model: ProductVariation,
+          as: 'ProductVariations',
+          include: [
+            {
+              model: ProductImage,
+              as: 'VariationImages'
+            }
+          ]
+        },
+        {
+          model: ProductImage,
+          as: 'ProductImages',
+          where: { product_variation_id: null },
+          required: false
+        }
+      ]
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Format response
+    const variations = product.ProductVariations.map(variation => ({
+      id: variation.id,
+      sku: variation.sku,
+      attributes: variation.attributes,
+      price: variation.price,
+      stock: variation.stock,
+      images: variation.VariationImages.map(img => ({
+        id: img.id,
+        url: img.image_url,
+        altText: img.alt_text,
+        isPrimary: img.is_primary,
+        displayOrder: img.display_order
+      }))
+    }));
+
+    // Product-level images (can be used as base)
+    const productImages = product.ProductImages.map(img => ({
+      id: img.id,
+      url: img.image_url,
+      altText: img.alt_text,
+      isPrimary: img.is_primary
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        product: {
+          id: product.id,
+          name: product.name,
+          category: product.categoryId,
+          images: productImages
+        },
+        variations
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting product variations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get product variations',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Generate AI images for selected variations
+ * POST /api/ai-images/generate
+ */
+exports.generateImages = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const { productId, variations } = req.body;
+
+    // Validate input
+    if (!productId || !variations || !Array.isArray(variations) || variations.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid request. Provide productId and variations array.'
+      });
+    }
+
+    console.log('\n🎨 AI Image Generation Request');
+    console.log('Product ID:', productId);
+    console.log('Variations to process:', variations.length);
+
+    // Get product info
+    const product = await Product.findByPk(productId, { transaction });
+    if (!product) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    const results = [];
+    let totalImagesGenerated = 0;
+    let totalImagesDeleted = 0;
+
+    // Process each variation
+    for (const varData of variations) {
+      const { variationId, baseImageId } = varData;
+
+      console.log(`\n📦 Processing variation ${variationId}...`);
+
+      // Get variation
+      const variation = await ProductVariation.findByPk(variationId, { transaction });
+      if (!variation) {
+        console.error(`❌ Variation ${variationId} not found`);
+        results.push({
+          variationId,
+          success: false,
+          error: 'Variation not found'
+        });
+        continue;
+      }
+
+      // Get base image
+      const baseImage = await ProductImage.findByPk(baseImageId, { transaction });
+      if (!baseImage) {
+        console.error(`❌ Base image ${baseImageId} not found`);
+        results.push({
+          variationId,
+          success: false,
+          error: 'Base image not found'
+        });
+        continue;
+      }
+
+      // Get base image path
+      const baseImagePath = path.join(
+        __dirname,
+        '../uploads/products',
+        path.basename(baseImage.image_url)
+      );
+
+      // Verify base image exists
+      const imageExists = await imageGenService.verifyImageExists(baseImage.image_url);
+      if (!imageExists) {
+        console.error(`❌ Base image file not found: ${baseImage.image_url}`);
+        results.push({
+          variationId,
+          success: false,
+          error: 'Base image file not found'
+        });
+        continue;
+      }
+
+      try {
+        // Get all old images for this variation
+        const oldImages = await ProductImage.findAll({
+          where: { product_variation_id: variationId },
+          transaction
+        });
+
+        console.log(`🗑️  Found ${oldImages.length} old images to delete`);
+
+        // Delete old images from file system
+        const deletionResult = await imageGenService.deleteOldImages(oldImages);
+        totalImagesDeleted += deletionResult.deletedCount;
+
+        // Delete old image records from database
+        await ProductImage.destroy({
+          where: { product_variation_id: variationId },
+          transaction
+        });
+
+        console.log(`✅ Deleted ${oldImages.length} old image records from database`);
+
+        // Generate new AI images
+        const generationResult = await imageGenService.generateImagesForVariation(
+          baseImagePath,
+          {
+            name: product.name,
+            category: product.categoryId
+          },
+          {
+            id: variation.id,
+            attributes: variation.attributes
+          }
+        );
+
+        if (!generationResult.success) {
+          throw new Error('Image generation failed');
+        }
+
+        // Save new images to database
+        const newImageRecords = [];
+        for (const img of generationResult.images) {
+          const imageRecord = await ProductImage.create({
+            product_id: productId,
+            product_variation_id: variationId,
+            image_url: img.webpPath, // Use WebP as primary
+            alt_text: `${product.name} - ${img.type}`,
+            display_order: img.displayOrder,
+            is_primary: img.isPrimary,
+            status: 'active'
+          }, { transaction });
+
+          newImageRecords.push({
+            id: imageRecord.id,
+            url: imageRecord.image_url,
+            type: img.type
+          });
+        }
+
+        totalImagesGenerated += newImageRecords.length;
+
+        console.log(`✅ Created ${newImageRecords.length} new image records in database`);
+
+        results.push({
+          variationId,
+          success: true,
+          imagesDeleted: oldImages.length,
+          imagesGenerated: newImageRecords.length,
+          newImages: newImageRecords
+        });
+
+      } catch (error) {
+        console.error(`❌ Error processing variation ${variationId}:`, error);
+        results.push({
+          variationId,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+
+    // Commit transaction
+    await transaction.commit();
+
+    console.log('\n✅ AI Image Generation Complete');
+    console.log(`Total images deleted: ${totalImagesDeleted}`);
+    console.log(`Total images generated: ${totalImagesGenerated}`);
+
+    res.json({
+      success: true,
+      message: 'AI image generation completed',
+      data: {
+        productId,
+        totalVariationsProcessed: variations.length,
+        totalImagesDeleted,
+        totalImagesGenerated,
+        results
+      }
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error('❌ Error in AI image generation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate AI images',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get AI usage statistics
+ * GET /api/ai-images/usage-stats
+ */
+exports.getUsageStats = async (req, res) => {
+  try {
+    const stats = imageGenService.getUsageStats();
+    
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error getting usage stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get usage statistics',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Test AI connection
+ * GET /api/ai-images/test-connection
+ */
+exports.testConnection = async (req, res) => {
+  try {
+    const result = await imageGenService.testConnection();
+    
+    res.json({
+      success: result.success,
+      message: result.success ? 'AI connection successful' : 'AI connection failed',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error testing AI connection:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to test AI connection',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Enhance existing image
+ * POST /api/ai-images/enhance
+ */
+exports.enhanceImage = async (req, res) => {
+  try {
+    const { imageId } = req.body;
+
+    if (!imageId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Image ID is required'
+      });
+    }
+
+    // Get image record
+    const image = await ProductImage.findByPk(imageId);
+    if (!image) {
+      return res.status(404).json({
+        success: false,
+        message: 'Image not found'
+      });
+    }
+
+    // Enhance image
+    const result = await imageGenService.enhanceExistingImage(image.image_url);
+
+    res.json({
+      success: true,
+      message: 'Image enhanced successfully',
+      data: {
+        originalUrl: image.image_url,
+        enhancedUrl: result.path
+      }
+    });
+
+  } catch (error) {
+    console.error('Error enhancing image:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to enhance image',
+      error: error.message
+    });
+  }
+};

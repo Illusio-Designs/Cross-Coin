@@ -1,38 +1,48 @@
-# Cross-Coin E-Commerce Platform
+<!--  --># Cross-Coin E-Commerce Platform
 
 <div align="center">
-  <img src="Frontend/public/assets/crosscoin_logo.webp" alt="Cross-Coin Logo" width="200"/>
+  <img src="Crosscoin/public/assets/crosscoin_logo.webp" alt="Cross-Coin Logo" width="200"/>
   
   [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-  [![Next.js](https://img.shields.io/badge/Next.js-14.1.0-black.svg)](https://nextjs.org/)
+  [![Next.js](https://img.shields.io/badge/Next.js-14.2.33-black.svg)](https://nextjs.org/)
+  [![React](https://img.shields.io/badge/React-18.2.0-blue.svg)](https://reactjs.org/)
   [![Express](https://img.shields.io/badge/Express-4.18.2-lightgrey.svg)](https://expressjs.com/)
   [![MySQL](https://img.shields.io/badge/MySQL-8.0+-blue.svg)](https://mysql.com/)
   [![License](https://img.shields.io/badge/License-ISC-yellow.svg)](LICENSE)
-  [![Version](https://img.shields.io/badge/Version-2.0-brightgreen.svg)](#latest-updates)
 </div>
 
-## 🆕 Latest Updates (v2.0)
+## 🚀 Multi-Brand E-Commerce Platform
 
-### 🚀 Major Performance Improvements
+A comprehensive, production-ready e-commerce solution supporting multiple brands with advanced features for fashion accessories and retail products.
 
-- **Image Loading**: Lazy loading with Intersection Observer + shimmer animations
-- **Bundle Size**: Reduced to 471 kB shared JavaScript (75% optimization)
-- **Load Time**: Improved from 2s to <1.5s page load time
-- **Deployment**: Automated deployment package with zero-downtime builds
+### 🏢 Supported Brands
 
-### 🛠️ New Features
+- **Cross-Coin**: Fashion accessories and socks
+- **Knitwink**: Knitted products and accessories
+- **Gripzus**: Specialized grip products
 
-- **Advanced Optimization Scripts**: Automated build and deployment tools
-- **Production Package**: Clean deployment folder with optimized assets
+### 🆕 Latest Features
+
+- **Multi-Brand Architecture**: Separate frontend instances for each brand
+- **Advanced Image Generation**: AI-powered product image generation
+- **Performance Optimized**: Bundle size optimization and lazy loading
+- **Automated Deployment**: One-command deployment with production builds
 - **TypeScript Support**: Enhanced type checking and validation
-- **Performance Monitoring**: Built-in Core Web Vitals tracking
-- **Enhanced Order Management**: Real-time tracking with duplicate prevention
+- **Real-time Analytics**: Google Analytics and Facebook Pixel integration
+- **Secure Payments**: Multiple payment gateway integrations
 
 ### 📦 Quick Start
 
 ```bash
-cd Frontend
-npm run deploy  # One-command deployment
+# Backend
+cd Backend
+npm install
+npm run dev
+
+# Frontend (Crosscoin)
+cd Crosscoin
+npm install
+npm run dev
 ```
 
 ## 📋 Table of Contents
@@ -55,15 +65,17 @@ npm run deploy  # One-command deployment
 
 ## 🎯 Overview
 
-Cross-Coin is a modern, full-stack e-commerce platform specializing in fashion accessories, particularly socks. Built with cutting-edge technologies, it provides a seamless shopping experience with advanced features like real-time inventory management, multi-payment gateways, and comprehensive admin dashboard.
+Cross-Coin is a modern, full-stack multi-brand e-commerce platform specializing in fashion accessories and retail products. Built with cutting-edge technologies, it provides a seamless shopping experience with advanced features like real-time inventory management, multi-payment gateways, AI-powered image generation, and comprehensive admin dashboard.
 
 ### Key Highlights
 
-- 🛍️ **Modern E-Commerce**: Complete shopping experience with cart, wishlist, and checkout
-- 🎨 **Responsive Design**: Mobile-first approach with Tailwind CSS
-- ⚡ **High Performance**: Optimized for speed with Next.js and advanced caching
-- 🔐 **Secure**: JWT authentication, input validation, and secure payment processing
-- 📊 **Analytics**: Built-in analytics with Google Analytics and Facebook Pixel integration
+- 🏢 **Multi-Brand Support**: Separate storefronts for Cross-Coin, Knitwink, and Gripzus
+- 🛍️ **Complete E-Commerce**: Full shopping experience with cart, wishlist, and checkout
+- 🎨 **Responsive Design**: Mobile-first approach with Tailwind CSS 3.4.1
+- ⚡ **High Performance**: Optimized with Next.js 14.2.33 and advanced caching
+- 🔐 **Secure**: JWT authentication, OAuth, input validation, and secure payment processing
+- 📊 **Analytics**: Google Analytics, Facebook Pixel, and Vercel Analytics integration
+- 🤖 **AI-Powered**: Automated product image generation capabilities
 - 🚀 **Scalable**: Microservices-ready architecture with modular design
 
 ## ✨ Features
@@ -94,46 +106,67 @@ Cross-Coin is a modern, full-stack e-commerce platform specializing in fashion a
 ### 🔧 Technical Features
 
 - **RESTful API**: Well-documented API endpoints
-- **Image Optimization**: Automatic image compression and optimization
+- **Image Optimization**: Automatic image compression with Sharp
+- **AI Image Generation**: Automated product image creation
 - **Database Optimization**: Efficient queries with Sequelize ORM
 - **Error Handling**: Comprehensive error logging and user feedback
-- **Security**: CORS, input sanitization, and SQL injection prevention
-- **Performance Monitoring**: Built-in performance tracking
+- **Security**: CORS, helmet, input sanitization, and SQL injection prevention
+- **Performance Monitoring**: Vercel Analytics and Speed Insights
+- **Session Management**: Express sessions with MySQL storage
+- **File Processing**: Advanced file handling with Multer and Sharp
 
-## 🚚 FShip Integration
+## 🤖 AI Image Generation
+
+The platform includes advanced AI-powered image generation capabilities for product images. See dedicated documentation:
+
+- [AI Image Generation Spec](AI_IMAGE_GENERATION_SPEC.md)
+- [Implementation Guide](AI_IMAGE_GENERATION_IMPLEMENTATION.md)
+- [README](AI_IMAGE_GENERATION_README.md)
+- [Summary](AI_IMAGE_GENERATION_SUMMARY.md)
 
 ## 🛠️ Tech Stack
 
 ### Frontend
 
-- **Framework**: Next.js 14.1.0 with React 18.2.0
-- **Styling**: Tailwind CSS 3.4.1
-- **State Management**: React Context API + Redux Toolkit
-- **Icons**: Lucide React + React Icons
-- **Animations**: GSAP 3.13.0
+- **Framework**: Next.js 14.2.33 with React 18.2.0
+- **Styling**: Tailwind CSS 3.4.1 with Autoprefixer
+- **State Management**: Redux Toolkit 2.2.1 + React Context API
+- **Authentication**: NextAuth.js 4.24.5
+- **Icons**: Lucide React 0.511.0 + React Icons 5.0.1
+- **Animations**: GSAP 3.13.0 + Lottie animations
 - **Forms**: React Hook Form with validation
-- **Notifications**: React Hot Toast + React Toastify
+- **Notifications**: React Hot Toast 2.4.1 + React Toastify 11.0.5
+- **Rich Text**: TipTap 2.25.0 + React Quill 2.0.0
+- **Analytics**: Vercel Analytics + Speed Insights
+- **Routing**: React Router DOM 7.6.2
+- **Data Export**: XLSX 0.18.5
 
 ### Backend
 
 - **Runtime**: Node.js with Express.js 4.18.2
-- **Database**: MySQL 8.0+ with Sequelize ORM
-- **Authentication**: JWT + Passport.js with Google OAuth
-- **File Upload**: Multer with Sharp for image processing
-- **Payment**: Razorpay integration
-- **Email**: Nodemailer for notifications
-- **Security**: bcrypt, helmet, CORS
+- **Database**: MySQL 8.0+ with Sequelize ORM 6.31.0
+- **Authentication**: JWT + Passport.js with Google OAuth 2.0
+- **File Upload**: Multer with Sharp 0.33.5 for image processing
+- **Payment**: Razorpay 2.9.6 integration
+- **Email**: Nodemailer 6.10.0 for notifications
+- **Security**: bcrypt 6.0.0, helmet, CORS 2.8.5
+- **Session**: Express Session with MySQL storage
+- **Compression**: Gzip compression 1.8.1
+- **Scheduling**: Node-cron 3.0.3
+- **PDF Generation**: PDF-lib 1.17.1
+- **Data Processing**: XLSX 0.18.5, Archiver 7.0.1
 
 ### DevOps & Tools
 
 - **Version Control**: Git
 - **Package Manager**: npm
-- **Development**: Nodemon for auto-restart
-- **Testing**: Jest for backend testing
+- **Development**: Nodemon 2.0.22 for auto-restart
+- **Testing**: Jest 29.7.0 + Playwright 1.55.0
 - **Linting**: ESLint with Next.js config
-- **Performance**: Bundle analyzer and optimization scripts
-- **TypeScript**: Type checking and validation
-- **Build Tools**: Advanced deployment automation
+- **Performance**: Webpack Bundle Analyzer 4.10.1
+- **TypeScript**: 5.3.3 with type checking
+- **Build Tools**: Automated deployment scripts
+- **Cleaning**: Rimraf 5.0.5
 
 ## 📁 Project Structure
 
@@ -143,22 +176,26 @@ Cross-Coin/
 │   ├── config/                # Configuration files
 │   │   ├── config.js         # Main configuration
 │   │   ├── corsConfig.js     # CORS settings
+│   │   ├── cronJobs.js       # Scheduled tasks
 │   │   ├── db.js             # Database configuration
 │   │   ├── defaultSeoData.js # Default SEO settings
 │   │   └── passport.js       # Authentication config
-│   ├── controller/           # API route controllers
-│   ├── middleware/           # Custom middleware
-│   ├── model/               # Database models (Sequelize)
+│   ├── controller/           # API route controllers (22 controllers)
+│   ├── middleware/           # Custom middleware (auth, brand, upload)
+│   ├── model/               # Database models (40+ Sequelize models)
 │   ├── routes/              # API route definitions
 │   ├── services/            # Business logic services
-│   ├── integration/         # Third-party integrations
-│   ├── utils/               # Utility functions
+│   ├── integration/         # Third-party integrations (Analytics, FB, Google)
 │   ├── uploads/             # File uploads storage
-│   └── scripts/             # Database setup scripts
-├── Frontend/                 # Next.js frontend application
+│   │   ├── categories/      # Category images
+│   │   └── products/        # Product images
+│   ├── scripts/             # Database setup and migration scripts
+│   └── package.json         # Backend dependencies
+│
+├── Crosscoin/               # Cross-Coin brand frontend
 │   ├── src/
-│   │   ├── components/      # React components (optimized)
-│   │   ├── pages/          # Next.js pages (34 static pages)
+│   │   ├── components/      # React components
+│   │   ├── pages/          # Next.js pages
 │   │   ├── context/        # React Context providers
 │   │   ├── services/       # API service functions
 │   │   ├── styles/         # CSS and styling files
@@ -167,17 +204,18 @@ Cross-Coin/
 │   ├── scripts/            # Build and optimization scripts
 │   │   ├── deploy-build.js # Automated deployment
 │   │   ├── performance-optimize.js # Performance analysis
-│   │   ├── pre-build-optimize.js # Pre-build checks
-│   │   └── build-optimized.bat # Windows deployment
+│   │   └── pre-build-optimize.js # Pre-build checks
 │   ├── deploy/             # Production deployment package
-│   │   ├── .next/         # Optimized Next.js build
-│   │   ├── public/        # Static assets
-│   │   ├── package.json   # Production package.json
-│   │   ├── server.js      # Production server
-│   │   └── next.config.js # Next.js configuration
-│   ├── DEPLOYMENT_SUMMARY.md # Deployment documentation
-│   └── package.json       # Development package.json
-└── README.md              # This file (updated v2.0)
+│   └── package.json        # Frontend dependencies
+│
+├── Knitwink/               # Knitwink brand frontend
+│   └── [Similar structure to Crosscoin]
+│
+├── Gripzus/                # Gripzus brand frontend
+│   └── [Similar structure to Crosscoin]
+│
+├── AI_IMAGE_GENERATION_*.md # AI image generation documentation
+└── README.md               # This file
 ```
 
 ## 📋 Prerequisites
@@ -208,12 +246,23 @@ cd cross-coin
 ```bash
 cd Backend
 npm install
+
+# Create .env file (see Configuration section)
 ```
 
-### 3. Frontend Setup
+### 3. Frontend Setup (Choose your brand)
 
 ```bash
-cd ../Frontend
+# For Cross-Coin
+cd Crosscoin
+npm install
+
+# For Knitwink
+cd Knitwink
+npm install
+
+# For Gripzus
+cd Gripzus
 npm install
 ```
 
@@ -230,61 +279,133 @@ cd Backend
 npm run db:setup
 ```
 
-### 5. Environment Configuration
+### 5. Start Development Servers
 
-Create `.env` files in both Backend and Frontend directories:
+```bash
+# Terminal 1 - Backend
+cd Backend
+npm run dev
+
+# Terminal 2 - Frontend (Crosscoin example)
+cd Crosscoin
+npm run dev
+```
+
+Access the application:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:5000
+
+## ⚙️ Configuration
+
+### Environment Configuration
+
+Create `.env` files in Backend and your chosen frontend directory:
 
 #### Backend/.env
 
 ```env
 NODE_ENV=development
 PORT=5000
+
+# Database Configuration
 DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=your_password
 DB_DATABASE=crosscoin_db
-JWT_SECRET=your_jwt_secret
-RAZORPAY_KEY_ID=your_razorpay_key
-RAZORPAY_KEY_SECRET=your_razorpay_secret
+
+# Authentication
+JWT_SECRET=your_jwt_secret_key_here
+SESSION_SECRET=your_session_secret_here
+
+# Google OAuth
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_CALLBACK_URL=http://localhost:5000/api/users/auth/google/callback
+
+# Payment Gateway
+RAZORPAY_KEY_ID=your_razorpay_key
+RAZORPAY_KEY_SECRET=your_razorpay_secret
+
+# Email Configuration
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=your_email@gmail.com
 EMAIL_PASS=your_app_password
+
+# FShip Integration (Optional)
+FSHIP_API_KEY=your_fship_api_key
+FSHIP_API_URL=https://api.fship.com
+
+# Frontend URL
+FRONTEND_URL=http://localhost:3000
 ```
 
-#### Frontend/.env.local
+#### Frontend/.env.local (Crosscoin/Knitwink/Gripzus)
 
 ```env
+# API Configuration
 NEXT_PUBLIC_API_URL=http://localhost:5000
 NEXT_PUBLIC_BACKEND_URL=http://localhost:5000
+
+# Authentication
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your_nextauth_secret
+
+# Analytics (Optional)
+NEXT_PUBLIC_GA_ID=your_google_analytics_id
+NEXT_PUBLIC_FB_PIXEL_ID=your_facebook_pixel_id
+
+# Environment
+NODE_ENV=development
 ```
 
-## ⚙️ Configuration
+## ⚙️ Configuration (Continued)
 
 ### Database Configuration
 
-The application uses Sequelize ORM with MySQL. Database models are defined in `Backend/model/` directory with proper associations.
+The application uses Sequelize ORM with MySQL. Database models are defined in `Backend/model/` directory with proper associations and relationships.
+
+Key models include:
+- User, GuestUser
+- Product, ProductVariation, ProductImage, ProductSEO
+- Order, OrderItem, OrderStatusHistory
+- Cart, CartItem, Wishlist
+- Category, Brand, Attribute
+- Payment, ShippingAddress, ShippingFee
+- Review, Coupon, Slider, Policy, SEO
 
 ### Authentication Setup
 
-1. **Google OAuth**: Set up Google Cloud Console project
-2. **JWT**: Configure JWT secret in environment variables
-3. **Passport**: Configured for Google OAuth and local authentication
+1. **Google OAuth**: 
+   - Create project in Google Cloud Console
+   - Enable Google+ API
+   - Configure OAuth consent screen
+   - Create OAuth 2.0 credentials
+   - Add authorized redirect URIs
+
+2. **JWT**: 
+   - Configure JWT_SECRET in environment variables
+   - Token expiration set in config
+
+3. **NextAuth**: 
+   - Configure NEXTAUTH_SECRET and NEXTAUTH_URL
+   - Supports Google OAuth and credentials providers
 
 ### Payment Integration
 
-- **Razorpay**: Primary payment gateway
-- **PayPal**: Alternative payment option
-- **Skrill**: International payment support
+- **Razorpay**: Primary payment gateway for Indian market
+- **PayPal**: Alternative payment option for international customers
+- **Skrill**: Additional international payment support
+
+Configure payment keys in Backend/.env file.
 
 ### File Upload Configuration
 
-- **Multer**: Handles file uploads
-- **Sharp**: Image processing and optimization
-- **Storage**: Local storage in `Backend/uploads/`
+- **Multer**: Handles multipart/form-data file uploads
+- **Sharp**: Image processing, resizing, and optimization
+- **Storage**: Local storage in `Backend/uploads/` with organized subdirectories
+- **Supported Formats**: JPEG, PNG, WebP, AVIF
 
 ## 📚 API Documentation
 
@@ -347,64 +468,105 @@ POST   /api/admin/sliders        # Upload slider image
 
 ### Pages & Components
 
-- **Home Page**: Hero section with featured products
-- **Product Catalog**: Grid/list view with filters
-- **Product Details**: Detailed product view with variations
-- **Shopping Cart**: Cart management with quantity updates
-- **Checkout**: Multi-step checkout process
-- **User Dashboard**: Order history and profile management
-- **Admin Dashboard**: Complete admin interface
+- **Home Page**: Hero section with sliders, featured products, and categories
+- **Product Catalog**: Grid/list view with advanced filters and sorting
+- **Product Details**: Detailed product view with variations, reviews, and related products
+- **Shopping Cart**: Real-time cart management with quantity updates
+- **Wishlist**: Save favorite products across sessions
+- **Checkout**: Multi-step checkout with address validation and payment
+- **User Dashboard**: Order history, profile management, addresses, and wishlist
+- **Admin Dashboard**: Complete admin interface for all operations
+- **Category Pages**: Browse products by category
+- **Brand Pages**: Browse products by brand
+- **Search Results**: Advanced search with filters
+- **Order Tracking**: Real-time order status updates
 
 ### UI/UX Features
 
-- **Responsive Design**: Mobile-first approach
-- **Dark/Light Theme**: Theme switching capability
-- **Loading States**: Skeleton loaders and spinners
-- **Toast Notifications**: User feedback system
-- **Image Gallery**: Product image carousel
-- **Search & Filters**: Advanced product filtering
-- **Pagination**: Efficient data loading
+- **Responsive Design**: Mobile-first approach with Tailwind CSS
+- **Theme Support**: Next-themes for dark/light mode switching
+- **Loading States**: Skeleton loaders, shimmer effects, and Lottie animations
+- **Toast Notifications**: Dual notification system (React Hot Toast + Toastify)
+- **Image Gallery**: Product image carousel with zoom functionality
+- **Advanced Search**: Real-time search with debouncing
+- **Filters & Sorting**: Multi-criteria product filtering and sorting
+- **Pagination**: Efficient data loading with pagination controls
+- **Date Picker**: React DatePicker for date selections
+- **Select Components**: React Select for enhanced dropdowns
+- **Rich Text Editor**: TipTap and Quill for content management
+- **Data Export**: Export orders and reports to Excel format
 
 ### Performance Features
 
 - **Image Optimization**: Next.js Image component with WebP/AVIF support
 - **Code Splitting**: Automatic route-based splitting with vendor chunks
-- **Lazy Loading**: Advanced lazy loading with Intersection Observer
-- **Caching**: Static generation with optimized caching headers
-- **Bundle Optimization**: Advanced webpack optimization
-- **Shimmer Loading**: Smooth loading animations for better UX
-- **Preloading**: Intelligent image and resource preloading
+- **Lazy Loading**: Intersection Observer API for images and components
+- **Static Generation**: Pre-rendered pages for instant loading
+- **Bundle Optimization**: Webpack optimization with tree shaking
+- **Compression**: Gzip compression for all assets
+- **Caching**: Optimized caching headers for static resources
+- **Analytics**: Vercel Analytics and Speed Insights integration
+- **Performance Monitoring**: Real-time Core Web Vitals tracking
+- **Preloading**: Intelligent resource preloading for critical assets
 
 ## 🔧 Backend Features
 
-### Database Models
+### Database Models (40+ Sequelize Models)
 
-- **User**: User accounts and authentication
-- **Product**: Product catalog with variations
-- **Order**: Order management and tracking
-- **Cart**: Shopping cart functionality
-- **Wishlist**: User wishlist management
-- **Review**: Product reviews and ratings
-- **Category**: Product categorization
-- **Coupon**: Discount code management
+Core models with associations:
+- **User Management**: User, GuestUser
+- **Product System**: Product, ProductVariation, ProductImage, ProductSEO, ProductBrand
+- **Order Management**: Order, OrderItem, OrderStatusHistory, Payment
+- **Shopping Features**: Cart, CartItem, Wishlist
+- **Catalog**: Category, CategoryBrand, Brand, BrandSetting, Attribute, AttributeValue
+- **Marketing**: Coupon, CouponUsage, Slider, Review, ReviewImage
+- **Shipping**: ShippingAddress, ShippingFee, FshipLabelDownload
+- **Content**: Policy, SEOMetadata, UTM
 
-### Business Logic
+### Business Logic & Services
 
-- **Order Processing**: Complete order workflow
-- **Payment Integration**: Multiple payment gateways
-- **Inventory Management**: Stock tracking and updates
-- **Email Notifications**: Order confirmations and updates
-- **File Upload**: Image and document handling
-- **Search & Filtering**: Advanced product search
+- **Order Processing**: Complete order workflow with status tracking
+- **Payment Integration**: Razorpay integration with webhook handling
+- **Inventory Management**: Real-time stock tracking and updates
+- **Email Notifications**: Order confirmations, status updates, and newsletters
+- **File Upload**: Multi-file upload with image optimization
+- **Search & Filtering**: Advanced product search with multiple criteria
+- **Brand Management**: Multi-brand support with brand-specific settings
+- **Address Quality**: Address validation and quality checking
+- **FShip Integration**: Shipping label generation and tracking
+- **Settings Helper**: Centralized settings management
+
+### Integration Services
+
+- **Dashboard Analytics**: Custom analytics and reporting
+- **Facebook Catalog**: Product catalog sync for Facebook
+- **Facebook Pixel**: Event tracking and conversion optimization
+- **Google Analytics**: E-commerce tracking and user behavior
 
 ### Security Features
 
-- **Authentication**: JWT and OAuth integration
-- **Authorization**: Role-based access control
-- **Input Validation**: Request validation middleware
-- **CORS Configuration**: Cross-origin request handling
-- **Rate Limiting**: API rate limiting
-- **SQL Injection Prevention**: Parameterized queries
+- **Authentication**: JWT tokens with refresh token support
+- **Authorization**: Role-based access control (RBAC)
+- **Input Validation**: Request validation middleware with sanitization
+- **CORS Configuration**: Configurable cross-origin request handling
+- **Rate Limiting**: API rate limiting to prevent abuse
+- **SQL Injection Prevention**: Parameterized queries with Sequelize
+- **XSS Protection**: Input sanitization with DOMPurify
+- **Password Hashing**: bcrypt with salt rounds
+- **Session Management**: Secure session storage with MySQL
+- **Helmet**: Security headers configuration
+
+### API Features
+
+- **RESTful Design**: Clean and consistent API structure
+- **Error Handling**: Centralized error handling with proper status codes
+- **Logging**: Morgan for HTTP request logging
+- **Compression**: Gzip compression for responses
+- **File Processing**: Sharp for image optimization and resizing
+- **PDF Generation**: PDF-lib for invoice and label generation
+- **Excel Export**: XLSX for data export functionality
+- **Scheduled Tasks**: Node-cron for automated jobs
+- **Archiving**: Archiver for file compression and downloads
 
 ## 🚀 Deployment
 
@@ -413,30 +575,36 @@ POST   /api/admin/sliders        # Upload slider image
 #### Automated Deployment
 
 ```bash
-# Navigate to Frontend directory
-cd Frontend
+# Navigate to your brand's frontend directory
+cd Crosscoin  # or Knitwink or Gripzus
 
 # Run automated deployment
 npm run deploy
 ```
 
 This will:
-
 - ✅ Clean previous builds
+- ✅ Run pre-build optimizations
 - ✅ Install dependencies
 - ✅ Build optimized application
 - ✅ Create deployment package in `deploy/` folder
 - ✅ Remove dev dependencies
 - ✅ Generate production-ready files
 
-#### Manual Deployment
+#### Manual Deployment Options
 
 ```bash
-# Option 1: Full production build
+# Option 1: Full production build with optimizations
 npm run build:production
 
-# Option 2: Simple build
+# Option 2: Optimized build
+npm run build:optimized
+
+# Option 3: Simple build
 npm run build
+
+# Option 4: Performance analysis
+npm run optimize:performance
 ```
 
 ### 📦 Deployment Package
@@ -447,10 +615,10 @@ The `deploy/` folder contains everything needed for production:
 deploy/
 ├── .next/                 # Optimized Next.js build
 ├── public/               # Static assets
-├── package.json         # Production package.json
+├── package.json         # Production package.json (no dev deps)
 ├── package-lock.json    # Lock file
 ├── next.config.js       # Next.js configuration
-├── server.js           # Production server
+├── server.js           # Production server (if custom)
 └── tsconfig.json       # TypeScript configuration
 ```
 
@@ -469,12 +637,32 @@ npm install --production
 #### 3. Start Server
 
 ```bash
+# Using npm
 npm start
+
+# Using PM2 (recommended for production)
+pm2 start npm --name "crosscoin" -- start
+pm2 save
+pm2 startup
 ```
 
-#### 4. Configure Web Server
+#### 4. Configure Web Server (Nginx Example)
 
-Set up nginx/apache to proxy requests to port 3000.
+```nginx
+server {
+    listen 80;
+    server_name yourdomain.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
 
 ### 🔧 Environment Setup
 
@@ -485,108 +673,264 @@ Set up nginx/apache to proxy requests to port 3000.
 NODE_ENV=production
 PORT=5000
 DB_HOST=your_production_db_host
+DB_USER=your_production_db_user
+DB_PASSWORD=your_production_db_password
+DB_DATABASE=crosscoin_production
+JWT_SECRET=your_strong_jwt_secret
 # ... other production variables
 
 # Frontend
+NODE_ENV=production
 NEXT_PUBLIC_API_URL=https://api.yourdomain.com
 NEXT_PUBLIC_BACKEND_URL=https://api.yourdomain.com
+NEXTAUTH_URL=https://yourdomain.com
+NEXTAUTH_SECRET=your_strong_nextauth_secret
 ```
 
 ### 📊 Deployment Features
 
-- **Zero-Downtime**: Optimized build process
-- **Auto-Cleanup**: Removes unnecessary files
-- **Production Ready**: Dev dependencies removed
-- **Optimized Assets**: Compressed and cached
+- **Zero-Downtime**: Optimized build process with minimal interruption
+- **Auto-Cleanup**: Removes unnecessary files and dev dependencies
+- **Production Ready**: Optimized for production environment
+- **Optimized Assets**: Compressed and cached static files
 - **Error Handling**: Comprehensive error logging
+- **Performance**: Pre-optimized for best Core Web Vitals
 
-### Docker Deployment (Optional)
+### 🐳 Docker Deployment (Optional)
+
+#### Dockerfile for Frontend
 
 ```dockerfile
-# Dockerfile example
-FROM node:18-alpine
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm ci --only=production
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
+
+# Production image
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV production
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
 EXPOSE 3000
-CMD ["npm", "start"]
+ENV PORT 3000
+
+CMD ["node", "server.js"]
+```
+
+#### Docker Compose
+
+```yaml
+version: '3.8'
+
+services:
+  backend:
+    build: ./Backend
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - mysql
+
+  frontend:
+    build: ./Crosscoin
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - backend
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: your_password
+      MYSQL_DATABASE: crosscoin_db
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:
 ```
 
 ## ⚡ Performance Optimization
 
-### 🚀 Latest Optimizations (v2.0)
+### 🚀 Built-in Optimizations
 
-**Major Performance Improvements Applied:**
+The platform includes comprehensive performance optimizations:
 
-- **Image Loading Optimization**:
+**Image Optimization:**
+- Next.js Image component with automatic WebP/AVIF conversion
+- Sharp-based server-side image processing
+- Lazy loading with Intersection Observer API
+- Image preloading for critical assets
+- Responsive images with srcset
 
-  - Lazy loading with Intersection Observer API
-  - Image preloading for better UX
-  - Shimmer loading animations
-  - WebP/AVIF format support with Next.js Image component
+**Bundle Optimization:**
+- Webpack optimization with tree shaking
+- Code splitting with vendor chunks
+- Dynamic imports for route-based splitting
+- SWC minification (faster than Terser)
+- Module concatenation for smaller bundles
 
-- **Bundle Optimization**:
+**React Optimization:**
+- useCallback and useMemo hooks
+- React.memo for component memoization
+- Throttled scroll handlers with requestAnimationFrame
+- Debounced search and input handlers
+- Proper cleanup to prevent memory leaks
 
-  - Optimized package imports for React Icons, Lucide React, Axios, Lodash
-  - Advanced webpack bundle splitting with vendor chunks
-  - SWC minification with module concatenation
-  - Bundle size reduced to **471 kB** shared JavaScript
+**Caching Strategy:**
+- Static generation for product pages
+- Incremental Static Regeneration (ISR)
+- Long-term caching for static assets (1 year)
+- Service worker caching (if implemented)
+- API response caching
 
-- **React Component Optimization**:
-  - useCallback and useMemo hooks for performance
-  - Throttled scroll handlers with requestAnimationFrame
-  - Optimized search with debounced API calls
-  - Memory leak prevention with proper cleanup
-
-### Built-in Optimizations
-
-- **Next.js 14.1.0**: Latest framework with Turbopack support
-- **Image Optimization**: Sharp-based image processing with WebP/AVIF
-- **Bundle Analysis**: Webpack bundle analyzer integration
-- **Caching Headers**: Long-term caching for static assets (1 year)
-- **Compression**: Gzip compression with optimized settings
-- **Static Generation**: 34 pages pre-rendered for instant loading
+**Loading Performance:**
+- Shimmer loading animations
+- Skeleton screens for better perceived performance
+- Lottie animations for engaging loading states
+- Progressive image loading
+- Prefetching for navigation
 
 ### 🛠️ Optimization Scripts
 
-The `Frontend/scripts/` directory contains advanced optimization tools:
+The platform includes automated optimization tools in `scripts/`:
 
-- **deploy-build.js**: Complete deployment automation
-- **performance-optimize.js**: Advanced performance analysis
-- **pre-build-optimize.js**: Pre-build optimization checks
-- **build-optimized.bat**: Windows deployment automation
+```bash
+# Pre-build optimization checks
+npm run optimize:pre-build
+
+# Performance analysis after build
+npm run optimize:performance
+
+# Full optimized build
+npm run build:optimized
+
+# Bundle analysis
+npm run analyze
+```
+
+**Scripts functionality:**
+- **pre-build-optimize.js**: Validates configuration, checks dependencies
+- **performance-optimize.js**: Analyzes bundle size, identifies optimization opportunities
+- **deploy-build.js**: Complete deployment automation with optimizations
 
 ### 📊 Performance Metrics
 
-- **Bundle Size**: **471 kB** shared JavaScript (optimized)
-- **Page Load**: **< 1.5 seconds** (improved from 2s)
-- **Image Load**: **< 0.5 seconds** with lazy loading
-- **Cache Hit Rate**: **98%+** with optimized headers
-- **Compression**: **75%** smaller files
-- **Core Web Vitals**: Optimized for Google ranking
+Target metrics for production:
+
+- **First Contentful Paint (FCP)**: < 1.5s
+- **Largest Contentful Paint (LCP)**: < 2.5s
+- **Time to Interactive (TTI)**: < 3.5s
+- **Cumulative Layout Shift (CLS)**: < 0.1
+- **First Input Delay (FID)**: < 100ms
+- **Bundle Size**: Optimized to < 500 KB shared JavaScript
+- **Image Load Time**: < 0.5s with lazy loading
+- **Cache Hit Rate**: 95%+ for static assets
+
+### 🔍 Monitoring & Analytics
+
+- **Vercel Analytics**: Real-time performance monitoring
+- **Vercel Speed Insights**: Core Web Vitals tracking
+- **Google Analytics**: User behavior and conversion tracking
+- **Facebook Pixel**: Event tracking and remarketing
+- **Custom Dashboard**: Backend analytics for business metrics
+
+### 💡 Best Practices Implemented
+
+- Static generation for SEO-critical pages
+- Dynamic imports for heavy components
+- Compression middleware for API responses
+- CDN-ready static asset structure
+- Optimized font loading with next/font
+- Minimal third-party scripts
+- Efficient database queries with indexes
+- Connection pooling for database
+- Redis caching for session storage (optional)
 
 ## 🤝 Contributing
 
-We welcome contributions! Please follow these steps:
+We welcome contributions to improve the Cross-Coin platform! Please follow these guidelines:
+
+### Getting Started
 
 1. **Fork the repository**
-2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
-3. **Commit your changes**: `git commit -m 'Add amazing feature'`
-4. **Push to the branch**: `git push origin feature/amazing-feature`
-5. **Open a Pull Request**
+2. **Clone your fork**: `git clone https://github.com/yourusername/cross-coin.git`
+3. **Create a feature branch**: `git checkout -b feature/amazing-feature`
+4. **Make your changes**
+5. **Commit your changes**: `git commit -m 'Add amazing feature'`
+6. **Push to the branch**: `git push origin feature/amazing-feature`
+7. **Open a Pull Request**
 
 ### Development Guidelines
 
-- Follow the existing code style
-- Add tests for new features
-- Update documentation as needed
-- Ensure all tests pass before submitting
+- **Code Style**: Follow the existing code style and conventions
+- **ESLint**: Ensure your code passes linting (`npm run lint`)
+- **TypeScript**: Use TypeScript for type safety where applicable
+- **Testing**: Add tests for new features (Jest for backend, Playwright for frontend)
+- **Documentation**: Update documentation for significant changes
+- **Commits**: Write clear, descriptive commit messages
+- **Pull Requests**: Provide detailed description of changes
+
+### Code Standards
+
+- Use meaningful variable and function names
+- Add comments for complex logic
+- Follow React best practices (hooks, component structure)
+- Optimize for performance (avoid unnecessary re-renders)
+- Ensure accessibility compliance
+- Handle errors gracefully
+- Validate user inputs
+
+### Testing
+
+```bash
+# Backend tests
+cd Backend
+npm test
+
+# Frontend type checking
+cd Crosscoin
+npm run type-check
+
+# Linting
+npm run lint
+```
+
+### Areas for Contribution
+
+- Bug fixes and issue resolution
+- Performance improvements
+- New features and enhancements
+- Documentation improvements
+- Test coverage expansion
+- Accessibility improvements
+- UI/UX enhancements
+- Security improvements
 
 ## 📄 License
 
-This project is licensed under the ISC License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the ISC License.
 
 ## 📞 Contact
 
@@ -594,12 +938,44 @@ This project is licensed under the ISC License - see the [LICENSE](LICENSE) file
 
 - **Author**: Riya Lunagariya
 - **Email**: info@illusiodesigns.agency
-- **Website**: https://www.illusiodesigns.agency
-- **Project**: Cross-Coin E-Commerce Platform
+- **Website**: [https://www.illusiodesigns.agency](https://www.illusiodesigns.agency)
+- **Project**: Cross-Coin Multi-Brand E-Commerce Platform
+
+### Support
+
+For support, bug reports, or feature requests:
+- Open an issue on GitHub
+- Contact us via email
+- Visit our website for more information
 
 ---
 
 <div align="center">
-  <p>Built with ❤️ by the Illusio Designs team</p>
-  <p>© 2024 Cross-Coin. All rights reserved.</p>
+  
+### 🌟 Key Features Summary
+
+| Feature | Description |
+|---------|-------------|
+| 🏢 Multi-Brand | Support for Cross-Coin, Knitwink, and Gripzus |
+| 🛍️ E-Commerce | Complete shopping cart, wishlist, and checkout |
+| 🤖 AI-Powered | Automated product image generation |
+| ⚡ Performance | Optimized with Next.js 14.2.33 and advanced caching |
+| 🔐 Security | JWT, OAuth, input validation, and secure payments |
+| 📊 Analytics | Google Analytics, Facebook Pixel, Vercel Analytics |
+| 🚀 Deployment | One-command automated deployment |
+| 📱 Responsive | Mobile-first design with Tailwind CSS |
+
+### 🛠️ Tech Stack Summary
+
+**Frontend**: Next.js 14.2.33 • React 18.2.0 • Tailwind CSS 3.4.1 • Redux Toolkit 2.2.1
+
+**Backend**: Node.js • Express 4.18.2 • MySQL 8.0+ • Sequelize 6.31.0
+
+**Tools**: TypeScript 5.3.3 • Jest 29.7.0 • Playwright 1.55.0 • Sharp 0.33.5
+
+---
+
+<p>Built with ❤️ by the Illusio Designs team</p>
+<p>© 2024 Cross-Coin. All rights reserved.</p>
+
 </div>
