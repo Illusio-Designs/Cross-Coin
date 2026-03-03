@@ -100,8 +100,16 @@ exports.generateImages = async (req, res) => {
   try {
     const { productId, variations } = req.body;
 
+    console.log('\n🎨 === AI IMAGE GENERATION REQUEST RECEIVED ===');
+    console.log('Request Body:', JSON.stringify(req.body, null, 2));
+    console.log('Product ID:', productId);
+    console.log('Variations:', variations);
+    console.log('User:', req.user ? req.user.id : 'No user');
+    console.log('User Role:', req.user ? req.user.role : 'No role');
+
     // Validate input
     if (!productId || !variations || !Array.isArray(variations) || variations.length === 0) {
+      console.error('❌ Validation failed: Invalid request format');
       return res.status(400).json({
         success: false,
         message: 'Invalid request. Provide productId and variations array.'
@@ -258,9 +266,11 @@ exports.generateImages = async (req, res) => {
     // Commit transaction
     await transaction.commit();
 
-    console.log('\n✅ AI Image Generation Complete');
+    console.log('\n✅ === AI IMAGE GENERATION COMPLETE ===');
     console.log(`Total images deleted: ${totalImagesDeleted}`);
     console.log(`Total images generated: ${totalImagesGenerated}`);
+    console.log('Results:', JSON.stringify(results, null, 2));
+    console.log('=== END GENERATION ===\n');
 
     res.json({
       success: true,
@@ -276,7 +286,11 @@ exports.generateImages = async (req, res) => {
 
   } catch (error) {
     await transaction.rollback();
-    console.error('❌ Error in AI image generation:', error);
+    console.error('\n❌ === AI IMAGE GENERATION ERROR ===');
+    console.error('Error:', error);
+    console.error('Error Message:', error.message);
+    console.error('Error Stack:', error.stack);
+    console.error('=== END ERROR ===\n');
     res.status(500).json({
       success: false,
       message: 'Failed to generate AI images',
