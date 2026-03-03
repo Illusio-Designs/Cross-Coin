@@ -1,5 +1,5 @@
 const { Category } = require('../model/categoryModel.js');
-const { Product, ProductVariation, ProductImage, ProductSEO } = require('../model/associations.js');
+const { Product, ProductVariation, ProductImage, ProductSEO, Brand } = require('../model/associations.js');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs/promises');
@@ -155,7 +155,8 @@ const createCategory = async (req, res) => {
 // Get All Categories
 const getAllCategories = async (req, res) => {
     try {
-        // ✅ Filter by brand if X-Brand-Name header is present (for frontend)
+        // ✅ Only filter by brand if X-Brand-Name header is present (public frontend)
+        // Admin requests without header will see ALL categories from ALL brands
         let brandFilter = null;
         if (req.brand && req.brand.id) {
             brandFilter = req.brand.id;
@@ -344,15 +345,35 @@ const updateCategory = async (req, res) => {
 // Get Public Categories
 const getPublicCategories = async (req, res) => {
     try {
+        // Build include options with brand filtering
+        const includeOptions = [
+            {
+                model: Category,
+                as: 'parent',
+                attributes: ['id', 'name']
+            }
+        ];
+
+        // Add brand filtering if brand is identified
+        if (req.brand && req.brand.id) {
+            includeOptions.push({
+                model: Brand,
+                as: 'Brands',
+                attributes: [],
+                through: { 
+                    attributes: [],
+                    where: { status: 'active' }
+                },
+                where: { id: req.brand.id },
+                required: true
+            });
+        }
+
         const categories = await Category.findAll({
             where: {
                 status: 'active'
             },
-            include: [{
-                model: Category,
-                as: 'parent',
-                attributes: ['id', 'name']
-            }],
+            include: includeOptions,
             order: [['createdAt', 'DESC']],
             attributes: ['id', 'name', 'description', 'image', 'slug', 'parentId']
         });

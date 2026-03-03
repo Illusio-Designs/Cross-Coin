@@ -9,6 +9,7 @@ const {
   Review,
   ReviewImage,
   User,
+  Brand,
 } = require("../model/associations.js");
 const { v4: uuidv4 } = require("uuid");
 const path = require("path");
@@ -586,11 +587,13 @@ module.exports.getAllProducts = async (req, res) => {
     // Build filter options
     const whereOptions = {};
     
-    // ✅ Filter by brand if X-Brand-Name header is present (for frontend)
-    let brandFilter = null;
+    // ✅ Only filter by brand if X-Brand-Name header is present (public frontend)
+    // Admin requests without header will see ALL products from ALL brands
     if (req.brand && req.brand.id) {
+      // Public frontend - filter by specific brand
       brandFilter = req.brand.id;
     }
+    // If no brand header, admin sees all products with their brand assignments
     
     if (search) {
       whereOptions[Op.or] = [
@@ -1614,7 +1617,12 @@ module.exports.getAllPublicProducts = async (req, res) => {
       // Handle different sort cases
       switch (sort) {
         case "featured":
-          sortOptions = [["createdAt", "DESC"]];
+          // For featured, prioritize products with higher ratings and review counts
+          sortOptions = [
+            ["avg_rating", "DESC"],
+            ["review_count", "DESC"],
+            ["createdAt", "DESC"]
+          ];
           break;
         case "price:asc":
           sortOptions = [["price", "ASC"]];
@@ -1633,18 +1641,31 @@ module.exports.getAllPublicProducts = async (req, res) => {
       sortOptions = [["createdAt", "DESC"]];
     }
 
+    // Build include options with brand filtering
+    const includeOptions = [
+      { model: Category },
+      { model: ProductVariation, as: "ProductVariations" },
+      { model: ProductImage, as: "ProductImages" },
+      { model: ProductSEO, as: "ProductSEO" },
+      {
+        model: Brand,
+        as: "Brands",
+        through: { 
+          attributes: ['status', 'price_override', 'stock_override'],
+          where: { status: 'active' }
+        },
+        ...(req.brand && req.brand.id && { where: { id: req.brand.id } })
+      }
+    ];
+
     // Get products with pagination
     const products = await Product.findAndCountAll({
       where: filter,
       order: sortOptions,
       limit: parseInt(limit),
       offset: (parseInt(page) - 1) * parseInt(limit),
-      include: [
-        { model: Category },
-        { model: ProductVariation, as: "ProductVariations" },
-        { model: ProductImage, as: "ProductImages" },
-        { model: ProductSEO, as: "ProductSEO" },
-      ],
+      include: includeOptions,
+      distinct: true
     });
 
     // Format products with proper image URLs
