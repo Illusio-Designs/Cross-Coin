@@ -6,7 +6,7 @@ import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
 import Loader from "@/components/Loader";
 import BrandTags from "@/components/Dashboard/BrandTags";
-import BrandAssignment from "@/components/admin/BrandAssignment";
+import BrandAssignment from "@/components/Dashboard/BrandAssignment";
 import { categoryService } from "@/services";
 import { debounce } from 'lodash';
 import "../../../styles/dashboard/seo.css";
