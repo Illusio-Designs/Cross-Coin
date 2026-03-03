@@ -126,7 +126,7 @@ exports.generateImages = async (req, res) => {
       include: [
         {
           model: require('../model/categoryModel').Category,
-          as: 'category',
+          as: 'Category', // Use capital C - matches the default Sequelize alias
           attributes: ['id', 'name']
         }
       ]
@@ -139,7 +139,7 @@ exports.generateImages = async (req, res) => {
       });
     }
 
-    console.log('Product found:', product.name, 'Category:', product.category?.name);
+    console.log('Product found:', product.name, 'Category:', product.Category?.name);
 
     const results = [];
     let totalImagesGenerated = 0;
@@ -220,7 +220,7 @@ exports.generateImages = async (req, res) => {
           baseImagePath,
           {
             name: product.name,
-            category: product.category?.name || 'product' // Use category name, not ID
+            category: product.Category?.name || 'product' // Use Category with capital C
           },
           {
             id: variation.id,
