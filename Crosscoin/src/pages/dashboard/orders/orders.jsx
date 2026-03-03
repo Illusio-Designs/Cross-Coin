@@ -760,8 +760,10 @@ const Orders = () => {
                 
                 if (row.OrderItems && row.OrderItems.length > 0) {
                     row.OrderItems.forEach(item => {
-                        if (item.Product && item.Product.brands) {
-                            item.Product.brands.forEach(brand => {
+                        // Check both 'Brands' (uppercase) and 'brands' (lowercase) for compatibility
+                        const productBrands = item.Product?.Brands || item.Product?.brands || [];
+                        if (productBrands.length > 0) {
+                            productBrands.forEach(brand => {
                                 if (!brandIds.has(brand.id)) {
                                     brandIds.add(brand.id);
                                     brands.push(brand);

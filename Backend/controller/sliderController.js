@@ -40,7 +40,8 @@ const formatSliderResponse = (slider) => {
     const baseUrl = process.env.API_URL || process.env.BACKEND_URL || 'https://api.crosscoin.in';
     sliderData.image = `${baseUrl}/uploads/slider/${sliderData.image}`;
     console.log('Formatted slider image path:', sliderData.image);
-    delete sliderData.category;
+    // Keep category object for frontend to access Brands
+    // delete sliderData.category;
     return sliderData;
 };
 

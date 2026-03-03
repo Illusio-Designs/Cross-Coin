@@ -9,6 +9,7 @@ const { Payment } = require("../model/paymentModel.js");
 const { User } = require("../model/userModel.js");
 const { GuestUser } = require("../model/guestUserModel.js");
 const { ProductImage } = require("../model/productImageModel.js");
+const Brand = require("../model/brandModel.js");
 const FShipLabelDownload = require("../model/fshipLabelDownloadModel.js");
 const { Op } = require("sequelize");
 const { sequelize } = require("../config/db.js");
