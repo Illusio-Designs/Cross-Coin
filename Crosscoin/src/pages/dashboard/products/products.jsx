@@ -13,6 +13,7 @@ import AttributeSelector from '@/components/products/AttributeSelector';
 import ExistingImageSelector from '@/components/products/ExistingImageSelector';
 import BrandTags from '@/components/Dashboard/BrandTags';
 import BrandAssignment from '@/components/Dashboard/BrandAssignment';
+import AIImageGenerator from '@/components/Dashboard/AIImageGenerator';
 import "../../../styles/dashboard/products.css";
 import dynamic from 'next/dynamic';
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
@@ -279,7 +280,7 @@ const ProductsPage = () => {
     {
       header: "Actions",
       accessor: "actions",
-      cell: ({ id }) => (
+      cell: ({ id, name }) => (
         <div className="action-buttons">
           <button
             className="action-btn edit"
@@ -290,6 +291,11 @@ const ProductsPage = () => {
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z"/>
             </svg>
           </button>
+          <AIImageGenerator
+            productId={id}
+            productName={name}
+            onSuccess={() => fetchProducts()}
+          />
           <button
             className="action-btn delete"
             data-tooltip="Delete"
