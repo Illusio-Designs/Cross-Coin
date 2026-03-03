@@ -19,8 +19,13 @@ const AIImageGenerator = ({ productId, productName, onSuccess }) => {
     
     try {
       const token = localStorage.getItem('token');
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+      
+      console.log('🔍 Fetching variations for product:', productId);
+      console.log('API URL:', apiUrl);
+      
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/ai-images/products/${productId}/variations`,
+        `${apiUrl}/api/ai-images/products/${productId}/variations`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -30,13 +35,54 @@ const AIImageGenerator = ({ productId, productName, onSuccess }) => {
 
       const data = await response.json();
       
+      console.log('📥 Variations Response:', data);
+      
       if (data.success) {
-        setVariations(data.data.variations);
+        // Process variations to ensure proper image URLs (same as products page)
+        const processedVariations = data.data.variations.map(variation => {
+          console.log('Processing variation:', variation.id, 'Images:', variation.images);
+          
+          return {
+            ...variation,
+            images: variation.images?.map(img => {
+              console.log('Raw image from backend:', img);
+              
+              // Get the base URL
+              const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+              
+              // Construct the proper image URL (same logic as products page)
+              let imageUrl = img.image_url || img.url;
+              if (!imageUrl.startsWith('http')) {
+                if (imageUrl.startsWith('/uploads/')) {
+                  imageUrl = `${baseUrl}${imageUrl}`;
+                } else {
+                  imageUrl = `${baseUrl}/uploads/products/${imageUrl}`;
+                }
+              }
+              
+              const processedImage = {
+                id: img.id,
+                url: imageUrl,
+                image_url: imageUrl,
+                altText: img.alt_text || img.altText,
+                isPrimary: img.is_primary || img.isPrimary,
+                displayOrder: img.display_order || img.displayOrder
+              };
+              
+              console.log('Processed image:', processedImage);
+              return processedImage;
+            }) || []
+          };
+        });
+        
+        console.log('✅ Processed variations:', processedVariations);
+        setVariations(processedVariations);
         setShowModal(true);
       } else {
         setError(data.message || 'Failed to load variations');
       }
     } catch (err) {
+      console.error('❌ Error loading variations:', err);
       setError(err.message || 'Failed to load variations');
     } finally {
       setLoading(false);
@@ -256,28 +302,39 @@ const AIImageGenerator = ({ productId, productName, onSuccess }) => {
                           <div className="base-image-selector">
                             <p className="selector-label">Select base image for AI generation:</p>
                             <div className="images-grid">
-                              {variation.images.map((image) => (
-                                <label
-                                  key={image.id}
-                                  className={`image-option ${selectedImageId === image.id ? 'selected' : ''}`}
-                                >
-                                  <input
-                                    type="radio"
-                                    name={`base-image-${variation.id}`}
-                                    value={image.id}
-                                    checked={selectedImageId === image.id}
-                                    onChange={() => handleBaseImageSelect(variation.id, image.id)}
-                                  />
-                                  <img
-                                    src={image.url}
-                                    alt={`Image ${image.id}`}
-                                    onError={(e) => {
-                                      e.target.src = '/placeholder-image.png';
-                                    }}
-                                  />
-                                  <span className="image-id">ID: {image.id}</span>
-                                </label>
-                              ))}
+                              {variation.images.map((image) => {
+                                console.log('Rendering image:', image.id, 'URL:', image.url);
+                                return (
+                                  <label
+                                    key={image.id}
+                                    className={`image-option ${selectedImageId === image.id ? 'selected' : ''}`}
+                                  >
+                                    <input
+                                      type="radio"
+                                      name={`base-image-${variation.id}`}
+                                      value={image.id}
+                                      checked={selectedImageId === image.id}
+                                      onChange={() => handleBaseImageSelect(variation.id, image.id)}
+                                    />
+                                    <img
+                                      src={image.url}
+                                      alt={`Image ${image.id}`}
+                                      onError={(e) => {
+                                        console.error('Failed to load image:', image.url);
+                                        e.target.style.backgroundColor = '#f0f0f0';
+                                        e.target.style.display = 'flex';
+                                        e.target.style.alignItems = 'center';
+                                        e.target.style.justifyContent = 'center';
+                                        e.target.alt = '❌ Failed';
+                                      }}
+                                      onLoad={() => {
+                                        console.log('✅ Image loaded successfully:', image.url);
+                                      }}
+                                    />
+                                    <span className="image-id">ID: {image.id}</span>
+                                  </label>
+                                );
+                              })}
                             </div>
                           </div>
                         )}
