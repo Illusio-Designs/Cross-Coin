@@ -382,6 +382,14 @@ const setupDatabase = async () => {
       // Don't fail the entire setup if migrations have issues
     }
 
+    // Create brand_settings table
+    console.log("Creating brand_settings table...");
+    await createBrandSettingsTable();
+
+    // Create brands table
+    console.log("Creating brands table...");
+    await createBrandsTable();
+
     // Now it's safe to create the admin user
     if (models["User"]) {
       const bcrypt = require("bcryptjs");
@@ -810,6 +818,85 @@ const updateCouponTable = async () => {
     
   } catch (error) {
     console.log('⚠️ Coupon table update skipped (columns may already exist):', error.message);
+  }
+};
+
+// Function to create brand_settings table
+const createBrandSettingsTable = async () => {
+  try {
+    console.log('Creating brand_settings table...');
+
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS brand_settings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        brand_id INT NOT NULL COMMENT 'Reference to brands table',
+        \`key\` VARCHAR(100) NOT NULL COMMENT 'Setting key',
+        value TEXT COMMENT 'Setting value (encrypted for sensitive data)',
+        is_encrypted TINYINT(1) DEFAULT 0 COMMENT 'Whether the value is encrypted',
+        category ENUM('payment','analytics','social_media','shipping','email','sms','general') DEFAULT 'general' COMMENT 'Setting category',
+        description VARCHAR(255) COMMENT 'Human-readable description',
+        updated_by INT COMMENT 'User who last updated this setting',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_brand_id (brand_id),
+        INDEX idx_category (category),
+        UNIQUE KEY unique_brand_key (brand_id, \`key\`),
+        FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE ON UPDATE CASCADE,
+        FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+    `);
+
+    console.log('✓ brand_settings table created successfully');
+    
+  } catch (error) {
+    console.log('⚠️ Brand settings table creation skipped (table may already exist):', error.message);
+  }
+};
+
+// Function to create brands table
+const createBrandsTable = async () => {
+  try {
+    console.log('Creating brands table...');
+
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS brands (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL UNIQUE COMMENT 'Brand name',
+        slug VARCHAR(100) NOT NULL UNIQUE COMMENT 'URL-friendly brand identifier',
+        display_name VARCHAR(100) NOT NULL COMMENT 'Display name for the brand',
+        domain VARCHAR(255) COMMENT 'Custom domain for the brand',
+        logo_url VARCHAR(500) COMMENT 'Brand logo URL',
+        primary_color VARCHAR(7) COMMENT 'Primary theme color (hex)',
+        secondary_color VARCHAR(7) COMMENT 'Secondary theme color (hex)',
+        contact_email VARCHAR(255) COMMENT 'Brand contact email',
+        contact_phone VARCHAR(20) COMMENT 'Brand contact phone',
+        status ENUM('active', 'inactive') DEFAULT 'active' COMMENT 'Brand status',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_slug (slug),
+        INDEX idx_domain (domain),
+        INDEX idx_status (status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+    `);
+
+    console.log('✓ brands table created successfully');
+
+    // Insert default brand if table is empty
+    const [existingBrands] = await sequelize.query('SELECT COUNT(*) as count FROM brands');
+    
+    if (existingBrands[0].count === 0) {
+      console.log('Inserting default brand...');
+      
+      await sequelize.query(`
+        INSERT INTO brands (name, slug, display_name, status, primary_color, contact_email) VALUES
+        ('CrossCoin', 'crosscoin', 'CrossCoin Store', 'active', '#4CAF50', 'contact@crosscoin.com')
+      `);
+      
+      console.log('✓ Default brand inserted');
+    }
+    
+  } catch (error) {
+    console.log('⚠️ Brands table creation/migration skipped:', error.message);
   }
 };
 

@@ -28,6 +28,8 @@ import Slider from "./slider/slider";
 import MediaGallery from "./media/gallery";
 import Policies from "./policies";
 import UTMAnalytics from "./analytics/utmAnalytics";
+import BrandSettingsManager from "./brandSettings";
+import BrandManager from "./brands";
 
 function Dashboard() {
   const [currentView, setCurrentView] = useState('main');
@@ -175,6 +177,10 @@ function Dashboard() {
         return <SEO />;
       case 'policies':
         return <Policies />;
+      case 'brands':
+        return <BrandManager />;
+      case 'brand-settings':
+        return <BrandSettingsManager />;
       case 'slider':
         return <Slider />;
       case 'media-gallery':
