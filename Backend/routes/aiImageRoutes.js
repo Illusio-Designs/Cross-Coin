@@ -2,10 +2,10 @@
 const express = require('express');
 const router = express.Router();
 const aiImageController = require('../controller/aiImageController');
-const { authenticateToken, isAdmin } = require('../middleware/authMiddleware');
+const { authenticate, isAdmin } = require('../middleware/authMiddleware');
 
 // All routes require admin authentication
-router.use(authenticateToken);
+router.use(authenticate);
 router.use(isAdmin);
 
 /**

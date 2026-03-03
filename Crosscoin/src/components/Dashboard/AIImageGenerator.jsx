@@ -120,7 +120,10 @@ const AIImageGenerator = ({ productId, productName, onSuccess }) => {
         }))
       };
 
-      console.log('Generating AI images:', requestData);
+      console.log('🎨 === AI IMAGE GENERATION REQUEST ===');
+      console.log('Request Data:', requestData);
+      console.log('API URL:', `${process.env.NEXT_PUBLIC_API_URL}/api/ai-images/generate`);
+      console.log('Token:', token ? 'Present' : 'Missing');
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/ai-images/generate`,
@@ -134,17 +137,35 @@ const AIImageGenerator = ({ productId, productName, onSuccess }) => {
         }
       );
 
+      console.log('📥 Response Status:', response.status);
+      console.log('📥 Response OK:', response.ok);
+
       const data = await response.json();
 
+      console.log('📥 === AI IMAGE GENERATION RESPONSE ===');
+      console.log('Full Response:', data);
+      console.log('Success:', data.success);
+      console.log('Message:', data.message);
+      console.log('Data:', data.data);
+      console.log('Error:', data.error);
+      console.log('=== END RESPONSE ===');
+
       if (data.success) {
+        console.log('✅ Generation successful!');
         setResult(data.data);
         if (onSuccess) {
           onSuccess();
         }
       } else {
+        console.error('❌ Generation failed:', data.message);
         setError(data.message || 'Failed to generate images');
       }
     } catch (err) {
+      console.error('❌ === AI IMAGE GENERATION ERROR ===');
+      console.error('Error:', err);
+      console.error('Error Message:', err.message);
+      console.error('Error Stack:', err.stack);
+      console.error('=== END ERROR ===');
       setError(err.message || 'Failed to generate images');
     } finally {
       setGenerating(false);
