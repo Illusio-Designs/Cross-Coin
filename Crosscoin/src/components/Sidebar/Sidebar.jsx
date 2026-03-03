@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import SafeImage from "../common/SafeImage";
 import {
-  FaHome, FaUser, FaBox, FaClipboardList, FaChartBar, FaLock, FaChevronDown, FaChevronLeft, FaChevronRight, FaQuestionCircle, FaShoppingCart, FaCreditCard, FaStar, FaCog, FaTags, FaTruck, FaFileAlt, FaSignOutAlt, FaImages, FaTimes
+  FaHome, FaUser, FaBox, FaClipboardList, FaChartBar, FaLock, FaChevronDown, FaChevronLeft, FaChevronRight, FaQuestionCircle, FaShoppingCart, FaCreditCard, FaStar, FaCog, FaTags, FaTruck, FaFileAlt, FaSignOutAlt, FaImages, FaTimes, FaStore
 } from 'react-icons/fa';
 import "./Sidebar.css";
 
@@ -55,6 +55,14 @@ const menu = [
   {
     label: "Policies",
     icon: <FaFileAlt />, view: "policies"
+  },
+  {
+    label: "Brands",
+    icon: <FaStore />, view: "brands"
+  },
+  {
+    label: "Brand Settings",
+    icon: <FaCog />, view: "brand-settings"
   },
   {
     label: "UTM Analytics",
