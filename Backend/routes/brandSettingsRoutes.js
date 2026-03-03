@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const brandSettingsController = require('../controller/brandSettingsController');
-const { authenticateToken, isAdmin } = require('../middleware/authMiddleware');
+const { authenticate, isAdmin } = require('../middleware/authMiddleware');
 
 // All routes require admin authentication
-router.use(authenticateToken, isAdmin);
+router.use('/', authenticate, isAdmin);
 
 // Get all settings (with optional category filter via query param)
 router.get('/brand-settings', brandSettingsController.getAllSettings);

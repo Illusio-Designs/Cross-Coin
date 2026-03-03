@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const brandController = require('../controller/brandController');
-const { authenticateToken, isAdmin } = require('../middleware/authMiddleware');
+const { authenticate, isAdmin } = require('../middleware/authMiddleware');
 
 // All routes require admin authentication
-router.use(authenticateToken, isAdmin);
+router.use('/', authenticate, isAdmin);
 
 // Search brands (must be before /:id route)
 router.get('/brands/search', brandController.searchBrands);
