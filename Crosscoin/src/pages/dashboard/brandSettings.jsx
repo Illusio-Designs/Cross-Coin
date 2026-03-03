@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { FiSave, FiEdit2, FiTrash2, FiX, FiLock, FiUnlock, FiPlus, FiRefreshCw } from 'react-icons/fi';
 import { brandSettingsService, brandService } from '@/services';
+import Modal from '@/components/common/Modal';
+import Button from '@/components/common/Button';
+import InputField from '@/components/common/InputField';
+import Loader from '@/components/Loader';
 import '@/styles/dashboard/brandSettings.css';
 
 export default function BrandSettingsManager() {
@@ -201,19 +205,18 @@ export default function BrandSettingsManager() {
 
     if (loading) {
         return (
-            <div className="brand-settings-manager">
-                <div className="loading-container">
-                    <FiRefreshCw className="spin" size={32} />
-                    <p>Loading settings...</p>
+            <div className="dashboard-page">
+                <div style={{ position: 'relative', minHeight: '400px' }}>
+                    <Loader />
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="brand-settings-manager">
-            <div className="settings-header">
-                <h2>Brand Settings Manager</h2>
+        <div className="dashboard-page">
+            <div className="seo-header-container">
+                <h1 className="seo-title">Brand Settings</h1>
                 <div className="header-actions">
                     <select
                         className="brand-selector"
@@ -226,80 +229,89 @@ export default function BrandSettingsManager() {
                             </option>
                         ))}
                     </select>
-                    <button
-                        className="btn-primary"
-                        onClick={() => setShowAddForm(!showAddForm)}
+                    <Button
+                        onClick={() => setShowAddForm(true)}
+                        variant="primary"
                         disabled={!selectedBrandId}
                     >
-                        <FiPlus /> Add New Setting
-                    </button>
+                        Add New Setting
+                    </Button>
                 </div>
             </div>
 
-            {showAddForm && (
-                <div className="add-form-card">
-                    <h3>Add New Setting</h3>
-                    <div className="form-grid">
-                        <div className="form-group">
-                            <label>Setting Key</label>
-                            <input
-                                type="text"
-                                value={newKey}
-                                onChange={(e) => setNewKey(e.target.value)}
-                                placeholder="e.g., RAZORPAY_KEY_ID"
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Category</label>
-                            <select
-                                value={newCategory}
-                                onChange={(e) => setNewCategory(e.target.value)}
-                            >
-                                {Object.entries(categories)
-                                    .filter(([key]) => key !== 'all')
-                                    .map(([key, label]) => (
-                                        <option key={key} value={key}>{label}</option>
-                                    ))}
-                            </select>
-                        </div>
-                        <div className="form-group full-width">
-                            <label>Description</label>
-                            <input
-                                type="text"
-                                value={newDescription}
-                                onChange={(e) => setNewDescription(e.target.value)}
-                                placeholder="Description of this setting"
-                            />
-                        </div>
-                        <div className="form-group full-width">
-                            <label>Setting Value</label>
-                            <textarea
-                                value={newValue}
-                                onChange={(e) => setNewValue(e.target.value)}
-                                placeholder="Enter value..."
-                                rows={3}
-                            />
-                        </div>
+            <Modal
+                isOpen={showAddForm}
+                onClose={() => {
+                    setShowAddForm(false);
+                    setNewKey('');
+                    setNewValue('');
+                    setNewCategory('general');
+                    setNewDescription('');
+                }}
+                title="Add New Setting"
+            >
+                <div className="form-grid">
+                    <div className="form-group">
+                        <label>Setting Key</label>
+                        <InputField
+                            type="text"
+                            value={newKey}
+                            onChange={(e) => setNewKey(e.target.value)}
+                            placeholder="e.g., RAZORPAY_KEY_ID"
+                        />
                     </div>
-                    <div className="form-actions">
-                        <button className="btn-primary" onClick={handleAdd}>
-                            <FiSave /> Add Setting
-                        </button>
-                        <button
-                            className="btn-secondary"
-                            onClick={() => {
-                                setShowAddForm(false);
-                                setNewKey('');
-                                setNewValue('');
-                                setNewCategory('general');
-                                setNewDescription('');
-                            }}
+                    <div className="form-group">
+                        <label>Category</label>
+                        <select
+                            value={newCategory}
+                            onChange={(e) => setNewCategory(e.target.value)}
+                            className="form-select"
                         >
-                            <FiX /> Cancel
-                        </button>
+                            {Object.entries(categories)
+                                .filter(([key]) => key !== 'all')
+                                .map(([key, label]) => (
+                                    <option key={key} value={key}>{label}</option>
+                                ))}
+                        </select>
+                    </div>
+                    <div className="form-group full-width">
+                        <label>Description</label>
+                        <InputField
+                            type="text"
+                            value={newDescription}
+                            onChange={(e) => setNewDescription(e.target.value)}
+                            placeholder="Description of this setting"
+                        />
+                    </div>
+                    <div className="form-group full-width">
+                        <label>Setting Value</label>
+                        <textarea
+                            value={newValue}
+                            onChange={(e) => setNewValue(e.target.value)}
+                            placeholder="Enter value..."
+                            rows={3}
+                            className="form-textarea"
+                        />
                     </div>
                 </div>
-            )}
+                <div className="form-actions" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                    <Button
+                        onClick={() => {
+                            setShowAddForm(false);
+                            setNewKey('');
+                            setNewValue('');
+                            setNewCategory('general');
+                            setNewDescription('');
+                        }}
+                        variant="secondary"
+                    >
+                        Cancel
+                    </Button>
+                    <Button onClick={handleAdd} variant="primary">
+                        Add Setting
+                    </Button>
+                </div>
+            </Modal>
 
             <div className="category-filter">
                         {Object.entries(categories).map(([key, label]) => (

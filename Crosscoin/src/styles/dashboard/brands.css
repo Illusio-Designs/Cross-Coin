@@ -98,7 +98,7 @@
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #4CAF50;
+    border-color: #180D3E;
 }
 
 .color-input-group {
@@ -266,13 +266,13 @@
 }
 
 .status-badge.active {
-    background: #e8f5e9;
-    color: #388e3c;
+    background: #f0eef5;
+    color: #180D3E;
 }
 
 .status-badge.inactive {
-    background: #ffebee;
-    color: #c62828;
+    background: #fce8ec;
+    color: #CE1E36;
 }
 
 .brand-card-footer small {
@@ -280,39 +280,7 @@
     font-size: 12px;
 }
 
-/* Buttons */
-.btn-primary,
-.btn-secondary {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.btn-primary {
-    background: #4CAF50;
-    color: white;
-}
-
-.btn-primary:hover {
-    background: #45a049;
-}
-
-.btn-secondary {
-    background: #f5f5f5;
-    color: #333;
-}
-
-.btn-secondary:hover {
-    background: #e0e0e0;
-}
-
+/* Buttons - Legacy styles (kept for backward compatibility with icon buttons) */
 .btn-icon {
     padding: 8px;
     border: none;
@@ -320,7 +288,7 @@
     color: #666;
     cursor: pointer;
     border-radius: 6px;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -333,11 +301,11 @@
 }
 
 .btn-icon.active {
-    color: #4CAF50;
+    color: #180D3E;
 }
 
 .btn-icon.active:hover {
-    background: #e8f5e9;
+    background: #f0eef5;
 }
 
 .btn-icon.inactive {
@@ -349,11 +317,11 @@
 }
 
 .btn-icon.btn-danger {
-    color: #f44336;
+    color: #CE1E36;
 }
 
 .btn-icon.btn-danger:hover {
-    background: #ffebee;
+    background: #fce8ec;
 }
 
 /* Empty State */
@@ -394,4 +362,34 @@
         width: 100%;
         justify-content: flex-end;
     }
+}
+
+/* Form Select Styling */
+.form-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+    background: white;
+    cursor: pointer;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: #180D3E;
+}
+
+/* Modal Form Grid Override */
+.modal-content .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 0;
+}
+
+.modal-content .form-group.full-width {
+    grid-column: 1 / -1;
 }

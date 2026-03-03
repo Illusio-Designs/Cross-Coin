@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { FiPlus, FiEdit2, FiTrash2, FiX, FiSave, FiToggleLeft, FiToggleRight, FiSearch, FiRefreshCw } from 'react-icons/fi';
 import { brandService } from '@/services';
+import Modal from '@/components/common/Modal';
+import Button from '@/components/common/Button';
+import InputField from '@/components/common/InputField';
+import Loader from '@/components/Loader';
 import '@/styles/dashboard/brands.css';
 
 export default function BrandManager() {
@@ -146,41 +150,37 @@ export default function BrandManager() {
 
     if (loading) {
         return (
-            <div className="brand-manager">
-                <div className="loading-container">
-                    <FiRefreshCw className="spin" size={32} />
-                    <p>Loading brands...</p>
+            <div className="dashboard-page">
+                <div style={{ position: 'relative', minHeight: '400px' }}>
+                    <Loader />
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="brand-manager">
-            <div className="brand-header">
-                <h2>Brand Management</h2>
-                <button
-                    className="btn-primary"
-                    onClick={() => setShowAddForm(!showAddForm)}
+        <div className="dashboard-page">
+            <div className="seo-header-container">
+                <h1 className="seo-title">Brand Management</h1>
+                <Button
+                    onClick={() => setShowAddForm(true)}
+                    variant="primary"
                 >
-                    <FiPlus /> Add New Brand
-                </button>
+                    Add New Brand
+                </Button>
             </div>
 
             {showAddForm && (
-                <div className="brand-form-card">
-                    <div className="form-header">
-                        <h3>{editingBrand ? 'Edit Brand' : 'Add New Brand'}</h3>
-                        <button className="btn-icon" onClick={resetForm}>
-                            <FiX />
-                        </button>
-                    </div>
-                    
+                <Modal
+                    isOpen={showAddForm}
+                    onClose={resetForm}
+                    title={editingBrand ? 'Edit Brand' : 'Add New Brand'}
+                >
                     <form onSubmit={handleSubmit}>
                         <div className="form-grid">
                             <div className="form-group">
                                 <label>Brand Name *</label>
-                                <input
+                                <InputField
                                     type="text"
                                     name="name"
                                     value={formData.name}
@@ -192,7 +192,7 @@ export default function BrandManager() {
 
                             <div className="form-group">
                                 <label>Display Name *</label>
-                                <input
+                                <InputField
                                     type="text"
                                     name="display_name"
                                     value={formData.display_name}
@@ -204,7 +204,7 @@ export default function BrandManager() {
 
                             <div className="form-group">
                                 <label>Slug</label>
-                                <input
+                                <InputField
                                     type="text"
                                     name="slug"
                                     value={formData.slug}
@@ -215,7 +215,7 @@ export default function BrandManager() {
 
                             <div className="form-group">
                                 <label>Domain</label>
-                                <input
+                                <InputField
                                     type="text"
                                     name="domain"
                                     value={formData.domain}
@@ -226,7 +226,7 @@ export default function BrandManager() {
 
                             <div className="form-group">
                                 <label>Logo URL</label>
-                                <input
+                                <InputField
                                     type="text"
                                     name="logo_url"
                                     value={formData.logo_url}
@@ -244,7 +244,7 @@ export default function BrandManager() {
                                         value={formData.primary_color}
                                         onChange={handleInputChange}
                                     />
-                                    <input
+                                    <InputField
                                         type="text"
                                         value={formData.primary_color}
                                         onChange={(e) => setFormData(prev => ({ ...prev, primary_color: e.target.value }))}
@@ -262,7 +262,7 @@ export default function BrandManager() {
                                         value={formData.secondary_color}
                                         onChange={handleInputChange}
                                     />
-                                    <input
+                                    <InputField
                                         type="text"
                                         value={formData.secondary_color}
                                         onChange={(e) => setFormData(prev => ({ ...prev, secondary_color: e.target.value }))}
@@ -273,7 +273,7 @@ export default function BrandManager() {
 
                             <div className="form-group">
                                 <label>Contact Email</label>
-                                <input
+                                <InputField
                                     type="email"
                                     name="contact_email"
                                     value={formData.contact_email}
@@ -284,7 +284,7 @@ export default function BrandManager() {
 
                             <div className="form-group">
                                 <label>Contact Phone</label>
-                                <input
+                                <InputField
                                     type="tel"
                                     name="contact_phone"
                                     value={formData.contact_phone}
@@ -299,6 +299,7 @@ export default function BrandManager() {
                                     name="status"
                                     value={formData.status}
                                     onChange={handleInputChange}
+                                    className="form-select"
                                 >
                                     <option value="active">Active</option>
                                     <option value="inactive">Inactive</option>
@@ -306,16 +307,16 @@ export default function BrandManager() {
                             </div>
                         </div>
 
-                        <div className="form-actions">
-                            <button type="submit" className="btn-primary">
-                                <FiSave /> {editingBrand ? 'Update Brand' : 'Create Brand'}
-                            </button>
-                            <button type="button" className="btn-secondary" onClick={resetForm}>
-                                <FiX /> Cancel
-                            </button>
+                        <div className="form-actions" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                            <Button type="button" variant="secondary" onClick={resetForm}>
+                                Cancel
+                            </Button>
+                            <Button type="submit" variant="primary">
+                                {editingBrand ? 'Update Brand' : 'Create Brand'}
+                            </Button>
                         </div>
                     </form>
-                </div>
+                </Modal>
             )}
 
             <div className="search-bar">
