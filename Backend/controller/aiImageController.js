@@ -175,17 +175,34 @@ exports.generateImages = async (req, res) => {
         continue;
       }
 
+      console.log('📸 Base image found:', {
+        id: baseImage.id,
+        image_url: baseImage.image_url,
+        product_id: baseImage.product_id,
+        variation_id: baseImage.product_variation_id
+      });
+
+      // Extract filename from URL (handle both /uploads/products/file.jpg and just file.jpg)
+      let imageFilename = baseImage.image_url;
+      if (imageFilename.includes('/')) {
+        imageFilename = imageFilename.split('/').pop();
+      }
+      
+      console.log('📸 Extracted filename:', imageFilename);
+
       // Get base image path
       const baseImagePath = path.join(
         __dirname,
         '../uploads/products',
-        path.basename(baseImage.image_url)
+        imageFilename
       );
+
+      console.log('📸 Full base image path:', baseImagePath);
 
       // Verify base image exists
       const imageExists = await imageGenService.verifyImageExists(baseImage.image_url);
       if (!imageExists) {
-        console.error(`❌ Base image file not found: ${baseImage.image_url}`);
+        console.error(`❌ Base image file not found at: ${baseImagePath}`);
         results.push({
           variationId,
           success: false,
@@ -193,6 +210,8 @@ exports.generateImages = async (req, res) => {
         });
         continue;
       }
+
+      console.log('✅ Base image file exists');
 
       try {
         // Get all old images for this variation
