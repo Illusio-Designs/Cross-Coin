@@ -1314,4 +1314,141 @@ export const dashboardService = {
   },
 };
 
+// Brand Services
+export const brandService = {
+  getAllBrands: async (includeInactive = false) => {
+    try {
+      const response = await api.get("/api/admin/brands", {
+        params: { includeInactive }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  getBrandById: async (id) => {
+    try {
+      const response = await api.get(`/api/admin/brands/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  createBrand: async (brandData) => {
+    try {
+      const response = await api.post("/api/admin/brands", brandData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  updateBrand: async (id, brandData) => {
+    try {
+      const response = await api.put(`/api/admin/brands/${id}`, brandData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  deleteBrand: async (id) => {
+    try {
+      const response = await api.delete(`/api/admin/brands/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  toggleBrandStatus: async (id) => {
+    try {
+      const response = await api.patch(`/api/admin/brands/${id}/toggle-status`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  searchBrands: async (query) => {
+    try {
+      const response = await api.get("/api/admin/brands/search", {
+        params: { q: query }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+};
+
+// Brand Settings Services
+export const brandSettingsService = {
+  getAllSettings: async (brandId, category = null) => {
+    try {
+      const params = { brandId };
+      if (category) params.category = category;
+      const response = await api.get("/api/admin/brand-settings", { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  getSettingsByCategory: async (brandId, category) => {
+    try {
+      const response = await api.get(`/api/admin/brand-settings/category/${category}`, {
+        params: { brandId }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  getSetting: async (brandId, key) => {
+    try {
+      const response = await api.get(`/api/admin/brand-settings/${key}`, {
+        params: { brandId }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  createSetting: async (settingData) => {
+    try {
+      const response = await api.post("/api/admin/brand-settings", settingData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  updateSetting: async (brandId, key, settingData) => {
+    try {
+      const response = await api.put(`/api/admin/brand-settings/${key}`, settingData, {
+        params: { brandId }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  deleteSetting: async (brandId, key) => {
+    try {
+      const response = await api.delete(`/api/admin/brand-settings/${key}`, {
+        params: { brandId }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+};
+
 export default api;

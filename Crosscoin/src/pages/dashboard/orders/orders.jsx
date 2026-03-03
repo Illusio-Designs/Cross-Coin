@@ -1423,6 +1423,23 @@ const Orders = () => {
                                         <option value="asc">Oldest First</option>
                                     </select>
                                 </div>
+                                
+                                <div className="filter-group">
+                                    <label>Show:</label>
+                                    <select
+                                        value={itemsPerPage}
+                                        onChange={(e) => {
+                                            setItemsPerPage(Number(e.target.value));
+                                            setCurrentPage(1);
+                                        }}
+                                        className="sort-select"
+                                    >
+                                        <option value={10}>10 results</option>
+                                        <option value={25}>25 results</option>
+                                        <option value={50}>50 results</option>
+                                        <option value={100}>100 results</option>
+                                    </select>
+                                </div>
                             </div>
 
                             

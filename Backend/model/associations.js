@@ -25,6 +25,7 @@ const { CouponUsage } = require("./couponUsageModel.js");
 const { GuestUser } = require("./guestUserModel.js");
 const FShipLabelDownload = require("./fshipLabelDownloadModel.js");
 const { UTMTracking } = require("./utmModel.js");
+const { BrandSetting } = require("./brandSettingModel.js");
 
 // Export all models
 module.exports = {
@@ -54,6 +55,7 @@ module.exports = {
   GuestUser,
   FShipLabelDownload,
   UTMTracking,
+  BrandSetting,
 };
 
 // User Associations
