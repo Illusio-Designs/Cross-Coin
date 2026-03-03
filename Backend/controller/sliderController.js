@@ -1,5 +1,6 @@
 const { Slider } = require('../model/sliderModel.js');
 const { Category } = require('../model/categoryModel.js');
+const Brand = require('../model/brandModel.js');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs/promises');
