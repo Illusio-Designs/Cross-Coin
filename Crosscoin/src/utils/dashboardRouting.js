@@ -13,8 +13,11 @@ export const getPageTitle = (view) => {
     'reviews': 'Reviews',
     'seo': 'SEO',
     'policies': 'Policies',
+    'brands': 'Brands',
+    'brand-settings': 'Brand Settings',
     'slider': 'Slider',
-    'media-gallery': 'Media Gallery'
+    'media-gallery': 'Media Gallery',
+    'utm-analytics': 'UTM Analytics'
   };
   return titles[view] || 'Dashboard';
 };

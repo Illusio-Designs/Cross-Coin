@@ -382,6 +382,14 @@ const setupDatabase = async () => {
       // Don't fail the entire setup if migrations have issues
     }
 
+    // Create brand_settings table
+    console.log("Creating brand_settings table...");
+    await createBrandSettingsTable();
+
+    // Create brands table
+    console.log("Creating brands table...");
+    await createBrandsTable();
+
     // Now it's safe to create the admin user
     if (models["User"]) {
       const bcrypt = require("bcryptjs");
@@ -810,6 +818,108 @@ const updateCouponTable = async () => {
     
   } catch (error) {
     console.log('⚠️ Coupon table update skipped (columns may already exist):', error.message);
+  }
+};
+
+// Function to create brand_settings table
+const createBrandSettingsTable = async () => {
+  try {
+    console.log('Creating brand_settings table...');
+
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS brand_settings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        setting_key VARCHAR(255) NOT NULL UNIQUE COMMENT 'Unique identifier for the setting',
+        setting_value TEXT NOT NULL COMMENT 'The actual value (encrypted if is_encrypted=true)',
+        category VARCHAR(50) DEFAULT 'general' COMMENT 'Category: general, payment, shipping, email, sms, social, analytics, security, api',
+        is_encrypted BOOLEAN DEFAULT FALSE COMMENT 'Whether the value is encrypted',
+        description TEXT COMMENT 'Human-readable description of what this setting does',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_category (category),
+        INDEX idx_setting_key (setting_key)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+    `);
+
+    console.log('✓ brand_settings table created successfully');
+
+    // Insert default settings if table is empty
+    const [existingSettings] = await sequelize.query('SELECT COUNT(*) as count FROM brand_settings');
+    
+    if (existingSettings[0].count === 0) {
+      console.log('Inserting default brand settings...');
+      
+      await sequelize.query(`
+        INSERT INTO brand_settings (setting_key, setting_value, category, is_encrypted, description) VALUES
+        ('BRAND_NAME', 'My E-Commerce Store', 'general', false, 'The name of your brand/store'),
+        ('BRAND_EMAIL', 'contact@example.com', 'general', false, 'Primary contact email for the brand'),
+        ('BRAND_PHONE', '+1234567890', 'general', false, 'Primary contact phone number'),
+        ('CURRENCY', 'INR', 'general', false, 'Default currency code'),
+        ('TIMEZONE', 'Asia/Kolkata', 'general', false, 'Default timezone'),
+        ('RAZORPAY_KEY_ID', '', 'payment', false, 'Razorpay API Key ID'),
+        ('RAZORPAY_KEY_SECRET', '', 'payment', true, 'Razorpay API Key Secret'),
+        ('SMTP_HOST', '', 'email', false, 'SMTP server hostname'),
+        ('SMTP_PORT', '587', 'email', false, 'SMTP server port'),
+        ('SMTP_USER', '', 'email', false, 'SMTP username'),
+        ('SMTP_PASSWORD', '', 'email', true, 'SMTP password'),
+        ('SMS_API_KEY', '', 'sms', true, 'SMS service API key'),
+        ('FACEBOOK_PIXEL_ID', '', 'analytics', false, 'Facebook Pixel ID'),
+        ('GOOGLE_ANALYTICS_ID', '', 'analytics', false, 'Google Analytics tracking ID'),
+        ('ENCRYPTION_KEY', '', 'security', true, 'Encryption key for sensitive data')
+      `);
+      
+      console.log('✓ Default brand settings inserted');
+    }
+    
+  } catch (error) {
+    console.log('⚠️ Brand settings table creation skipped (table may already exist):', error.message);
+  }
+};
+
+// Function to create brands table
+const createBrandsTable = async () => {
+  try {
+    console.log('Creating brands table...');
+
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS brands (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL UNIQUE COMMENT 'Brand name',
+        slug VARCHAR(255) NOT NULL UNIQUE COMMENT 'URL-friendly brand identifier',
+        domain VARCHAR(255) UNIQUE COMMENT 'Custom domain for the brand',
+        logo VARCHAR(500) COMMENT 'Brand logo URL',
+        description TEXT COMMENT 'Brand description',
+        is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether the brand is active',
+        theme_color VARCHAR(7) DEFAULT '#4CAF50' COMMENT 'Primary theme color (hex)',
+        contact_email VARCHAR(255) COMMENT 'Brand contact email',
+        contact_phone VARCHAR(20) COMMENT 'Brand contact phone',
+        metadata JSON COMMENT 'Additional brand metadata',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_slug (slug),
+        INDEX idx_domain (domain),
+        INDEX idx_is_active (is_active)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+    `);
+
+    console.log('✓ brands table created successfully');
+
+    // Insert default brand if table is empty
+    const [existingBrands] = await sequelize.query('SELECT COUNT(*) as count FROM brands');
+    
+    if (existingBrands[0].count === 0) {
+      console.log('Inserting default brand...');
+      
+      await sequelize.query(`
+        INSERT INTO brands (name, slug, description, is_active, theme_color, contact_email) VALUES
+        ('CrossCoin', 'crosscoin', 'Default e-commerce brand', true, '#4CAF50', 'contact@crosscoin.com')
+      `);
+      
+      console.log('✓ Default brand inserted');
+    }
+    
+  } catch (error) {
+    console.log('⚠️ Brands table creation skipped (table may already exist):', error.message);
   }
 };
 
