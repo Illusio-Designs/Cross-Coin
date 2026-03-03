@@ -1,10 +1,15 @@
 const express = require("express");
 const axios = require("axios");
-
-const FB_PIXEL_ID = process.env.FB_PIXEL_ID || "1386995345678287"; // Use env or fallback
-const FB_ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN; // Must be set in env
+const settingsHelper = require("../services/settingsHelper");
 
 async function sendFacebookEvent(eventName, order, extraData = {}) {
+  // Get brand ID from order or default to 1
+  const brandId = order.brand_id || 1;
+  
+  // Get settings from brand_settings table
+  const FB_PIXEL_ID = await settingsHelper.getSetting(brandId, 'FB_PIXEL_ID', '1386995345678287');
+  const FB_ACCESS_TOKEN = await settingsHelper.getSetting(brandId, 'FB_ACCESS_TOKEN');
+  
   // Skip Facebook Pixel if no access token is configured
   if (!FB_ACCESS_TOKEN || FB_ACCESS_TOKEN === "YOUR_ACCESS_TOKEN") {
     console.log(

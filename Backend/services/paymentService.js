@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const settingsHelper = require('./settingsHelper');
 const { Payment } = require('../model/paymentModel.js');
 
 const PaymentService = {
@@ -18,11 +19,12 @@ const PaymentService = {
      * @param {string} signature - Signature received from Razorpay
      * @returns {boolean} - True if signature is valid, false otherwise
      */
-    verifyMagicCheckoutSignature: (orderId, paymentId, signature) => {
+    verifyMagicCheckoutSignature: async (orderId, paymentId, signature) => {
         try {
             // Generate signature using HMAC SHA256
+            const key_secret = await settingsHelper.getSetting(1, 'RAZORPAY_KEY_SECRET');
             const generatedSignature = crypto
-                .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+                .createHmac('sha256', key_secret)
                 .update(orderId + '|' + paymentId)
                 .digest('hex');
 

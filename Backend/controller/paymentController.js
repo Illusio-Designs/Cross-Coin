@@ -7,6 +7,18 @@ const { sequelize } = require('../config/db.js');
 const { PaymentService } = require('../services/paymentService.js');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const settingsHelper = require('../services/settingsHelper');
+
+// Helper function to get Razorpay instance
+async function getRazorpayInstance(brandId = 1) {
+    const key_id = await settingsHelper.getSetting(brandId, 'RAZORPAY_KEY_ID');
+    const key_secret = await settingsHelper.getSetting(brandId, 'RAZORPAY_KEY_SECRET');
+    
+    return new Razorpay({
+        key_id,
+        key_secret
+    });
+}
 
 // Process a payment
 module.exports.processPayment = async (req, res) => {
@@ -481,10 +493,7 @@ module.exports.createRazorpayOrder = async (req, res) => {
         }
 
         // Initialize Razorpay instance
-        const razorpay = new Razorpay({
-            key_id: process.env.RAZORPAY_KEY_ID,
-            key_secret: process.env.RAZORPAY_KEY_SECRET
-        });
+        const razorpay = await getRazorpayInstance(1);
 
         // Create order
         const options = {
@@ -513,8 +522,9 @@ module.exports.updateOrderPayment = async (req, res) => {
     }
 
     // Verify signature
+    const key_secret = await settingsHelper.getSetting(1, 'RAZORPAY_KEY_SECRET');
     const generated_signature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .createHmac('sha256', key_secret)
       .update(razorpayOrderId + '|' + razorpayPaymentId)
       .digest('hex');
 
@@ -585,8 +595,9 @@ module.exports.razorpayCallback = async (req, res) => {
   }
 
   // Verify signature
+  const key_secret = await settingsHelper.getSetting(1, 'RAZORPAY_KEY_SECRET');
   const generated_signature = crypto
-    .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+    .createHmac('sha256', key_secret)
     .update(razorpay_order_id + '|' + razorpay_payment_id)
     .digest('hex');
 
@@ -636,10 +647,7 @@ module.exports.createMagicCheckoutOrder = async (req, res) => {
     }
 
     // Initialize Razorpay instance
-    const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET
-    });
+    const razorpay = await getRazorpayInstance(1);
 
     // Create order with Magic Checkout flag
     const options = {

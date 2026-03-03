@@ -5,12 +5,20 @@ const { Op } = require('sequelize');
 const addressQualityService = require('../services/addressQualityService.js');
 const fshipService = require('../services/fshipService.js');
 const Razorpay = require('razorpay');
+const settingsHelper = require('../services/settingsHelper');
 
-// Initialize Razorpay instance
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET
-});
+// Initialize Razorpay instance - will be initialized per request with brand settings
+let razorpayInstance = null;
+
+async function getRazorpayInstance(brandId = 1) {
+    const key_id = await settingsHelper.getSetting(brandId, 'RAZORPAY_KEY_ID');
+    const key_secret = await settingsHelper.getSetting(brandId, 'RAZORPAY_KEY_SECRET');
+    
+    return new Razorpay({
+        key_id,
+        key_secret
+    });
+}
 
 /**
  * RAZORPAY DASHBOARD CONFIGURATION REQUIRED
@@ -508,6 +516,7 @@ module.exports.createOrder = async (req, res) => {
         };
 
         // Create order using Razorpay API
+        const razorpay = await getRazorpayInstance(1);
         const order = await razorpay.orders.create(orderOptions);
 
         res.json({
@@ -558,8 +567,9 @@ module.exports.verifyPayment = async (req, res) => {
 
         // Create signature verification string
         const crypto = require('crypto');
+        const key_secret = await settingsHelper.getSetting(1, 'RAZORPAY_KEY_SECRET');
         const generatedSignature = crypto
-            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+            .createHmac('sha256', key_secret)
             .update(`${razorpay_order_id}|${razorpay_payment_id}`)
             .digest('hex');
 

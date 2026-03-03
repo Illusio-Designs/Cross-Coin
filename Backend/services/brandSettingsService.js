@@ -1,5 +1,4 @@
 const { BrandSetting } = require('../model/brandSettingModel');
-const { encrypt, decrypt } = require('../utils/encryption');
 
 // In-memory cache for settings (5 minutes TTL)
 const settingsCache = new Map();
@@ -28,11 +27,7 @@ async function getBrandSetting(brandId, key, useCache = true) {
         return null;
     }
     
-    // Decrypt if needed
-    let value = setting.value;
-    if (setting.is_encrypted && value) {
-        value = decrypt(value);
-    }
+    const value = setting.value;
     
     // Cache the result
     if (useCache) {
@@ -58,15 +53,10 @@ async function getAllBrandSettings(brandId, category = null) {
     
     const result = {};
     for (const setting of settings) {
-        let value = setting.value;
-        if (setting.is_encrypted && value) {
-            value = decrypt(value);
-        }
         result[setting.key] = {
-            value,
+            value: setting.value,
             category: setting.category,
-            description: setting.description,
-            is_encrypted: setting.is_encrypted
+            description: setting.description
         };
     }
     
@@ -77,17 +67,11 @@ async function getAllBrandSettings(brandId, category = null) {
  * Set or update a brand setting
  */
 async function setBrandSetting(brandId, key, value, isEncrypted = false, category = 'general', description = null, updatedBy = null) {
-    // Encrypt if needed
-    let finalValue = value;
-    if (isEncrypted && value) {
-        finalValue = encrypt(value);
-    }
-    
     const [setting, created] = await BrandSetting.upsert({
         brand_id: brandId,
         key,
-        value: finalValue,
-        is_encrypted: isEncrypted,
+        value: value,
+        is_encrypted: false,
         category,
         description,
         updated_by: updatedBy
@@ -156,16 +140,11 @@ async function getSetting(brandId, key) {
  * Create a new setting
  */
 async function createSetting(data) {
-    let finalValue = data.value;
-    if (data.is_encrypted && finalValue) {
-        finalValue = encrypt(finalValue);
-    }
-    
     const setting = await BrandSetting.create({
         brand_id: data.brand_id,
         key: data.key,
-        value: finalValue,
-        is_encrypted: data.is_encrypted || false,
+        value: data.value,
+        is_encrypted: false,
         category: data.category || 'general',
         description: data.description || null,
         updated_by: data.updated_by || null
@@ -186,14 +165,9 @@ async function updateSetting(brandId, key, data) {
         return null;
     }
     
-    let finalValue = data.value;
-    if (data.is_encrypted && finalValue) {
-        finalValue = encrypt(finalValue);
-    }
-    
     await setting.update({
-        value: finalValue,
-        is_encrypted: data.is_encrypted !== undefined ? data.is_encrypted : setting.is_encrypted,
+        value: data.value,
+        is_encrypted: false,
         updated_by: data.updated_by || null
     });
     

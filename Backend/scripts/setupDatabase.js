@@ -870,7 +870,6 @@ const createBrandsTable = async () => {
         secondary_color VARCHAR(7) COMMENT 'Secondary theme color (hex)',
         contact_email VARCHAR(255) COMMENT 'Brand contact email',
         contact_phone VARCHAR(20) COMMENT 'Brand contact phone',
-        settings LONGTEXT COMMENT 'Brand settings as JSON string',
         status ENUM('active', 'inactive') DEFAULT 'active' COMMENT 'Brand status',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
