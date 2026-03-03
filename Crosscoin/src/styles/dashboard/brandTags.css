@@ -1,0 +1,59 @@
+/* Brand Tags Component Styles */
+
+.brand-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.brand-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 4px;
+    border-left: 3px solid;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.brand-tag:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.brand-tag-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.brand-tag.no-brands {
+    background: #f5f5f5;
+    border-left-color: #999;
+    color: #666;
+    font-style: italic;
+}
+
+.brand-tag.more-brands {
+    background: #e0e0e0;
+    border-left-color: #999;
+    color: #666;
+    cursor: help;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .brand-tags {
+        gap: 4px;
+    }
+
+    .brand-tag {
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+}

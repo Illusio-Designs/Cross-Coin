@@ -67,6 +67,15 @@ export const adminProductService = {
     return response.data;
   },
 
+  // Get all products with brand assignments (for admin dashboard)
+  getAllProductsWithBrands: async (page = 1, limit = 10, search = "") => {
+    const api = createAdminApi('crosscoin'); // Use any brand for admin
+    const params = { page, limit, search };
+    if (!search) delete params.search;
+    const response = await api.get("/admin/products/with-brands", { params });
+    return response.data;
+  },
+
   getProduct: async (brandSlug, id) => {
     const api = createAdminApi(brandSlug);
     const response = await api.get(`/products/${id}`);
@@ -94,6 +103,13 @@ export const adminProductService = {
     const response = await api.delete(`/products/${id}`);
     return response.data;
   },
+
+  // Assign brands to a product
+  assignBrandsToProduct: async (productId, brandIds) => {
+    const api = createAdminApi('crosscoin');
+    const response = await api.post(`/admin/products/${productId}/brands`, { brandIds });
+    return response.data;
+  },
 };
 
 /**
@@ -103,6 +119,13 @@ export const adminCategoryService = {
   getAllCategories: async (brandSlug) => {
     const api = createAdminApi(brandSlug);
     const response = await api.get("/categories");
+    return response.data;
+  },
+
+  // Get all categories with brand assignments (for admin dashboard)
+  getAllCategoriesWithBrands: async () => {
+    const api = createAdminApi('crosscoin'); // Use any brand for admin
+    const response = await api.get("/admin/categories/with-brands");
     return response.data;
   },
 
@@ -127,6 +150,13 @@ export const adminCategoryService = {
   deleteCategory: async (brandSlug, id) => {
     const api = createAdminApi(brandSlug);
     const response = await api.delete(`/categories/${id}`);
+    return response.data;
+  },
+
+  // Assign brands to a category
+  assignBrandsToCategory: async (categoryId, brandIds) => {
+    const api = createAdminApi('crosscoin');
+    const response = await api.post(`/admin/categories/${categoryId}/brands`, { brandIds });
     return response.data;
   },
 };
