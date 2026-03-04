@@ -30,6 +30,21 @@ router.get('/products/:productId/variations', aiImageController.getProductVariat
 router.post('/generate', aiImageController.generateImages);
 
 /**
+ * Delete old images for selected variations (manual cleanup after reviewing AI images)
+ * POST /api/ai-images/delete-old-images
+ * 
+ * Body:
+ * {
+ *   productId: 1,
+ *   variations: [
+ *     { variationId: 1, keepImageIds: [101, 102, 103] },
+ *     { variationId: 2, keepImageIds: [201, 202, 203] }
+ *   ]
+ * }
+ */
+router.post('/delete-old-images', aiImageController.deleteOldImages);
+
+/**
  * Get AI usage statistics
  * GET /api/ai-images/usage-stats
  */
