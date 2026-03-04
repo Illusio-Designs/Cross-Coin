@@ -122,24 +122,27 @@ class ImageGenerationService {
       const jpegPath = path.join(this.uploadsDir, jpegFilename);
 
       // Process and save as WebP (primary format)
-      await sharp(imageBuffer)
+      const webpImage = await sharp(imageBuffer)
         .resize(config.imageWidth, config.imageHeight, {
-          fit: 'contain',
-          background: { r: 255, g: 255, b: 255, alpha: 1 }
+          fit: 'cover', // Changed from 'contain' to 'cover' - no white bars!
+          position: 'center' // Center the image
         })
         .webp({ quality: config.imageQuality })
         .toFile(webpPath);
 
+      console.log(`💾 Saved WebP: ${webpFilename} (${webpImage.width}x${webpImage.height}, ${(webpImage.size / 1024).toFixed(2)} KB)`);
+        .toFile(webpPath);
+
       // Process and save as JPEG (fallback format)
-      await sharp(imageBuffer)
+      const jpegImage = await sharp(imageBuffer)
         .resize(config.imageWidth, config.imageHeight, {
-          fit: 'contain',
-          background: { r: 255, g: 255, b: 255 }
+          fit: 'cover', // Changed from 'contain' to 'cover' - no white bars!
+          position: 'center' // Center the image
         })
         .jpeg({ quality: config.imageQuality - 5 })
         .toFile(jpegPath);
 
-      console.log(`💾 Saved: ${webpFilename} and ${jpegFilename}`);
+      console.log(`💾 Saved JPEG: ${jpegFilename} (${jpegImage.width}x${jpegImage.height}, ${(jpegImage.size / 1024).toFixed(2)} KB)`);
 
       return {
         webp: `/uploads/products/${webpFilename}`,

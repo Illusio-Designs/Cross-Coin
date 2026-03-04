@@ -111,6 +111,8 @@ Generate a photorealistic image that looks like it was taken by a professional p
   async generateMultipleImages(baseImagePath, prompts) {
     const results = [];
     
+    console.log(`🎨 Starting generation of ${prompts.length} images...`);
+    
     for (let i = 0; i < prompts.length; i++) {
       const promptData = prompts[i];
       console.log(`\n📸 Generating image ${i + 1}/${prompts.length}: ${promptData.type}`);
@@ -122,26 +124,46 @@ Generate a photorealistic image that looks like it was taken by a professional p
           promptData.negativePrompt
         );
         
-        results.push({
-          ...result,
-          type: promptData.type,
-          settings: promptData.settings
-        });
+        if (result.success) {
+          console.log(`✅ Successfully generated ${promptData.type}`);
+          results.push({
+            ...result,
+            type: promptData.type,
+            settings: promptData.settings
+          });
+        } else {
+          console.error(`❌ Failed to generate ${promptData.type}: No success flag`);
+          results.push({
+            success: false,
+            type: promptData.type,
+            error: 'Generation failed'
+          });
+        }
         
-        // Small delay between requests to avoid rate limiting
+        // Longer delay between requests to avoid rate limiting
         if (i < prompts.length - 1) {
-          await this.delay(2000); // 2 second delay
+          console.log('⏳ Waiting 3 seconds before next generation...');
+          await this.delay(3000); // 3 second delay (increased from 2)
         }
         
       } catch (error) {
         console.error(`❌ Failed to generate ${promptData.type}:`, error.message);
+        console.error('Error details:', error);
         results.push({
           success: false,
           type: promptData.type,
           error: error.message
         });
+        
+        // Still wait before next attempt
+        if (i < prompts.length - 1) {
+          console.log('⏳ Waiting 3 seconds before retry...');
+          await this.delay(3000);
+        }
       }
     }
+    
+    console.log(`\n📊 Generation complete: ${results.filter(r => r.success).length}/${prompts.length} successful`);
     
     return results;
   }
