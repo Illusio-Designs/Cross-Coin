@@ -4,7 +4,8 @@ require('dotenv').config();
 module.exports = {
   // Google AI API Configuration
   apiKey: process.env.GOOGLE_AI_API_KEY,
-  model: process.env.GOOGLE_AI_MODEL || 'gemini-pro-vision',
+  model: process.env.GOOGLE_AI_MODEL || 'gemini-2.5-flash-image', // Image generation model
+  useImageGen: process.env.GEMINI_USE_IMAGE_GEN === 'true' || true, // Enable image generation
   
   // Image Generation Settings
   imagesPerVariation: parseInt(process.env.AI_IMAGES_PER_VARIATION) || 6,

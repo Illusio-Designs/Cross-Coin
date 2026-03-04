@@ -26,7 +26,8 @@ class GoogleAIService {
    */
   async generateImage(baseImagePath, prompt, negativePrompt) {
     try {
-      console.log('🎨 Generating AI image...');
+      console.log('🎨 Generating AI image with Gemini...');
+      console.log('Model:', config.model);
       console.log('Base image:', baseImagePath);
       console.log('Prompt:', prompt.substring(0, 100) + '...');
 
@@ -63,18 +64,30 @@ ${negativePrompt}
 Generate a photorealistic image that looks like it was taken by a professional product photographer.
       `.trim();
 
+      console.log('📤 Sending request to Gemini API...');
+
       // Call Google AI API
       const result = await this.model.generateContent([
         fullPrompt,
         imagePart
       ]);
 
+      console.log('📥 Received response from Gemini API');
+
       const response = await result.response;
+      
+      // Log response structure for debugging
+      console.log('Response candidates:', response.candidates?.length || 0);
+      
       const generatedImage = response.candidates[0]?.content?.parts[0]?.inlineData;
 
-      if (!generatedImage) {
+      if (!generatedImage || !generatedImage.data) {
+        console.error('❌ No image data in response');
+        console.log('Response structure:', JSON.stringify(response.candidates[0]?.content, null, 2));
         throw new Error('No image generated from AI');
       }
+
+      console.log('✅ Image generated successfully, size:', generatedImage.data.length, 'bytes');
 
       // Track usage
       this.trackUsage();
