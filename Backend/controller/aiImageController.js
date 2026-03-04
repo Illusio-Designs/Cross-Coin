@@ -50,22 +50,36 @@ exports.getProductVariations = async (req, res) => {
       attributes: variation.attributes,
       price: variation.price,
       stock: variation.stock,
-      images: variation.VariationImages.map(img => ({
-        id: img.id,
-        url: img.image_url,
-        altText: img.alt_text,
-        isPrimary: img.is_primary,
-        displayOrder: img.display_order
-      }))
+      images: variation.VariationImages.map(img => {
+        console.log('📸 Variation image from DB:', {
+          id: img.id,
+          image_url: img.image_url,
+          product_id: img.product_id,
+          variation_id: img.product_variation_id
+        });
+        return {
+          id: img.id,
+          url: img.image_url,
+          altText: img.alt_text,
+          isPrimary: img.is_primary,
+          displayOrder: img.display_order
+        };
+      })
     }));
 
     // Product-level images (can be used as base)
-    const productImages = product.ProductImages.map(img => ({
-      id: img.id,
-      url: img.image_url,
-      altText: img.alt_text,
-      isPrimary: img.is_primary
-    }));
+    const productImages = product.ProductImages.map(img => {
+      console.log('📸 Product image from DB:', {
+        id: img.id,
+        image_url: img.image_url
+      });
+      return {
+        id: img.id,
+        url: img.image_url,
+        altText: img.alt_text,
+        isPrimary: img.is_primary
+      };
+    });
 
     res.json({
       success: true,
@@ -190,7 +204,7 @@ exports.generateImages = async (req, res) => {
       
       console.log('📸 Extracted filename:', imageFilename);
 
-      // Get base image path
+      // Get base image path - FULL SERVER PATH
       const baseImagePath = path.join(
         __dirname,
         '../uploads/products',
@@ -198,20 +212,39 @@ exports.generateImages = async (req, res) => {
       );
 
       console.log('📸 Full base image path:', baseImagePath);
+      console.log('📸 Checking if file exists at:', baseImagePath);
 
-      // Verify base image exists
-      const imageExists = await imageGenService.verifyImageExists(baseImage.image_url);
-      if (!imageExists) {
-        console.error(`❌ Base image file not found at: ${baseImagePath}`);
+      // Check if file exists using fs
+      const fs = require('fs').promises;
+      try {
+        await fs.access(baseImagePath);
+        console.log('✅ Base image file EXISTS at:', baseImagePath);
+      } catch (err) {
+        console.error('❌ Base image file DOES NOT EXIST at:', baseImagePath);
+        console.error('❌ Error:', err.message);
+        
+        // List files in the directory to see what's actually there
+        try {
+          const files = await fs.readdir(path.join(__dirname, '../uploads/products'));
+          console.log('📁 Files in uploads/products directory (first 20):');
+          files.slice(0, 20).forEach(file => console.log('  -', file));
+          
+          // Check if there's a similar filename
+          const similarFiles = files.filter(f => f.includes(imageFilename.split('-')[0]));
+          if (similarFiles.length > 0) {
+            console.log('🔍 Similar filenames found:', similarFiles);
+          }
+        } catch (listErr) {
+          console.error('❌ Could not list directory:', listErr.message);
+        }
+        
         results.push({
           variationId,
           success: false,
-          error: 'Base image file not found'
+          error: `Base image file not found: ${imageFilename}`
         });
         continue;
       }
-
-      console.log('✅ Base image file exists');
 
       try {
         // Get all old images for this variation
@@ -222,17 +255,28 @@ exports.generateImages = async (req, res) => {
 
         console.log(`🗑️  Found ${oldImages.length} old images to delete`);
 
-        // Delete old images from file system
-        const deletionResult = await imageGenService.deleteOldImages(oldImages);
-        totalImagesDeleted += deletionResult.deletedCount;
+        // DON'T delete the base image yet - we need it for generation!
+        const imagesToDeleteNow = oldImages.filter(img => img.id !== baseImageId);
+        const baseImageToDeleteLater = oldImages.find(img => img.id === baseImageId);
 
-        // Delete old image records from database
-        await ProductImage.destroy({
-          where: { product_variation_id: variationId },
-          transaction
-        });
+        console.log(`🗑️  Deleting ${imagesToDeleteNow.length} images now, keeping base image ${baseImageId} for generation`);
 
-        console.log(`✅ Deleted ${oldImages.length} old image records from database`);
+        // Delete non-base images from file system
+        if (imagesToDeleteNow.length > 0) {
+          const deletionResult = await imageGenService.deleteOldImages(imagesToDeleteNow);
+          totalImagesDeleted += deletionResult.deletedCount;
+
+          // Delete non-base image records from database
+          await ProductImage.destroy({
+            where: { 
+              product_variation_id: variationId,
+              id: { [require('sequelize').Op.ne]: baseImageId } // Don't delete base image
+            },
+            transaction
+          });
+
+          console.log(`✅ Deleted ${imagesToDeleteNow.length} old image records from database`);
+        }
 
         // Generate new AI images
         console.log('🎨 Starting AI image generation...');
