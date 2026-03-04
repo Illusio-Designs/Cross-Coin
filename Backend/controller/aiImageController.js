@@ -247,36 +247,15 @@ exports.generateImages = async (req, res) => {
       }
 
       try {
-        // Get all old images for this variation
+        // DON'T DELETE ANY IMAGES - Just generate new ones!
+        console.log('🎨 Generating new AI images WITHOUT deleting old images');
+        
         const oldImages = await ProductImage.findAll({
           where: { product_variation_id: variationId },
           transaction
         });
 
-        console.log(`🗑️  Found ${oldImages.length} old images to delete`);
-
-        // DON'T delete the base image yet - we need it for generation!
-        const imagesToDeleteNow = oldImages.filter(img => img.id !== baseImageId);
-        const baseImageToDeleteLater = oldImages.find(img => img.id === baseImageId);
-
-        console.log(`🗑️  Deleting ${imagesToDeleteNow.length} images now, keeping base image ${baseImageId} for generation`);
-
-        // Delete non-base images from file system
-        if (imagesToDeleteNow.length > 0) {
-          const deletionResult = await imageGenService.deleteOldImages(imagesToDeleteNow);
-          totalImagesDeleted += deletionResult.deletedCount;
-
-          // Delete non-base image records from database
-          await ProductImage.destroy({
-            where: { 
-              product_variation_id: variationId,
-              id: { [require('sequelize').Op.ne]: baseImageId } // Don't delete base image
-            },
-            transaction
-          });
-
-          console.log(`✅ Deleted ${imagesToDeleteNow.length} old image records from database`);
-        }
+        console.log(`� Variation currently has ${oldImages.length} images (keeping them all)`);
 
         // Generate new AI images
         console.log('🎨 Starting AI image generation...');
@@ -476,6 +455,126 @@ exports.enhanceImage = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to enhance image',
+      error: error.message
+    });
+  }
+};
+
+
+/**
+ * Delete old images for selected variations (manual cleanup)
+ * POST /api/ai-images/delete-old-images
+ */
+exports.deleteOldImages = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const { productId, variations } = req.body;
+
+    console.log('\n🗑️  === DELETE OLD IMAGES REQUEST ===');
+    console.log('Product ID:', productId);
+    console.log('Variations:', variations);
+
+    // Validate input
+    if (!productId || !variations || !Array.isArray(variations) || variations.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid request. Provide productId and variations array.'
+      });
+    }
+
+    const results = [];
+    let totalImagesDeleted = 0;
+
+    // Process each variation
+    for (const varData of variations) {
+      const { variationId, keepImageIds } = varData; // keepImageIds = array of AI-generated image IDs to keep
+
+      console.log(`\n🗑️  Processing variation ${variationId}...`);
+      console.log('Keep these image IDs:', keepImageIds);
+
+      // Get variation
+      const variation = await ProductVariation.findByPk(variationId, { transaction });
+      if (!variation) {
+        console.error(`❌ Variation ${variationId} not found`);
+        results.push({
+          variationId,
+          success: false,
+          error: 'Variation not found'
+        });
+        continue;
+      }
+
+      try {
+        // Get all images for this variation
+        const allImages = await ProductImage.findAll({
+          where: { product_variation_id: variationId },
+          transaction
+        });
+
+        // Filter images to delete (exclude the ones to keep)
+        const imagesToDelete = allImages.filter(img => !keepImageIds.includes(img.id));
+
+        console.log(`🗑️  Found ${allImages.length} total images, deleting ${imagesToDelete.length}`);
+
+        if (imagesToDelete.length > 0) {
+          // Delete images from file system
+          const deletionResult = await imageGenService.deleteOldImages(imagesToDelete);
+          totalImagesDeleted += deletionResult.deletedCount;
+
+          // Delete image records from database
+          await ProductImage.destroy({
+            where: { 
+              product_variation_id: variationId,
+              id: imagesToDelete.map(img => img.id)
+            },
+            transaction
+          });
+
+          console.log(`✅ Deleted ${imagesToDelete.length} images`);
+        }
+
+        results.push({
+          variationId,
+          success: true,
+          imagesDeleted: imagesToDelete.length,
+          imagesKept: keepImageIds.length
+        });
+
+      } catch (error) {
+        console.error(`❌ Error processing variation ${variationId}:`, error);
+        results.push({
+          variationId,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+
+    // Commit transaction
+    await transaction.commit();
+
+    console.log('\n✅ === DELETE OLD IMAGES COMPLETE ===');
+    console.log(`Total images deleted: ${totalImagesDeleted}`);
+
+    res.json({
+      success: true,
+      message: 'Old images deleted successfully',
+      data: {
+        productId,
+        totalVariationsProcessed: variations.length,
+        totalImagesDeleted,
+        results
+      }
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error('\n❌ === DELETE OLD IMAGES ERROR ===');
+    console.error('Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete old images',
       error: error.message
     });
   }
