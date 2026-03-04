@@ -235,6 +235,11 @@ exports.generateImages = async (req, res) => {
         console.log(`✅ Deleted ${oldImages.length} old image records from database`);
 
         // Generate new AI images
+        console.log('🎨 Starting AI image generation...');
+        console.log('Base image path:', baseImagePath);
+        console.log('Product info:', { name: product.name, category: product.Category?.name });
+        console.log('Variation info:', { id: variation.id, attributes: variation.attributes });
+        
         const generationResult = await imageGenService.generateImagesForVariation(
           baseImagePath,
           {
@@ -247,8 +252,20 @@ exports.generateImages = async (req, res) => {
           }
         );
 
+        console.log('🎨 Generation result:', {
+          success: generationResult.success,
+          totalGenerated: generationResult.totalGenerated,
+          imagesCount: generationResult.images?.length || 0
+        });
+
         if (!generationResult.success) {
+          console.error('❌ Image generation failed - no success flag');
           throw new Error('Image generation failed');
+        }
+
+        if (!generationResult.images || generationResult.images.length === 0) {
+          console.error('❌ No images were generated');
+          throw new Error('No images were generated');
         }
 
         // Save new images to database

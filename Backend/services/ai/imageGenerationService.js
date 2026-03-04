@@ -79,6 +79,17 @@ class ImageGenerationService {
 
       console.log(`\n✅ Successfully generated ${savedImages.length} images`);
 
+      // Return success false if no images were generated
+      if (savedImages.length === 0) {
+        console.error('❌ No images were successfully generated');
+        return {
+          success: false,
+          images: [],
+          totalGenerated: 0,
+          error: 'All image generations failed'
+        };
+      }
+
       return {
         success: true,
         images: savedImages,
