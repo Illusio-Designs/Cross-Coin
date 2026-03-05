@@ -48,7 +48,7 @@ const formatSliderResponse = (slider) => {
 // Create Slider
 const createSlider = async (req, res) => {
     try {
-        const { title, description } = req.body;
+        const { title, description, brand_id } = req.body;
 
         if (!req.file) {
             return res.status(400).json({ message: 'Image is required' });
@@ -75,11 +75,14 @@ const createSlider = async (req, res) => {
         const image = result.filename; // Store only filename
         console.log('Created slider image filename:', image);
 
+        // Use brand_id from request body if provided, otherwise use req.brand or default to 1
+        const brandIdToUse = brand_id || (req.brand ? req.brand.id : 1);
+
         const slider = await Slider.create({
             title,
             description,
             image,
-            brand_id: req.brand ? req.brand.id : 1, // ✅ Multi-brand support
+            brand_id: brandIdToUse,
         });
 
         res.status(201).json({ 
@@ -159,7 +162,7 @@ const getSliderById = async (req, res) => {
 const updateSlider = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, description, buttonText, categoryId, status } = req.body;
+        const { title, description, buttonText, categoryId, status, brand_id } = req.body;
 
         const slider = await Slider.findByPk(id);
         if (!slider) {
@@ -207,15 +210,23 @@ const updateSlider = async (req, res) => {
             }
         }
 
-        // Update slider
-        await slider.update({
+        // Prepare update data
+        const updateData = {
             title,
             description,
             buttonText,
             categoryId: categoryIdToUse,
             status,
             image // This will only change if a new file was uploaded
-        });
+        };
+
+        // Add brand_id if provided
+        if (brand_id) {
+            updateData.brand_id = brand_id;
+        }
+
+        // Update slider
+        await slider.update(updateData);
 
         res.status(200).json({ 
             success: true,
