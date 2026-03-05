@@ -103,9 +103,9 @@ export default function Home() {
           title: slider.title,
           subtitle: slider.subtitle || '',
           description: slider.description || '',
-          cta: slider.button_text || 'Shop Now',
-          link: slider.button_link || '/products',
-          image: slider.image_url ? `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}${slider.image_url}` : '',
+          cta: slider.buttonText || 'Shop Now',
+          link: slider.categorySlug ? `/products?category=${slider.categorySlug}` : '/products',
+          image: slider.image || '',
           theme: slider.theme || 'dark'
         }));
         
