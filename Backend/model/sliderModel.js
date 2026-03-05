@@ -42,13 +42,12 @@ const Slider = sequelize.define('Slider', {
     },
     brand_id: {
         type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 1,
+        allowNull: true, // Changed to nullable since we'll use many-to-many
         references: {
             model: 'brands',
             key: 'id'
         },
-        onDelete: 'CASCADE',
+        onDelete: 'SET NULL',
         onUpdate: 'CASCADE'
     }
 }, {

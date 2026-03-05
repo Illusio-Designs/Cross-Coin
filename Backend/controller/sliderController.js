@@ -1,6 +1,7 @@
 const { Slider } = require('../model/sliderModel.js');
 const { Category } = require('../model/categoryModel.js');
 const Brand = require('../model/brandModel.js');
+const SliderBrand = require('../model/sliderBrandModel.js');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs/promises');
@@ -103,15 +104,10 @@ const createSlider = async (req, res) => {
 // Get All Sliders
 const getAllSliders = async (req, res) => {
     try {
-        // ✅ Multi-brand filtering
+        // ✅ Multi-brand filtering using many-to-many relationship
         const whereOptions = {};
-        if (req.brand && req.brand.id) {
-            whereOptions.brand_id = req.brand.id;
-        }
-
-        const sliders = await Slider.findAll({
-            where: whereOptions,
-            include: [{
+        let includeOptions = [
+            {
                 model: Category,
                 as: 'category',
                 attributes: ['id', 'name'],
@@ -120,10 +116,39 @@ const getAllSliders = async (req, res) => {
                     as: 'Brands',
                     through: { attributes: ['status'] }
                 }]
-            }]
+            },
+            {
+                model: Brand,
+                as: 'Brands',
+                through: { 
+                    attributes: ['status'],
+                    where: { status: 'active' }
+                },
+                required: false // LEFT JOIN to get sliders even without brand assignments
+            }
+        ];
+
+        // If brand is specified, filter sliders by brand
+        if (req.brand && req.brand.id) {
+            includeOptions[1].where = { id: req.brand.id };
+            includeOptions[1].required = true; // INNER JOIN to only get sliders for this brand
+        }
+
+        const sliders = await Slider.findAll({
+            where: whereOptions,
+            include: includeOptions
         });
 
-        const slidersResponse = sliders.map(formatSliderResponse);
+        const slidersResponse = sliders.map(slider => {
+            const sliderData = formatSliderResponse(slider);
+            // Add brands array to response
+            sliderData.brands = slider.Brands ? slider.Brands.map(brand => ({
+                id: brand.id,
+                name: brand.name,
+                status: brand.SliderBrand ? brand.SliderBrand.status : 'active'
+            })) : [];
+            return sliderData;
+        });
         console.log('All sliders image paths:', slidersResponse.map(s => s.image));
 
         res.status(200).json({ sliders: slidersResponse });
@@ -246,15 +271,37 @@ const updateSlider = async (req, res) => {
 // Get Public Sliders
 const getPublicSliders = async (req, res) => {
     try {
+        // Get brand from header
+        const brandName = req.headers['x-brand-name'];
+        
+        let includeOptions = [
+            {
+                model: Category,
+                as: 'category',
+                attributes: ['id', 'name', 'slug']
+            },
+            {
+                model: Brand,
+                as: 'Brands',
+                through: { 
+                    attributes: ['status'],
+                    where: { status: 'active' }
+                },
+                required: false
+            }
+        ];
+
+        // If brand is specified, filter by brand
+        if (brandName) {
+            includeOptions[1].where = { name: brandName };
+            includeOptions[1].required = true; // Only get sliders for this brand
+        }
+
         const sliders = await Slider.findAll({
             where: {
                 status: 'active'
             },
-            include: [{
-                model: Category,
-                as: 'category',
-                attributes: ['id', 'name', 'slug']
-            }],
+            include: includeOptions,
             order: [['createdAt', 'DESC']],
             attributes: ['id', 'title', 'description', 'buttonText', 'image', 'categoryId']
         });
@@ -265,7 +312,10 @@ const getPublicSliders = async (req, res) => {
             sliderData.categorySlug = slider.category ? slider.category.slug : null;
             // Add full image path
             sliderData.image = `${process.env.API_URL || process.env.BACKEND_URL || 'https://api.crosscoin.in'}/uploads/slider/${sliderData.image}`;
+            // Add brands info
+            sliderData.brands = slider.Brands ? slider.Brands.map(brand => brand.name) : [];
             delete sliderData.category;
+            delete sliderData.Brands;
             return sliderData;
         });
 
@@ -314,6 +364,119 @@ module.exports = {
     updateSlider,
     getPublicSliders,
     deleteSlider,
-    upload
+    upload,
+    assignSliderToBrands,
+    removeSliderFromBrand
 };
+
+// Assign slider to multiple brands
+async function assignSliderToBrands(req, res) {
+    try {
+        const { id } = req.params;
+        const { brand_ids } = req.body; // Array of brand IDs
+
+        if (!Array.isArray(brand_ids) || brand_ids.length === 0) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'brand_ids must be a non-empty array' 
+            });
+        }
+
+        const slider = await Slider.findByPk(id);
+        if (!slider) {
+            return res.status(404).json({ 
+                success: false,
+                message: 'Slider not found' 
+            });
+        }
+
+        // Verify all brands exist
+        const brands = await Brand.findAll({
+            where: { id: brand_ids }
+        });
+
+        if (brands.length !== brand_ids.length) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'One or more brand IDs are invalid' 
+            });
+        }
+
+        // Create slider-brand relationships
+        const assignments = [];
+        for (const brandId of brand_ids) {
+            const [sliderBrand, created] = await SliderBrand.findOrCreate({
+                where: {
+                    slider_id: id,
+                    brand_id: brandId
+                },
+                defaults: {
+                    status: 'active'
+                }
+            });
+
+            if (!created && sliderBrand.status === 'inactive') {
+                // Reactivate if it was inactive
+                await sliderBrand.update({ status: 'active' });
+            }
+
+            assignments.push({
+                brand_id: brandId,
+                brand_name: brands.find(b => b.id === brandId).name,
+                status: sliderBrand.status
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Slider assigned to brands successfully',
+            data: {
+                slider_id: id,
+                assignments
+            }
+        });
+    } catch (error) {
+        console.error('Assign slider to brands error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to assign slider to brands',
+            error: error.message
+        });
+    }
+}
+
+// Remove slider from a brand
+async function removeSliderFromBrand(req, res) {
+    try {
+        const { id, brandId } = req.params;
+
+        const sliderBrand = await SliderBrand.findOne({
+            where: {
+                slider_id: id,
+                brand_id: brandId
+            }
+        });
+
+        if (!sliderBrand) {
+            return res.status(404).json({
+                success: false,
+                message: 'Slider-brand relationship not found'
+            });
+        }
+
+        await sliderBrand.destroy();
+
+        res.status(200).json({
+            success: true,
+            message: 'Slider removed from brand successfully'
+        });
+    } catch (error) {
+        console.error('Remove slider from brand error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to remove slider from brand',
+            error: error.message
+        });
+    }
+}
 
