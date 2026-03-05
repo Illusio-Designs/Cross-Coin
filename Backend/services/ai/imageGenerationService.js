@@ -131,7 +131,6 @@ class ImageGenerationService {
         .toFile(webpPath);
 
       console.log(`💾 Saved WebP: ${webpFilename} (${webpImage.width}x${webpImage.height}, ${(webpImage.size / 1024).toFixed(2)} KB)`);
-        .toFile(webpPath);
 
       // Process and save as JPEG (fallback format)
       const jpegImage = await sharp(imageBuffer)
