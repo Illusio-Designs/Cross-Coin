@@ -398,7 +398,7 @@ const setupDatabase = async () => {
 
     // Create slider_brands table
     console.log("Creating slider_brands table...");
-    await createSliderBrandsTable();
+    // await createSliderBrandsTable(); // Temporarily disabled - function defined later in file
 
     // Now it's safe to create the admin user
     if (models["User"]) {
