@@ -799,6 +799,26 @@ export const sliderService = {
       throw handleApiError(error);
     }
   },
+
+  assignSliderToBrands: async (sliderId, brandIds) => {
+    try {
+      const response = await api.post(`/api/sliders/${sliderId}/brands`, {
+        brand_ids: brandIds
+      });
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+
+  removeSliderFromBrand: async (sliderId, brandId) => {
+    try {
+      const response = await api.delete(`/api/sliders/${sliderId}/brands/${brandId}`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
 };
 
 // Product Services

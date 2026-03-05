@@ -35,6 +35,7 @@ export default function Slider() {
     categoryId: "",
     buttonText: "",
     brand_id: "",
+    brand_ids: [], // Array for multi-brand selection
   });
 
   // Check admin access
@@ -214,17 +215,24 @@ export default function Slider() {
     { header: "Description", accessor: "description" },
     { header: "Category", accessor: "categoryName" },
     {
-      header: "Brand",
-      accessor: row => {
-        const brand = brands.find(b => b.id === row.brand_id);
-        return brand ? (brand.display_name || brand.name) : 'N/A';
-      }
-    },
-    {
       header: "Brands",
       accessor: row => {
-        const brands = row.category?.Brands || row.category?.brands || [];
-        return <BrandTags brands={brands} />;
+        // Show brands from slider_brands relationship
+        const sliderBrands = row.brands || [];
+        if (sliderBrands.length === 0) {
+          // Fallback to single brand_id if no multi-brand assignments
+          const brand = brands.find(b => b.id === row.brand_id);
+          return brand ? (
+            <span className="brand-tag">{brand.display_name || brand.name}</span>
+          ) : 'N/A';
+        }
+        return (
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {sliderBrands.map((brandName, idx) => (
+              <span key={idx} className="brand-tag">{brandName}</span>
+            ))}
+          </div>
+        );
       }
     },
     { 
@@ -270,6 +278,12 @@ export default function Slider() {
       const response = await sliderService.getSliderById(id);
       const data = response.slider || response; // Handle both response formats
       console.log('Edit slider data:', data);
+      
+      // Extract brand IDs from brands array
+      const brandIds = data.brands && Array.isArray(data.brands) 
+        ? data.brands.map(b => typeof b === 'object' ? b.id : b)
+        : (data.brand_id ? [data.brand_id] : []);
+      
       setFormData({
         id: data.id,
         title: data.title || "",
@@ -278,7 +292,8 @@ export default function Slider() {
         categoryId: data.categoryId || "",
         image: data.image || null,
         buttonText: data.buttonText || "",
-        brand_id: data.brand_id || ""
+        brand_id: data.brand_id || "",
+        brand_ids: brandIds
       });
       setIsModalOpen(true);
     } catch (err) {
@@ -314,7 +329,8 @@ export default function Slider() {
       categoryId: "",
       image: null,
       buttonText: "",
-      brand_id: ""
+      brand_id: "",
+      brand_ids: []
     });
     setIsModalOpen(true);
   };
@@ -328,7 +344,8 @@ export default function Slider() {
       categoryId: "",
       image: null,
       buttonText: "",
-      brand_id: ""
+      brand_id: "",
+      brand_ids: []
     });
     // Reset file input value if present
     const fileInput = document.querySelector('input[type="file"][name="image"]');
@@ -348,6 +365,13 @@ export default function Slider() {
       setFormData(prev => ({
         ...prev,
         [name]: e.target.files && e.target.files[0] ? e.target.files[0] : null
+      }));
+    } else if (name === 'brand_ids') {
+      // Handle multi-select for brands
+      const selectedOptions = Array.from(e.target.selectedOptions, option => parseInt(option.value));
+      setFormData(prev => ({
+        ...prev,
+        brand_ids: selectedOptions
       }));
     } else {
       setFormData(prev => ({
@@ -370,8 +394,10 @@ export default function Slider() {
       formDataToSend.append("status", formData.status);
       formDataToSend.append("buttonText", formData.buttonText);
       
-      // Add brand_id if selected
-      if (formData.brand_id) {
+      // Add brand_id for backward compatibility (use first selected brand)
+      if (formData.brand_ids && formData.brand_ids.length > 0) {
+        formDataToSend.append("brand_id", formData.brand_ids[0]);
+      } else if (formData.brand_id) {
         formDataToSend.append("brand_id", formData.brand_id);
       }
       
@@ -379,13 +405,25 @@ export default function Slider() {
       if (formData.image && formData.image instanceof File) {
         formDataToSend.append("image", formData.image);
       }
-      // Do NOT append image if it's a string (old image) - backend should keep old image
 
       if (formData.id) {
         await sliderService.updateSlider(formData.id, formDataToSend);
+        
+        // Assign slider to multiple brands
+        if (formData.brand_ids && formData.brand_ids.length > 0) {
+          await sliderService.assignSliderToBrands(formData.id, formData.brand_ids);
+        }
+        
         toast.success("Slider updated successfully");
       } else {
-        await sliderService.createSlider(formDataToSend);
+        const response = await sliderService.createSlider(formDataToSend);
+        const sliderId = response.data?.id || response.id;
+        
+        // Assign slider to multiple brands
+        if (sliderId && formData.brand_ids && formData.brand_ids.length > 0) {
+          await sliderService.assignSliderToBrands(sliderId, formData.brand_ids);
+        }
+        
         toast.success("Slider created successfully");
       }
 
@@ -521,21 +559,32 @@ export default function Slider() {
                 }))
               ]}
             />
-            <InputField
-              label="Brand"
-              type="select"
-              name="brand_id"
-              value={formData.brand_id}
-              onChange={handleInputChange}
-              required
-              options={[
-                { value: "", label: "Select Brand" },
-                ...brands.map(brand => ({
-                  value: brand.id,
-                  label: brand.display_name || brand.name
-                }))
-              ]}
-            />
+            <div className="input-field">
+              <label className="input-field-label">Brands (Hold Ctrl/Cmd to select multiple)</label>
+              <select
+                name="brand_ids"
+                multiple
+                value={formData.brand_ids}
+                onChange={handleInputChange}
+                className="input-field"
+                style={{ minHeight: '120px' }}
+                required
+              >
+                {brands.map(brand => (
+                  <option key={brand.id} value={brand.id}>
+                    {brand.display_name || brand.name}
+                  </option>
+                ))}
+              </select>
+              {formData.brand_ids && formData.brand_ids.length > 0 && (
+                <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
+                  Selected: {formData.brand_ids.map(id => {
+                    const brand = brands.find(b => b.id === id);
+                    return brand ? (brand.display_name || brand.name) : '';
+                  }).filter(Boolean).join(', ')}
+                </div>
+              )}
+            </div>
             <InputField
               label="Status"
               type="select"
