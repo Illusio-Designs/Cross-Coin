@@ -146,11 +146,11 @@ const AIImageGenerator = ({ productId, productName, onSuccess }) => {
     }, 0);
 
     const confirmed = window.confirm(
-      `⚠️ WARNING: This will:\n\n` +
-      `• Delete ${oldImagesCount} existing images\n` +
-      `• Generate ${totalImages} new AI images (6 per variation)\n` +
+      `✅ This will:\n\n` +
+      `• Keep all ${oldImagesCount} existing images\n` +
+      `• Generate ${totalImages} NEW AI images (6 per variation)\n` +
+      `• Total images after: ${oldImagesCount + totalImages}\n` +
       `• Cost: $${(totalImages * 0.00025).toFixed(4)}\n\n` +
-      `This action cannot be undone!\n\n` +
       `Continue?`
     );
 
@@ -279,10 +279,10 @@ const AIImageGenerator = ({ productId, productName, onSuccess }) => {
                     <li>Select which variations to process (checkbox)</li>
                     <li>Choose a base image for each selected variation (radio button)</li>
                     <li>Click "Generate AI Images"</li>
-                    <li>AI will delete all old images and generate 6 new professional images per variation</li>
+                    <li>AI will generate 6 new professional images per variation (existing images will be kept)</li>
                   </ol>
-                  <p className="warning">
-                    ⚠️ <strong>Warning:</strong> All existing images will be permanently deleted!
+                  <p className="info-note">
+                    ℹ️ <strong>Note:</strong> Your existing images will be kept. New AI images will be added.
                   </p>
                 </div>
 
@@ -304,7 +304,7 @@ const AIImageGenerator = ({ productId, productName, onSuccess }) => {
                               onChange={() => handleVariationToggle(variation.id)}
                             />
                             <span className="variation-info">
-                              <strong>Variation {variation.id}</strong>
+                              <strong>{productName}</strong>
                               <span className="attributes">
                                 {Object.entries(variation.attributes || {}).map(([key, value]) => (
                                   <span key={key} className="attribute-tag">
@@ -313,7 +313,7 @@ const AIImageGenerator = ({ productId, productName, onSuccess }) => {
                                 ))}
                               </span>
                               <span className="image-count">
-                                {variation.images?.length || 0} images
+                                ({variation.images?.length || 0} existing images)
                               </span>
                             </span>
                           </label>
@@ -321,9 +321,9 @@ const AIImageGenerator = ({ productId, productName, onSuccess }) => {
 
                         {isSelected && variation.images && variation.images.length > 0 && (
                           <div className="base-image-selector">
-                            <p className="selector-label">Select base image for AI generation:</p>
+                            <p className="selector-label">📸 Select ONE base image for AI to use as reference:</p>
                             <div className="images-grid">
-                              {variation.images.map((image) => {
+                              {variation.images.map((image, index) => {
                                 console.log('Rendering image:', image.id, 'URL:', image.url);
                                 return (
                                   <label
@@ -339,7 +339,7 @@ const AIImageGenerator = ({ productId, productName, onSuccess }) => {
                                     />
                                     <img
                                       src={image.url}
-                                      alt={`Image ${image.id}`}
+                                      alt={`Image ${index + 1}`}
                                       onError={(e) => {
                                         console.error('Failed to load image:', image.url);
                                         e.target.style.backgroundColor = '#f0f0f0';
@@ -352,7 +352,7 @@ const AIImageGenerator = ({ productId, productName, onSuccess }) => {
                                         console.log('✅ Image loaded successfully:', image.url);
                                       }}
                                     />
-                                    <span className="image-id">ID: {image.id}</span>
+                                    <span className="image-id">#{index + 1}</span>
                                   </label>
                                 );
                               })}
