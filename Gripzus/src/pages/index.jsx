@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
+import { getPublicSliders } from '../services/publicindex';
 
 // Sample product data
 const featuredProducts = [
@@ -83,50 +84,64 @@ const featuredProducts = [
 const newArrivals = featuredProducts.slice(0, 4);
 const bestSellers = featuredProducts.slice(2, 6);
 
-// Hero slides data
-const slides = [
-  {
-    id: 1,
-    title: 'Autumn 2026',
-    subtitle: 'New Collection',
-    description: 'Discover the latest trends in luxury fashion',
-    cta: 'Shop Now',
-    link: '/collections/new-arrivals',
-    image: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1920&h=1080&fit=crop',
-    theme: 'dark'
-  },
-  {
-    id: 2,
-    title: 'Summer Sale',
-    subtitle: 'Up to 70% Off',
-    description: 'Limited time offer on selected items',
-    cta: 'Shop Sale',
-    link: '/collections/sale',
-    image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1920&h=1080&fit=crop',
-    theme: 'light'
-  },
-  {
-    id: 3,
-    title: 'Premium Quality',
-    subtitle: 'Luxury Essentials',
-    description: 'Timeless pieces for your wardrobe',
-    cta: 'Explore',
-    link: '/collections/all',
-    image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1920&h=1080&fit=crop',
-    theme: 'dark'
-  }
-];
-
 export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [slides, setSlides] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch sliders from API
+  useEffect(() => {
+    const fetchSliders = async () => {
+      try {
+        setLoading(true);
+        const data = await getPublicSliders();
+        console.log('Fetched sliders:', data);
+        
+        // Transform API data to match component structure
+        const transformedSlides = data.map(slider => ({
+          id: slider.id,
+          title: slider.title,
+          subtitle: slider.subtitle || '',
+          description: slider.description || '',
+          cta: slider.button_text || 'Shop Now',
+          link: slider.button_link || '/products',
+          image: slider.image_url ? `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}${slider.image_url}` : '',
+          theme: slider.theme || 'dark'
+        }));
+        
+        setSlides(transformedSlides);
+      } catch (error) {
+        console.error('Error fetching sliders:', error);
+        // Fallback to default slides if API fails
+        setSlides([
+          {
+            id: 1,
+            title: 'Autumn 2026',
+            subtitle: 'New Collection',
+            description: 'Discover the latest trends in luxury fashion',
+            cta: 'Shop Now',
+            link: '/products',
+            image: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1920&h=1080&fit=crop',
+            theme: 'dark'
+          }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSliders();
+  }, []);
 
   useEffect(() => {
+    if (slides.length === 0) return;
+    
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 5000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [slides.length]);
 
   const goToSlide = (index) => {
     setCurrentSlide(index);
@@ -152,61 +167,89 @@ export default function Home() {
       <main className="main">
         {/* Hero Section */}
         <section className="hero">
-          <div className="sliderContainer">
-            {slides.map((slide, index) => (
-              <div
-                key={slide.id}
-                className={`slide ${index === currentSlide ? 'active' : ''} ${slide.theme}`}
-                style={{
-                  backgroundImage: `url(${slide.image})`,
-                }}
-              >
-                <div className="overlay"></div>
+          {loading ? (
+            <div className="sliderContainer">
+              <div className="slide active dark" style={{ backgroundColor: '#1a1a1a' }}>
                 <div className="container">
                   <div className="slideContent">
-                    <span className="subtitle">{slide.subtitle}</span>
-                    <h2 className="title">{slide.title}</h2>
-                    <p className="description">{slide.description}</p>
-                    <Link href={slide.link} className="btn btn-primary btn-lg">
-                      {slide.cta}
+                    <div style={{ textAlign: 'center' }}>Loading...</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : slides.length > 0 ? (
+            <>
+              <div className="sliderContainer">
+                {slides.map((slide, index) => (
+                  <div
+                    key={slide.id}
+                    className={`slide ${index === currentSlide ? 'active' : ''} ${slide.theme}`}
+                    style={{
+                      backgroundImage: `url(${slide.image})`,
+                    }}
+                  >
+                    <div className="overlay"></div>
+                    <div className="container">
+                      <div className="slideContent">
+                        {slide.subtitle && <span className="subtitle">{slide.subtitle}</span>}
+                        <h2 className="title">{slide.title}</h2>
+                        {slide.description && <p className="description">{slide.description}</p>}
+                        <Link href={slide.link} className="btn btn-primary btn-lg">
+                          {slide.cta}
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Navigation Arrows */}
+              <button 
+                className="arrow arrowPrev"
+                onClick={prevSlide}
+                aria-label="Previous slide"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              <button 
+                className="arrow arrowNext"
+                onClick={nextSlide}
+                aria-label="Next slide"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+
+              {/* Dots Navigation */}
+              <div className="dots">
+                {slides.map((_, index) => (
+                  <button
+                    key={index}
+                    className={`dot ${index === currentSlide ? 'dotActive' : ''}`}
+                    onClick={() => goToSlide(index)}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="sliderContainer">
+              <div className="slide active dark" style={{ backgroundColor: '#1a1a1a' }}>
+                <div className="container">
+                  <div className="slideContent">
+                    <h2 className="title">Welcome to Gripzus</h2>
+                    <p className="description">Discover premium fashion and accessories</p>
+                    <Link href="/products" className="btn btn-primary btn-lg">
+                      Shop Now
                     </Link>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-
-          {/* Navigation Arrows */}
-          <button 
-            className="arrow arrowPrev"
-            onClick={prevSlide}
-            aria-label="Previous slide"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-          <button 
-            className="arrow arrowNext"
-            onClick={nextSlide}
-            aria-label="Next slide"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-
-          {/* Dots Navigation */}
-          <div className="dots">
-            {slides.map((_, index) => (
-              <button
-                key={index}
-                className={`dot ${index === currentSlide ? 'dotActive' : ''}`}
-                onClick={() => goToSlide(index)}
-                aria-label={`Go to slide ${index + 1}`}
-              />
-            ))}
-          </div>
+            </div>
+          )}
         </section>
 
         {/* Featured Categories */}

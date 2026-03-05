@@ -6,7 +6,7 @@ import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
 import Loader from "@/components/Loader";
 import BrandTags from "@/components/Dashboard/BrandTags";
-import { sliderService, categoryService } from "@/services";
+import { sliderService, categoryService, brandService } from "@/services";
 import { debounce } from 'lodash';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../../context/AuthContext';
@@ -26,6 +26,7 @@ export default function Slider() {
   const [error, setError] = useState(null);
   const [sliders, setSliders] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -33,6 +34,7 @@ export default function Slider() {
     image: null,
     categoryId: "",
     buttonText: "",
+    brand_id: "",
   });
 
   // Check admin access
@@ -52,8 +54,21 @@ export default function Slider() {
     }
   };
 
+  // Fetch brands
+  const fetchBrands = async () => {
+    try {
+      const response = await brandService.getAllBrands(true);
+      if (response.success && response.data) {
+        setBrands(response.data);
+      }
+    } catch (err) {
+      console.error("Error fetching brands:", err);
+    }
+  };
+
   useEffect(() => {
     fetchCategories();
+    fetchBrands();
   }, []);
 
   // Debounced search function
@@ -199,6 +214,13 @@ export default function Slider() {
     { header: "Description", accessor: "description" },
     { header: "Category", accessor: "categoryName" },
     {
+      header: "Brand",
+      accessor: row => {
+        const brand = brands.find(b => b.id === row.brand_id);
+        return brand ? (brand.display_name || brand.name) : 'N/A';
+      }
+    },
+    {
       header: "Brands",
       accessor: row => {
         const brands = row.category?.Brands || row.category?.brands || [];
@@ -255,7 +277,8 @@ export default function Slider() {
         status: data.status || "active",
         categoryId: data.categoryId || "",
         image: data.image || null,
-        buttonText: data.buttonText || ""
+        buttonText: data.buttonText || "",
+        brand_id: data.brand_id || ""
       });
       setIsModalOpen(true);
     } catch (err) {
@@ -290,7 +313,8 @@ export default function Slider() {
       status: "active",
       categoryId: "",
       image: null,
-      buttonText: ""
+      buttonText: "",
+      brand_id: ""
     });
     setIsModalOpen(true);
   };
@@ -303,7 +327,8 @@ export default function Slider() {
       status: "active",
       categoryId: "",
       image: null,
-      buttonText: ""
+      buttonText: "",
+      brand_id: ""
     });
     // Reset file input value if present
     const fileInput = document.querySelector('input[type="file"][name="image"]');
@@ -344,6 +369,11 @@ export default function Slider() {
       formDataToSend.append("categoryId", formData.categoryId);
       formDataToSend.append("status", formData.status);
       formDataToSend.append("buttonText", formData.buttonText);
+      
+      // Add brand_id if selected
+      if (formData.brand_id) {
+        formDataToSend.append("brand_id", formData.brand_id);
+      }
       
       // Only append image if it's a File (i.e., a new image was selected)
       if (formData.image && formData.image instanceof File) {
@@ -488,6 +518,21 @@ export default function Slider() {
                 ...categories.map(category => ({
                   value: category.id,
                   label: category.name
+                }))
+              ]}
+            />
+            <InputField
+              label="Brand"
+              type="select"
+              name="brand_id"
+              value={formData.brand_id}
+              onChange={handleInputChange}
+              required
+              options={[
+                { value: "", label: "Select Brand" },
+                ...brands.map(brand => ({
+                  value: brand.id,
+                  label: brand.display_name || brand.name
                 }))
               ]}
             />
