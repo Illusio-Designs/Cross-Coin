@@ -58,17 +58,12 @@ class PromptGenerator {
     return {
       type: 'hero',
       prompt: `
-Professional e-commerce hero shot of ${productName}${color ? ` in ${color} color` : ''}${material ? ` made of ${material}` : ''}.
-CAMERA ANGLE: Straight-on front view at eye level, camera perpendicular to product, 0-degree angle.
-BACKGROUND: Pure white seamless background (RGB 255,255,255), no shadows on background, infinite white backdrop.
-COMPOSITION: Product perfectly centered in frame, occupying 70% of image space, full product visible from top to bottom.
-LIGHTING: Three-point studio lighting setup - key light at 45 degrees, fill light opposite side, rim light from behind for edge definition.
-SHADOWS: Soft natural drop shadow directly beneath product, subtle and realistic, adds depth without distraction.
-PRODUCT POSITION: Laid flat or standing naturally, front-facing, symmetrical presentation, no tilt or rotation.
-COLOR ACCURACY: True-to-life colors, professional color grading, accurate ${color || 'original'} tone representation.
-TEXTURE: Natural ${material || 'fabric'} texture visible, realistic material appearance, slight natural wrinkles showing authenticity.
-FOCUS: Tack-sharp focus across entire product, f/8 aperture equivalent, no blur, crisp edges.
-STYLE: Amazon/Nike/Adidas product photography standard, commercial e-commerce quality, professional catalog style.
+Professional e-commerce product photo of ${productName}${color ? ` in ${color}` : ''}${material ? ` made of ${material}` : ''}.
+Pure white background.
+Centered, front view.
+Studio lighting with soft shadows.
+High quality, sharp focus.
+Professional catalog style.
 ${this.baseQuality}
       `.trim(),
       negativePrompt: this.negativePrompt,
@@ -86,17 +81,11 @@ ${this.baseQuality}
     return {
       type: 'angle_front',
       prompt: `
-Professional front view product photography of ${productName}${color ? ` in ${color}` : ''}.
-CAMERA ANGLE: Direct front view, 0-degree angle, camera at product center height, perfectly perpendicular.
-BACKGROUND: Seamless pure white background, no gradients, clean and minimal.
-COMPOSITION: Product centered, fills 75% of frame vertically, shows complete front surface.
-LIGHTING: Even front lighting, soft diffused light, minimal shadows, shows all front details clearly.
-PRODUCT ORIENTATION: Perfectly straight front-facing position, no rotation, symmetrical alignment.
-DETAILS: All front features visible - labels, patterns, stitching, design elements clearly shown.
-TEXTURE: ${material || 'Fabric'} texture and weave pattern visible, natural material appearance.
-DEPTH: Slight depth visible at edges, shows product is three-dimensional, not flat.
-FOCUS: Entire front surface in sharp focus, f/11 aperture equivalent, maximum depth of field.
-STYLE: Standard e-commerce front view, catalog photography, professional product documentation.
+Professional product photo of ${productName}${color ? ` in ${color}` : ''}.
+Direct front view, white background.
+Centered, shows all front details.
+Studio lighting, sharp focus.
+E-commerce catalog style.
 ${this.baseQuality}
       `.trim(),
       negativePrompt: this.negativePrompt,
@@ -114,17 +103,11 @@ ${this.baseQuality}
     return {
       type: 'angle_side',
       prompt: `
-Professional 45-degree angle product photography of ${productName}${color ? ` in ${color}` : ''}.
-CAMERA ANGLE: 45-degree side angle, camera positioned at 45° horizontal rotation from front, eye-level height.
-BACKGROUND: Pure white seamless background, clean studio backdrop.
-COMPOSITION: Product positioned to show both front and side surfaces, 3/4 view, reveals depth and dimension.
-LIGHTING: Side lighting at 45 degrees, creates natural shadows that define contours and shape.
-PRODUCT POSITION: Angled to show thickness, depth, and three-dimensional form, reveals side profile.
-SHADOWS: Natural gradient shadow on opposite side, shows volume and dimensionality.
-TEXTURE: ${material || 'Material'} texture visible on both visible surfaces, shows construction quality.
-DEPTH PERCEPTION: Clear sense of product thickness, layering, and structural form.
-FOCUS: Sharp focus from front edge to back edge, f/8-f/11 aperture, good depth of field.
-STYLE: Professional 3/4 view product photography, shows product from customer's natural viewing angle.
+Professional product photo of ${productName}${color ? ` in ${color}` : ''}.
+45-degree side angle view.
+White background, shows depth.
+Studio lighting, natural shadows.
+Sharp focus, professional quality.
 ${this.baseQuality}
       `.trim(),
       negativePrompt: this.negativePrompt,
@@ -167,46 +150,23 @@ ${this.baseQuality}
    * 5. Lifestyle Image - Product in real-world context
    */
   generateLifestylePrompt(productName, color, category) {
-    // Determine lifestyle context based on category
-    let context = 'modern minimalist interior setting, styled on wooden table with soft natural light';
-    let cameraAngle = 'eye-level angle, natural perspective';
-    let usage = 'artfully arranged with complementary lifestyle props';
-    
-    // Convert category to string and handle null/undefined
+    let context = 'modern interior setting';
     const categoryStr = category ? String(category).toLowerCase() : '';
     
     if (categoryStr.includes('sock')) {
-      context = 'cozy home interior, person relaxing on modern sofa or chair';
-      cameraAngle = 'natural eye-level angle, casual perspective';
-      usage = 'worn naturally on feet, person in comfortable relaxed pose';
-    } else if (categoryStr.includes('clothing') || categoryStr.includes('apparel')) {
-      context = 'natural indoor setting with soft window light, modern minimalist interior';
-      cameraAngle = 'waist-level angle, fashion photography perspective';
-      usage = 'worn by model in natural pose, showing fit and drape';
-    } else if (categoryStr.includes('home') || categoryStr.includes('decor')) {
-      context = 'styled in modern home interior, natural daylight from window';
-      cameraAngle = 'slightly elevated angle, interior design perspective';
-      usage = 'placed naturally in living space, shows scale and application';
-    } else if (categoryStr.includes('accessory') || categoryStr.includes('accessories')) {
-      context = 'lifestyle flat lay on marble or wooden surface, natural window light';
-      cameraAngle = 'overhead 90-degree angle, flat lay perspective';
-      usage = 'styled with complementary items like coffee, books, or plants';
+      context = 'person wearing socks, casual lifestyle';
+    } else if (categoryStr.includes('clothing')) {
+      context = 'worn by model, natural setting';
     }
 
     return {
       type: 'lifestyle',
       prompt: `
-Professional lifestyle product photography of ${productName}${color ? ` in ${color}` : ''} in real-world setting.
-CAMERA ANGLE: ${cameraAngle}, shows product in natural use context.
-SETTING: ${context}, authentic environment, not overly staged.
-LIGHTING: Soft natural window light, golden hour quality, warm and inviting, realistic indoor lighting.
-PRODUCT USAGE: ${usage}, demonstrates real-world application.
-COMPOSITION: Product is focal point but integrated naturally into scene, rule of thirds composition.
-ATMOSPHERE: Warm, inviting, aspirational but achievable, helps customer envision ownership.
-PROPS: Minimal complementary items, enhance story without distraction, natural styling.
-COLOR PALETTE: Warm neutral tones, natural wood, soft textiles, cohesive color story with ${color || 'product'}.
-AUTHENTICITY: Looks lived-in not staged, realistic not perfect, relatable lifestyle moment.
-STYLE: Instagram-worthy lifestyle photography, editorial quality, commercial lifestyle standard.
+Lifestyle photo of ${productName}${color ? ` in ${color}` : ''}.
+${context}.
+Natural lighting, realistic scene.
+Product in use, shows scale.
+Professional lifestyle photography.
 ${this.baseQuality}
       `.trim(),
       negativePrompt: this.negativePrompt,
@@ -224,17 +184,11 @@ ${this.baseQuality}
     return {
       type: 'feature',
       prompt: `
-Professional feature highlight photography of ${productName}${color ? ` in ${color}` : ''} showcasing key selling points.
-CAMERA ANGLE: Slightly elevated 30-degree angle, shows product features from optimal viewing perspective.
-BACKGROUND: Clean white or light gray gradient background, minimal and professional.
-COMPOSITION: Product positioned to emphasize unique features, special details in focus, key benefits visible.
-LIGHTING: Dramatic side lighting with soft fill, creates depth and highlights special features and construction.
-FEATURE FOCUS: Shows unique design elements, special stitching, quality construction, premium details.
-PRODUCT POSITION: Angled or folded to reveal key features - reinforced areas, special seams, quality indicators.
-MATERIAL QUALITY: ${material || 'Premium material'} quality visible, shows craftsmanship and attention to detail.
-DETAILS: Close enough to see quality indicators but shows enough context to understand feature location.
-SELLING POINTS: Emphasizes what makes this product special - durability, comfort, design, innovation.
-STYLE: Professional feature documentation, quality showcase, premium product photography.
+Professional product photo of ${productName}${color ? ` in ${color}` : ''}.
+Highlighting key features and quality.
+White background, angled view.
+Studio lighting, shows details.
+Professional e-commerce style.
 ${this.baseQuality}
       `.trim(),
       negativePrompt: this.negativePrompt,
