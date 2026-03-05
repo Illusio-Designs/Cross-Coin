@@ -8,6 +8,14 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  const logout = useCallback(() => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
+    localStorage.removeItem('tokenExpiry');
+    setUser(null);
+    router.push('/');
+  }, [router]);
+
   const checkAuth = useCallback(() => {
     try {
       const token = localStorage.getItem('authToken');
@@ -30,7 +38,7 @@ export function AuthProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [logout]);
 
   useEffect(() => {
     // Check if user is logged in on mount
@@ -96,13 +104,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
-    localStorage.removeItem('tokenExpiry');
-    setUser(null);
-    router.push('/');
-  };
 
   const updateProfile = async (data) => {
     try {
