@@ -29,6 +29,7 @@ const { BrandSetting } = require("./brandSettingModel.js");
 const Brand = require("./brandModel.js");
 const { ProductBrand } = require("./productBrandModel.js");
 const { CategoryBrand } = require("./categoryBrandModel.js");
+const SliderBrand = require("./sliderBrandModel.js");
 
 // Export all models
 module.exports = {
@@ -62,6 +63,7 @@ module.exports = {
   Brand,
   ProductBrand,
   CategoryBrand,
+  SliderBrand,
 };
 
 // User Associations
@@ -415,16 +417,30 @@ Order.belongsTo(Brand, {
   onDelete: "CASCADE",
 });
 
-// Sliders can belong to multiple brands (optional - uncomment if needed)
-Brand.hasMany(Slider, {
+// Sliders can belong to multiple brands - MANY-TO-MANY
+Brand.belongsToMany(Slider, {
+  through: SliderBrand,
   foreignKey: "brand_id",
+  otherKey: "slider_id",
   as: "Sliders",
-  onDelete: "CASCADE",
 });
+Slider.belongsToMany(Brand, {
+  through: SliderBrand,
+  foreignKey: "slider_id",
+  otherKey: "brand_id",
+  as: "Brands",
+});
+
+// Keep the old brand_id for backward compatibility (optional)
 Slider.belongsTo(Brand, {
   foreignKey: "brand_id",
-  as: "Brand",
-  onDelete: "CASCADE",
+  as: "PrimaryBrand",
+  onDelete: "SET NULL",
+});
+Brand.hasMany(Slider, {
+  foreignKey: "brand_id",
+  as: "PrimarySliders",
+  onDelete: "SET NULL",
 });
 
 // Coupons can belong to multiple brands (optional - uncomment if needed)
