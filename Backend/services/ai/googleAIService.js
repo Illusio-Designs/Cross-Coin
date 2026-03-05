@@ -142,8 +142,8 @@ Generate a photorealistic image that looks like it was taken by a professional p
         
         // Longer delay between requests to avoid rate limiting
         if (i < prompts.length - 1) {
-          console.log('⏳ Waiting 3 seconds before next generation...');
-          await this.delay(3000); // 3 second delay (increased from 2)
+          console.log('⏳ Waiting 10 seconds before next generation...');
+          await this.delay(10000); // 10 second delay to avoid rate limits
         }
         
       } catch (error) {
@@ -157,13 +157,22 @@ Generate a photorealistic image that looks like it was taken by a professional p
         
         // Still wait before next attempt
         if (i < prompts.length - 1) {
-          console.log('⏳ Waiting 3 seconds before retry...');
-          await this.delay(3000);
+          console.log('⏳ Waiting 10 seconds before retry...');
+          await this.delay(10000);
         }
       }
     }
     
     console.log(`\n📊 Generation complete: ${results.filter(r => r.success).length}/${prompts.length} successful`);
+    
+    // Log failed generations
+    const failed = results.filter(r => !r.success);
+    if (failed.length > 0) {
+      console.error('\n❌ FAILED GENERATIONS:');
+      failed.forEach(f => {
+        console.error(`  - ${f.type}: ${f.error}`);
+      });
+    }
     
     return results;
   }
