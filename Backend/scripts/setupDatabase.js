@@ -396,6 +396,10 @@ const setupDatabase = async () => {
     console.log("Creating brands table...");
     await createBrandsTable();
 
+    // Create slider_brands table
+    console.log("Creating slider_brands table...");
+    await createSliderBrandsTable();
+
     // Now it's safe to create the admin user
     if (models["User"]) {
       const bcrypt = require("bcryptjs");
@@ -903,6 +907,70 @@ const createBrandsTable = async () => {
     
   } catch (error) {
     console.log('⚠️ Brands table creation/migration skipped:', error.message);
+  }
+};
+
+// Function to create slider_brands table
+const createSliderBrandsTable = async () => {
+  try {
+    console.log('Creating slider_brands table...');
+
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS slider_brands (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        slider_id INT NOT NULL COMMENT 'Reference to sliders table',
+        brand_id INT NOT NULL COMMENT 'Reference to brands table',
+        status ENUM('active', 'inactive') DEFAULT 'active' COMMENT 'Assignment status',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_slider_id (slider_id),
+        INDEX idx_brand_id (brand_id),
+        INDEX idx_status (status),
+        UNIQUE KEY unique_slider_brand (slider_id, brand_id),
+        FOREIGN KEY (slider_id) REFERENCES sliders(id) ON DELETE CASCADE ON UPDATE CASCADE,
+        FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE ON UPDATE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+    `);
+
+    console.log('✓ slider_brands table created successfully');
+
+    // Migrate existing slider brand_id to slider_brands table
+    console.log('Migrating existing slider brand assignments...');
+    
+    const [existingSliders] = await sequelize.query(`
+      SELECT id, brand_id FROM sliders WHERE brand_id IS NOT NULL
+    `);
+
+    if (existingSliders.length > 0) {
+      for (const slider of existingSliders) {
+        // Check if relationship already exists
+        const [existing] = await sequelize.query(`
+          SELECT COUNT(*) as count FROM slider_brands 
+          WHERE slider_id = ${slider.id} AND brand_id = ${slider.brand_id}
+        `);
+
+        if (existing[0].count === 0) {
+          await sequelize.query(`
+            INSERT INTO slider_brands (slider_id, brand_id, status) 
+            VALUES (${slider.id}, ${slider.brand_id}, 'active')
+          `);
+          console.log(`  ✓ Migrated slider ${slider.id} to brand ${slider.brand_id}`);
+        }
+      }
+      console.log(`✓ Migrated ${existingSliders.length} slider brand assignments`);
+    } else {
+      console.log('✓ No existing slider brand assignments to migrate');
+    }
+
+    // Make brand_id nullable in sliders table for backward compatibility
+    await sequelize.query(`
+      ALTER TABLE sliders 
+      MODIFY COLUMN brand_id INT NULL COMMENT 'Legacy brand reference (use slider_brands table instead)'
+    `);
+    console.log('✓ Updated sliders.brand_id to nullable');
+    
+  } catch (error) {
+    console.log('⚠️ Slider brands table creation/migration skipped:', error.message);
   }
 };
 

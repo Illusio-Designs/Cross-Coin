@@ -7,6 +7,8 @@ const {
     updateSlider, 
     deleteSlider,
     getPublicSliders,
+    assignSliderToBrands,
+    removeSliderFromBrand,
     upload 
 } = require('../controller/sliderController.js');
 
@@ -21,5 +23,9 @@ router.get('/admin/all', isAuthenticated, authorize(['admin']), getAllSliders);
 router.post('/', isAuthenticated, authorize(['admin']), upload.single('image'), createSlider);
 router.put('/:id', isAuthenticated, authorize(['admin']), upload.single('image'), updateSlider);
 router.delete('/:id', isAuthenticated, authorize(['admin']), deleteSlider);
+
+// Brand assignment routes
+router.post('/:id/brands', isAuthenticated, authorize(['admin']), assignSliderToBrands);
+router.delete('/:id/brands/:brandId', isAuthenticated, authorize(['admin']), removeSliderFromBrand);
 
 module.exports = router; 
