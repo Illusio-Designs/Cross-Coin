@@ -1,10 +1,12 @@
 .table-container {
   width: 100%;
   overflow-x: auto;
+  overflow-y: visible;
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin: 0;
+  position: relative;
 }
 
 .common-table {
@@ -13,8 +15,9 @@
   border-collapse: collapse;
   background-color: #F3F4F5;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   table-layout: auto;
+  position: relative;
 }
 
 .common-table th {
@@ -49,14 +52,32 @@
   padding: 12px 16px;
   border-bottom: 1px solid rgba(24, 13, 62, 0.1);
   color: #180D3E;
+  position: relative;
+}
+
+/* Allow tooltips to overflow from action column cells */
+.common-table td:last-child {
+  overflow: visible !important;
+}
+
+.common-table tbody tr {
+  position: relative;
+  z-index: 1;
+}
+
+.common-table tbody tr:hover {
+  z-index: 10;
 }
 
 .common-table td:last-child {
   text-align: center;
+  overflow: visible !important;
 }
 
 .common-table tr:hover {
   background-color: rgba(24, 13, 62, 0.05);
+  position: relative;
+  z-index: 10;
 }
 
 .common-table tr.clickable {

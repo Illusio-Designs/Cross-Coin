@@ -435,17 +435,33 @@
 .action-btn[data-tooltip]:hover::after {
   content: attr(data-tooltip);
   position: absolute;
-  bottom: 100%;
+  bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
-  padding: 0.25rem 0.5rem;
+  padding: 6px 10px;
   background: #1f2937;
   color: white;
-  font-size: 0.75rem;
-  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px;
   white-space: nowrap;
-  margin-bottom: 0.25rem;
-  z-index: 10;
+  z-index: 9999;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: max-content;
+}
+
+/* Add arrow to tooltip */
+.action-btn[data-tooltip]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1f2937;
+  z-index: 9999;
+  pointer-events: none;
 }
 
 
