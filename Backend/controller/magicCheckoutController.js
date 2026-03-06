@@ -499,11 +499,33 @@ module.exports.createOrder = async (req, res) => {
         // Convert amount to paise (Razorpay expects amount in smallest currency unit)
         const amountInPaise = Math.round(parseFloat(amount) * 100);
 
+        // Format line_items for Magic Checkout (REQUIRED for Magic Checkout UI)
+        const formattedLineItems = cart_items.map(item => ({
+            type: 'e-commerce',
+            sku: item.product_id ? `SKU_${item.product_id}` : 'SKU_UNKNOWN',
+            variant_id: item.variation_id ? `VAR_${item.variation_id}` : null,
+            price: Math.round(parseFloat(item.price || 0) * 100), // in paise
+            offer_price: Math.round(parseFloat(item.price || 0) * 100), // in paise
+            tax_amount: 0, // Add tax if applicable
+            quantity: item.quantity || 1,
+            name: item.name || 'Product',
+            description: item.description || '',
+            // image_url: item.image_url || '' // Optional: add if available
+        }));
+
+        // Calculate line_items_total (sum of all items)
+        const lineItemsTotal = formattedLineItems.reduce((sum, item) => {
+            return sum + (item.price * item.quantity);
+        }, 0);
+
         // Prepare order options with Magic Checkout parameters
         const orderOptions = {
             amount: amountInPaise,
             currency: currency,
             receipt: `order_${Date.now()}_${customer_id || 'guest'}`,
+            // ✅ CRITICAL: line_items and line_items_total are REQUIRED for Magic Checkout
+            line_items: formattedLineItems,
+            line_items_total: lineItemsTotal,
             notes: {
                 customer_id: customer_id || 'guest',
                 cart_items: JSON.stringify(cart_items),
@@ -514,6 +536,13 @@ module.exports.createOrder = async (req, res) => {
             // Disable partial payment for cleaner Magic Checkout experience
             partial_payment: false,
         };
+
+        console.log('Creating Magic Checkout order with line_items:', {
+            amount: amountInPaise,
+            line_items_count: formattedLineItems.length,
+            line_items_total: lineItemsTotal,
+            has_line_items: formattedLineItems.length > 0
+        });
 
         // Create order using Razorpay API
         const razorpay = await getRazorpayInstance(1);
