@@ -11,6 +11,7 @@ const { GuestUser } = require("../model/guestUserModel.js");
 const { ProductImage } = require("../model/productImageModel.js");
 const Brand = require("../model/brandModel.js");
 const FShipLabelDownload = require("../model/fshipLabelDownloadModel.js");
+const UTMTracking = require("../model/utmModel.js"); // ✅ Add UTM Tracking import
 const { Op } = require("sequelize");
 const { sequelize } = require("../config/db.js");
 const XLSX = require('xlsx');
@@ -377,14 +378,19 @@ module.exports.createOrder = async (req, res) => {
     const createdOrder = await Order.findByPk(order.id, {
       include: [
         { 
-          model: OrderItem, 
+          model: OrderItem,
+          as: 'OrderItems', // ✅ Use the alias defined in associations
           include: [
             Product,
             ProductVariation  // ✅ Include ProductVariation to get SKU
           ] 
         },
         { model: User, attributes: ["id", "username", "email"] },
-        { model: OrderStatusHistory, order: [["updated_at", "DESC"]] },
+        { 
+          model: OrderStatusHistory,
+          as: 'OrderStatusHistories', // ✅ Use the alias
+          order: [["updated_at", "DESC"]] 
+        },
       ],
     });
     console.log("createOrder: Order fetched successfully");
