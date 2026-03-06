@@ -134,20 +134,6 @@ const CartDrawer = ({ isOpen, onClose, lastAddedItem }) => {
     router.push('/UnifiedCheckout');
   };
 
-  const handleFastCheckout = () => {
-    console.log("🚀 Fast Checkout: Opening Magic Checkout...");
-    // Close drawer
-    onClose();
-    // Trigger Magic Checkout modal
-    if (typeof window !== 'undefined' && window.openMagicCheckout) {
-      window.openMagicCheckout();
-    } else {
-      console.error("❌ Magic Checkout not available");
-      // Fallback to regular checkout
-      router.push('/UnifiedCheckout');
-    }
-  };
-
   const handleViewCart = () => {
     onClose();
     router.push('/UnifiedCheckout');
@@ -295,12 +281,8 @@ const CartDrawer = ({ isOpen, onClose, lastAddedItem }) => {
             </div>
             
             <div className="cart-drawer-buttons">
-              <button className="cart-drawer-btn primary magic" onClick={handleFastCheckout}>
-                ⚡ Fast Checkout (Magic)
-              </button>
-              
-              <button className="cart-drawer-btn secondary" onClick={handleCheckout}>
-                Regular Checkout
+              <button className="cart-drawer-btn primary" onClick={handleCheckout}>
+                Proceed to Checkout
               </button>
             </div>
           </div>

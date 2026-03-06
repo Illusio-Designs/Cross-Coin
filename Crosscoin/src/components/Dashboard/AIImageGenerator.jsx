@@ -243,18 +243,20 @@ const AIImageGenerator = ({ productId, productName, onSuccess }) => {
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
           border: 'none',
-          padding: '8px 12px',
+          padding: '8px',
           borderRadius: '6px',
           cursor: loading ? 'not-allowed' : 'pointer',
-          fontSize: '12px',
-          fontWeight: '600',
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '4px',
-          opacity: loading ? 0.6 : 1
+          justifyContent: 'center',
+          opacity: loading ? 0.6 : 1,
+          width: '32px',
+          height: '32px'
         }}
       >
-        {loading ? '⏳' : '🎨'}
+        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
       </button>
 
       {showModal && (

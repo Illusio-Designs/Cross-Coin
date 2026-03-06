@@ -54,8 +54,9 @@ import {
 } from "../utils/toast";
 import { fbqTrack } from "../components/common/Analytics";
 import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
-import MagicCheckoutIntegration from "../components/checkout/MagicCheckoutIntegration";
-// import ExpressCheckout from "../components/checkout/ExpressCheckout"; // COMMENTED OUT - Using normal checkout only
+// Magic Checkout components removed - using traditional checkout only
+// import MagicCheckoutIntegration from "../components/checkout/MagicCheckoutIntegration";
+// import ExpressCheckout from "../components/checkout/ExpressCheckout";
 
 // Load page-specific CSS
 import "../styles/pages/UnifiedCheckout.css";
@@ -92,9 +93,6 @@ export default function UnifiedCheckout() {
       }
     }
   }, [shippingFee, appliedCoupon]); // Removed handleCouponRemoved from dependencies
-
-  // Magic Checkout - Always show
-  const [useMagicCheckout, setUseMagicCheckout] = useState(true);
 
   // Address management state
   const [addresses, setAddresses] = useState([]);
@@ -362,7 +360,6 @@ export default function UnifiedCheckout() {
     }
   };
 
-  // Helper to load Razorpay script
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
       if (document.getElementById("razorpay-script")) return resolve(true);
@@ -373,133 +370,6 @@ export default function UnifiedCheckout() {
       script.onerror = () => resolve(false);
       document.body.appendChild(script);
     });
-  };
-
-  /**
-   * Handle Magic Checkout success callback
-   */
-  const handleMagicCheckoutSuccess = async (paymentResponse) => {
-    try {
-      console.log("Magic Checkout payment success:", paymentResponse);
-      
-      // Prepare order data
-      const orderData = !isAuthenticated ? {
-        guest_info: guestInfo,
-        shipping_address: {
-          fullName: shippingAddress.full_name || shippingAddress.fullName,
-          address: shippingAddress.address,
-          city: shippingAddress.city,
-          state: shippingAddress.state,
-          pincode: shippingAddress.postal_code || shippingAddress.postalCode,
-          phone: shippingAddress.phone_number || shippingAddress.phoneNumber,
-        },
-        items: [
-          ...(buyNowItem ? [{
-            product_id: buyNowItem.productId || buyNowItem.id,
-            variation_id: buyNowItem.variationId || buyNowItem.variation?.id || null,
-            quantity: buyNowItem.quantity,
-          }] : []),
-          ...cartItems.map((item) => ({
-            product_id: item.productId || item.id,
-            variation_id: item.variationId || item.variation?.id || null,
-            quantity: item.quantity,
-          }))
-        ],
-        payment_type: "upi",
-        notes: "Magic Checkout Payment",
-        discount_amount: appliedCoupon?.discount || 0,
-        coupon_id: appliedCoupon?.id || null,
-        session_id: typeof window !== "undefined" ? sessionStorage.getItem("sessionId") || "guest-" + Date.now() : "guest-" + Date.now(),
-        ip_address: typeof window !== "undefined" ? window.location.hostname : "localhost",
-        user_agent: typeof window !== "undefined" ? window.navigator.userAgent : "unknown",
-      } : {
-        shipping_address_id: shippingAddress.id,
-        items: [
-          ...(buyNowItem ? [{
-            product_id: buyNowItem.productId || buyNowItem.id,
-            variation_id: buyNowItem.variationId || buyNowItem.variation?.id || null,
-            quantity: buyNowItem.quantity,
-          }] : []),
-          ...cartItems.map((item) => ({
-            product_id: item.productId || item.id,
-            variation_id: item.variationId || item.variation?.id || null,
-            quantity: item.quantity,
-          }))
-        ],
-        payment_type: "upi",
-        notes: "Magic Checkout Payment",
-        discount_amount: appliedCoupon?.discount || 0,
-        coupon_id: appliedCoupon?.id || null,
-      };
-
-      // Create order
-      const orderResult = !isAuthenticated ? await createGuestOrder(orderData) : await createOrder(orderData);
-      
-      // Update order with payment details
-      await updateOrderPayment({
-        orderId: orderResult.data.order.id,
-        razorpayPaymentId: paymentResponse.razorpay_payment_id,
-        razorpayOrderId: paymentResponse.razorpay_order_id,
-        razorpaySignature: paymentResponse.razorpay_signature
-      });
-
-      // Track purchase
-      try {
-        const totalAmount = cartItems.reduce((sum, item) => {
-          const price = parseFloat(item.price || 0);
-          return sum + price * (item.quantity || 1);
-        }, 0);
-        const shippingFeeAmount = parseFloat(shippingFee?.fee || 0);
-        const discountAmount = appliedCoupon?.discount || 0;
-        const finalAmount = totalAmount + shippingFeeAmount - discountAmount;
-
-        const orderNumber = orderResult?.data?.order?.order_number;
-        const purchaseTracked = fbqTrack("Purchase", {
-          value: Number(finalAmount.toFixed(2)),
-          currency: "INR",
-          content_type: "product",
-          contents: cartItems.filter((item) => item.productId || item.id).map((item) => ({
-            id: String(item.productId || item.id),
-            quantity: item.quantity || 1,
-          })),
-        });
-
-        if (purchaseTracked && orderNumber) {
-          sessionStorage.setItem(`fb_purchase_tracked_${orderNumber}`, "true");
-        }
-      } catch (e) {
-        console.warn("Purchase tracking (Magic Checkout): failed to send fbq Purchase", e);
-      }
-
-      // Clear cart and redirect
-      clearCart();
-      clearBuyNow();
-      sessionStorage.removeItem("shippingAddress");
-      sessionStorage.removeItem("appliedCoupon");
-      showOrderPlacedSuccessToast(orderResult.data.order.order_number);
-      
-      const redirectUrl = !isAuthenticated 
-        ? `/ThankYou?order_number=${orderResult.data.order.order_number}&guest_email=${encodeURIComponent(guestInfo.email)}&is_guest=true`
-        : `/ThankYou?order_number=${orderResult.data.order.order_number}`;
-      
-      router.push(redirectUrl);
-    } catch (error) {
-      console.error("Error handling Magic Checkout success:", error);
-      showOrderPlacedErrorToast("Payment successful but order creation failed. Please contact support.");
-      setIsProcessing(false);
-    }
-  };
-
-  /**
-   * Handle Magic Checkout error callback
-   */
-  const handleMagicCheckoutError = (error) => {
-    console.error("Magic Checkout error:", error);
-    
-    // Show error notification
-    alert(`Magic Checkout Error: ${error.message || 'Payment failed'}\n\nPlease try again or contact support.`);
-    
-    setIsProcessing(false);
   };
 
   const handlePlaceOrder = async () => {
@@ -1345,14 +1215,6 @@ export default function UnifiedCheckout() {
       <Header />
       <div className="cart-main checkout-container">
         <div className="cart-section">
-          {/* Express Checkout - COMMENTED OUT - Using normal checkout only */}
-          {/* {(cartItems.length > 0 || buyNowItem) && (
-            <ExpressCheckout
-              onSuccess={handleMagicCheckoutSuccess}
-              onError={handleMagicCheckoutError}
-            />
-          )} */}
-
           {/* Products Section */}
           <CartStep 
             selectedPaymentMode={selectedPaymentMode}
@@ -1394,31 +1256,6 @@ export default function UnifiedCheckout() {
               shippingFees={shippingFees}
               onSelectFee={handleSelectFee}
             />
-
-            {/* Magic Checkout Integration */}
-            {useMagicCheckout && shippingAddress && (
-              <div className="magic-checkout-section" style={{ marginTop: '20px' }}>
-                <div style={{ 
-                  padding: '20px', 
-                  backgroundColor: '#f8f9fa', 
-                  borderRadius: '8px',
-                  border: '1px solid #e0e0e0'
-                }}>
-                  <h3 style={{ marginBottom: '15px', fontSize: '18px', fontWeight: '600' }}>
-                    Express Checkout
-                  </h3>
-                  <MagicCheckoutIntegration
-                    cartItems={cartItems}
-                    user={user}
-                    onSuccess={handleMagicCheckoutSuccess}
-                    onError={handleMagicCheckoutError}
-                    shippingAddress={shippingAddress}
-                    shippingFee={shippingFee}
-                    appliedCoupon={appliedCoupon}
-                  />
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
