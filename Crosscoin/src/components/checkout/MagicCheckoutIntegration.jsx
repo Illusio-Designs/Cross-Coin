@@ -181,11 +181,16 @@ const MagicCheckoutIntegration = ({
         order_id: orderId,
         hasHandler: !!handlePaymentSuccess,
         hasModal: true,
-        magic: true // ✅ This enables Magic Checkout UI
+        magic: true, // ✅ This enables Magic Checkout UI
+        hasPrefill: !!(shippingAddress || user),
+        prefillData: {
+          name: shippingAddress?.full_name || shippingAddress?.fullName || user?.name || '',
+          email: user?.email || '',
+          contact: shippingAddress?.phone_number || shippingAddress?.phoneNumber || user?.phone || ''
+        }
       });
       
-      // Use standard Razorpay SDK - Magic Checkout features are enabled with magic: true
-      const instance = new window.Razorpay({
+      const razorpayOptions = {
         key: RAZORPAY_KEY,
         order_id: orderId,
         magic: true, // ✅ CRITICAL: This enables Magic Checkout UI instead of standard checkout
@@ -209,7 +214,12 @@ const MagicCheckoutIntegration = ({
             language: 'en'
           }
         }
-      });
+      };
+      
+      console.log("🔧 Magic Checkout: Final Razorpay options:", JSON.stringify(razorpayOptions, null, 2));
+      
+      // Use standard Razorpay SDK - Magic Checkout features are enabled with magic: true
+      const instance = new window.Razorpay(razorpayOptions);
 
       console.log("✅ Magic Checkout: Razorpay instance created successfully", instance);
       setMagicCheckoutInstance(instance);
