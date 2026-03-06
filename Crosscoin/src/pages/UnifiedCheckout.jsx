@@ -1,3 +1,35 @@
+/**
+ * UnifiedCheckout Page
+ * 
+ * CHECKOUT FLOW:
+ * 1. User adds items to cart
+ * 2. User navigates to /checkout (this page)
+ * 3. Page loads and fetches:
+ *    - Shipping fees (with X-Brand-Name header)
+ *    - User addresses (if authenticated)
+ * 4. User fills in shipping address
+ * 5. User selects delivery method (COD/Prepaid)
+ * 6. User can either:
+ *    a) Click "Place Order" button (standard checkout)
+ *    b) Click "Pay with Magic Checkout" button (Razorpay Magic Checkout)
+ * 
+ * MAGIC CHECKOUT:
+ * - Only triggers when user explicitly clicks "Pay with Magic Checkout" button
+ * - Does NOT make API calls on page load or address changes
+ * - Creates Razorpay order and opens payment modal when button is clicked
+ * 
+ * CONSOLE LOGGING:
+ * - 🔄 = Loading/Processing
+ * - ✅ = Success
+ * - ❌ = Error
+ * - 📦 = Shipping/Delivery related
+ * - 👤 = User/Authentication related
+ * - 💰 = Payment related
+ * - 📍 = Address related
+ * - 🛒 = Cart related
+ * - 🎁 = Coupon/Promotion related
+ */
+
 import { useState, useEffect, useCallback } from "react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
@@ -136,17 +168,28 @@ export default function UnifiedCheckout() {
     const loadInitialData = async () => {
       console.log('🔄 UnifiedCheckout: Loading initial data...', {
         isAuthenticated,
-        hasShippingFee: !!shippingFee
+        hasShippingFee: !!shippingFee,
+        timestamp: new Date().toISOString()
       });
       
       try {
         // Load shipping fees
-        console.log('📦 UnifiedCheckout: Fetching shipping fees...');
+        console.log('📦 UnifiedCheckout: Fetching shipping fees from API...');
+        console.log('📦 UnifiedCheckout: API URL:', process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in');
+        console.log('📦 UnifiedCheckout: Has auth token:', !!localStorage.getItem("token"));
+        
         const feeData = await getShippingFees();
-        console.log('✅ UnifiedCheckout: Shipping fees received:', feeData);
+        console.log('✅ UnifiedCheckout: Shipping fees API response:', {
+          type: typeof feeData,
+          isArray: Array.isArray(feeData),
+          data: feeData
+        });
         
         const fees = Array.isArray(feeData) ? feeData : feeData?.shippingFees || feeData?.fees || [];
-        console.log('📦 UnifiedCheckout: Processed shipping fees:', fees);
+        console.log('📦 UnifiedCheckout: Processed shipping fees:', {
+          count: fees.length,
+          fees: fees
+        });
         
         setShippingFees(fees);
         if (!shippingFee && fees.length > 0) {
@@ -157,10 +200,13 @@ export default function UnifiedCheckout() {
 
         // Load addresses only for authenticated users
         if (isAuthenticated) {
-          console.log('👤 UnifiedCheckout: User authenticated, loading addresses...');
+          console.log('� UnifiedCheckoutr: User authenticated, loading addresses...');
           setAddressLoading(true);
           const addressData = await getUserShippingAddresses();
-          console.log('✅ UnifiedCheckout: Addresses received:', addressData);
+          console.log('✅ UnifiedCheckout: Addresses received:', {
+            count: addressData?.length || 0,
+            addresses: addressData
+          });
           
           setAddresses(addressData);
           
@@ -176,10 +222,14 @@ export default function UnifiedCheckout() {
         }
       } catch (error) {
         console.error('❌ UnifiedCheckout: Error loading initial data:', {
-          error: error.message,
+          message: error.message,
           response: error.response?.data,
           status: error.response?.status,
-          stack: error.stack
+          statusText: error.response?.statusText,
+          stack: error.stack,
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers
         });
         setShippingFees([]);
         setAddressLoading(false);
