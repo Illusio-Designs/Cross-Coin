@@ -567,14 +567,34 @@ export const createOrder = async (orderData) => {
 };
 
 // Shipping Fees
+// Shipping Fees
 export const getShippingFees = async () => {
   try {
     const token = localStorage.getItem("token");
-    const response = await axios.get(`${API_URL}/api/shipping-fees`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const brandName = "crosscoin"; // Brand identifier for Crosscoin
+    
+    console.log("📦 getShippingFees: Making API call...", {
+      hasToken: !!token,
+      brandName,
+      url: `${API_URL}/api/shipping-fees`
     });
+    
+    const response = await axios.get(`${API_URL}/api/shipping-fees`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        "X-Brand-Name": brandName,
+      },
+    });
+    
+    console.log("✅ getShippingFees: API response received:", response.data);
     return response.data;
   } catch (error) {
+    console.error("❌ getShippingFees: API error:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      statusText: error.response?.statusText
+    });
     throw error.response?.data || error.message;
   }
 };

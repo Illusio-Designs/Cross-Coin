@@ -4,6 +4,33 @@ import PropTypes from "prop-types";
 /**
  * Magic Checkout SDK Integration Component
  * Handles Razorpay Magic Checkout SDK loading, initialization, and payment processing
+ * 
+ * IMPORTANT BEHAVIOR:
+ * - SDK loads automatically on component mount (if NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED=true)
+ * - API calls (shipping info, promotions) ONLY happen when user clicks "Pay with Magic Checkout" button
+ * - Does NOT make API calls on page load or when props change
+ * - This prevents premature 400 errors from Magic Checkout endpoints
+ * 
+ * FLOW:
+ * 1. Component mounts → Load SDK from CDN
+ * 2. User clicks "Pay with Magic Checkout" → processPayment() is called
+ * 3. processPayment() creates Razorpay order
+ * 4. processPayment() initializes Magic Checkout SDK with order_id
+ * 5. processPayment() fetches promotions and shipping info (optional)
+ * 6. processPayment() opens payment modal
+ * 7. User completes payment → handlePaymentSuccess() is called
+ * 
+ * CONSOLE LOGGING:
+ * - 🚀 = Process start
+ * - 🔧 = SDK initialization
+ * - 📦 = Order creation
+ * - 💰 = Amount calculation
+ * - 📍 = Shipping info
+ * - 🎁 = Promotions
+ * - 🎯 = Modal opening
+ * - ✅ = Success
+ * - ❌ = Error
+ * - ⚠️ = Warning (non-critical)
  */
 const MagicCheckoutIntegration = ({
   cartItems = [],
@@ -229,9 +256,30 @@ const MagicCheckoutIntegration = ({
    */
   const fetchShippingInfo = useCallback(async (addresses) => {
     try {
+      console.log("📍 Magic Checkout: Fetching shipping info for addresses...", {
+        addressCount: addresses?.length || 0,
+        hasShippingFee: !!shippingFee
+      });
+      
       const cartTotal = cartItems.reduce((sum, item) => {
         return sum + parseFloat(item.price || 0) * (item.quantity || 1);
       }, 0);
+
+      const requestBody = {
+        addresses: addresses.map((addr) => ({
+          id: addr.id,
+          line1: addr.address || addr.line1,
+          line2: addr.line2 || "",
+          city: addr.city,
+          state: addr.state,
+          pincode: addr.postal_code || addr.postalCode || addr.pincode,
+          phone: addr.phone_number || addr.phoneNumber || addr.phone,
+        })),
+        cart_total: Math.round(cartTotal * 100),
+        payment_method: shippingFee?.orderType === "cod" ? "cod" : "prepaid",
+      };
+      
+      console.log("📦 Magic Checkout: Shipping info request:", requestBody);
 
       const response = await fetch(
         `${API_URL}/api/payments/magic-checkout/shipping-info`,
@@ -239,36 +287,35 @@ const MagicCheckoutIntegration = ({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...(user ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
           },
-          body: JSON.stringify({
-            addresses: addresses.map((addr) => ({
-              id: addr.id,
-              line1: addr.address || addr.line1,
-              line2: addr.line2 || "",
-              city: addr.city,
-              state: addr.state,
-              pincode: addr.postal_code || addr.postalCode || addr.pincode,
-              phone: addr.phone_number || addr.phoneNumber || addr.phone,
-            })),
-            cart_total: Math.round(cartTotal * 100),
-            payment_method: shippingFee?.orderType === "cod" ? "cod" : "prepaid",
-          }),
+          body: JSON.stringify(requestBody),
         }
       );
 
       if (!response.ok) {
-        throw new Error("Failed to fetch shipping info");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("❌ Magic Checkout: Shipping info fetch failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
+        throw new Error(errorData.message || "Failed to fetch shipping info");
       }
 
       const data = await response.json();
+      console.log("✅ Magic Checkout: Shipping info received:", data);
       setShippingInfo(data.shipping_info || []);
       return data.shipping_info || [];
     } catch (err) {
-      console.error("Error fetching shipping info:", err);
+      console.error("❌ Magic Checkout: Error fetching shipping info:", {
+        message: err.message,
+        stack: err.stack
+      });
       setShippingInfo([]);
       return [];
     }
-  }, [cartItems, shippingFee, API_URL]);
+  }, [cartItems, shippingFee, API_URL, user]);
 
   /**
    * Handle payment success callback
@@ -308,14 +355,23 @@ const MagicCheckoutIntegration = ({
    */
   const processPayment = useCallback(async () => {
     try {
+      console.log("🚀 Magic Checkout: Starting payment process...", {
+        hasShippingAddress: !!shippingAddress,
+        hasShippingFee: !!shippingFee,
+        cartItemsCount: cartItems?.length || 0,
+        hasUser: !!user,
+        hasCoupon: !!appliedCoupon
+      });
+      
       setIsProcessing(true);
       setError(null);
 
       // Step 1: Calculate total amount
       const totalAmount = calculateTotalAmount() / 100; // Convert from paise to rupees
+      console.log("💰 Magic Checkout: Total amount calculated:", totalAmount);
 
       // Step 2: Create Razorpay order
-      console.log("Creating Razorpay order for Magic Checkout...");
+      console.log("📦 Magic Checkout: Creating Razorpay order...");
       const orderResponse = await fetch(
         `${API_URL}/api/payments/magic-checkout/create-order`,
         {
@@ -352,27 +408,57 @@ const MagicCheckoutIntegration = ({
       );
 
       if (!orderResponse.ok) {
-        throw new Error("Failed to create order");
+        const errorData = await orderResponse.json().catch(() => ({}));
+        console.error("❌ Magic Checkout: Order creation failed:", {
+          status: orderResponse.status,
+          statusText: orderResponse.statusText,
+          error: errorData
+        });
+        throw new Error(errorData.message || "Failed to create order");
       }
 
       const orderData = await orderResponse.json();
-      console.log("Order created successfully:", orderData);
+      console.log("✅ Magic Checkout: Order created successfully:", orderData);
 
       // Step 3: Initialize Magic Checkout with order_id
+      console.log("🔧 Magic Checkout: Initializing SDK...");
       const instance = await initializeMagicCheckout(orderData.order_id);
       
       if (!instance) {
+        console.error("❌ Magic Checkout: SDK initialization failed");
         throw new Error("Failed to initialize Magic Checkout");
       }
+      console.log("✅ Magic Checkout: SDK initialized successfully");
 
-      // Step 4: Fetch promotions for the order
-      await fetchPromotions(orderData.order_id);
+      // Step 4: Fetch promotions for the order (optional, non-blocking)
+      console.log("🎁 Magic Checkout: Fetching promotions...");
+      try {
+        await fetchPromotions(orderData.order_id);
+        console.log("✅ Magic Checkout: Promotions fetched");
+      } catch (promoError) {
+        console.warn("⚠️ Magic Checkout: Failed to fetch promotions (non-critical):", promoError);
+      }
 
-      // Step 5: Open Magic Checkout payment modal
+      // Step 5: Optionally fetch shipping info (non-blocking)
+      if (shippingAddress) {
+        console.log("📍 Magic Checkout: Fetching shipping info...");
+        try {
+          await fetchShippingInfo([shippingAddress]);
+          console.log("✅ Magic Checkout: Shipping info fetched");
+        } catch (shippingError) {
+          console.warn("⚠️ Magic Checkout: Failed to fetch shipping info (non-critical):", shippingError);
+        }
+      }
+
+      // Step 6: Open Magic Checkout payment modal
+      console.log("🎯 Magic Checkout: Opening payment modal...");
       instance.open();
       return true;
     } catch (err) {
-      console.error("Error processing payment:", err);
+      console.error("❌ Magic Checkout: Payment process error:", {
+        message: err.message,
+        stack: err.stack
+      });
       setError(err.message || "Failed to process payment");
       setIsProcessing(false);
       if (onError) {
@@ -389,6 +475,7 @@ const MagicCheckoutIntegration = ({
     API_URL,
     initializeMagicCheckout,
     fetchPromotions,
+    fetchShippingInfo,
     onError,
   ]);
 
@@ -428,13 +515,15 @@ const MagicCheckoutIntegration = ({
   }, [processPayment]);
 
   /**
-   * Fetch shipping info when address changes
+   * Fetch shipping info when address changes - DISABLED
+   * This was causing premature API calls on page load
+   * Shipping info should only be fetched when user clicks "Pay with Magic Checkout"
    */
-  useEffect(() => {
-    if (shippingAddress && sdkLoaded) {
-      fetchShippingInfo([shippingAddress]);
-    }
-  }, [shippingAddress, sdkLoaded, fetchShippingInfo]);
+  // useEffect(() => {
+  //   if (shippingAddress && sdkLoaded) {
+  //     fetchShippingInfo([shippingAddress]);
+  //   }
+  // }, [shippingAddress, sdkLoaded, fetchShippingInfo]);
 
   // Don't render anything if Magic Checkout is not enabled
   if (!MAGIC_CHECKOUT_ENABLED) {
