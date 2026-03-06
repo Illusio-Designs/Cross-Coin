@@ -193,7 +193,9 @@ const MagicCheckoutIntegration = ({
       const razorpayOptions = {
         key: RAZORPAY_KEY,
         order_id: orderId,
-        magic: true, // ✅ CRITICAL: This enables Magic Checkout UI instead of standard checkout
+        // ✅ Try both magic flags to ensure compatibility
+        magic: true, // Standard flag
+        "checkout.magic": true, // Alternative flag format
         handler: handlePaymentSuccess,
         modal: {
           ondismiss: handlePaymentDismiss,
