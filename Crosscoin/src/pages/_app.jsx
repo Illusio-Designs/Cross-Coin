@@ -2,13 +2,14 @@
 import Head from "next/head";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { AuthProvider } from "../context/AuthContext";
+import { AuthProvider, useAuth } from "../context/AuthContext";
 import { CartProvider, useCart } from "../context/CartContext";
 import { WishlistProvider } from "../context/WishlistContext";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import Loader from "../components/Loader";
 import CartDrawer from "../components/cart/CartDrawer";
+import MagicCheckoutIntegration from "../components/checkout/MagicCheckoutIntegration";
 // Critical CSS only - loaded immediately
 import "../styles/globals.css";
 import "../styles/responsive.css";
@@ -20,7 +21,44 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 
 function AppContent({ Component, pageProps, progressRef }) {
-  const { isDrawerOpen, setIsDrawerOpen, lastAddedItem } = useCart();
+  const { isDrawerOpen, setIsDrawerOpen, lastAddedItem, cartItems } = useCart();
+  const { user } = useAuth();
+  const [shippingAddress, setShippingAddress] = useState(null);
+  const [shippingFee, setShippingFee] = useState(null);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+
+  // Load saved data from session storage
+  useEffect(() => {
+    const savedAddress = sessionStorage.getItem('shippingAddress');
+    const savedCoupon = sessionStorage.getItem('appliedCoupon');
+    
+    if (savedAddress) {
+      try {
+        setShippingAddress(JSON.parse(savedAddress));
+      } catch (e) {
+        console.error('Failed to parse shipping address', e);
+      }
+    }
+    
+    if (savedCoupon) {
+      try {
+        setAppliedCoupon(JSON.parse(savedCoupon));
+      } catch (e) {
+        console.error('Failed to parse coupon', e);
+      }
+    }
+  }, []);
+
+  const handleMagicCheckoutSuccess = async (paymentResponse) => {
+    console.log("✅ Global Magic Checkout: Payment successful", paymentResponse);
+    // Redirect to thank you page or handle success
+    window.location.href = '/ThankYou';
+  };
+
+  const handleMagicCheckoutError = (error) => {
+    console.error("❌ Global Magic Checkout: Error", error);
+    alert(`Payment failed: ${error.message || 'Please try again'}`);
+  };
 
   return (
     <>
@@ -39,6 +77,20 @@ function AppContent({ Component, pageProps, progressRef }) {
         onClose={() => setIsDrawerOpen(false)}
         lastAddedItem={lastAddedItem}
       />
+      
+      {/* Global Magic Checkout Integration - Hidden but always mounted */}
+      <div style={{ display: 'none' }}>
+        <MagicCheckoutIntegration
+          cartItems={cartItems}
+          user={user}
+          onSuccess={handleMagicCheckoutSuccess}
+          onError={handleMagicCheckoutError}
+          shippingAddress={shippingAddress}
+          shippingFee={shippingFee}
+          appliedCoupon={appliedCoupon}
+        />
+      </div>
+      
       <ToastContainer
         position="top-right"
         autoClose={3000}
