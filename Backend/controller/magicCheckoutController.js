@@ -546,7 +546,25 @@ module.exports.createOrder = async (req, res) => {
 
         // Create order using Razorpay API
         const razorpay = await getRazorpayInstance(1);
+        
+        console.log('📦 Creating Razorpay order with Magic Checkout parameters:', {
+            amount: amountInPaise,
+            currency: currency,
+            receipt: orderOptions.receipt,
+            has_line_items: !!orderOptions.line_items,
+            line_items_count: orderOptions.line_items?.length || 0,
+            line_items_total: orderOptions.line_items_total,
+            partial_payment: orderOptions.partial_payment
+        });
+        
         const order = await razorpay.orders.create(orderOptions);
+        
+        console.log('✅ Razorpay order created:', {
+            order_id: order.id,
+            amount: order.amount,
+            currency: order.currency,
+            status: order.status
+        });
 
         res.json({
             success: true,
