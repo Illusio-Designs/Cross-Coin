@@ -480,8 +480,8 @@ export default function UnifiedCheckout() {
         const orderResult = !isAuthenticated ? await createGuestOrder(orderData) : await createOrder(orderData);
         console.log('✅ UnifiedCheckout: COD order created:', orderResult);
         
-        if (!orderResult?.data?.order) {
-          console.error('❌ UnifiedCheckout: Order creation failed - no order returned');
+        if (!orderResult?.order) {
+          console.error('❌ UnifiedCheckout: Order creation failed - no order returned', orderResult);
           throw new Error("Order creation failed to return an order.");
         }
 
@@ -495,7 +495,7 @@ export default function UnifiedCheckout() {
           const discountAmount = appliedCoupon?.discount || 0;
           const finalAmount = totalAmount + shippingFeeAmount - discountAmount;
 
-          const orderNumber = orderResult?.data?.order?.order_number;
+          const orderNumber = orderResult?.order?.order_number;
           const purchaseTracked = fbqTrack("Purchase", {
             value: Number(finalAmount.toFixed(2)),
             currency: "INR",
@@ -513,17 +513,29 @@ export default function UnifiedCheckout() {
           console.warn("Purchase tracking (COD): failed to send fbq Purchase", e);
         }
 
+        // Clear cart and show success
         clearCart();
         clearBuyNow();
         sessionStorage.removeItem("shippingAddress");
         sessionStorage.removeItem("appliedCoupon");
-        showOrderPlacedSuccessToast(orderResult.data.order.order_number);
         
+        const orderNumber = orderResult.order.order_number;
+        console.log('🎉 UnifiedCheckout: COD order successful, order number:', orderNumber);
+        
+        // Show success toast
+        showOrderPlacedSuccessToast(orderNumber);
+        
+        // Prepare redirect URL
         const redirectUrl = !isAuthenticated 
-          ? `/ThankYou?order_number=${orderResult.data.order.order_number}&guest_email=${encodeURIComponent(guestInfo.email)}&is_guest=true`
-          : `/ThankYou?order_number=${orderResult.data.order.order_number}`;
+          ? `/ThankYou?order_number=${orderNumber}&guest_email=${encodeURIComponent(guestInfo.email)}&is_guest=true`
+          : `/ThankYou?order_number=${orderNumber}`;
         
-        router.push(redirectUrl);
+        console.log('🔄 UnifiedCheckout: Redirecting to:', redirectUrl);
+        
+        // Redirect to thank you page
+        setTimeout(() => {
+          router.push(redirectUrl);
+        }, 500); // Small delay to ensure toast is visible
       } else {
         // Prepaid: Handle Razorpay payment
         const totalAmount = cartItems.reduce((sum, item) => {
@@ -571,9 +583,14 @@ export default function UnifiedCheckout() {
               const orderResult = !isAuthenticated ? await createGuestOrder(orderData) : await createOrder(orderData);
               console.log('✅ UnifiedCheckout: Order created after payment:', orderResult);
               
+              if (!orderResult?.order) {
+                console.error('❌ UnifiedCheckout: Order creation failed - no order returned', orderResult);
+                throw new Error("Order creation failed to return an order.");
+              }
+              
               console.log('🔄 UnifiedCheckout: Updating order with payment details...');
               await updateOrderPayment({
-                orderId: orderResult.data.order.id,
+                orderId: orderResult.order.id,
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpayOrderId: response.razorpay_order_id,
                 razorpaySignature: response.razorpay_signature
@@ -582,7 +599,7 @@ export default function UnifiedCheckout() {
 
               // Track purchase
               try {
-                const orderNumber = orderResult?.data?.order?.order_number;
+                const orderNumber = orderResult?.order?.order_number;
                 console.log('📊 UnifiedCheckout: Tracking purchase...', { orderNumber, finalAmount });
                 const purchaseTracked = fbqTrack("Purchase", {
                   value: Number((finalAmount || 0).toFixed(2)),
@@ -604,17 +621,33 @@ export default function UnifiedCheckout() {
               
               console.log('🧹 UnifiedCheckout: Clearing cart and session data...');
               setOrderPlaced(true);
-              clearCart();
-              clearBuyNow();
+              
+              try {
+                clearCart();
+                clearBuyNow();
+              } catch (e) {
+                console.warn("⚠️ UnifiedCheckout: Error clearing cart:", e);
+              }
+              
               sessionStorage.removeItem("shippingAddress");
               sessionStorage.removeItem("appliedCoupon");
               
-              const redirectUrl = !isAuthenticated 
-                ? `/ThankYou?order_number=${orderResult.data.order.order_number}&guest_email=${encodeURIComponent(guestInfo.email)}&is_guest=true`
-                : `/ThankYou?order_number=${orderResult.data.order.order_number}`;
+              const orderNumber = orderResult.order.order_number;
+              console.log('🎉 UnifiedCheckout: Prepaid order successful, order number:', orderNumber);
               
-              console.log('🎉 UnifiedCheckout: Redirecting to thank you page:', redirectUrl);
-              router.push(redirectUrl);
+              // Show success toast
+              showOrderPlacedSuccessToast(orderNumber);
+              
+              const redirectUrl = !isAuthenticated 
+                ? `/ThankYou?order_number=${orderNumber}&guest_email=${encodeURIComponent(guestInfo.email)}&is_guest=true`
+                : `/ThankYou?order_number=${orderNumber}`;
+              
+              console.log('🔄 UnifiedCheckout: Redirecting to thank you page:', redirectUrl);
+              
+              // Redirect with delay to show toast
+              setTimeout(() => {
+                router.push(redirectUrl);
+              }, 500);
             } catch (error) {
               console.error("❌ UnifiedCheckout: Error creating order after payment:", {
                 error: error.message,
@@ -657,9 +690,20 @@ export default function UnifiedCheckout() {
         error: error.message,
         response: error.response?.data,
         status: error.response?.status,
-        stack: error.stack
+        stack: error.stack,
+        orderType: shippingFee?.orderType
       });
-      showOrderPlacedErrorToast("Order placement failed: " + (error.message || "Unknown error"));
+      
+      // More specific error message
+      let errorMessage = "Order placement failed. Please try again.";
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      showOrderPlacedErrorToast(errorMessage);
       setIsProcessing(false);
     }
   };
