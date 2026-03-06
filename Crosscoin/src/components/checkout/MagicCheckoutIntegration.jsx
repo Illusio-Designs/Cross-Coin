@@ -176,6 +176,8 @@ const MagicCheckoutIntegration = ({
           method: "GET",
           headers: {
             "Content-Type": "application/json",
+            "X-Brand-Name": "crosscoin",
+            ...(user ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
           },
         }
       );
@@ -211,6 +213,8 @@ const MagicCheckoutIntegration = ({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "X-Brand-Name": "crosscoin",
+            ...(user ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
           },
           body: JSON.stringify({
             promotion_code: promotionCode,
@@ -287,6 +291,7 @@ const MagicCheckoutIntegration = ({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "X-Brand-Name": "crosscoin",
             ...(user ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
           },
           body: JSON.stringify(requestBody),
@@ -378,6 +383,7 @@ const MagicCheckoutIntegration = ({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "X-Brand-Name": "crosscoin",
             ...(user ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
           },
           body: JSON.stringify({

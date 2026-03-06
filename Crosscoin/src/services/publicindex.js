@@ -549,7 +549,10 @@ export const createOrder = async (orderData) => {
     console.log("createOrder: Making API call to:", `${API_URL}/api/orders`);
 
     const response = await axios.post(`${API_URL}/api/orders`, orderData, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        "X-Brand-Name": "crosscoin"
+      },
       withCredentials: true, // ✅ SEND COOKIES (including session_id for UTM tracking)
       timeout: 30000, // 30 second timeout
     });
@@ -828,7 +831,9 @@ export const createRazorpayOrder = async ({
       ? `${API_URL}/api/payments/guest/razorpay-order`
       : `${API_URL}/api/payments/razorpay-order`;
     
-    const headers = {};
+    const headers = {
+      "X-Brand-Name": "crosscoin"
+    };
     
     // Only add authorization header for authenticated users
     if (!isGuest) {
@@ -874,6 +879,11 @@ export const updateOrderPayment = async ({
         razorpayPaymentId,
         razorpayOrderId,
         razorpaySignature
+      },
+      {
+        headers: {
+          "X-Brand-Name": "crosscoin"
+        }
       }
     );
     
@@ -924,6 +934,9 @@ export const createGuestOrder = async (orderData) => {
     }
     
     const response = await axios.post(`${API_URL}/api/orders/guest`, orderData, {
+      headers: {
+        "X-Brand-Name": "crosscoin"
+      },
       withCredentials: true, // ✅ SEND COOKIES (including session_id for UTM tracking)
     });
     console.log("GUEST CHECKOUT API RESPONSE:", response.data);
