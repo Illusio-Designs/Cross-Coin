@@ -134,30 +134,53 @@ export default function UnifiedCheckout() {
   // Load addresses and shipping fees on mount
   useEffect(() => {
     const loadInitialData = async () => {
+      console.log('🔄 UnifiedCheckout: Loading initial data...', {
+        isAuthenticated,
+        hasShippingFee: !!shippingFee
+      });
+      
       try {
         // Load shipping fees
+        console.log('📦 UnifiedCheckout: Fetching shipping fees...');
         const feeData = await getShippingFees();
+        console.log('✅ UnifiedCheckout: Shipping fees received:', feeData);
+        
         const fees = Array.isArray(feeData) ? feeData : feeData?.shippingFees || feeData?.fees || [];
+        console.log('📦 UnifiedCheckout: Processed shipping fees:', fees);
+        
         setShippingFees(fees);
         if (!shippingFee && fees.length > 0) {
-          setShippingFee(fees.find((f) => f.isDefault) || fees[0]);
+          const selectedFee = fees.find((f) => f.isDefault) || fees[0];
+          console.log('📦 UnifiedCheckout: Auto-selecting shipping fee:', selectedFee);
+          setShippingFee(selectedFee);
         }
 
         // Load addresses only for authenticated users
         if (isAuthenticated) {
+          console.log('👤 UnifiedCheckout: User authenticated, loading addresses...');
           setAddressLoading(true);
           const addressData = await getUserShippingAddresses();
+          console.log('✅ UnifiedCheckout: Addresses received:', addressData);
+          
           setAddresses(addressData);
           
           // Auto-select default address
           const defaultAddress = addressData.find((a) => a.isDefault);
           if (defaultAddress) {
+            console.log('📍 UnifiedCheckout: Auto-selecting default address:', defaultAddress);
             setShippingAddress(defaultAddress);
           }
           setAddressLoading(false);
+        } else {
+          console.log('👤 UnifiedCheckout: Guest user, skipping address load');
         }
       } catch (error) {
-        console.error("Error loading initial data:", error);
+        console.error('❌ UnifiedCheckout: Error loading initial data:', {
+          error: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          stack: error.stack
+        });
         setShippingFees([]);
         setAddressLoading(false);
       }
@@ -430,26 +453,43 @@ export default function UnifiedCheckout() {
   };
 
   const handlePlaceOrder = async () => {
+    console.log('🛒 UnifiedCheckout: Place order initiated', {
+      isAuthenticated,
+      hasShippingAddress: !!shippingAddress,
+      hasShippingFee: !!shippingFee,
+      cartItemsCount: cartItems?.length || 0,
+      hasBuyNowItem: !!buyNowItem,
+      hasAppliedCoupon: !!appliedCoupon
+    });
+    
     // Validation
     if (!isAuthenticated) {
+      console.log('👤 UnifiedCheckout: Guest checkout - validating guest info', guestInfo);
       if (!guestInfo.email || !guestInfo.firstName || !guestInfo.phone) {
+        console.error('❌ UnifiedCheckout: Guest info incomplete');
         showValidationErrorToast("Please fill in all required information.");
         return;
       }
     }
 
     if (!shippingAddress || !shippingFee) {
+      console.error('❌ UnifiedCheckout: Missing shipping details', {
+        hasAddress: !!shippingAddress,
+        hasFee: !!shippingFee
+      });
       showValidationErrorToast("Please select shipping address and delivery method.");
       return;
     }
 
     if (!cartItems || cartItems.length === 0) {
       if (!buyNowItem) {
+        console.error('❌ UnifiedCheckout: No items to order');
         showValidationErrorToast("Your cart is empty and no Buy Now item selected.");
         return;
       }
     }
 
+    console.log('✅ UnifiedCheckout: Validation passed, processing order...');
     setIsProcessing(true);
 
     // Prepare order data
@@ -487,6 +527,7 @@ export default function UnifiedCheckout() {
         ip_address: typeof window !== "undefined" ? window.location.hostname : "localhost",
         user_agent: typeof window !== "undefined" ? window.navigator.userAgent : "unknown",
       };
+      console.log('📦 UnifiedCheckout: Guest order data prepared:', orderData);
     } else {
       orderData = {
         shipping_address_id: shippingAddress.id,
@@ -509,14 +550,18 @@ export default function UnifiedCheckout() {
         discount_amount: appliedCoupon?.discount || 0,
         coupon_id: appliedCoupon?.id || null,
       };
+      console.log('📦 UnifiedCheckout: Authenticated order data prepared:', orderData);
     }
 
     try {
       if (shippingFee.orderType === "cod") {
+        console.log('💵 UnifiedCheckout: COD order - creating order directly...');
         // COD: Create order immediately
         const orderResult = !isAuthenticated ? await createGuestOrder(orderData) : await createOrder(orderData);
+        console.log('✅ UnifiedCheckout: COD order created:', orderResult);
         
         if (!orderResult?.data?.order) {
+          console.error('❌ UnifiedCheckout: Order creation failed - no order returned');
           throw new Error("Order creation failed to return an order.");
         }
 
@@ -602,18 +647,23 @@ export default function UnifiedCheckout() {
           },
           handler: async function (response) {
             try {
+              console.log('💳 UnifiedCheckout: Payment successful, creating order...');
               const orderResult = !isAuthenticated ? await createGuestOrder(orderData) : await createOrder(orderData);
+              console.log('✅ UnifiedCheckout: Order created after payment:', orderResult);
               
+              console.log('🔄 UnifiedCheckout: Updating order with payment details...');
               await updateOrderPayment({
                 orderId: orderResult.data.order.id,
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpayOrderId: response.razorpay_order_id,
                 razorpaySignature: response.razorpay_signature
               });
+              console.log('✅ UnifiedCheckout: Payment details updated');
 
               // Track purchase
               try {
                 const orderNumber = orderResult?.data?.order?.order_number;
+                console.log('📊 UnifiedCheckout: Tracking purchase...', { orderNumber, finalAmount });
                 const purchaseTracked = fbqTrack("Purchase", {
                   value: Number((finalAmount || 0).toFixed(2)),
                   currency: "INR",
@@ -626,11 +676,13 @@ export default function UnifiedCheckout() {
 
                 if (purchaseTracked && orderNumber) {
                   sessionStorage.setItem(`fb_purchase_tracked_${orderNumber}`, "true");
+                  console.log('✅ UnifiedCheckout: Purchase tracked successfully');
                 }
               } catch (e) {
-                console.warn("Purchase tracking (prepaid): failed to send fbq Purchase", e);
+                console.warn("⚠️ UnifiedCheckout: Purchase tracking (prepaid) failed:", e);
               }
               
+              console.log('🧹 UnifiedCheckout: Clearing cart and session data...');
               setOrderPlaced(true);
               clearCart();
               clearBuyNow();
@@ -641,15 +693,21 @@ export default function UnifiedCheckout() {
                 ? `/ThankYou?order_number=${orderResult.data.order.order_number}&guest_email=${encodeURIComponent(guestInfo.email)}&is_guest=true`
                 : `/ThankYou?order_number=${orderResult.data.order.order_number}`;
               
+              console.log('🎉 UnifiedCheckout: Redirecting to thank you page:', redirectUrl);
               router.push(redirectUrl);
             } catch (error) {
-              console.error("Error creating order after payment:", error);
+              console.error("❌ UnifiedCheckout: Error creating order after payment:", {
+                error: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+                stack: error.stack
+              });
               showOrderPlacedErrorToast("Payment successful but order creation failed. Please contact support.");
             }
           },
           modal: {
             ondismiss: function() {
-              console.log("Payment cancelled by user");
+              console.log("⚠️ UnifiedCheckout: Payment cancelled by user");
               showOrderPlacedErrorToast("Payment was cancelled. Your cart items are safe.");
               setIsProcessing(false);
             }
@@ -659,22 +717,35 @@ export default function UnifiedCheckout() {
         const rzp = new window.Razorpay(options);
         
         rzp.on('payment.failed', function (response) {
-          console.error("Payment failed:", response.error);
+          console.error("❌ UnifiedCheckout: Payment failed:", {
+            code: response.error.code,
+            description: response.error.description,
+            source: response.error.source,
+            step: response.error.step,
+            reason: response.error.reason,
+            metadata: response.error.metadata
+          });
           showOrderPlacedErrorToast("Payment failed: " + (response.error.description || "Please try again"));
           setIsProcessing(false);
         });
         
+        console.log('💳 UnifiedCheckout: Opening Razorpay payment modal...');
         rzp.open();
       }
     } catch (error) {
-      console.error("Order placement error:", error);
+      console.error("❌ UnifiedCheckout: Order placement error:", {
+        error: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        stack: error.stack
+      });
       showOrderPlacedErrorToast("Order placement failed: " + (error.message || "Unknown error"));
       setIsProcessing(false);
     }
   };
 
   const handleCouponApplied = (coupon) => {
-    console.log('UnifiedCheckout: Coupon applied:', coupon);
+    console.log('✅ UnifiedCheckout: Coupon applied:', coupon);
     setAppliedCoupon(coupon);
     // Save to sessionStorage to persist across page refreshes
     if (coupon) {
@@ -683,6 +754,7 @@ export default function UnifiedCheckout() {
   };
 
   const handleCouponRemoved = useCallback(() => {
+    console.log('🗑️ UnifiedCheckout: Coupon removed');
     setAppliedCoupon(null);
     sessionStorage.removeItem("appliedCoupon");
   }, []);
