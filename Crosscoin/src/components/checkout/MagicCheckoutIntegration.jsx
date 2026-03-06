@@ -490,6 +490,8 @@ const MagicCheckoutIntegration = ({
               variation_id: item.variationId || item.variation?.id || null,
               quantity: item.quantity,
               price: parseFloat(item.price || 0),
+              name: item.name || item.title || 'Product', // ✅ Add product name for line_items
+              description: item.description || '',
             })),
             shipping_address: {
               full_name: shippingAddress?.full_name || shippingAddress?.fullName,
