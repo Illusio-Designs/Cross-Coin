@@ -180,18 +180,30 @@ const MagicCheckoutIntegration = ({
         key: RAZORPAY_KEY ? `${RAZORPAY_KEY.substring(0, 10)}...` : 'NOT SET',
         order_id: orderId,
         hasHandler: !!handlePaymentSuccess,
-        hasModal: true
+        hasModal: true,
+        magic: true // ✅ This enables Magic Checkout UI
       });
       
-      // Use standard Razorpay SDK - Magic Checkout features are enabled server-side
+      // Use standard Razorpay SDK - Magic Checkout features are enabled with magic: true
       const instance = new window.Razorpay({
         key: RAZORPAY_KEY,
         order_id: orderId,
+        magic: true, // ✅ CRITICAL: This enables Magic Checkout UI instead of standard checkout
         handler: handlePaymentSuccess,
         modal: {
           ondismiss: handlePaymentDismiss,
         },
-        // Magic Checkout specific options (if supported)
+        // Prefill customer data for better Magic Checkout experience
+        prefill: {
+          name: shippingAddress?.full_name || shippingAddress?.fullName || user?.name || '',
+          email: user?.email || '',
+          contact: shippingAddress?.phone_number || shippingAddress?.phoneNumber || user?.phone || ''
+        },
+        // Theme customization
+        theme: {
+          color: '#180D3E' // Your brand color
+        },
+        // Additional Magic Checkout options
         config: {
           display: {
             language: 'en'
