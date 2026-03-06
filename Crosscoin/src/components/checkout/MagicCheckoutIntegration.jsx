@@ -54,13 +54,32 @@ const MagicCheckoutIntegration = ({
   const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
   const MAGIC_CHECKOUT_ENABLED = process.env.NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED === "true";
 
+  // Log configuration on mount
+  useEffect(() => {
+    console.log("🔧 Magic Checkout: Component configuration:", {
+      API_URL,
+      RAZORPAY_KEY: RAZORPAY_KEY ? `${RAZORPAY_KEY.substring(0, 10)}...` : 'NOT SET',
+      MAGIC_CHECKOUT_ENABLED,
+      hasShippingAddress: !!shippingAddress,
+      hasShippingFee: !!shippingFee,
+      cartItemsCount: cartItems?.length || 0
+    });
+  }, []);
+
   /**
    * Load Magic Checkout SDK from CDN
    */
   const loadMagicCheckoutSDK = useCallback(() => {
     return new Promise((resolve, reject) => {
+      console.log("📥 Magic Checkout: Starting SDK load...", {
+        hasWindow: typeof window !== 'undefined',
+        hasRazorpayMagicCheckout: typeof window !== 'undefined' && !!window.RazorpayMagicCheckout,
+        scriptExists: typeof document !== 'undefined' && !!document.getElementById("razorpay-magic-checkout-script")
+      });
+      
       // Check if SDK is already loaded
       if (window.RazorpayMagicCheckout) {
+        console.log("✅ Magic Checkout: SDK already loaded");
         setSDKLoaded(true);
         resolve(true);
         return;
@@ -68,10 +87,12 @@ const MagicCheckoutIntegration = ({
 
       // Check if script tag already exists
       if (document.getElementById("razorpay-magic-checkout-script")) {
+        console.log("⏳ Magic Checkout: Script tag exists, waiting for load...");
         // Wait for it to load
         const checkInterval = setInterval(() => {
           if (window.RazorpayMagicCheckout) {
             clearInterval(checkInterval);
+            console.log("✅ Magic Checkout: SDK loaded from existing script");
             setSDKLoaded(true);
             resolve(true);
           }
@@ -80,12 +101,14 @@ const MagicCheckoutIntegration = ({
         setTimeout(() => {
           clearInterval(checkInterval);
           if (!window.RazorpayMagicCheckout) {
+            console.error("❌ Magic Checkout: SDK load timeout");
             reject(new Error("SDK load timeout"));
           }
         }, 10000);
         return;
       }
 
+      console.log("📥 Magic Checkout: Creating script tag...");
       setSDKLoading(true);
       const script = document.createElement("script");
       script.id = "razorpay-magic-checkout-script";
@@ -93,18 +116,26 @@ const MagicCheckoutIntegration = ({
       script.async = true;
 
       script.onload = () => {
+        console.log("✅ Magic Checkout: SDK script loaded successfully", {
+          hasRazorpayMagicCheckout: !!window.RazorpayMagicCheckout
+        });
         setSDKLoaded(true);
         setSDKLoading(false);
         resolve(true);
       };
 
-      script.onerror = () => {
+      script.onerror = (error) => {
+        console.error("❌ Magic Checkout: SDK script failed to load", {
+          error,
+          src: script.src
+        });
         setSDKLoading(false);
         setError("Failed to load Magic Checkout SDK");
         reject(new Error("Failed to load Magic Checkout SDK"));
       };
 
       document.body.appendChild(script);
+      console.log("📥 Magic Checkout: Script tag appended to body");
     });
   }, []);
 
@@ -112,17 +143,44 @@ const MagicCheckoutIntegration = ({
    * Initialize Magic Checkout SDK with order_id
    */
   const initializeMagicCheckout = useCallback(async (orderId) => {
+    console.log("🔧 Magic Checkout: Attempting to initialize SDK...", {
+      sdkLoaded,
+      hasWindow: typeof window !== 'undefined',
+      hasRazorpayMagicCheckout: typeof window !== 'undefined' && !!window.RazorpayMagicCheckout,
+      orderId,
+      razorpayKey: RAZORPAY_KEY ? `${RAZORPAY_KEY.substring(0, 10)}...` : 'NOT SET'
+    });
+    
     if (!sdkLoaded || !window.RazorpayMagicCheckout) {
-      console.error("Magic Checkout SDK not loaded");
+      console.error("❌ Magic Checkout: SDK not loaded", {
+        sdkLoaded,
+        windowRazorpayMagicCheckout: typeof window !== 'undefined' ? !!window.RazorpayMagicCheckout : 'no window'
+      });
       return null;
     }
 
     if (!orderId) {
-      console.error("Order ID is required to initialize Magic Checkout");
+      console.error("❌ Magic Checkout: Order ID is required to initialize Magic Checkout");
+      return null;
+    }
+
+    if (!RAZORPAY_KEY) {
+      console.error("❌ Magic Checkout: RAZORPAY_KEY is not configured", {
+        envVar: 'NEXT_PUBLIC_RAZORPAY_KEY_ID',
+        value: RAZORPAY_KEY
+      });
+      setError("Razorpay Key is not configured. Please set NEXT_PUBLIC_RAZORPAY_KEY_ID in environment variables.");
       return null;
     }
 
     try {
+      console.log("🔧 Magic Checkout: Creating SDK instance with config:", {
+        key: RAZORPAY_KEY ? `${RAZORPAY_KEY.substring(0, 10)}...` : 'NOT SET',
+        order_id: orderId,
+        hasHandler: !!handlePaymentSuccess,
+        hasModal: true
+      });
+      
       const instance = new window.RazorpayMagicCheckout({
         key: RAZORPAY_KEY,
         order_id: orderId, // Use the created order ID
@@ -132,11 +190,17 @@ const MagicCheckoutIntegration = ({
         },
       });
 
+      console.log("✅ Magic Checkout: SDK instance created successfully", instance);
       setMagicCheckoutInstance(instance);
       return instance;
     } catch (err) {
-      console.error("Failed to initialize Magic Checkout:", err);
-      setError("Failed to initialize Magic Checkout");
+      console.error("❌ Magic Checkout: Failed to initialize SDK:", {
+        error: err.message,
+        stack: err.stack,
+        orderId,
+        razorpayKey: RAZORPAY_KEY ? 'SET' : 'NOT SET'
+      });
+      setError(`Failed to initialize Magic Checkout: ${err.message}`);
       return null;
     }
   }, [sdkLoaded, RAZORPAY_KEY]);
@@ -511,13 +575,21 @@ const MagicCheckoutIntegration = ({
   }, [MAGIC_CHECKOUT_ENABLED, loadMagicCheckoutSDK, fallbackToStandardCheckout]);
 
   /**
-   * Expose processPayment function to parent component
+   * Expose processPayment function to parent component and globally
    */
   useEffect(() => {
-    // Make processPayment available to parent via ref or callback
+    // Make processPayment available globally for cart drawer
     if (typeof window !== 'undefined') {
-      window.magicCheckoutProcessPayment = processPayment;
+      window.openMagicCheckout = processPayment;
+      console.log("✅ Magic Checkout: Global function registered (window.openMagicCheckout)");
     }
+    
+    return () => {
+      // Cleanup on unmount
+      if (typeof window !== 'undefined') {
+        delete window.openMagicCheckout;
+      }
+    };
   }, [processPayment]);
 
   /**
