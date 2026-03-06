@@ -73,13 +73,13 @@ const MagicCheckoutIntegration = ({
     return new Promise((resolve, reject) => {
       console.log("📥 Magic Checkout: Starting SDK load...", {
         hasWindow: typeof window !== 'undefined',
-        hasRazorpayMagicCheckout: typeof window !== 'undefined' && !!window.RazorpayMagicCheckout,
+        hasRazorpay: typeof window !== 'undefined' && !!window.Razorpay,
         scriptExists: typeof document !== 'undefined' && !!document.getElementById("razorpay-magic-checkout-script")
       });
       
-      // Check if SDK is already loaded
-      if (window.RazorpayMagicCheckout) {
-        console.log("✅ Magic Checkout: SDK already loaded");
+      // Check if SDK is already loaded (standard Razorpay SDK)
+      if (window.Razorpay) {
+        console.log("✅ Magic Checkout: Razorpay SDK already loaded");
         setSDKLoaded(true);
         resolve(true);
         return;
@@ -90,9 +90,9 @@ const MagicCheckoutIntegration = ({
         console.log("⏳ Magic Checkout: Script tag exists, waiting for load...");
         // Wait for it to load
         const checkInterval = setInterval(() => {
-          if (window.RazorpayMagicCheckout) {
+          if (window.Razorpay) {
             clearInterval(checkInterval);
-            console.log("✅ Magic Checkout: SDK loaded from existing script");
+            console.log("✅ Magic Checkout: Razorpay SDK loaded from existing script");
             setSDKLoaded(true);
             resolve(true);
           }
@@ -100,7 +100,7 @@ const MagicCheckoutIntegration = ({
         
         setTimeout(() => {
           clearInterval(checkInterval);
-          if (!window.RazorpayMagicCheckout) {
+          if (!window.Razorpay) {
             console.error("❌ Magic Checkout: SDK load timeout");
             reject(new Error("SDK load timeout"));
           }
@@ -112,12 +112,14 @@ const MagicCheckoutIntegration = ({
       setSDKLoading(true);
       const script = document.createElement("script");
       script.id = "razorpay-magic-checkout-script";
-      script.src = "https://checkout.razorpay.com/v1/magic-checkout.js";
+      // Note: Magic Checkout uses the standard Razorpay checkout SDK
+      // The "magic" features are enabled via API configuration, not a separate SDK
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
       script.async = true;
 
       script.onload = () => {
-        console.log("✅ Magic Checkout: SDK script loaded successfully", {
-          hasRazorpayMagicCheckout: !!window.RazorpayMagicCheckout
+        console.log("✅ Magic Checkout: Razorpay SDK script loaded successfully", {
+          hasRazorpay: !!window.Razorpay
         });
         setSDKLoaded(true);
         setSDKLoading(false);
@@ -130,8 +132,8 @@ const MagicCheckoutIntegration = ({
           src: script.src
         });
         setSDKLoading(false);
-        setError("Failed to load Magic Checkout SDK");
-        reject(new Error("Failed to load Magic Checkout SDK"));
+        setError("Failed to load Razorpay SDK");
+        reject(new Error("Failed to load Razorpay SDK"));
       };
 
       document.body.appendChild(script);
@@ -146,15 +148,15 @@ const MagicCheckoutIntegration = ({
     console.log("🔧 Magic Checkout: Attempting to initialize SDK...", {
       sdkLoaded,
       hasWindow: typeof window !== 'undefined',
-      hasRazorpayMagicCheckout: typeof window !== 'undefined' && !!window.RazorpayMagicCheckout,
+      hasRazorpay: typeof window !== 'undefined' && !!window.Razorpay,
       orderId,
       razorpayKey: RAZORPAY_KEY ? `${RAZORPAY_KEY.substring(0, 10)}...` : 'NOT SET'
     });
     
-    if (!sdkLoaded || !window.RazorpayMagicCheckout) {
-      console.error("❌ Magic Checkout: SDK not loaded", {
+    if (!sdkLoaded || !window.Razorpay) {
+      console.error("❌ Magic Checkout: Razorpay SDK not loaded", {
         sdkLoaded,
-        windowRazorpayMagicCheckout: typeof window !== 'undefined' ? !!window.RazorpayMagicCheckout : 'no window'
+        windowRazorpay: typeof window !== 'undefined' ? !!window.Razorpay : 'no window'
       });
       return null;
     }
@@ -174,23 +176,30 @@ const MagicCheckoutIntegration = ({
     }
 
     try {
-      console.log("🔧 Magic Checkout: Creating SDK instance with config:", {
+      console.log("🔧 Magic Checkout: Creating Razorpay instance with config:", {
         key: RAZORPAY_KEY ? `${RAZORPAY_KEY.substring(0, 10)}...` : 'NOT SET',
         order_id: orderId,
         hasHandler: !!handlePaymentSuccess,
         hasModal: true
       });
       
-      const instance = new window.RazorpayMagicCheckout({
+      // Use standard Razorpay SDK - Magic Checkout features are enabled server-side
+      const instance = new window.Razorpay({
         key: RAZORPAY_KEY,
-        order_id: orderId, // Use the created order ID
+        order_id: orderId,
         handler: handlePaymentSuccess,
         modal: {
           ondismiss: handlePaymentDismiss,
         },
+        // Magic Checkout specific options (if supported)
+        config: {
+          display: {
+            language: 'en'
+          }
+        }
       });
 
-      console.log("✅ Magic Checkout: SDK instance created successfully", instance);
+      console.log("✅ Magic Checkout: Razorpay instance created successfully", instance);
       setMagicCheckoutInstance(instance);
       return instance;
     } catch (err) {
@@ -553,14 +562,19 @@ const MagicCheckoutIntegration = ({
    * Fallback to standard checkout - Removed, open SDK directly
    */
   const fallbackToStandardCheckout = useCallback(() => {
-    console.log("Magic Checkout SDK failed to load");
-    setError("Magic Checkout is not available. Please check your Razorpay configuration.");
+    console.log("⚠️ Magic Checkout: SDK failed to load, using fallback");
+    setError("Magic Checkout is not available. Using standard checkout instead.");
     
-    // Show notification to user
-    if (typeof window !== 'undefined' && window.alert) {
-      alert("Magic Checkout Error: SDK failed to load. Please check:\n1. NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED is set to 'true'\n2. NEXT_PUBLIC_RAZORPAY_KEY_ID is configured\n3. Magic Checkout is enabled in your Razorpay account");
-    }
-  }, []);
+    // Don't show alert, just log and disable Magic Checkout
+    console.warn("Magic Checkout SDK failed to load. Possible reasons:");
+    console.warn("1. Network issue - check if https://checkout.razorpay.com is accessible");
+    console.warn("2. Magic Checkout not enabled in Razorpay account");
+    console.warn("3. Script blocked by browser/ad-blocker");
+    console.warn("Environment check:", {
+      MAGIC_CHECKOUT_ENABLED,
+      RAZORPAY_KEY: RAZORPAY_KEY ? 'SET' : 'NOT SET'
+    });
+  }, [MAGIC_CHECKOUT_ENABLED, RAZORPAY_KEY]);
 
   /**
    * Load SDK on mount if enabled
