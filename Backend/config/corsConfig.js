@@ -64,6 +64,12 @@ const staticAllowedOrigins = [
     'http://localhost:5000',
     'http://127.0.0.1:5000',
     
+    // Production domains (fallback if database is not available)
+    'https://crosscoin.in',
+    'https://www.crosscoin.in',
+    'http://crosscoin.in',
+    'http://www.crosscoin.in',
+    
     // API domain
     process.env.API_URL,
     process.env.BACKEND_URL
@@ -71,29 +77,37 @@ const staticAllowedOrigins = [
 
 const corsOptions = {
     origin: async function (origin, callback) {
+        console.log('🔍 CORS check for origin:', origin);
+        
         // Allow requests with no origin (mobile apps, Postman, curl, etc.)
         if (!origin) {
+            console.log('✅ CORS: Allowing request with no origin');
             return callback(null, true);
         }
         
         // Allow Vercel preview deployments
         if (origin.includes('vercel.app')) {
+            console.log('✅ CORS: Allowing Vercel deployment:', origin);
             return callback(null, true);
         }
         
         // Check static allowed origins
         if (staticAllowedOrigins.includes(origin)) {
+            console.log('✅ CORS: Allowing static origin:', origin);
             return callback(null, true);
         }
         
         // Check dynamic brand domains
         const brandDomains = await getBrandDomains();
         if (brandDomains.includes(origin)) {
+            console.log('✅ CORS: Allowing brand domain:', origin);
             return callback(null, true);
         }
         
-        // Log blocked request
+        // Log blocked request with details
         console.warn(`❌ CORS blocked request from: ${origin}`);
+        console.warn('Static allowed origins:', staticAllowedOrigins);
+        console.warn('Brand domains:', brandDomains);
         return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
