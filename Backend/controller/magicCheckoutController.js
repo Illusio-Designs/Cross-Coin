@@ -450,7 +450,21 @@ module.exports.getShippingInfo = async (req, res) => {
         }
 
         res.json({
-            shipping_info: shippingInfoResults
+            addresses: shippingInfoResults.map(info => ({
+                zipcode: info.address_id, // Use address_id as identifier
+                serviceable: info.serviceable,
+                cod: info.cod_available,
+                cod_fee: info.cod_fee,
+                shipping_fee: info.shipping_fee,
+                estimated_delivery_days: info.estimated_delivery_days,
+                shipping_methods: info.serviceable ? [{
+                    id: "standard",
+                    name: "Standard Delivery",
+                    description: `Delivered in ${info.estimated_delivery_days || 3}-7 business days`,
+                    price: info.shipping_fee,
+                    cod: info.cod_available
+                }] : []
+            }))
         });
 
     } catch (error) {

@@ -468,6 +468,30 @@ const MagicCheckoutIntegration = ({
       setIsProcessing(true);
       setError(null);
 
+      // Step 0: Validate shipping address serviceability BEFORE creating order
+      if (shippingAddress) {
+        console.log("📍 Magic Checkout: Checking address serviceability...");
+        try {
+          const serviceabilityCheck = await fetchShippingInfo([shippingAddress]);
+          
+          if (serviceabilityCheck && serviceabilityCheck.length > 0) {
+            const addressInfo = serviceabilityCheck[0];
+            
+            if (!addressInfo.serviceable) {
+              console.error("❌ Magic Checkout: Address not serviceable:", addressInfo.reason);
+              setError(`Delivery not available: ${addressInfo.reason || 'Pincode not serviceable'}`);
+              setIsProcessing(false);
+              return false;
+            }
+            
+            console.log("✅ Magic Checkout: Address is serviceable");
+          }
+        } catch (serviceError) {
+          console.warn("⚠️ Magic Checkout: Serviceability check failed (non-critical):", serviceError);
+          // Continue anyway - don't block checkout
+        }
+      }
+
       // Step 1: Calculate total amount
       const totalAmount = calculateTotalAmount() / 100; // Convert from paise to rupees
       console.log("💰 Magic Checkout: Total amount calculated:", totalAmount);
