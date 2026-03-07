@@ -303,12 +303,16 @@ export const validateCoupon = async (code, cartTotal, paymentMode = null, cartIt
     const response = await axios.post(
       `${API_URL}/api/coupons/validate`,
       requestData,
-      token ? {
-        headers: { Authorization: `Bearer ${token}` },
-      } : {}
+      {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          "X-Brand-Name": "crosscoin"
+        }
+      }
     );
     return response.data;
   } catch (error) {
+    console.error("Validate coupon error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -337,11 +341,13 @@ export const createPublicReview = async (reviewData) => {
       {
         headers: {
           "Content-Type": "multipart/form-data",
+          "X-Brand-Name": "crosscoin"
         },
       }
     );
     return response.data;
   } catch (error) {
+    console.error("Create public review error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -351,10 +357,14 @@ export const getCurrentUser = async () => {
   try {
     const token = localStorage.getItem("token");
     const response = await axios.get(`${API_URL}/api/users/me`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        "X-Brand-Name": "crosscoin"
+      },
     });
     return response.data;
   } catch (error) {
+    console.error("Get current user error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -363,7 +373,10 @@ export const getCurrentUser = async () => {
 export const updateUserProfile = async (profileData) => {
   try {
     const token = localStorage.getItem("token");
-    let headers = { Authorization: `Bearer ${token}` };
+    let headers = { 
+      Authorization: `Bearer ${token}`,
+      "X-Brand-Name": "crosscoin"
+    };
     let data = profileData;
     if (profileData instanceof FormData) {
       headers["Content-Type"] = "multipart/form-data";
@@ -373,6 +386,7 @@ export const updateUserProfile = async (profileData) => {
     });
     return response.data;
   } catch (error) {
+    console.error("Update user profile error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -437,7 +451,10 @@ export const getUserShippingAddresses = async () => {
     console.log("Fetching user addresses from API...");
     const token = localStorage.getItem("token");
     const promise = axios.get(`${API_URL}/api/shipping-addresses`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        "X-Brand-Name": "crosscoin"
+      },
     });
     
     apiCache.addPending(cacheKey, promise);
@@ -450,7 +467,10 @@ export const getUserShippingAddresses = async () => {
     
     return data;
   } catch (error) {
+    console.error("Get user addresses error:", error);
     throw error.response?.data || error.message;
+  } finally {
+    apiCache.removePending(cacheKey);
   }
 };
 
@@ -471,7 +491,10 @@ export const updateShippingAddress = async (id, addressData) => {
       `${API_URL}/api/shipping-addresses/${id}`,
       payload,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "X-Brand-Name": "crosscoin"
+        },
       }
     );
     
@@ -482,6 +505,7 @@ export const updateShippingAddress = async (id, addressData) => {
     
     return response.data;
   } catch (error) {
+    console.error("Update shipping address error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -492,7 +516,10 @@ export const deleteShippingAddress = async (id) => {
     const response = await axios.delete(
       `${API_URL}/api/shipping-addresses/${id}`,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "X-Brand-Name": "crosscoin"
+        },
       }
     );
     
@@ -503,6 +530,7 @@ export const deleteShippingAddress = async (id) => {
     
     return response.data;
   } catch (error) {
+    console.error("Delete shipping address error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -514,7 +542,10 @@ export const setDefaultShippingAddress = async (id) => {
       `${API_URL}/api/shipping-addresses/${id}/default`,
       {},
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "X-Brand-Name": "crosscoin"
+        },
       }
     );
     
@@ -525,6 +556,7 @@ export const setDefaultShippingAddress = async (id) => {
     
     return response.data;
   } catch (error) {
+    console.error("Set default address error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -547,10 +579,16 @@ export const createGuestShippingAddress = async (addressData, guestInfo) => {
     };
     const response = await axios.post(
       `${API_URL}/api/shipping-addresses/guest`,
-      payload
+      payload,
+      {
+        headers: {
+          "X-Brand-Name": "crosscoin"
+        }
+      }
     );
     return response.data;
   } catch (error) {
+    console.error("Create guest address error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -560,10 +598,16 @@ export const getGuestShippingAddresses = async (guestEmail) => {
     const response = await axios.get(
       `${API_URL}/api/shipping-addresses/guest?guest_email=${encodeURIComponent(
         guestEmail
-      )}`
+      )}`,
+      {
+        headers: {
+          "X-Brand-Name": "crosscoin"
+        }
+      }
     );
     return response.data.shippingAddresses;
   } catch (error) {
+    console.error("Get guest addresses error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -580,11 +624,15 @@ export const getUserOrders = async (params = {}) => {
     const response = await axios.get(
       `${API_URL}/api/orders/my-orders?${queryParams.toString()}`,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "X-Brand-Name": "crosscoin"
+        },
       }
     );
     return response.data;
   } catch (error) {
+    console.error("Get user orders error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -709,10 +757,14 @@ export const getWishlist = async () => {
   try {
     const token = localStorage.getItem("token");
     const response = await axios.get(`${API_URL}/api/wishlist`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        "X-Brand-Name": "crosscoin"
+      },
     });
     return response.data.wishlist || [];
   } catch (error) {
+    console.error("Get wishlist error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -724,11 +776,15 @@ export const addToWishlist = async (productId) => {
       `${API_URL}/api/wishlist/add/${productId}`,
       {},
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "X-Brand-Name": "crosscoin"
+        },
       }
     );
     return response.data;
   } catch (error) {
+    console.error("Add to wishlist error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -739,11 +795,15 @@ export const removeFromWishlist = async (productId) => {
     const response = await axios.delete(
       `${API_URL}/api/wishlist/remove/${productId}`,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "X-Brand-Name": "crosscoin"
+        },
       }
     );
     return response.data;
   } catch (error) {
+    console.error("Remove from wishlist error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -752,10 +812,14 @@ export const clearWishlist = async () => {
   try {
     const token = localStorage.getItem("token");
     const response = await axios.delete(`${API_URL}/api/wishlist/clear`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        "X-Brand-Name": "crosscoin"
+      },
     });
     return response.data;
   } catch (error) {
+    console.error("Clear wishlist error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -767,11 +831,15 @@ export const logout = async () => {
       `${API_URL}/api/users/logout`,
       {},
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "X-Brand-Name": "crosscoin"
+        },
       }
     );
     return response.data;
   } catch (error) {
+    console.error("Logout error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -782,7 +850,10 @@ export const getCart = async () => {
     const token = localStorage.getItem("token");
     console.log("publicindex: getCart called");
     const response = await axios.get(`${API_URL}/api/cart`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        "X-Brand-Name": "crosscoin"
+      },
     });
     console.log("publicindex: getCart response:", response.data);
     return response.data.cart || [];
@@ -806,7 +877,10 @@ export const addToCart = async ({ productId, variationId, quantity, size }) => {
     const token = localStorage.getItem("token");
     const payload = { productId, variationId, quantity, size };
     const response = await axios.post(`${API_URL}/api/cart/add`, payload, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        "X-Brand-Name": "crosscoin"
+      },
     });
     console.log("publicindex: addToCart response:", response.data);
     return response.data;
@@ -827,11 +901,15 @@ export const updateCartItem = async (productId, quantity, variationId) => {
       `${API_URL}/api/cart/item/${productId}`,
       payload,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "X-Brand-Name": "crosscoin"
+        },
       }
     );
     return response.data;
   } catch (error) {
+    console.error("Update cart item error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -850,7 +928,10 @@ export const removeFromCart = async (productId, variationId) => {
       variationId,
     });
     const response = await axios.delete(url, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        "X-Brand-Name": "crosscoin"
+      },
     });
     console.log("publicindex: removeFromCart response:", response.data);
     return response.data;
@@ -867,10 +948,14 @@ export const clearCart = async () => {
   try {
     const token = localStorage.getItem("token");
     const response = await axios.delete(`${API_URL}/api/cart/clear`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        "X-Brand-Name": "crosscoin"
+      },
     });
     return response.data;
   } catch (error) {
+    console.error("Clear cart error:", error);
     throw error.response?.data || error.message;
   }
 };
