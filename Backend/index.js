@@ -119,13 +119,16 @@ app.use('/uploads', (req, res, next) => {
     next();
 }, express.static(uploadsDir));
 
-// Handle trailing slashes in uploads URLs
-app.use('/uploads/*/', (req, res, next) => {
-    console.log('Trailing slash detected in uploads URL:', req.originalUrl);
-    // Remove trailing slash and redirect
-    const newUrl = req.originalUrl.slice(0, -1);
-    console.log('Redirecting to:', newUrl);
-    res.redirect(301, newUrl);
+// Handle trailing slashes in uploads URLs - ONLY if URL actually ends with /
+app.use('/uploads', (req, res, next) => {
+    // Only redirect if the URL actually ends with a trailing slash
+    if (req.originalUrl.endsWith('/') && req.originalUrl !== '/uploads/') {
+        console.log('Trailing slash detected in uploads URL:', req.originalUrl);
+        const newUrl = req.originalUrl.slice(0, -1);
+        console.log('Redirecting to:', newUrl);
+        return res.redirect(301, newUrl);
+    }
+    next();
 });
 
 // Enhanced health check API endpoint
