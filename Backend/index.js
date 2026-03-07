@@ -45,16 +45,13 @@ console.log('Environment variables loaded:', {
 
 const app = express();
 
-// CORS middleware
+// CORS middleware - MUST be before other middleware
 app.use(cors(corsOptions));
 
-// Handle preflight requests
+// Handle preflight requests for all routes
 app.options('*', cors(corsOptions));
 
 // Body parsing middleware with increased limits for production
-// Compression middleware
-app.use(compression());
-
 app.use(express.json({ 
     limit: process.env.MAX_FILE_SIZE || '5mb',
     verify: (req, res, buf) => {
@@ -65,6 +62,10 @@ app.use(express.urlencoded({
     extended: true, 
     limit: process.env.MAX_FILE_SIZE || '5mb' 
 }));
+
+// Compression middleware
+app.use(compression());
+
 app.use(cookieParser());
 
 // Logging middleware
@@ -160,6 +161,20 @@ app.get('/api/health', async (req, res) => {
             timestamp: Date.now()
         });
     }
+});
+
+// CORS debug endpoint
+app.get('/api/cors-test', (req, res) => {
+    res.json({
+        success: true,
+        message: 'CORS is working correctly',
+        origin: req.headers.origin || 'No origin header',
+        timestamp: new Date().toISOString(),
+        headers: {
+            'access-control-allow-origin': res.getHeader('access-control-allow-origin'),
+            'access-control-allow-credentials': res.getHeader('access-control-allow-credentials')
+        }
+    });
 });
 
 // Root endpoint for basic connectivity test
@@ -264,6 +279,26 @@ const startServer = async () => {
         console.log(`Environment: ${process.env.NODE_ENV}`);
         console.log(`Port: ${PORT}`);
         
+        // Monitor memory usage
+        const logMemoryUsage = () => {
+            const used = process.memoryUsage();
+            console.log('📊 Memory Usage:', {
+                rss: `${Math.round(used.rss / 1024 / 1024)} MB`,
+                heapTotal: `${Math.round(used.heapTotal / 1024 / 1024)} MB`,
+                heapUsed: `${Math.round(used.heapUsed / 1024 / 1024)} MB`,
+                external: `${Math.round(used.external / 1024 / 1024)} MB`
+            });
+            
+            // Warn if memory usage is high
+            const heapUsedMB = used.heapUsed / 1024 / 1024;
+            if (heapUsedMB > 400) {
+                console.warn('⚠️ High memory usage detected! Consider restarting the server.');
+            }
+        };
+        
+        // Log memory usage every 30 minutes
+        setInterval(logMemoryUsage, 30 * 60 * 1000);
+        
         // Test database connection first
         console.log('Testing database connection...');
         await sequelize.authenticate();
@@ -289,6 +324,7 @@ const startServer = async () => {
             console.log(`✓ Server is running on port ${PORT}`);
             console.log(`✓ Health check available at: http://localhost:${PORT}/api/health`);
             console.log(`✓ API base URL: http://localhost:${PORT}/api`);
+            logMemoryUsage(); // Log initial memory usage
         });
         
         // Graceful shutdown
@@ -306,6 +342,17 @@ const startServer = async () => {
                 console.log('Process terminated');
                 process.exit(0);
             });
+        });
+        
+        // Handle uncaught exceptions
+        process.on('uncaughtException', (error) => {
+            console.error('❌ Uncaught Exception:', error);
+            logMemoryUsage();
+        });
+        
+        process.on('unhandledRejection', (reason, promise) => {
+            console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+            logMemoryUsage();
         });
         
     } catch (error) {

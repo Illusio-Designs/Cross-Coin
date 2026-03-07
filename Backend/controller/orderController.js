@@ -447,12 +447,13 @@ module.exports.createOrder = async (req, res) => {
           products: orderItems
         };
 
-        // Run FShip integration in background
+        // Run FShip integration in background with error handling
         setImmediate(async () => {
           try {
             console.log(`🔄 Creating FShip order for ${createdOrder.order_number}`);
             
-            const fshipResponse = await fshipService.createForwardOrder(fshipOrderData);
+            // Use createOrUpdateForwardOrder to prevent duplicates
+            const fshipResponse = await fshipService.createOrUpdateForwardOrder(fshipOrderData);
             
             if (fshipResponse.success) {
               await createdOrder.update({
@@ -490,32 +491,8 @@ module.exports.createOrder = async (req, res) => {
     });
     console.log("createOrder: Response sent successfully");
 
-    // --- Auto-sync all unsynced orders with FShip in the background ---
-    try {
-      setImmediate(async () => {
-        try {
-          await module.exports.syncOrdersWithFShip(
-            {
-              user: req.user,
-              headers: req.headers,
-              body: {},
-              query: {},
-            },
-            {
-              status: () => ({ json: () => {} }),
-              json: () => {},
-            }
-          );
-        } catch (err) {
-          console.error("Background FShip sync failed:", err.message);
-        }
-      });
-    } catch (err) {
-      console.error(
-        "Failed to trigger background FShip sync:",
-        err.message
-      );
-    }
+    // Note: Full sync removed - cron job handles periodic syncing
+    // Individual order is already synced above via createOrUpdateForwardOrder
   } catch (error) {
     console.error("createOrder: Error caught:", error.message);
     console.error("createOrder: Error stack:", error.stack);
@@ -931,7 +908,8 @@ module.exports.createGuestOrder = async (req, res) => {
           fshipOrderData
         );
 
-        const fshipResponse = await fshipService.createForwardOrder(fshipOrderData);
+        // Use createOrUpdateForwardOrder to prevent duplicates
+        const fshipResponse = await fshipService.createOrUpdateForwardOrder(fshipOrderData);
 
         if (fshipResponse.success) {
           await order.update({
@@ -2505,6 +2483,21 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null) => {
 module.exports.createOrderInFShip = async (order, transaction) => {
   try {
     console.log(`🚀 Creating order ${order.order_number} in FShip...`);
+
+    // Reload order to get latest data and prevent race conditions
+    await order.reload({ transaction });
+    
+    // Double-check if order was already synced by another process
+    if (order.fship_order_id && order.fship_waybill) {
+      console.log(`⚠️ Order ${order.order_number} already has FShip data. Skipping creation.`);
+      return {
+        success: true,
+        fship_order_id: order.fship_order_id,
+        waybill: order.fship_waybill,
+        route_code: order.fship_route_code,
+        already_synced: true
+      };
+    }
 
     // Prepare order data for FShip
     const fshipOrderData = await this.prepareFShipOrderData(order);
