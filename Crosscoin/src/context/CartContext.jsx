@@ -25,6 +25,7 @@ function CartProvider({ children }) {
   const [isCartLoading, setIsCartLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [lastAddedItem, setLastAddedItem] = useState(null);
+  const [buyNowItem, setBuyNowItem] = useState(null);
 
   // Initialize authentication state
   useEffect(() => {
@@ -369,8 +370,32 @@ function CartProvider({ children }) {
   };
 
   const buyNow = async (product, selectedColor, selectedSize, quantity = 1, variationId = null, variationImages = null) => {
-    // For now, just add to cart and redirect to checkout
-    await addToCart(product, selectedColor, selectedSize, quantity, variationId, variationImages);
+    // Get variation price if available
+    const selectedVariation = variationId && product.variations ? 
+      product.variations.find(v => v.id === variationId) : null;
+    const variationPrice = selectedVariation?.price || product.price;
+    
+    // Create buy now item
+    const item = {
+      id: Date.now() + Math.random(),
+      productId: product.id,
+      name: product.name,
+      image: variationImages && variationImages.length > 0 ? variationImages[0] : product.images[0],
+      images: variationImages && variationImages.length > 0 ? variationImages : product.images,
+      price: variationPrice,
+      color: selectedColor,
+      size: selectedSize,
+      quantity: quantity,
+      variationId: variationId,
+      variation: selectedVariation
+    };
+    
+    setBuyNowItem(item);
+  };
+
+  const clearBuyNow = () => {
+    console.log('CartContext: Clearing buy now item');
+    setBuyNowItem(null);
   };
 
   const cartTotal = React.useMemo(() => {
@@ -380,6 +405,12 @@ function CartProvider({ children }) {
       return total + (parseFloat(price) || 0) * (item.quantity || 1);
     }, 0);
   }, [cartItems]);
+
+  const buyNowTotal = React.useMemo(() => {
+    if (!buyNowItem) return 0;
+    const price = buyNowItem.variation?.price || buyNowItem.price || 0;
+    return (parseFloat(price) || 0) * (buyNowItem.quantity || 1);
+  }, [buyNowItem]);
 
   return (
     <CartContext.Provider value={{
@@ -394,6 +425,9 @@ function CartProvider({ children }) {
       isCartLoading,
       setQuantity,
       buyNow,
+      buyNowItem,
+      buyNowTotal,
+      clearBuyNow,
       isDrawerOpen,
       setIsDrawerOpen,
       lastAddedItem

@@ -2348,7 +2348,8 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
       ],
       limit: limit, // Add limit to prevent processing too many orders at once
       order: [
-        ['fship_last_synced_at', 'ASC NULLS FIRST'], // Prioritize never-synced orders
+        [sequelize.literal('ISNULL(`Order`.`fship_last_synced_at`)'), 'DESC'], // NULL values first (MariaDB compatible)
+        ['fship_last_synced_at', 'ASC'], // Then oldest synced orders
         ['created_at', 'DESC']
       ]
     });
