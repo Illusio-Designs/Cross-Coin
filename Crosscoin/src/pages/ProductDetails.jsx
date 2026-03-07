@@ -68,6 +68,9 @@ export default function ProductDetails() {
   const [coupons, setCoupons] = useState([]);
   const [copiedCoupon, setCopiedCoupon] = useState(null);
   const [allReviews, setAllReviews] = useState([]);
+  const [reviewsPage, setReviewsPage] = useState(1);
+  const [reviewsHasMore, setReviewsHasMore] = useState(true);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [tooltipStyle, setTooltipStyle] = useState({});
@@ -215,27 +218,53 @@ export default function ProductDetails() {
     fetchCoupons();
   }, []);
 
-  // Fetch all reviews for the product
+  // Fetch reviews with pagination
   useEffect(() => {
     if (!product?.id) return;
     
-    const fetchAllReviews = async () => {
+    const fetchReviews = async () => {
       try {
-        console.log('API BEING CALLED: ProductDetails all reviews fetch for product:', product.id);
-        const response = await getPublicProductReviews(product.id, { limit: 100 }); // Fetch up to 100 reviews
+        setReviewsLoading(true);
+        console.log('API BEING CALLED: ProductDetails reviews fetch for product:', product.id, 'page:', reviewsPage);
+        const response = await getPublicProductReviews(product.id, { 
+          page: reviewsPage, 
+          limit: 10 // Fetch 10 reviews per page instead of 100
+        });
+        
         if (response.success && response.reviews) {
-          setAllReviews(response.reviews);
+          if (reviewsPage === 1) {
+            // First page - replace reviews
+            setAllReviews(response.reviews);
+          } else {
+            // Subsequent pages - append reviews
+            setAllReviews(prev => [...prev, ...response.reviews]);
+          }
+          
+          // Check if there are more reviews to load
+          const hasMore = response.pagination && 
+                         response.pagination.page < response.pagination.totalPages;
+          setReviewsHasMore(hasMore);
         } else {
-          setAllReviews(product.reviews || []); // Fallback to product reviews
+          // Fallback to product reviews if API fails
+          if (reviewsPage === 1) {
+            setAllReviews(product.reviews || []);
+            setReviewsHasMore(false);
+          }
         }
       } catch (err) {
-        console.error('Error fetching all reviews:', err);
-        setAllReviews(product.reviews || []); // Fallback to product reviews
+        console.error('Error fetching reviews:', err);
+        // Fallback to product reviews on error
+        if (reviewsPage === 1) {
+          setAllReviews(product.reviews || []);
+          setReviewsHasMore(false);
+        }
+      } finally {
+        setReviewsLoading(false);
       }
     };
     
-    fetchAllReviews();
-  }, [product?.id, product?.reviews]);
+    fetchReviews();
+  }, [product?.id, reviewsPage]);
 
   // Get all unique color names from variations
   const colorOptions = product?.variations
@@ -519,14 +548,19 @@ export default function ProductDetails() {
         const updatedProduct = await getPublicProductBySlug(productSlug);
         if (updatedProduct.success) {
           setProduct(updatedProduct.data);
-          // Also refresh all reviews
+          // Reset to page 1 and refresh reviews
+          setReviewsPage(1);
+          setReviewsHasMore(true);
           try {
-            const allReviewsResponse = await getPublicProductReviews(updatedProduct.data.id, { limit: 100 });
+            const allReviewsResponse = await getPublicProductReviews(updatedProduct.data.id, { page: 1, limit: 10 });
             if (allReviewsResponse.success && allReviewsResponse.reviews) {
               setAllReviews(allReviewsResponse.reviews);
+              const hasMore = allReviewsResponse.pagination && 
+                             allReviewsResponse.pagination.page < allReviewsResponse.pagination.totalPages;
+              setReviewsHasMore(hasMore);
             }
           } catch (err) {
-            console.error('Error refreshing all reviews:', err);
+            console.error('Error refreshing reviews:', err);
           }
         }
       }
@@ -1444,6 +1478,30 @@ export default function ProductDetails() {
             <span className="total-reviews-label">({totalReviews} reviews)</span>
                   </div>
           <InfiniteReviewsSlider reviews={allReviews} />
+          
+          {/* Load More Reviews Button */}
+          {reviewsHasMore && (
+            <div style={{ textAlign: 'center', marginTop: '24px' }}>
+              <button
+                onClick={() => setReviewsPage(prev => prev + 1)}
+                disabled={reviewsLoading}
+                style={{
+                  padding: '12px 32px',
+                  background: reviewsLoading ? '#ccc' : '#222',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: reviewsLoading ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'background 0.2s'
+                }}
+              >
+                {reviewsLoading ? 'Loading...' : 'Load More Reviews'}
+              </button>
+            </div>
+          )}
+          
           {showReviewForm && (
             <div 
               className="review-form-modal"

@@ -544,13 +544,25 @@ module.exports.createGuestOrder = async (req, res) => {
     }
 
     // Validate guest info
-    const { email, firstName, lastName, phone } = guest_info;
-    if (!email || !firstName || !lastName) {
+    let { email, firstName, lastName, phone } = guest_info;
+    if (!email || !firstName) {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: "Email, first name, and last name are required",
+        message: "Email and first name are required",
       });
+    }
+
+    // If lastName is not provided, try to extract from fullName or default to empty string
+    if (!lastName && shipping_address.fullName) {
+      const nameParts = shipping_address.fullName.trim().split(/\s+/);
+      if (nameParts.length > 1) {
+        lastName = nameParts.slice(1).join(' ');
+      } else {
+        lastName = ''; // Single name provided
+      }
+    } else if (!lastName) {
+      lastName = ''; // Default to empty string
     }
 
     // Validate shipping address
