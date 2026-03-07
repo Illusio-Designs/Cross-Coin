@@ -315,9 +315,10 @@ export default function UnifiedCheckout() {
       }));
     }
     
-    try {
-      let savedAddress;
-      if (isAuthenticated) {
+    let savedAddress;
+    
+    if (isAuthenticated) {
+      try {
         if (editingAddressId) {
           // Update existing address logic would go here
           savedAddress = addressForm; // Simplified for now
@@ -327,7 +328,7 @@ export default function UnifiedCheckout() {
           console.log("Address created successfully:", savedAddress);
         }
         
-        // Reload addresses
+        // Try to reload addresses, but don't fail if it doesn't work
         try {
           console.log("Reloading addresses...");
           const addressData = await getUserShippingAddresses();
@@ -335,49 +336,50 @@ export default function UnifiedCheckout() {
           setAddresses(addressData);
         } catch (reloadError) {
           console.error("Error reloading addresses (non-critical):", reloadError);
-          // Don't fail the whole operation if reload fails
-          // The address was created successfully, just use it
+          // Don't fail - just add the new address to the list
           setAddresses(prev => [...prev, savedAddress]);
         }
-      } else {
-        // For guest users, create a temporary address object
-        savedAddress = {
-          id: Date.now(),
-          full_name: addressForm.fullName,
-          phone_number: addressForm.phoneNumber,
-          address: addressForm.address,
-          city: addressForm.city,
-          state: addressForm.state,
-          postal_code: addressForm.postalCode,
-          country: addressForm.country,
-        };
+      } catch (error) {
+        console.error("Error creating address:", error);
+        console.error("Error details:", {
+          message: error.message,
+          response: error.response,
+          stack: error.stack
+        });
+        showValidationErrorToast("Failed to save address. Please try again.");
+        return; // Exit early on actual creation error
       }
-      
-      console.log("Setting shipping address:", savedAddress);
-      setShippingAddress(savedAddress);
-      setShowAddressForm(false);
-      setEditingAddressId(null);
-      setAddressForm({
-        fullName: "",
-        phoneNumber: "",
-        address: "",
-        city: "",
-        state: "",
-        postalCode: "",
-        country: "India",
-        isDefault: false,
-      });
-      
-      console.log("Address saved successfully!");
-    } catch (error) {
-      console.error("Error saving address:", error);
-      console.error("Error details:", {
-        message: error.message,
-        response: error.response,
-        stack: error.stack
-      });
-      showValidationErrorToast("Failed to save address. Please try again.");
+    } else {
+      // For guest users, create a temporary address object
+      savedAddress = {
+        id: Date.now(),
+        full_name: addressForm.fullName,
+        phone_number: addressForm.phoneNumber,
+        address: addressForm.address,
+        city: addressForm.city,
+        state: addressForm.state,
+        postal_code: addressForm.postalCode,
+        country: addressForm.country,
+      };
     }
+    
+    // If we got here, address was saved successfully
+    console.log("Setting shipping address:", savedAddress);
+    setShippingAddress(savedAddress);
+    setShowAddressForm(false);
+    setEditingAddressId(null);
+    setAddressForm({
+      fullName: "",
+      phoneNumber: "",
+      address: "",
+      city: "",
+      state: "",
+      postalCode: "",
+      country: "India",
+      isDefault: false,
+    });
+    
+    console.log("Address saved successfully!");
   };
 
   const loadRazorpayScript = () => {
