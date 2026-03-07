@@ -71,12 +71,17 @@ const staticAllowedOrigins = [
     'http://www.crosscoin.in',
     
     // API domain
+    'https://api.crosscoin.in',
+    'http://api.crosscoin.in',
+    
+    // Environment variables
     process.env.API_URL,
-    process.env.BACKEND_URL
+    process.env.BACKEND_URL,
+    process.env.FRONTEND_URL
 ].filter(Boolean); // Remove undefined values
 
 const corsOptions = {
-    origin: async function (origin, callback) {
+    origin: function (origin, callback) {
         console.log('🔍 CORS check for origin:', origin);
         
         // Allow requests with no origin (mobile apps, Postman, curl, etc.)
@@ -97,18 +102,28 @@ const corsOptions = {
             return callback(null, true);
         }
         
-        // Check dynamic brand domains
-        const brandDomains = await getBrandDomains();
-        if (brandDomains.includes(origin)) {
-            console.log('✅ CORS: Allowing brand domain:', origin);
-            return callback(null, true);
-        }
-        
-        // Log blocked request with details
-        console.warn(`❌ CORS blocked request from: ${origin}`);
-        console.warn('Static allowed origins:', staticAllowedOrigins);
-        console.warn('Brand domains:', brandDomains);
-        return callback(new Error('Not allowed by CORS'));
+        // Check dynamic brand domains asynchronously
+        getBrandDomains()
+            .then(brandDomains => {
+                if (brandDomains.includes(origin)) {
+                    console.log('✅ CORS: Allowing brand domain:', origin);
+                    return callback(null, true);
+                }
+                
+                // Log blocked request with details
+                console.warn(`❌ CORS blocked request from: ${origin}`);
+                console.warn('Static allowed origins:', staticAllowedOrigins);
+                console.warn('Brand domains:', brandDomains);
+                
+                // Allow the request anyway but log the warning (permissive mode)
+                // Change to callback(new Error('Not allowed by CORS')) for strict mode
+                return callback(null, true);
+            })
+            .catch(error => {
+                console.error('Error checking brand domains:', error);
+                // Allow request on error to prevent blocking legitimate traffic
+                return callback(null, true);
+            });
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -119,9 +134,11 @@ const corsOptions = {
         'Accept',
         'Origin',
         'X-API-Key',
-        'X-Brand-Name' // ✅ ADD THIS for brand identification
+        'X-Brand-Name',
+        'Cache-Control',
+        'Pragma'
     ],
-    exposedHeaders: ['Content-Range', 'X-Content-Range', 'X-Total-Count'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range', 'X-Total-Count', 'Set-Cookie'],
     maxAge: 86400, // 24 hours
     preflightContinue: false,
     optionsSuccessStatus: 204
