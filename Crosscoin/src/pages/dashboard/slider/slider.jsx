@@ -216,7 +216,8 @@ export default function Slider() {
     { header: "Category", accessor: "categoryName" },
     {
       header: "Brands",
-      accessor: row => {
+      accessor: "brands", // Just use the accessor to get the data
+      cell: (row) => {
         // Show brands from slider_brands relationship
         const sliderBrands = row.brands || [];
         if (sliderBrands.length === 0) {
