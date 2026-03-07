@@ -161,12 +161,33 @@ export default function Profile() {
     e.preventDefault();
     try {
       if (editingId) {
+        // Update existing address
         await updateShippingAddress(editingId, addressForm);
+        
+        // Optimistic update - update local state instead of refetching
+        setAddresses(prev => prev.map(addr => 
+          addr.id === editingId 
+            ? { ...addr, ...addressForm }
+            : addr
+        ));
+        
         showAddressUpdatedSuccessToast();
       } else {
-        await createShippingAddress(addressForm);
+        // Create new address
+        const response = await createShippingAddress(addressForm);
+        
+        // Optimistic update - add to local state instead of refetching
+        if (response && response.shippingAddress) {
+          setAddresses(prev => [...prev, response.shippingAddress]);
+        } else {
+          // Fallback: refetch if response format unexpected
+          const data = await getUserShippingAddresses();
+          setAddresses(data);
+        }
+        
         showAddressAddedSuccessToast();
       }
+      
       setAddressForm({
         address: "",
         city: "",
@@ -177,10 +198,15 @@ export default function Profile() {
         isDefault: false,
       });
       setEditingId(null);
-      const data = await getUserShippingAddresses();
-      setAddresses(data);
     } catch (err) {
       showProfileUpdateErrorToast(err.message || "Failed to save address");
+      // On error, refetch to ensure consistency
+      try {
+        const data = await getUserShippingAddresses();
+        setAddresses(data);
+      } catch (refetchErr) {
+        console.error('Failed to refetch addresses:', refetchErr);
+      }
     }
   };
 
@@ -200,24 +226,45 @@ export default function Profile() {
   const handleDeleteAddress = async (id) => {
     try {
       await deleteShippingAddress(id);
-      const data = await getUserShippingAddresses();
-      setAddresses(data);
+      
+      // Optimistic update - remove from local state instead of refetching
+      setAddresses(prev => prev.filter(addr => addr.id !== id));
+      
       showAddressDeletedSuccessToast();
     } catch (err) {
       showProfileUpdateErrorToast(err.message || "Failed to delete address");
+      // On error, refetch to ensure consistency
+      try {
+        const data = await getUserShippingAddresses();
+        setAddresses(data);
+      } catch (refetchErr) {
+        console.error('Failed to refetch addresses:', refetchErr);
+      }
     }
   };
 
   const handleSetDefaultAddress = async (id) => {
     try {
       await setDefaultShippingAddress(id);
-      const data = await getUserShippingAddresses();
-      setAddresses(data);
+      
+      // Optimistic update - update local state instead of refetching
+      setAddresses(prev => prev.map(addr => ({
+        ...addr,
+        isDefault: addr.id === id
+      })));
+      
       showAddressUpdatedSuccessToast();
     } catch (err) {
       showProfileUpdateErrorToast(
         err.message || "Failed to set default address"
       );
+      // On error, refetch to ensure consistency
+      try {
+        const data = await getUserShippingAddresses();
+        setAddresses(data);
+      } catch (refetchErr) {
+        console.error('Failed to refetch addresses:', refetchErr);
+      }
     }
   };
 

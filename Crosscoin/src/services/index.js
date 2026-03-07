@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getCachedData, setCachedData } from '../utils/apiCache';
+import { getCachedData, setCachedData, clearCache } from '../utils/apiCache';
 import { deduplicateRequest } from '../utils/requestDeduplication';
 
 const API_BASE_URL =
@@ -112,18 +112,43 @@ const handleApiError = (error) => {
 // Shipping Fee Services
 export const shippingFeeService = {
   getAllShippingFees: async () => {
-    try {
-      const response = await api.get("/api/shipping-fees");
-      return response.data.shippingFees;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
+    const cacheKey = 'shipping_fees_all';
+    
+    // Check cache first (30 minute cache)
+    const cached = getCachedData(cacheKey, 30 * 60 * 1000);
+    if (cached) return cached;
+    
+    // Deduplicate simultaneous requests
+    return deduplicateRequest(cacheKey, async () => {
+      try {
+        const response = await api.get("/api/shipping-fees");
+        const data = response.data.shippingFees;
+        
+        // Cache for 30 minutes
+        setCachedData(cacheKey, data);
+        
+        return data;
+      } catch (error) {
+        throw error.response?.data || error.message;
+      }
+    });
   },
 
   getShippingFeeByType: async (type) => {
+    const cacheKey = `shipping_fee_${type}`;
+    
+    // Check cache first (30 minute cache)
+    const cached = getCachedData(cacheKey, 30 * 60 * 1000);
+    if (cached) return cached;
+    
     try {
       const response = await api.get(`/api/shipping-fees/${type}`);
-      return response.data.shippingFee;
+      const data = response.data.shippingFee;
+      
+      // Cache for 30 minutes
+      setCachedData(cacheKey, data);
+      
+      return data;
     } catch (error) {
       throw error.response?.data || error.message;
     }
@@ -132,6 +157,8 @@ export const shippingFeeService = {
   createShippingFee: async (feeData) => {
     try {
       const response = await api.post("/api/shipping-fees", feeData);
+      // Clear cache after creating
+      clearCache('shipping_fees_all');
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -141,6 +168,9 @@ export const shippingFeeService = {
   updateShippingFee: async (id, feeData) => {
     try {
       const response = await api.put(`/api/shipping-fees/${id}`, feeData);
+      // Clear cache after updating
+      clearCache('shipping_fees_all');
+      clearCache(`shipping_fee_${feeData.orderType}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -150,6 +180,8 @@ export const shippingFeeService = {
   deleteShippingFee: async (id) => {
     try {
       const response = await api.delete(`/api/shipping-fees/${id}`);
+      // Clear all shipping fee caches
+      clearCache('shipping_fees_all');
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -999,6 +1031,8 @@ export const couponService = {
   createCoupon: async (couponData) => {
     try {
       const response = await api.post("/api/coupons", couponData);
+      // Clear cache after creating
+      clearCache('coupons_all');
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -1006,14 +1040,28 @@ export const couponService = {
   },
 
   getAllCoupons: async () => {
-    try {
-      const response = await api.get("/api/coupons");
-      console.log("API Response:", response.data);
-      return response.data;
-    } catch (error) {
-      console.error("Error in getAllCoupons:", error);
-      throw handleApiError(error);
-    }
+    const cacheKey = 'coupons_all';
+    
+    // Check cache first (30 minute cache for coupons)
+    const cached = getCachedData(cacheKey, 30 * 60 * 1000);
+    if (cached) return cached;
+    
+    // Deduplicate simultaneous requests
+    return deduplicateRequest(cacheKey, async () => {
+      try {
+        const response = await api.get("/api/coupons");
+        console.log("API Response:", response.data);
+        const data = response.data;
+        
+        // Cache for 30 minutes
+        setCachedData(cacheKey, data);
+        
+        return data;
+      } catch (error) {
+        console.error("Error in getAllCoupons:", error);
+        throw handleApiError(error);
+      }
+    });
   },
 
   getCouponById: async (id) => {
@@ -1028,6 +1076,8 @@ export const couponService = {
   updateCoupon: async (id, couponData) => {
     try {
       const response = await api.put(`/api/coupons/${id}`, couponData);
+      // Clear cache after updating
+      clearCache('coupons_all');
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -1037,6 +1087,8 @@ export const couponService = {
   deleteCoupon: async (id) => {
     try {
       const response = await api.delete(`/api/coupons/${id}`);
+      // Clear cache after deleting
+      clearCache('coupons_all');
       return response.data;
     } catch (error) {
       throw handleApiError(error);

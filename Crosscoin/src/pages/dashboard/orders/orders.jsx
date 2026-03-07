@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { orderService } from '../../../services';
+import { orderService, dashboardService } from '../../../services';
 import { debounce } from 'lodash';
 import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
@@ -107,34 +107,53 @@ const Orders = () => {
         }
     }, [currentPage, itemsPerPage, statusFilter, paymentTypeFilter, paymentStatusFilter, filterValue, sortBy, sortOrder]);
 
-    // Fetch all orders for stats calculation
+    // Fetch stats from optimized dashboard endpoint
     const fetchAllOrdersForStats = useCallback(async () => {
         try {
-            const params = {
-                page: 1,
-                limit: 10000, // Get all orders
-                status: statusFilter !== 'all' ? statusFilter : undefined,
-                payment_type: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
-                payment_status: paymentStatusFilter !== 'all' ? paymentStatusFilter : undefined,
-                search: filterValue || undefined // Add search parameter
-            };
+            // Use optimized dashboard stats endpoint instead of fetching 10,000 orders
+            const response = await dashboardService.getDashboardStats();
             
-            // Remove undefined values
-            Object.keys(params).forEach(key => {
-                if (params[key] === undefined) {
-                    delete params[key];
+            if (response.success && response.stats) {
+                const dashStats = response.stats;
+                
+                // Map dashboard stats to the format expected by the orders page
+                const stats = {
+                    total: dashStats.orders?.total || 0,
+                    prepaid: 0, // Calculate from payment distribution
+                    cod: 0, // Calculate from payment distribution
+                    paid: dashStats.paymentStatusDistribution?.counts?.paid || 0,
+                    pending: dashStats.paymentStatusDistribution?.counts?.pending || 0,
+                    totalRevenue: dashStats.revenue?.total || 0,
+                    averageOrderValue: dashStats.revenue?.average || 0,
+                    deliveredOrders: dashStats.orders?.completed || 0,
+                    cancelledOrders: dashStats.orders?.cancelled || 0,
+                    // Payment status breakdown
+                    paymentStatusPending: dashStats.paymentStatusDistribution?.counts?.pending || 0,
+                    paymentStatusPaid: dashStats.paymentStatusDistribution?.counts?.paid || 0,
+                    paymentStatusFailed: dashStats.paymentStatusDistribution?.counts?.failed || 0,
+                    paymentStatusRefunded: dashStats.paymentStatusDistribution?.counts?.refunded || 0,
+                    paymentStatusCancelled: dashStats.paymentStatusDistribution?.counts?.cancelled || 0,
+                    paymentStatusRefundPending: dashStats.paymentStatusDistribution?.counts?.refund_pending || 0
+                };
+                
+                // Calculate prepaid and COD from payment distribution
+                if (dashStats.paymentDistribution) {
+                    stats.cod = dashStats.paymentDistribution.cod?.count || 0;
+                    stats.prepaid = dashStats.paymentDistribution.prepaid?.count || 0;
                 }
-            });
-            
-            const data = await orderService.getAllOrders(params);
-            const allOrders = data.orders || data.data || [];
-            
-            // Store all orders data for charts
-            setAllOrdersData(allOrders);
-            
-            // Calculate stats from all orders
-            const stats = {
-                total: allOrders.length,
+                
+                setAllOrdersStats(stats);
+                
+                // Store recent orders for charts if available
+                if (dashStats.recentOrders) {
+                    setAllOrdersData(dashStats.recentOrders);
+                }
+            }
+        } catch (err) {
+            console.error('Failed to fetch stats:', err);
+            // Fallback: If dashboard stats fail, don't break the page
+            setAllOrdersStats({
+                total: 0,
                 prepaid: 0,
                 cod: 0,
                 paid: 0,
@@ -143,91 +162,15 @@ const Orders = () => {
                 averageOrderValue: 0,
                 deliveredOrders: 0,
                 cancelledOrders: 0,
-                // Payment status breakdown (from Order model)
                 paymentStatusPending: 0,
                 paymentStatusPaid: 0,
                 paymentStatusFailed: 0,
                 paymentStatusRefunded: 0,
                 paymentStatusCancelled: 0,
                 paymentStatusRefundPending: 0
-            };
-
-            allOrders.forEach(order => {
-                const paymentType = order.payment_type?.toLowerCase();
-                const paymentStatus = order.payment_status?.toLowerCase();
-                const orderStatus = order.status?.toLowerCase();
-                
-                const orderTotal = parseFloat(order.final_amount || 0);
-                
-                // Count cancelled orders
-                if (orderStatus === 'cancelled') {
-                    stats.cancelledOrders++;
-                } else {
-                    // Include all orders except cancelled ones in revenue
-                    stats.totalRevenue += orderTotal;
-                }
-                
-                // Count delivered orders separately for tracking
-                if (orderStatus === 'delivered') {
-                    stats.deliveredOrders++;
-                }
-                
-                // Count payment status breakdown (all statuses from Order model)
-                switch (paymentStatus) {
-                    case 'pending':
-                        stats.paymentStatusPending++;
-                        break;
-                    case 'paid':
-                        stats.paymentStatusPaid++;
-                        break;
-                    case 'failed':
-                        stats.paymentStatusFailed++;
-                        break;
-                    case 'refunded':
-                        stats.paymentStatusRefunded++;
-                        break;
-                    case 'cancelled':
-                        stats.paymentStatusCancelled++;
-                        break;
-                    case 'refund_pending':
-                        stats.paymentStatusRefundPending++;
-                        break;
-                }
-                
-                // Count payment types and statuses (legacy logic for backward compatibility)
-                if (['credit_card', 'debit_card', 'upi', 'wallet'].includes(paymentType)) {
-                    stats.prepaid++;
-                    if (paymentStatus === 'paid') {
-                        stats.paid++;
-                    } else {
-                        stats.pending++;
-                    }
-                } else if (paymentType === 'cod') {
-                    stats.cod++;
-                    if (orderStatus === 'delivered' || paymentStatus === 'paid') {
-                        stats.paid++;
-                    } else {
-                        stats.pending++;
-                    }
-                } else {
-                    // Handle other payment types
-                    if (paymentStatus === 'paid') {
-                        stats.paid++;
-                    } else {
-                        stats.pending++;
-                    }
-                }
             });
-
-            // Calculate average order value based on non-cancelled orders
-            const nonCancelledOrders = allOrders.filter(order => order.status?.toLowerCase() !== 'cancelled');
-            stats.averageOrderValue = nonCancelledOrders.length > 0 ? stats.totalRevenue / nonCancelledOrders.length : 0;
-            
-            setAllOrdersStats(stats);
-        } catch (err) {
-            console.error('Failed to fetch stats:', err);
         }
-    }, [statusFilter, paymentTypeFilter, paymentStatusFilter, filterValue]);
+    }, []); // No dependencies - dashboard stats are global, not filtered
 
 
 
