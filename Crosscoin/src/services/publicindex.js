@@ -395,7 +395,10 @@ export const createShippingAddress = async (addressData) => {
       `${API_URL}/api/shipping-addresses`,
       payload,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "X-Brand-Name": "crosscoin"
+        },
       }
     );
     
@@ -404,8 +407,10 @@ export const createShippingAddress = async (addressData) => {
     apiCache.remove(cacheKey);
     console.log("Address cache cleared after create");
     
-    return response.data;
+    // Return the shippingAddress object, not the whole response
+    return response.data.shippingAddress || response.data;
   } catch (error) {
+    console.error("Create shipping address error:", error);
     throw error.response?.data || error.message;
   }
 };
