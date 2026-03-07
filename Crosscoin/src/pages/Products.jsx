@@ -118,7 +118,22 @@ const Products = () => {
       } catch (error) {
         console.error("Error fetching categories:", error);
         console.error("Categories error details:", error.response?.data || error.message);
-        setError("Failed to load categories. Please refresh the page.");
+        
+        // More specific error message
+        let errorMessage = "Failed to load categories. ";
+        if (error.response?.status === 400) {
+          errorMessage += "Brand header missing or invalid.";
+        } else if (error.response?.status === 404) {
+          errorMessage += "Brand not found.";
+        } else if (error.response?.status === 500) {
+          errorMessage += "Server error. Please try again later.";
+        } else if (!error.response) {
+          errorMessage += "Network error. Please check your connection.";
+        } else {
+          errorMessage += "Please refresh the page.";
+        }
+        
+        setError(errorMessage);
         setLoading(false);
       }
     };
