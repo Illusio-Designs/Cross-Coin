@@ -14,12 +14,12 @@ const {
 
 const router = express.Router();
 
-// Public routes
-router.get('/public/sliders', getPublicSliders);
-router.get('/:id', getSliderById);
+// Public routes - MUST come before parameterized routes
+router.get('/public', getPublicSliders);
 
 // Admin routes (requires authentication)
 router.get('/admin/all', isAuthenticated, authorize(['admin']), getAllSliders);
+router.get('/:id', getSliderById);
 router.post('/', isAuthenticated, authorize(['admin']), upload.single('image'), createSlider);
 router.put('/:id', isAuthenticated, authorize(['admin']), upload.single('image'), updateSlider);
 router.delete('/:id', isAuthenticated, authorize(['admin']), deleteSlider);
