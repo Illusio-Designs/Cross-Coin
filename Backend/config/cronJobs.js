@@ -7,14 +7,15 @@ const orderController = require('../controller/orderController');
 function initializeCronJobs() {
   console.log('🕐 Initializing cron jobs...');
 
-  // FShip Order Sync - Runs every hour
-  cron.schedule('0 * * * *', async () => {
-    console.log('\n⏰ [CRON] FShip hourly sync started at:', new Date().toISOString());
+  // FShip Order Sync - Runs every 2 hours (reduced frequency)
+  cron.schedule('0 */2 * * *', async () => {
+    console.log('\n⏰ [CRON] FShip sync started at:', new Date().toISOString());
     
     try {
       // Create mock request and response objects for the controller
       const mockReq = {
-        user: { id: 'system', username: 'cron_job' }
+        user: { id: 'system', username: 'cron_job' },
+        query: { limit: 50 } // Limit to 50 orders per sync to prevent resource exhaustion
       };
       
       const mockRes = {
@@ -43,7 +44,7 @@ function initializeCronJobs() {
 
   console.log('✅ Cron jobs initialized successfully');
   console.log('📋 Active jobs:');
-  console.log('   - FShip Order Sync: Every hour (0 * * * *)');
+  console.log('   - FShip Order Sync: Every 2 hours (0 */2 * * *) - Max 50 orders per run');
 }
 
 module.exports = { initializeCronJobs };

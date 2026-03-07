@@ -175,6 +175,11 @@ const Order = sequelize.define('Order', {
         },
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE'
+    },
+    fship_last_synced_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'Last time this order was synced with FShip'
     }
 }, {
     tableName: 'orders',

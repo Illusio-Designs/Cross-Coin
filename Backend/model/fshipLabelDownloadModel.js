@@ -47,4 +47,5 @@ const FShipLabelDownload = sequelize.define('FShipLabelDownload', {
   ]
 });
 
+// Export as default for setupDatabase.js compatibility
 module.exports = FShipLabelDownload;

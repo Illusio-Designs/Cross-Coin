@@ -70,4 +70,5 @@ const UTMTracking = sequelize.define('UTMTracking', {
   updatedAt: false
 });
 
-module.exports = { UTMTracking };
+// Export as default for setupDatabase.js compatibility
+module.exports = UTMTracking;

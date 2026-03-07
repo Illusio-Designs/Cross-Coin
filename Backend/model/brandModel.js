@@ -71,4 +71,5 @@ const Brand = sequelize.define('Brand', {
     ]
 });
 
+// Export as default for setupDatabase.js compatibility
 module.exports = Brand;

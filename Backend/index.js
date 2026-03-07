@@ -293,11 +293,17 @@ const startServer = async () => {
             const heapUsedMB = used.heapUsed / 1024 / 1024;
             if (heapUsedMB > 400) {
                 console.warn('⚠️ High memory usage detected! Consider restarting the server.');
+                
+                // Force garbage collection if available (requires --expose-gc flag)
+                if (global.gc) {
+                    console.log('🧹 Running garbage collection...');
+                    global.gc();
+                }
             }
         };
         
-        // Log memory usage every 30 minutes
-        setInterval(logMemoryUsage, 30 * 60 * 1000);
+        // Log memory usage every hour (reduced from 30 minutes)
+        setInterval(logMemoryUsage, 60 * 60 * 1000);
         
         // Test database connection first
         console.log('Testing database connection...');
