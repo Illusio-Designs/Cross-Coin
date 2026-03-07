@@ -322,11 +322,23 @@ export default function UnifiedCheckout() {
           // Update existing address logic would go here
           savedAddress = addressForm; // Simplified for now
         } else {
+          console.log("Creating shipping address...");
           savedAddress = await createShippingAddress(addressForm);
+          console.log("Address created successfully:", savedAddress);
         }
+        
         // Reload addresses
-        const addressData = await getUserShippingAddresses();
-        setAddresses(addressData);
+        try {
+          console.log("Reloading addresses...");
+          const addressData = await getUserShippingAddresses();
+          console.log("Addresses reloaded successfully:", addressData);
+          setAddresses(addressData);
+        } catch (reloadError) {
+          console.error("Error reloading addresses (non-critical):", reloadError);
+          // Don't fail the whole operation if reload fails
+          // The address was created successfully, just use it
+          setAddresses(prev => [...prev, savedAddress]);
+        }
       } else {
         // For guest users, create a temporary address object
         savedAddress = {
@@ -341,6 +353,7 @@ export default function UnifiedCheckout() {
         };
       }
       
+      console.log("Setting shipping address:", savedAddress);
       setShippingAddress(savedAddress);
       setShowAddressForm(false);
       setEditingAddressId(null);
@@ -354,8 +367,15 @@ export default function UnifiedCheckout() {
         country: "India",
         isDefault: false,
       });
+      
+      console.log("Address saved successfully!");
     } catch (error) {
       console.error("Error saving address:", error);
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response,
+        stack: error.stack
+      });
       showValidationErrorToast("Failed to save address. Please try again.");
     }
   };

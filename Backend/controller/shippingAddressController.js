@@ -75,9 +75,27 @@ module.exports.createShippingAddress = async (req, res) => {
 
     await transaction.commit();
 
+    // Transform response to match frontend expectations
+    const responseAddress = {
+      id: shippingAddress.id,
+      user_id: shippingAddress.user_id,
+      full_name: shippingAddress.full_name,
+      address: shippingAddress.address,
+      city: shippingAddress.city,
+      state: shippingAddress.state,
+      postal_code: shippingAddress.pincode, // Transform pincode to postal_code
+      pincode: shippingAddress.pincode, // Keep both for compatibility
+      country: shippingAddress.country,
+      phone_number: shippingAddress.phone, // Transform phone to phone_number
+      phone: shippingAddress.phone, // Keep both for compatibility
+      is_default: shippingAddress.is_default,
+      createdAt: shippingAddress.createdAt,
+      updatedAt: shippingAddress.updatedAt
+    };
+
     res.status(201).json({
       message: "Shipping address created successfully",
-      shippingAddress,
+      shippingAddress: responseAddress,
     });
   } catch (error) {
     await transaction.rollback();
@@ -102,7 +120,25 @@ module.exports.getUserShippingAddresses = async (req, res) => {
       ],
     });
 
-    res.json({ shippingAddresses });
+    // Transform addresses to match frontend expectations
+    const transformedAddresses = shippingAddresses.map(addr => ({
+      id: addr.id,
+      user_id: addr.user_id,
+      full_name: addr.full_name,
+      address: addr.address,
+      city: addr.city,
+      state: addr.state,
+      postal_code: addr.pincode, // Transform pincode to postal_code
+      pincode: addr.pincode, // Keep both for compatibility
+      country: addr.country,
+      phone_number: addr.phone, // Transform phone to phone_number
+      phone: addr.phone, // Keep both for compatibility
+      is_default: addr.is_default,
+      createdAt: addr.createdAt,
+      updatedAt: addr.updatedAt
+    }));
+
+    res.json({ shippingAddresses: transformedAddresses });
   } catch (error) {
     console.error("Error getting shipping addresses:", error);
     res.status(500).json({
