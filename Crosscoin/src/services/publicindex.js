@@ -394,7 +394,10 @@ export const updateUserProfile = async (profileData) => {
 // Shipping Address APIs (public, require token)
 export const createShippingAddress = async (addressData) => {
   try {
+    console.log("📍 createShippingAddress: Starting...", addressData);
     const token = localStorage.getItem("token");
+    console.log("📍 createShippingAddress: Token exists:", !!token);
+    
     // Map camelCase to snake_case for backend
     const payload = {
       address: addressData.address,
@@ -405,6 +408,8 @@ export const createShippingAddress = async (addressData) => {
       phone_number: addressData.phoneNumber,
       is_default: addressData.isDefault,
     };
+    console.log("📍 createShippingAddress: Payload prepared:", payload);
+    
     const response = await axios.post(
       `${API_URL}/api/shipping-addresses`,
       payload,
@@ -416,40 +421,50 @@ export const createShippingAddress = async (addressData) => {
       }
     );
     
+    console.log("📍 createShippingAddress: API response received:", response.data);
+    
     // Clear address cache after creating
     const cacheKey = apiCache.getCacheKey(`${API_URL}/api/shipping-addresses`);
     apiCache.remove(cacheKey);
-    console.log("Address cache cleared after create");
+    console.log("📍 createShippingAddress: Address cache cleared");
     
     // Return the shippingAddress object, not the whole response
-    return response.data.shippingAddress || response.data;
+    const addressToReturn = response.data.shippingAddress || response.data;
+    console.log("📍 createShippingAddress: Returning address:", addressToReturn);
+    return addressToReturn;
   } catch (error) {
-    console.error("Create shipping address error:", error);
+    console.error("❌ createShippingAddress: Error occurred:", error);
+    console.error("❌ createShippingAddress: Error response:", error.response?.data);
+    console.error("❌ createShippingAddress: Error status:", error.response?.status);
     throw error.response?.data || error.message;
   }
 };
 
 export const getUserShippingAddresses = async () => {
+  console.log("📍 getUserShippingAddresses: Starting...");
   const cacheKey = apiCache.getCacheKey(`${API_URL}/api/shipping-addresses`);
   
   // Check if request is already pending
   if (apiCache.isPending(cacheKey)) {
-    console.log("User addresses API call already in progress, waiting...");
+    console.log("📍 getUserShippingAddresses: Request already pending, waiting...");
     const pendingPromise = apiCache.getPending(cacheKey);
     const response = await pendingPromise;
+    console.log("📍 getUserShippingAddresses: Pending request resolved:", response.data);
     return response.data.shippingAddresses;
   }
 
   // Check cache first (5 minute TTL for addresses)
   const cached = apiCache.get(cacheKey);
   if (cached) {
-    console.log("User addresses loaded from cache");
+    console.log("📍 getUserShippingAddresses: Loaded from cache:", cached);
     return cached;
   }
 
   try {
-    console.log("Fetching user addresses from API...");
+    console.log("📍 getUserShippingAddresses: Fetching from API...");
     const token = localStorage.getItem("token");
+    console.log("📍 getUserShippingAddresses: Token exists:", !!token);
+    
     const promise = axios.get(`${API_URL}/api/shipping-addresses`, {
       headers: { 
         Authorization: `Bearer ${token}`,
@@ -459,18 +474,24 @@ export const getUserShippingAddresses = async () => {
     
     apiCache.addPending(cacheKey, promise);
     const response = await promise;
+    console.log("📍 getUserShippingAddresses: API response received:", response.data);
+    
     const data = response.data.shippingAddresses;
+    console.log("📍 getUserShippingAddresses: Extracted addresses:", data);
     
     // Cache for 5 minutes
     apiCache.set(cacheKey, data, 5 * 60 * 1000);
-    console.log("User addresses cached successfully");
+    console.log("📍 getUserShippingAddresses: Addresses cached successfully");
     
     return data;
   } catch (error) {
-    console.error("Get user addresses error:", error);
+    console.error("❌ getUserShippingAddresses: Error occurred:", error);
+    console.error("❌ getUserShippingAddresses: Error response:", error.response?.data);
+    console.error("❌ getUserShippingAddresses: Error status:", error.response?.status);
     throw error.response?.data || error.message;
   } finally {
     apiCache.removePending(cacheKey);
+    console.log("📍 getUserShippingAddresses: Pending request removed from cache");
   }
 };
 
