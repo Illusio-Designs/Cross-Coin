@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-white text-primary antialiased;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white px-6 py-3 rounded-none font-medium hover:bg-accent transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-primary border-2 border-primary px-6 py-3 rounded-none font-medium hover:bg-primary hover:text-white transition-colors duration-200;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 border border-border rounded-none focus:outline-none focus:border-primary transition-colors;
+  }
+
+  .product-card {
+    @apply cursor-pointer;
+  }
+
+  .product-card-image {
+    @apply relative overflow-hidden bg-gray-50;
+  }
+
+  .link-hover {
+    @apply hover:text-muted transition-colors duration-200;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
