@@ -14,10 +14,14 @@ const sequelize = new Sequelize(
             charset: 'utf8mb4'
         },
         pool: {
-            max: 5,
-            min: 0,
+            max: 10, // Increased from 5 for better concurrency
+            min: 2, // Keep minimum connections ready
             acquire: 30000,
-            idle: 10000
+            idle: 10000,
+            evict: 5000 // Check for idle connections every 5 seconds
+        },
+        retry: {
+            max: 3 // Retry failed queries up to 3 times
         }
     }
 );

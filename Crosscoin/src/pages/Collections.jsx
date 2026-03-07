@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getPublicCategories } from '../services/publicindex';
+import { getCachedData, setCachedData } from '../utils/apiCache';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import SeoWrapper from '../console/SeoWrapper';
@@ -21,6 +22,15 @@ const Collections = () => {
     setIsMounted(true);
     
     const fetchCategories = async () => {
+      // Check cache first
+      const cacheKey = 'public_categories';
+      const cached = getCachedData(cacheKey, 10 * 60 * 1000); // 10 minutes cache
+      if (cached) {
+        setCategories(cached);
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
@@ -55,6 +65,11 @@ const Collections = () => {
         
         // Always set categories, even if empty
         setCategories(categoriesData);
+        
+        // Cache the result
+        if (categoriesData.length > 0) {
+          setCachedData(cacheKey, categoriesData);
+        }
         
         // Only set error if we explicitly got an error response
         if (categoriesData.length === 0 && response && response.message) {

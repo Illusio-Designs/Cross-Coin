@@ -11,6 +11,7 @@ import {
 } from "react-icons/fi";
 import { useRouter } from "next/router";
 import { useCart } from "../context/CartContext";
+import { getCachedData, setCachedData } from '../utils/apiCache';
 import {
   getAllPublicProducts,
   getPublicCategories,
@@ -97,10 +98,21 @@ const Products = () => {
     const fetchCategories = async () => {
       if (categoriesLoadedRef.current) return; // Prevent multiple calls
 
+      // Check cache first
+      const cacheKey = 'public_categories';
+      const cached = getCachedData(cacheKey, 10 * 60 * 1000); // 10 minutes cache
+      if (cached) {
+        setCategories(cached);
+        categoriesLoadedRef.current = true;
+        console.log("Categories loaded from cache:", cached.length);
+        return;
+      }
+
       try {
         const data = await getPublicCategories();
         console.log("Categories API response:", data);
         setCategories(data);
+        setCachedData(cacheKey, data); // Cache for 10 minutes
         categoriesLoadedRef.current = true;
         console.log("Categories loaded:", data.length);
       } catch (error) {
@@ -184,7 +196,7 @@ const Products = () => {
           // Fetch all products
           const params = {
             page: 1,
-            limit: 1000, // Fetch all for client-side filtering
+            limit: 100, // Reduced from 1000 to 100 for better performance
           };
           response = await getAllPublicProducts(params);
           console.log("All products API Response:", response);

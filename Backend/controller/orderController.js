@@ -11,7 +11,7 @@ const { GuestUser } = require("../model/guestUserModel.js");
 const { ProductImage } = require("../model/productImageModel.js");
 const Brand = require("../model/brandModel.js");
 const FShipLabelDownload = require("../model/fshipLabelDownloadModel.js");
-const UTMTracking = require("../model/utmModel.js"); // ✅ Add UTM Tracking import
+const UTMTracking = require("../model/utmModel.js");
 const { Op } = require("sequelize");
 const { sequelize } = require("../config/db.js");
 const XLSX = require('xlsx');
@@ -2309,10 +2309,19 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
     // STEP 2: Get orders for sync (exclude cancelled and delivered)
     console.log("=== STEP 2: FETCHING ORDERS FOR SYNC ===");
     
+    // Get limit from request (default 50 for cron, can be overridden by admin)
+    const limit = parseInt(req.query?.limit) || 50;
+    console.log(`📊 Sync limit set to: ${limit} orders`);
+    
+    // Prioritize orders that haven't been synced recently or never synced
     const ordersToSync = await Order.findAll({
       where: {
         status: { [Op.notIn]: ['cancelled', 'delivered', 'rto delivered'] }, // Skip final states
-        order_number: { [Op.notLike]: '%TEST%' } // Exclude test orders
+        order_number: { [Op.notLike]: '%TEST%' }, // Exclude test orders
+        [Op.or]: [
+          { fship_last_synced_at: null }, // Never synced
+          { fship_last_synced_at: { [Op.lt]: new Date(Date.now() - 30 * 60 * 1000) } } // Not synced in last 30 minutes
+        ]
       },
       include: [
         { 
@@ -2327,8 +2336,11 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
         { model: GuestUser, as: "GuestUser", attributes: ["id", "email", "firstName", "lastName", "phone"], required: false },
         { model: ShippingAddress, as: "ShippingAddress" },
       ],
-      // No limit - process all orders
-      order: [['created_at', 'DESC']]
+      limit: limit, // Add limit to prevent processing too many orders at once
+      order: [
+        ['fship_last_synced_at', 'ASC NULLS FIRST'], // Prioritize never-synced orders
+        ['created_at', 'DESC']
+      ]
     });
 
     console.log(`📦 Found ${ordersToSync.length} orders to process`);
@@ -2556,7 +2568,8 @@ module.exports.createOrderInFShip = async (order, transaction) => {
         fship_route_code: result.routeCode,
         fship_label_url: labelUrl,
         tracking_number: result.waybill,
-        status: 'processing' // Update status to processing when synced
+        status: 'processing', // Update status to processing when synced
+        fship_last_synced_at: new Date() // Track last sync time
       }, { transaction });
 
       // Create status history
@@ -2646,7 +2659,8 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
       if (statusChanged) {
         // Prepare update data
         const updateData = {
-          status: newStatus
+          status: newStatus,
+          fship_last_synced_at: new Date() // Track last sync time
         };
 
         // SPECIAL HANDLING: Update payment status based on order status
@@ -2737,6 +2751,11 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
         };
       } else {
         console.log(`📋 Order ${order.order_number} status unchanged: ${order.status}`);
+        
+        // Update last synced timestamp even if status unchanged
+        await order.update({
+          fship_last_synced_at: new Date()
+        }, { transaction });
         
         // Even if status unchanged, ensure we have label URL
         if (!order.fship_label_url && waybill) {

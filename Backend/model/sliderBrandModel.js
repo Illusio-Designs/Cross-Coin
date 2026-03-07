@@ -42,4 +42,5 @@ const SliderBrand = sequelize.define('SliderBrand', {
     ]
 });
 
+// Export as default for setupDatabase.js compatibility
 module.exports = SliderBrand;

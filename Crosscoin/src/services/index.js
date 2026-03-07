@@ -1,13 +1,20 @@
 import axios from "axios";
+import { getCachedData, setCachedData } from '../utils/apiCache';
+import { deduplicateRequest } from '../utils/requestDeduplication';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
 
+// Debug logging only in development
+const isDevelopment = process.env.NODE_ENV === 'development';
+
 // Debug logging to see what URL is being used
-console.log("=== API URL Debug ===");
-console.log("NEXT_PUBLIC_API_URL from env:", process.env.NEXT_PUBLIC_API_URL);
-console.log("Final API_BASE_URL:", API_BASE_URL);
-console.log("========================");
+if (isDevelopment) {
+  console.log("=== API URL Debug ===");
+  console.log("NEXT_PUBLIC_API_URL from env:", process.env.NEXT_PUBLIC_API_URL);
+  console.log("Final API_BASE_URL:", API_BASE_URL);
+  console.log("========================");
+}
 
 // Create axios instance
 const api = axios.create({
@@ -23,16 +30,20 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    console.log("=== API Request ===");
-    console.log("URL:", config.url);
-    console.log("Method:", config.method);
-    console.log("Base URL:", API_BASE_URL);
+    if (isDevelopment) {
+      console.log("=== API Request ===");
+      console.log("URL:", config.url);
+      console.log("Method:", config.method);
+      console.log("Base URL:", API_BASE_URL);
+    }
 
     const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log("Authorization header set");
-    } else {
+      if (isDevelopment) {
+        console.log("Authorization header set");
+      }
+    } else if (isDevelopment) {
       console.log("No token found for request");
     }
 
@@ -42,8 +53,10 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.log("=== Request Error ===");
-    console.log("Error:", error.message);
+    if (isDevelopment) {
+      console.log("=== Request Error ===");
+      console.log("Error:", error.message);
+    }
     return Promise.reject(error);
   }
 );
@@ -51,24 +64,32 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    console.log("=== API Response Success ===");
-    console.log("Status:", response.status);
-    console.log("Data:", response.data);
+    if (isDevelopment) {
+      console.log("=== API Response Success ===");
+      console.log("Status:", response.status);
+      console.log("Data:", response.data);
+    }
     return response;
   },
   (error) => {
-    console.log("=== API Response Error ===");
-    console.log("Status:", error.response?.status);
-    console.log("Message:", error.message);
-    console.log("Error Data:", error.response?.data);
+    if (isDevelopment) {
+      console.log("=== API Response Error ===");
+      console.log("Status:", error.response?.status);
+      console.log("Message:", error.message);
+      console.log("Error Data:", error.response?.data);
+    }
 
     if (error.code === "ECONNABORTED") {
-      console.log("Request timed out");
+      if (isDevelopment) {
+        console.log("Request timed out");
+      }
       return Promise.reject(new Error("Request timed out. Please try again."));
     }
 
     if (error.response?.status === 401) {
-      console.log("Unauthorized - clearing token");
+      if (isDevelopment) {
+        console.log("Unauthorized - clearing token");
+      }
       localStorage.removeItem("token");
       // Don't redirect here, let the component handle the redirect
     }
@@ -697,12 +718,26 @@ export const userService = {
 // Category Services
 export const categoryService = {
   getAllCategories: async () => {
-    try {
-      const response = await api.get("/api/categories");
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
+    const cacheKey = 'categories_all';
+    
+    // Check cache first
+    const cached = getCachedData(cacheKey);
+    if (cached) return cached;
+    
+    // Deduplicate simultaneous requests
+    return deduplicateRequest(cacheKey, async () => {
+      try {
+        const response = await api.get("/api/categories");
+        const data = response.data;
+        
+        // Cache the result for 5 minutes
+        setCachedData(cacheKey, data);
+        
+        return data;
+      } catch (error) {
+        throw error.response?.data || error.message;
+      }
+    });
   },
 
   getCategoryById: async (id) => {

@@ -190,45 +190,45 @@ const Home = () => {
         );
         const data = await response.json();
         if (data.success && data.data.products) {
-          // Fetch full details for each product using getPublicProductBySlug
-          const detailedProducts = await Promise.all(
-            data.data.products.map(async (product) => {
-              try {
-                // Import here to avoid circular import issues
-                const { getPublicProductBySlug } = await import('../services/publicindex');
-                const detailResp = await getPublicProductBySlug(product.slug);
-                if (detailResp && detailResp.success && detailResp.data) {
-                  return detailResp.data;
-                }
-                return product; // fallback to original if failed
-              } catch {
-                return product;
-              }
-            })
-          );
-          setExclusiveProducts(detailedProducts);
-          setExclusiveStates(detailedProducts.map(() => ({ selectedThumbnail: 0, selectedColor: '', selectedSize: '', quantity: 1 })));
-          setExclusiveSelectedSkus(detailedProducts.map(product => 
+          // Use the products directly without fetching full details
+          // This reduces 3 API calls per product
+          const products = data.data.products;
+          
+          setExclusiveProducts(products);
+          setExclusiveStates(products.map(() => ({ selectedThumbnail: 0, selectedColor: '', selectedSize: '', quantity: 1 })));
+          setExclusiveSelectedSkus(products.map(product => 
             product.variations && product.variations.length > 0 ? product.variations[0].sku : ''
           ));
-          // Fetch review counts and average ratings for each product
-          const reviewStats = await Promise.all(
-            detailedProducts.map(async (product) => {
-              try {
-                const reviewData = await getPublicProductReviews(product.id, { limit: 10 });
-                const count = reviewData.total || (reviewData.reviews ? reviewData.reviews.length : 0);
-                let avg = 0;
-                if (reviewData.reviews && reviewData.reviews.length > 0) {
-                  avg = reviewData.reviews.reduce((acc, r) => acc + (r.rating || 0), 0) / reviewData.reviews.length;
-                }
-                return { count, avg };
-              } catch {
-                return { count: 0, avg: 0 };
-              }
-            })
-          );
-          setExclusiveReviewCounts(reviewStats.map(s => s.count));
-          setExclusiveAvgRatings(reviewStats.map(s => s.avg));
+          
+          // Fetch review counts in a single batch (if API supports it)
+          // For now, set default values to avoid 3 additional API calls
+          setExclusiveReviewCounts(products.map(() => 0));
+          setExclusiveAvgRatings(products.map(() => 0));
+          
+          // Optional: Fetch reviews in background after page load
+          setTimeout(async () => {
+            try {
+              const reviewStats = await Promise.all(
+                products.map(async (product) => {
+                  try {
+                    const reviewData = await getPublicProductReviews(product.id, { limit: 5 });
+                    const count = reviewData.total || (reviewData.reviews ? reviewData.reviews.length : 0);
+                    let avg = 0;
+                    if (reviewData.reviews && reviewData.reviews.length > 0) {
+                      avg = reviewData.reviews.reduce((acc, r) => acc + (r.rating || 0), 0) / reviewData.reviews.length;
+                    }
+                    return { count, avg };
+                  } catch {
+                    return { count: 0, avg: 0 };
+                  }
+                })
+              );
+              setExclusiveReviewCounts(reviewStats.map(s => s.count));
+              setExclusiveAvgRatings(reviewStats.map(s => s.avg));
+            } catch (error) {
+              console.error('Error fetching reviews:', error);
+            }
+          }, 1000); // Delay review fetch by 1 second
         } else {
           setExclusiveProducts([]);
           setExclusiveStates([]);

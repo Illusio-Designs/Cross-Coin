@@ -1,121 +1,85 @@
-// Enhanced API cache utility with TTL support and better performance
-class ApiCache {
-  constructor() {
-    this.cache = new Map();
-    this.pendingRequests = new Map();
-    this.defaultTTL = 5 * 60 * 1000; // 5 minutes default
-  }
+/**
+ * Simple in-memory cache for API responses
+ * Reduces duplicate API calls and improves performance
+ */
 
-  // Generate cache key from URL and params
-  getCacheKey(url, params = {}) {
-    const sortedParams = Object.keys(params)
-      .sort()
-      .reduce((result, key) => {
-        result[key] = params[key];
-        return result;
-      }, {});
-    return `${url}_${JSON.stringify(sortedParams)}`;
-  }
+const cache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes default
 
-  // Check if request is already pending
-  isPending(cacheKey) {
-    return this.pendingRequests.has(cacheKey);
-  }
-
-  // Get pending request promise
-  getPending(cacheKey) {
-    return this.pendingRequests.get(cacheKey);
-  }
-
-  // Add pending request
-  addPending(cacheKey, promise) {
-    this.pendingRequests.set(cacheKey, promise);
-    // Auto-cleanup after promise resolves
-    promise.finally(() => {
-      this.removePending(cacheKey);
-    });
-    return promise;
-  }
-
-  // Remove pending request
-  removePending(cacheKey) {
-    this.pendingRequests.delete(cacheKey);
-  }
-
-  // Get cached data
-  get(cacheKey) {
-    const cached = this.cache.get(cacheKey);
-    if (!cached) return null;
-    
-    // Check if expired
-    if (Date.now() > cached.expiresAt) {
-      this.cache.delete(cacheKey);
-      return null;
-    }
-    
+/**
+ * Get cached data if it exists and is not expired
+ * @param {string} key - Cache key
+ * @param {number} maxAge - Maximum age in milliseconds (optional)
+ * @returns {any|null} Cached data or null if not found/expired
+ */
+export const getCachedData = (key, maxAge = CACHE_DURATION) => {
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.timestamp < maxAge) {
+    console.log(`✅ Cache HIT: ${key}`);
     return cached.data;
   }
-
-  // Set cached data with custom TTL
-  set(cacheKey, data, ttl = this.defaultTTL) {
-    this.cache.set(cacheKey, {
-      data,
-      timestamp: Date.now(),
-      expiresAt: Date.now() + ttl
-    });
+  if (cached) {
+    console.log(`⏰ Cache EXPIRED: ${key}`);
+    cache.delete(key);
+  } else {
+    console.log(`❌ Cache MISS: ${key}`);
   }
+  return null;
+};
 
-  // Check if cache is valid
-  isValid(cacheKey) {
-    const cached = this.cache.get(cacheKey);
-    if (!cached) return false;
-    return Date.now() < cached.expiresAt;
+/**
+ * Store data in cache
+ * @param {string} key - Cache key
+ * @param {any} data - Data to cache
+ */
+export const setCachedData = (key, data) => {
+  cache.set(key, {
+    data,
+    timestamp: Date.now()
+  });
+  console.log(`💾 Cache SET: ${key}`);
+};
+
+/**
+ * Clear cache for a specific key or all cache
+ * @param {string} key - Cache key (optional, clears all if not provided)
+ */
+export const clearCache = (key) => {
+  if (key) {
+    cache.delete(key);
+    console.log(`🗑️ Cache CLEAR: ${key}`);
+  } else {
+    cache.clear();
+    console.log(`🗑️ Cache CLEAR: ALL`);
   }
+};
 
-  // Clear cache
-  clear() {
-    this.cache.clear();
-    this.pendingRequests.clear();
-  }
+/**
+ * Get cache statistics
+ * @returns {object} Cache stats
+ */
+export const getCacheStats = () => {
+  return {
+    size: cache.size,
+    keys: Array.from(cache.keys())
+  };
+};
 
-  // Clear specific cache entry
-  clearEntry(cacheKey) {
-    this.cache.delete(cacheKey);
-    this.pendingRequests.delete(cacheKey);
-  }
-
-  // Clear expired entries (cleanup)
-  clearExpired() {
-    const now = Date.now();
-    for (const [key, value] of this.cache.entries()) {
-      if (now > value.expiresAt) {
-        this.cache.delete(key);
-      }
-    }
-  }
-
-  // Get cache stats
-  getStats() {
-    return {
-      size: this.cache.size,
-      pending: this.pendingRequests.size
-    };
-  }
-}
-
-// Create singleton instance
-const apiCache = new ApiCache();
-
-// Auto-cleanup expired entries every 5 minutes
+// Clear expired cache entries every 10 minutes
 if (typeof window !== 'undefined') {
   setInterval(() => {
-    apiCache.clearExpired();
-  }, 5 * 60 * 1000);
+    const now = Date.now();
+    for (const [key, value] of cache.entries()) {
+      if (now - value.timestamp > CACHE_DURATION) {
+        cache.delete(key);
+      }
+    }
+  }, 10 * 60 * 1000);
 }
 
-export default apiCache;
-
-// Helper function for easy cache usage
-export const getCachedData = (key) => apiCache.get(key);
-export const setCachedData = (key, data, ttl) => apiCache.set(key, data, ttl);
-export const clearCache = () => apiCache.clear();
+export default {
+  getCachedData,
+  setCachedData,
+  clearCache,
+  getCacheStats
+};
