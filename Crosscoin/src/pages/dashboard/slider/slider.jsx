@@ -216,24 +216,31 @@ export default function Slider() {
     { header: "Category", accessor: "categoryName" },
     {
       header: "Brands",
-      accessor: "brands", // Just use the accessor to get the data
+      accessor: "id", // Use a simple accessor that won't cause issues
       cell: (row) => {
         // Show brands from slider_brands relationship
         const sliderBrands = row.brands || [];
-        if (sliderBrands.length === 0) {
-          // Fallback to single brand_id if no multi-brand assignments
-          const brand = brands.find(b => b.id === row.brand_id);
-          return brand ? (
-            <span className="brand-tag">{brand.display_name || brand.name}</span>
-          ) : 'N/A';
+        
+        // Handle if brands is an array of objects
+        if (sliderBrands.length > 0) {
+          return (
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+              {sliderBrands.map((brand, idx) => {
+                // Handle both string and object formats
+                const brandName = typeof brand === 'string' ? brand : (brand.name || brand.display_name || 'Unknown');
+                return (
+                  <span key={idx} className="brand-tag">{brandName}</span>
+                );
+              })}
+            </div>
+          );
         }
-        return (
-          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-            {sliderBrands.map((brandName, idx) => (
-              <span key={idx} className="brand-tag">{brandName}</span>
-            ))}
-          </div>
-        );
+        
+        // Fallback to single brand_id if no multi-brand assignments
+        const brand = brands.find(b => b.id === row.brand_id);
+        return brand ? (
+          <span className="brand-tag">{brand.display_name || brand.name}</span>
+        ) : 'N/A';
       }
     },
     { 
