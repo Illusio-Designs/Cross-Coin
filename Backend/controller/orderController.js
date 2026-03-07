@@ -967,48 +967,46 @@ module.exports.createGuestOrder = async (req, res) => {
       }
     });
 
-    // Return success response
+    // Return success response (matching authenticated order format)
     res.status(201).json({
       success: true,
       message: "Guest order created successfully",
-      data: {
-        order: {
-          id: order.id,
-          order_number: order.order_number,
-          total_amount: order.total_amount,
-          shipping_fee: order.shipping_fee,
-          discount_amount: order.discount_amount,
-          final_amount: order.final_amount,
-          payment_type: order.payment_type,
-          status: order.status,
-          payment_status: order.payment_status,
-          created_at: order.created_at,
-        },
-        guest_user: {
-          id: guestUser.id,
-          email: guestUser.email,
-          firstName: guestUser.firstName,
-          lastName: guestUser.lastName,
-          phone: guestUser.phone,
-        },
-        shipping_address: {
-          id: guestShippingAddress.id,
-          full_name: guestShippingAddress.full_name,
-          address: guestShippingAddress.address,
-          city: guestShippingAddress.city,
-          state: guestShippingAddress.state,
-          pincode: guestShippingAddress.pincode,
-          phone: guestShippingAddress.phone,
-        },
-        items: validatedItems.map((item) => ({
-          product_id: item.product.id,
-          product_name: item.product.name,
-          variation_id: item.variation ? item.variation.id : null,
-          quantity: item.quantity,
-          price: item.price,
-          total_price: item.itemTotal,
-        })),
+      order: {
+        id: order.id,
+        order_number: order.order_number,
+        total_amount: order.total_amount,
+        shipping_fee: order.shipping_fee,
+        discount_amount: order.discount_amount,
+        final_amount: order.final_amount,
+        payment_type: order.payment_type,
+        status: order.status,
+        payment_status: order.payment_status,
+        created_at: order.created_at,
       },
+      guest_user: {
+        id: guestUser.id,
+        email: guestUser.email,
+        firstName: guestUser.firstName,
+        lastName: guestUser.lastName,
+        phone: guestUser.phone,
+      },
+      shipping_address: {
+        id: guestShippingAddress.id,
+        full_name: guestShippingAddress.full_name,
+        address: guestShippingAddress.address,
+        city: guestShippingAddress.city,
+        state: guestShippingAddress.state,
+        pincode: guestShippingAddress.pincode,
+        phone: guestShippingAddress.phone,
+      },
+      items: validatedItems.map((item) => ({
+        product_id: item.product.id,
+        product_name: item.product.name,
+        variation_id: item.variation ? item.variation.id : null,
+        quantity: item.quantity,
+        price: item.price,
+        total_price: item.itemTotal,
+      })),
     });
   } catch (error) {
     console.error("createGuestOrder: Error caught:", error.message);

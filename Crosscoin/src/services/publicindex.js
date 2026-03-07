@@ -398,6 +398,12 @@ export const createShippingAddress = async (addressData) => {
         headers: { Authorization: `Bearer ${token}` },
       }
     );
+    
+    // Clear address cache after creating
+    const cacheKey = apiCache.getCacheKey(`${API_URL}/api/shipping-addresses`);
+    apiCache.remove(cacheKey);
+    console.log("Address cache cleared after create");
+    
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -405,12 +411,39 @@ export const createShippingAddress = async (addressData) => {
 };
 
 export const getUserShippingAddresses = async () => {
+  const cacheKey = apiCache.getCacheKey(`${API_URL}/api/shipping-addresses`);
+  
+  // Check if request is already pending
+  if (apiCache.isPending(cacheKey)) {
+    console.log("User addresses API call already in progress, waiting...");
+    const pendingPromise = apiCache.getPending(cacheKey);
+    const response = await pendingPromise;
+    return response.data.shippingAddresses;
+  }
+
+  // Check cache first (5 minute TTL for addresses)
+  const cached = apiCache.get(cacheKey);
+  if (cached) {
+    console.log("User addresses loaded from cache");
+    return cached;
+  }
+
   try {
+    console.log("Fetching user addresses from API...");
     const token = localStorage.getItem("token");
-    const response = await axios.get(`${API_URL}/api/shipping-addresses`, {
+    const promise = axios.get(`${API_URL}/api/shipping-addresses`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    return response.data.shippingAddresses;
+    
+    apiCache.addPending(cacheKey, promise);
+    const response = await promise;
+    const data = response.data.shippingAddresses;
+    
+    // Cache for 5 minutes
+    apiCache.set(cacheKey, data, 5 * 60 * 1000);
+    console.log("User addresses cached successfully");
+    
+    return data;
   } catch (error) {
     throw error.response?.data || error.message;
   }
@@ -436,6 +469,12 @@ export const updateShippingAddress = async (id, addressData) => {
         headers: { Authorization: `Bearer ${token}` },
       }
     );
+    
+    // Clear address cache after updating
+    const cacheKey = apiCache.getCacheKey(`${API_URL}/api/shipping-addresses`);
+    apiCache.remove(cacheKey);
+    console.log("Address cache cleared after update");
+    
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -451,6 +490,12 @@ export const deleteShippingAddress = async (id) => {
         headers: { Authorization: `Bearer ${token}` },
       }
     );
+    
+    // Clear address cache after deleting
+    const cacheKey = apiCache.getCacheKey(`${API_URL}/api/shipping-addresses`);
+    apiCache.remove(cacheKey);
+    console.log("Address cache cleared after delete");
+    
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -467,6 +512,12 @@ export const setDefaultShippingAddress = async (id) => {
         headers: { Authorization: `Bearer ${token}` },
       }
     );
+    
+    // Clear address cache after setting default
+    const cacheKey = apiCache.getCacheKey(`${API_URL}/api/shipping-addresses`);
+    apiCache.remove(cacheKey);
+    console.log("Address cache cleared after setting default");
+    
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;

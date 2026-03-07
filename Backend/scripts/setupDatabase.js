@@ -450,6 +450,10 @@ const setupDatabase = async () => {
     console.log("\nUpdating coupon table with new fields...");
     await updateCouponTable();
     
+    // Add fship_last_synced_at column to orders table
+    console.log("\nAdding fship_last_synced_at column to orders table...");
+    await addFshipLastSyncedAtColumn();
+    
     return true;
   } catch (error) {
     console.error("❌ Database setup failed:", error.message);
@@ -971,6 +975,39 @@ const createSliderBrandsTable = async () => {
     
   } catch (error) {
     console.log('⚠️ Slider brands table creation/migration skipped:', error.message);
+  }
+};
+
+// Function to add fship_last_synced_at column to orders table
+const addFshipLastSyncedAtColumn = async () => {
+  try {
+    console.log('Checking if fship_last_synced_at column exists in orders table...');
+
+    // Check if column exists
+    const [columnExists] = await sequelize.query(`
+      SELECT COUNT(*) as count
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_SCHEMA = DATABASE() 
+      AND TABLE_NAME = 'orders' 
+      AND COLUMN_NAME = 'fship_last_synced_at'
+    `);
+
+    if (columnExists[0].count === 0) {
+      console.log('Adding fship_last_synced_at column to orders table...');
+      
+      await sequelize.query(`
+        ALTER TABLE orders 
+        ADD COLUMN fship_last_synced_at DATETIME NULL 
+        COMMENT 'Last time this order was synced with FShip' 
+        AFTER brand_id
+      `);
+      
+      console.log('✓ fship_last_synced_at column added successfully');
+    } else {
+      console.log('✓ fship_last_synced_at column already exists');
+    }
+  } catch (error) {
+    console.log('⚠️ Error adding fship_last_synced_at column:', error.message);
   }
 };
 
