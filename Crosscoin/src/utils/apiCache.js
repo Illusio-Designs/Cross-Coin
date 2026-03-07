@@ -1,85 +1,97 @@
-/**
- * Simple in-memory cache for API responses
- * Reduces duplicate API calls and improves performance
- */
-
-const cache = new Map();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes default
-
-/**
- * Get cached data if it exists and is not expired
- * @param {string} key - Cache key
- * @param {number} maxAge - Maximum age in milliseconds (optional)
- * @returns {any|null} Cached data or null if not found/expired
- */
-export const getCachedData = (key, maxAge = CACHE_DURATION) => {
-  const cached = cache.get(key);
-  if (cached && Date.now() - cached.timestamp < maxAge) {
-    console.log(`✅ Cache HIT: ${key}`);
-    return cached.data;
+// Simple API cache utility to prevent multiple calls
+class ApiCache {
+  constructor() {
+    this.cache = new Map();
+    this.pendingRequests = new Map();
   }
-  if (cached) {
-    console.log(`⏰ Cache EXPIRED: ${key}`);
-    cache.delete(key);
-  } else {
-    console.log(`❌ Cache MISS: ${key}`);
+
+  // Generate cache key from URL and params
+  getCacheKey(url, params = {}) {
+    const sortedParams = Object.keys(params)
+      .sort()
+      .reduce((result, key) => {
+        result[key] = params[key];
+        return result;
+      }, {});
+    return `${url}?${JSON.stringify(sortedParams)}`;
+  }
+
+  // Check if data is in cache and still valid
+  isValid(key, maxAge = 5 * 60 * 1000) {
+    const cached = this.cache.get(key);
+    if (!cached) return false;
+    return Date.now() - cached.timestamp < maxAge;
+  }
+
+  // Get cached data
+  get(key) {
+    const cached = this.cache.get(key);
+    return cached ? cached.data : null;
+  }
+
+  // Set cache data
+  set(key, data) {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+    });
+  }
+
+  // Remove from cache
+  remove(key) {
+    this.cache.delete(key);
+  }
+
+  // Clear all cache
+  clear() {
+    this.cache.clear();
+  }
+
+  // Check if request is pending
+  isPending(key) {
+    return this.pendingRequests.has(key);
+  }
+
+  // Add pending request
+  addPending(key, promise) {
+    this.pendingRequests.set(key, promise);
+    
+    // Remove from pending when done
+    promise
+      .then((response) => {
+        this.pendingRequests.delete(key);
+        this.set(key, response.data);
+        return response;
+      })
+      .catch((error) => {
+        this.pendingRequests.delete(key);
+        throw error;
+      });
+    
+    return promise;
+  }
+}
+
+const apiCache = new ApiCache();
+
+// Also export legacy functions for backward compatibility
+export const getCachedData = (key, maxAge = 5 * 60 * 1000) => {
+  if (apiCache.isValid(key, maxAge)) {
+    return apiCache.get(key);
   }
   return null;
 };
 
-/**
- * Store data in cache
- * @param {string} key - Cache key
- * @param {any} data - Data to cache
- */
 export const setCachedData = (key, data) => {
-  cache.set(key, {
-    data,
-    timestamp: Date.now()
-  });
-  console.log(`💾 Cache SET: ${key}`);
+  apiCache.set(key, data);
 };
 
-/**
- * Clear cache for a specific key or all cache
- * @param {string} key - Cache key (optional, clears all if not provided)
- */
 export const clearCache = (key) => {
   if (key) {
-    cache.delete(key);
-    console.log(`🗑️ Cache CLEAR: ${key}`);
+    apiCache.remove(key);
   } else {
-    cache.clear();
-    console.log(`🗑️ Cache CLEAR: ALL`);
+    apiCache.clear();
   }
 };
 
-/**
- * Get cache statistics
- * @returns {object} Cache stats
- */
-export const getCacheStats = () => {
-  return {
-    size: cache.size,
-    keys: Array.from(cache.keys())
-  };
-};
-
-// Clear expired cache entries every 10 minutes
-if (typeof window !== 'undefined') {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, value] of cache.entries()) {
-      if (now - value.timestamp > CACHE_DURATION) {
-        cache.delete(key);
-      }
-    }
-  }, 10 * 60 * 1000);
-}
-
-export default {
-  getCachedData,
-  setCachedData,
-  clearCache,
-  getCacheStats
-};
+export default apiCache;

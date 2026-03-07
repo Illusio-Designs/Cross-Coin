@@ -94,6 +94,9 @@ export const getPublicCategories = async () => {
 
   try {
     console.log("Fetching categories from API...");
+    console.log("API URL:", `${API_URL}/api/categories/public`);
+    console.log("Brand Header:", BRAND_NAME);
+    
     const promise = axios.get(`${API_URL}/api/categories/public`, addBrandHeader());
     
     // Add to pending requests
@@ -106,10 +109,17 @@ export const getPublicCategories = async () => {
     apiCache.set(cacheKey, data);
     apiCache.removePending(cacheKey);
     
-    console.log("Categories data cached successfully");
+    console.log("Categories data cached successfully:", data.length, "categories");
     return data;
   } catch (error) {
     apiCache.removePending(cacheKey);
+    console.error("Categories API Error Details:", {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      headers: error.response?.headers
+    });
     throw error.response?.data || error.message;
   }
 };
@@ -147,7 +157,7 @@ export const getPublicSliders = async () => {
 
   try {
     console.log("Fetching sliders from API...");
-    const promise = axios.get(`${API_URL}/api/sliders/public/sliders`, addBrandHeader());
+    const promise = axios.get(`${API_URL}/api/sliders/public`, addBrandHeader());
     apiCache.addPending(cacheKey, promise);
     
     const response = await promise;
