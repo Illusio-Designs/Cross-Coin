@@ -1289,8 +1289,8 @@ export default function UnifiedCheckout() {
             appliedCoupon={appliedCoupon}
           />
           
-          {/* Address Section */}
-          {cartItems.length > 0 && (
+          {/* Address Section - Show for both cart items and buy now item */}
+          {(cartItems.length > 0 || buyNowItem) && (
             <>
               {renderAddressSection()}
               {isAuthenticated && renderAddressForm()}

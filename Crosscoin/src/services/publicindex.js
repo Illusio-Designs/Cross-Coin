@@ -81,7 +81,7 @@ export const getPublicCategories = async () => {
   // Check if request is already pending
   if (apiCache.isPending(cacheKey)) {
     console.log("Categories API call already in progress, waiting...");
-    const pendingPromise = apiCache.pendingRequests.get(cacheKey);
+    const pendingPromise = apiCache.getPending(cacheKey);
     const response = await pendingPromise;
     return response.data;
   }
@@ -99,20 +99,19 @@ export const getPublicCategories = async () => {
     
     const promise = axios.get(`${API_URL}/api/categories/public`, addBrandHeader());
     
-    // Add to pending requests
-    const cachedPromise = apiCache.addPending(cacheKey, promise);
+    // Add to pending requests - this will auto-remove when done
+    apiCache.addPending(cacheKey, promise);
     
-    const response = await cachedPromise;
+    const response = await promise;
     const data = response.data;
     
-    // Cache the result
+    // Cache the result (pending already removed by addPending)
     apiCache.set(cacheKey, data);
-    apiCache.removePending(cacheKey);
     
     console.log("Categories data cached successfully:", data.length, "categories");
     return data;
   } catch (error) {
-    apiCache.removePending(cacheKey);
+    // Error already handled by addPending, just log and throw
     console.error("Categories API Error Details:", {
       message: error.message,
       status: error.response?.status,
@@ -205,7 +204,7 @@ export const getAllPublicProducts = async (params = {}) => {
   // Check if request is already pending
   if (apiCache.isPending(cacheKey)) {
     console.log("Products API call already in progress, waiting...");
-    const pendingPromise = apiCache.pendingRequests.get(cacheKey);
+    const pendingPromise = apiCache.getPending(cacheKey);
     const response = await pendingPromise;
     return response.data;
   }
@@ -220,22 +219,21 @@ export const getAllPublicProducts = async (params = {}) => {
     console.log("Fetching products from API...");
     const promise = axios.get(url, addBrandHeader());
     
-    // Add to pending requests
-    const cachedPromise = apiCache.addPending(cacheKey, promise);
+    // Add to pending requests - this will auto-remove when done
+    apiCache.addPending(cacheKey, promise);
     
-    const response = await cachedPromise;
+    const response = await promise;
     const data = response.data;
     
-    // Cache the result (only for general products)
+    // Cache the result (only for general products, pending already removed by addPending)
     if (!params.category) {
       apiCache.set(cacheKey, data);
       console.log("Products data cached successfully");
     }
     
-    apiCache.removePending(cacheKey);
     return data;
   } catch (error) {
-    apiCache.removePending(cacheKey);
+    // Error already handled by addPending
     throw error.response?.data || error.message;
   }
 };
@@ -489,7 +487,7 @@ export const getUserShippingAddresses = async () => {
     const data = response.data.shippingAddresses;
     console.log("📍 getUserShippingAddresses: Extracted addresses:", data);
     
-    // Cache for 5 minutes
+    // Cache for 5 minutes (pending already removed by addPending)
     apiCache.set(cacheKey, data, 5 * 60 * 1000);
     console.log("📍 getUserShippingAddresses: Addresses cached successfully");
     
@@ -499,9 +497,6 @@ export const getUserShippingAddresses = async () => {
     console.error("❌ getUserShippingAddresses: Error response:", error.response?.data);
     console.error("❌ getUserShippingAddresses: Error status:", error.response?.status);
     throw error.response?.data || error.message;
-  } finally {
-    apiCache.removePending(cacheKey);
-    console.log("📍 getUserShippingAddresses: Pending request removed from cache");
   }
 };
 
@@ -761,23 +756,22 @@ export const getSeoByPageName = async (pageName) => {
     console.log(`Fetching SEO data for page: ${pageName}`);
     const promise = axios.get(url, addBrandHeader());
     
-    // Add to pending requests
-    const cachedPromise = apiCache.addPending(cacheKey, promise);
+    // Add to pending requests - this will auto-remove when done
+    apiCache.addPending(cacheKey, promise);
     
-    const response = await cachedPromise;
+    const response = await promise;
     const data = response.data;
     
     // Handle the response structure - backend returns { success: true, data: seoData }
     const seoData = data.success ? data.data : data;
     
-    // Cache the result
+    // Cache the result (pending already removed by addPending)
     apiCache.set(cacheKey, seoData);
-    apiCache.removePending(cacheKey);
     
     console.log(`SEO data for ${pageName} cached successfully:`, seoData);
     return seoData;
   } catch (error) {
-    apiCache.removePending(cacheKey);
+    // Error already handled by addPending
     console.error(`SEO API error for ${pageName}:`, error.response?.data || error.message);
     throw error.response?.data || error.message;
   }
