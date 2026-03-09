@@ -70,6 +70,16 @@ class ApiCache {
     
     return promise;
   }
+
+  // Get pending request
+  getPending(key) {
+    return this.pendingRequests.get(key);
+  }
+
+  // Remove pending request
+  removePending(key) {
+    this.pendingRequests.delete(key);
+  }
 }
 
 const apiCache = new ApiCache();
