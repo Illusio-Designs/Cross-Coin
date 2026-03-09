@@ -111,30 +111,27 @@ const Products = () => {
       try {
         const data = await getPublicCategories();
         console.log("Categories API response:", data);
-        setCategories(data);
-        setCachedData(cacheKey, data); // Cache for 10 minutes
-        categoriesLoadedRef.current = true;
-        console.log("Categories loaded:", data.length);
+        
+        // Ensure data is an array
+        if (Array.isArray(data)) {
+          setCategories(data);
+          setCachedData(cacheKey, data); // Cache for 10 minutes
+          categoriesLoadedRef.current = true;
+          console.log("Categories loaded:", data.length);
+        } else {
+          console.warn("Categories response is not an array:", data);
+          setCategories([]);
+          categoriesLoadedRef.current = true;
+        }
       } catch (error) {
         console.error("Error fetching categories:", error);
         console.error("Categories error details:", error.response?.data || error.message);
         
-        // More specific error message
-        let errorMessage = "Failed to load categories. ";
-        if (error.response?.status === 400) {
-          errorMessage += "Brand header missing or invalid.";
-        } else if (error.response?.status === 404) {
-          errorMessage += "Brand not found.";
-        } else if (error.response?.status === 500) {
-          errorMessage += "Server error. Please try again later.";
-        } else if (!error.response) {
-          errorMessage += "Network error. Please check your connection.";
-        } else {
-          errorMessage += "Please refresh the page.";
-        }
-        
-        setError(errorMessage);
-        setLoading(false);
+        // Don't show error for categories - just set empty array and continue
+        // Categories are optional for browsing products
+        setCategories([]);
+        categoriesLoadedRef.current = true;
+        console.log("Categories failed to load, continuing without categories");
       }
     };
     fetchCategories();
@@ -252,15 +249,19 @@ const Products = () => {
     [] // No dependencies to prevent recreation
   );
 
-  // Handle category from URL query - only run once when categories are loaded
+  // Handle category from URL query - run when categories are loaded OR after timeout
   useEffect(() => {
     const categoryFromQuery = router.query.category;
 
-    // Only proceed if we have categories loaded and this is the initial load
-    if (categories.length > 0 && initialLoadRef.current && !isLoadingRef.current) {
+    // Wait for categories to load, but don't wait forever
+    const shouldProceed = (categories.length > 0 || categoriesLoadedRef.current) && 
+                          initialLoadRef.current && 
+                          !isLoadingRef.current;
+
+    if (shouldProceed) {
       initialLoadRef.current = false;
 
-      if (categoryFromQuery) {
+      if (categoryFromQuery && categories.length > 0) {
         // Decode and set category filter
         const decodedCategoryName = decodeURIComponent(categoryFromQuery);
         console.log("Loading category from URL:", decodedCategoryName);
@@ -306,10 +307,9 @@ const Products = () => {
           fetchProductsData(matchedCategory.name, true);
         } else {
           console.error("No matching category found for:", decodedCategoryName);
-          setError(
-            `Category "${decodedCategoryName}" not found. Please try a different category.`
-          );
-          setLoading(false);
+          // Still load all products even if category not found
+          console.log("Loading all products instead...");
+          fetchProductsData();
         }
       } else {
         // No category in URL, fetch all products
@@ -317,7 +317,7 @@ const Products = () => {
         fetchProductsData();
       }
     }
-  }, [categories, router.query.category, fetchProductsData]);
+  }, [categories, router.query.category, fetchProductsData, categoriesLoadedRef.current]);
   
   // Safety check: If categories loaded but products didn't load
   useEffect(() => {
