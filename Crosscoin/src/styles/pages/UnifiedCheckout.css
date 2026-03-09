@@ -1102,6 +1102,43 @@
     height: 32px !important;
     font-size: 12px !important;
   }
+  
+  /* Mobile address form */
+  .form-row-2col {
+    flex-direction: column !important;
+    gap: 0.7rem !important;
+  }
+  
+  .form-group {
+    width: 100% !important;
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Guest address form */
+  .guest-address-form {
+    width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .guest-address-form .form-row-2col {
+    flex-direction: column !important;
+    gap: 0.7rem !important;
+  }
+  
+  .guest-address-form .form-group {
+    width: 100% !important;
+  }
+  
+  .guest-address-form .form-group input {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
 }
 @media (max-width: 480px) {
   .cart-main {
@@ -1121,8 +1158,49 @@
   }
   
   .form-row-2col {
-    flex-direction: column;
-    gap: 0.7rem;
+    flex-direction: column !important;
+    gap: 0.7rem !important;
+  }
+  
+  .form-group {
+    width: 100% !important;
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 10px 12px !important;
+    font-size: 0.95rem !important;
+  }
+  
+  /* Guest address form mobile */
+  .guest-address-form {
+    width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .guest-address-form .form-row-2col {
+    flex-direction: column !important;
+    gap: 0.7rem !important;
+  }
+  
+  .guest-address-form .form-group {
+    width: 100% !important;
+    margin-bottom: 0 !important;
+  }
+  
+  .guest-address-form .form-group input {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 10px 12px !important;
+    font-size: 0.95rem !important;
+  }
+  
+  .guest-address-form .form-group label {
+    font-size: 0.9rem !important;
+    margin-bottom: 4px !important;
   }
   
   /* Mobile delivery methods */
@@ -1202,9 +1280,10 @@
     font-size: 1.1rem;
   }
   
-  .form-group input {
-    padding: 10px 12px;
-    font-size: 0.95rem;
+  .save-address-btn,
+  .cancel-btn {
+    padding: 12px 0 !important;
+    font-size: 1rem !important;
   }
 }
 @media (max-width: 384px){
