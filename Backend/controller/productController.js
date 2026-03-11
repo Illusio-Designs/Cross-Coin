@@ -1460,7 +1460,10 @@ module.exports.getPublicProductBySlug = async (req, res) => {
     console.log("========================");
 
     const product = await Product.findOne({
-      where: { slug: decodedSlug },
+      where: { 
+        slug: decodedSlug,
+        status: "active" // Only show active products to public
+      },
       include: [
         { model: Category },
         {
