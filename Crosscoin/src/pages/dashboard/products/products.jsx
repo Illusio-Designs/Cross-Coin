@@ -319,6 +319,7 @@ const ProductsPage = () => {
       
       console.log('=== PRODUCT EDIT DEBUG ===');
       console.log('Raw product response:', product);
+      console.log('Product brands:', product.brands);
       console.log('Product images:', product.images);
       console.log('Product variations:', product.variations);
       console.log('Environment API URL:', process.env.NEXT_PUBLIC_API_URL);
