@@ -1,4 +1,57 @@
 import React, { useState, useEffect } from 'react';
+import Skeleton from '../Skeleton';
+
+/**
+ * Detect browser support for modern image formats
+ * Returns the best format supported by the browser
+ */
+function detectImageFormatSupport() {
+  if (typeof window === 'undefined') {
+    // Server-side: default to JPEG for compatibility
+    return 'jpeg';
+  }
+
+  // Check for AVIF support
+  const canvas = document.createElement('canvas');
+  if (canvas.toDataURL('image/avif').indexOf('image/avif') === 0) {
+    return 'avif';
+  }
+
+  // Check for WebP support
+  if (canvas.toDataURL('image/webp').indexOf('image/webp') === 0) {
+    return 'webp';
+  }
+
+  // Fallback to JPEG
+  return 'jpeg';
+}
+
+/**
+ * Get responsive sizing parameters based on viewport width
+ * Returns query parameters for image optimization
+ */
+function getResponsiveSizingParams(sizes) {
+  if (typeof window === 'undefined') {
+    // Server-side: default to desktop sizing
+    return { width: 600, quality: 85 };
+  }
+
+  // Determine viewport width
+  const viewportWidth = window.innerWidth;
+
+  // Mobile (< 640px): smaller image, lower quality
+  if (viewportWidth < 640) {
+    return { width: 300, quality: 80 };
+  }
+
+  // Tablet (640px - 1024px): medium image, medium quality
+  if (viewportWidth < 1024) {
+    return { width: 450, quality: 82 };
+  }
+
+  // Desktop (> 1024px): larger image, higher quality
+  return { width: 600, quality: 85 };
+}
 
 const SafeImage = ({ 
   imageData, 
@@ -13,11 +66,21 @@ const SafeImage = ({
   isSlider = false, // NEW: Skip skeleton for sliders
   priority = false,
   quality = 75,
+  sizes = null,
+  onLoadingComplete = null,
+  fetchPriority = null,
   ...props 
 }) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [imageSrc, setImageSrc] = useState(null);
+  const [showSkeleton, setShowSkeleton] = useState(true);
+  const [supportedFormat, setSupportedFormat] = useState('jpeg');
+
+  // Detect format support on mount
+  useEffect(() => {
+    setSupportedFormat(detectImageFormatSupport());
+  }, []);
 
   useEffect(() => {
     let newSrc = null;
@@ -55,13 +118,26 @@ const SafeImage = ({
       newSrc = fallbackSrc;
     }
     
+    // Add responsive sizing and format optimization query parameters for product cards
+    if (newSrc && isProductCard && !newSrc.includes('?')) {
+      // Get responsive sizing parameters based on viewport width
+      const { width: imgWidth, quality: imgQuality } = getResponsiveSizingParams(sizes);
+      
+      // Add format negotiation: AVIF for modern browsers, WebP as fallback, JPEG for legacy
+      // The format parameter tells the server which format to serve
+      const format = supportedFormat === 'avif' ? 'avif' : 
+                     supportedFormat === 'webp' ? 'webp' : 'jpeg';
+      
+      newSrc = `${newSrc}?w=${imgWidth}&q=${imgQuality}&fmt=${format}`;
+    }
+    
     // Only reset loading state if the source URL actually changed
     if (newSrc !== imageSrc) {
       setImageSrc(newSrc);
       setImageError(false);
       setImageLoading(true);
     }
-  }, [imageData, fallbackSrc, isLogo, isProductCard, imageSrc]);
+  }, [imageData, fallbackSrc, isLogo, isProductCard, imageSrc, supportedFormat]);
 
   const handleError = (event) => {
     if (!imageError) {
@@ -78,6 +154,10 @@ const SafeImage = ({
 
   const handleLoad = () => {
     setImageLoading(false);
+    setShowSkeleton(false);
+    if (onLoadingComplete) {
+      onLoadingComplete();
+    }
   };
 
   if (isLogo && (!imageSrc || imageError)) {
@@ -86,25 +166,13 @@ const SafeImage = ({
 
   if (isProductCard && !imageSrc) {
     return (
-      <div
-        className={`${className} image-skeleton`}
-        style={{
-          width: width || '100%',
-          height: height || 'auto',
-          backgroundColor: '#e0e0e0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-          ...style
-        }}
-        {...props}
-      >
-        <div className="shimmer-wrapper">
-          <div className="shimmer"></div>
-        </div>
-      </div>
+      <Skeleton
+        width={width || '100%'}
+        height={height || 'auto'}
+        className={className}
+        style={style}
+        aspectRatio="1 / 1"
+      />
     );
   }
 
@@ -148,32 +216,37 @@ const SafeImage = ({
   // Only show shimmer for product card images
   if (isProductCard) {
     return (
-      <div style={{ position: 'relative', width: width || '100%', height: height || 'auto', display: 'inline-block' }}>
-        {imageLoading && (
-          <div
-            className="image-skeleton"
+      <div 
+        style={{ 
+          position: 'relative', 
+          width: width || '100%', 
+          height: height || 'auto', 
+          display: 'inline-block',
+          aspectRatio: '1 / 1'
+        }}
+      >
+        {showSkeleton && (
+          <Skeleton
+            width="100%"
+            height="100%"
+            className="product-card-skeleton"
             style={{
               position: 'absolute',
               top: 0,
               left: 0,
-              width: '100%',
-              height: '100%',
-              backgroundColor: '#e0e0e0',
-              overflow: 'hidden',
               zIndex: 1
             }}
-          >
-            <div className="shimmer-wrapper">
-              <div className="shimmer"></div>
-            </div>
-          </div>
+            aspectRatio="1 / 1"
+          />
         )}
         <img
           src={imageSrc}
           alt={alt}
           width={imgWidth}
           height={imgHeight}
-          loading={priority ? 'eager' : 'lazy'}
+          loading="lazy"
+          fetchpriority={fetchPriority || (priority ? "high" : "low")}
+          sizes={sizes}
           onError={handleError}
           onLoad={handleLoad}
           className={`${className} product-card-image-contain`}
@@ -183,7 +256,7 @@ const SafeImage = ({
             height: '100%',
             objectFit: 'contain',
             display: 'block',
-            opacity: imageLoading ? 0 : 1,
+            opacity: showSkeleton ? 0 : 1,
             transition: 'opacity 0.3s ease-in-out',
             position: 'relative',
             zIndex: 2
@@ -201,7 +274,9 @@ const SafeImage = ({
       alt={alt}
       width={imgWidth}
       height={imgHeight}
-      loading={priority ? 'eager' : 'lazy'}
+      loading="lazy"
+      fetchpriority={fetchPriority || (priority ? "high" : "low")}
+      sizes={sizes}
       onError={handleError}
       onLoad={handleLoad}
       className={className}

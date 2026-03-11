@@ -35,12 +35,21 @@ function forceEnvImageBase(url) {
 function WishlistProvider({ children }) {
   const [wishlist, setWishlist] = useState([]);
   const [wishlistCount, setWishlistCount] = useState(0);
-  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
   const apiCalledRef = useRef(false);
 
-  // Load wishlist from backend or localStorage on initial render
+  // Initialize authentication state after hydration (client-side only)
   useEffect(() => {
-    if (apiCalledRef.current) return; // Prevent multiple calls
+    // Check if token exists in localStorage (client-side only)
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    setIsAuthenticated(!!token);
+    setIsHydrated(true);
+  }, []);
+
+  // Load wishlist from backend or localStorage after hydration
+  useEffect(() => {
+    if (!isHydrated || apiCalledRef.current) return; // Prevent multiple calls and wait for hydration
     apiCalledRef.current = true;
     console.log('API BEING CALLED: Wishlist data fetch');
     const fetchWishlist = async () => {
@@ -51,7 +60,7 @@ function WishlistProvider({ children }) {
           setWishlist(backendWishlist.map(item => {
             const product = item.Product;
             let primaryImage = '';
-            if (product?.ProductImages && product.ProductImages.length > 0 && product.ProductImages[0].image_url) {
+            if (product?.ProductImages && product.ProductImages.length > 0 && product?.ProductImages[0].image_url) {
               primaryImage = forceEnvImageBase(product.ProductImages[0].image_url);
             } else if (product?.image) {
               primaryImage = forceEnvImageBase(product.image);
@@ -73,22 +82,26 @@ function WishlistProvider({ children }) {
           setWishlist([]);
         }
       } else {
-        const savedWishlist = localStorage.getItem('wishlist');
-        if (savedWishlist) {
-          const parsedWishlist = JSON.parse(savedWishlist);
-          setWishlist(parsedWishlist);
+        // Load from localStorage only on client-side after hydration
+        if (typeof window !== 'undefined') {
+          const savedWishlist = localStorage.getItem('wishlist');
+          if (savedWishlist) {
+            const parsedWishlist = JSON.parse(savedWishlist);
+            setWishlist(parsedWishlist);
+          }
         }
       }
     };
     fetchWishlist();
-  }, [isAuthenticated]);
+  }, [isHydrated, isAuthenticated]);
 
   useEffect(() => {
+    if (!isHydrated) return; // Only sync to localStorage after hydration
     if (!isAuthenticated) {
       localStorage.setItem('wishlist', JSON.stringify(wishlist));
     }
     setWishlistCount(wishlist.length);
-  }, [wishlist, isAuthenticated]);
+  }, [wishlist, isAuthenticated, isHydrated]);
 
   const addToWishlist = async (product) => {
     if (isAuthenticated) {
