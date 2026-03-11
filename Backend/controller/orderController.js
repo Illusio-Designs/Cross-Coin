@@ -373,6 +373,22 @@ module.exports.createOrder = async (req, res) => {
     await transaction.commit();
     console.log("createOrder: Transaction committed successfully");
 
+    // Recalculate badges for all products in this order
+    console.log("createOrder: Recalculating badges for products in order...");
+    try {
+      const BadgeService = require("../services/badgeService");
+      for (const item of validatedItems) {
+        const product = await Product.findByPk(item.product_id);
+        if (product) {
+          await BadgeService.updateBadgeIfChanged(product);
+          console.log(`✅ Badge recalculated for product ${product.id}: ${product.badge}`);
+        }
+      }
+    } catch (badgeError) {
+      console.error("❌ Error recalculating badges:", badgeError.message);
+      // Don't fail the order creation if badge recalculation fails
+    }
+
     // Fetch the created order with its items
     console.log("createOrder: Fetching created order with details...");
     const createdOrder = await Order.findByPk(order.id, {

@@ -582,6 +582,8 @@
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .products-slider .product-card:hover {
@@ -706,7 +708,8 @@
   padding: 0.25rem 0.75rem;
   border-radius: 4px;
   font-size: 0.8rem;
-  z-index: 1;
+  z-index: 10;
+  pointer-events: auto;
 }
 
 .products-slider .wishlist-btn {
@@ -723,8 +726,9 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  z-index: 1;
+  z-index: 10;
   color: #666;
+  pointer-events: auto;
 }
 
 .products-slider .wishlist-btn svg {

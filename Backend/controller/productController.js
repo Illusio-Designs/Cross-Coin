@@ -19,6 +19,7 @@ const slugify = require("slugify");
 const { sequelize } = require("../config/db.js");
 const { Op } = require("sequelize");
 const fs = require("fs/promises");
+const BadgeService = require("../services/badgeService.js");
 
 // In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(
@@ -145,45 +146,17 @@ const formatProductResponse = (product) => {
     productData.outOfStock = false;
   }
 
+  // Ensure badge field is included (default to 'none' if not set)
+  if (!productData.badge) {
+    productData.badge = 'none';
+  }
+
   // Do NOT delete images from the product response
   // if (productData.images) {
   //     delete productData.images;
   // }
 
   return productData;
-};
-
-// Helper function to calculate product badge
-const calculateProductBadge = async (product, transaction) => {
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-  // Check if product is new (created within last 30 days)
-  const isNewArrival = product.created_at >= thirtyDaysAgo;
-
-  // Check if product is hot selling (total_sold > 25)
-  const isHotSelling = product.total_sold > 25;
-
-  // Check if any variation has low stock (stock < 10)
-  const variations = await ProductVariation.findAll({
-    where: { productId: product.id },
-    transaction,
-  });
-  const hasLowStock = variations.some((v) => v.stock < 10 && v.stock > 0);
-  const allOutOfStock =
-    variations.length > 0 && variations.every((v) => v.stock <= 0);
-
-  // Determine badge priority
-  if (allOutOfStock) {
-    return "out_of_stock";
-  } else if (isNewArrival) {
-    return "new_arrival";
-  } else if (isHotSelling) {
-    return "hot_selling";
-  } else if (hasLowStock) {
-    return "low_stock";
-  }
-  return "none";
 };
 
 // Helper function to handle product attributes
@@ -501,10 +474,10 @@ module.exports.createProduct = async (req, res) => {
     }
 
     // Calculate and set initial badge
-    console.log("--- Before calculateProductBadge ---");
-    const badge = await calculateProductBadge(product, transaction);
+    console.log("--- Before calculateBadge ---");
+    const badge = await BadgeService.calculateBadge(product, transaction);
     await product.update({ badge }, { transaction });
-    console.log("--- After calculateProductBadge and product.update ---");
+    console.log("--- After calculateBadge and product.update ---");
 
     // Handle product-level images
     if (images && images.length > 0) {
@@ -1175,8 +1148,7 @@ module.exports.updateProduct = async (req, res) => {
     // If no new images and no library images, preserve all existing images (do nothing)
 
     // Recalculate and update badge
-    const badge = await calculateProductBadge(product, transaction);
-    await product.update({ badge }, { transaction });
+    await BadgeService.updateBadgeIfChanged(product, transaction);
 
     await transaction.commit();
 

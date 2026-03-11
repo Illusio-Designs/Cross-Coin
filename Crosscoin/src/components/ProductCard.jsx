@@ -5,6 +5,7 @@ import { HiOutlineEye } from "react-icons/hi2";
 import { useRouter } from "next/router";
 import { useWishlist } from "../context/WishlistContext";
 import imagePreloader from "../utils/imagePreloader";
+import { BADGE_CONFIG, getBadgeDisplay, formatBadge } from "../config/badgeConfig";
 
 // Filter options data - This should come from API in real implementation
 export const filterOptions = {
@@ -30,6 +31,20 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
   const [hoverImagePreloaded, setHoverImagePreloaded] = useState(false);
   const hoverImageRef = useRef(null);
   const isAboveFold = index < 6; // Above-the-fold cards
+
+  // Debug logging for badge and wishlist
+  useEffect(() => {
+    console.log('ProductCard Loaded:', {
+      productId: product?.id,
+      productName: product?.name,
+      badge: product?.badge,
+      badgeIsNull: product?.badge === null,
+      badgeIsUndefined: product?.badge === undefined,
+      badgeValue: product?.badge || 'NOT SET',
+      wishlistStatus: isInWishlist(product?.id),
+      allProductData: product
+    });
+  }, [product?.id, product?.badge]);
 
   const variation = product?.variations?.[0];
 
@@ -184,12 +199,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
     defaultSize = attrs.size?.[0] || "";
   }
 
-  // Format badge text safely
-  const formatBadge = (badge) => {
-    if (!badge) return "";
-    return badge.toString().replace(/_/g, " ").toUpperCase();
-  };
-
   return (
     <div
       className="product-card"
@@ -199,12 +208,8 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
       onMouseLeave={handleMouseLeave}
     >
       <div className="product-image" style={{ position: "relative" }}>
-        {product?.badge && product.badge !== 'none' && (
-          <span className="product-badge">{formatBadge(product.badge)}</span>
-        )}
-        
         {/* Main image container with hover image overlay */}
-        <div style={{ position: "relative", width: "100%", height: "100%" }}>
+        <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden" }}>
           {/* Main image */}
           <div style={{ position: "relative", width: "100%", height: "100%" }}>
             <SafeImage
@@ -255,14 +260,61 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
             </div>
           )}
         </div>
+
+        {/* Badge - positioned absolutely, outside overflow container */}
+        {product?.badge && product.badge !== 'none' && (
+          <>
+            {console.log('Badge Rendering:', { badge: product.badge, display: getBadgeDisplay(product.badge) })}
+            <span 
+              className="product-badge" 
+              style={{ 
+                background: getBadgeDisplay(product.badge).color,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                position: 'absolute',
+                top: '1rem',
+                left: '1rem',
+                zIndex: 10
+              }}
+              aria-label={getBadgeDisplay(product.badge).label}
+              title={getBadgeDisplay(product.badge).description}
+            >
+              <span>{getBadgeDisplay(product.badge).icon}</span>
+              <span>{formatBadge(product.badge)}</span>
+            </span>
+          </>
+        )}
+        {!product?.badge && console.log('Badge is NULL or UNDEFINED for product:', product?.id)}
+        {product?.badge === 'none' && console.log('Badge is "none" for product:', product?.id)}
         
+        {/* Wishlist Button - positioned absolutely, outside overflow container */}
         <button
           className={`wishlist-btn ${
             isInWishlist(product?.id) ? "active" : ""
           }`}
-          onClick={handleWishlistClick}
+          onClick={(e) => {
+            console.log('Wishlist Button Clicked:', {
+              productId: product?.id,
+              isCurrentlyInWishlist: isInWishlist(product?.id),
+              action: isInWishlist(product?.id) ? 'REMOVE' : 'ADD'
+            });
+            handleWishlistClick(e);
+          }}
           aria-label="Add to wishlist"
+          style={{
+            position: 'absolute',
+            top: '1rem',
+            right: '1rem',
+            zIndex: 10,
+            pointerEvents: 'auto'
+          }}
         >
+          {console.log('Wishlist Button Rendered:', { 
+            productId: product?.id, 
+            isInWishlist: isInWishlist(product?.id),
+            buttonElement: 'SHOULD_BE_VISIBLE'
+          })}
           <FiHeart />
         </button>
       </div>

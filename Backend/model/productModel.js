@@ -59,7 +59,7 @@ const Product = sequelize.define('Product', {
     },
     // Badge field
     badge: {
-        type: DataTypes.ENUM('new_arrival', 'hot_selling', 'low_stock', 'none'),
+        type: DataTypes.ENUM('new_arrival', 'hot_selling', 'low_stock', 'out_of_stock', 'none'),
         defaultValue: 'none'
     },
     // Badge calculation fields
