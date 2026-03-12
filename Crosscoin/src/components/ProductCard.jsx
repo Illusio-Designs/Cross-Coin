@@ -108,19 +108,11 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
   }, [hoverImagePreloaded]);
 
   // Preload hover images on component mount for above-the-fold cards
-  // Use requestIdleCallback for above-the-fold to preload during idle time
+  // DISABLED: Aggressive preloading causes performance issues
+  // Hover images will be loaded on-demand when user hovers
   useEffect(() => {
-    if (isAboveFold && hoverImageData) {
-      const hoverImageUrl = getHoverImageUrl();
-      if (hoverImageUrl) {
-        // Use requestIdleCallback for above-the-fold cards to preload during idle time
-        imagePreloader.preloadImage(hoverImageUrl, true).then(() => {
-          setHoverImagePreloaded(true);
-        }).catch(() => {
-          // Silently fail - hover image preload is not critical
-        });
-      }
-    }
+    // Preloading disabled to improve initial page load performance
+    // Hover images will load on first hover instead
   }, [isAboveFold, hoverImageData]);
 
   // Handle hover - preload for below-the-fold cards on first hover

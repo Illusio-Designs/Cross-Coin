@@ -28,7 +28,10 @@ class ImageKitService {
     // f-auto: Automatic format conversion (WebP for modern browsers)
     // q-{quality}: Quality setting
     // w-{width}, h-{height}: Dimensions
-    return `${imagePath}?tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
+    
+    // Check if URL already has query parameters
+    const separator = imagePath.includes('?') ? '&' : '?';
+    return `${imagePath}${separator}tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
   }
 
   /**
@@ -109,7 +112,9 @@ class ImageKitService {
       position = 'center',
     } = params;
 
-    return `${imagePath}?tr=w-${width},h-${height},q-${quality},f-${format},c-${fit},g-${position}`;
+    // Check if URL already has query parameters
+    const separator = imagePath.includes('?') ? '&' : '?';
+    return `${imagePath}${separator}tr=w-${width},h-${height},q-${quality},f-${format},c-${fit},g-${position}`;
   }
 }
 
