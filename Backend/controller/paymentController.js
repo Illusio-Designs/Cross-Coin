@@ -5,20 +5,10 @@ const { GuestUser } = require('../model/guestUserModel.js');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/db.js');
 const { PaymentService } = require('../services/paymentService.js');
-const Razorpay = require('razorpay');
+const razorpayService = require('../services/razorpayService');
 const crypto = require('crypto');
 const settingsHelper = require('../services/settingsHelper');
-
-// Helper function to get Razorpay instance
-async function getRazorpayInstance(brandId = 1) {
-    const key_id = await settingsHelper.getSetting(brandId, 'RAZORPAY_KEY_ID');
-    const key_secret = await settingsHelper.getSetting(brandId, 'RAZORPAY_KEY_SECRET');
-    
-    return new Razorpay({
-        key_id,
-        key_secret
-    });
-}
+const { toSmallestUnit, fromSmallestUnit } = require('../utils/amountConverter');
 
 // Process a payment
 module.exports.processPayment = async (req, res) => {
@@ -393,20 +383,52 @@ module.exports.createPaymentIntent = async (req, res) => {
 module.exports.getUserPayments = async (req, res) => {
     try {
         const userId = req.user.id; // Assuming user ID is available in the request
+        const { page = 1, limit = 20 } = req.query;
 
-        const payments = await Payment.findAll({
+        // Pagination
+        const offset = (page - 1) * limit;
+
+        const payments = await Payment.findAndCountAll({
             where: { user_id: userId },
-            order: [['createdAt', 'DESC']]
+            order: [['createdAt', 'DESC']],
+            limit: parseInt(limit),
+            offset: parseInt(offset)
         });
 
-        if (!payments.length) {
-            return res.status(404).json({ message: 'No payments found for this user' });
+        if (!payments.count) {
+            return res.status(404).json({ 
+                success: false,
+                message: 'No payments found for this user',
+                pagination: {
+                    total: 0,
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    totalPages: 0
+                }
+            });
         }
 
-        res.json(payments);
+        const totalPages = Math.ceil(payments.count / limit);
+
+        res.json({
+            success: true,
+            data: payments.rows,
+            pagination: {
+                total: payments.count,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                totalPages,
+                hasNextPage: page < totalPages,
+                hasPreviousPage: page > 1
+            }
+        });
     } catch (error) {
         console.error('Error fetching user payments:', error);
-        res.status(500).json({ message: 'Failed to fetch user payments', error: error.message });
+        res.status(500).json({ 
+            success: false,
+            message: 'Failed to fetch user payments', 
+            error: error.message 
+        });
     }
 };
 
@@ -492,17 +514,15 @@ module.exports.createRazorpayOrder = async (req, res) => {
             return res.status(400).json({ message: 'Amount is required' });
         }
 
-        // Initialize Razorpay instance
-        const razorpay = await getRazorpayInstance(1);
-
-        // Create order
-        const options = {
-            amount: amount, // amount is already in paise (frontend sends it in paise)
+        // Create order using centralized Razorpay service
+        const order = await razorpayService.createOrder({
+            amount,
             currency,
-            receipt: receipt || `rcpt_${Date.now()}`,
-        };
-        console.log('Backend: Sending these options to Razorpay:', options);
-        const order = await razorpay.orders.create(options);
+            receipt,
+            brandId: 1
+        });
+
+        console.log('Backend: Razorpay order created:', { order_id: order.id, amount: order.amount });
         res.json({ order });
     } catch (error) {
         console.error('Error creating Razorpay order:', error);
@@ -521,14 +541,15 @@ module.exports.updateOrderPayment = async (req, res) => {
       return res.status(400).json({ message: 'All payment fields are required' });
     }
 
-    // Verify signature
-    const key_secret = await settingsHelper.getSetting(1, 'RAZORPAY_KEY_SECRET');
-    const generated_signature = crypto
-      .createHmac('sha256', key_secret)
-      .update(razorpayOrderId + '|' + razorpayPaymentId)
-      .digest('hex');
+    // Verify signature using centralized Razorpay service
+    const isValidSignature = await razorpayService.verifySignature(
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
+      1
+    );
 
-    if (generated_signature !== razorpaySignature) {
+    if (!isValidSignature) {
       return res.status(400).json({ message: 'Invalid payment signature' });
     }
 
@@ -543,6 +564,9 @@ module.exports.updateOrderPayment = async (req, res) => {
     order.status = 'processing';
     await order.save();
 
+    // Convert order amount to smallest unit for consistent storage
+    const amountInSmallestUnit = toSmallestUnit(order.final_amount, 'INR');
+
     // Find existing payment record for this order
     let payment = await Payment.findOne({
       where: { order_id: order.id }
@@ -552,7 +576,7 @@ module.exports.updateOrderPayment = async (req, res) => {
       // Update existing payment
       await payment.update({
         payment_type: 'razorpay',
-        amount_paid: order.final_amount,
+        amount_paid: amountInSmallestUnit,
         status: 'successful',
         transaction_id: razorpayPaymentId,
         razorpay_order_id: razorpayOrderId,
@@ -565,7 +589,7 @@ module.exports.updateOrderPayment = async (req, res) => {
         user_id: order.user_id || null,
         guest_user_id: order.guest_user_id || null,
         payment_type: 'razorpay',
-        amount_paid: order.final_amount,
+        amount_paid: amountInSmallestUnit,
         status: 'successful',
         transaction_id: razorpayPaymentId,
         razorpay_order_id: razorpayOrderId,
@@ -646,12 +670,9 @@ module.exports.createMagicCheckoutOrder = async (req, res) => {
       return res.status(400).json({ message: 'Customer email and phone are required' });
     }
 
-    // Initialize Razorpay instance
-    const razorpay = await getRazorpayInstance(1);
-
-    // Create order with Magic Checkout flag
-    const options = {
-      amount: amount, // amount is already in paise (frontend sends it in paise)
+    // Create order using centralized Razorpay service
+    const order = await razorpayService.createOrder({
+      amount,
       currency,
       receipt: receipt || `rcpt_magic_${Date.now()}`,
       notes: {
@@ -659,13 +680,11 @@ module.exports.createMagicCheckoutOrder = async (req, res) => {
         customer_email: customer.email,
         customer_phone: customer.phone,
         customer_name: customer.name || ''
-      }
-    };
+      },
+      brandId: 1
+    });
 
-    console.log('Backend: Sending these options to Razorpay for Magic Checkout:', options);
-    
-    // Create Razorpay order
-    const order = await razorpay.orders.create(options);
+    console.log('Backend: Magic Checkout order created:', { order_id: order.id, amount: order.amount });
     
     // Return order details with Magic Checkout context
     res.json({ 
@@ -718,11 +737,12 @@ module.exports.verifyMagicCheckoutPayment = async (req, res) => {
       });
     }
 
-    // Verify payment signature using PaymentService
-    const isValidSignature = PaymentService.verifyMagicCheckoutSignature(
+    // Verify payment signature using centralized Razorpay service
+    const isValidSignature = await razorpayService.verifySignature(
       razorpayOrderId,
       razorpayPaymentId,
-      razorpaySignature
+      razorpaySignature,
+      1
     );
 
     if (!isValidSignature) {
@@ -743,26 +763,26 @@ module.exports.verifyMagicCheckoutPayment = async (req, res) => {
       });
     }
 
-    // Validate payment amount matches order amount
-    // Note: Razorpay amounts are in paise, order amounts are in rupees
-    const orderAmountInPaise = Math.round(parseFloat(order.final_amount) * 100);
+    // Validate payment amount matches order amount using standardized converter
+    const orderAmountInSmallestUnit = toSmallestUnit(order.final_amount, 'INR');
     
     // Update order status
     order.payment_status = 'paid';
     order.status = 'processing';
     await order.save({ transaction });
 
-    // Create payment record using PaymentService
+    // Create payment record using PaymentService with standardized amount
     const payment = await PaymentService.createMagicCheckoutPayment({
       order_id: order.id,
       user_id: order.user_id,
       guest_user_id: order.guest_user_id,
       payment_type: 'razorpay',
-      amount_paid: order.final_amount,
+      amount_paid: order.final_amount, // Pass in rupees, service will convert
       status: 'successful',
       magic_checkout_order_id: razorpayOrderId,
       magic_checkout_payment_id: razorpayPaymentId,
-      magic_checkout_signature: razorpaySignature
+      magic_checkout_signature: razorpaySignature,
+      currency: 'INR'
     }, transaction);
 
     await transaction.commit();
@@ -778,7 +798,7 @@ module.exports.verifyMagicCheckoutPayment = async (req, res) => {
       },
       payment: {
         id: payment.id,
-        amount_paid: payment.amount_paid,
+        amount_paid: fromSmallestUnit(payment.amount_paid, 'INR'), // Convert back to rupees for display
         status: payment.status
       }
     });

@@ -55,7 +55,8 @@ class SettingsHelper {
             // Fallback to environment variable
             const envValue = process.env[key];
             if (envValue) {
-                console.log(`⚠️ Using environment variable for ${key} (not found in brand settings)`);
+                const { logger } = require('../config/logging');
+                logger.debug(`Using environment variable for ${key} (not found in brand settings)`);
                 return envValue;
             }
 

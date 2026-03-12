@@ -1,5 +1,6 @@
 const { ProductVariation } = require('../model/associations');
 const badgeConfig = require('../config/badgeConfig');
+const badgeQueue = require('../queue/badgeQueue');
 
 class BadgeService {
   /**
@@ -127,6 +128,38 @@ class BadgeService {
     } catch (error) {
       console.error('Error updating badge:', error);
       return false;
+    }
+  }
+
+  /**
+   * Enqueue badge recalculation job for async processing
+   * Non-blocking - returns immediately
+   * 
+   * @param {number} user_id - User ID to recalculate badges for
+   * @param {string[]} badge_types - Types of badges to recalculate (optional)
+   * @returns {Promise<Object>} - Job object
+   */
+  static async enqueueBadgeRecalculation(user_id, badge_types = []) {
+    try {
+      console.log(`📤 Enqueueing badge recalculation for user ${user_id}`);
+      
+      const job = await badgeQueue.add(
+        {
+          user_id,
+          badge_types,
+        },
+        {
+          priority: 'normal',
+          delay: 0, // Process immediately
+        }
+      );
+      
+      console.log(`✅ Badge recalculation job ${job.id} enqueued for user ${user_id}`);
+      return job;
+    } catch (error) {
+      console.error(`❌ Error enqueueing badge recalculation:`, error);
+      // Don't throw - allow order creation to continue even if queue fails
+      return null;
     }
   }
 

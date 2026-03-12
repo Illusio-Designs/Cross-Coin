@@ -77,6 +77,15 @@ const Payment = sequelize.define(
       type: DataTypes.STRING(255),
       allowNull: true,
     },
+    brand_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+      references: {
+        model: "brands",
+        key: "id",
+      },
+    },
   },
   {
     tableName: "payments",
@@ -97,6 +106,9 @@ const Payment = sequelize.define(
       },
       {
         fields: ["magic_checkout_payment_id"],
+      },
+      {
+        fields: ["brand_id"],
       },
     ],
   }

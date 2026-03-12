@@ -8,6 +8,8 @@ const { Op } = require('sequelize');
 const ImageHandler = require('../utils/imageHandler.js');
 const { categoryUpload } = require('../middleware/uploadMiddleware.js');
 const slugify = require('slugify');
+const CategoryService = require('../services/categoryService.js');
+const cacheManager = require('../services/cacheManager.js');
 
 // In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/categories'));
@@ -345,53 +347,13 @@ const updateCategory = async (req, res) => {
 // Get Public Categories
 const getPublicCategories = async (req, res) => {
     try {
-        // Build include options with brand filtering
-        const includeOptions = [
-            {
-                model: Category,
-                as: 'parent',
-                attributes: ['id', 'name']
-            }
-        ];
-
-        // Add brand filtering if brand is identified
-        if (req.brand && req.brand.id) {
-            includeOptions.push({
-                model: Brand,
-                as: 'Brands',
-                attributes: [],
-                through: { 
-                    attributes: [],
-                    where: { status: 'active' }
-                },
-                where: { id: req.brand.id },
-                required: true
-            });
-        }
-
-        const categories = await Category.findAll({
-            where: {
-                status: 'active'
-            },
-            include: includeOptions,
-            order: [['createdAt', 'DESC']],
-            attributes: ['id', 'name', 'description', 'image', 'slug', 'parentId']
+        // Use CategoryService with caching
+        const categories = await CategoryService.getAllCategories({
+            useCache: true,
+            brand: req.brand
         });
 
-        // Format the response
-        const formattedCategories = categories.map(category => ({
-            id: category.id,
-            name: category.name,
-            description: category.description,
-            parentId: category.parentId,
-            parentName: category.parent ? category.parent.name : null,
-            image: category.image && !category.image.startsWith('/uploads/') 
-                ? `/uploads/categories/${category.image}` 
-                : category.image,
-            slug: category.slug
-        }));
-
-        res.status(200).json(formattedCategories);
+        res.status(200).json(categories);
     } catch (error) {
         console.error('Get public categories error:', error);
         res.status(500).json({ message: error.message });

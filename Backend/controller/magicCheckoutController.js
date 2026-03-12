@@ -4,21 +4,9 @@ const { ShippingFee } = require('../model/shippingFeeModel.js');
 const { Op } = require('sequelize');
 const addressQualityService = require('../services/addressQualityService.js');
 const fshipService = require('../services/fshipService.js');
-const Razorpay = require('razorpay');
+const razorpayService = require('../services/razorpayService');
 const settingsHelper = require('../services/settingsHelper');
-
-// Initialize Razorpay instance - will be initialized per request with brand settings
-let razorpayInstance = null;
-
-async function getRazorpayInstance(brandId = 1) {
-    const key_id = await settingsHelper.getSetting(brandId, 'RAZORPAY_KEY_ID');
-    const key_secret = await settingsHelper.getSetting(brandId, 'RAZORPAY_KEY_SECRET');
-    
-    return new Razorpay({
-        key_id,
-        key_secret
-    });
-}
+const { toSmallestUnit, fromSmallestUnit } = require('../utils/amountConverter');
 
 /**
  * RAZORPAY DASHBOARD CONFIGURATION REQUIRED
@@ -131,7 +119,7 @@ module.exports.getPromotions = async (req, res) => {
 
             // 5. Validate minimum purchase requirements
             if (coupon.minPurchase !== null) {
-                const minPurchaseInPaise = parseFloat(coupon.minPurchase) * 100;
+                const minPurchaseInPaise = toSmallestUnit(parseFloat(coupon.minPurchase), 'INR');
                 if (cartTotalAmount < minPurchaseInPaise) {
                     isApplicable = false;
                     reason = `Minimum purchase of ₹${coupon.minPurchase} required`;
@@ -149,12 +137,12 @@ module.exports.getPromotions = async (req, res) => {
                 
                 // Apply maximum discount cap
                 if (coupon.maxDiscount !== null) {
-                    const maxDiscountInPaise = parseFloat(coupon.maxDiscount) * 100;
+                    const maxDiscountInPaise = toSmallestUnit(parseFloat(coupon.maxDiscount), 'INR');
                     calculatedDiscount = Math.min(calculatedDiscount, maxDiscountInPaise);
                 }
             } else if (coupon.type === 'fixed') {
-                // Fixed discount in rupees, convert to paise
-                calculatedDiscount = Math.round(parseFloat(coupon.value) * 100);
+                // Fixed discount in rupees, convert to paise using standardized converter
+                calculatedDiscount = toSmallestUnit(parseFloat(coupon.value), 'INR');
             }
 
             // 7. Return formatted promotions array
@@ -163,8 +151,8 @@ module.exports.getPromotions = async (req, res) => {
                 description: coupon.description || `${coupon.type === 'percentage' ? coupon.value + '%' : '₹' + coupon.value} off`,
                 type: coupon.type,
                 value: discountValue,
-                min_purchase: coupon.minPurchase ? parseFloat(coupon.minPurchase) * 100 : null,
-                max_discount: coupon.maxDiscount ? parseFloat(coupon.maxDiscount) * 100 : null,
+                min_purchase: coupon.minPurchase ? toSmallestUnit(parseFloat(coupon.minPurchase), 'INR') : null,
+                max_discount: coupon.maxDiscount ? toSmallestUnit(parseFloat(coupon.maxDiscount), 'INR') : null,
                 applicable: isApplicable,
                 estimated_discount: calculatedDiscount,
                 reason: reason
@@ -278,7 +266,7 @@ module.exports.applyPromotion = async (req, res) => {
 
         // 4. Validate minimum purchase requirement
         if (coupon.minPurchase !== null) {
-            const minPurchaseInPaise = parseFloat(coupon.minPurchase) * 100;
+            const minPurchaseInPaise = toSmallestUnit(parseFloat(coupon.minPurchase), 'INR');
             if (cartTotalAmount < minPurchaseInPaise) {
                 return res.status(400).json({
                     success: false,
@@ -297,12 +285,12 @@ module.exports.applyPromotion = async (req, res) => {
             
             // 6. Apply maximum discount cap for percentage
             if (coupon.maxDiscount !== null) {
-                const maxDiscountInPaise = parseFloat(coupon.maxDiscount) * 100;
+                const maxDiscountInPaise = toSmallestUnit(parseFloat(coupon.maxDiscount), 'INR');
                 discountAmount = Math.min(discountAmount, maxDiscountInPaise);
             }
         } else if (coupon.type === 'fixed') {
-            // Fixed discount in rupees, convert to paise
-            discountAmount = Math.round(parseFloat(coupon.value) * 100);
+            // Fixed discount in rupees, convert to paise using standardized converter
+            discountAmount = toSmallestUnit(parseFloat(coupon.value), 'INR');
             
             // Ensure discount doesn't exceed cart total
             discountAmount = Math.min(discountAmount, cartTotalAmount);
@@ -427,13 +415,13 @@ module.exports.getShippingInfo = async (req, res) => {
                         addressInfo.reason = 'Address quality too low for COD';
                     }
 
-                    // 5. Calculate shipping fees from shipping_fees table
+                    // 5. Calculate shipping fees from shipping_fees table using standardized converter
                     // 6. Calculate COD fees if applicable
                     if (payment_method === 'cod' && addressInfo.cod_available) {
-                        addressInfo.shipping_fee = parseFloat(codFee) * 100; // Convert to paise
-                        addressInfo.cod_fee = parseFloat(codFee) * 100; // Convert to paise
+                        addressInfo.shipping_fee = toSmallestUnit(parseFloat(codFee), 'INR');
+                        addressInfo.cod_fee = toSmallestUnit(parseFloat(codFee), 'INR');
                     } else {
-                        addressInfo.shipping_fee = parseFloat(prepaidFee) * 100; // Convert to paise
+                        addressInfo.shipping_fee = toSmallestUnit(parseFloat(prepaidFee), 'INR');
                         addressInfo.cod_fee = 0;
                     }
                 } else {
@@ -510,16 +498,13 @@ module.exports.createOrder = async (req, res) => {
             });
         }
 
-        // Convert amount to paise (Razorpay expects amount in smallest currency unit)
-        const amountInPaise = Math.round(parseFloat(amount) * 100);
-
         // Format line_items for Magic Checkout (REQUIRED for Magic Checkout UI)
         const formattedLineItems = cart_items.map(item => ({
             type: 'e-commerce',
             sku: item.product_id ? `SKU_${item.product_id}` : 'SKU_UNKNOWN',
             variant_id: item.variation_id ? `VAR_${item.variation_id}` : null,
-            price: Math.round(parseFloat(item.price || 0) * 100), // in paise
-            offer_price: Math.round(parseFloat(item.price || 0) * 100), // in paise
+            price: toSmallestUnit(parseFloat(item.price || 0), currency), // in paise
+            offer_price: toSmallestUnit(parseFloat(item.price || 0), currency), // in paise
             tax_amount: 0, // Add tax if applicable
             quantity: item.quantity || 1,
             name: item.name || 'Product',
@@ -532,12 +517,11 @@ module.exports.createOrder = async (req, res) => {
             return sum + (item.price * item.quantity);
         }, 0);
 
-        // Prepare order options with Magic Checkout parameters
-        const orderOptions = {
-            amount: amountInPaise,
-            currency: currency,
+        // Create order using centralized Razorpay service
+        const order = await razorpayService.createOrder({
+            amount,
+            currency,
             receipt: `order_${Date.now()}_${customer_id || 'guest'}`,
-            // ✅ CRITICAL: line_items and line_items_total are REQUIRED for Magic Checkout
             line_items: formattedLineItems,
             line_items_total: lineItemsTotal,
             notes: {
@@ -547,32 +531,10 @@ module.exports.createOrder = async (req, res) => {
                 checkout_type: 'magic_checkout',
                 ...notes
             },
-            // Disable partial payment for cleaner Magic Checkout experience
             partial_payment: false,
-        };
-
-        console.log('Creating Magic Checkout order with line_items:', {
-            amount: amountInPaise,
-            line_items_count: formattedLineItems.length,
-            line_items_total: lineItemsTotal,
-            has_line_items: formattedLineItems.length > 0
+            brandId: 1
         });
 
-        // Create order using Razorpay API
-        const razorpay = await getRazorpayInstance(1);
-        
-        console.log('📦 Creating Razorpay order with Magic Checkout parameters:', {
-            amount: amountInPaise,
-            currency: currency,
-            receipt: orderOptions.receipt,
-            has_line_items: !!orderOptions.line_items,
-            line_items_count: orderOptions.line_items?.length || 0,
-            line_items_total: orderOptions.line_items_total,
-            partial_payment: orderOptions.partial_payment
-        });
-        
-        const order = await razorpay.orders.create(orderOptions);
-        
         console.log('✅ Razorpay order created:', {
             order_id: order.id,
             amount: order.amount,
@@ -626,16 +588,15 @@ module.exports.verifyPayment = async (req, res) => {
             });
         }
 
-        // Create signature verification string
-        const crypto = require('crypto');
-        const key_secret = await settingsHelper.getSetting(1, 'RAZORPAY_KEY_SECRET');
-        const generatedSignature = crypto
-            .createHmac('sha256', key_secret)
-            .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-            .digest('hex');
+        // Verify signature using centralized Razorpay service
+        const isValid = await razorpayService.verifySignature(
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature,
+            1
+        );
 
-        // Compare signatures
-        if (generatedSignature === razorpay_signature) {
+        if (isValid) {
             res.json({
                 success: true,
                 message: 'Payment verified successfully',
