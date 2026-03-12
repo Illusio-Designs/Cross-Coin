@@ -86,30 +86,42 @@ const SafeImage = ({
     let newSrc = null;
     
     if (imageData) {
-      let rawUrl = null;
-      
-      if (typeof imageData === 'string') {
-        rawUrl = imageData;
-      } else if (imageData.image_url) {
-        rawUrl = imageData.image_url;
-      } else if (imageData.url) {
-        rawUrl = imageData.url;
+      // Priority 1: Use ImageKit optimized URLs if available (from API response)
+      if (isProductCard && imageData.medium) {
+        // Use medium size for product cards (600x600px)
+        newSrc = imageData.medium;
+      } 
+      // Priority 2: Use thumbnail for smaller displays
+      else if (isProductCard && imageData.thumbnail) {
+        newSrc = imageData.thumbnail;
       }
-      
-      if (rawUrl && rawUrl.trim() !== '') {
-        if (rawUrl.startsWith("http")) {
-          newSrc = rawUrl;
-        } 
-        else if (rawUrl.startsWith("/assets/")) {
-          newSrc = rawUrl;
-        } 
-        else if (rawUrl.startsWith("/uploads/")) {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-          newSrc = `${apiUrl}${rawUrl}`;
-        } 
-        else {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-          newSrc = `${apiUrl}/uploads/products/${rawUrl}`;
+      // Priority 3: Fall back to raw image_url and construct URL
+      else {
+        let rawUrl = null;
+        
+        if (typeof imageData === 'string') {
+          rawUrl = imageData;
+        } else if (imageData.image_url) {
+          rawUrl = imageData.image_url;
+        } else if (imageData.url) {
+          rawUrl = imageData.url;
+        }
+        
+        if (rawUrl && rawUrl.trim() !== '') {
+          if (rawUrl.startsWith("http")) {
+            newSrc = rawUrl;
+          } 
+          else if (rawUrl.startsWith("/assets/")) {
+            newSrc = rawUrl;
+          } 
+          else if (rawUrl.startsWith("/uploads/")) {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+            newSrc = `${apiUrl}${rawUrl}`;
+          } 
+          else {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+            newSrc = `${apiUrl}/uploads/products/${rawUrl}`;
+          }
         }
       }
     }
@@ -119,7 +131,8 @@ const SafeImage = ({
     }
     
     // Add responsive sizing and format optimization query parameters for product cards
-    if (newSrc && isProductCard && !newSrc.includes('?')) {
+    // Only if ImageKit URLs are not already being used (they already have optimization)
+    if (newSrc && isProductCard && !newSrc.includes('?tr=') && !newSrc.includes('?')) {
       // Get responsive sizing parameters based on viewport width
       const { width: imgWidth, quality: imgQuality } = getResponsiveSizingParams(sizes);
       
