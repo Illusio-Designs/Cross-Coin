@@ -216,9 +216,9 @@ const Products = () => {
                 images: imageUrl ? [{ image_url: imageUrl }] : [], // Keep empty array for no images
                 variations: [
                   {
-                    price: parseFloat(p.price) || 0,
-                    comparePrice: parseFloat(p.comparePrice) || 0,
-                    stock: parseInt(p.stock) || 0,
+                    price: parseFloat(p.variations?.[0]?.price || p.price || 0) || 0,
+                    comparePrice: parseFloat(p.variations?.[0]?.comparePrice || p.comparePrice || 0) || 0,
+                    stock: parseInt(p.variations?.[0]?.stock || p.stock || 0) || 0,
                   },
                 ],
               };
@@ -264,14 +264,21 @@ const Products = () => {
           console.log("All products API Response:", response);
 
           if (response?.success) {
-            setProducts(response.data?.products || []);
+            // Transform products to ensure price fields are populated
+            const transformedProducts = (response.data?.products || []).map(p => ({
+              ...p,
+              price: p.price || p.variations?.[0]?.price || 0,
+              comparePrice: p.comparePrice || p.variations?.[0]?.comparePrice || 0,
+            }));
+            
+            setProducts(transformedProducts);
             setTotalProducts(
               response.data?.total || response.data?.totalProducts || 0
             );
             
             // Cache the products (30 minute TTL)
             cacheManager.setByType('products', {
-              products: response.data?.products || [],
+              products: transformedProducts,
               total: response.data?.total || response.data?.totalProducts || 0
             });
             console.log('✅ All products cached for 30 minutes');
@@ -280,14 +287,20 @@ const Products = () => {
             productsLoadedRef.current = true; // Mark as loaded
           } else if (response?.data?.products) {
             // Handle case where response structure is different
-            setProducts(response.data.products || []);
+            const transformedProducts = (response.data.products || []).map(p => ({
+              ...p,
+              price: p.price || p.variations?.[0]?.price || 0,
+              comparePrice: p.comparePrice || p.variations?.[0]?.comparePrice || 0,
+            }));
+            
+            setProducts(transformedProducts);
             setTotalProducts(
               response.data.total || response.data.totalProducts || 0
             );
             
             // Cache the products
             cacheManager.setByType('products', {
-              products: response.data.products || [],
+              products: transformedProducts,
               total: response.data.total || response.data.totalProducts || 0
             });
             
