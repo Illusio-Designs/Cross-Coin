@@ -1,22 +1,7 @@
-const redis = require("redis");
 const { Product, Order, User, Review, OrderItem, ProductVariation, GuestUser, UTMTracking } = require("../model/associations.js");
 const { sequelize } = require("../config/db.js");
 const { Op, QueryTypes } = require("sequelize");
-
-// Create Redis client for caching
-const redisClient = redis.createClient({
-  host: process.env.REDIS_HOST || "localhost",
-  port: process.env.REDIS_PORT || 6379,
-  password: process.env.REDIS_PASSWORD || undefined,
-});
-
-redisClient.on("error", (err) => {
-  console.error("Redis client error:", err);
-});
-
-redisClient.on("connect", () => {
-  console.log("Redis client connected for dashboard caching");
-});
+const cacheManager = require("./cacheManager.js");
 
 // Cache configuration
 const DASHBOARD_CACHE_TTL = 5 * 60; // 5 minutes in seconds
@@ -615,17 +600,12 @@ const getDashboardDataWithCache = async (userId) => {
   
   try {
     // Check if data exists in cache
-    const cachedData = await new Promise((resolve, reject) => {
-      redisClient.get(cacheKey, (err, data) => {
-        if (err) reject(err);
-        else resolve(data);
-      });
-    });
+    const cachedData = await cacheManager.get(cacheKey);
 
     if (cachedData) {
       console.log(`✅ Dashboard cache HIT for user ${userId}`);
       return {
-        ...JSON.parse(cachedData),
+        ...cachedData,
         cacheHit: true
       };
     }
@@ -636,17 +616,7 @@ const getDashboardDataWithCache = async (userId) => {
     const aggregatedData = await aggregateDashboardData(userId);
 
     // Store in cache with TTL
-    await new Promise((resolve, reject) => {
-      redisClient.setex(
-        cacheKey,
-        DASHBOARD_CACHE_TTL,
-        JSON.stringify(aggregatedData),
-        (err) => {
-          if (err) reject(err);
-          else resolve();
-        }
-      );
-    });
+    await cacheManager.set(cacheKey, aggregatedData, DASHBOARD_CACHE_TTL);
 
     console.log(`✅ Dashboard data cached for user ${userId} with TTL ${DASHBOARD_CACHE_TTL}s`);
     
@@ -675,13 +645,7 @@ const invalidateDashboardCache = async (userId) => {
   const cacheKey = DASHBOARD_CACHE_KEY(userId);
   
   try {
-    await new Promise((resolve, reject) => {
-      redisClient.del(cacheKey, (err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-    
+    await cacheManager.delete(cacheKey);
     console.log(`✅ Dashboard cache invalidated for user ${userId}`);
   } catch (error) {
     console.error("Error invalidating dashboard cache:", error);
