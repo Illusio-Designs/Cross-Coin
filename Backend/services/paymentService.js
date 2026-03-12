@@ -1,6 +1,9 @@
 const crypto = require('crypto');
 const settingsHelper = require('./settingsHelper');
 const { Payment } = require('../model/paymentModel.js');
+const { Order } = require('../model/orderModel.js');
+const { toSmallestUnit, fromSmallestUnit } = require('../utils/amountConverter');
+const { logger } = require('../config/logging');
 
 const PaymentService = {
     confirmPayment: async (paymentIntentId) => {
@@ -10,6 +13,34 @@ const PaymentService = {
             id: paymentIntentId,
             status: 'confirmed'
         };
+    },
+
+    /**
+     * Validate brand consistency between order and payment
+     * @param {number} orderId - Order ID
+     * @param {number} brandId - Brand ID from request context
+     * @returns {Promise<boolean>} - True if brand is consistent
+     */
+    validateBrandConsistency: async (orderId, brandId) => {
+        try {
+            const order = await Order.findByPk(orderId);
+            if (!order) {
+                throw new Error(`Order ${orderId} not found`);
+            }
+
+            if (order.brand_id !== brandId) {
+                logger.warn(
+                    `Brand mismatch: Order ${orderId} belongs to brand ${order.brand_id}, ` +
+                    `but request context has brand ${brandId}`
+                );
+                return false;
+            }
+
+            return true;
+        } catch (error) {
+            logger.error('Error validating brand consistency:', error);
+            throw error;
+        }
     },
 
     /**
@@ -31,7 +62,7 @@ const PaymentService = {
             // Compare with received signature
             return generatedSignature === signature;
         } catch (error) {
-            console.error('Error verifying Magic Checkout signature:', error);
+            logger.error('Error verifying Magic Checkout signature:', error);
             return false;
         }
     },
@@ -43,12 +74,14 @@ const PaymentService = {
      * @param {number} paymentData.user_id - User ID (optional for guest orders)
      * @param {number} paymentData.guest_user_id - Guest user ID (optional for registered users)
      * @param {string} paymentData.payment_type - Payment type
-     * @param {number} paymentData.amount_paid - Amount paid
+     * @param {number} paymentData.amount_paid - Amount paid (in rupees/dollars, will be converted to smallest unit)
      * @param {string} paymentData.status - Payment status
      * @param {string} paymentData.magic_checkout_order_id - Magic Checkout order ID
      * @param {string} paymentData.magic_checkout_payment_id - Magic Checkout payment ID
      * @param {string} paymentData.magic_checkout_signature - Magic Checkout signature
      * @param {string} paymentData.payment_gateway - Payment gateway name
+     * @param {string} paymentData.currency - Currency code (default: INR)
+     * @param {number} paymentData.brand_id - Brand ID (required for multi-brand support)
      * @param {Object} transaction - Sequelize transaction (optional)
      * @returns {Promise<Object>} - Created payment record
      */
@@ -64,7 +97,9 @@ const PaymentService = {
                 magic_checkout_order_id,
                 magic_checkout_payment_id,
                 magic_checkout_signature,
-                payment_gateway = 'Razorpay Magic Checkout'
+                payment_gateway = 'Razorpay Magic Checkout',
+                currency = 'INR',
+                brand_id = 1
             } = paymentData;
 
             // Validate required fields
@@ -72,24 +107,28 @@ const PaymentService = {
                 throw new Error('Missing required payment fields');
             }
 
-            // Create payment record with Magic Checkout fields
+            // Convert amount to smallest unit (paise/cents) for consistent storage
+            const amountInSmallestUnit = toSmallestUnit(amount_paid, currency);
+
+            // Create payment record with Magic Checkout fields and brand context
             const payment = await Payment.create({
                 order_id,
                 user_id: user_id || null,
                 guest_user_id: guest_user_id || null,
                 payment_type,
                 transaction_id: magic_checkout_payment_id,
-                amount_paid,
+                amount_paid: amountInSmallestUnit,
                 status: status || 'successful',
                 payment_gateway,
                 magic_checkout_order_id,
                 magic_checkout_payment_id,
-                magic_checkout_signature
+                magic_checkout_signature,
+                brand_id // ✅ Store brand context in payment record
             }, transaction ? { transaction } : {});
 
             return payment;
         } catch (error) {
-            console.error('Error creating Magic Checkout payment:', error);
+            logger.error('Error creating Magic Checkout payment:', error);
             throw error;
         }
     }

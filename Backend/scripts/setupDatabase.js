@@ -454,6 +454,9 @@ const setupDatabase = async () => {
     console.log("\nAdding fship_last_synced_at column to orders table...");
     await addFshipLastSyncedAtColumn();
     
+    // Create performance optimization indexes
+    await createPerformanceIndexes();
+    
     return true;
   } catch (error) {
     console.error("❌ Database setup failed:", error.message);
@@ -1011,4 +1014,96 @@ const addFshipLastSyncedAtColumn = async () => {
   }
 };
 
-module.exports = { setupDatabase, findAvailablePort };
+// Function to create performance optimization indexes
+const createPerformanceIndexes = async () => {
+  try {
+    console.log('\n📊 Creating performance optimization indexes...');
+
+    const indexes = [
+      {
+        name: 'idx_orders_user_date',
+        table: 'orders',
+        columns: '(user_id, createdAt DESC)',
+        comment: 'Optimize user order history queries'
+      },
+      {
+        name: 'idx_order_items_product',
+        table: 'order_items',
+        columns: '(order_id, product_id)',
+        comment: 'Optimize order item lookups'
+      },
+      {
+        name: 'idx_badges_user',
+        table: 'badges',
+        columns: '(user_id, badge_type, createdAt DESC)',
+        comment: 'Optimize badge queries by user'
+      },
+      {
+        name: 'idx_transactions_order',
+        table: 'transactions',
+        columns: '(order_id, status, createdAt DESC)',
+        comment: 'Optimize transaction lookups'
+      },
+      {
+        name: 'idx_products_category',
+        table: 'products',
+        columns: '(category_id, is_active, createdAt DESC)',
+        comment: 'Optimize category product listing'
+      },
+      {
+        name: 'idx_variations_product',
+        table: 'product_variations',
+        columns: '(product_id, is_active)',
+        comment: 'Optimize variation lookups'
+      },
+      {
+        name: 'idx_coupons_code_status',
+        table: 'coupons',
+        columns: '(code, is_active, expiry_date)',
+        comment: 'Optimize coupon validation'
+      },
+      {
+        name: 'idx_stock_product_warehouse',
+        table: 'stock',
+        columns: '(product_id, warehouse_id, quantity)',
+        comment: 'Optimize stock checks'
+      }
+    ];
+
+    let created = 0;
+    let skipped = 0;
+
+    for (const index of indexes) {
+      try {
+        // Check if index already exists
+        const [indexExists] = await sequelize.query(`
+          SELECT COUNT(*) as count
+          FROM INFORMATION_SCHEMA.STATISTICS 
+          WHERE TABLE_SCHEMA = DATABASE() 
+          AND TABLE_NAME = '${index.table}' 
+          AND INDEX_NAME = '${index.name}'
+        `);
+
+        if (indexExists[0].count === 0) {
+          await sequelize.query(`
+            ALTER TABLE ${index.table} 
+            ADD INDEX ${index.name} ${index.columns}
+          `);
+          console.log(`  ✓ Created ${index.name} on ${index.table}`);
+          created++;
+        } else {
+          console.log(`  ⊘ ${index.name} already exists`);
+          skipped++;
+        }
+      } catch (error) {
+        console.log(`  ⚠️ Error creating ${index.name}: ${error.message}`);
+      }
+    }
+
+    console.log(`✓ Performance indexes: ${created} created, ${skipped} already exist`);
+  } catch (error) {
+    console.error('❌ Error creating performance indexes:', error.message);
+  }
+};
+
+module.exports = { setupDatabase, findAvailablePort, createPerformanceIndexes };

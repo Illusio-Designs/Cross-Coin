@@ -18,6 +18,7 @@ const { setupDatabase } = require('./scripts/setupDatabase.js');
 const corsOptions = require('./config/corsConfig.js');
 const { sendFacebookEvent } = require('./integration/facebookPixel.js');
 const { initializeCronJobs } = require('./config/cronJobs.js');
+const { logger, getLoggingConfig } = require('./config/logging.js');
 
 // Import routes
 const googleAnalyticsRouter = require('./integration/googleAnalytics.js');
@@ -28,20 +29,21 @@ const utmRoutes = require('./routes/utmRoutes.js');
 const brandSettingsRoutes = require('./routes/brandSettingsRoutes.js');
 const brandRoutes = require('./routes/brandRoutes.js');
 const brandAssignmentRoutes = require('./routes/brandAssignmentRoutes.js');
-const aiImageRoutes = require('./routes/aiImageRoutes.js');
 
 // Initialize dotenv
 dotenv.config();
 
-// Debug environment variables on startup
-console.log('Environment variables loaded:', {
-    API_URL: process.env.API_URL,
-    BACKEND_URL: process.env.BACKEND_URL,
-    NODE_ENV: process.env.NODE_ENV,
-    PORT: process.env.PORT,
-    DB_HOST: process.env.DB_HOST,
-    DB_DATABASE: process.env.DB_DATABASE
-});
+// Debug environment variables on startup (only in development)
+if (process.env.NODE_ENV !== 'production') {
+    console.log('Environment variables loaded:', {
+        API_URL: process.env.API_URL,
+        BACKEND_URL: process.env.BACKEND_URL,
+        NODE_ENV: process.env.NODE_ENV,
+        PORT: process.env.PORT,
+        DB_HOST: process.env.DB_HOST,
+        DB_DATABASE: process.env.DB_DATABASE
+    });
+}
 
 const app = express();
 
@@ -69,9 +71,14 @@ app.use(compression());
 app.use(cookieParser());
 
 // Logging middleware
+const loggingConfig = getLoggingConfig();
 if (process.env.NODE_ENV === 'production') {
-    app.use(morgan('combined'));
+    // In production, use minimal HTTP request logging
+    if (!loggingConfig.disableHttpLogging) {
+        app.use(morgan('combined'));
+    }
 } else {
+    // In development, use detailed logging
     app.use(morgan('dev'));
 }
 
@@ -115,7 +122,7 @@ if (!fs.existsSync(seoUploadsDir)) {
 
 // Serve static files with logging
 app.use('/uploads', (req, res, next) => {
-    console.log('Static file request:', req.originalUrl);
+    logger.debug('Static file request:', req.originalUrl);
     next();
 }, express.static(uploadsDir));
 
@@ -123,9 +130,9 @@ app.use('/uploads', (req, res, next) => {
 app.use('/uploads', (req, res, next) => {
     // Only redirect if the URL actually ends with a trailing slash
     if (req.originalUrl.endsWith('/') && req.originalUrl !== '/uploads/') {
-        console.log('Trailing slash detected in uploads URL:', req.originalUrl);
+        logger.debug('Trailing slash detected in uploads URL:', req.originalUrl);
         const newUrl = req.originalUrl.slice(0, -1);
-        console.log('Redirecting to:', newUrl);
+        logger.debug('Redirecting to:', newUrl);
         return res.redirect(301, newUrl);
     }
     next();
@@ -157,7 +164,7 @@ app.get('/api/health', async (req, res) => {
     
     res.status(200).json(healthData);
     } catch (error) {
-        console.error('Health check error:', error);
+        logger.error('Health check error:', error);
         res.status(503).json({
             status: 'error',
             message: 'Service unavailable',
@@ -203,7 +210,6 @@ app.use('/api/utm', utmRoutes);
 app.use('/api/admin', brandSettingsRoutes);
 app.use('/api/admin', brandRoutes);
 app.use('/api/admin', brandAssignmentRoutes);
-app.use('/api/ai-images', aiImageRoutes);
 
 // Endpoint to receive Facebook Pixel events from frontend and sync server-side
 app.post('/api/facebook-pixel', async (req, res) => {
@@ -215,7 +221,7 @@ app.post('/api/facebook-pixel', async (req, res) => {
         await sendFacebookEvent(event, order);
         res.json({ success: true });
     } catch (err) {
-        console.error('Facebook Pixel error:', err);
+        logger.error('Facebook Pixel error:', err);
         res.status(500).json({ success: false, message: err.message });
     }
 });
@@ -236,11 +242,11 @@ app.use('*', (req, res) => {
 
 // Enhanced error handling middleware
 app.use((err, req, res, next) => {
-    console.error('Error:', err);
+    logger.error('Error:', err);
     
     // Log additional error details in production
     if (process.env.NODE_ENV === 'production') {
-        console.error('Error details:', {
+        logger.error('Error details:', {
             url: req.url,
             method: req.method,
             ip: req.ip,
@@ -278,14 +284,14 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
     try {
-        console.log('Starting CrossCoin API server...');
-        console.log(`Environment: ${process.env.NODE_ENV}`);
-        console.log(`Port: ${PORT}`);
+        logger.info('Starting CrossCoin API server...');
+        logger.info(`Environment: ${process.env.NODE_ENV}`);
+        logger.info(`Port: ${PORT}`);
         
         // Monitor memory usage
         const logMemoryUsage = () => {
             const used = process.memoryUsage();
-            console.log('📊 Memory Usage:', {
+            logger.debug('Memory Usage:', {
                 rss: `${Math.round(used.rss / 1024 / 1024)} MB`,
                 heapTotal: `${Math.round(used.heapTotal / 1024 / 1024)} MB`,
                 heapUsed: `${Math.round(used.heapUsed / 1024 / 1024)} MB`,
@@ -295,11 +301,11 @@ const startServer = async () => {
             // Warn if memory usage is high
             const heapUsedMB = used.heapUsed / 1024 / 1024;
             if (heapUsedMB > 400) {
-                console.warn('⚠️ High memory usage detected! Consider restarting the server.');
+                logger.warn('High memory usage detected! Consider restarting the server.');
                 
                 // Force garbage collection if available (requires --expose-gc flag)
                 if (global.gc) {
-                    console.log('🧹 Running garbage collection...');
+                    logger.debug('Running garbage collection...');
                     global.gc();
                 }
             }
@@ -308,64 +314,75 @@ const startServer = async () => {
         // Log memory usage every hour (reduced from 30 minutes)
         setInterval(logMemoryUsage, 60 * 60 * 1000);
         
+        // Initialize Redis connection
+        logger.info('Initializing Redis connection...');
+        const redisService = require('./services/redisService.js');
+        try {
+            await redisService.initialize();
+            logger.info('✓ Redis connection initialized');
+        } catch (error) {
+            logger.warn('Redis initialization failed:', error.message);
+            logger.warn('Caching will be disabled. Ensure Redis is running for optimal performance.');
+        }
+        
         // Test database connection first
-        console.log('Testing database connection...');
+        logger.info('Testing database connection...');
         await sequelize.authenticate();
-        console.log('✓ Database connection successful');
+        logger.info('✓ Database connection successful');
         
         // Create all tables
-        console.log('Setting up database...');
+        logger.info('Setting up database...');
         await setupDatabase();
-        console.log('✓ Database setup completed');
+        logger.info('✓ Database setup completed');
 
         // Initialize SEO data
-        console.log('Initializing SEO data...');
+        logger.info('Initializing SEO data...');
         await initializeSeoData();
-        console.log('✓ SEO data initialized');
+        logger.info('✓ SEO data initialized');
         
         // Initialize cron jobs
-        console.log('Initializing cron jobs...');
+        logger.info('Initializing cron jobs...');
         initializeCronJobs();
-        console.log('✓ Cron jobs initialized');
+        logger.info('✓ Cron jobs initialized');
         
         // Start server
         const server = app.listen(PORT, () => {
-            console.log(`✓ Server is running on port ${PORT}`);
-            console.log(`✓ Health check available at: http://localhost:${PORT}/api/health`);
-            console.log(`✓ API base URL: http://localhost:${PORT}/api`);
+            logger.info(`✓ Server is running on port ${PORT}`);
+            logger.info(`✓ Health check available at: http://localhost:${PORT}/api/health`);
+            logger.info(`✓ API base URL: http://localhost:${PORT}/api`);
             logMemoryUsage(); // Log initial memory usage
         });
         
         // Graceful shutdown
         process.on('SIGTERM', () => {
-            console.log('SIGTERM received, shutting down gracefully');
+            logger.info('SIGTERM received, shutting down gracefully');
             server.close(() => {
-                console.log('Process terminated');
+                logger.info('Process terminated');
                 process.exit(0);
             });
         });
         
         process.on('SIGINT', () => {
-            console.log('SIGINT received, shutting down gracefully');
+            logger.info('SIGINT received, shutting down gracefully');
             server.close(() => {
-                console.log('Process terminated');
+                logger.info('Process terminated');
                 process.exit(0);
             });
         });
         
         // Handle uncaught exceptions
         process.on('uncaughtException', (error) => {
-            console.error('❌ Uncaught Exception:', error);
+            logger.error('Uncaught Exception:', error);
             logMemoryUsage();
         });
         
         process.on('unhandledRejection', (reason, promise) => {
-            console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+            logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
             logMemoryUsage();
         });
         
     } catch (error) {
-        console.error('❌ Failed to start server:', error);
+        logger.error('Failed to start server:', error);
         process.exit(1);
     }
 };

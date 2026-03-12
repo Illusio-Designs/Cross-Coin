@@ -1492,3 +1492,9 @@ const isValidSignature = await PaymentService.verifyMagicCheckoutSignature(...);
 **Recommended Timeline:** 1-2 weeks  
 **Priority:** URGENT - Deploy before accepting prepaid orders
 
+# Redis server details tatus:  Running
+IP Address: 127.0.0.1
+Port: 35399
+Password: 3wZooQV3BLCvaM7uCux 
+Max Memory: 128mb
+Databases: 16

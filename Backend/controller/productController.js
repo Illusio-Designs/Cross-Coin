@@ -20,6 +20,8 @@ const { sequelize } = require("../config/db.js");
 const { Op } = require("sequelize");
 const fs = require("fs/promises");
 const BadgeService = require("../services/badgeService.js");
+const ProductService = require("../services/productService.js");
+const cacheManager = require("../services/cacheManager.js");
 
 // In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(
@@ -1266,33 +1268,75 @@ module.exports.deleteProduct = async (req, res) => {
 // Example function to get best-selling products
 module.exports.getBestSellers = async (req, res) => {
   try {
-    const bestSellers = await Product.findAll({
+    const { page = 1, limit = 20 } = req.query;
+    
+    // Pagination
+    const offset = (page - 1) * limit;
+    
+    const bestSellers = await Product.findAndCountAll({
       where: { soldCount: { [Op.gt]: 0 } }, // Assuming you have a soldCount field
       order: [["soldCount", "DESC"]],
-      limit: 10, // Limit to top 10 best sellers
+      limit: parseInt(limit),
+      offset: parseInt(offset),
     });
 
-    res.json(bestSellers);
+    const totalPages = Math.ceil(bestSellers.count / limit);
+
+    res.json({
+      success: true,
+      data: bestSellers.rows,
+      pagination: {
+        total: bestSellers.count,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      }
+    });
   } catch (error) {
     console.error("Error fetching best sellers:", error);
-    res
-      .status(500)
-      .json({ message: "Failed to fetch best sellers", error: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch best sellers",
+      error: error.message
+    });
   }
 };
 
 // Example function to get featured products
 module.exports.getFeaturedProducts = async (req, res) => {
   try {
-    const featuredProducts = await Product.findAll({
+    const { page = 1, limit = 20 } = req.query;
+    
+    // Pagination
+    const offset = (page - 1) * limit;
+    
+    const featuredProducts = await Product.findAndCountAll({
       where: { isFeatured: true }, // Assuming you have an isFeatured field
-      limit: 10, // Limit to top 10 featured products
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [["createdAt", "DESC"]],
     });
 
-    res.json(featuredProducts);
+    const totalPages = Math.ceil(featuredProducts.count / limit);
+
+    res.json({
+      success: true,
+      data: featuredProducts.rows,
+      pagination: {
+        total: featuredProducts.count,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      }
+    });
   } catch (error) {
     console.error("Error fetching featured products:", error);
     res.status(500).json({
+      success: false,
       message: "Failed to fetch featured products",
       error: error.message,
     });
@@ -1302,17 +1346,38 @@ module.exports.getFeaturedProducts = async (req, res) => {
 // Example function to get new arrivals
 module.exports.getNewArrivals = async (req, res) => {
   try {
-    const newArrivals = await Product.findAll({
+    const { page = 1, limit = 20 } = req.query;
+    
+    // Pagination
+    const offset = (page - 1) * limit;
+    
+    const newArrivals = await Product.findAndCountAll({
       order: [["createdAt", "DESC"]], // Assuming you want the latest products
-      limit: 10, // Limit to top 10 new arrivals
+      limit: parseInt(limit),
+      offset: parseInt(offset),
     });
 
-    res.json(newArrivals);
+    const totalPages = Math.ceil(newArrivals.count / limit);
+
+    res.json({
+      success: true,
+      data: newArrivals.rows,
+      pagination: {
+        total: newArrivals.count,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      }
+    });
   } catch (error) {
     console.error("Error fetching new arrivals:", error);
-    res
-      .status(500)
-      .json({ message: "Failed to fetch new arrivals", error: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch new arrivals",
+      error: error.message
+    });
   }
 };
 
@@ -1320,26 +1385,54 @@ module.exports.getNewArrivals = async (req, res) => {
 module.exports.getProductsByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    
+    // Pagination
+    const offset = (page - 1) * limit;
 
-    const products = await Product.findAll({
+    const products = await Product.findAndCountAll({
       where: { categoryId },
       include: [
         { model: ProductVariation },
         { model: ProductImage },
         { model: ProductSEO },
       ],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [["createdAt", "DESC"]],
     });
 
-    if (!products.length) {
-      return res
-        .status(404)
-        .json({ message: "No products found for this category" });
+    if (!products.count) {
+      return res.status(404).json({
+        success: false,
+        message: "No products found for this category",
+        pagination: {
+          total: 0,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: 0
+        }
+      });
     }
 
-    res.json(products.map(formatProductResponse));
+    const totalPages = Math.ceil(products.count / limit);
+
+    res.json({
+      success: true,
+      data: products.rows.map(formatProductResponse),
+      pagination: {
+        total: products.count,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      }
+    });
   } catch (error) {
     console.error("Error fetching products by category:", error);
     res.status(500).json({
+      success: false,
       message: "Failed to fetch products by category",
       error: error.message,
     });
@@ -1349,7 +1442,7 @@ module.exports.getProductsByCategory = async (req, res) => {
 // Search products
 module.exports.searchProducts = async (req, res) => {
   try {
-    const { query } = req.query;
+    const { query, page = 1, limit = 20 } = req.query;
 
     if (!query || query.trim() === "") {
       return res.status(400).json({
@@ -1358,7 +1451,10 @@ module.exports.searchProducts = async (req, res) => {
       });
     }
 
-    const products = await Product.findAll({
+    // Pagination
+    const offset = (page - 1) * limit;
+
+    const products = await Product.findAndCountAll({
       where: {
         [Op.and]: [
           { status: "active" }, // Only search active products
@@ -1377,10 +1473,12 @@ module.exports.searchProducts = async (req, res) => {
         { model: ProductSEO, as: "ProductSEO" },
       ],
       order: [["createdAt", "DESC"]],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
     });
 
     // Format products with proper image URLs
-    const formattedProducts = products.map((product) => {
+    const formattedProducts = products.rows.map((product) => {
       const formattedProduct = formatProductResponse(product);
       if (formattedProduct.images) {
         formattedProduct.images = formattedProduct.images.map((image) => ({
@@ -1397,15 +1495,24 @@ module.exports.searchProducts = async (req, res) => {
       return formattedProduct;
     });
 
+    const totalPages = Math.ceil(products.count / limit);
+
     res.json({
       success: true,
       data: {
         products: formattedProducts,
-        total: formattedProducts.length,
+        total: products.count,
+      },
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
       },
       message:
         formattedProducts.length > 0
-          ? `Found ${formattedProducts.length} products matching "${query}"`
+          ? `Found ${products.count} products matching "${query}"`
           : `No products found matching "${query}"`,
     });
   } catch (error) {
@@ -1566,88 +1673,21 @@ module.exports.getAllPublicProducts = async (req, res) => {
   try {
     const { category, search, sort, page = 1, limit = 10 } = req.query;
 
-    // Build filter
-    const filter = { status: "active" }; // Only get active products
-    if (category) {
-      // Handle multiple category IDs (comma-separated)
-      if (category.includes(",")) {
-        const categoryIds = category
-          .split(",")
-          .map((id) => parseInt(id.trim()));
-        filter.categoryId = { [Op.in]: categoryIds };
-      } else {
-        filter.categoryId = parseInt(category);
-      }
-    }
-    if (search) {
-      filter[Op.or] = [
-        { name: { [Op.like]: `%${search.toLowerCase()}%` } },
-        { description: { [Op.like]: `%${search.toLowerCase()}%` } },
-      ];
-    }
-
-    // Build sort options
-    let sortOptions = [];
-    if (sort) {
-      // Handle different sort cases
-      switch (sort) {
-        case "featured":
-          // For featured, prioritize products with higher ratings and review counts
-          sortOptions = [
-            ["avg_rating", "DESC"],
-            ["review_count", "DESC"],
-            ["createdAt", "DESC"]
-          ];
-          break;
-        case "price:asc":
-          sortOptions = [["price", "ASC"]];
-          break;
-        case "price:desc":
-          sortOptions = [["price", "DESC"]];
-          break;
-        case "newest":
-          sortOptions = [["createdAt", "DESC"]];
-          break;
-        default:
-          sortOptions = [["createdAt", "DESC"]];
-      }
-    } else {
-      // Default sort
-      sortOptions = [["createdAt", "DESC"]];
-    }
-
-    // Build include options with brand filtering
-    const includeOptions = [
-      { model: Category },
-      { model: ProductVariation, as: "ProductVariations" },
-      { model: ProductImage, as: "ProductImages" },
-      { model: ProductSEO, as: "ProductSEO" },
-      {
-        model: Brand,
-        as: "Brands",
-        through: { 
-          attributes: ['status', 'price_override', 'stock_override'],
-          where: { status: 'active' }
-        },
-        ...(req.brand && req.brand.id && { where: { id: req.brand.id } })
-      }
-    ];
-
-    // Get products with pagination
-    const products = await Product.findAndCountAll({
-      where: filter,
-      order: sortOptions,
-      limit: parseInt(limit),
-      offset: (parseInt(page) - 1) * parseInt(limit),
-      include: includeOptions,
-      distinct: true
+    // Use ProductService with caching
+    const result = await ProductService.getProductsList({
+      category,
+      search,
+      sort,
+      page,
+      limit,
+      useCache: true,
+      brand: req.brand
     });
 
     // Format products with proper image URLs
-    const formattedProducts = products.rows.map((product) => {
-      const formattedProduct = formatProductResponse(product);
-      if (formattedProduct.images) {
-        formattedProduct.images = formattedProduct.images.map((image) => ({
+    const formattedProducts = result.data.map((product) => {
+      if (product.images) {
+        product.images = product.images.map((image) => ({
           ...image,
           image_url: image.image_url.startsWith("http")
             ? image.image_url
@@ -1658,7 +1698,7 @@ module.exports.getAllPublicProducts = async (req, res) => {
               }${image.image_url}`,
         }));
       }
-      return formattedProduct;
+      return product;
     });
 
     // Set caching headers
@@ -1671,9 +1711,9 @@ module.exports.getAllPublicProducts = async (req, res) => {
       success: true,
       data: {
         products: formattedProducts,
-        total: products.count,
-        page: parseInt(page),
-        totalPages: Math.ceil(products.count / parseInt(limit)),
+        total: result.pagination.total,
+        page: result.pagination.page,
+        totalPages: result.pagination.pages,
       },
     });
   } catch (error) {

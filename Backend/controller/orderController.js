@@ -21,6 +21,12 @@ const fshipService = require("../services/fshipService.js");
 const { setImmediate } = require("timers");
 const { sendFacebookEvent } = require("../integration/facebookPixel.js");
 const settingsHelper = require("../services/settingsHelper");
+// Import batch fetch utilities for performance optimization
+const { batchFetchProducts, batchFetchVariations, batchFetchVariationsByProductIds } = require("../utils/batchFetch.js");
+// Import batch insert utility for efficient bulk operations
+const { batchInsert } = require("../utils/batchInsert.js");
+// Import dashboard cache invalidation
+const { invalidateDashboardCache } = require("../services/dashboardService.js");
 
 // Generate unique order number
 const generateOrderNumber = () => {
@@ -85,9 +91,15 @@ const calculateShipmentDimensions = (orderItems) => {
 // Create a new order
 module.exports.createOrder = async (req, res) => {
   console.log("createOrder: Starting order creation...");
-  const transaction = await sequelize.transaction();
+  let transaction = null;
 
   try {
+    // Start transaction with READ_COMMITTED isolation level
+    transaction = await sequelize.transaction({
+      isolationLevel: sequelize.Transaction.ISOLATION_LEVELS.READ_COMMITTED
+    });
+    console.log("✅ Transaction started for order creation");
+
     const {
       shipping_address_id,
       items,
@@ -109,6 +121,7 @@ module.exports.createOrder = async (req, res) => {
 
     if (!shipping_address_id || !items || !payment_type) {
       await transaction.rollback();
+      console.log("❌ Validation failed: Missing required fields");
       return res.status(400).json({
         message: "Shipping address, items, and payment type are required",
       });
@@ -118,10 +131,12 @@ module.exports.createOrder = async (req, res) => {
     // Validate shipping address belongs to user
     const shippingAddress = await ShippingAddress.findOne({
       where: { id: shipping_address_id, user_id: userId },
+      transaction
     });
 
     if (!shippingAddress) {
       await transaction.rollback();
+      console.log("❌ Validation failed: Shipping address not found");
       return res.status(404).json({ message: "Shipping address not found" });
     }
     console.log("createOrder: Shipping address validated");
@@ -135,9 +150,26 @@ module.exports.createOrder = async (req, res) => {
       items.length,
       "items"
     );
+
+    // BATCH FETCH: Extract all product and variation IDs upfront
+    const productIds = items.map((item) => item.product_id);
+    const variationIds = items
+      .filter((item) => item.variation_id)
+      .map((item) => item.variation_id);
+
+    // Fetch all products and variations in parallel (2 queries instead of N+1)
+    console.log("createOrder: Batch fetching", productIds.length, "products and", variationIds.length, "variations...");
+    const [productMap, variationMap, variationsByProductMap] = await Promise.all([
+      batchFetchProducts(productIds),
+      batchFetchVariations(variationIds),
+      batchFetchVariationsByProductIds(productIds),
+    ]);
+    console.log("✅ createOrder: Batch fetch complete - reduced N+1 queries");
+
+    // Validate items using pre-fetched data
     for (const item of items) {
       const { product_id, quantity } = item;
-      let { variation_id } = item; // Use a local, mutable variation_id
+      let { variation_id } = item;
 
       if (!product_id || !quantity) {
         await transaction.rollback();
@@ -146,8 +178,8 @@ module.exports.createOrder = async (req, res) => {
         });
       }
 
-      console.log("createOrder: Validating product", product_id);
-      const product = await Product.findByPk(product_id);
+      // Get product from map (O(1) lookup instead of database query)
+      const product = productMap.get(product_id);
       if (!product) {
         await transaction.rollback();
         return res
@@ -159,9 +191,10 @@ module.exports.createOrder = async (req, res) => {
       let price;
       let stockAvailable;
       let variation;
+
       if (variation_id) {
-        console.log("createOrder: Validating variation", variation_id);
-        variation = await ProductVariation.findByPk(variation_id);
+        // Get variation from map (O(1) lookup instead of database query)
+        variation = variationMap.get(variation_id);
         if (!variation || variation.productId !== product_id) {
           await transaction.rollback();
           return res
@@ -177,40 +210,20 @@ module.exports.createOrder = async (req, res) => {
           stockAvailable
         );
       } else {
-        const variations = await ProductVariation.findAll({
-          where: { productId: product_id },
-        });
+        // Get variations for this product from map (already fetched in batch)
+        const variations = variationsByProductMap.get(product_id) || [];
         if (variations.length > 0) {
-          // If variations exist but none was chosen, default to the first one
+          // Default to the first variation
           variation = variations[0];
-          variation_id = variation.id; // Assign to the local variable
+          variation_id = variation.id;
           price = variation.price;
           stockAvailable = variation.stock;
         } else {
-          const variations = await ProductVariation.findAll({
-            where: { productId: product_id },
+          // No variations exist
+          await transaction.rollback();
+          return res.status(400).json({
+            message: `Product ${product_id} has no variations defined. Please contact support.`,
           });
-          if (variations.length > 0) {
-            // If variations exist but none was chosen, default to the first one
-            variation = variations[0];
-            variation_id = variation.id; // Assign to the local variable
-            price = variation.price;
-            stockAvailable = variation.stock;
-          } else {
-            // No variations exist - this shouldn't happen in this system
-            // All products should have at least one variation for stock management
-            await transaction.rollback();
-            return res.status(400).json({
-              message: `Product ${product_id} has no variations defined. Please contact support.`,
-            });
-          }
-
-          if (!price || price <= 0) {
-            await transaction.rollback();
-            return res
-              .status(400)
-              .json({ message: `No price found for product ${product_id}` });
-          }
         }
 
         if (!price || price <= 0) {
@@ -245,7 +258,7 @@ module.exports.createOrder = async (req, res) => {
 
       validatedItems.push({
         product_id,
-        variation_id: variation_id || null, // Use the local variable
+        variation_id: variation_id || null,
         quantity,
         price,
         discount,
@@ -319,22 +332,24 @@ module.exports.createOrder = async (req, res) => {
     );
     console.log("createOrder: Order created with ID:", order.id);
 
-    // Create order items
-    for (const item of validatedItems) {
-      await OrderItem.create(
-        {
-          order_id: order.id,
-          product_id: item.product_id,
-          variation_id: item.variation_id,
-          quantity: item.quantity,
-          price: item.price,
-          discount: item.discount,
-          subtotal: item.subtotal,
-        },
-        { transaction }
-      );
+    // BATCH INSERT: Create all order items in a single bulk operation
+    console.log("createOrder: Batch inserting", validatedItems.length, "order items...");
+    const orderItemsData = validatedItems.map(item => ({
+      order_id: order.id,
+      product_id: item.product_id,
+      variation_id: item.variation_id,
+      quantity: item.quantity,
+      price: item.price,
+      discount: item.discount,
+      subtotal: item.subtotal,
+    }));
 
-      // DECREMENT STOCK
+    await batchInsert(OrderItem, orderItemsData, { transaction });
+    console.log("✅ createOrder: Batch insert complete - reduced N individual inserts to 1 query");
+
+    // DECREMENT STOCK for all items
+    console.log("createOrder: Decrementing stock for", validatedItems.length, "items...");
+    for (const item of validatedItems) {
       if (item._variation) {
         item._variation.stock -= item.quantity;
         await item._variation.save({ transaction });
@@ -344,6 +359,7 @@ module.exports.createOrder = async (req, res) => {
         console.error(`Warning: Order item ${item.product_id} has no variation for stock management`);
       }
     }
+    console.log("✅ createOrder: Stock decremented for all items");
 
     // Create initial status history
     await OrderStatusHistory.create(
@@ -364,6 +380,7 @@ module.exports.createOrder = async (req, res) => {
           payment_type,
           amount_paid: finalAmount,
           status: "pending",
+          brand_id: req.brand ? req.brand.id : 1, // ✅ Store brand context in payment record
         },
         { transaction }
       );
@@ -373,20 +390,16 @@ module.exports.createOrder = async (req, res) => {
     await transaction.commit();
     console.log("createOrder: Transaction committed successfully");
 
-    // Recalculate badges for all products in this order
-    console.log("createOrder: Recalculating badges for products in order...");
+    // Enqueue badge recalculation for async processing (non-blocking)
+    console.log("createOrder: Enqueueing badge recalculation for products in order...");
     try {
       const BadgeService = require("../services/badgeService");
-      for (const item of validatedItems) {
-        const product = await Product.findByPk(item.product_id);
-        if (product) {
-          await BadgeService.updateBadgeIfChanged(product);
-          console.log(`✅ Badge recalculated for product ${product.id}: ${product.badge}`);
-        }
-      }
+      // Enqueue job - returns immediately without blocking
+      await BadgeService.enqueueBadgeRecalculation(userId);
+      console.log(`✅ Badge recalculation job enqueued for user ${userId}`);
     } catch (badgeError) {
-      console.error("❌ Error recalculating badges:", badgeError.message);
-      // Don't fail the order creation if badge recalculation fails
+      console.error("⚠️ Warning: Error enqueueing badge recalculation:", badgeError.message);
+      // Don't fail the order creation if badge queue fails
     }
 
     // Fetch the created order with its items
@@ -507,12 +520,30 @@ module.exports.createOrder = async (req, res) => {
     });
     console.log("createOrder: Response sent successfully");
 
+    // Invalidate dashboard cache for the user (non-blocking)
+    try {
+      await invalidateDashboardCache(userId);
+    } catch (cacheError) {
+      console.warn("⚠️ Warning: Error invalidating dashboard cache:", cacheError.message);
+      // Don't fail the order creation if cache invalidation fails
+    }
+
     // Note: Full sync removed - cron job handles periodic syncing
     // Individual order is already synced above via createOrUpdateForwardOrder
   } catch (error) {
     console.error("createOrder: Error caught:", error.message);
     console.error("createOrder: Error stack:", error.stack);
-    await transaction.rollback();
+    
+    // Ensure transaction is rolled back on any error
+    if (transaction && !transaction.finished) {
+      try {
+        await transaction.rollback();
+        console.log("✅ Transaction rolled back due to error");
+      } catch (rollbackError) {
+        console.error("❌ Error rolling back transaction:", rollbackError.message);
+      }
+    }
+    
     console.error("Error creating order:", error);
     res
       .status(500)
@@ -858,6 +889,7 @@ module.exports.createGuestOrder = async (req, res) => {
         amount_paid: finalAmount, // Use amount_paid instead of amount
         status: payment_type === "cod" ? "pending" : "pending",
         transaction_id: null,
+        brand_id: req.brand ? req.brand.id : 1, // ✅ Store brand context in payment record
       },
       { transaction }
     );
@@ -2735,11 +2767,11 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
           if (!existingPayment) {
             await Payment.create({
               order_id: order.id,
-              payment_method: 'cod',
-              amount: order.final_amount,
+              payment_type: 'cod',
+              amount_paid: order.final_amount,
               status: 'completed',
               transaction_id: `COD-${order.order_number}`,
-              payment_date: new Date(),
+              brand_id: order.brand_id, // ✅ Use brand_id from order for consistency
               notes: 'COD payment completed on delivery'
             }, { transaction });
           } else {
