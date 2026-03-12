@@ -1,12 +1,4 @@
 const Queue = require("bull");
-const redis = require("redis");
-
-// Create Redis client for Bull queue
-const redisClient = redis.createClient({
-  host: process.env.REDIS_HOST || "localhost",
-  port: process.env.REDIS_PORT || 6379,
-  password: process.env.REDIS_PASSWORD || undefined,
-});
 
 // Create Bull queue for badge recalculation
 const badgeQueue = new Queue("badge_recalculation", {
