@@ -92,6 +92,17 @@ const formatProductResponse = (product) => {
       }
       return variationObj;
     });
+    
+    // Populate product-level price from first variation if not already set
+    if (productData.variations.length > 0) {
+      if (!productData.price || productData.price === null || productData.price === undefined) {
+        productData.price = productData.variations[0].price;
+      }
+      if (!productData.comparePrice || productData.comparePrice === null || productData.comparePrice === undefined) {
+        productData.comparePrice = productData.variations[0].comparePrice;
+      }
+    }
+    
     delete productData.ProductVariations;
   }
 
@@ -1684,10 +1695,19 @@ module.exports.getAllPublicProducts = async (req, res) => {
       brand: req.brand
     });
 
-    // Format products with proper image URLs
+    // Format products using formatProductResponse to ensure price fields are populated
     const formattedProducts = result.data.map((product) => {
-      if (product.images) {
-        product.images = product.images.map((image) => ({
+      // Create a temporary object with the structure expected by formatProductResponse
+      const tempProduct = {
+        toJSON: () => product
+      };
+      
+      // Apply formatting which includes price population from variations
+      const formatted = formatProductResponse(tempProduct);
+      
+      // Format image URLs
+      if (formatted.images) {
+        formatted.images = formatted.images.map((image) => ({
           ...image,
           image_url: image.image_url.startsWith("http")
             ? image.image_url
@@ -1698,7 +1718,8 @@ module.exports.getAllPublicProducts = async (req, res) => {
               }${image.image_url}`,
         }));
       }
-      return product;
+      
+      return formatted;
     });
 
     // Set caching headers

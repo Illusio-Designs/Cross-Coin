@@ -909,9 +909,9 @@ const Home = () => {
                         <div>
                           <h1 className="product-title">{product.name}</h1>
                           <div className="product-price-row">
-                            <span className="current-price">₹{selectedVariation?.price || product?.price || 0}</span>
-                            {(selectedVariation?.comparePrice || product?.comparePrice) && (
-                              <span className="original-price">₹{selectedVariation?.comparePrice || product?.comparePrice}</span>
+                            <span className="current-price">₹{selectedVariation?.price || product?.ProductVariations?.[0]?.price || product?.price || 0}</span>
+                            {(selectedVariation?.comparePrice || product?.ProductVariations?.[0]?.comparePrice || product?.comparePrice) && (
+                              <span className="original-price">₹{selectedVariation?.comparePrice || product?.ProductVariations?.[0]?.comparePrice || product?.comparePrice}</span>
                             )}
                             <span className="review-summary">
                               <span className="stars">{renderStars(avgRating)}</span>
@@ -1120,6 +1120,11 @@ const Home = () => {
                 } else {
                   imagesArr = []; // No fallback image
                 }
+                // Get price from ProductVariations (API response structure)
+                const firstVariation = product.ProductVariations?.[0] || product.variations?.[0];
+                const productPrice = firstVariation?.price || product.price || 0;
+                const productComparePrice = firstVariation?.comparePrice || product.comparePrice || 0;
+
                 const formattedProduct = {
                   id: product.id,
                   name: product.name,
@@ -1127,9 +1132,9 @@ const Home = () => {
                   description: product.description,
                   badge: product.badge || null,
                   images: imagesArr,
-                  price: product.variations?.[0]?.price || product.price || 0,
-                  comparePrice: product.variations?.[0]?.comparePrice || product.comparePrice || 0,
-                  variations: product.variations && product.variations.length > 0 ? product.variations.map(variation => ({
+                  price: productPrice,
+                  comparePrice: productComparePrice,
+                  variations: (product.ProductVariations || product.variations || []).length > 0 ? (product.ProductVariations || product.variations).map(variation => ({
                     id: variation.id,
                     sku: variation.sku,
                     price: variation.price || 0,
@@ -1140,8 +1145,8 @@ const Home = () => {
                   })) : [{
                     id: null,
                     sku: null,
-                    price: 0,
-                    comparePrice: 0,
+                    price: productPrice,
+                    comparePrice: productComparePrice,
                     stock: 0,
                     attributes: {},
                     images: []
