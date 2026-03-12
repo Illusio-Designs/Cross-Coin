@@ -4,11 +4,13 @@ import { FaBox, FaShoppingCart, FaDollarSign, FaUsers, FaStar, FaClock, FaRupeeS
 import { dashboardService } from '../../services';
 import Loader from '../Loader';
 import DonutChart from '../common/DonutChart';
+import cacheManager from '../../services/cacheManager';
 
 function CardGrid() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [cacheHit, setCacheHit] = useState(false);
 
   useEffect(() => {
     fetchDashboardStats();
@@ -17,12 +19,31 @@ function CardGrid() {
   const fetchDashboardStats = async () => {
     try {
       setLoading(true);
+      setCacheHit(false);
+
+      // Check cache first (5 minute TTL for dashboard)
+      const cachedStats = cacheManager.getByType('dashboard');
+      if (cachedStats) {
+        console.log('✅ Dashboard stats loaded from cache');
+        setStats(cachedStats);
+        setCacheHit(true);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
+      // Cache miss - fetch from API
+      console.log('⚠️ Dashboard cache miss - fetching from API');
       const response = await dashboardService.getDashboardStats();
       console.log('Dashboard Stats Response:', response);
       if (response.success) {
         console.log('Revenue Data:', response.stats.revenue);
         console.log('Donut Chart Data:', response.stats.revenue?.donutChart);
         setStats(response.stats);
+        
+        // Cache the response (5 minute TTL)
+        cacheManager.setByType('dashboard', response.stats);
+        console.log('✅ Dashboard stats cached for 5 minutes');
       }
       setError(null);
     } catch (err) {
@@ -62,6 +83,21 @@ function CardGrid() {
   if (!stats) {
     return null;
   }
+
+  // Cache status indicator
+  const cacheStatusStyle = {
+    position: 'fixed',
+    top: '20px',
+    right: '20px',
+    padding: '8px 12px',
+    borderRadius: '4px',
+    fontSize: '12px',
+    fontWeight: '500',
+    zIndex: 1000,
+    opacity: 0.8,
+    backgroundColor: cacheHit ? '#10b981' : '#f59e0b',
+    color: 'white'
+  };
 
   const productCards = [
     {
@@ -120,6 +156,11 @@ function CardGrid() {
 
   return (
     <div className="dashboard-sections">
+      {/* Cache Status Indicator */}
+      <div style={cacheStatusStyle}>
+        {cacheHit ? '✅ Cached' : '🔄 Fresh'}
+      </div>
+
       {/* Revenue Overview - Hero Section */}
       <div className="dashboard-hero-section">
         <div className="revenue-hero-card">

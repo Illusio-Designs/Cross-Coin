@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
-import { validateCoupon, getPublicCoupons } from "../../services/publicindex";
+import { validateCoupon, getPublicCoupons } from "../../services/publicApi";
 import { useRouter } from "next/router";
 
 export default function OrderSummary({ 

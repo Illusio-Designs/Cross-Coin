@@ -15,7 +15,7 @@ import {
   deleteShippingAddress,
   setDefaultShippingAddress,
   getUserOrders,
-} from "../services/publicindex";
+} from "../services/publicApi";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import {

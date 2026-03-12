@@ -1,6 +1,7 @@
 import axios from "axios";
 import { getCachedData, setCachedData, clearCache } from '../utils/apiCache';
 import { deduplicateRequest } from '../utils/requestDeduplication';
+import { getTimeoutForEndpoint, handleTimeoutError } from '../config/apiConfig';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
@@ -16,10 +17,10 @@ if (isDevelopment) {
   console.log("========================");
 }
 
-// Create axios instance
+// Create axios instance with default timeout
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 0, // 0 = no timeout for all API calls
+  timeout: 15000, // Default 15 second timeout (reduced from 30s)
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -27,7 +28,7 @@ const api = axios.create({
   },
 });
 
-// Request interceptor
+// Request interceptor - set dynamic timeout based on endpoint
 api.interceptors.request.use(
   (config) => {
     if (isDevelopment) {
@@ -35,6 +36,14 @@ api.interceptors.request.use(
       console.log("URL:", config.url);
       console.log("Method:", config.method);
       console.log("Base URL:", API_BASE_URL);
+    }
+
+    // Set timeout based on endpoint
+    const timeout = getTimeoutForEndpoint(config.url || '');
+    config.timeout = timeout;
+    
+    if (isDevelopment) {
+      console.log("Timeout set to:", timeout, "ms");
     }
 
     const token = localStorage.getItem("token");
@@ -79,11 +88,13 @@ api.interceptors.response.use(
       console.log("Error Data:", error.response?.data);
     }
 
+    // Handle timeout errors
     if (error.code === "ECONNABORTED") {
+      const userMessage = handleTimeoutError(error);
       if (isDevelopment) {
-        console.log("Request timed out");
+        console.log("Request timed out:", userMessage);
       }
-      return Promise.reject(new Error("Request timed out. Please try again."));
+      return Promise.reject(new Error(userMessage));
     }
 
     if (error.response?.status === 401) {

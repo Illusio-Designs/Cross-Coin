@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
-import { searchProducts } from '../services/publicindex';
+import { searchProducts } from '../services/publicApi';
 import ProductCard from '../components/ProductCard';
 import Header from '../components/Header';
 import Footer from '../components/Footer';

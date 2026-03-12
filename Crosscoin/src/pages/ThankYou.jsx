@@ -2,7 +2,7 @@ import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
-import { getGuestOrder, getUserOrders } from "../services/publicindex";
+import { getGuestOrder, getUserOrders } from "../services/publicApi";
 import { useAuth } from "../context/AuthContext";
 import { fbqTrack } from "../components/common/Analytics";
 

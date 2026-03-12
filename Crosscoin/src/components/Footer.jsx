@@ -4,7 +4,7 @@ import { AiOutlineMail } from "react-icons/ai";
 import { FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn } from "react-icons/fa";
 import { MdOutlinePhoneInTalk } from "react-icons/md"; 
 import SafeImage from "./common/SafeImage";
-import { getPublicCategories } from "../services/publicindex";
+import { getPublicCategories } from "../services/publicApi";
 
 const Footer = () => {
   const [collections, setCollections] = useState([]);

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { userService, authService } from '../services';
-import { loginUser, registerUser, getCurrentUser as getPublicCurrentUser, logout as publicLogout } from '../services/publicindex';
+import { loginUser, registerUser, getCurrentUser as getPublicCurrentUser, logout as publicLogout } from '../services/publicApi';
 import { useContext as useReactContext } from 'react';
 import { WishlistContext } from './WishlistContext';
 import { 

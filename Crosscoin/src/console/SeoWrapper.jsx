@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { useRouter } from 'next/router';
-import { getSeoByPageName } from '../services/publicindex';
+import { getSeoByPageName } from '../services/publicApi';
 import Head from 'next/head';
 
 const SeoWrapper = ({ pageName, children, seoData }) => {

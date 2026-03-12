@@ -8,7 +8,7 @@ import {
   getShippingFees,
   createGuestShippingAddress,
   getGuestShippingAddresses,
-} from "../../services/publicindex";
+} from "../../services/publicApi";
 import { FaPlus, FaTrash, FaEdit } from "react-icons/fa";
 
 export default function ShippingStep({
