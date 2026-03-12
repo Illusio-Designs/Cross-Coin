@@ -5,7 +5,7 @@ import {
   updateCartItem as apiUpdateCartItem,
   removeFromCart as apiRemoveFromCart,
   clearCart as apiClearCart
-} from '../services/publicindex';
+} from '../services/publicApi';
 import { 
   showAddToCartSuccessToast, 
   showAddToCartErrorToast, 

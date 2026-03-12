@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
-import { getPublicProductReviews, getAllPublicReviews } from '../services/publicindex';
+import { getPublicProductReviews, getAllPublicReviews } from '../services/publicApi';
 
 const Testimonials = () => {
   const sliderRef = useRef(null);

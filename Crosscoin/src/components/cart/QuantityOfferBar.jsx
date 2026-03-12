@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiGift, FiCheck } from 'react-icons/fi';
 import { useCart } from '../../context/CartContext';
-import { getPublicCoupons } from '../../services/publicindex';
+import { getPublicCoupons } from '../../services/publicApi';
 import './QuantityOfferBar.css';
 
 const QuantityOfferBar = ({ selectedPaymentMode = 'cod', appliedCoupon, onCouponApply }) => {

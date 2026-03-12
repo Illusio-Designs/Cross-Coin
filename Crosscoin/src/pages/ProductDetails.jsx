@@ -7,7 +7,7 @@ import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from "next/navigation";
-import { getPublicProductBySlug, createPublicReview, getPublicCoupons, getPublicProductReviews } from '../services/publicindex';
+import { getPublicProductBySlug, createPublicReview, getPublicCoupons, getPublicProductReviews } from '../services/publicApi';
 import SeoWrapper from '../console/SeoWrapper';
 import { showValidationErrorToast, showReviewSubmittedSuccessToast, showReviewSubmittedErrorToast } from '../utils/toast';
 import Loader from '../components/Loader';

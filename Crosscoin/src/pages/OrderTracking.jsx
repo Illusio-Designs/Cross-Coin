@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import SafeImage from '../components/common/SafeImage';
-import { trackOrderByAWB, trackOrderByOrderNumber } from '../services/publicindex';
+import { trackOrderByAWB, trackOrderByOrderNumber } from '../services/publicApi';
 import { formatAttributesForDisplay } from '../utils/productAttributeFormatter';
 import { getStatusColor, getStatusDisplayText } from '../utils/statusUtils';
 import '../styles/pages/OrderTracking.css';

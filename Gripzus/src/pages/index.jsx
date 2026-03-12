@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
-import { getPublicSliders } from '../services/publicindex';
+import { getPublicSliders } from '../services/publicApi';
 
 // Sample product data
 const featuredProducts = [

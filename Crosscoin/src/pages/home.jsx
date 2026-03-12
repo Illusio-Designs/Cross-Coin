@@ -9,7 +9,7 @@ import FeaturedProductSkeleton from "../components/common/FeaturedProductSkeleto
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { getPublicSliders, getPublicCategories, getPublicCategoryByName, getPublicProductReviews } from '../services/publicindex';
+import { getPublicSliders, getPublicCategories, getPublicCategoryByName, getPublicProductReviews } from '../services/publicApi';
 import SeoWrapper from '../console/SeoWrapper';
 import { useRouter } from 'next/router';
 import { fbqTrack } from '../components/common/Analytics';
@@ -406,7 +406,7 @@ const Home = () => {
     
     console.log('Adding to cart with:', {
       product: product.name,
-      selectedVariation: selectedVariation.id,
+      selectedVariation: selectedVariation?.id,
       finalSelectedColor,
       finalSelectedSize,
       quantity: state.quantity,
@@ -428,7 +428,7 @@ const Home = () => {
       content_ids: [product.id],
       content_name: product.name,
       content_type: 'product',
-      value: selectedVariation.price || product.price,
+      value: selectedVariation?.price || product.price,
       currency: 'INR',
       quantity: state.quantity,
     });
@@ -485,11 +485,11 @@ const Home = () => {
         finalSelectedColor,
         finalSelectedSize,
         quantity: state.quantity,
-        selectedVariationId: selectedVariation.id,
+      selectedVariationId: selectedVariation?.id,
         selectedVariation,
         variationImages
       });
-      await addToCart(product, finalSelectedColor, finalSelectedSize, state.quantity, selectedVariation.id, variationImages);
+      await addToCart(product, finalSelectedColor, finalSelectedSize, state.quantity, selectedVariation?.id, variationImages);
       console.log('Product added to cart successfully');
 
       // Track the event (non-blocking)
@@ -909,8 +909,8 @@ const Home = () => {
                         <div>
                           <h1 className="product-title">{product.name}</h1>
                           <div className="product-price-row">
-                            <span className="current-price">₹{selectedVariation.price}</span>
-                            {selectedVariation.comparePrice && (
+                            <span className="current-price">₹{selectedVariation?.price || 0}</span>
+                            {selectedVariation?.comparePrice && (
                               <span className="original-price">₹{selectedVariation.comparePrice}</span>
                             )}
                             <span className="review-summary">

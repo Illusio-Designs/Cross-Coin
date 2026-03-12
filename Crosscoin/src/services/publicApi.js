@@ -2,7 +2,8 @@ import axios from "axios";
 import apiCache from "../utils/apiCache";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
-const BRAND_NAME = "crosscoin"; // ✅ CrossCoin brand identifier
+const API_BASE_URL = API_URL;
+const BRAND_NAME = "crosscoin";
 
 // Create axios instance with brand header
 const createPublicApiClient = () => {
@@ -10,7 +11,7 @@ const createPublicApiClient = () => {
     baseURL: API_URL,
     headers: {
       "Content-Type": "application/json",
-      "X-Brand-Name": BRAND_NAME, // ✅ Send brand header with all requests
+      "X-Brand-Name": BRAND_NAME,
     },
   });
 };
@@ -26,13 +27,27 @@ const addBrandHeader = (config = {}) => {
   };
 };
 
-// Authentication APIs
+// Create axios instance for offer API
+const offerAPI = axios.create({
+  baseURL: `${API_BASE_URL}/api`,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add auth token to offer API requests if available
+offerAPI.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// ============ AUTHENTICATION APIs ============
 export const registerUser = async (userData) => {
   try {
-    const response = await axios.post(
-      `${API_URL}/api/users/register`,
-      userData
-    );
+    const response = await axios.post(`${API_URL}/api/users/register`, userData);
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -41,10 +56,7 @@ export const registerUser = async (userData) => {
 
 export const loginUser = async (credentials) => {
   try {
-    const response = await axios.post(
-      `${API_URL}/api/users/login`,
-      credentials
-    );
+    const response = await axios.post(`${API_URL}/api/users/login`, credentials);
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -53,9 +65,7 @@ export const loginUser = async (credentials) => {
 
 export const forgotPassword = async (email) => {
   try {
-    const response = await axios.post(`${API_URL}/api/users/forgot-password`, {
-      email,
-    });
+    const response = await axios.post(`${API_URL}/api/users/forgot-password`, { email });
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -64,66 +74,40 @@ export const forgotPassword = async (email) => {
 
 export const resetPassword = async (resetData) => {
   try {
-    const response = await axios.post(
-      `${API_URL}/api/users/reset-password`,
-      resetData
-    );
+    const response = await axios.post(`${API_URL}/api/users/reset-password`, resetData);
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
   }
 };
 
-// Get public categories
+
+// ============ CATEGORY APIs ============
 export const getPublicCategories = async () => {
   const cacheKey = apiCache.getCacheKey(`${API_URL}/api/categories/public`);
   
-  // Check if request is already pending
   if (apiCache.isPending(cacheKey)) {
-    console.log("Categories API call already in progress, waiting...");
     const pendingPromise = apiCache.getPending(cacheKey);
     const response = await pendingPromise;
     return response.data;
   }
 
-  // Check cache first
   if (apiCache.isValid(cacheKey)) {
-    console.log("Categories data loaded from cache");
     return apiCache.get(cacheKey);
   }
 
   try {
-    console.log("Fetching categories from API...");
-    console.log("API URL:", `${API_URL}/api/categories/public`);
-    console.log("Brand Header:", BRAND_NAME);
-    
     const promise = axios.get(`${API_URL}/api/categories/public`, addBrandHeader());
-    
-    // Add to pending requests - this will auto-remove when done
     apiCache.addPending(cacheKey, promise);
-    
     const response = await promise;
     const data = response.data;
-    
-    // Cache the result (pending already removed by addPending)
     apiCache.set(cacheKey, data);
-    
-    console.log("Categories data cached successfully:", data.length, "categories");
     return data;
   } catch (error) {
-    // Error already handled by addPending, just log and throw
-    console.error("Categories API Error Details:", {
-      message: error.message,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      headers: error.response?.headers
-    });
     throw error.response?.data || error.message;
   }
 };
 
-// Get public category by name
 export const getPublicCategoryByName = async (categoryName) => {
   try {
     const response = await axios.get(
@@ -136,60 +120,43 @@ export const getPublicCategoryByName = async (categoryName) => {
   }
 };
 
-// Get public sliders with caching
+// ============ SLIDER APIs ============
 export const getPublicSliders = async () => {
   const cacheKey = apiCache.getCacheKey(`${API_URL}/api/sliders/public`);
   
-  // Check if request is already pending
   if (apiCache.isPending(cacheKey)) {
     const pendingPromise = apiCache.getPending(cacheKey);
     const response = await pendingPromise;
     return response.data.sliders || response.data;
   }
 
-  // Check cache first (10 minutes TTL for sliders)
   const cached = apiCache.get(cacheKey);
   if (cached) {
-    console.log("Sliders data loaded from cache");
     return cached;
   }
 
   try {
-    console.log("Fetching sliders from API...");
     const promise = axios.get(`${API_URL}/api/sliders/public`, addBrandHeader());
     apiCache.addPending(cacheKey, promise);
-    
     const response = await promise;
     const data = response.data.sliders || response.data;
-    
-    // Cache for 10 minutes
     apiCache.set(cacheKey, data, 10 * 60 * 1000);
-    console.log("Sliders data cached successfully");
-    
     return data;
   } catch (error) {
-    console.error("Error fetching public sliders:", error);
     throw error.response?.data || error.message;
   }
 };
 
-// Get public product by slug
+// ============ PRODUCT APIs ============
 export const getPublicProductBySlug = async (slug) => {
   try {
-    console.log("API CALL: Fetching product with slug:", slug);
-    console.log("API URL:", `${API_URL}/api/products/public/${slug}`);
     const response = await axios.get(`${API_URL}/api/products/public/${slug}`, addBrandHeader());
-    console.log("API RESPONSE:", response.data);
     return response.data;
   } catch (error) {
-    console.error("API ERROR:", error);
-    console.error("Error response:", error.response?.data);
-    console.error("Error status:", error.response?.status);
     throw error.response?.data || error.message;
   }
 };
 
-// Get all public products
 export const getAllPublicProducts = async (params = {}) => {
   const queryParams = new URLSearchParams();
   if (params.category) queryParams.append("category", params.category);
@@ -201,47 +168,32 @@ export const getAllPublicProducts = async (params = {}) => {
   const url = `${API_URL}/api/products/public?${queryParams.toString()}`;
   const cacheKey = apiCache.getCacheKey(url, params);
 
-  // Check if request is already pending
   if (apiCache.isPending(cacheKey)) {
-    console.log("Products API call already in progress, waiting...");
     const pendingPromise = apiCache.getPending(cacheKey);
     const response = await pendingPromise;
     return response.data;
   }
 
-  // Check cache first (only for general products, not category-specific)
   if (!params.category && apiCache.isValid(cacheKey)) {
-    console.log("Products data loaded from cache");
     return apiCache.get(cacheKey);
   }
 
   try {
-    console.log("Fetching products from API...");
     const promise = axios.get(url, addBrandHeader());
-    
-    // Add to pending requests - this will auto-remove when done
     apiCache.addPending(cacheKey, promise);
-    
     const response = await promise;
     const data = response.data;
-    
-    // Cache the result (only for general products, pending already removed by addPending)
     if (!params.category) {
       apiCache.set(cacheKey, data);
-      console.log("Products data cached successfully");
     }
-    
     return data;
   } catch (error) {
-    // Error already handled by addPending
     throw error.response?.data || error.message;
   }
 };
 
-// Search products
 export const searchProducts = async (query, params = {}) => {
   try {
-    console.log("SEARCH API CALL: Searching for:", query);
     const queryParams = new URLSearchParams();
     queryParams.append("query", query);
     if (params.category) queryParams.append("category", params.category);
@@ -253,15 +205,14 @@ export const searchProducts = async (query, params = {}) => {
       `${API_URL}/api/products/search?${queryParams.toString()}`,
       addBrandHeader()
     );
-    console.log("SEARCH API RESPONSE:", response.data);
     return response.data;
   } catch (error) {
-    console.error("SEARCH API ERROR:", error);
     throw error.response?.data || error.message;
   }
 };
 
-// Get all public coupons
+
+// ============ COUPON APIs ============
 export const getPublicCoupons = async () => {
   try {
     const response = await axios.get(`${API_URL}/api/coupons/public`, addBrandHeader());
@@ -271,7 +222,36 @@ export const getPublicCoupons = async () => {
   }
 };
 
-// Get public reviews for a product
+export const validateCoupon = async (code, cartTotal, paymentMode = null, cartItems = null) => {
+  try {
+    const token = localStorage.getItem("token");
+    const requestData = { code, cartTotal };
+    
+    if (paymentMode) {
+      requestData.paymentMode = paymentMode;
+    }
+    
+    if (cartItems && Array.isArray(cartItems)) {
+      requestData.cartItems = cartItems;
+    }
+    
+    const response = await axios.post(
+      `${API_URL}/api/coupons/validate`,
+      requestData,
+      {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          "X-Brand-Name": "crosscoin"
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// ============ REVIEW APIs ============
 export const getPublicProductReviews = async (productId, params = {}) => {
   try {
     const queryParams = new URLSearchParams();
@@ -289,43 +269,6 @@ export const getPublicProductReviews = async (productId, params = {}) => {
   }
 };
 
-// Validate a coupon
-export const validateCoupon = async (code, cartTotal, paymentMode = null, cartItems = null) => {
-  try {
-    const token = localStorage.getItem("token");
-    const requestData = { 
-      code, 
-      cartTotal 
-    };
-    
-    // Add payment mode if provided
-    if (paymentMode) {
-      requestData.paymentMode = paymentMode;
-    }
-    
-    // Add cart items if provided (for quantity-based coupons)
-    if (cartItems && Array.isArray(cartItems)) {
-      requestData.cartItems = cartItems;
-    }
-    
-    const response = await axios.post(
-      `${API_URL}/api/coupons/validate`,
-      requestData,
-      {
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          "X-Brand-Name": "crosscoin"
-        }
-      }
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Validate coupon error:", error);
-    throw error.response?.data || error.message;
-  }
-};
-
-// Create a public review
 export const createPublicReview = async (reviewData) => {
   try {
     const formData = new FormData();
@@ -335,7 +278,6 @@ export const createPublicReview = async (reviewData) => {
     formData.append("name", reviewData.get("name"));
     formData.append("email", reviewData.get("email"));
 
-    // Append files if they exist
     const files = reviewData.getAll("files");
     if (files && files.length > 0) {
       files.forEach((file) => {
@@ -355,12 +297,27 @@ export const createPublicReview = async (reviewData) => {
     );
     return response.data;
   } catch (error) {
-    console.error("Create public review error:", error);
     throw error.response?.data || error.message;
   }
 };
 
-// Get current user (public, requires token)
+export const getAllPublicReviews = async (params = {}) => {
+  try {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append("page", params.page);
+    if (params.limit) queryParams.append("limit", params.limit);
+    if (params.sort) queryParams.append("sort", params.sort);
+    const response = await axios.get(
+      `${API_URL}/api/reviews/public/all?${queryParams.toString()}`,
+      addBrandHeader()
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// ============ USER APIs ============
 export const getCurrentUser = async () => {
   try {
     const token = localStorage.getItem("token");
@@ -372,12 +329,10 @@ export const getCurrentUser = async () => {
     });
     return response.data;
   } catch (error) {
-    console.error("Get current user error:", error);
     throw error.response?.data || error.message;
   }
 };
 
-// Update user profile (public, requires token)
 export const updateUserProfile = async (profileData) => {
   try {
     const token = localStorage.getItem("token");
@@ -394,19 +349,34 @@ export const updateUserProfile = async (profileData) => {
     });
     return response.data;
   } catch (error) {
-    console.error("Update user profile error:", error);
     throw error.response?.data || error.message;
   }
 };
 
-// Shipping Address APIs (public, require token)
+export const logout = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.post(
+      `${API_URL}/api/users/logout`,
+      {},
+      {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "X-Brand-Name": "crosscoin"
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+
+// ============ SHIPPING ADDRESS APIs ============
 export const createShippingAddress = async (addressData) => {
   try {
-    console.log("📍 createShippingAddress: Starting...", addressData);
     const token = localStorage.getItem("token");
-    console.log("📍 createShippingAddress: Token exists:", !!token);
-    
-    // Map camelCase to snake_case for backend
     const payload = {
       address: addressData.address,
       city: addressData.city,
@@ -416,7 +386,6 @@ export const createShippingAddress = async (addressData) => {
       phone_number: addressData.phoneNumber,
       is_default: addressData.isDefault,
     };
-    console.log("📍 createShippingAddress: Payload prepared:", payload);
     
     const response = await axios.post(
       `${API_URL}/api/shipping-addresses`,
@@ -429,50 +398,32 @@ export const createShippingAddress = async (addressData) => {
       }
     );
     
-    console.log("📍 createShippingAddress: API response received:", response.data);
-    
-    // Clear address cache after creating
     const cacheKey = apiCache.getCacheKey(`${API_URL}/api/shipping-addresses`);
     apiCache.remove(cacheKey);
-    console.log("📍 createShippingAddress: Address cache cleared");
     
-    // Return the shippingAddress object, not the whole response
     const addressToReturn = response.data.shippingAddress || response.data;
-    console.log("📍 createShippingAddress: Returning address:", addressToReturn);
     return addressToReturn;
   } catch (error) {
-    console.error("❌ createShippingAddress: Error occurred:", error);
-    console.error("❌ createShippingAddress: Error response:", error.response?.data);
-    console.error("❌ createShippingAddress: Error status:", error.response?.status);
     throw error.response?.data || error.message;
   }
 };
 
 export const getUserShippingAddresses = async () => {
-  console.log("📍 getUserShippingAddresses: Starting...");
   const cacheKey = apiCache.getCacheKey(`${API_URL}/api/shipping-addresses`);
   
-  // Check if request is already pending
   if (apiCache.isPending(cacheKey)) {
-    console.log("📍 getUserShippingAddresses: Request already pending, waiting...");
     const pendingPromise = apiCache.getPending(cacheKey);
     const response = await pendingPromise;
-    console.log("📍 getUserShippingAddresses: Pending request resolved:", response.data);
     return response.data.shippingAddresses;
   }
 
-  // Check cache first (5 minute TTL for addresses)
   const cached = apiCache.get(cacheKey);
   if (cached) {
-    console.log("📍 getUserShippingAddresses: Loaded from cache:", cached);
     return cached;
   }
 
   try {
-    console.log("📍 getUserShippingAddresses: Fetching from API...");
     const token = localStorage.getItem("token");
-    console.log("📍 getUserShippingAddresses: Token exists:", !!token);
-    
     const promise = axios.get(`${API_URL}/api/shipping-addresses`, {
       headers: { 
         Authorization: `Bearer ${token}`,
@@ -482,20 +433,10 @@ export const getUserShippingAddresses = async () => {
     
     apiCache.addPending(cacheKey, promise);
     const response = await promise;
-    console.log("📍 getUserShippingAddresses: API response received:", response.data);
-    
     const data = response.data.shippingAddresses;
-    console.log("📍 getUserShippingAddresses: Extracted addresses:", data);
-    
-    // Cache for 5 minutes (pending already removed by addPending)
     apiCache.set(cacheKey, data, 5 * 60 * 1000);
-    console.log("📍 getUserShippingAddresses: Addresses cached successfully");
-    
     return data;
   } catch (error) {
-    console.error("❌ getUserShippingAddresses: Error occurred:", error);
-    console.error("❌ getUserShippingAddresses: Error response:", error.response?.data);
-    console.error("❌ getUserShippingAddresses: Error status:", error.response?.status);
     throw error.response?.data || error.message;
   }
 };
@@ -503,7 +444,6 @@ export const getUserShippingAddresses = async () => {
 export const updateShippingAddress = async (id, addressData) => {
   try {
     const token = localStorage.getItem("token");
-    // Map camelCase to snake_case for backend
     const payload = {
       address: addressData.address,
       city: addressData.city,
@@ -524,14 +464,11 @@ export const updateShippingAddress = async (id, addressData) => {
       }
     );
     
-    // Clear address cache after updating
     const cacheKey = apiCache.getCacheKey(`${API_URL}/api/shipping-addresses`);
     apiCache.remove(cacheKey);
-    console.log("Address cache cleared after update");
     
     return response.data;
   } catch (error) {
-    console.error("Update shipping address error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -549,14 +486,11 @@ export const deleteShippingAddress = async (id) => {
       }
     );
     
-    // Clear address cache after deleting
     const cacheKey = apiCache.getCacheKey(`${API_URL}/api/shipping-addresses`);
     apiCache.remove(cacheKey);
-    console.log("Address cache cleared after delete");
     
     return response.data;
   } catch (error) {
-    console.error("Delete shipping address error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -575,19 +509,15 @@ export const setDefaultShippingAddress = async (id) => {
       }
     );
     
-    // Clear address cache after setting default
     const cacheKey = apiCache.getCacheKey(`${API_URL}/api/shipping-addresses`);
     apiCache.remove(cacheKey);
-    console.log("Address cache cleared after setting default");
     
     return response.data;
   } catch (error) {
-    console.error("Set default address error:", error);
     throw error.response?.data || error.message;
   }
 };
 
-// Guest shipping address functions (no token required)
 export const createGuestShippingAddress = async (addressData, guestInfo) => {
   try {
     const payload = {
@@ -614,7 +544,6 @@ export const createGuestShippingAddress = async (addressData, guestInfo) => {
     );
     return response.data;
   } catch (error) {
-    console.error("Create guest address error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -622,9 +551,7 @@ export const createGuestShippingAddress = async (addressData, guestInfo) => {
 export const getGuestShippingAddresses = async (guestEmail) => {
   try {
     const response = await axios.get(
-      `${API_URL}/api/shipping-addresses/guest?guest_email=${encodeURIComponent(
-        guestEmail
-      )}`,
+      `${API_URL}/api/shipping-addresses/guest?guest_email=${encodeURIComponent(guestEmail)}`,
       {
         headers: {
           "X-Brand-Name": "crosscoin"
@@ -633,12 +560,12 @@ export const getGuestShippingAddresses = async (guestEmail) => {
     );
     return response.data.shippingAddresses;
   } catch (error) {
-    console.error("Get guest addresses error:", error);
     throw error.response?.data || error.message;
   }
 };
 
-// Get user orders
+
+// ============ ORDER APIs ============
 export const getUserOrders = async (params = {}) => {
   try {
     const token = localStorage.getItem("token");
@@ -658,7 +585,6 @@ export const getUserOrders = async (params = {}) => {
     );
     return response.data;
   } catch (error) {
-    console.error("Get user orders error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -666,51 +592,133 @@ export const getUserOrders = async (params = {}) => {
 export const createOrder = async (orderData) => {
   try {
     const token = localStorage.getItem("token");
-    console.log("createOrder: Token available:", !!token);
-    console.log("createOrder: Order data:", orderData);
-    
-    // Add UTM session_id to order data
     const utmSessionId = localStorage.getItem('utm_session_id');
     if (utmSessionId) {
       orderData.utm_session_id = utmSessionId;
-      console.log("createOrder: Adding UTM session_id:", utmSessionId);
     }
-    
-    console.log("createOrder: Making API call to:", `${API_URL}/api/orders`);
 
     const response = await axios.post(`${API_URL}/api/orders`, orderData, {
       headers: { 
         Authorization: `Bearer ${token}`,
         "X-Brand-Name": "crosscoin"
       },
-      withCredentials: true, // ✅ SEND COOKIES (including session_id for UTM tracking)
-      timeout: 30000, // 30 second timeout
+      withCredentials: true,
+      timeout: 30000,
     });
-    console.log("createOrder: Response received:", response.data);
     return response.data;
   } catch (error) {
-    console.error("createOrder: Error details:", {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-    });
     throw error.response?.data || error.message;
   }
 };
 
-// Shipping Fees
-// Shipping Fees
+export const createGuestOrder = async (orderData) => {
+  try {
+    const utmSessionId = localStorage.getItem('utm_session_id');
+    if (utmSessionId) {
+      orderData.utm_session_id = utmSessionId;
+    }
+    
+    const response = await axios.post(`${API_URL}/api/orders/guest`, orderData, {
+      headers: {
+        "X-Brand-Name": "crosscoin"
+      },
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const getGuestOrder = async (email, orderNumber) => {
+  try {
+    const response = await axios.get(
+      `${API_URL}/api/orders/guest/track?email=${encodeURIComponent(email)}&orderNumber=${encodeURIComponent(orderNumber)}`
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const trackOrderByOrderNumber = async (orderNumber) => {
+  try {
+    const response = await axios.get(
+      `${API_URL}/api/orders/track/${encodeURIComponent(orderNumber)}`
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const trackOrderByAWB = async (awbNumber) => {
+  try {
+    const response = await axios.get(
+      `${API_URL}/api/orders/track/awb?awb_number=${encodeURIComponent(awbNumber)}`
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// ============ PAYMENT APIs ============
+export const createRazorpayOrder = async ({ amount, currency = "INR", receipt, isGuest = false }) => {
+  try {
+    const endpoint = isGuest 
+      ? `${API_URL}/api/payments/guest/razorpay-order`
+      : `${API_URL}/api/payments/razorpay-order`;
+    
+    const headers = {
+      "X-Brand-Name": "crosscoin"
+    };
+    
+    if (!isGuest) {
+      const token = localStorage.getItem("token");
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    
+    const response = await axios.post(
+      endpoint,
+      { amount, currency, receipt },
+      { headers }
+    );
+    return response.data.order;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const updateOrderPayment = async ({ orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature }) => {
+  try {
+    const response = await axios.post(
+      `${API_URL}/api/payments/update-order-payment`,
+      {
+        orderId,
+        razorpayPaymentId,
+        razorpayOrderId,
+        razorpaySignature
+      },
+      {
+        headers: {
+          "X-Brand-Name": "crosscoin"
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// ============ SHIPPING FEES APIs ============
 export const getShippingFees = async () => {
   try {
     const token = localStorage.getItem("token");
-    const brandName = "crosscoin"; // Brand identifier for Crosscoin
-    
-    console.log("📦 getShippingFees: Making API call...", {
-      hasToken: !!token,
-      brandName,
-      url: `${API_URL}/api/shipping-fees`
-    });
+    const brandName = "crosscoin";
     
     const response = await axios.get(`${API_URL}/api/shipping-fees`, {
       headers: {
@@ -719,65 +727,52 @@ export const getShippingFees = async () => {
       },
     });
     
-    console.log("✅ getShippingFees: API response received:", response.data);
     return response.data;
   } catch (error) {
-    console.error("❌ getShippingFees: API error:", {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status,
-      statusText: error.response?.statusText
-    });
     throw error.response?.data || error.message;
   }
 };
 
-// SEO
+// ============ SEO APIs ============
 export const getSeoByPageName = async (pageName) => {
   const url = `${API_URL}/api/seo?page_name=${encodeURIComponent(pageName)}`;
   const cacheKey = apiCache.getCacheKey(url, { page_name: pageName });
   
-  // Check if request is already pending
   if (apiCache.isPending(cacheKey)) {
-    console.log(`SEO API call for ${pageName} already in progress, waiting...`);
     const pendingPromise = apiCache.pendingRequests.get(cacheKey);
     const response = await pendingPromise;
     const data = response.data;
     return data.success ? data.data : data;
   }
 
-  // Check cache first
   if (apiCache.isValid(cacheKey)) {
-    console.log(`SEO data for ${pageName} loaded from cache`);
-    return apiCache.get(cacheKey); // Fixed: removed .data since cache already stores the data
+    return apiCache.get(cacheKey);
   }
 
   try {
-    console.log(`Fetching SEO data for page: ${pageName}`);
     const promise = axios.get(url, addBrandHeader());
-    
-    // Add to pending requests - this will auto-remove when done
     apiCache.addPending(cacheKey, promise);
-    
     const response = await promise;
     const data = response.data;
-    
-    // Handle the response structure - backend returns { success: true, data: seoData }
     const seoData = data.success ? data.data : data;
-    
-    // Cache the result (pending already removed by addPending)
     apiCache.set(cacheKey, seoData);
-    
-    console.log(`SEO data for ${pageName} cached successfully:`, seoData);
     return seoData;
   } catch (error) {
-    // Error already handled by addPending
-    console.error(`SEO API error for ${pageName}:`, error.response?.data || error.message);
     throw error.response?.data || error.message;
   }
 };
 
-// Wishlist APIs (public, require token)
+export const getPublicPolicyByName = async (name) => {
+  try {
+    const response = await axios.get(`${API_URL}/api/policies/name/${name}`, addBrandHeader());
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+
+// ============ WISHLIST APIs ============
 export const getWishlist = async () => {
   try {
     const token = localStorage.getItem("token");
@@ -789,7 +784,6 @@ export const getWishlist = async () => {
     });
     return response.data.wishlist || [];
   } catch (error) {
-    console.error("Get wishlist error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -809,7 +803,6 @@ export const addToWishlist = async (productId) => {
     );
     return response.data;
   } catch (error) {
-    console.error("Add to wishlist error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -828,7 +821,6 @@ export const removeFromWishlist = async (productId) => {
     );
     return response.data;
   } catch (error) {
-    console.error("Remove from wishlist error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -844,61 +836,28 @@ export const clearWishlist = async () => {
     });
     return response.data;
   } catch (error) {
-    console.error("Clear wishlist error:", error);
     throw error.response?.data || error.message;
   }
 };
 
-export const logout = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await axios.post(
-      `${API_URL}/api/users/logout`,
-      {},
-      {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          "X-Brand-Name": "crosscoin"
-        },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Logout error:", error);
-    throw error.response?.data || error.message;
-  }
-};
-
-// Cart APIs (public, require token)
+// ============ CART APIs ============
 export const getCart = async () => {
   try {
     const token = localStorage.getItem("token");
-    console.log("publicindex: getCart called");
     const response = await axios.get(`${API_URL}/api/cart`, {
       headers: { 
         Authorization: `Bearer ${token}`,
         "X-Brand-Name": "crosscoin"
       },
     });
-    console.log("publicindex: getCart response:", response.data);
     return response.data.cart || [];
   } catch (error) {
-    console.error(
-      "publicindex: getCart error:",
-      error.response?.data || error.message
-    );
     throw error.response?.data || error.message;
   }
 };
 
 export const addToCart = async ({ productId, variationId, quantity, size }) => {
   try {
-    console.log("publicindex: addToCart called with:", {
-      productId,
-      variationId,
-      quantity,
-      size,
-    });
     const token = localStorage.getItem("token");
     const payload = { productId, variationId, quantity, size };
     const response = await axios.post(`${API_URL}/api/cart/add`, payload, {
@@ -907,13 +866,8 @@ export const addToCart = async ({ productId, variationId, quantity, size }) => {
         "X-Brand-Name": "crosscoin"
       },
     });
-    console.log("publicindex: addToCart response:", response.data);
     return response.data;
   } catch (error) {
-    console.error(
-      "publicindex: addToCart error:",
-      error.response?.data || error.message
-    );
     throw error.response?.data || error.message;
   }
 };
@@ -934,7 +888,6 @@ export const updateCartItem = async (productId, quantity, variationId) => {
     );
     return response.data;
   } catch (error) {
-    console.error("Update cart item error:", error);
     throw error.response?.data || error.message;
   }
 };
@@ -943,28 +896,17 @@ export const removeFromCart = async (productId, variationId) => {
   try {
     const token = localStorage.getItem("token");
     let url = `${API_URL}/api/cart/item/${productId}`;
-    // Only append variationId if it is not null or undefined
     if (variationId !== null && variationId !== undefined) {
       url += `/${variationId}`;
     }
-    console.log("publicindex: removeFromCart URL:", url);
-    console.log("publicindex: removeFromCart params:", {
-      productId,
-      variationId,
-    });
     const response = await axios.delete(url, {
       headers: { 
         Authorization: `Bearer ${token}`,
         "X-Brand-Name": "crosscoin"
       },
     });
-    console.log("publicindex: removeFromCart response:", response.data);
     return response.data;
   } catch (error) {
-    console.error(
-      "publicindex: removeFromCart error:",
-      error.response?.data || error.message
-    );
     throw error.response?.data || error.message;
   }
 };
@@ -980,187 +922,474 @@ export const clearCart = async () => {
     });
     return response.data;
   } catch (error) {
-    console.error("Clear cart error:", error);
     throw error.response?.data || error.message;
   }
 };
 
-// Create Razorpay order (public)
-export const createRazorpayOrder = async ({
-  amount,
-  currency = "INR",
-  receipt,
-  isGuest = false,
-}) => {
-  try {
-    const endpoint = isGuest 
-      ? `${API_URL}/api/payments/guest/razorpay-order`
-      : `${API_URL}/api/payments/razorpay-order`;
+
+// ============ COUPON INTEGRATION SERVICE ============
+class CouponIntegrationService {
+  constructor() {
+    this.cachedCoupons = null;
+    this.cacheExpiry = null;
+    this.CACHE_DURATION = 5 * 60 * 1000;
+  }
+
+  async getQuantityBasedCoupons() {
+    const now = Date.now();
     
-    const headers = {
-      "X-Brand-Name": "crosscoin"
-    };
-    
-    // Only add authorization header for authenticated users
-    if (!isGuest) {
-      const token = localStorage.getItem("token");
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
+    if (this.cachedCoupons && this.cacheExpiry && now < this.cacheExpiry) {
+      return this.cachedCoupons;
     }
-    
-    console.log("Creating Razorpay order:", { endpoint, isGuest, amount, currency, receipt });
-    
-    const response = await axios.post(
-      endpoint,
-      { amount, currency, receipt },
-      { headers }
-    );
-    return response.data.order;
-  } catch (error) {
-    console.error("Razorpay order creation error:", error);
-    throw error.response?.data || error.message;
-  }
-};
 
-// Update order with payment details after successful payment
-export const updateOrderPayment = async ({
-  orderId,
-  razorpayPaymentId,
-  razorpayOrderId,
-  razorpaySignature
-}) => {
-  try {
-    console.log("Updating order payment details:", {
-      orderId,
-      razorpayPaymentId,
-      razorpayOrderId,
-      razorpaySignature
-    });
-    
-    const response = await axios.post(
-      `${API_URL}/api/payments/update-order-payment`,
-      {
-        orderId,
-        razorpayPaymentId,
-        razorpayOrderId,
-        razorpaySignature
-      },
-      {
-        headers: {
-          "X-Brand-Name": "crosscoin"
+    try {
+      const response = await getPublicCoupons();
+      
+      if (response && response.coupons) {
+        const quantityCoupons = response.coupons.filter(coupon => 
+          coupon.type === 'quantity_based' && 
+          coupon.status === 'active' &&
+          coupon.quantityBasedDiscounts &&
+          new Date(coupon.endDate) > new Date()
+        );
+
+        const validCoupons = quantityCoupons.map(coupon => {
+          let quantityTiers = [];
+          
+          try {
+            quantityTiers = typeof coupon.quantityBasedDiscounts === 'string' 
+              ? JSON.parse(coupon.quantityBasedDiscounts)
+              : coupon.quantityBasedDiscounts || [];
+          } catch (e) {
+            return null;
+          }
+
+          if (!Array.isArray(quantityTiers) || quantityTiers.length === 0) {
+            return null;
+          }
+
+          quantityTiers.sort((a, b) => a.minQuantity - b.minQuantity);
+
+          return {
+            ...coupon,
+            parsedTiers: quantityTiers
+          };
+        }).filter(Boolean);
+
+        this.cachedCoupons = validCoupons;
+        this.cacheExpiry = now + this.CACHE_DURATION;
+
+        return validCoupons;
+      } else {
+        return [];
+      }
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getBestOfferForCart(cartItems, cartTotal) {
+    const coupons = await this.getQuantityBasedCoupons();
+    if (coupons.length === 0) return null;
+
+    const totalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    let bestCurrentOffer = null;
+    let bestNextOffer = null;
+
+    coupons.forEach(coupon => {
+      const tiers = coupon.parsedTiers;
+
+      const applicableTiers = tiers.filter(tier => totalQuantity >= tier.minQuantity);
+      if (applicableTiers.length > 0) {
+        const currentTier = applicableTiers[applicableTiers.length - 1];
+        if (!bestCurrentOffer || parseFloat(currentTier.discount) > parseFloat(bestCurrentOffer.discount)) {
+          bestCurrentOffer = {
+            coupon,
+            tier: currentTier,
+            discount: parseFloat(currentTier.discount),
+            currentQuantity: totalQuantity,
+            type: 'current'
+          };
         }
       }
-    );
-    
-    console.log("Order payment update response:", response.data);
-    return response.data;
-  } catch (error) {
-    console.error("Error updating order payment:", error);
-    throw error.response?.data || error.message;
-  }
-};
 
-// Get all public reviews (for testimonials)
-export const getAllPublicReviews = async (params = {}) => {
-  try {
-    const queryParams = new URLSearchParams();
-    if (params.page) queryParams.append("page", params.page);
-    if (params.limit) queryParams.append("limit", params.limit);
-    if (params.sort) queryParams.append("sort", params.sort);
-    const response = await axios.get(
-      `${API_URL}/api/reviews/public/all?${queryParams.toString()}`,
-      addBrandHeader()
-    );
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
+      const nextTier = tiers.find(tier => totalQuantity < tier.minQuantity);
+      if (nextTier) {
+        if (!bestNextOffer || parseFloat(nextTier.discount) > parseFloat(bestNextOffer.discount)) {
+          bestNextOffer = {
+            coupon,
+            tier: nextTier,
+            discount: parseFloat(nextTier.discount),
+            currentQuantity: totalQuantity,
+            remaining: nextTier.minQuantity - totalQuantity,
+            progress: (totalQuantity / nextTier.minQuantity) * 100,
+            type: 'next'
+          };
+        }
+      }
+    });
 
-export const getPublicPolicyByName = async (name) => {
-  try {
-    const response = await axios.get(`${API_URL}/api/policies/name/${name}`, addBrandHeader());
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
+    return {
+      current: bestCurrentOffer,
+      next: bestNextOffer,
+      totalQuantity
+    };
   }
-};
 
-// Guest Checkout API
-export const createGuestOrder = async (orderData) => {
-  try {
-    console.log("GUEST CHECKOUT API CALL: Creating guest order:", orderData);
-    
-    // Add UTM session_id to order data
-    const utmSessionId = localStorage.getItem('utm_session_id');
-    if (utmSessionId) {
-      orderData.utm_session_id = utmSessionId;
-      console.log("GUEST CHECKOUT: Adding UTM session_id:", utmSessionId);
+  async validateAndApplyCoupon(couponCode, cartItems, cartTotal, paymentMode = null) {
+    try {
+      const cartItemsForValidation = cartItems.map(item => ({
+        productId: item.productId || item.id,
+        quantity: item.quantity,
+        price: item.price
+      }));
+
+      const response = await validateCoupon(
+        couponCode,
+        cartTotal,
+        paymentMode,
+        cartItemsForValidation
+      );
+
+      if (response && response.success) {
+        return {
+          success: true,
+          coupon: response.coupon,
+          discountAmount: parseFloat(response.discountAmount),
+          finalAmount: parseFloat(response.finalAmount),
+          message: response.message
+        };
+      } else {
+        return {
+          success: false,
+          message: response?.message || 'Invalid coupon'
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message || 'Failed to validate coupon'
+      };
     }
-    
-    const response = await axios.post(`${API_URL}/api/orders/guest`, orderData, {
-      headers: {
-        "X-Brand-Name": "crosscoin"
-      },
-      withCredentials: true, // ✅ SEND COOKIES (including session_id for UTM tracking)
+  }
+
+  async getOfferDisplayData(cartItems, cartTotal) {
+    const offers = await this.getBestOfferForCart(cartItems, cartTotal);
+    if (!offers) return null;
+
+    const { current, next, totalQuantity } = offers;
+
+    if (current && !next) {
+      return {
+        type: 'achieved',
+        coupon: current.coupon,
+        tier: current.tier,
+        discount: current.discount,
+        currentQuantity: totalQuantity,
+        message: `You've unlocked "${current.coupon.description || current.coupon.code}"!`,
+        badgeText: this.formatDiscount(current.discount, current.coupon),
+        canApply: true
+      };
+    }
+
+    if (next) {
+      return {
+        type: 'progress',
+        coupon: next.coupon,
+        tier: next.tier,
+        discount: next.discount,
+        currentQuantity: totalQuantity,
+        targetQuantity: next.tier.minQuantity,
+        remaining: next.remaining,
+        progress: next.progress,
+        message: `Add ${next.remaining} more item${next.remaining > 1 ? 's' : ''} to get ${this.formatDiscount(next.discount, next.coupon)}`,
+        badgeText: this.formatDiscount(next.discount, next.coupon),
+        canApply: false
+      };
+    }
+
+    return null;
+  }
+
+  formatDiscount(discount, coupon) {
+    if (coupon.type === 'quantity_based') {
+      return `₹${discount} OFF`;
+    } else if (coupon.type === 'percentage') {
+      return `${discount}% OFF`;
+    }
+    return `₹${discount} OFF`;
+  }
+
+  clearCache() {
+    this.cachedCoupons = null;
+    this.cacheExpiry = null;
+  }
+
+  async getAllOffers() {
+    const coupons = await this.getQuantityBasedCoupons();
+    return coupons.map(coupon => ({
+      id: coupon.id,
+      code: coupon.code,
+      description: coupon.description,
+      type: coupon.type,
+      status: coupon.status,
+      tiers: coupon.parsedTiers,
+      usageCount: coupon.usageCount,
+      usageLimit: coupon.usageLimit,
+      startDate: coupon.startDate,
+      endDate: coupon.endDate
+    }));
+  }
+
+  async getOffersForQuantity(quantity, cartTotal) {
+    const coupons = await this.getQuantityBasedCoupons();
+    const applicableOffers = [];
+
+    coupons.forEach(coupon => {
+      const applicableTiers = coupon.parsedTiers.filter(tier => quantity >= tier.minQuantity);
+      if (applicableTiers.length > 0) {
+        const bestTier = applicableTiers[applicableTiers.length - 1];
+        applicableOffers.push({
+          coupon,
+          tier: bestTier,
+          discount: parseFloat(bestTier.discount)
+        });
+      }
     });
-    console.log("GUEST CHECKOUT API RESPONSE:", response.data);
-    return response.data;
-  } catch (error) {
-    console.error("GUEST CHECKOUT API ERROR:", error);
-    throw error.response?.data || error.message;
+
+    return applicableOffers.sort((a, b) => b.discount - a.discount);
+  }
+}
+
+export const couponIntegrationService = new CouponIntegrationService();
+
+
+// ============ OFFER API SERVICE ============
+export const offerAPIService = {
+  getCartUpsellRecommendations: async (cartItems, cartTotal) => {
+    try {
+      const response = await offerAPI.get('/cart/upsell-recommendations', {
+        params: {
+          cartItems: JSON.stringify(cartItems),
+          cartTotal
+        }
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  getFreeShippingThreshold: async () => {
+    try {
+      const response = await offerAPI.get('/cart/free-shipping-threshold');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  getPrepaidIncentive: async (cartTotal) => {
+    try {
+      const response = await offerAPI.get('/cart/prepaid-incentive', {
+        params: { cartTotal }
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  trackUpsellInteraction: async (upsellType, productId, action) => {
+    try {
+      const response = await offerAPI.post('/cart/track-upsell-interaction', {
+        upsellType,
+        productId,
+        action
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  applyOfferDiscount: async (cartItems, offerId, offerType) => {
+    try {
+      const response = await offerAPI.post('/cart/apply-offer', {
+        cartItems,
+        offerId,
+        offerType
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  validateOfferEligibility: async (cartItems, cartTotal, offerId, offerType) => {
+    try {
+      const response = await offerAPI.post('/cart/validate-offer', {
+        cartItems,
+        cartTotal,
+        offerId,
+        offerType
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  admin: {
+    getUpsellRules: async () => {
+      try {
+        const response = await offerAPI.get('/admin/upsell-rules');
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    createUpsellRule: async (ruleData) => {
+      try {
+        const response = await offerAPI.post('/admin/upsell-rules', ruleData);
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    updateUpsellRule: async (ruleId, ruleData) => {
+      try {
+        const response = await offerAPI.put(`/admin/upsell-rules/${ruleId}`, ruleData);
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    deleteUpsellRule: async (ruleId) => {
+      try {
+        const response = await offerAPI.delete(`/admin/upsell-rules/${ruleId}`);
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    getFreeShippingSettings: async () => {
+      try {
+        const response = await offerAPI.get('/admin/free-shipping-settings');
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    updateFreeShippingSettings: async (settings) => {
+      try {
+        const response = await offerAPI.put('/admin/free-shipping-settings', settings);
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    getPrepaidIncentives: async () => {
+      try {
+        const response = await offerAPI.get('/admin/prepaid-incentives');
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    createPrepaidIncentive: async (incentiveData) => {
+      try {
+        const response = await offerAPI.post('/admin/prepaid-incentives', incentiveData);
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    updatePrepaidIncentive: async (incentiveId, incentiveData) => {
+      try {
+        const response = await offerAPI.put(`/admin/prepaid-incentives/${incentiveId}`, incentiveData);
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    deletePrepaidIncentive: async (incentiveId) => {
+      try {
+        const response = await offerAPI.delete(`/admin/prepaid-incentives/${incentiveId}`);
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    getUpsellAnalytics: async (startDate, endDate, type) => {
+      try {
+        const response = await offerAPI.get('/admin/upsell-analytics', {
+          params: { startDate, endDate, type }
+        });
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    }
   }
 };
 
-// Guest Order Tracking API
-export const getGuestOrder = async (email, orderNumber) => {
-  try {
-    console.log("GUEST ORDER TRACKING API CALL: Tracking order:", {
-      email,
-      orderNumber,
-    });
-    const response = await axios.get(
-      `${API_URL}/api/orders/guest/track?email=${encodeURIComponent(
-        email
-      )}&orderNumber=${encodeURIComponent(orderNumber)}`
-    );
-    console.log("GUEST ORDER TRACKING API RESPONSE:", response.data);
-    return response.data;
-  } catch (error) {
-    console.error("GUEST ORDER TRACKING API ERROR:", error);
-    throw error.response?.data || error.message;
-  }
-};
-
-// Track Order by Order Number (works for both registered and guest orders)
-export const trackOrderByOrderNumber = async (orderNumber) => {
-  try {
-    console.log("ORDER NUMBER TRACKING API CALL: Tracking order by order number:", orderNumber);
-    const response = await axios.get(
-      `${API_URL}/api/orders/track/${encodeURIComponent(orderNumber)}`
-    );
-    console.log("ORDER NUMBER TRACKING API RESPONSE:", response.data);
-    return response.data;
-  } catch (error) {
-    console.error("ORDER NUMBER TRACKING API ERROR:", error);
-    throw error.response?.data || error.message;
-  }
-};
-
-// Track Order by AWB Number (works for both registered and guest orders)
-export const trackOrderByAWB = async (awbNumber) => {
-  try {
-    console.log("AWB TRACKING API CALL: Tracking order by AWB:", awbNumber);
-    const response = await axios.get(
-      `${API_URL}/api/orders/track/awb?awb_number=${encodeURIComponent(
-        awbNumber
-      )}`
-    );
-    console.log("AWB TRACKING API RESPONSE:", response.data);
-    return response.data;
-  } catch (error) {
-    console.error("AWB TRACKING API ERROR:", error);
-    throw error.response?.data || error.message;
-  }
+export default {
+  registerUser,
+  loginUser,
+  forgotPassword,
+  resetPassword,
+  getPublicCategories,
+  getPublicCategoryByName,
+  getPublicSliders,
+  getPublicProductBySlug,
+  getAllPublicProducts,
+  searchProducts,
+  getPublicCoupons,
+  validateCoupon,
+  getPublicProductReviews,
+  createPublicReview,
+  getAllPublicReviews,
+  getCurrentUser,
+  updateUserProfile,
+  logout,
+  createShippingAddress,
+  getUserShippingAddresses,
+  updateShippingAddress,
+  deleteShippingAddress,
+  setDefaultShippingAddress,
+  createGuestShippingAddress,
+  getGuestShippingAddresses,
+  getUserOrders,
+  createOrder,
+  createGuestOrder,
+  getGuestOrder,
+  trackOrderByOrderNumber,
+  trackOrderByAWB,
+  createRazorpayOrder,
+  updateOrderPayment,
+  getShippingFees,
+  getSeoByPageName,
+  getPublicPolicyByName,
+  getWishlist,
+  addToWishlist,
+  removeFromWishlist,
+  clearWishlist,
+  getCart,
+  addToCart,
+  updateCartItem,
+  removeFromCart,
+  clearCart,
+  couponIntegrationService,
+  offerAPIService,
 };

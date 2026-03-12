@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getPublicCategories } from '../services/publicindex';
+import { getPublicCategories } from '../services/publicApi';
 import { getCachedData, setCachedData } from '../utils/apiCache';
 import Header from '../components/Header';
 import Footer from '../components/Footer';

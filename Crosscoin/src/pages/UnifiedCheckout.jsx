@@ -46,7 +46,7 @@ import {
   getUserShippingAddresses,
   createShippingAddress,
   getShippingFees,
-} from "../services/publicindex";
+} from "../services/publicApi";
 import {
   showOrderPlacedSuccessToast,
   showOrderPlacedErrorToast,

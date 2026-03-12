@@ -16,12 +16,13 @@ import {
   getAllPublicProducts,
   getPublicCategories,
   getPublicCategoryByName,
-} from "../services/publicindex";
+} from "../services/publicApi";
 import { getProductImageSrc } from "../utils/imageUtils";
 import SeoWrapper from "../console/SeoWrapper";
 import { fbqTrack } from "../components/common/Analytics";
 import colorMap from "../components/products/colorMap";
 import Pagination from "../components/common/Pagination";
+import cacheManager from "../services/cacheManager";
 import "../styles/common/TableControls.css";
 
 // Load page-specific CSS
@@ -66,6 +67,7 @@ const Products = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   const [totalProducts, setTotalProducts] = useState(0);
+  const [cacheHit, setCacheHit] = useState(false);
   
   // Safety guard: Ensure products is always an array
   const safeProducts = Array.isArray(products) ? products : [];
@@ -98,13 +100,22 @@ const Products = () => {
     const fetchCategories = async () => {
       if (categoriesLoadedRef.current) return; // Prevent multiple calls
 
-      // Check cache first
+      // Check cache first using new cache manager (1 hour TTL)
+      const cachedCategories = cacheManager.getByType('categories');
+      if (cachedCategories) {
+        setCategories(cachedCategories);
+        categoriesLoadedRef.current = true;
+        console.log("✅ Categories loaded from cache:", cachedCategories.length);
+        return;
+      }
+
+      // Fallback to old cache system if new cache misses
       const cacheKey = 'public_categories';
       const cached = getCachedData(cacheKey, 10 * 60 * 1000); // 10 minutes cache
       if (cached) {
         setCategories(cached);
         categoriesLoadedRef.current = true;
-        console.log("Categories loaded from cache:", cached.length);
+        console.log("Categories loaded from legacy cache:", cached.length);
         return;
       }
 
@@ -115,9 +126,11 @@ const Products = () => {
         // Ensure data is an array
         if (Array.isArray(data)) {
           setCategories(data);
-          setCachedData(cacheKey, data); // Cache for 10 minutes
+          // Cache using new cache manager (1 hour TTL)
+          cacheManager.setByType('categories', data);
+          setCachedData(cacheKey, data); // Also cache in legacy system
           categoriesLoadedRef.current = true;
-          console.log("Categories loaded:", data.length);
+          console.log("✅ Categories loaded and cached:", data.length);
         } else {
           console.warn("Categories response is not an array:", data);
           setCategories([]);
@@ -152,11 +165,29 @@ const Products = () => {
         isLoadingRef.current = true;
         setLoading(true);
         setError(null);
+        setCacheHit(false);
 
         let response;
+        let cacheKey = null;
 
         if (isCategorySpecific && categoryName) {
-          // Fetch products by category name
+          // Check cache for category-specific products (30 minute TTL)
+          cacheKey = `products_category_${categoryName}`;
+          const cachedProducts = cacheManager.get(cacheKey);
+          if (cachedProducts) {
+            console.log(`✅ Products for category "${categoryName}" loaded from cache`);
+            setProducts(cachedProducts.products);
+            setTotalProducts(cachedProducts.total);
+            setCacheHit(true);
+            setLoading(false);
+            if (isCategorySpecific) {
+              productsLoadedRef.current = false;
+            }
+            return;
+          }
+
+          // Cache miss - fetch from API
+          console.log(`⚠️ Cache miss for category "${categoryName}" - fetching from API`);
           response = await getPublicCategoryByName(categoryName);
           console.log("Category API Response:", response);
 
@@ -195,6 +226,11 @@ const Products = () => {
             console.log("Transformed products:", transformedProducts);
             setProducts(transformedProducts);
             setTotalProducts(transformedProducts.length);
+            
+            // Cache the category products (30 minute TTL)
+            cacheManager.set(cacheKey, { products: transformedProducts, total: transformedProducts.length }, 30 * 60 * 1000);
+            console.log(`✅ Category products cached for 30 minutes`);
+            
             setLoading(false); // Ensure loading is set to false
             if (isCategorySpecific) {
               productsLoadedRef.current = false; // Reset for category-specific loads
@@ -205,7 +241,21 @@ const Products = () => {
             );
           }
         } else {
-          // Fetch all products
+          // Check cache for all products (30 minute TTL)
+          cacheKey = 'products_all';
+          const cachedProducts = cacheManager.getByType('products');
+          if (cachedProducts) {
+            console.log('✅ All products loaded from cache');
+            setProducts(cachedProducts.products);
+            setTotalProducts(cachedProducts.total);
+            setCacheHit(true);
+            setLoading(false);
+            productsLoadedRef.current = true;
+            return;
+          }
+
+          // Cache miss - fetch from API
+          console.log('⚠️ Products cache miss - fetching from API');
           const params = {
             page: 1,
             limit: 100, // Reduced from 1000 to 100 for better performance
@@ -218,6 +268,14 @@ const Products = () => {
             setTotalProducts(
               response.data?.total || response.data?.totalProducts || 0
             );
+            
+            // Cache the products (30 minute TTL)
+            cacheManager.setByType('products', {
+              products: response.data?.products || [],
+              total: response.data?.total || response.data?.totalProducts || 0
+            });
+            console.log('✅ All products cached for 30 minutes');
+            
             setLoading(false); // Ensure loading is set to false
             productsLoadedRef.current = true; // Mark as loaded
           } else if (response?.data?.products) {
@@ -226,6 +284,13 @@ const Products = () => {
             setTotalProducts(
               response.data.total || response.data.totalProducts || 0
             );
+            
+            // Cache the products
+            cacheManager.setByType('products', {
+              products: response.data.products || [],
+              total: response.data.total || response.data.totalProducts || 0
+            });
+            
             setLoading(false); // Ensure loading is set to false
             productsLoadedRef.current = true; // Mark as loaded
           } else {
