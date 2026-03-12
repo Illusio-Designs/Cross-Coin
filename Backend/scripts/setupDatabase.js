@@ -1067,6 +1067,12 @@ const createPerformanceIndexes = async () => {
         table: 'stock',
         columns: '(product_id, warehouse_id, quantity)',
         comment: 'Optimize stock checks'
+      },
+      {
+        name: 'idx_payments_brand_id',
+        table: 'payments',
+        columns: '(brand_id)',
+        comment: 'Optimize payment queries by brand'
       }
     ];
 
