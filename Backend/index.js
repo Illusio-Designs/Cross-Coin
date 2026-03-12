@@ -345,6 +345,16 @@ const startServer = async () => {
         initializeCronJobs();
         logger.info('✓ Cron jobs initialized');
         
+        // Auto-migrate images to ImageKit
+        logger.info('Checking for images to migrate to ImageKit...');
+        const migrateImagesToImageKit = require('./scripts/migrateToImageKit.js');
+        try {
+            await migrateImagesToImageKit();
+            logger.info('✓ ImageKit migration check completed');
+        } catch (error) {
+            logger.warn('ImageKit migration error:', error.message);
+        }
+        
         // Start server
         const server = app.listen(PORT, () => {
             logger.info(`✓ Server is running on port ${PORT}`);

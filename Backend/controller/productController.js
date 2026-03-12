@@ -70,6 +70,7 @@ const formatProductResponse = (product) => {
 
   // Format variations
   if (productData.ProductVariations) {
+    const imagekitService = require('../services/imagekitService');
     productData.variations = productData.ProductVariations.map((variation) => {
       const variationObj = {
         id: variation.id,
@@ -81,14 +82,21 @@ const formatProductResponse = (product) => {
       };
       // Attach variation images if present
       if (variation.VariationImages && variation.VariationImages.length > 0) {
-        variationObj.images = variation.VariationImages.map((image) => ({
-          id: image.id,
-          image_url: image.image_url, // Keep the full path
-          alt_text: image.alt_text,
-          display_order: image.display_order,
-          is_primary: image.is_primary,
-          status: image.status,
-        }));
+        variationObj.images = variation.VariationImages.map((image) => {
+          const imagePath = image.image_url;
+          return {
+            id: image.id,
+            image_url: imagePath,
+            thumbnail: imagekitService.getOptimizedUrl(imagePath, 'thumbnail'),
+            medium: imagekitService.getOptimizedUrl(imagePath, 'medium'),
+            large: imagekitService.getOptimizedUrl(imagePath, 'large'),
+            srcset: imagekitService.getResponsiveSrcSet(imagePath),
+            alt_text: image.alt_text,
+            display_order: image.display_order,
+            is_primary: image.is_primary,
+            status: image.status,
+          };
+        });
       }
       return variationObj;
     });
@@ -108,10 +116,17 @@ const formatProductResponse = (product) => {
 
   // Format images - include ALL images (both product-level and variation images) in the images array
   if (productData.ProductImages) {
+    const imagekitService = require('../services/imagekitService');
     productData.images = productData.ProductImages.map((image) => {
+      const imagePath = image.image_url;
       return {
         id: image.id,
-        image_url: image.image_url, // Keep the full path
+        image_url: imagePath, // Keep the full path
+        // Add optimized URLs for different sizes
+        thumbnail: imagekitService.getOptimizedUrl(imagePath, 'thumbnail'),
+        medium: imagekitService.getOptimizedUrl(imagePath, 'medium'),
+        large: imagekitService.getOptimizedUrl(imagePath, 'large'),
+        srcset: imagekitService.getResponsiveSrcSet(imagePath),
         alt_text: image.alt_text,
         display_order: image.display_order,
         is_primary: image.is_primary,
