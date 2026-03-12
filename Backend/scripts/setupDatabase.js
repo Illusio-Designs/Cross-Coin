@@ -430,6 +430,30 @@ const setupDatabase = async () => {
     console.log("\nCreating RTO stock restoration table...");
     await createRTOStockRestorationTable();
     
+    // Add brand_id column to payments if it doesn't exist
+    console.log("\nEnsuring brand_id column exists in payments table...");
+    try {
+      const [columns] = await sequelize.query(`
+        SELECT COUNT(*) as count
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = DATABASE() 
+        AND TABLE_NAME = 'payments' 
+        AND COLUMN_NAME = 'brand_id'
+      `);
+      
+      if (columns[0].count === 0) {
+        await sequelize.query(`
+          ALTER TABLE payments 
+          ADD COLUMN brand_id INT NOT NULL DEFAULT 1
+        `);
+        console.log("✓ Added brand_id column to payments table");
+      } else {
+        console.log("✓ brand_id column already exists");
+      }
+    } catch (error) {
+      console.log("⚠️ Error checking/adding brand_id column:", error.message);
+    }
+    
     // Clean up duplicate payments
     console.log("\nCleaning up duplicate payments...");
     await cleanupDuplicatePayments();
