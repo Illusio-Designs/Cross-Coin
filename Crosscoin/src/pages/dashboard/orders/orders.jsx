@@ -4,7 +4,7 @@ import { debounce } from 'lodash';
 import Table from "@/components/common/Table";
 import Pagination from "@/components/common/Pagination";
 import Modal from "@/components/common/Modal";
-import Button from "@/components/common/Button";
+import { Button } from "@/components/ui";
 import SafeImage from "@/components/common/SafeImage";
 import Loader from "@/components/Loader";
 import BrandTags from "@/components/Dashboard/BrandTags";

@@ -136,6 +136,12 @@
   border: none;
   cursor: pointer;
   transition: all 0.3s ease;
+  background: #CE1E36;
+  color: white;
+}
+
+.btn-responsive:hover {
+  background: #a01729;
 }
 
 @media (max-width: 768px) {

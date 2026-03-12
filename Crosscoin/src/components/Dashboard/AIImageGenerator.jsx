@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Modal from '@/components/common/Modal';
-import Button from '@/components/common/Button';
+import { Button } from '@/components/ui';
 import '../../styles/dashboard/ai-image-generator.css';
 
 const AIImageGenerator = ({ productId, productName, onSuccess }) => {

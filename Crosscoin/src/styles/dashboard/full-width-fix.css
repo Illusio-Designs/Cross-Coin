@@ -230,53 +230,6 @@
   align-items: center;
 }
 
-.action-btn {
-  width: 28px !important; /* Smaller buttons */
-  height: 28px !important;
-  padding: 5px !important;
-  border-radius: 5px !important;
-  border: none !important;
-  cursor: pointer !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  transition: all 0.2s ease !important;
-}
-
-.action-btn:hover {
-  transform: translateY(-1px) !important;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
-}
-
-.action-btn svg {
-  width: 14px !important; /* Smaller icons */
-  height: 14px !important;
-}
-
-.action-btn.edit,
-.action-btn.view,
-.action-btn.moderate {
-  background: linear-gradient(135deg, #180D3E 0%, #2a1a4d 100%) !important;
-  color: white !important;
-}
-
-.action-btn.edit:hover,
-.action-btn.view:hover,
-.action-btn.moderate:hover {
-  background: linear-gradient(135deg, #2a1a4d 0%, #180D3E 100%) !important;
-  box-shadow: 0 4px 12px rgba(24, 13, 62, 0.3) !important;
-}
-
-.action-btn.delete {
-  background: linear-gradient(135deg, #CE1E36 0%, #a01729 100%) !important;
-  color: white !important;
-}
-
-.action-btn.delete:hover {
-  background: linear-gradient(135deg, #a01729 0%, #CE1E36 100%) !important;
-  box-shadow: 0 4px 12px rgba(206, 30, 54, 0.3) !important;
-}
-
 /* Pagination */
 .seo-pagination-container {
   margin-top: 1rem !important;

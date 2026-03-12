@@ -630,38 +630,6 @@
     grid-column: 1 / -1;
 }
 
-.btn-track-another {
-    padding: 0.75rem 1.5rem;
-    background: #6B7280;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
-    font-size: 0.875rem;
-}
-
-.btn-track-another:hover {
-    background: #4B5563;
-}
-
-.btn-track-live {
-    padding: 0.75rem 1.5rem;
-    background: #10B981;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: 600;
-    transition: background 0.2s;
-    font-size: 0.875rem;
-    display: inline-block;
-}
-
-.btn-track-live:hover {
-    background: #059669;
-}
-
 /* Responsive */
 @media (max-width: 768px) {
     .order-tracking-container {

@@ -84,7 +84,7 @@
 
 .header__nav li a:hover,
 .header__nav li a.active {
-  color: #d32f2f;
+  color: #CE1E36;
 }
 
 .header__nav li a.active::after {
@@ -94,7 +94,7 @@
   left: 0;
   width: 100%;
   height: 2px;
-  background-color: #d32f2f;
+  background-color: #CE1E36;
   border-radius: 2px;
 }
 
