@@ -909,9 +909,9 @@ const Home = () => {
                         <div>
                           <h1 className="product-title">{product.name}</h1>
                           <div className="product-price-row">
-                            <span className="current-price">₹{selectedVariation?.price || 0}</span>
-                            {selectedVariation?.comparePrice && (
-                              <span className="original-price">₹{selectedVariation.comparePrice}</span>
+                            <span className="current-price">₹{selectedVariation?.price || product?.price || 0}</span>
+                            {(selectedVariation?.comparePrice || product?.comparePrice) && (
+                              <span className="original-price">₹{selectedVariation?.comparePrice || product?.comparePrice}</span>
                             )}
                             <span className="review-summary">
                               <span className="stars">{renderStars(avgRating)}</span>
@@ -1127,14 +1127,24 @@ const Home = () => {
                   description: product.description,
                   badge: product.badge || null,
                   images: imagesArr,
+                  price: product.variations?.[0]?.price || product.price || 0,
+                  comparePrice: product.variations?.[0]?.comparePrice || product.comparePrice || 0,
                   variations: product.variations && product.variations.length > 0 ? product.variations.map(variation => ({
+                    id: variation.id,
+                    sku: variation.sku,
                     price: variation.price || 0,
                     comparePrice: variation.comparePrice || 0,
-                    stock: variation.stock || 0
+                    stock: variation.stock || 0,
+                    attributes: variation.attributes,
+                    images: variation.images || []
                   })) : [{
+                    id: null,
+                    sku: null,
                     price: 0,
                     comparePrice: 0,
-                    stock: 0
+                    stock: 0,
+                    attributes: {},
+                    images: []
                   }],
                   category: {
                     name: product.category?.name || 'Uncategorized'
