@@ -141,7 +141,6 @@ export default function ProductDetails() {
     : selectedVariationBySku?.attributes || {};
 
   const productApiCalledRef = useRef(false);
-  const couponApiCalledRef = useRef(false);
 
   useEffect(() => {
     // Reset states when slug changes
@@ -152,71 +151,82 @@ export default function ProductDetails() {
     if (productApiCalledRef.current === productSlug) return; // Prevent multiple calls for same slug
     productApiCalledRef.current = productSlug;
     
-    console.log('API BEING CALLED: ProductDetails product fetch');
-    const fetchProduct = async () => {
+    console.log('API BEING CALLED: ProductDetails data fetch (PARALLELIZED)');
+    
+    // ✅ PARALLELIZED: Fetch product and coupons simultaneously
+    const fetchAllData = async () => {
       try {
         setLoading(true);
-        setError(null); // Reset error state
-        setProduct(null); // Reset product state
-        
-        if (productSlug) {
-          const response = await getPublicProductBySlug(productSlug);
-          console.log('API Response:', response);
-          
-          if (response && response.success && response.data) {
-            setProduct(response.data);
-            // Set default variation if available
-            if (response.data.variations && response.data.variations.length > 0) {
-              setSelectedVariation(response.data.variations[0]);
-              setSelectedSku(response.data.variations[0].sku); // Always select first variation
-              // Initialize selected attributes with first options
-              const firstVariation = response.data.variations[0];
-              if (firstVariation.attributes) {
-                const attributes = typeof firstVariation.attributes === 'string'
-                  ? JSON.parse(firstVariation.attributes)
-                  : firstVariation.attributes;
-                const initialAttributes = {};
-                Object.keys(attributes).forEach(key => {
-                  initialAttributes[key] = attributes[key][0];
-                });
-                setSelectedAttributes(initialAttributes);
-              }
+        setError(null);
+        setProduct(null);
+
+        if (!productSlug) {
+          setError('No product slug provided');
+          setLoading(false);
+          return;
+        }
+
+        // Execute product and coupon fetches in parallel
+        const [productResponse, couponsData] = await Promise.all([
+          // 1. Fetch product
+          (async () => {
+            try {
+              return await getPublicProductBySlug(productSlug);
+            } catch (err) {
+              console.error('Error fetching product:', err);
+              throw err;
             }
-          } else {
-            // Handle case where API returns success: false or no data
-            setError('Product not found or no data returned');
-            console.error('API returned no product data:', response);
+          })(),
+
+          // 2. Fetch coupons
+          (async () => {
+            try {
+              const data = await getPublicCoupons();
+              return Array.isArray(data) ? data : data.coupons || [];
+            } catch (err) {
+              console.error('Error fetching coupons:', err);
+              return [];
+            }
+          })()
+        ]);
+
+        // Process product response
+        if (productResponse && productResponse.success && productResponse.data) {
+          setProduct(productResponse.data);
+          // Set default variation if available
+          if (productResponse.data.variations && productResponse.data.variations.length > 0) {
+            setSelectedVariation(productResponse.data.variations[0]);
+            setSelectedSku(productResponse.data.variations[0].sku);
+            // Initialize selected attributes with first options
+            const firstVariation = productResponse.data.variations[0];
+            if (firstVariation.attributes) {
+              const attributes = typeof firstVariation.attributes === 'string'
+                ? JSON.parse(firstVariation.attributes)
+                : firstVariation.attributes;
+              const initialAttributes = {};
+              Object.keys(attributes).forEach(key => {
+                initialAttributes[key] = attributes[key][0];
+              });
+              setSelectedAttributes(initialAttributes);
+            }
           }
         } else {
-          setError('No product slug provided');
+          setError('Product not found or no data returned');
+          console.error('API returned no product data:', productResponse);
         }
+
+        // Set coupons
+        setCoupons(couponsData);
+
+        setLoading(false);
       } catch (err) {
         setError(err.message || 'Failed to fetch product');
-        console.error('Error fetching product:', err);
-      } finally {
         setLoading(false);
       }
     };
-    fetchProduct();
-  }, [productSlug]);
 
-  // Fetch coupons for display
-  useEffect(() => {
-    if (couponApiCalledRef.current) return; // Prevent multiple calls
-    couponApiCalledRef.current = true;
-    console.log('API BEING CALLED: ProductDetails coupon fetch');
-    const fetchCoupons = async () => {
-      try {
-        const data = await getPublicCoupons();
-        setCoupons(Array.isArray(data) ? data : data.coupons || []);
-      } catch (err) {
-        console.error('Error fetching coupons:', err);
-        // Optionally handle error - set empty array as fallback
-        setCoupons([]);
-      }
-    };
-    fetchCoupons();
-  }, []);
+    fetchAllData();
+  }, [productSlug]);
 
   // Fetch reviews with pagination
   useEffect(() => {

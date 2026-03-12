@@ -346,4 +346,4 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
   );
 };
 
-export default ProductCard;
+export default React.memo(ProductCard);

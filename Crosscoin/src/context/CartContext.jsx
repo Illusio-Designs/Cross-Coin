@@ -27,6 +27,9 @@ function CartProvider({ children }) {
   const [lastAddedItem, setLastAddedItem] = useState(null);
   const [buyNowItem, setBuyNowItem] = useState(null);
 
+  // ✅ Request deduplication - prevent duplicate API calls
+  const pendingRequestRef = React.useRef(null);
+
   // Initialize authentication state
   useEffect(() => {
     const checkAuth = () => {
@@ -59,23 +62,49 @@ function CartProvider({ children }) {
     }
 
     console.log('API BEING CALLED: Cart data fetch');
+    
+    // ✅ Deduplication: Skip if request already pending
+    if (pendingRequestRef.current) {
+      console.log('CartContext: Cart fetch already pending, skipping duplicate request');
+      return;
+    }
+
     const fetchCart = async () => {
-      console.log('CartContext: useEffect fetchCart, isAuthenticated:', isAuthenticated);
-      setIsCartLoading(true);
-      
-      if (isAuthenticated) {
-        try {
-          console.log('CartContext: fetching cart from backend');
-          const backendCart = await apiGetCart();
-          console.log('CartContext: backend cart received', backendCart);
-          setCartItems(Array.isArray(backendCart) ? backendCart : []);
-        } catch (error){
-          console.error('CartContext: error fetching backend cart', error);
-          // Fallback to localStorage if backend fails
+      try {
+        // Mark request as pending
+        pendingRequestRef.current = true;
+        setIsCartLoading(true);
+        
+        if (isAuthenticated) {
+          try {
+            console.log('CartContext: fetching cart from backend');
+            const backendCart = await apiGetCart();
+            console.log('CartContext: backend cart received', backendCart);
+            setCartItems(Array.isArray(backendCart) ? backendCart : []);
+          } catch (error){
+            console.error('CartContext: error fetching backend cart', error);
+            // Fallback to localStorage if backend fails
+            const savedCartItems = localStorage.getItem('cartItems');
+            if (savedCartItems) {
+              try {
+                const parsedItems = JSON.parse(savedCartItems);
+                setCartItems(Array.isArray(parsedItems) ? parsedItems : []);
+              } catch (parseError) {
+                console.error('Error parsing saved cart items:', parseError);
+                setCartItems([]);
+                localStorage.removeItem('cartItems'); // Clear corrupted data
+              }
+            } else {
+              setCartItems([]);
+            }
+          }
+        } else {
+          console.log('CartContext: loading cart from localStorage for guest user');
           const savedCartItems = localStorage.getItem('cartItems');
           if (savedCartItems) {
             try {
               const parsedItems = JSON.parse(savedCartItems);
+              console.log('CartContext: Parsed cart items from localStorage:', parsedItems);
               setCartItems(Array.isArray(parsedItems) ? parsedItems : []);
             } catch (parseError) {
               console.error('Error parsing saved cart items:', parseError);
@@ -83,28 +112,15 @@ function CartProvider({ children }) {
               localStorage.removeItem('cartItems'); // Clear corrupted data
             }
           } else {
+            console.log('CartContext: No saved cart items found in localStorage');
             setCartItems([]);
           }
         }
-      } else {
-        console.log('CartContext: loading cart from localStorage for guest user');
-        const savedCartItems = localStorage.getItem('cartItems');
-        if (savedCartItems) {
-          try {
-            const parsedItems = JSON.parse(savedCartItems);
-            console.log('CartContext: Parsed cart items from localStorage:', parsedItems);
-            setCartItems(Array.isArray(parsedItems) ? parsedItems : []);
-          } catch (parseError) {
-            console.error('Error parsing saved cart items:', parseError);
-            setCartItems([]);
-            localStorage.removeItem('cartItems'); // Clear corrupted data
-          }
-        } else {
-          console.log('CartContext: No saved cart items found in localStorage');
-          setCartItems([]);
-        }
+      } finally {
+        setIsCartLoading(false);
+        // Mark request as complete
+        pendingRequestRef.current = null;
       }
-      setIsCartLoading(false);
     };
     
     fetchCart();
