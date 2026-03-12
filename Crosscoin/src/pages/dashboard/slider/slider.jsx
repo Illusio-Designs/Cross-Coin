@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import Button from "../../../components/common/Button";
+import { Button } from "../../../components/ui";
 import InputField from "../../../components/common/InputField";
 import Modal from "../../../components/common/Modal";
 import Table from "../../../components/common/Table";

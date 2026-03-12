@@ -1,0 +1,379 @@
+/* ============================================
+   UNIFIED BUTTON COMPONENT STYLES
+   Crosscoin Brand Color: #CE1E36
+   ============================================ */
+
+/* Base Button Styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* ============================================
+   BUTTON VARIANTS
+   ============================================ */
+
+/* Primary Variant - Crosscoin Red */
+.btn--primary {
+  background: #CE1E36;
+  color: white;
+  box-shadow: 0 2px 4px rgba(206, 30, 54, 0.1);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: #a01729;
+  box-shadow: 0 4px 8px rgba(206, 30, 54, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn--primary:active:not(:disabled) {
+  background: #8a1220;
+  transform: translateY(0);
+}
+
+/* Secondary Variant - Purple */
+.btn--secondary {
+  background: #180D3E;
+  color: white;
+  box-shadow: 0 2px 4px rgba(24, 13, 62, 0.1);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: #2a1a4d;
+  box-shadow: 0 4px 8px rgba(24, 13, 62, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn--secondary:active:not(:disabled) {
+  background: #1e1438;
+  transform: translateY(0);
+}
+
+/* Outline Variant - Red Border */
+.btn--outline {
+  background: transparent;
+  color: #CE1E36;
+  border: 2px solid #CE1E36;
+}
+
+.btn--outline:hover:not(:disabled) {
+  background: #CE1E36;
+  color: white;
+  box-shadow: 0 4px 8px rgba(206, 30, 54, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn--outline:active:not(:disabled) {
+  background: #a01729;
+  border-color: #a01729;
+  transform: translateY(0);
+}
+
+/* Ghost Variant - Transparent */
+.btn--ghost {
+  background: transparent;
+  color: #333;
+  border: none;
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: #f5f5f5;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+.btn--ghost:active:not(:disabled) {
+  background: #e8e8e8;
+  transform: translateY(0);
+}
+
+/* Danger Variant - Red */
+.btn--danger {
+  background: #dc3545;
+  color: white;
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.1);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: #c82333;
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn--danger:active:not(:disabled) {
+  background: #bd2130;
+  transform: translateY(0);
+}
+
+/* Success Variant - Green */
+.btn--success {
+  background: #28a745;
+  color: white;
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.1);
+}
+
+.btn--success:hover:not(:disabled) {
+  background: #218838;
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn--success:active:not(:disabled) {
+  background: #1e7e34;
+  transform: translateY(0);
+}
+
+/* ============================================
+   BUTTON SIZES
+   ============================================ */
+
+.btn--sm {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.btn--md {
+  padding: 10px 16px;
+  font-size: 14px;
+  border-radius: 6px;
+}
+
+.btn--lg {
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: 6px;
+}
+
+.btn--xl {
+  padding: 16px 32px;
+  font-size: 18px;
+  border-radius: 8px;
+}
+
+/* ============================================
+   BUTTON STATES
+   ============================================ */
+
+/* Disabled State */
+.btn--disabled,
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #F3F4F5 !important;
+  color: #999 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* Loading State */
+.btn--loading {
+  position: relative;
+  color: transparent;
+}
+
+.btn--loading .btn__loader {
+  display: inline-block;
+}
+
+/* Full Width */
+.btn--full-width {
+  width: 100%;
+}
+
+/* ============================================
+   BUTTON ICON STYLES
+   ============================================ */
+
+.btn__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn__icon svg {
+  width: 1em;
+  height: 1em;
+}
+
+/* Loading Spinner */
+.btn__loader {
+  display: none;
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: btn-spin 0.6s linear infinite;
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================
+   RESPONSIVE STYLES
+   ============================================ */
+
+@media (max-width: 768px) {
+  .btn--lg {
+    padding: 10px 20px;
+    font-size: 15px;
+  }
+
+  .btn--xl {
+    padding: 12px 24px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .btn--sm {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .btn--md {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .btn--lg {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  .btn--xl {
+    padding: 12px 20px;
+    font-size: 15px;
+  }
+
+  .btn--full-width {
+    width: 100%;
+  }
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+.btn:focus-visible {
+  outline: 2px solid #CE1E36;
+  outline-offset: 2px;
+}
+
+.btn--secondary:focus-visible {
+  outline: 2px solid #180D3E;
+  outline-offset: 2px;
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .btn {
+    border: 2px solid currentColor;
+  }
+
+  .btn--primary {
+    border-color: white;
+  }
+
+  .btn--secondary {
+    border-color: white;
+  }
+
+  .btn--outline {
+    border-width: 2px;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
+
+  .btn__loader {
+    animation: none;
+  }
+
+  .btn:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+/* Icon Button (Square) */
+.btn--icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 6px;
+}
+
+.btn--icon.btn--sm {
+  width: 32px;
+  height: 32px;
+}
+
+.btn--icon.btn--lg {
+  width: 48px;
+  height: 48px;
+}
+
+/* Block Button */
+.btn--block {
+  display: flex;
+  width: 100%;
+}
+
+/* Rounded Button */
+.btn--rounded {
+  border-radius: 50px;
+}
+
+/* ============================================
+   BUTTON GROUPS
+   ============================================ */
+
+.btn-group {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.btn-group .btn {
+  margin: 0;
+}
+
+.btn-group--vertical {
+  flex-direction: column;
+}
+
+.btn-group--block {
+  width: 100%;
+}
+
+.btn-group--block .btn {
+  flex: 1;
+}

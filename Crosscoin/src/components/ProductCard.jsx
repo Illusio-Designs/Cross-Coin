@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import SafeImage from "./common/SafeImage";
+import { Button } from "../components/ui";
 import { FiHeart, FiShoppingCart } from "react-icons/fi";
 import { HiOutlineEye } from "react-icons/hi2";
 import { useRouter } from "next/router";
@@ -326,8 +327,10 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
               <span className="original-price">₹{comparePrice}</span>
             )}
           </span>
-          <button
-            className="view-details"
+          <Button
+            size="sm"
+            variant="outline"
+            icon={<HiOutlineEye />}
             onClick={(e) => {
               e.stopPropagation();
               if (product.slug) {
@@ -337,9 +340,8 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
               }
             }}
             aria-label="View product details"
-          >
-            <HiOutlineEye />
-          </button>
+            className="view-details-btn"
+          />
         </div>
       </div>
     </div>

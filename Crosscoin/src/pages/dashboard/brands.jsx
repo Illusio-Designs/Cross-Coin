@@ -3,7 +3,7 @@ import { toast } from 'react-toastify';
 import { FiPlus, FiEdit2, FiTrash2, FiX, FiSave, FiToggleLeft, FiToggleRight, FiSearch, FiRefreshCw } from 'react-icons/fi';
 import { brandService } from '@/services';
 import Modal from '@/components/common/Modal';
-import Button from '@/components/common/Button';
+import { Button } from '@/components/ui';
 import InputField from '@/components/common/InputField';
 import Loader from '@/components/Loader';
 import '@/styles/dashboard/brands.css';
