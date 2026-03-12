@@ -48,6 +48,11 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
 
   const variation = product?.variations?.[0];
 
+  // Safety check: if no variation and no product price, log warning
+  if (!variation && !product?.price) {
+    console.warn('ProductCard: No variation or product price found for product:', product?.id);
+  }
+
   // Get hover image (second image if available)
   let hoverImageData = null;
   if (variation?.images && Array.isArray(variation.images) && variation.images.length > 1) {
@@ -179,9 +184,9 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
     imageData = product.ProductImages.find((img) => img.is_primary) || product.ProductImages[0];
   }
 
-  // Get the first variation for price
-  const price = variation?.price || 0;
-  const comparePrice = variation?.comparePrice || 0;
+  // Get the first variation for price - with fallback to product price if no variation
+  const price = variation?.price || product?.price || 0;
+  const comparePrice = variation?.comparePrice || product?.comparePrice || 0;
 
   // Get category name
   const categoryName = product?.category?.name || "";
