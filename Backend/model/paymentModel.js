@@ -107,9 +107,6 @@ const Payment = sequelize.define(
       {
         fields: ["magic_checkout_payment_id"],
       },
-      {
-        fields: ["brand_id"],
-      },
     ],
   }
 );
