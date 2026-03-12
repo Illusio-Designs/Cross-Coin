@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Skeleton from '../Skeleton';
 
 /**
  * Detect browser support for modern image formats
  * Returns the best format supported by the browser
+ * ✅ MEMOIZED: Only runs once per browser session
  */
-function detectImageFormatSupport() {
+const SUPPORTED_FORMAT = (() => {
   if (typeof window === 'undefined') {
     // Server-side: default to JPEG for compatibility
     return 'jpeg';
@@ -24,7 +25,7 @@ function detectImageFormatSupport() {
 
   // Fallback to JPEG
   return 'jpeg';
-}
+})();
 
 /**
  * Get responsive sizing parameters based on viewport width
@@ -75,12 +76,8 @@ const SafeImage = ({
   const [imageLoading, setImageLoading] = useState(true);
   const [imageSrc, setImageSrc] = useState(null);
   const [showSkeleton, setShowSkeleton] = useState(true);
-  const [supportedFormat, setSupportedFormat] = useState('jpeg');
-
-  // Detect format support on mount
-  useEffect(() => {
-    setSupportedFormat(detectImageFormatSupport());
-  }, []);
+  // ✅ Use memoized format detection instead of state
+  const supportedFormat = useMemo(() => SUPPORTED_FORMAT, []);
 
   useEffect(() => {
     let newSrc = null;

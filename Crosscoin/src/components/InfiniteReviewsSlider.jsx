@@ -3,14 +3,36 @@ import SafeImage from './common/SafeImage';
 
 const InfiniteReviewsSlider = ({ reviews }) => {
   const sliderRef = useRef(null);
+  const containerRef = useRef(null);
   const [hoveredReview, setHoveredReview] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [isVisible, setIsVisible] = useState(true);
 
   // Function to truncate text
   const truncateText = (text, maxLength = 80) => {
     if (!text || text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
   };
+
+  // ✅ Intersection Observer - Pause animation when component is not visible
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+      },
+      { threshold: 0.1 }
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => {
+      if (containerRef.current) {
+        observer.unobserve(containerRef.current);
+      }
+    };
+  }, []);
 
   // Handle mouse enter for tooltip
   const handleReviewMouseEnter = (review, event) => {
@@ -40,7 +62,8 @@ const InfiniteReviewsSlider = ({ reviews }) => {
     let isPaused = false;
 
     const autoScroll = () => {
-      if (!isPaused) {
+      // ✅ Only scroll if component is visible AND not paused
+      if (!isPaused && isVisible) {
         slider.scrollLeft += scrollSpeed;
         
         // Reset scroll position for infinite loop
@@ -71,7 +94,7 @@ const InfiniteReviewsSlider = ({ reviews }) => {
         slider.removeEventListener('mouseleave', handleMouseLeave);
       }
     };
-  }, [reviews]);
+  }, [reviews, isVisible]);
 
   if (!reviews || reviews.length === 0) {
     return (
@@ -86,7 +109,7 @@ const InfiniteReviewsSlider = ({ reviews }) => {
 
   return (
     <>
-      <div
+      <div ref={containerRef}>
         ref={sliderRef}
         className="infinite-reviews-slider"
         style={{
@@ -97,7 +120,7 @@ const InfiniteReviewsSlider = ({ reviews }) => {
           scrollbarWidth: 'none',
           msOverflowStyle: 'none'
         }}
-      >
+      
         <style jsx>{`
           .infinite-reviews-slider::-webkit-scrollbar {
             display: none;

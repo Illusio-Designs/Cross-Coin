@@ -86,7 +86,7 @@ const formatProductResponse = (product) => {
           const imagePath = image.image_url;
           return {
             id: image.id,
-            image_url: imagePath,
+            image_url: imagekitService.getOptimizedUrl(imagePath, 'medium'), // ✅ Use ImageKit optimized URL
             thumbnail: imagekitService.getOptimizedUrl(imagePath, 'thumbnail'),
             medium: imagekitService.getOptimizedUrl(imagePath, 'medium'),
             large: imagekitService.getOptimizedUrl(imagePath, 'large'),
@@ -121,7 +121,7 @@ const formatProductResponse = (product) => {
       const imagePath = image.image_url;
       return {
         id: image.id,
-        image_url: imagePath, // Keep the full path
+        image_url: imagekitService.getOptimizedUrl(imagePath, 'medium'), // ✅ Use ImageKit optimized URL
         // Add optimized URLs for different sizes
         thumbnail: imagekitService.getOptimizedUrl(imagePath, 'thumbnail'),
         medium: imagekitService.getOptimizedUrl(imagePath, 'medium'),
@@ -142,17 +142,9 @@ const formatProductResponse = (product) => {
   // Add mainImage property
   if (productData.images && productData.images.length > 0) {
     const primary = productData.images.find((img) => img.is_primary);
-    let mainImageFile = primary
-      ? primary.image_url
+    productData.mainImage = primary 
+      ? primary.image_url  // ✅ Now this is already an ImageKit optimized URL
       : productData.images[0].image_url;
-    if (
-      mainImageFile &&
-      !mainImageFile.startsWith("http") &&
-      !mainImageFile.startsWith("/uploads/")
-    ) {
-      mainImageFile = `/uploads/products/${mainImageFile}`;
-    }
-    productData.mainImage = mainImageFile;
   } else {
     productData.mainImage = null; // No placeholder image
   }

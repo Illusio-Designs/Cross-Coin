@@ -120,96 +120,104 @@ const Home = () => {
   useEffect(() => {
     if (apiCalledRef.current) return; // Prevent multiple calls
     apiCalledRef.current = true;
-    console.log('API BEING CALLED: home page data fetch');
-    const fetchSliders = async () => {
+    console.log('API BEING CALLED: home page data fetch (PARALLELIZED)');
+    
+    // ✅ PARALLELIZED: All 4 API calls run simultaneously
+    const fetchAllData = async () => {
       try {
-        const data = await getPublicSliders();
-        setSlides(data);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching sliders:', error);
-        setLoading(false);
-      }
-    };
-
-    const fetchCategories = async () => {
-      try {
-        const data = await getPublicCategories();
-        // Handle both array and object response
-        if (Array.isArray(data)) {
-        setCategories(data);
-        } else if (data && Array.isArray(data.categories)) {
-          setCategories(data.categories);
-        } else {
-          setCategories([]);
-        }
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-        setCategories([]);
-      }
-    };
-
-    const fetchLatestProducts = async () => {
-      try {
+        setLoading(true);
         setLatestProductsLoading(true);
-        // Fetch latest products from all categories
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/public?limit=15&sort=newest`,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Brand-Name': 'crosscoin'
-            }
-          }
-        );
-        const data = await response.json();
-        if (data.success && data.data.products) {
-          setLatestProducts(data.data.products);
-        } else {
-          setLatestProducts([]);
-        }
-      } catch (error) {
-        console.error('Error fetching latest products:', error);
-        setLatestProducts([]);
-      } finally {
-        setLatestProductsLoading(false);
-      }
-    };
+        setExclusiveProductsLoading(true);
 
-    const fetchExclusiveProducts = async () => {
-      setExclusiveProductsLoading(true);
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/public?sort=featured&limit=3`,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Brand-Name': 'crosscoin'
+        // Execute all 4 API calls in parallel using Promise.all()
+        const [slidersData, categoriesData, latestData, exclusiveData] = await Promise.all([
+          // 1. Fetch sliders
+          (async () => {
+            try {
+              return await getPublicSliders();
+            } catch (error) {
+              console.error('Error fetching sliders:', error);
+              return [];
             }
-          }
-        );
-        const data = await response.json();
-        if (data.success && data.data.products) {
-          // Use the products directly without fetching full details
-          // This reduces 3 API calls per product
-          const products = data.data.products;
-          
-          setExclusiveProducts(products);
-          setExclusiveStates(products.map(() => ({ selectedThumbnail: 0, selectedColor: '', selectedSize: '', quantity: 1 })));
-          setExclusiveSelectedSkus(products.map(product => 
+          })(),
+
+          // 2. Fetch categories
+          (async () => {
+            try {
+              const data = await getPublicCategories();
+              if (Array.isArray(data)) {
+                return data;
+              } else if (data && Array.isArray(data.categories)) {
+                return data.categories;
+              }
+              return [];
+            } catch (error) {
+              console.error('Error fetching categories:', error);
+              return [];
+            }
+          })(),
+
+          // 3. Fetch latest products
+          (async () => {
+            try {
+              const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/public?limit=15&sort=newest`,
+                {
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-Brand-Name': 'crosscoin'
+                  }
+                }
+              );
+              const data = await response.json();
+              return (data.success && data.data.products) ? data.data.products : [];
+            } catch (error) {
+              console.error('Error fetching latest products:', error);
+              return [];
+            }
+          })(),
+
+          // 4. Fetch exclusive/featured products
+          (async () => {
+            try {
+              const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/public?sort=featured&limit=3`,
+                {
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-Brand-Name': 'crosscoin'
+                  }
+                }
+              );
+              const data = await response.json();
+              return (data.success && data.data.products) ? data.data.products : [];
+            } catch (error) {
+              console.error('Error fetching exclusive products:', error);
+              return [];
+            }
+          })()
+        ]);
+
+        // Set all data at once
+        setSlides(slidersData);
+        setCategories(categoriesData);
+        setLatestProducts(latestData);
+
+        // Process exclusive products
+        if (exclusiveData && exclusiveData.length > 0) {
+          setExclusiveProducts(exclusiveData);
+          setExclusiveStates(exclusiveData.map(() => ({ selectedThumbnail: 0, selectedColor: '', selectedSize: '', quantity: 1 })));
+          setExclusiveSelectedSkus(exclusiveData.map(product => 
             product.variations && product.variations.length > 0 ? product.variations[0].sku : ''
           ));
-          
-          // Fetch review counts in a single batch (if API supports it)
-          // For now, set default values to avoid 3 additional API calls
-          setExclusiveReviewCounts(products.map(() => 0));
-          setExclusiveAvgRatings(products.map(() => 0));
-          
-          // Optional: Fetch reviews in background after page load
+          setExclusiveReviewCounts(exclusiveData.map(() => 0));
+          setExclusiveAvgRatings(exclusiveData.map(() => 0));
+
+          // Fetch reviews in background after page load
           setTimeout(async () => {
             try {
               const reviewStats = await Promise.all(
-                products.map(async (product) => {
+                exclusiveData.map(async (product) => {
                   try {
                     const reviewData = await getPublicProductReviews(product.id, { limit: 5 });
                     const count = reviewData.total || (reviewData.reviews ? reviewData.reviews.length : 0);
@@ -228,7 +236,7 @@ const Home = () => {
             } catch (error) {
               console.error('Error fetching reviews:', error);
             }
-          }, 1000); // Delay review fetch by 1 second
+          }, 1000);
         } else {
           setExclusiveProducts([]);
           setExclusiveStates([]);
@@ -236,20 +244,19 @@ const Home = () => {
           setExclusiveAvgRatings([]);
           setExclusiveSelectedSkus([]);
         }
+
+        setLoading(false);
+        setLatestProductsLoading(false);
+        setExclusiveProductsLoading(false);
       } catch (error) {
-        setExclusiveProducts([]);
-        setExclusiveStates([]);
-        setExclusiveReviewCounts([]);
-        setExclusiveAvgRatings([]);
-      } finally {
+        console.error('Error in fetchAllData:', error);
+        setLoading(false);
+        setLatestProductsLoading(false);
         setExclusiveProductsLoading(false);
       }
     };
 
-    fetchSliders();
-    fetchCategories();
-    fetchLatestProducts();
-    fetchExclusiveProducts();
+    fetchAllData();
   }, []);
 
   const fetchCategoryProducts = useCallback(async (categoryName) => {

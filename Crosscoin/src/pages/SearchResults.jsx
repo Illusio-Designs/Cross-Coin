@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { searchProducts } from '../services/publicApi';
 import ProductCard from '../components/ProductCard';
@@ -9,6 +9,19 @@ import Pagination from '../components/common/Pagination';
 import SeoWrapper from '../console/SeoWrapper';
 import '../styles/pages/SearchResults.css';
 import '../styles/common/TableControls.css';
+
+// ✅ Debounce function moved outside component to prevent recreation
+function createDebouncedSearch(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
 
 const SearchResults = () => {
   const router = useRouter();
@@ -23,22 +36,25 @@ const SearchResults = () => {
   const [totalProducts, setTotalProducts] = useState(0);
   const itemsPerPage = 20;
 
-  // Debounced search function
-  const debouncedSearch = useCallback(async (searchTerm, categoryFilter, sortOption) => {
-    if (!searchTerm.trim()) {
-      setProducts([]);
-      setTotalProducts(0);
-      return;
-    }
+  // ✅ Use ref to store debounced function (created once)
+  const debouncedSearchRef = useRef(null);
 
-    try {
+  // Create debounced search function once on mount
+  useEffect(() => {
+    const performSearch = async (searchTerm, categoryFilter, sortOption) => {
+      if (!searchTerm.trim()) {
+        setProducts([]);
+        setTotalProducts(0);
+        return;
+      }
+
+      try {
         setLoading(true);
         setError(null);
         
-        // Fetch all products for client-side pagination
         const params = {
           page: 1,
-          limit: 1000, // Fetch all products for client-side filtering
+          limit: 1000,
           sort: sortOption,
           category: categoryFilter
         };
@@ -61,6 +77,10 @@ const SearchResults = () => {
       } finally {
         setLoading(false);
       }
+    };
+
+    // Create debounced version once
+    debouncedSearchRef.current = createDebouncedSearch(performSearch, 300);
   }, []);
 
   // Update URL when search parameters change
@@ -114,7 +134,10 @@ const SearchResults = () => {
     const value = e.target.value;
     setSearchQuery(value);
     updateURL(value, selectedCategory, sortBy);
-    debouncedSearch(value, selectedCategory, sortBy);
+    // ✅ Use debounced function from ref
+    if (debouncedSearchRef.current) {
+      debouncedSearchRef.current(value, selectedCategory, sortBy);
+    }
   };
 
   // Handle sort change
@@ -122,7 +145,10 @@ const SearchResults = () => {
     const value = e.target.value;
     setSortBy(value);
     updateURL(searchQuery, selectedCategory, value);
-    debouncedSearch(searchQuery, selectedCategory, value);
+    // ✅ Use debounced function from ref
+    if (debouncedSearchRef.current) {
+      debouncedSearchRef.current(searchQuery, selectedCategory, value);
+    }
   };
 
   // Handle category filter
@@ -130,7 +156,10 @@ const SearchResults = () => {
     const value = e.target.value;
     setSelectedCategory(value);
     updateURL(searchQuery, value, sortBy);
-    debouncedSearch(searchQuery, value, sortBy);
+    // ✅ Use debounced function from ref
+    if (debouncedSearchRef.current) {
+      debouncedSearchRef.current(searchQuery, value, sortBy);
+    }
   };
 
   // Clear search
@@ -186,19 +215,6 @@ const SearchResults = () => {
       }
     }
   }, [query, category, sort]);
-
-  // Simple debounce function
-  function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-      const later = () => {
-        clearTimeout(timeout);
-        func(...args);
-      };
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
-    };
-  }
 
   return (
     <SeoWrapper pageName="search">

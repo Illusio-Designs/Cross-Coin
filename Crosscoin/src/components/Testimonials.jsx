@@ -4,10 +4,12 @@ import { getPublicProductReviews, getAllPublicReviews } from '../services/public
 
 const Testimonials = () => {
   const sliderRef = useRef(null);
+  const sectionRef = useRef(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isAutoScrolling, setIsAutoScrolling] = useState(true);
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
     const fetchReviews = async () => {
@@ -30,6 +32,26 @@ const Testimonials = () => {
     fetchReviews();
   }, []);
 
+  // ✅ Intersection Observer - Pause animation when section is not visible
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+      },
+      { threshold: 0.1 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => {
+      if (sectionRef.current) {
+        observer.unobserve(sectionRef.current);
+      }
+    };
+  }, []);
+
   // Auto-scroll effect for infinite scrolling
   useEffect(() => {
     if (!reviews.length || reviews.length < 3) return;
@@ -42,7 +64,8 @@ const Testimonials = () => {
     let isPaused = false;
 
     const autoScroll = () => {
-      if (!isPaused && isAutoScrolling) {
+      // ✅ Only scroll if section is visible AND auto-scrolling is enabled
+      if (!isPaused && isAutoScrolling && isVisible) {
         slider.scrollLeft += scrollSpeed;
         
         // Reset scroll position for infinite loop
@@ -78,7 +101,7 @@ const Testimonials = () => {
         slider.removeEventListener('mouseleave', handleMouseLeave);
       }
     };
-  }, [reviews, isAutoScrolling]);
+  }, [reviews, isAutoScrolling, isVisible]);
 
   const scrollSlider = (direction) => {
     const scrollAmount = 400;
@@ -124,7 +147,7 @@ const Testimonials = () => {
   const duplicatedReviews = reviews.length >= 3 ? [...reviews, ...reviews] : reviews;
 
   return (
-    <section className="testimonials-section">
+    <section className="testimonials-section" ref={sectionRef}>
       <h3 className="section-title">CUSTOMER SATISFACTION</h3>
       <div className="testimonials-container">
         {reviews.length > 2 && (
