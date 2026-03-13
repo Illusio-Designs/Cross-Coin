@@ -30,14 +30,15 @@ const Footer = dynamic(() => import("../components/Footer"), {
 });
 
 export default function ProductDetails() {
-  const router = useRouter();
-  const nextRouter = useNextRouter();
-  
-  // Get slug from router query - add safety check for router.query
-  const rawSlug = router.query?.slug;
-  
-  // Decode the slug to handle URL-encoded characters like %28 and %29
-  const productSlug = rawSlug ? decodeURIComponent(rawSlug) : null;
+  try {
+    const router = useRouter();
+    const nextRouter = useNextRouter();
+    
+    // Get slug from router query - add safety check for router.query
+    const rawSlug = router.query?.slug;
+    
+    // Decode the slug to handle URL-encoded characters like %28 and %29
+    const productSlug = rawSlug ? decodeURIComponent(rawSlug) : null;
   
   const { addToCart, removeFromCart, buyNow } = useCart();
   const { addToWishlist, removeFromWishlist, wishlist } = useWishlist();
@@ -90,19 +91,29 @@ export default function ProductDetails() {
   const [selectedSku, setSelectedSku] = useState('');
 
   // Find the selected variation by SKU
-  const selectedVariationBySku = product?.variations.find(v => v.sku === selectedSku) || product?.variations[0];
+  const selectedVariationBySku = useMemo(() => {
+    if (!product?.variations || !Array.isArray(product.variations)) {
+      return null;
+    }
+    return product.variations.find(v => v && v.sku === selectedSku) || product.variations[0] || null;
+  }, [product?.variations, selectedSku]);
 
   // Use images from selected variation if available, else fallback to product images
   const variationImages = useMemo(() => {
+    // Safety check: ensure we have valid data
+    if (!product || !selectedVariation) {
+      return [];
+    }
+    
     // Priority 1: Use images from the selected variation if available
-    if (selectedVariation?.images && selectedVariation.images.length > 0) {
+    if (selectedVariation?.images && Array.isArray(selectedVariation.images) && selectedVariation.images.length > 0) {
       console.log('Using selectedVariation.images:', selectedVariation.images);
       return selectedVariation.images;
     }
     
     // Priority 2: Filter product images by variation ID
-    if (product?.images && product.images.length > 0 && selectedVariation?.id) {
-      const filteredImages = product.images.filter(img => img.product_variation_id === selectedVariation.id);
+    if (product?.images && Array.isArray(product.images) && product.images.length > 0 && selectedVariation?.id) {
+      const filteredImages = product.images.filter(img => img && img.product_variation_id === selectedVariation.id);
       if (filteredImages.length > 0) {
         console.log('Using filtered product images for variation:', selectedVariation.id, filteredImages);
         return filteredImages;
@@ -110,7 +121,7 @@ export default function ProductDetails() {
     }
     
     // Priority 3: Fallback to all product images
-    if (product?.images && product.images.length > 0) {
+    if (product?.images && Array.isArray(product.images) && product.images.length > 0) {
       console.log('Using all product images as fallback');
       return product.images;
     }
@@ -137,16 +148,30 @@ export default function ProductDetails() {
     setSelectedThumbnail(0);
   }, [selectedVariation?.id]);
 
-  // Parse attributes
-  const attrs = selectedVariationBySku && typeof selectedVariationBySku.attributes === 'string'
-    ? JSON.parse(selectedVariationBySku.attributes)
-    : selectedVariationBySku?.attributes || {};
+  // Parse attributes with safety checks
+  const attrs = useMemo(() => {
+    if (!selectedVariationBySku || !selectedVariationBySku.attributes) {
+      return {};
+    }
+    
+    try {
+      return typeof selectedVariationBySku.attributes === 'string'
+        ? JSON.parse(selectedVariationBySku.attributes)
+        : selectedVariationBySku.attributes || {};
+    } catch (error) {
+      console.error('Error parsing variation attributes:', error);
+      return {};
+    }
+  }, [selectedVariationBySku]);
 
   const productApiCalledRef = useRef(false);
 
   useEffect(() => {
     // Don't run if router is not ready yet
     if (!router.isReady) return;
+    
+    // Don't run if productSlug is null or undefined
+    if (!productSlug) return;
     
     // Reset states when slug changes
     if (productApiCalledRef.current && productApiCalledRef.current !== productSlug) {
@@ -738,6 +763,25 @@ export default function ProductDetails() {
     );
   }
 
+  // Safety check: Don't render if essential data is missing
+  if (!selectedVariationBySku || !variationImages) {
+    return (
+      <SeoWrapper
+        pageName={productSlug || "product-details"}
+        seo={null}
+      >
+        <div className="product-details-container">
+          <Header />
+          <div className="product-details">
+            <div style={{ textAlign: 'center', padding: '50px' }}>
+              <Loader />
+            </div>
+          </div>
+        </div>
+      </SeoWrapper>
+    );
+  }
+
   // Log product description and image URL
   console.log('Product Description:', product.description);
   const mainImageUrl = product.images && product.images.length > 0
@@ -1320,8 +1364,8 @@ export default function ProductDetails() {
               <div>
                 <h1 className="product-title">{product.name}</h1>
                 <div className="product-price-row">
-                  <span className="current-price">₹{selectedVariationBySku.price}</span>
-                  {selectedVariationBySku.comparePrice && (
+                  <span className="current-price">₹{selectedVariationBySku?.price || 0}</span>
+                  {selectedVariationBySku?.comparePrice && (
                     <span className="original-price">₹{selectedVariationBySku.comparePrice}</span>
                   )}
                   <span className="review-summary">
@@ -1580,4 +1624,52 @@ export default function ProductDetails() {
       </div>
     </SeoWrapper>
   );
+  } catch (error) {
+    console.error('ProductDetails component error:', error);
+    return (
+      <SeoWrapper
+        pageName="error"
+        seo={null}
+      >
+        <div className="product-details-container">
+          <Header />
+          <div className="product-details">
+            <div style={{ textAlign: 'center', padding: '50px' }}>
+              <h2>Something went wrong</h2>
+              <p>Please try refreshing the page or go back to the previous page.</p>
+              <button 
+                onClick={() => window.location.reload()}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  marginTop: '20px',
+                  marginRight: '10px'
+                }}
+              >
+                Refresh Page
+              </button>
+              <button 
+                onClick={() => window.history.back()}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  marginTop: '20px'
+                }}
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+      </SeoWrapper>
+    );
+  }
 } 
