@@ -30,15 +30,140 @@ const Footer = dynamic(() => import("../components/Footer"), {
 });
 
 export default function ProductDetails() {
-  try {
-    const router = useRouter();
-    const nextRouter = useNextRouter();
+  const router = useRouter();
+  const nextRouter = useNextRouter();
+  
+  // Get slug from router query - add safety check for router.query
+  const rawSlug = router.query?.slug;
+  
+  // Decode the slug to handle URL-encoded characters like %28 and %29
+  const productSlug = rawSlug ? decodeURIComponent(rawSlug) : null;
+  
+  const { addToCart, removeFromCart, buyNow } = useCart();
+  const { addToWishlist, removeFromWishlist, wishlist } = useWishlist();
+  const { isAuthenticated, user } = useAuth();
+  
+  const [selectedThumbnail, setSelectedThumbnail] = useState(0);
+  const [selectedVariation, setSelectedVariation] = useState(null);
+  const [selectedAttributes, setSelectedAttributes] = useState({});
+  const [quantity, setQuantity] = useState(1);
+  const [activeTab, setActiveTab] = useState("description");
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Note: avoid heavy debug logging here (hurts mobile performance)
+  const [showAddedToCart, setShowAddedToCart] = useState(false);
+  const [reviewForm, setReviewForm] = useState({
+    rating: 5,
+    comment: '',
+    name: '',
+    email: '',
+    files: []
+  });
+  const [reviewError, setReviewError] = useState(null);
+  const [reviewSuccess, setReviewSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formTouched, setFormTouched] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [filePreview, setFilePreview] = useState([]);
+  const [coupons, setCoupons] = useState([]);
+  const [copiedCoupon, setCopiedCoupon] = useState(null);
+  const [allReviews, setAllReviews] = useState([]);
+  const [reviewsPage, setReviewsPage] = useState(1);
+  const [reviewsHasMore, setReviewsHasMore] = useState(true);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [tooltipStyle, setTooltipStyle] = useState({});
+  const [isBuyNowLoading, setIsBuyNowLoading] = useState(false);
+  const couponRefs = useRef({});
+  // Store selected size per pack/variation
+  const [selectedSizes, setSelectedSizes] = useState({});
+
+  // Add color selection by name
+  const [selectedColor, setSelectedColor] = useState(null);
+  // Add type/model selection state
+  const [selectedType, setSelectedType] = useState(null);
+
+  // Add state for selectedSku
+  const [selectedSku, setSelectedSku] = useState('');
+
+  // Find the selected variation by SKU
+  const selectedVariationBySku = useMemo(() => {
+    if (!product?.variations || !Array.isArray(product.variations)) {
+      return null;
+    }
+    return product.variations.find(v => v && v.sku === selectedSku) || product.variations[0] || null;
+  }, [product?.variations, selectedSku]);
+
+  // Use images from selected variation if available, else fallback to product images
+  const variationImages = useMemo(() => {
+    // Safety check: ensure we have valid data
+    if (!product || !selectedVariation) {
+      return [];
+    }
     
-    // Get slug from router query - add safety check for router.query
-    const rawSlug = router.query?.slug;
+    // Priority 1: Use images from the selected variation if available
+    if (selectedVariation?.images && Array.isArray(selectedVariation.images) && selectedVariation.images.length > 0) {
+      console.log('Using selectedVariation.images:', selectedVariation.images);
+      return selectedVariation.images;
+    }
     
-    // Decode the slug to handle URL-encoded characters like %28 and %29
-    const productSlug = rawSlug ? decodeURIComponent(rawSlug) : null;
+    // Priority 2: Filter product images by variation ID
+    if (product?.images && Array.isArray(product.images) && product.images.length > 0 && selectedVariation?.id) {
+      const filteredImages = product.images.filter(img => img && img.product_variation_id === selectedVariation.id);
+      if (filteredImages.length > 0) {
+        console.log('Using filtered product images for variation:', selectedVariation.id, filteredImages);
+        return filteredImages;
+      }
+    }
+    
+    // Priority 3: Fallback to all product images
+    if (product?.images && Array.isArray(product.images) && product.images.length > 0) {
+      console.log('Using all product images as fallback');
+      return product.images;
+    }
+    
+    // If no images available, return empty array
+    console.log('No images available');
+    return [];
+  }, [selectedVariation, product]);
+
+  // Debug: Log variation images data
+  useEffect(() => {
+    console.log('=== ProductDetails Image Debug ===');
+    console.log('selectedVariation:', selectedVariation);
+    console.log('product?.images:', product?.images);
+    console.log('variationImages:', variationImages);
+    console.log('selectedThumbnail:', selectedThumbnail);
+    console.log('Current image:', variationImages[selectedThumbnail]);
+    console.log('================================');
+  }, [selectedVariation, variationImages, selectedThumbnail, product]);
+
+  // Reset selectedThumbnail when variation changes
+  useEffect(() => {
+    console.log('Variation changed, resetting thumbnail to 0');
+    setSelectedThumbnail(0);
+  }, [selectedVariation?.id]);
+
+  // Parse attributes with safety checks
+  const attrs = useMemo(() => {
+    if (!selectedVariationBySku || !selectedVariationBySku.attributes) {
+      return {};
+    }
+    
+    try {
+      return typeof selectedVariationBySku.attributes === 'string'
+        ? JSON.parse(selectedVariationBySku.attributes)
+        : selectedVariationBySku.attributes || {};
+    } catch (error) {
+      console.error('Error parsing variation attributes:', error);
+      return {};
+    }
+  }, [selectedVariationBySku]);
+
+  const productApiCalledRef = useRef(false);
   
   const { addToCart, removeFromCart, buyNow } = useCart();
   const { addToWishlist, removeFromWishlist, wishlist } = useWishlist();
@@ -250,12 +375,20 @@ export default function ProductDetails() {
 
         setLoading(false);
       } catch (err) {
+        console.error('ProductDetails fetch error:', err);
         setError(err.message || 'Failed to fetch product');
         setLoading(false);
       }
     };
 
-    fetchAllData();
+    // Wrap in try-catch to handle any synchronous errors
+    try {
+      fetchAllData();
+    } catch (syncError) {
+      console.error('ProductDetails sync error:', syncError);
+      setError('An unexpected error occurred');
+      setLoading(false);
+    }
   }, [productSlug, router.isReady]);
 
   // Fetch reviews with pagination
@@ -1624,52 +1757,4 @@ export default function ProductDetails() {
       </div>
     </SeoWrapper>
   );
-  } catch (error) {
-    console.error('ProductDetails component error:', error);
-    return (
-      <SeoWrapper
-        pageName="error"
-        seo={null}
-      >
-        <div className="product-details-container">
-          <Header />
-          <div className="product-details">
-            <div style={{ textAlign: 'center', padding: '50px' }}>
-              <h2>Something went wrong</h2>
-              <p>Please try refreshing the page or go back to the previous page.</p>
-              <button 
-                onClick={() => window.location.reload()}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  marginTop: '20px',
-                  marginRight: '10px'
-                }}
-              >
-                Refresh Page
-              </button>
-              <button 
-                onClick={() => window.history.back()}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  marginTop: '20px'
-                }}
-              >
-                Go Back
-              </button>
-            </div>
-          </div>
-        </div>
-      </SeoWrapper>
-    );
-  }
 } 
