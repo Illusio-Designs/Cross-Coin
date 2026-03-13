@@ -113,22 +113,22 @@ const InfiniteReviewsSlider = ({ reviews }) => {
         <div
           ref={sliderRef}
           className="infinite-reviews-slider"
-        style={{
-          display: 'flex',
-          overflowX: 'auto',
-          gap: '12px',
-          padding: '8px 0',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none'
-        }}
-      
-        <style jsx>{`
-          .infinite-reviews-slider::-webkit-scrollbar {
-            display: none;
-          }
-        `}</style>
-        
-        {displayReviews.map((review, idx) => (
+          style={{
+            display: 'flex',
+            overflowX: 'auto',
+            gap: '12px',
+            padding: '8px 0',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}
+        >
+          <style jsx>{`
+            .infinite-reviews-slider::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
+          
+          {displayReviews.map((review, idx) => (
           <div
             key={`${review.id || idx}-${idx}`}
             className="review-slide"
@@ -200,6 +200,7 @@ const InfiniteReviewsSlider = ({ reviews }) => {
             )}
           </div>
         ))}
+        </div>
       </div>
       
       {/* Tooltip for full review text */}
