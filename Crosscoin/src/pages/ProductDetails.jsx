@@ -426,8 +426,8 @@ export default function ProductDetails() {
         setTimeout(() => {
           setCopiedCoupon(couponCode);
           setTooltipStyle({
-            '--tooltip-top': `20px`,
-            '--tooltip-left': `50vw`
+            top: '20px',
+            left: '50vw'
           });
           requestAnimationFrame(() => {
             if (couponRefs.current[couponCode]) {
@@ -435,9 +435,8 @@ export default function ProductDetails() {
               const top = rect.top - 44;
               const left = rect.left + rect.width / 2;
               setTooltipStyle({
-                '--tooltip-top': `${top}px`,
-                '--tooltip-left': `${left}px`,
-                '--tooltip-arrow-left': `${left}px`
+                top: `${top}px`,
+                left: `${left}px`
               });
             }
           });
@@ -445,8 +444,8 @@ export default function ProductDetails() {
       } else {
         setCopiedCoupon(couponCode);
         setTooltipStyle({
-          '--tooltip-top': `20px`,
-          '--tooltip-left': `50vw`
+          top: '20px',
+          left: '50vw'
         });
         requestAnimationFrame(() => {
           if (couponRefs.current[couponCode]) {
@@ -454,9 +453,8 @@ export default function ProductDetails() {
             const top = rect.top - 44;
             const left = rect.left + rect.width / 2;
             setTooltipStyle({
-              '--tooltip-top': `${top}px`,
-              '--tooltip-left': `${left}px`,
-              '--tooltip-arrow-left': `${left}px`
+              top: `${top}px`,
+              left: `${left}px`
             });
           }
         });
@@ -1437,13 +1435,13 @@ export default function ProductDetails() {
                       role="button"
                       aria-label={`Copy coupon code ${coupon.code}`}
                       onKeyPress={e => { if (e.key === 'Enter' || e.key === ' ') handleCopyCoupon(coupon.code); }}
-                      ref={el => couponRefs.current[coupon.code] = el}
+                      ref={el => { couponRefs.current[coupon.code] = el; }}
                     >
                       <div className="coupon-code-details">{coupon.code}</div>
                       <p className="coupon-description-details">
                         {coupon.description || generateCouponDescription(coupon)}
                       </p>
-                      {copiedCoupon === coupon.code && tooltipStyle['--tooltip-top'] && tooltipStyle['--tooltip-left'] && (
+                      {copiedCoupon === coupon.code && tooltipStyle.top && tooltipStyle.left && (
                         <span className="coupon-copied-tooltip fixed" style={tooltipStyle}>Copied!</span>
                       )}
                     </div>
