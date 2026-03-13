@@ -29,9 +29,8 @@ const Footer = dynamic(() => import("../components/Footer"), {
 });
 
 export default function ProductDetails() {
-  try {
-    const router = useRouter();
-    const nextRouter = useNextRouter();
+  const router = useRouter();
+  const nextRouter = useNextRouter();
   
   // Get slug from router query - add safety check for router.query
   const rawSlug = router.query?.slug;
@@ -425,6 +424,7 @@ export default function ProductDetails() {
     };
   }, []);
 
+  // Helper functions
   const generateCouponDescription = (coupon) => {
     const value = parseFloat(coupon.value);
     const minPurchase = parseFloat(coupon.minPurchase);
@@ -686,164 +686,6 @@ export default function ProductDetails() {
     return html;
   }
 
-  // Remove useEffect for tooltip position
-
-  // Show loading state
-  if (loading) {
-    return (
-      <SeoWrapper
-        pageName={productSlug || "product-details"}
-        seo={null}
-      >
-        <div className="product-details-container">
-          <Header />
-          <div className="product-details">
-            <div style={{ textAlign: 'center', padding: '50px' }}>
-              <Loader />
-            </div>
-          </div>
-        </div>
-      </SeoWrapper>
-    );
-  }
-
-  // Show error state
-  if (error) {
-    return (
-      <SeoWrapper
-        pageName={productSlug || "product-details"}
-        seo={null}
-      >
-        <div className="product-details-container">
-          <Header />
-          <div className="product-details">
-            <div style={{ textAlign: 'center', padding: '50px' }}>
-              <h2>Product Not Found</h2>
-              <p>The product you're looking for doesn't exist or has been removed.</p>
-              <button 
-                onClick={() => window.history.back()}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  marginTop: '20px'
-                }}
-              >
-                Go Back
-              </button>
-            </div>
-          </div>
-        </div>
-      </SeoWrapper>
-    );
-  }
-
-  // Show error if no product found
-  if (!product) {
-    return (
-      <SeoWrapper
-        pageName={productSlug || "product-details"}
-        seo={null}
-      >
-        <div className="product-details-container">
-          <Header />
-          <div className="product-details">
-            <div style={{ textAlign: 'center', padding: '50px' }}>
-              <h2>Product Not Found</h2>
-              <p>No product found with the given slug.</p>
-              <button 
-                onClick={() => window.history.back()}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  marginTop: '20px'
-                }}
-              >
-                Go Back
-              </button>
-            </div>
-          </div>
-        </div>
-      </SeoWrapper>
-    );
-  }
-
-  // Safety check: Don't render if essential data is missing
-  if (!selectedVariationBySku) {
-    return (
-      <SeoWrapper
-        pageName={productSlug || "product-details"}
-        seo={null}
-      >
-        <div className="product-details-container">
-          <Header />
-          <div className="product-details">
-            <div style={{ textAlign: 'center', padding: '50px' }}>
-              <Loader />
-            </div>
-          </div>
-        </div>
-      </SeoWrapper>
-    );
-  }
-
-  // Log product description and image URL
-  console.log('Product Description:', product.description);
-  const mainImageUrl = product.images && product.images.length > 0
-    ? (product.images[0].image_url || product.images[0].url || product.images[0])
-    : '';
-  console.log('Main Image URL:', mainImageUrl);
-
-  // Use home page logic for image URL (getCategoryImageSrc equivalent)
-  function getProductImageSrcForDetails(imageObj) {
-    if (!imageObj) return null; // Return null instead of fallback
-    const img = imageObj.image_url || imageObj.url || imageObj;
-    if (typeof img !== 'string') return null; // Return null instead of fallback
-    if (img.startsWith('http')) return img;
-    if (img.startsWith('/assets/')) return img;
-    
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-    if (img.startsWith('/uploads/')) {
-      return `${baseUrl}${img}`;
-    }
-    return `${baseUrl}/uploads/products/${img}`;
-  }
-
-  function forceEnvImageBase(url) {
-    if (!url) return null; // Return null instead of fallback
-    if (url.startsWith('http')) {
-      if (url.includes('localhost:5000')) {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-        const path = url.replace(/^https?:\/\/[^/]+/, '');
-        return `${baseUrl}${path}`;
-      }
-      return url;
-    }
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-    return `${baseUrl}${url}`;
-  }
-
-  // When a pack is selected, show its size options and highlight the selected size for that pack
-  const handleSizeSelect = (sku, size) => {
-    setSelectedSizes(prev => ({ ...prev, [sku]: size }));
-  };
-
-  // Get the selected size for the current pack
-  let defaultSize = '';
-    if (Array.isArray(attrs.size) && attrs.size.length > 0) {
-        defaultSize = attrs.size[0];
-    } else if (typeof attrs.size === 'string' && attrs.size) {
-        defaultSize = attrs.size;
-    }
-  const selectedSizeForPack = selectedSizes[selectedSku] || defaultSize;
-
   // Update addToCart and buyNow to use selectedSizeForPack
   const handleAddToCart = () => {
     // No validation required - use defaults automatically
@@ -994,6 +836,164 @@ export default function ProductDetails() {
       currency: 'INR',
     });
   };
+
+  // When a pack is selected, show its size options and highlight the selected size for that pack
+  const handleSizeSelect = (sku, size) => {
+    setSelectedSizes(prev => ({ ...prev, [sku]: size }));
+  };
+
+  // Get the selected size for the current pack
+  let defaultSize = '';
+    if (Array.isArray(attrs.size) && attrs.size.length > 0) {
+        defaultSize = attrs.size[0];
+    } else if (typeof attrs.size === 'string' && attrs.size) {
+        defaultSize = attrs.size;
+    }
+  const selectedSizeForPack = selectedSizes[selectedSku] || defaultSize;
+
+  // Remove useEffect for tooltip position
+
+  // Show loading state
+  if (loading) {
+    return (
+      <SeoWrapper
+        pageName={productSlug || "product-details"}
+        seo={null}
+      >
+        <div className="product-details-container">
+          <Header />
+          <div className="product-details">
+            <div style={{ textAlign: 'center', padding: '50px' }}>
+              <Loader />
+            </div>
+          </div>
+        </div>
+      </SeoWrapper>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <SeoWrapper
+        pageName={productSlug || "product-details"}
+        seo={null}
+      >
+        <div className="product-details-container">
+          <Header />
+          <div className="product-details">
+            <div style={{ textAlign: 'center', padding: '50px' }}>
+              <h2>Product Not Found</h2>
+              <p>The product you're looking for doesn't exist or has been removed.</p>
+              <button 
+                onClick={() => window.history.back()}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  marginTop: '20px'
+                }}
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+      </SeoWrapper>
+    );
+  }
+
+  // Show error if no product found
+  if (!product) {
+    return (
+      <SeoWrapper
+        pageName={productSlug || "product-details"}
+        seo={null}
+      >
+        <div className="product-details-container">
+          <Header />
+          <div className="product-details">
+            <div style={{ textAlign: 'center', padding: '50px' }}>
+              <h2>Product Not Found</h2>
+              <p>No product found with the given slug.</p>
+              <button 
+                onClick={() => window.history.back()}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  marginTop: '20px'
+                }}
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+      </SeoWrapper>
+    );
+  }
+
+  // Safety check: Don't render if essential data is missing
+  if (!selectedVariationBySku) {
+    return (
+      <SeoWrapper
+        pageName={productSlug || "product-details"}
+        seo={null}
+      >
+        <div className="product-details-container">
+          <Header />
+          <div className="product-details">
+            <div style={{ textAlign: 'center', padding: '50px' }}>
+              <Loader />
+            </div>
+          </div>
+        </div>
+      </SeoWrapper>
+    );
+  }
+
+  // Log product description and image URL
+  console.log('Product Description:', product.description);
+  const mainImageUrl = product.images && product.images.length > 0
+    ? (product.images[0].image_url || product.images[0].url || product.images[0])
+    : '';
+  console.log('Main Image URL:', mainImageUrl);
+
+  // Use home page logic for image URL (getCategoryImageSrc equivalent)
+  function getProductImageSrcForDetails(imageObj) {
+    if (!imageObj) return null; // Return null instead of fallback
+    const img = imageObj.image_url || imageObj.url || imageObj;
+    if (typeof img !== 'string') return null; // Return null instead of fallback
+    if (img.startsWith('http')) return img;
+    if (img.startsWith('/assets/')) return img;
+    
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+    if (img.startsWith('/uploads/')) {
+      return `${baseUrl}${img}`;
+    }
+    return `${baseUrl}/uploads/products/${img}`;
+  }
+
+  function forceEnvImageBase(url) {
+    if (!url) return null; // Return null instead of fallback
+    if (url.startsWith('http')) {
+      if (url.includes('localhost:5000')) {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+        const path = url.replace(/^https?:\/\/[^/]+/, '');
+        return `${baseUrl}${path}`;
+      }
+      return url;
+    }
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+    return `${baseUrl}${url}`;
+  }
 
   const renderReviewForm = () => (
     <div className="review-form-container">
@@ -1643,37 +1643,4 @@ export default function ProductDetails() {
       </div>
     </SeoWrapper>
   );
-  } catch (error) {
-    console.error('ProductDetails component error:', error);
-    return (
-      <SeoWrapper
-        pageName="product-details-error"
-        seo={null}
-      >
-        <div className="product-details-container">
-          <Header />
-          <div className="product-details">
-            <div style={{ textAlign: 'center', padding: '50px' }}>
-              <h2>Something went wrong</h2>
-              <p>We're having trouble loading this product. Please try refreshing the page.</p>
-              <button 
-                onClick={() => window.location.reload()}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  marginTop: '20px'
-                }}
-              >
-                Refresh Page
-              </button>
-            </div>
-          </div>
-        </div>
-      </SeoWrapper>
-    );
-  }
 } 
