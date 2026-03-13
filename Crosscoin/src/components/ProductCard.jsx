@@ -7,6 +7,8 @@ import { useRouter } from "next/router";
 import { useWishlist } from "../context/WishlistContext";
 import imagePreloader from "../utils/imagePreloader";
 import { BADGE_CONFIG, getBadgeDisplay, formatBadge } from "../config/badgeConfig";
+import { selectProductImage, selectProductImages } from "../utils/productImageSelector";
+import { getImageUrl } from "../utils/imageHandler";
 
 // Filter options data - This should come from API in real implementation
 export const filterOptions = {
@@ -54,48 +56,14 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
     console.warn('ProductCard: No variation or product price found for product:', product?.id);
   }
 
-  // Get hover image (second image if available)
-  let hoverImageData = null;
-  if (variation?.images && Array.isArray(variation.images) && variation.images.length > 1) {
-    hoverImageData = variation.images[1];
-  } else if (Array.isArray(product?.images) && product.images.length > 1) {
-    hoverImageData = product.images[1];
-  } else if (Array.isArray(product?.ProductImages) && product.ProductImages.length > 1) {
-    hoverImageData = product.ProductImages[1];
-  }
+  // Get hover image using centralized utility
+  const allImages = selectProductImages(product, variation);
+  const hoverImageData = allImages.length > 1 ? allImages[1] : null;
 
   // Get hover image URL for prefetch
   const getHoverImageUrl = () => {
     if (!hoverImageData) return null;
-    
-    let rawUrl = null;
-    if (typeof hoverImageData === 'string') {
-      rawUrl = hoverImageData;
-    } else if (hoverImageData.image_url) {
-      rawUrl = hoverImageData.image_url;
-    } else if (hoverImageData.url) {
-      rawUrl = hoverImageData.url;
-    }
-    
-    if (!rawUrl || rawUrl.trim() === '') return null;
-    
-    let url = null;
-    if (rawUrl.startsWith("http")) {
-      url = rawUrl;
-    } else if (rawUrl.startsWith("/assets/")) {
-      url = rawUrl;
-    } else if (rawUrl.startsWith("/uploads/")) {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-      url = `${apiUrl}${rawUrl}`;
-    } else {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-      url = `${apiUrl}/uploads/products/${rawUrl}`;
-    }
-    
-    // Note: Query parameters for responsive sizing and format optimization
-    // are now handled by SafeImage component for consistency
-    
-    return url;
+    return getImageUrl(hoverImageData);
   };
 
   // Monitor preload queue size to prevent memory issues
@@ -153,29 +121,8 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
     }
   };
 
-  // Get the primary image or first image from the images array
-  let imageData = null;
-  
-  // Priority 1: Check variation images
-  if (variation?.images && Array.isArray(variation.images) && variation.images.length > 0) {
-    imageData = variation.images[0];
-  } 
-  // Priority 2: Check product images array
-  else if (Array.isArray(product?.images) && product.images.length > 0) {
-    imageData = product.images.find((img) => img.is_primary) || product.images[0];
-  } 
-  // Priority 3: Check if product has a single image property
-  else if (product?.image) {
-    if (typeof product.image === 'string') {
-      imageData = { image_url: product.image };
-    } else {
-      imageData = product.image;
-    }
-  }
-  // Priority 4: Check ProductImages (from backend)
-  else if (Array.isArray(product?.ProductImages) && product.ProductImages.length > 0) {
-    imageData = product.ProductImages.find((img) => img.is_primary) || product.ProductImages[0];
-  }
+  // Get the primary image or first image from the images array using centralized utility
+  const imageData = selectProductImage(product, variation);
 
   // Get the first variation for price - with fallback to product price if no variation
   const price = variation?.price || product?.price || 0;
