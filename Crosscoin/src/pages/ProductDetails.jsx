@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import Header from "../components/Header";
@@ -17,7 +17,6 @@ import { getProductImageSrc } from '../utils/imageUtils';
 import DOMPurify from 'dompurify';
 import Modal from "../components/common/Modal";
 import colorMap from '../components/products/colorMap';
-import { useRef } from "react";
 
 // Load page-specific CSS
 import "../styles/pages/ProductDetails.css";
@@ -30,8 +29,9 @@ const Footer = dynamic(() => import("../components/Footer"), {
 });
 
 export default function ProductDetails() {
-  const router = useRouter();
-  const nextRouter = useNextRouter();
+  try {
+    const router = useRouter();
+    const nextRouter = useNextRouter();
   
   // Get slug from router query - add safety check for router.query
   const rawSlug = router.query?.slug;
@@ -520,12 +520,12 @@ export default function ProductDetails() {
     setSelectedAttributes(prev => {
       const newAttributes = { ...prev, [attributeName]: value };
       // Find matching variation
-      const matchingVariation = product.variations.find(variation => {
+      const matchingVariation = product?.variations?.find(variation => {
         const attrs = typeof variation.attributes === 'string'
           ? JSON.parse(variation.attributes)
           : variation.attributes;
         return Object.entries(newAttributes).every(([key, val]) => 
-          attrs[key]?.includes(val)
+          attrs?.[key]?.includes(val)
         );
       });
       if (matchingVariation) {
@@ -674,9 +674,14 @@ export default function ProductDetails() {
   // Add this decodeHtml function
   function decodeHtml(html) {
     if (typeof window !== 'undefined') {
-      const txt = document.createElement('textarea');
-      txt.innerHTML = html;
-      return txt.value;
+      try {
+        const txt = document.createElement('textarea');
+        txt.innerHTML = html;
+        return txt.value;
+      } catch (error) {
+        console.error('Error decoding HTML:', error);
+        return html;
+      }
     }
     return html;
   }
@@ -771,7 +776,7 @@ export default function ProductDetails() {
   }
 
   // Safety check: Don't render if essential data is missing
-  if (!selectedVariationBySku || !variationImages) {
+  if (!selectedVariationBySku) {
     return (
       <SeoWrapper
         pageName={productSlug || "product-details"}
@@ -847,8 +852,8 @@ export default function ProductDetails() {
     // Find the image for the selected variation by product_variation_id
     let selectedImage = [];
     let imagesForVariation = [];
-    if (product.images && product.images.length > 0 && selectedVariation.id) {
-      imagesForVariation = product.images.filter(img => img.product_variation_id === selectedVariation.id);
+    if (product?.images && product.images.length > 0 && selectedVariation?.id) {
+      imagesForVariation = product.images.filter(img => img && img.product_variation_id === selectedVariation.id);
       console.log('All product images:', product.images);
       console.log('Selected variation id:', selectedVariation.id);
       console.log('Images for this variation:', imagesForVariation);
@@ -856,7 +861,7 @@ export default function ProductDetails() {
         selectedImage = [imagesForVariation[0]];
       }
     }
-    if (selectedImage.length === 0 && selectedVariation.images && selectedVariation.images.length > 0) {
+    if (selectedImage.length === 0 && selectedVariation?.images && selectedVariation.images.length > 0) {
       selectedImage = [selectedVariation.images[0]];
       console.log('Fallback to selectedVariation.images:', selectedVariation.images);
     }
@@ -866,7 +871,7 @@ export default function ProductDetails() {
       selectedColor,
       selectedSize,
       quantity,
-      selectedVariation.id,
+      selectedVariation?.id,
       selectedImage
     );
     setShowAddedToCart(true);
@@ -899,8 +904,8 @@ export default function ProductDetails() {
       // Find the image for the selected variation by product_variation_id
       let selectedImage = [];
       let imagesForVariation = [];
-      if (product.images && product.images.length > 0 && selectedVariation.id) {
-        imagesForVariation = product.images.filter(img => img.product_variation_id === selectedVariation.id);
+      if (product?.images && product.images.length > 0 && selectedVariation?.id) {
+        imagesForVariation = product.images.filter(img => img && img.product_variation_id === selectedVariation.id);
         console.log('All product images:', product.images);
         console.log('Selected variation id:', selectedVariation.id);
         console.log('Images for this variation:', imagesForVariation);
@@ -908,7 +913,7 @@ export default function ProductDetails() {
           selectedImage = [imagesForVariation[0]];
         }
       }
-      if (selectedImage.length === 0 && selectedVariation.images && selectedVariation.images.length > 0) {
+      if (selectedImage.length === 0 && selectedVariation?.images && selectedVariation.images.length > 0) {
         selectedImage = [selectedVariation.images[0]];
         console.log('Fallback to selectedVariation.images:', selectedVariation.images);
       }
@@ -920,7 +925,7 @@ export default function ProductDetails() {
         selectedColor,
         selectedSize,
         quantity,
-        selectedVariationId: selectedVariation.id,
+        selectedVariationId: selectedVariation?.id,
         selectedVariation,
         selectedImage
       });
@@ -929,7 +934,7 @@ export default function ProductDetails() {
         selectedColor,
         selectedSize,
         quantity,
-        selectedVariation.id,
+        selectedVariation?.id,
         selectedImage
       );
       console.log('Buy now item set successfully');
@@ -1246,7 +1251,7 @@ export default function ProductDetails() {
         <div className="product-details">
           <div className="product-gallery">
             <div className="product-image-container">
-              {variationImages.length > 0 && variationImages[selectedThumbnail] ? (
+              {variationImages && variationImages.length > 0 && variationImages[selectedThumbnail] ? (
                 <>
                   <SafeImage
                     imageData={{
@@ -1315,14 +1320,14 @@ export default function ProductDetails() {
             </div>
             {/* Thumbnails */}
             <div className="thumbnail-gallery" style={{ display: 'flex', flexWrap: 'wrap' , justifyContent: 'center', gap: 16, marginTop: 16 }}>
-              {variationImages.map((image, idx) => (
+              {variationImages && variationImages.length > 0 && variationImages.map((image, idx) => (
                 (image && (image.image_url || image.url || image)) ? (
                   <div key={image.id || idx} className="thumbnail-wrapper" style={{ position: 'relative', width: 80, height: 80 }}>
                     <SafeImage
                       imageData={{
                         image_url: image.image_url || image.url || image
                       }}
-                      alt={image.alt_text || `${product.name} thumbnail ${idx + 1}`}
+                      alt={image.alt_text || `${product?.name || 'Product'} thumbnail ${idx + 1}`}
                       width={80}
                       height={80}
                       priority={idx < 4}
@@ -1342,7 +1347,7 @@ export default function ProductDetails() {
                     />
                   </div>
                 ) : (
-                  <div key={image.id || idx} style={{ width: 80, height: 80, background: '#eee', borderRadius: 4 }} />
+                  <div key={image?.id || idx} style={{ width: 80, height: 80, background: '#eee', borderRadius: 4 }} />
                 )
               ))}
             </div>
@@ -1512,7 +1517,14 @@ export default function ProductDetails() {
                 <span className="details-value">
                   <span
                     dangerouslySetInnerHTML={{
-                      __html: DOMPurify.sanitize(decodeHtml(product.description || "-"))
+                      __html: (() => {
+                        try {
+                          return DOMPurify.sanitize(decodeHtml(product.description || "-"));
+                        } catch (error) {
+                          console.error('Error sanitizing HTML:', error);
+                          return product.description || "-";
+                        }
+                      })()
                     }}
                   />
                 </span>
@@ -1631,4 +1643,37 @@ export default function ProductDetails() {
       </div>
     </SeoWrapper>
   );
+  } catch (error) {
+    console.error('ProductDetails component error:', error);
+    return (
+      <SeoWrapper
+        pageName="product-details-error"
+        seo={null}
+      >
+        <div className="product-details-container">
+          <Header />
+          <div className="product-details">
+            <div style={{ textAlign: 'center', padding: '50px' }}>
+              <h2>Something went wrong</h2>
+              <p>We're having trouble loading this product. Please try refreshing the page.</p>
+              <button 
+                onClick={() => window.location.reload()}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  marginTop: '20px'
+                }}
+              >
+                Refresh Page
+              </button>
+            </div>
+          </div>
+        </div>
+      </SeoWrapper>
+    );
+  }
 } 
