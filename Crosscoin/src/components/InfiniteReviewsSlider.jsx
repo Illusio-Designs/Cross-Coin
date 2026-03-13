@@ -110,8 +110,9 @@ const InfiniteReviewsSlider = ({ reviews }) => {
   return (
     <>
       <div ref={containerRef}>
-        ref={sliderRef}
-        className="infinite-reviews-slider"
+        <div
+          ref={sliderRef}
+          className="infinite-reviews-slider"
         style={{
           display: 'flex',
           overflowX: 'auto',
