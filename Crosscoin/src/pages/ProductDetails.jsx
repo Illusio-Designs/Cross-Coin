@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import Header from "../components/Header";
 import SafeImage from "../components/common/SafeImage";
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
-import { useRouter } from "next/navigation";
+import { useRouter as useNextRouter } from "next/navigation";
 import { getPublicProductBySlug, createPublicReview, getPublicCoupons, getPublicProductReviews } from '../services/publicApi';
 import SeoWrapper from '../console/SeoWrapper';
 import { showValidationErrorToast, showReviewSubmittedSuccessToast, showReviewSubmittedErrorToast } from '../utils/toast';
@@ -30,8 +30,11 @@ const Footer = dynamic(() => import("../components/Footer"), {
 });
 
 export default function ProductDetails() {
-  const searchParams = useSearchParams();
-  const rawSlug = searchParams.get('slug');
+  const router = useRouter();
+  const nextRouter = useNextRouter();
+  
+  // Get slug from router query - add safety check for router.query
+  const rawSlug = router.query?.slug;
   
   // Decode the slug to handle URL-encoded characters like %28 and %29
   const productSlug = rawSlug ? decodeURIComponent(rawSlug) : null;
@@ -143,6 +146,9 @@ export default function ProductDetails() {
   const productApiCalledRef = useRef(false);
 
   useEffect(() => {
+    // Don't run if router is not ready yet
+    if (!router.isReady) return;
+    
     // Reset states when slug changes
     if (productApiCalledRef.current && productApiCalledRef.current !== productSlug) {
       productApiCalledRef.current = null;
@@ -226,7 +232,7 @@ export default function ProductDetails() {
     };
 
     fetchAllData();
-  }, [productSlug]);
+  }, [productSlug, router.isReady]);
 
   // Fetch reviews with pagination
   useEffect(() => {
@@ -897,7 +903,7 @@ export default function ProductDetails() {
       console.log('Redirecting to UnifiedCheckout...');
       
       // Use router.replace for clean navigation
-      router.replace('/UnifiedCheckout');
+      nextRouter.replace('/UnifiedCheckout');
       
     } catch (error) {
       console.error('Error in buy now process:', error);
