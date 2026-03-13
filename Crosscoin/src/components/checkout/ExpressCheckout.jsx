@@ -384,7 +384,7 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
       console.log("Opening Razorpay checkout...");
       const options = {
         key: RAZORPAY_KEY,
-        amount: Math.round(totalAmount * 100), // Convert to paise
+        amount: orderData.amount, // Use amount from order (already in paise from backend)
         currency: "INR",
         name: "Cross Coin",
         description: "Express Checkout",
