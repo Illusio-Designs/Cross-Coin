@@ -42,7 +42,6 @@ export default function ProductDetails() {
   const { addToCart, removeFromCart, buyNow } = useCart();
   const { addToWishlist, removeFromWishlist, wishlist } = useWishlist();
   const { isAuthenticated, user } = useAuth();
-  const router = useRouter();
   
   const [selectedThumbnail, setSelectedThumbnail] = useState(0);
   const [selectedVariation, setSelectedVariation] = useState(null);
