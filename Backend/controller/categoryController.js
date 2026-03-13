@@ -412,7 +412,7 @@ const getPublicCategoryByName = async (req, res) => {
             return res.status(404).json({ message: 'Category not found' });
         }
 
-        // Format response
+        // Format response - match Products API structure
         const categoryResponse = {
             id: category.id,
             name: category.name,
@@ -424,43 +424,70 @@ const getPublicCategoryByName = async (req, res) => {
                 : category.image,
             slug: category.slug,
             products: category.products ? category.products.map(product => {
-                let image = null;
-                // Try primary image
-                const primaryImage = product.ProductImages?.find(img => img.is_primary);
-                if (primaryImage && primaryImage.image_url) {
-                    image = primaryImage.image_url.startsWith('http') || primaryImage.image_url.startsWith('/uploads/')
-                        ? primaryImage.image_url
-                        : `/uploads/products/${primaryImage.image_url}`;
-                }
-                // Fallback to first image if no primary
-                if (!image && product.ProductImages && product.ProductImages.length > 0) {
-                    const firstImage = product.ProductImages[0];
-                    if (firstImage.image_url) {
-                        image = firstImage.image_url.startsWith('http') || firstImage.image_url.startsWith('/uploads/')
-                            ? firstImage.image_url
-                            : `/uploads/products/${firstImage.image_url}`;
-                    }
-                }
-                // No fallback image
-                if (!image) {
-                    image = null;
-                }
+                const imagekitService = require('../services/imagekitService');
+                
+                // Format images array to match Products API structure
+                const images = product.ProductImages && product.ProductImages.length > 0 
+                    ? product.ProductImages.map(img => ({
+                        id: img.id,
+                        image_url: imagekitService.getOptimizedUrl(img.image_url, 'medium'),
+                        thumbnail: imagekitService.getOptimizedUrl(img.image_url, 'thumbnail'),
+                        medium: imagekitService.getOptimizedUrl(img.image_url, 'medium'),
+                        large: imagekitService.getOptimizedUrl(img.image_url, 'large'),
+                        srcset: imagekitService.getResponsiveSrcSet(img.image_url),
+                        alt_text: img.alt_text,
+                        display_order: img.display_order,
+                        is_primary: img.is_primary,
+                        status: img.status
+                      }))
+                    : [];
+                
+                // Format variations array to match Products API structure
+                const variations = product.ProductVariations && product.ProductVariations.length > 0
+                    ? product.ProductVariations.map(variation => ({
+                        id: variation.id,
+                        sku: variation.sku,
+                        price: parseFloat(variation.price) || 0,
+                        comparePrice: variation.comparePrice ? parseFloat(variation.comparePrice) : null,
+                        stock: parseInt(variation.stock) || 0,
+                        attributes: variation.attributes,
+                        images: variation.VariationImages && variation.VariationImages.length > 0
+                            ? variation.VariationImages.map(img => ({
+                                id: img.id,
+                                image_url: imagekitService.getOptimizedUrl(img.image_url, 'medium'),
+                                thumbnail: imagekitService.getOptimizedUrl(img.image_url, 'thumbnail'),
+                                medium: imagekitService.getOptimizedUrl(img.image_url, 'medium'),
+                                large: imagekitService.getOptimizedUrl(img.image_url, 'large'),
+                                srcset: imagekitService.getResponsiveSrcSet(img.image_url),
+                                alt_text: img.alt_text,
+                                display_order: img.display_order,
+                                is_primary: img.is_primary,
+                                status: img.status
+                              }))
+                            : []
+                      }))
+                    : [];
+                
                 return {
                     id: product.id,
                     name: product.name,
                     description: product.description,
                     slug: product.slug,
                     status: product.status,
-                    price: product.ProductVariations?.[0]?.price || 0,
-                    comparePrice: product.ProductVariations?.[0]?.comparePrice || null,
-                    stock: product.ProductVariations?.[0]?.stock || 0,
-                    image,
+                    badge: product.badge || null,
+                    images: images,
+                    ProductVariations: variations,
+                    variations: variations,
                     metaTitle: product.ProductSEO?.meta_title,
                     metaDescription: product.ProductSEO?.meta_description,
                     weight: product.weight,
                     weightUnit: product.weightUnit,
                     dimensions: product.dimensions,
-                    dimensionUnit: product.dimensionUnit
+                    dimensionUnit: product.dimensionUnit,
+                    category: {
+                        id: category.id,
+                        name: category.name
+                    }
                 };
             }) : []
         };

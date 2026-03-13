@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Skeleton from '../Skeleton';
+import { getImageUrl, getOptimizedImageUrl } from '../../utils/imageHandler';
 
 /**
  * Detect browser support for modern image formats
@@ -83,62 +84,20 @@ const SafeImage = ({
     let newSrc = null;
     
     if (imageData) {
-      // Priority 1: Use ImageKit optimized URLs if available (from API response)
-      if (isProductCard && imageData.medium) {
-        // Use medium size for product cards (600x600px)
-        newSrc = imageData.medium;
-      } 
-      // Priority 2: Use thumbnail for smaller displays
-      else if (isProductCard && imageData.thumbnail) {
-        newSrc = imageData.thumbnail;
-      }
-      // Priority 3: Fall back to raw image_url and construct URL
-      else {
-        let rawUrl = null;
-        
-        if (typeof imageData === 'string') {
-          rawUrl = imageData;
-        } else if (imageData.image_url) {
-          rawUrl = imageData.image_url;
-        } else if (imageData.url) {
-          rawUrl = imageData.url;
-        }
-        
-        if (rawUrl && rawUrl.trim() !== '') {
-          if (rawUrl.startsWith("http")) {
-            newSrc = rawUrl;
-          } 
-          else if (rawUrl.startsWith("/assets/")) {
-            newSrc = rawUrl;
-          } 
-          else if (rawUrl.startsWith("/uploads/")) {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-            newSrc = `${apiUrl}${rawUrl}`;
-          } 
-          else {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-            newSrc = `${apiUrl}/uploads/products/${rawUrl}`;
-          }
-        }
+      // Use centralized image handler utility
+      newSrc = getImageUrl(imageData);
+      
+      // Add optimization for product cards
+      if (isProductCard && newSrc && !newSrc.includes('?tr=')) {
+        const { width: imgWidth, quality: imgQuality } = getResponsiveSizingParams(sizes);
+        const format = supportedFormat === 'avif' ? 'avif' : 
+                       supportedFormat === 'webp' ? 'webp' : 'jpeg';
+        newSrc = `${newSrc}?w=${imgWidth}&q=${imgQuality}&fmt=${format}`;
       }
     }
     
     if (!newSrc && !isLogo && !isProductCard) {
       newSrc = fallbackSrc;
-    }
-    
-    // Add responsive sizing and format optimization query parameters for product cards
-    // Only if ImageKit URLs are not already being used (they already have optimization)
-    if (newSrc && isProductCard && !newSrc.includes('?tr=') && !newSrc.includes('?')) {
-      // Get responsive sizing parameters based on viewport width
-      const { width: imgWidth, quality: imgQuality } = getResponsiveSizingParams(sizes);
-      
-      // Add format negotiation: AVIF for modern browsers, WebP as fallback, JPEG for legacy
-      // The format parameter tells the server which format to serve
-      const format = supportedFormat === 'avif' ? 'avif' : 
-                     supportedFormat === 'webp' ? 'webp' : 'jpeg';
-      
-      newSrc = `${newSrc}?w=${imgWidth}&q=${imgQuality}&fmt=${format}`;
     }
     
     // Only reset loading state if the source URL actually changed

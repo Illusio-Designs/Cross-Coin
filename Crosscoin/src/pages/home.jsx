@@ -727,42 +727,39 @@ const Home = () => {
                   )}
                   <div className="products-slider" ref={categorySliderRef}>
                     {currentCategoryProducts.map((product) => {
-                      let imagesArr = [];
-                      if (Array.isArray(product.images) && product.images.length > 0) {
-                        imagesArr = product.images.map(img => {
-                          let imageUrl = img.image_url || img.url || img;
-                          if (!imageUrl) {
-                            imageUrl = 'null';
-                          } else if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads/')) {
-                            imageUrl = `/uploads/products/${imageUrl}`;
-                          }
-                          return {
-                            image_url: imageUrl,
-                            is_primary: img.is_primary
-                          };
-                        });
-                      } else if (product.image) {
-                        let imageUrl = product.image;
-                        if (!imageUrl) {
-                          imageUrl = 'null';
-                        } else if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads/')) {
-                          imageUrl = `/uploads/products/${imageUrl}`;
-                        }
-                        imagesArr = [{ image_url: imageUrl }];
-                      } else {
-                        imagesArr = [{ image_url: 'null' }];
-                      }
+                      // Use centralized image selection
+                      const imageData = product.images?.[0] || product.image || null;
+                      
+                      // Get price from ProductVariations (API response structure)
+                      const firstVariation = product.ProductVariations?.[0] || product.variations?.[0];
+                      const productPrice = firstVariation?.price || product.price || 0;
+                      const productComparePrice = firstVariation?.comparePrice || product.comparePrice || 0;
+
                       const formattedProduct = {
                         id: product.id,
                         name: product.name,
                         slug: product.slug,
                         description: product.description,
                         badge: product.badge || null,
-                        images: imagesArr,
-                        variations: [{
-                          price: product.price || 0,
-                          comparePrice: product.comparePrice || 0,
-                          stock: product.stock || 0
+                        images: imageData ? [imageData] : [],
+                        price: productPrice,
+                        comparePrice: productComparePrice,
+                        variations: (product.ProductVariations || product.variations || []).length > 0 ? (product.ProductVariations || product.variations).map(variation => ({
+                          id: variation.id,
+                          sku: variation.sku,
+                          price: variation.price || 0,
+                          comparePrice: variation.comparePrice || 0,
+                          stock: variation.stock || 0,
+                          attributes: variation.attributes,
+                          images: variation.images || []
+                        })) : [{
+                          id: null,
+                          sku: null,
+                          price: productPrice,
+                          comparePrice: productComparePrice,
+                          stock: 0,
+                          attributes: {},
+                          images: []
                         }],
                         category: {
                           name: currentCategory.name
@@ -1102,31 +1099,9 @@ const Home = () => {
                 )}
                 <div className="products-slider" ref={latestSliderRef}>
                   {latestProducts.slice(0, 15).map((product) => {
-                let imagesArr = [];
-                if (Array.isArray(product.images) && product.images.length > 0) {
-                  imagesArr = product.images.map(img => {
-                    let imageUrl = img.image_url || img.url || img;
-                    if (!imageUrl) {
-                      imageUrl = null; // No fallback
-                    } else if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads/')) {
-                      imageUrl = `/uploads/products/${imageUrl}`;
-                    }
-                    return {
-                      image_url: imageUrl,
-                      is_primary: img.is_primary
-                    };
-                  });
-                } else if (product.image) {
-                  let imageUrl = product.image;
-                  if (!imageUrl) {
-                    imageUrl = null; // No fallback
-                  } else if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads/')) {
-                    imageUrl = `/uploads/products/${imageUrl}`;
-                  }
-                  imagesArr = [{ image_url: imageUrl }];
-                } else {
-                  imagesArr = []; // No fallback image
-                }
+                // Use centralized image selection
+                const imageData = product.images?.[0] || product.image || null;
+                
                 // Get price from ProductVariations (API response structure)
                 const firstVariation = product.ProductVariations?.[0] || product.variations?.[0];
                 const productPrice = firstVariation?.price || product.price || 0;
@@ -1138,7 +1113,7 @@ const Home = () => {
                   slug: product.slug,
                   description: product.description,
                   badge: product.badge || null,
-                  images: imagesArr,
+                  images: imageData ? [imageData] : [],
                   price: productPrice,
                   comparePrice: productComparePrice,
                   variations: (product.ProductVariations || product.variations || []).length > 0 ? (product.ProductVariations || product.variations).map(variation => ({

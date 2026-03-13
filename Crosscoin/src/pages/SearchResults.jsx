@@ -7,6 +7,7 @@ import Footer from '../components/Footer';
 import Loader from '../components/Loader';
 import Pagination from '../components/common/Pagination';
 import SeoWrapper from '../console/SeoWrapper';
+import { usePagination } from '../hooks/usePagination';
 import '../styles/pages/SearchResults.css';
 import '../styles/common/TableControls.css';
 
@@ -32,9 +33,16 @@ const SearchResults = () => {
   const [error, setError] = useState(null);
   const [sortBy, setSortBy] = useState(sort || 'featured');
   const [selectedCategory, setSelectedCategory] = useState(category || '');
-  const [currentPage, setCurrentPage] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
   const itemsPerPage = 20;
+
+  // Use pagination hook instead of manual state management
+  const { 
+    currentPage, 
+    totalPages, 
+    currentItems: paginatedProducts, 
+    goToPage 
+  } = usePagination(products, itemsPerPage);
 
   // ✅ Use ref to store debounced function (created once)
   const debouncedSearchRef = useRef(null);
@@ -109,25 +117,13 @@ const SearchResults = () => {
     }
   };
 
-  // Get paginated products
-  const getPaginatedProducts = () => {
-    const sorted = sortProducts(products);
-    const startIdx = (currentPage - 1) * itemsPerPage;
-    return sorted.slice(startIdx, startIdx + itemsPerPage);
-  };
-
-  // Calculate total pages
-  const totalPages = Math.ceil(products.length / itemsPerPage) || 1;
-
-  // Handle page change
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
+  // Get sorted products
+  const sortedProducts = sortProducts(products);
 
   // Reset to page 1 when search parameters change
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, selectedCategory, sortBy]);
+    goToPage(1);
+  }, [searchQuery, selectedCategory, sortBy, goToPage]);
 
   // Handle search input change
   const handleSearchChange = (e) => {
@@ -300,7 +296,7 @@ const SearchResults = () => {
             </div>
           ) : (
             <div className="products-grid">
-              {getPaginatedProducts().map((product) => (
+              {paginatedProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
@@ -311,7 +307,7 @@ const SearchResults = () => {
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            onPageChange={handlePageChange}
+            onPageChange={goToPage}
           />
         )}
       </div>
