@@ -250,7 +250,7 @@ const MagicCheckoutIntegration = ({
     const discountAmount = selectedPromotion?.discount || 0;
     const finalAmount = cartTotal + shippingFeeAmount - discountAmount;
 
-    return Math.round(finalAmount * 100); // Convert to paise
+    return Math.round(finalAmount * 100) / 100; // Return in rupees
   };
 
   /**
@@ -267,7 +267,7 @@ const MagicCheckoutIntegration = ({
           new URLSearchParams({
             order_id: orderId,
             customer_id: user?.id || "",
-            cart_total: Math.round(cartTotal * 100),
+            cart_total: cartTotal,
           }),
         {
           method: "GET",
@@ -316,11 +316,11 @@ const MagicCheckoutIntegration = ({
           body: JSON.stringify({
             promotion_code: promotionCode,
             customer_id: user?.id || "",
-            cart_total: Math.round(cartTotal * 100),
+            cart_total: cartTotal,
             cart_items: cartItems.map((item) => ({
               product_id: item.productId || item.id,
               quantity: item.quantity,
-              price: Math.round(parseFloat(item.price || 0) * 100),
+              price: parseFloat(item.price || 0),
             })),
           }),
         }
@@ -376,7 +376,7 @@ const MagicCheckoutIntegration = ({
           pincode: addr.postal_code || addr.postalCode || addr.pincode,
           phone: addr.phone_number || addr.phoneNumber || addr.phone,
         })),
-        cart_total: Math.round(cartTotal * 100),
+        cart_total: cartTotal,
         payment_method: shippingFee?.orderType === "cod" ? "cod" : "prepaid",
       };
       

@@ -568,7 +568,6 @@ export default function UnifiedCheckout() {
         const shippingFeeAmount = parseFloat(shippingFee.fee || 0);
         const discountAmount = appliedCoupon?.discount || 0;
         const finalAmount = totalAmount + shippingFeeAmount - discountAmount;
-        const amountInPaisa = Math.round(finalAmount * 100);
 
         const scriptLoaded = await loadRazorpayScript();
         if (!scriptLoaded || !window.Razorpay) {
@@ -578,7 +577,7 @@ export default function UnifiedCheckout() {
         }
 
         const razorpayOrder = await createRazorpayOrder({
-          amount: amountInPaisa,
+          amount: finalAmount,
           currency: "INR",
           receipt: `rcpt_${Date.now()}`,
           isGuest: !isAuthenticated,
@@ -586,7 +585,7 @@ export default function UnifiedCheckout() {
         
         const options = {
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-          amount: amountInPaisa,
+          amount: razorpayOrder.amount,
           currency: razorpayOrder.currency,
           name: "Cross Coin",
           description: `Payment for Cross Coin Order`,
