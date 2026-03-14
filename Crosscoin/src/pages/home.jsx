@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from 'next/dynamic';
 import Header from "../components/Header";
+import HeroSlider from "../components/HeroSlider";
 import ProductCard from "../components/ProductCard";
 import SafeImage from "../components/common/SafeImage";
 import ProductSkeleton from "../components/common/ProductSkeleton";
@@ -57,7 +58,6 @@ const Home = () => {
     return `${baseUrl}/${url}`;
   };
   const router = useRouter();
-  const [current, setCurrent] = useState(0);
   const [slides, setSlides] = useState([]);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const { addToCart } = useCart();
@@ -120,7 +120,6 @@ const Home = () => {
   useEffect(() => {
     if (apiCalledRef.current) return; // Prevent multiple calls
     apiCalledRef.current = true;
-    console.log('API BEING CALLED: home page data fetch (PARALLELIZED)');
     
     // ✅ PARALLELIZED: All 4 API calls run simultaneously
     const fetchAllData = async () => {
@@ -271,15 +270,6 @@ const Home = () => {
       setCategoryLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    if (slides.length > 0) {
-      const interval = setInterval(() => {
-        setCurrent((prev) => (prev + 1) % slides.length);
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [slides]);
 
   // Handle category change when currentCategoryIndex changes
   useEffect(() => {
@@ -598,36 +588,7 @@ const Home = () => {
     <>
       <Header />
       <div className="home-page">
-        <div className="hero-slider">
-          {slides.length > 0 ? (
-            <div className="hero-slide" key={current}>
-              <div className="hero-slide__image">
-                <SafeImage 
-                  imageData={{ image_url: slides[current].image }}
-                  alt={slides[current].title}
-                  priority={true}
-                  quality={85}
-                  isSlider={true}
-                  style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                />
-              </div>
-              <div className="hero-slide__content">
-                <div className="hero-slide__content-text">
-                  <h1>{slides[current].title} <span className="highlight">{slides[current].highlight}</span></h1>
-                  <p>{slides[current].description}</p>
-                  <button className="hero-btn">{slides[current].buttonText}</button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="no-slides">No slides available</div>
-          )}
-          <div className="hero-slider__nav">
-            {slides.map((_, idx) => (
-              <span key={idx} className={`dot${idx === current ? ' active' : ''}`} onClick={() => setCurrent(idx)}></span>
-            ))}
-          </div>
-        </div>
+        <HeroSlider slides={slides} />
         <div className="trust-badges">
           <div className="trust-badges__container">
             <div className="trust-badge">
