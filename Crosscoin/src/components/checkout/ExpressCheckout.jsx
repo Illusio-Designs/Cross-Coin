@@ -252,7 +252,7 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
           sessionStorage.setItem(`fb_purchase_tracked_${orderNumber}`, "true");
         }
       } catch (e) {
-        : failed to send fbq Purchase", e);
+        // Silently ignore fbq tracking error
       }
 
       // Clear cart and redirect
