@@ -801,7 +801,7 @@ const Products = () => {
     selectedGender,
     selectedMaterial,
     priceRange,
-  });
+  };
 
   // Compute total pages based on filtered products
   const totalPages = useMemo(() => {

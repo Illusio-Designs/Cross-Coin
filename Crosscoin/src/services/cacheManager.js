@@ -74,7 +74,6 @@ class CacheManager {
       // Get metadata
       const metaData = localStorage.getItem(metaKey);
       if (!metaData) {
-        `);
         return null;
       }
 
@@ -89,7 +88,6 @@ class CacheManager {
       // Get the cached value
       const data = localStorage.getItem(storageKey);
       if (data === null) {
-        `);
         return null;
       }
 
