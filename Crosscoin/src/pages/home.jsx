@@ -350,7 +350,6 @@ const Home = () => {
   };
 
   const handleProductClick = (product) => {
-    console.log('Product clicked:', product);
     if (product && product.slug) {
       router.push(`/ProductDetails?slug=${product.slug}`);
     } else {
@@ -360,7 +359,6 @@ const Home = () => {
 
   const handleAddToCart = (e, product) => {
     e.stopPropagation();
-    console.log('Add to cart:', product);
     
     // Find the product index to get the current state
     const productIndex = exclusiveProducts.findIndex(p => p.id === product.id);
@@ -400,7 +398,6 @@ const Home = () => {
       }
       return [];
     })();
-    
     console.log('Adding to cart with:', {
       product: product.name,
       selectedVariation: selectedVariation?.id,
@@ -432,12 +429,6 @@ const Home = () => {
   };
 
   const handleBuyNow = async (product, state, productIndex) => {
-    console.log('=== HOME PAGE BUY NOW CLICKED ===');
-    console.log('Product:', product);
-    console.log('State:', state);
-    console.log('Product index:', productIndex);
-    console.log('User authenticated:', isAuthenticated);
-    
     // Get the selected variation and attributes
     const selectedSku = exclusiveSelectedSkus[productIndex] || '';
     const selectedVariation = product.variations?.find(v => v.sku === selectedSku) || product.variations?.[0];
@@ -452,16 +443,7 @@ const Home = () => {
     const finalSelectedSize = selectedSizeForPack || (Array.isArray(attrs.size) ? attrs.size[0] : 'Free Size');
     const finalSelectedColor = attrs.color ? (Array.isArray(attrs.color) ? attrs.color[0] : attrs.color) : '';
 
-    console.log('Selected data:', {
-      selectedSku,
-      selectedVariation,
-      attrs,
-      finalSelectedSize,
-      finalSelectedColor
-    });
-
     // No validation at all - use defaults automatically
-    console.log('Skipping all validation - using defaults automatically');
 
     setBuyNowLoadingStates(prev => ({ ...prev, [productIndex]: true }));
 
@@ -469,12 +451,6 @@ const Home = () => {
       // Get variation images and price
       const variationImages = selectedVariation?.images || [];
       const variationPrice = selectedVariation?.price || product.price;
-      
-      console.log('Variation data:', {
-        variationImages,
-        variationPrice,
-        selectedVariation
-      });
       
       // Add product to cart
       console.log('Home Buy Now: Adding product to cart with variation data:', {
@@ -505,7 +481,6 @@ const Home = () => {
       }
 
       // Direct redirect to UnifiedCheckout
-      console.log('Redirecting to UnifiedCheckout...');
       
       // Force direct navigation
       window.location.href = '/UnifiedCheckout';
@@ -522,9 +497,6 @@ const Home = () => {
     name: 'Loading...',
     image: null // No fallback image
   };
-
-  console.log('Current category:', currentCategory);
-  console.log('All categories:', categories);
 
   // Get the image source with fallback - simple version
   const getCategoryImageSrc = () => {

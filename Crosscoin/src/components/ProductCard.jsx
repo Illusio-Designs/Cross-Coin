@@ -35,20 +35,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
   const hoverImageRef = useRef(null);
   const isAboveFold = index < 6; // Above-the-fold cards
 
-  // Debug logging for badge and wishlist
-  useEffect(() => {
-    console.log('ProductCard Loaded:', {
-      productId: product?.id,
-      productName: product?.name,
-      badge: product?.badge,
-      badgeIsNull: product?.badge === null,
-      badgeIsUndefined: product?.badge === undefined,
-      badgeValue: product?.badge || 'NOT SET',
-      wishlistStatus: isInWishlist(product?.id),
-      allProductData: product
-    });
-  }, [product?.id, product?.badge]);
-
   const variation = product?.variations?.[0];
 
   // Safety check: if no variation and no product price, log warning
@@ -68,12 +54,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
 
   // Monitor preload queue size to prevent memory issues
   useEffect(() => {
-    // Log queue size for monitoring (can be used for performance metrics)
-    const queueSize = imagePreloader.getQueueSize();
-    if (queueSize > 10) {
-      // Queue is getting large, but this is handled by the preloader's maxConcurrent limit
-      console.debug(`Preload queue size: ${queueSize}`);
-    }
+    // Preload queue is handled by the preloader's maxConcurrent limit
   }, [hoverImagePreloaded]);
 
   // Preload hover images on component mount for above-the-fold cards
@@ -230,8 +211,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
             </span>
           </>
         )}
-        {!product?.badge && console.log('Badge is NULL or UNDEFINED for product:', product?.id)}
-        {product?.badge === 'none' && console.log('Badge is "none" for product:', product?.id)}
         
         {/* Wishlist Button - positioned absolutely, outside overflow container */}
         <button
@@ -239,11 +218,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
             isInWishlist(product?.id) ? "active" : ""
           }`}
           onClick={(e) => {
-            console.log('Wishlist Button Clicked:', {
-              productId: product?.id,
-              isCurrentlyInWishlist: isInWishlist(product?.id),
-              action: isInWishlist(product?.id) ? 'REMOVE' : 'ADD'
-            });
             handleWishlistClick(e);
           }}
           aria-label="Add to wishlist"
@@ -255,11 +229,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
             pointerEvents: 'auto'
           }}
         >
-          {console.log('Wishlist Button Rendered:', { 
-            productId: product?.id, 
-            isInWishlist: isInWishlist(product?.id),
-            buttonElement: 'SHOULD_BE_VISIBLE'
-          })}
           <FiHeart />
         </button>
       </div>
