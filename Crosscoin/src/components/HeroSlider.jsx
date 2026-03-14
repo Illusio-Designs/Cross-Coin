@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import SafeImage from './common/SafeImage';
+import '../styles/components/HeroSlider.css';
 
 const HeroSlider = ({ slides = [] }) => {
   const [current, setCurrent] = useState(0);
@@ -15,17 +16,50 @@ const HeroSlider = ({ slides = [] }) => {
     }
   }, [slides]);
 
-  const handleButtonClick = () => {
+  const handleButtonClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('=== BUTTON CLICKED ===');
+    console.log('Current slide index:', current);
+    console.log('Total slides:', slides.length);
+    console.log('All slides:', slides);
+    
     const currentSlide = slides[current];
     
-    if (!currentSlide) return;
+    console.log('Current slide data:', currentSlide);
+    
+    if (!currentSlide) {
+      console.error('No current slide found');
+      return;
+    }
+
+    console.log('Button clicked, current slide:', currentSlide);
+    console.log('Category name:', currentSlide?.categoryName);
 
     // Redirect to Products page with category name
     // Products page will fetch category data and products based on this
     if (currentSlide?.categoryName) {
-      router.push(`/Products?category=${encodeURIComponent(currentSlide.categoryName)}`);
+      const url = `/Products?category=${encodeURIComponent(currentSlide.categoryName)}`;
+      console.log('Redirecting to:', url);
+      console.log('Router ready:', router.isReady);
+      
+      // Ensure router is ready before pushing
+      if (router.isReady) {
+        console.log('Using router.push()');
+        router.push(url);
+      } else {
+        // Fallback: use window.location if router not ready
+        console.log('Router not ready, using window.location.href');
+        window.location.href = url;
+      }
     } else {
-      router.push('/Products');
+      console.log('No category name, redirecting to /Products');
+      if (router.isReady) {
+        router.push('/Products');
+      } else {
+        window.location.href = '/Products';
+      }
     }
   };
 
@@ -53,6 +87,7 @@ const HeroSlider = ({ slides = [] }) => {
             <button 
               className="hero-btn" 
               onClick={handleButtonClick}
+              type="button"
             >
               {slides[current].buttonText}
             </button>
