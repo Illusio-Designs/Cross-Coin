@@ -43,7 +43,6 @@ const extractAttributesFromMalformedData = (malformedData) => {
         const str = Object.values(malformedData).join('');
         return extractAttributesFromString(str);
     } catch (error) {
-        console.warn('Failed to extract attributes from malformed data:', error);
         return {};
     }
 };

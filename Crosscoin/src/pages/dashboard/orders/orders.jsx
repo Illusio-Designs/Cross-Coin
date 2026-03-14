@@ -147,7 +147,6 @@ const Orders = () => {
                 }
             }
         } catch (err) {
-            console.error('Failed to fetch stats:', err);
             // Fallback: If dashboard stats fail, don't break the page
             setAllOrdersStats({
                 total: 0,
@@ -212,8 +211,7 @@ const Orders = () => {
             
             if (results.failed > 0) {
                 message += `${results.failed} orders failed. `;
-                console.error('Failed orders:', results.errors);
-            }
+                }
             
             toast.success(message);
             
@@ -221,9 +219,6 @@ const Orders = () => {
             fetchOrders();
             fetchAllOrdersForStats();
         } catch (error) {
-            console.error('=== FShip Order Sync Failed ===');
-            console.error('Error object:', error);
-            
             let errorMessage = 'Failed to sync orders with FShip';
             if (error.message) {
                 errorMessage = error.message;
@@ -260,9 +255,6 @@ const Orders = () => {
                 toast.error(result.message || 'Failed to update order');
             }
         } catch (error) {
-            console.error('=== Single Order Update Failed ===');
-            console.error('Error object:', error);
-            
             let errorMessage = 'Failed to update order from FShip';
             if (error.message) {
                 errorMessage = error.message;
@@ -297,9 +289,6 @@ const Orders = () => {
                 toast.error(result.message || 'Failed to sync order with FShip');
             }
         } catch (error) {
-            console.error('=== Single Order Sync Failed ===');
-            console.error('Error object:', error);
-            
             let errorMessage = 'Failed to sync order with FShip';
             if (error.message) {
                 errorMessage = error.message;
@@ -334,9 +323,6 @@ const Orders = () => {
                 toast.error(result.message || 'Failed to cancel order');
             }
         } catch (error) {
-            console.error('=== Order Cancellation Failed ===');
-            console.error('Error object:', error);
-            
             let errorMessage = 'Failed to cancel order';
             if (error.message) {
                 errorMessage = error.message;
@@ -377,7 +363,6 @@ const Orders = () => {
             // Refresh orders
             fetchOrders(currentPage);
         } catch (error) {
-            console.error('AWB update error:', error);
             toast.error(error.message || 'Failed to update AWB number');
         }
     };
@@ -399,7 +384,6 @@ const Orders = () => {
             await orderService.exportDeliveredOrders(exportStartDate, exportEndDate);
             toast.success('Delivered orders exported successfully!');
         } catch (error) {
-            console.error('Export error:', error);
             toast.error(error.message || 'Failed to export delivered orders');
         } finally {
             setIsExporting(false);
@@ -424,8 +408,7 @@ const Orders = () => {
                 downloadRate: 0
             });
         } catch (error) {
-            console.error('Failed to fetch label stats:', error);
-        }
+            }
     };
 
     // Handle label download with tracking
@@ -443,7 +426,6 @@ const Orders = () => {
             
             toast.success('Label opened successfully!');
         } catch (error) {
-            console.error('Error tracking label download:', error);
             // Still allow the download even if tracking fails
         }
     };
@@ -488,7 +470,6 @@ const Orders = () => {
             fetchOrders(currentPage);
             fetchLabelStats();
         } catch (error) {
-            console.error('Bulk download error:', error);
             toast.error(error.message || 'Failed to download labels');
         } finally {
             setIsDownloadingBulk(false);
@@ -1786,3 +1767,5 @@ const Orders = () => {
 };
 
 export default Orders; 
+
+

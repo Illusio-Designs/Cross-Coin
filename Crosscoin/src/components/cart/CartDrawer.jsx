@@ -105,8 +105,7 @@ const CartDrawer = ({ isOpen, onClose, lastAddedItem }) => {
           setSelectedPaymentMode(coupon.paymentMode);
         }
       } catch (e) {
-        console.error('Failed to parse applied coupon', e);
-      }
+        }
     }
   }, [isOpen]);
 
@@ -293,3 +292,4 @@ const CartDrawer = ({ isOpen, onClose, lastAddedItem }) => {
 };
 
 export default CartDrawer;
+

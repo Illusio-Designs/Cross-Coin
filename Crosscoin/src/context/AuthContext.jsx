@@ -39,7 +39,6 @@ function AuthProvider({ children }) {
                 }
             }
         } catch (error) {
-            console.error('Auth check failed:', error);
             localStorage.removeItem('token');
             setUser(null);
         } finally {
@@ -50,7 +49,6 @@ function AuthProvider({ children }) {
     useEffect(() => {
         if (apiCalledRef.current) return; // Prevent multiple calls
         apiCalledRef.current = true;
-        console.log('API BEING CALLED: Auth data fetch');
         checkAuth();
     }, [checkAuth]);
 
@@ -109,8 +107,7 @@ function AuthProvider({ children }) {
                 await userService.logout();
             }
         } catch (error) {
-            console.error('Logout error:', error);
-        } finally {
+            } finally {
             localStorage.removeItem('token');
             setUser(null);
             if (setIsAuthenticated) {

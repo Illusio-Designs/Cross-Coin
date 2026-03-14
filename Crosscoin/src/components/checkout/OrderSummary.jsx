@@ -36,8 +36,7 @@ export default function OrderSummary({
               setAvailableCoupons(data.coupons);
             }
         } catch (error) {
-            console.error("Failed to fetch available coupons:", error);
-        }
+            }
     };
     fetchCoupons();
   }, []);
@@ -56,9 +55,6 @@ export default function OrderSummary({
   const discountAmount = appliedCoupon ? parseFloat(appliedCoupon.discount || 0) : 0;
   
   // Debug logging
-  console.log('OrderSummary: appliedCoupon:', appliedCoupon);
-  console.log('OrderSummary: discountAmount:', discountAmount);
-  
   // Calculate total including Buy Now items
   const subtotal = (cartTotal || 0) + (buyNowTotal || 0);
   const total = subtotal !== undefined ? Math.max(0, subtotal - discountAmount + deliveryFee) : 0;
@@ -108,7 +104,6 @@ export default function OrderSummary({
         throw new Error("Invalid coupon response format");
       }
     } catch (error) {
-      console.error("Coupon validation error:", error);
       setCouponError(error.message || "Failed to apply coupon. Please try again.");
       onCouponRemoved();
     }

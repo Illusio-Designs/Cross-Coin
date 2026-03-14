@@ -32,16 +32,12 @@ const SeoWrapper = ({ pageName, children, seoData }) => {
             try {
                 setIsLoading(true);
                 hasFetchedRef.current = true;
-                console.log(`Fetching SEO data for page: ${pageName}`);
                 const data = await getSeoByPageName(pageName);
-                console.log(`SEO data for ${pageName}:`, data);
                 setSeoDataState(data);
             } catch (error) {
-                console.error(`Error fetching SEO data for ${pageName}:`, error);
                 // Check if it's a 404 (SEO data not found) - this is normal
                 if (error.message && error.message.includes('not found')) {
-                    console.log(`No SEO data found for ${pageName}, using default`);
-                }
+                    }
                 // Use default data on error (including 404)
                 setSeoDataState(defaultSeoData);
             } finally {

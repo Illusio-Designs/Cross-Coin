@@ -237,7 +237,6 @@ const QuantityOfferBar = ({ selectedPaymentMode = 'cod', appliedCoupon, onCoupon
           setOfferData({ type: 'no_offers', paymentMode: selectedPaymentMode });
         }
       } catch (error) {
-        console.error('Error fetching offers:', error);
         setOfferData(null);
       }
     };
@@ -407,3 +406,4 @@ const QuantityOfferBar = ({ selectedPaymentMode = 'cod', appliedCoupon, onCoupon
 };
 
 export default QuantityOfferBar;
+

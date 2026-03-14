@@ -33,7 +33,6 @@ export default function SEO() {
           router.push('/dashboard');
         }
       } catch (error) {
-        console.error('Auth check failed:', error);
         router.push('/dashboard');
       }
     };
@@ -60,13 +59,10 @@ export default function SEO() {
       setLoading(true);
       setError(null);
       const response = await seoService.getAllSEOData();
-      console.log('SEO Data Response:', response);
-      
       // Check if response is an array or has a data property
       const data = Array.isArray(response) ? response : (response.data || []);
       setSeoData(data);
     } catch (err) {
-      console.error("Error fetching SEO data:", err);
       setError(err.message || "Failed to fetch SEO data");
       setSeoData([]);
     } finally {
@@ -160,12 +156,8 @@ export default function SEO() {
       setLoading(true);
       setError(null);
       const response = await seoService.getSEOData(pageName);
-      console.log('Edit SEO Data Response:', response);
-      
       // Handle both direct data and nested data property
       const data = response.data || response;
-      console.log('Extracted SEO Data:', data);
-      
       setFormData({
         original_page_name: pageName,
         page_name: data.page_name || pageName,
@@ -176,7 +168,6 @@ export default function SEO() {
       });
       setIsModalOpen(true);
     } catch (err) {
-      console.error("Error fetching SEO data for edit:", err);
       setError(err.message || "Failed to fetch SEO data for editing");
     } finally {
       setLoading(false);
@@ -191,8 +182,7 @@ export default function SEO() {
         await fetchSEOData();
       } catch (err) {
         setError(err.message || "Failed to delete SEO data");
-        console.error("Error deleting SEO data:", err);
-      } finally {
+        } finally {
         setLoading(false);
       }
     }
@@ -262,7 +252,7 @@ export default function SEO() {
         }
       });
 
-      console.log('Submitting form data:', Object.fromEntries(formDataToSend.entries()));
+      ));
 
       // If we're editing an existing entry and the page name has changed
       if (formData.original_page_name && formData.original_page_name !== formData.page_name) {
@@ -278,7 +268,6 @@ export default function SEO() {
       await fetchSEOData();
       setIsModalOpen(false);
     } catch (err) {
-      console.error("Error saving SEO data:", err);
       setError(err.message || "Failed to save SEO data");
     } finally {
       setLoading(false);
@@ -431,3 +420,4 @@ export default function SEO() {
     </>
   );
 } 
+

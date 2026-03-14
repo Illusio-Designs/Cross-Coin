@@ -39,8 +39,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
 
   // Safety check: if no variation and no product price, log warning
   if (!variation && !product?.price) {
-    console.warn('ProductCard: No variation or product price found for product:', product?.id);
-  }
+    }
 
   // Get hover image using centralized utility
   const allImages = selectProductImages(product, variation);
@@ -264,3 +263,4 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
 };
 
 export default React.memo(ProductCard);
+

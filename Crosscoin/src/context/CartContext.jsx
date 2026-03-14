@@ -34,7 +34,6 @@ function CartProvider({ children }) {
   useEffect(() => {
     const checkAuth = () => {
       const token = localStorage.getItem('token');
-      console.log('CartContext: Initial auth check, token exists:', !!token);
       setIsAuthenticated(!!token);
       setAuthChecked(true);
     };
@@ -45,7 +44,6 @@ function CartProvider({ children }) {
   // Sync isAuthenticated on token change
   useEffect(() => {
     const handleStorage = () => {
-      console.log('CartContext: storage event, token changed');
       const token = localStorage.getItem('token');
       setIsAuthenticated(!!token);
     };
@@ -57,15 +55,11 @@ function CartProvider({ children }) {
   useEffect(() => {
     // Don't fetch cart until auth is checked
     if (!authChecked) {
-      console.log('CartContext: Auth not checked yet, waiting...');
       return;
     }
 
-    console.log('API BEING CALLED: Cart data fetch');
-    
     // ✅ Deduplication: Skip if request already pending
     if (pendingRequestRef.current) {
-      console.log('CartContext: Cart fetch already pending, skipping duplicate request');
       return;
     }
 
@@ -77,12 +71,9 @@ function CartProvider({ children }) {
         
         if (isAuthenticated) {
           try {
-            console.log('CartContext: fetching cart from backend');
             const backendCart = await apiGetCart();
-            console.log('CartContext: backend cart received', backendCart);
             setCartItems(Array.isArray(backendCart) ? backendCart : []);
           } catch (error){
-            console.error('CartContext: error fetching backend cart', error);
             // Fallback to localStorage if backend fails
             const savedCartItems = localStorage.getItem('cartItems');
             if (savedCartItems) {
@@ -90,7 +81,6 @@ function CartProvider({ children }) {
                 const parsedItems = JSON.parse(savedCartItems);
                 setCartItems(Array.isArray(parsedItems) ? parsedItems : []);
               } catch (parseError) {
-                console.error('Error parsing saved cart items:', parseError);
                 setCartItems([]);
                 localStorage.removeItem('cartItems'); // Clear corrupted data
               }
@@ -99,20 +89,16 @@ function CartProvider({ children }) {
             }
           }
         } else {
-          console.log('CartContext: loading cart from localStorage for guest user');
           const savedCartItems = localStorage.getItem('cartItems');
           if (savedCartItems) {
             try {
               const parsedItems = JSON.parse(savedCartItems);
-              console.log('CartContext: Parsed cart items from localStorage:', parsedItems);
               setCartItems(Array.isArray(parsedItems) ? parsedItems : []);
             } catch (parseError) {
-              console.error('Error parsing saved cart items:', parseError);
               setCartItems([]);
               localStorage.removeItem('cartItems'); // Clear corrupted data
             }
           } else {
-            console.log('CartContext: No saved cart items found in localStorage');
             setCartItems([]);
           }
         }
@@ -130,48 +116,28 @@ function CartProvider({ children }) {
   useEffect(() => {
     // Don't save until auth is checked and cart is loaded
     if (!authChecked || isCartLoading) {
-      console.log('CartContext: Skipping save - auth not checked or cart loading');
       return;
     }
 
-    console.log('CartContext: Save effect triggered, isAuthenticated:', isAuthenticated, 'cartItems.length:', cartItems.length);
-    
     if (!isAuthenticated) {
       try {
         const cartData = JSON.stringify(cartItems);
         localStorage.setItem('cartItems', cartData);
-        console.log('CartContext: Saved cart to localStorage:', cartData);
-      } catch (error) {
-        console.error('CartContext: Error saving cart to localStorage:', error);
-      }
+        } catch (error) {
+        }
     }
     
     const newCartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
     setCartCount(newCartCount);
-    console.log('CartContext: Updated cart count:', newCartCount);
-  }, [cartItems, isAuthenticated, authChecked, isCartLoading]);
+    }, [cartItems, isAuthenticated, authChecked, isCartLoading]);
 
   const addToCart = async (product, selectedColor, selectedSize, quantity = 1, variationId = null, variationImages = null) => {
-    console.log('CartContext: addToCart called with:', { 
-      productName: product.name, 
-      selectedColor, 
-      selectedSize, 
-      quantity, 
-      variationId, 
-      variationImages,
-      productVariations: product.variations
-    });
-    console.log('CartContext: isAuthenticated:', isAuthenticated);
-    
     if (isAuthenticated) {
       try {
-        console.log('CartContext: addToCart for authenticated user');
         // Use variationId directly
-        console.log('CartContext: calling apiAddToCart with:', { productId: product.id, variationId, quantity, size: selectedSize });
         await apiAddToCart({ productId: product.id, variationId, quantity, size: selectedSize });
         const backendCart = await apiGetCart();
         setCartItems(backendCart);
-        console.log('CartContext: cart updated from backend after adding item');
         showAddToCartSuccessToast(product.name);
         
         // Open drawer and set last added item
@@ -181,15 +147,11 @@ function CartProvider({ children }) {
         setLastAddedItem(addedItem || { id: Date.now(), name: product.name });
         setIsDrawerOpen(true);
       } catch(error) {
-        console.error('CartContext: error adding to cart for authenticated user', error);
         showAddToCartErrorToast(error.message);
       }
     } else {
-      console.log('CartContext: addToCart for guest user');
       return new Promise((resolve) => {
         setCartItems(prevItems => {
-          console.log('CartContext: Previous cart items:', prevItems);
-          
           const existingItem = prevItems.find(
             item =>
               item.productId === product.id &&
@@ -218,7 +180,6 @@ function CartProvider({ children }) {
                   }
                 : item
             );
-            console.log('CartContext: updated existing item in guest cart', newItems);
             showAddToCartSuccessToast(product.name);
             resolve(newItems);
             return newItems;
@@ -228,15 +189,6 @@ function CartProvider({ children }) {
           const selectedVariation = variationId && product.variations ? 
             product.variations.find(v => v.id === variationId) : null;
           const variationPrice = selectedVariation?.price || product.price;
-          
-          console.log('CartContext: Variation data for new guest cart item:', {
-            variationId,
-            selectedVariation,
-            variationPrice,
-            productPrice: product.price,
-            selectedColor,
-            selectedSize
-          });
           
           const newItem = {
             id: Date.now() + Math.random(), // Generate unique ID for guest cart items
@@ -254,11 +206,6 @@ function CartProvider({ children }) {
           
           const newItems = [...prevItems, newItem];
           
-          console.log('CartContext: added new item to guest cart:', {
-            newItem,
-            allItems: newItems
-          });
-          
           showAddToCartSuccessToast(product.name);
           
           // Open drawer and set last added item
@@ -273,38 +220,28 @@ function CartProvider({ children }) {
   };
 
   const removeFromCart = async (itemId) => {
-    console.log('CartContext: removeFromCart called with itemId:', itemId);
-    console.log('CartContext: current cartItems:', cartItems);
     const itemToRemove = cartItems.find(item => item.id === itemId);
-    console.log('CartContext: itemToRemove:', itemToRemove);
-    
     if (!itemToRemove) {
-      console.error('CartContext: Item not found for removal');
       showRemoveFromCartErrorToast('Item not found in cart');
       return;
     }
     
     if (isAuthenticated) {
       try {
-        console.log('CartContext: removing from backend with productId and variationId:', itemToRemove.productId, itemToRemove.variationId);
         // Always pass null for variationId if it is null or undefined
         await apiRemoveFromCart(
           itemToRemove.productId,
           itemToRemove.variationId == null ? null : itemToRemove.variationId
         );
         const backendCart = await apiGetCart();
-        console.log('CartContext: backend cart after removal:', backendCart);
         setCartItems(backendCart);
         showRemoveFromCartSuccessToast(itemToRemove?.name || 'Item');
       } catch (error) {
-        console.error('CartContext: error removing from cart', error);
         showRemoveFromCartErrorToast(error.message || 'Failed to remove item');
       }
     } else {
-      console.log('CartContext: removing from local storage');
       setCartItems(prevItems => {
         const newItems = prevItems.filter(item => item.id !== itemId);
-        console.log('CartContext: new cart items after removal:', newItems);
         return newItems;
       });
       showRemoveFromCartSuccessToast(itemToRemove?.name || 'Item');
@@ -326,8 +263,7 @@ function CartProvider({ children }) {
             setCartItems(backendCart);
             showUpdateCartSuccessToast();
         } catch (error) {
-            console.error("Failed to update quantity:", error);
-        }
+            }
     } else {
         setCartItems(prevItems =>
             prevItems.map(item =>
@@ -347,8 +283,7 @@ function CartProvider({ children }) {
         setCartItems([]);
         showClearCartSuccessToast();
       } catch (error) {
-        console.error('CartContext: error clearing cart', error);
-      }
+        }
     } else {
       setCartItems([]);
       localStorage.removeItem('cartItems');
@@ -371,8 +306,7 @@ function CartProvider({ children }) {
         setCartItems(backendCart);
         showUpdateCartSuccessToast();
       } catch (error) {
-        console.error("Failed to set quantity:", error);
-      }
+        }
     } else {
       setCartItems(prevItems =>
         prevItems.map(item =>
@@ -410,7 +344,6 @@ function CartProvider({ children }) {
   };
 
   const clearBuyNow = () => {
-    console.log('CartContext: Clearing buy now item');
     setBuyNowItem(null);
   };
 

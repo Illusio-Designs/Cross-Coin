@@ -24,7 +24,6 @@ function CardGrid() {
       // Check cache first (5 minute TTL for dashboard)
       const cachedStats = cacheManager.getByType('dashboard');
       if (cachedStats) {
-        console.log('✅ Dashboard stats loaded from cache');
         setStats(cachedStats);
         setCacheHit(true);
         setError(null);
@@ -33,21 +32,15 @@ function CardGrid() {
       }
 
       // Cache miss - fetch from API
-      console.log('⚠️ Dashboard cache miss - fetching from API');
       const response = await dashboardService.getDashboardStats();
-      console.log('Dashboard Stats Response:', response);
       if (response.success) {
-        console.log('Revenue Data:', response.stats.revenue);
-        console.log('Donut Chart Data:', response.stats.revenue?.donutChart);
         setStats(response.stats);
         
         // Cache the response (5 minute TTL)
         cacheManager.setByType('dashboard', response.stats);
-        console.log('✅ Dashboard stats cached for 5 minutes');
-      }
+        }
       setError(null);
     } catch (err) {
-      console.error('Error fetching dashboard stats:', err);
       setError('Failed to load dashboard statistics');
     } finally {
       setLoading(false);

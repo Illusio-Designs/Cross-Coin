@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { FiMenu, FiX } from "react-icons/fi";
 import SafeImage from "./common/SafeImage";
-import CouponStrip from "./CouponStrip";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCart } from "../context/CartContext";
@@ -90,7 +89,6 @@ const Header = () => {
           setSearchResults([]);
         }
       } catch (error) {
-        console.error("Search error:", error);
         setSearchResults([]);
       } finally {
         setIsSearching(false);
@@ -186,9 +184,7 @@ const Header = () => {
   }, [handleScroll]);
 
   return (
-    <>
-      <CouponStrip />
-      <header className={`header ${isSticky ? "header--sticky" : ""} ${!isHeaderVisible ? "header--hidden" : ""}`}>
+    <header className={`header ${isSticky ? "header--sticky" : ""} ${!isHeaderVisible ? "header--hidden" : ""}`}>
         <div className="header__top">
         <div className="header__logo" onClick={() => window.location.href = '/'} style={{ cursor: 'pointer' }}>
           <SafeImage
@@ -427,8 +423,8 @@ const Header = () => {
 
       {/* search handled inline in header__search-wrap */}
     </header>
-    </>
   );
 };
 
 export default Header;
+

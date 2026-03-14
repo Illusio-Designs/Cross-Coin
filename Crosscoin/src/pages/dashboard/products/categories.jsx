@@ -47,8 +47,7 @@ export default function Categories() {
       setCategories(data);
     } catch (err) {
       setError(err.message || "Failed to fetch categories");
-      console.error("Error fetching categories:", err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -143,8 +142,7 @@ export default function Categories() {
       setIsModalOpen(true);
     } catch (err) {
       setError(err.message || "Failed to fetch category data");
-      console.error("Error fetching category data:", err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -157,8 +155,7 @@ export default function Categories() {
         await fetchCategories();
       } catch (err) {
         setError(err.message || "Failed to delete category");
-        console.error("Error deleting category:", err);
-      } finally {
+        } finally {
         setLoading(false);
       }
     }
@@ -188,13 +185,6 @@ export default function Categories() {
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
-    console.log('Input Change:', {
-      name,
-      value,
-      type,
-      currentFormData: formData
-    });
-    
     setFormData(prev => {
       const newData = {
         ...prev,
@@ -209,25 +199,18 @@ export default function Categories() {
         newData.metaDescription = value;
       }
 
-      console.log('New Form Data:', newData);
       return newData;
     });
   };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    console.log('Image Change:', {
-      file,
-      currentFormData: formData
-    });
-    
     if (file) {
       setFormData(prev => {
         const newData = {
           ...prev,
           image: file
         };
-        console.log('New Form Data with Image:', newData);
         return newData;
       });
     }
@@ -243,11 +226,6 @@ export default function Categories() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form Submit:', {
-      formData,
-      isEdit: !!formData.id
-    });
-    
     try {
       setLoading(true);
       const formDataToSend = new FormData();
@@ -264,8 +242,7 @@ export default function Categories() {
         }
       });
 
-      console.log('FormData being sent:', {
-        formDataToSend: Object.fromEntries(formDataToSend.entries())
+      )
       });
 
       if (formData.id) {
@@ -284,7 +261,6 @@ export default function Categories() {
         brandIds: [1]
       });
     } catch (err) {
-      console.error('Submit Error:', err);
       setError(err.message || "Failed to save category");
     } finally {
       setLoading(false);
@@ -457,3 +433,5 @@ export default function Categories() {
     </>
   );
 } 
+
+

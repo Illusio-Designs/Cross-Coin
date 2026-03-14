@@ -31,8 +31,7 @@ const Contact = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     // Handle form submission
-    console.log(formData);
-  };
+    };
 
   return (
     <SeoWrapper pageName="contact">
@@ -181,3 +180,4 @@ const Contact = () => {
 };
 
 export default Contact;
+

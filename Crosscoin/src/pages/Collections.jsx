@@ -36,7 +36,7 @@ const Collections = () => {
         setError(null);
         
         const response = await getPublicCategories();
-        console.log('Categories response received:', response, 'Type:', typeof response, 'IsArray:', Array.isArray(response));
+        );
         
         // More flexible response handling
         let categoriesData = [];
@@ -57,7 +57,6 @@ const Collections = () => {
             categoriesData = possibleArrays[0];
           } else {
             // If response is an object but not an array, it might be an error response
-            console.error('Unexpected response format:', response);
             // Don't set error immediately, wait for retry
             categoriesData = [];
           }
@@ -77,7 +76,6 @@ const Collections = () => {
         }
         
       } catch (err) {
-        console.error('Error fetching categories:', err);
         setError(err.message || 'Failed to fetch categories');
         setCategories([]); // Ensure categories is set to empty array on error
       } finally {
@@ -93,7 +91,6 @@ const Collections = () => {
     if (loading) {
       const timeout = setTimeout(() => {
         if (loading && categories.length === 0) {
-          console.log('Loading timeout reached');
           setLoading(false);
           if (!error) {
             setError('Request timed out. Please try again.');
@@ -153,7 +150,6 @@ const Collections = () => {
             safeCategories.map((cat) => {
             // Safety check for category object
             if (!cat || !cat.name) {
-              console.warn('Invalid category object:', cat);
               return null;
             }
             
@@ -180,7 +176,7 @@ const Collections = () => {
                 key={cat.id || cat._id || cat.name}
                 href={`/Products?category=${encodeURIComponent(cat.name)}`}
                 className="category-card"
-                onClick={() => console.log('Navigating to category:', cat.name)}
+                onClick={() => }
               >
                 <div className="category-card-image-wrapper">
                   {imageUrl && (
@@ -189,7 +185,6 @@ const Collections = () => {
                       alt={cat.name}
                       className="category-card-image"
                       onError={(e) => {
-                        console.error('Failed to load image:', imageUrl);
                         e.target.style.display = 'none';
                       }}
                     />

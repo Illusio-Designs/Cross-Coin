@@ -40,19 +40,15 @@ export function fbqTrack(event, params = {}) {
       // Block unwanted events from browser extensions or third-party scripts
       const blockedEvents = ['SubscribedButtonClick'];
       if (blockedEvents.includes(event)) {
-        console.warn(`Blocked unwanted Facebook Pixel event: ${event}`);
         return false;
       }
       
       window.fbq("track", event, params);
-      console.log(`Facebook Pixel event tracked: ${event}`, params);
       return true;
     } catch (error) {
-      console.error(`Error tracking Facebook Pixel event ${event}:`, error);
       return false;
     }
   } else {
-    console.warn('Facebook Pixel (fbq) not available yet');
     return false;
   }
 }
@@ -97,3 +93,4 @@ const Analytics = () => {
 };
 
 export default Analytics;
+
