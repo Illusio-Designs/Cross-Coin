@@ -156,15 +156,11 @@ export default function UnifiedCheckout() {
   // Load addresses and shipping fees on mount
   useEffect(() => {
     const loadInitialData = async () => {
-      .toISOString()
-      });
-      
       try {
         // Load shipping fees
-        );
         
         const feeData = await getShippingFees();
-        ,
+        setShippingFeeData({
           data: feeData
         });
         
@@ -291,7 +287,7 @@ export default function UnifiedCheckout() {
           const addressData = await getUserShippingAddresses();
           setAddresses(addressData);
         } catch (reloadError) {
-          :", reloadError);
+          // Silently ignore reload error
           // Don't fail - just add the new address to the list
           setAddresses(prev => [...prev, savedAddress]);
         }
@@ -457,7 +453,7 @@ export default function UnifiedCheckout() {
             sessionStorage.setItem(`fb_purchase_tracked_${orderNumber}`, "true");
           }
         } catch (e) {
-          : failed to send fbq Purchase", e);
+          // Silently ignore fbq tracking error
         }
 
         // Clear cart and show success
@@ -549,7 +545,7 @@ export default function UnifiedCheckout() {
                   sessionStorage.setItem(`fb_purchase_tracked_${orderNumber}`, "true");
                   }
               } catch (e) {
-                failed:", e);
+                // Silently ignore fbq tracking error
               }
               
               setOrderPlaced(true);

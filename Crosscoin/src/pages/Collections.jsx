@@ -175,7 +175,6 @@ const Collections = () => {
                 key={cat.id || cat._id || cat.name}
                 href={`/Products?category=${encodeURIComponent(cat.name)}`}
                 className="category-card"
-                onClick={() => }
               >
                 <div className="category-card-image-wrapper">
                   {imageUrl && (
