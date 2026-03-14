@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
 import SafeImage from './common/SafeImage';
+import HeroSliderSkeleton from './HeroSliderSkeleton';
 import '../styles/components/HeroSlider.css';
 
 const HeroSlider = ({ slides = [] }) => {
   const [current, setCurrent] = useState(0);
-  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // If slides are provided and not empty, stop loading
+    if (slides && slides.length > 0) {
+      setIsLoading(false);
+    }
+  }, [slides]);
 
   useEffect(() => {
     if (slides.length > 0) {
@@ -20,51 +27,24 @@ const HeroSlider = ({ slides = [] }) => {
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('=== BUTTON CLICKED ===');
-    console.log('Current slide index:', current);
-    console.log('Total slides:', slides.length);
-    console.log('All slides:', slides);
-    
     const currentSlide = slides[current];
     
-    console.log('Current slide data:', currentSlide);
-    
     if (!currentSlide) {
-      console.error('No current slide found');
       return;
     }
 
-    console.log('Button clicked, current slide:', currentSlide);
-    console.log('Category name:', currentSlide?.categoryName);
-
-    // Redirect to Products page with category name
-    // Products page will fetch category data and products based on this
     if (currentSlide?.categoryName) {
-      const url = `/Products?category=${encodeURIComponent(currentSlide.categoryName)}`;
-      console.log('Redirecting to:', url);
-      console.log('Router ready:', router.isReady);
-      
-      // Ensure router is ready before pushing
-      if (router.isReady) {
-        console.log('Using router.push()');
-        router.push(url);
-      } else {
-        // Fallback: use window.location if router not ready
-        console.log('Router not ready, using window.location.href');
-        window.location.href = url;
-      }
+      const categoryName = currentSlide.categoryName;
+      const url = `/Products?category=${encodeURIComponent(categoryName)}`;
+      window.location.href = url;
     } else {
-      console.log('No category name, redirecting to /Products');
-      if (router.isReady) {
-        router.push('/Products');
-      } else {
-        window.location.href = '/Products';
-      }
+      window.location.href = '/Products';
     }
   };
 
-  if (!slides || slides.length === 0) {
-    return <div className="no-slides">No slides available</div>;
+  // Show skeleton while loading
+  if (isLoading || !slides || slides.length === 0) {
+    return <HeroSliderSkeleton />;
   }
 
   return (

@@ -190,19 +190,17 @@ const Header = () => {
       <CouponStrip />
       <header className={`header ${isSticky ? "header--sticky" : ""} ${!isHeaderVisible ? "header--hidden" : ""}`}>
         <div className="header__top">
-        <div className="header__logo">
-          <Link href="/">
-            <SafeImage
-              imageData={{ image_url: "/assets/crosscoin_logo.webp" }}
-              alt="logo"
-              width={120}
-              height={48}
-              priority={true}
-              quality={90}
-              style={{ objectFit: 'contain' }}
-              isLogo={true}
-            />
-          </Link>
+        <div className="header__logo" onClick={() => window.location.href = '/'} style={{ cursor: 'pointer' }}>
+          <SafeImage
+            imageData={{ image_url: "/assets/crosscoin_logo.webp" }}
+            alt="logo"
+            width={120}
+            height={48}
+            priority={true}
+            quality={90}
+            style={{ objectFit: 'contain' }}
+            isLogo={true}
+          />
         </div>
         <nav className="header__nav">
           <ul>
