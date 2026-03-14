@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { FiSave, FiEdit2, FiTrash2, FiX, FiLock, FiUnlock, FiPlus, FiRefreshCw } from 'react-icons/fi';
 import { brandSettingsService, brandService } from '@/services';
-import Modal from '@/components/common/Modal';
-import { Button } from '@/components/ui';
-import InputField from '@/components/common/InputField';
+import { Modal, Button, Input } from '@/components/ui';
 import Loader from '@/components/Loader';
 import '@/styles/dashboard/brandSettings.css';
 
@@ -253,7 +251,7 @@ export default function BrandSettingsManager() {
                 <div className="form-grid">
                     <div className="form-group">
                         <label>Setting Key</label>
-                        <InputField
+                        <Input
                             type="text"
                             value={newKey}
                             onChange={(e) => setNewKey(e.target.value)}
@@ -276,7 +274,7 @@ export default function BrandSettingsManager() {
                     </div>
                     <div className="form-group full-width">
                         <label>Description</label>
-                        <InputField
+                        <Input
                             type="text"
                             value={newDescription}
                             onChange={(e) => setNewDescription(e.target.value)}
@@ -399,3 +397,4 @@ export default function BrandSettingsManager() {
         </div>
     );
 }
+

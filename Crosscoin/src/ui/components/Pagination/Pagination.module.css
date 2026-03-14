@@ -1,0 +1,231 @@
+/* ============================================
+   PAGINATION COMPONENT STYLES
+   ============================================ */
+
+/* Container */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  font-family: var(--font-family-base);
+}
+
+.pagination--disabled {
+  opacity: var(--disabled-opacity);
+  pointer-events: none;
+}
+
+/* Pagination Sizes */
+.pagination--sm {
+  gap: 2px;
+}
+
+.pagination--md {
+  gap: var(--spacing-xs);
+}
+
+.pagination--lg {
+  gap: var(--spacing-sm);
+}
+
+/* Button */
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-gray-200);
+  background-color: var(--color-white);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: var(--transition-base);
+  font-family: inherit;
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--border-radius-md);
+  outline: none;
+}
+
+.button:hover:not(.button--disabled):not(.button--active) {
+  background-color: var(--color-gray-100);
+  border-color: var(--color-gray-300);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Button Sizes */
+.pagination--sm .button {
+  width: 28px;
+  height: 28px;
+  font-size: var(--font-size-xs);
+}
+
+.pagination--md .button {
+  width: 32px;
+  height: 32px;
+  font-size: var(--font-size-sm);
+}
+
+.pagination--lg .button {
+  width: 40px;
+  height: 40px;
+  font-size: var(--font-size-base);
+}
+
+/* Button States */
+.button--active {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.button--active:hover {
+  background-color: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+}
+
+.button--disabled {
+  background-color: var(--color-gray-100);
+  border-color: var(--color-gray-200);
+  color: var(--color-gray-400);
+  cursor: not-allowed;
+}
+
+.button--disabled:hover {
+  background-color: var(--color-gray-100);
+  border-color: var(--color-gray-200);
+}
+
+/* Ellipsis */
+.ellipsis {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gray-500);
+  font-weight: var(--font-weight-medium);
+  user-select: none;
+}
+
+.pagination--sm .ellipsis {
+  width: 28px;
+  height: 28px;
+  font-size: var(--font-size-xs);
+}
+
+.pagination--md .ellipsis {
+  width: 32px;
+  height: 32px;
+  font-size: var(--font-size-sm);
+}
+
+.pagination--lg .ellipsis {
+  width: 40px;
+  height: 40px;
+  font-size: var(--font-size-base);
+}
+
+/* ============================================
+   RESPONSIVE STYLES
+   ============================================ */
+
+@media (max-width: 768px) {
+  .pagination {
+    gap: 2px;
+  }
+  
+  .pagination--lg .button {
+    width: 36px;
+    height: 36px;
+    font-size: var(--font-size-sm);
+  }
+  
+  .pagination--lg .ellipsis {
+    width: 36px;
+    height: 36px;
+    font-size: var(--font-size-sm);
+  }
+}
+
+@media (max-width: 480px) {
+  .pagination {
+    gap: 1px;
+  }
+  
+  .pagination--md .button,
+  .pagination--lg .button {
+    width: 32px;
+    height: 32px;
+    font-size: var(--font-size-xs);
+  }
+  
+  .pagination--md .ellipsis,
+  .pagination--lg .ellipsis {
+    width: 32px;
+    height: 32px;
+    font-size: var(--font-size-xs);
+  }
+  
+  .pagination--sm .button {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .button {
+    border-width: 2px;
+  }
+  
+  .button--active {
+    border-color: var(--color-white);
+  }
+  
+  .button:hover:not(.button--disabled):not(.button--active) {
+    background-color: var(--color-gray-200);
+    border-color: var(--color-text);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+}
+
+/* ============================================
+   COMPACT VARIANT
+   ============================================ */
+
+.pagination--compact {
+  gap: 0;
+}
+
+.pagination--compact .button {
+  border-radius: 0;
+  border-right-width: 0;
+}
+
+.pagination--compact .button:first-child {
+  border-top-left-radius: var(--border-radius-md);
+  border-bottom-left-radius: var(--border-radius-md);
+}
+
+.pagination--compact .button:last-child {
+  border-top-right-radius: var(--border-radius-md);
+  border-bottom-right-radius: var(--border-radius-md);
+  border-right-width: 1px;
+}
+
+.pagination--compact .ellipsis {
+  border: 1px solid var(--color-gray-200);
+  border-right-width: 0;
+  background-color: var(--color-white);
+}

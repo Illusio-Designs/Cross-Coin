@@ -1,9 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui";
-import InputField from "@/components/common/InputField";
-import Modal from "@/components/common/Modal";
-import Table from "@/components/common/Table";
-import Pagination from "@/components/common/Pagination";
+import { Button, Input, Modal, Table, Pagination } from "@/components/ui";
 import Loader from "@/components/Loader";
 import BrandTags from "@/components/Dashboard/BrandTags";
 import BrandAssignment from "@/components/Dashboard/BrandAssignment";
@@ -373,7 +369,7 @@ export default function Categories() {
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <InputField
+            <Input
               label="Category Name"
               type="text"
               name="name"
@@ -381,7 +377,7 @@ export default function Categories() {
               onChange={handleInputChange}
               required
             />
-            <InputField
+            <Input
               label="Description"
               type="textarea"
               name="description"
@@ -389,7 +385,7 @@ export default function Categories() {
               onChange={handleInputChange}
               required
             />
-            <InputField
+            <Input
               label="Status"
               type="select"
               name="status"
@@ -401,7 +397,7 @@ export default function Categories() {
                 { value: "inactive", label: "Inactive" }
               ]}
             />
-            <InputField
+            <Input
               label="Meta Keywords"
               type="text"
               name="metaKeywords"

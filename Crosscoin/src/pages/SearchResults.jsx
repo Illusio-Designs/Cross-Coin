@@ -5,7 +5,7 @@ import ProductCard from '../components/ProductCard';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Loader from '../components/Loader';
-import Pagination from '../components/common/Pagination';
+import { Pagination } from '../components/ui';
 import SeoWrapper from '../console/SeoWrapper';
 import { usePagination } from '../hooks/usePagination';
 import '../styles/pages/SearchResults.css';

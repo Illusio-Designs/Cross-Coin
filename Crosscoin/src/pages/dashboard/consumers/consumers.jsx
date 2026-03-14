@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui";
-import Table from "@/components/common/Table";
-import Pagination from "@/components/common/Pagination";
-import Modal from "@/components/common/Modal";
+import { Button, Table, Pagination, Modal } from "@/components/ui";
 import Loader from "@/components/Loader";
 import { debounce } from 'lodash';
 import { userService } from '@/services';

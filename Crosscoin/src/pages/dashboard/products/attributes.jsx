@@ -1,9 +1,5 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui";
-import InputField from "@/components/common/InputField";
-import Modal from "@/components/common/Modal";
-import Table from "@/components/common/Table";
-import Pagination from "@/components/common/Pagination";
+import { Button, Input, Modal, Table, Pagination } from "@/components/ui";
 import Loader from "@/components/Loader";
 import { attributeService } from "@/services";
 import "../../../styles/dashboard/seo.css";
@@ -335,7 +331,7 @@ export default function Attributes() {
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <InputField
+            <Input
               label="Attribute Name"
               type="text"
               name="name"
@@ -344,7 +340,7 @@ export default function Attributes() {
               required
               placeholder="Enter attribute name"
             />
-            <InputField
+            <Input
               label="Type"
               type="select"
               name="type"
@@ -358,7 +354,7 @@ export default function Attributes() {
               ]}
             />
             {formData.type === 'select' && (
-              <InputField
+              <Input
                 label="Values (comma-separated)"
                 type="text"
                 name="values"

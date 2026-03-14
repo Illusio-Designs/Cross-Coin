@@ -1,5 +1,65 @@
 :root {
   --theme-color: #180D3E;
+  
+  /* ============================================
+     CROSSCOIN UI DESIGN TOKENS
+     ============================================ */
+  
+  /* Primary Colors - Crosscoin Brand */
+  --color-primary: #CE1E36;
+  --color-primary-dark: #a01729;
+  --color-primary-darker: #8a1220;
+  
+  /* Secondary Colors - Purple */
+  --color-secondary: #180D3E;
+  --color-secondary-dark: #2a1a4d;
+  --color-secondary-darker: #1e1438;
+  
+  /* Semantic Colors */
+  --color-success: #4CAF50;
+  --color-success-dark: #218838;
+  --color-success-darker: #1e7e34;
+  
+  --color-danger: #F44336;
+  --color-danger-dark: #c82333;
+  --color-danger-darker: #bd2130;
+  
+  --color-warning: #FF9800;
+  --color-info: #2196F3;
+  
+  /* Neutral Colors */
+  --color-white: #FFFFFF;
+  --color-gray-100: #F3F4F6;
+  --color-gray-200: #E5E7EB;
+  --color-gray-500: #6B7280;
+  --color-text: #111827;
+  
+  /* Spacing Scale */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  
+  /* Typography */
+  --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-weight-semibold: 600;
+  
+  /* Border Radius */
+  --border-radius-sm: 4px;
+  --border-radius-md: 6px;
+  --border-radius-lg: 8px;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  
+  /* Transitions */
+  --transition-base: all 0.2s ease;
 }
 
 /* Font Optimization - Use font-display: swap for better performance */

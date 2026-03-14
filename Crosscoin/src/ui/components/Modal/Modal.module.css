@@ -1,0 +1,268 @@
+/* ============================================
+   MODAL COMPONENT STYLES
+   ============================================ */
+
+/* Overlay */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.overlay--visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Modal Container */
+.modal {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  position: relative;
+  transform: scale(0.95) translateY(-20px);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.modal--visible {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+.modal--centered {
+  margin: auto;
+}
+
+/* Modal Sizes */
+.modal--sm {
+  width: 100%;
+  max-width: 400px;
+}
+
+.modal--md {
+  width: 100%;
+  max-width: 500px;
+}
+
+.modal--lg {
+  width: 100%;
+  max-width: 700px;
+}
+
+.modal--xl {
+  width: 100%;
+  max-width: 900px;
+}
+
+.modal--full {
+  width: 95vw;
+  height: 95vh;
+  max-width: none;
+  max-height: none;
+}
+
+/* Modal Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  background-color: #ffffff;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.25;
+}
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  color: #6b7280;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.closeButton:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.closeButton:focus {
+  outline: 2px solid #ce1e36;
+  outline-offset: 2px;
+}
+
+/* Modal Body */
+.body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  color: #374151;
+  line-height: 1.6;
+  background-color: #ffffff;
+}
+
+/* Modal Footer */
+.footer {
+  padding: 16px 24px 24px 24px;
+  border-top: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+  flex-shrink: 0;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+/* ============================================
+   RESPONSIVE STYLES
+   ============================================ */
+
+@media (max-width: 768px) {
+  .overlay {
+    padding: 16px;
+    align-items: flex-end;
+  }
+  
+  .modal {
+    width: 100%;
+    max-height: 95vh;
+    border-radius: 12px 12px 0 0;
+  }
+  
+  .modal--sm,
+  .modal--md,
+  .modal--lg,
+  .modal--xl {
+    max-width: none;
+  }
+  
+  .modal--full {
+    width: 100%;
+    height: 100vh;
+    max-height: none;
+    border-radius: 0;
+  }
+  
+  .header {
+    padding: 20px 20px 16px 20px;
+  }
+  
+  .body {
+    padding: 20px;
+  }
+  
+  .footer {
+    padding: 12px 20px 20px 20px;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  
+  .footer > * {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .overlay {
+    padding: 0;
+  }
+  
+  .modal {
+    height: 100vh;
+    border-radius: 0;
+  }
+  
+  .title {
+    font-size: 18px;
+  }
+  
+  .header {
+    padding: 16px 16px 12px 16px;
+  }
+  
+  .body {
+    padding: 16px;
+  }
+  
+  .footer {
+    padding: 8px 16px 16px 16px;
+  }
+}
+
+/* ============================================
+   ACCESSIBILITY & FOCUS STYLES
+   ============================================ */
+
+.modal:focus {
+  outline: none;
+}
+
+.closeButton:focus-visible {
+  outline: 2px solid #ce1e36;
+  outline-offset: 2px;
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .overlay {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+  
+  .modal {
+    border: 2px solid #000000;
+  }
+  
+  .header,
+  .footer {
+    border-width: 2px;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .modal {
+    transition: none;
+  }
+  
+  .modal {
+    transform: none;
+    opacity: 1;
+  }
+  
+  .modal--visible {
+    transform: none;
+  }
+}

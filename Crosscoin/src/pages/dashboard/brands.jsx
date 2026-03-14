@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { FiPlus, FiEdit2, FiTrash2, FiX, FiSave, FiToggleLeft, FiToggleRight, FiSearch, FiRefreshCw } from 'react-icons/fi';
 import { brandService } from '@/services';
-import Modal from '@/components/common/Modal';
-import { Button } from '@/components/ui';
-import InputField from '@/components/common/InputField';
+import { Modal, Button, Input } from '@/components/ui';
 import Loader from '@/components/Loader';
 import '@/styles/dashboard/brands.css';
 
@@ -180,7 +178,7 @@ export default function BrandManager() {
                         <div className="form-grid">
                             <div className="form-group">
                                 <label>Brand Name *</label>
-                                <InputField
+                                <Input
                                     type="text"
                                     name="name"
                                     value={formData.name}
@@ -192,7 +190,7 @@ export default function BrandManager() {
 
                             <div className="form-group">
                                 <label>Display Name *</label>
-                                <InputField
+                                <Input
                                     type="text"
                                     name="display_name"
                                     value={formData.display_name}
@@ -204,7 +202,7 @@ export default function BrandManager() {
 
                             <div className="form-group">
                                 <label>Slug</label>
-                                <InputField
+                                <Input
                                     type="text"
                                     name="slug"
                                     value={formData.slug}
@@ -215,7 +213,7 @@ export default function BrandManager() {
 
                             <div className="form-group">
                                 <label>Domain</label>
-                                <InputField
+                                <Input
                                     type="text"
                                     name="domain"
                                     value={formData.domain}
@@ -226,7 +224,7 @@ export default function BrandManager() {
 
                             <div className="form-group">
                                 <label>Logo URL</label>
-                                <InputField
+                                <Input
                                     type="text"
                                     name="logo_url"
                                     value={formData.logo_url}
@@ -244,7 +242,7 @@ export default function BrandManager() {
                                         value={formData.primary_color}
                                         onChange={handleInputChange}
                                     />
-                                    <InputField
+                                    <Input
                                         type="text"
                                         value={formData.primary_color}
                                         onChange={(e) => setFormData(prev => ({ ...prev, primary_color: e.target.value }))}
@@ -262,7 +260,7 @@ export default function BrandManager() {
                                         value={formData.secondary_color}
                                         onChange={handleInputChange}
                                     />
-                                    <InputField
+                                    <Input
                                         type="text"
                                         value={formData.secondary_color}
                                         onChange={(e) => setFormData(prev => ({ ...prev, secondary_color: e.target.value }))}
@@ -273,7 +271,7 @@ export default function BrandManager() {
 
                             <div className="form-group">
                                 <label>Contact Email</label>
-                                <InputField
+                                <Input
                                     type="email"
                                     name="contact_email"
                                     value={formData.contact_email}
@@ -284,7 +282,7 @@ export default function BrandManager() {
 
                             <div className="form-group">
                                 <label>Contact Phone</label>
-                                <InputField
+                                <Input
                                     type="tel"
                                     name="contact_phone"
                                     value={formData.contact_phone}
@@ -421,3 +419,4 @@ export default function BrandManager() {
         </div>
     );
 }
+

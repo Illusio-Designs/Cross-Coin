@@ -1,9 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "../../../components/ui";
-import InputField from "../../../components/common/InputField";
-import Modal from "../../../components/common/Modal";
-import Table from "../../../components/common/Table";
-import Pagination from "../../../components/common/Pagination";
+import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
 import Loader from "../../../components/Loader";
 import BrandTags from "../../../components/Dashboard/BrandTags";
 import { sliderService, categoryService, brandService } from "../../../services";
@@ -537,7 +533,7 @@ export default function Slider() {
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <InputField
+            <Input
               label="Title"
               type="text"
               name="title"
@@ -545,7 +541,7 @@ export default function Slider() {
               onChange={handleInputChange}
               required
             />
-            <InputField
+            <Input
               label="Description"
               type="textarea"
               name="description"
@@ -553,7 +549,7 @@ export default function Slider() {
               onChange={handleInputChange}
               required
             />
-            <InputField
+            <Input
               label="Category"
               type="select"
               name="categoryId"
@@ -593,7 +589,7 @@ export default function Slider() {
                 </div>
               )}
             </div>
-            <InputField
+            <Input
               label="Status"
               type="select"
               name="status"
@@ -605,7 +601,7 @@ export default function Slider() {
                 { value: "inactive", label: "Inactive" }
               ]}
             />
-            <InputField
+            <Input
               label="Button Text"
               type="text"
               name="buttonText"

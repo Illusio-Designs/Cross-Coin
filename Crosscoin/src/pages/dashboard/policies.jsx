@@ -1,9 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui";
-import InputField from "@/components/common/InputField";
-import Modal from "@/components/common/Modal";
-import Table from "@/components/common/Table";
-import Pagination from "@/components/common/Pagination";
+import { Button, Input, Modal, Table, Pagination } from "@/components/ui";
 import Loader from "@/components/Loader";
 import { policyService } from "@/services";
 import { debounce } from 'lodash';
@@ -313,7 +309,7 @@ export default function Policies() {
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <InputField
+            <Input
               label="Policy Title"
               type="text"
               name="title"

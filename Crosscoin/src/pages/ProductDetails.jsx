@@ -15,7 +15,7 @@ import { fbqTrack } from '../components/common/Analytics';
 import InfiniteReviewsSlider from '../components/InfiniteReviewsSlider';
 import { getProductImageSrc } from '../utils/imageUtils';
 import DOMPurify from 'dompurify';
-import Modal from "../components/common/Modal";
+import { Modal } from "../components/ui";
 import colorMap from '../components/products/colorMap';
 
 // Load page-specific CSS

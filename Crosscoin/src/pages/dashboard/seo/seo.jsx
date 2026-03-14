@@ -1,10 +1,6 @@
 import "../../../styles/dashboard/seo.css";
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "../../../components/ui";
-import InputField from "../../../components/common/InputField";
-import Modal from "../../../components/common/Modal";
-import Table from "../../../components/common/Table";
-import Pagination from "../../../components/common/Pagination";
+import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
 import Loader from "../../../components/Loader";
 import { seoService, userService } from "../../../services";
 import { debounce } from 'lodash';
@@ -362,7 +358,7 @@ export default function SEO() {
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <InputField
+            <Input
               label="Page Name"
               type="text"
               name="page_name"
@@ -370,7 +366,7 @@ export default function SEO() {
               onChange={handleInputChange}
               required
             />
-            <InputField
+            <Input
               label="Meta Title"
               type="text"
               name="meta_title"
@@ -378,7 +374,7 @@ export default function SEO() {
               onChange={handleInputChange}
               required
             />
-            <InputField
+            <Input
               label="Meta Description"
               type="textarea"
               name="meta_description"
@@ -386,7 +382,7 @@ export default function SEO() {
               onChange={handleInputChange}
               required
             />
-            <InputField
+            <Input
               label="Meta Keywords"
               type="text"
               name="meta_keywords"
