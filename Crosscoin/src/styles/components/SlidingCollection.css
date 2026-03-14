@@ -275,59 +275,75 @@
 }
 
 /* Responsive design */
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .stage {
-    height: 400px;
+    height: 420px;
   }
 
   .card {
-    width: 360px;
-    height: 340px;
+    width: 380px;
+    height: 360px;
   }
 
   .card-content {
-    padding: 28px 24px 20px;
+    padding: 30px 26px 24px;
+  }
+
+  .line1-bold {
+    font-size: 34px;
+  }
+
+  .line2 {
+    font-size: 36px;
+  }
+
+  .line2-regular {
+    font-size: 22px;
+  }
+
+  .explore-btn {
+    padding: 9px 18px;
+    font-size: 10px;
+  }
+
+  .nav-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .nav-prev {
+    left: 16px;
+  }
+
+  .nav-next {
+    right: 16px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .stage {
+    height: 380px;
+  }
+
+  .card {
+    width: 340px;
+    height: 320px;
+  }
+
+  .card-content {
+    padding: 26px 22px 20px;
+  }
+
+  .line1-bold {
+    font-size: 30px;
   }
 
   .line2 {
     font-size: 32px;
   }
-}
 
-@media (max-width: 768px) {
-  .sliding-collection-section {
-    padding: 50px 0;
-  }
-
-  .section-header {
-    margin-bottom: 40px;
-  }
-
-  .stage {
-    height: 350px;
-    padding: 0 12px;
-  }
-
-  .card {
-    width: 300px;
-    height: 300px;
-  }
-
-  .card-content {
-    padding: 24px 20px 16px;
-  }
-
-  .line1 {
-    font-size: 14px;
-  }
-
-  .line2 {
-    font-size: 28px;
-  }
-
-  .tagline {
-    font-size: 12px;
-    margin-top: 8px;
+  .line2-regular {
+    font-size: 20px;
   }
 
   .explore-btn {
@@ -338,6 +354,73 @@
   .nav-btn {
     width: 40px;
     height: 40px;
+  }
+
+  .nav-prev {
+    left: 12px;
+  }
+
+  .nav-next {
+    right: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sliding-collection-section {
+    padding: 48px 0;
+  }
+
+  .section-header {
+    margin-bottom: 36px;
+    padding: 0 16px;
+  }
+
+  .section-header h2 {
+    font-size: 28px;
+  }
+
+  .section-header p {
+    font-size: 12px;
+  }
+
+  .stage {
+    height: 340px;
+    padding: 0 16px;
+  }
+
+  .card {
+    width: 300px;
+    height: 280px;
+  }
+
+  .card-content {
+    padding: 22px 18px 16px;
+  }
+
+  .line1 {
+    font-size: 13px;
+  }
+
+  .line1-bold {
+    font-size: 26px;
+  }
+
+  .line2 {
+    font-size: 28px;
+  }
+
+  .line2-regular {
+    font-size: 18px;
+  }
+
+  .explore-btn {
+    padding: 8px 14px;
+    font-size: 9px;
+  }
+
+  .nav-btn {
+    width: 38px;
+    height: 38px;
   }
 
   .nav-btn svg {
@@ -352,50 +435,68 @@
   .nav-next {
     right: 12px;
   }
+
+  .dots {
+    margin-top: 20px;
+  }
+
+  .dot {
+    width: 7px;
+    height: 7px;
+  }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .sliding-collection-section {
     padding: 40px 0;
   }
 
   .section-header {
     margin-bottom: 32px;
+    padding: 0 12px;
   }
 
   .section-header h2 {
     font-size: 24px;
   }
 
+  .section-header p {
+    font-size: 11px;
+    margin-top: 6px;
+  }
+
   .stage {
     height: 300px;
-    padding: 0 8px;
+    padding: 0 12px;
   }
 
   .card {
-    width: 240px;
+    width: 260px;
     height: 240px;
   }
 
   .card-content {
-    padding: 20px 16px 12px;
+    padding: 20px 16px 14px;
   }
 
   .line1 {
     font-size: 12px;
   }
 
-  .line2 {
+  .line1-bold {
     font-size: 22px;
   }
 
-  .tagline {
-    font-size: 11px;
-    margin-top: 6px;
+  .line2 {
+    font-size: 24px;
+  }
+
+  .line2-regular {
+    font-size: 16px;
   }
 
   .explore-btn {
-    padding: 7px 14px;
+    padding: 7px 12px;
     font-size: 8px;
   }
 
@@ -415,5 +516,98 @@
 
   .nav-next {
     right: 8px;
+  }
+
+  .dots {
+    margin-top: 16px;
+    gap: 6px;
+  }
+
+  .dot {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sliding-collection-section {
+    padding: 32px 0;
+  }
+
+  .section-header {
+    margin-bottom: 24px;
+    padding: 0 12px;
+  }
+
+  .section-header h2 {
+    font-size: 20px;
+  }
+
+  .section-header p {
+    font-size: 10px;
+    margin-top: 4px;
+  }
+
+  .stage {
+    height: 260px;
+    padding: 0 8px;
+  }
+
+  .card {
+    width: 220px;
+    height: 200px;
+  }
+
+  .card-content {
+    padding: 16px 12px 12px;
+  }
+
+  .line1 {
+    font-size: 11px;
+  }
+
+  .line1-bold {
+    font-size: 18px;
+  }
+
+  .line2 {
+    font-size: 20px;
+  }
+
+  .line2-regular {
+    font-size: 14px;
+  }
+
+  .explore-btn {
+    padding: 6px 10px;
+    font-size: 7px;
+  }
+
+  .nav-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .nav-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .nav-prev {
+    left: 4px;
+  }
+
+  .nav-next {
+    right: 4px;
+  }
+
+  .dots {
+    margin-top: 12px;
+    gap: 4px;
+  }
+
+  .dot {
+    width: 5px;
+    height: 5px;
   }
 }
