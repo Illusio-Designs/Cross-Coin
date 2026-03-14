@@ -56,12 +56,7 @@ const MagicCheckoutIntegration = ({
 
   // Log configuration on mount
   useEffect(() => {
-    }...` : 'NOT SET',
-      MAGIC_CHECKOUT_ENABLED,
-      hasShippingAddress: !!shippingAddress,
-      hasShippingFee: !!shippingFee,
-      cartItemsCount: cartItems?.length || 0
-    });
+    // Configuration logged on mount
   }, []);
 
   /**
