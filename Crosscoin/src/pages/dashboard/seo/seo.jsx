@@ -252,8 +252,6 @@ export default function SEO() {
         }
       });
 
-      ));
-
       // If we're editing an existing entry and the page name has changed
       if (formData.original_page_name && formData.original_page_name !== formData.page_name) {
         // First delete the old entry
