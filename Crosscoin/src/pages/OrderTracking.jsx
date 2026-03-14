@@ -55,7 +55,6 @@ export default function OrderTracking() {
         }
         try {
             const date = new Date(dateValue);
-            ));
             
             const formatted = date.toLocaleDateString('en-IN', { 
                 day: 'numeric',

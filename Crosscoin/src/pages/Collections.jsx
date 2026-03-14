@@ -36,7 +36,6 @@ const Collections = () => {
         setError(null);
         
         const response = await getPublicCategories();
-        );
         
         // More flexible response handling
         let categoriesData = [];
