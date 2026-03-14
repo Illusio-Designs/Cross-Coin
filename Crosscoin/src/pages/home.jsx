@@ -12,6 +12,12 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { getPublicSliders, getPublicCategories, getPublicCategoryByName, getPublicProductReviews } from '../services/publicApi';
 import SeoWrapper from '../console/SeoWrapper';
+
+// Lazy load CouponStrip to prevent module-level side effects
+const CouponStrip = dynamic(() => import("../components/CouponStrip"), {
+  loading: () => null,
+  ssr: true
+});
 import { useRouter } from 'next/router';
 import { fbqTrack } from '../components/common/Analytics';
 import { showValidationErrorToast } from '../utils/toast';
@@ -135,7 +141,6 @@ const Home = () => {
             try {
               return await getPublicSliders();
             } catch (error) {
-              console.error('Error fetching sliders:', error);
               return [];
             }
           })(),
@@ -151,7 +156,6 @@ const Home = () => {
               }
               return [];
             } catch (error) {
-              console.error('Error fetching categories:', error);
               return [];
             }
           })(),
@@ -171,7 +175,6 @@ const Home = () => {
               const data = await response.json();
               return (data.success && data.data.products) ? data.data.products : [];
             } catch (error) {
-              console.error('Error fetching latest products:', error);
               return [];
             }
           })(),
@@ -191,7 +194,6 @@ const Home = () => {
               const data = await response.json();
               return (data.success && data.data.products) ? data.data.products : [];
             } catch (error) {
-              console.error('Error fetching exclusive products:', error);
               return [];
             }
           })()
@@ -233,7 +235,6 @@ const Home = () => {
               setExclusiveReviewCounts(reviewStats.map(s => s.count));
               setExclusiveAvgRatings(reviewStats.map(s => s.avg));
             } catch (error) {
-              console.error('Error fetching reviews:', error);
             }
           }, 1000);
         } else {
@@ -248,7 +249,6 @@ const Home = () => {
         setLatestProductsLoading(false);
         setExclusiveProductsLoading(false);
       } catch (error) {
-        console.error('Error in fetchAllData:', error);
         setLoading(false);
         setLatestProductsLoading(false);
         setExclusiveProductsLoading(false);
@@ -264,7 +264,6 @@ const Home = () => {
       const data = await getPublicCategoryByName(categoryName);
       setCurrentCategoryProducts(data.products || []);
     } catch (error) {
-      console.error('Error fetching category products:', error);
       setCurrentCategoryProducts([]);
     } finally {
       setCategoryLoading(false);
@@ -352,8 +351,6 @@ const Home = () => {
   const handleProductClick = (product) => {
     if (product && product.slug) {
       router.push(`/ProductDetails?slug=${product.slug}`);
-    } else {
-      console.error('Product slug not found:', product);
     }
   };
 
@@ -369,7 +366,6 @@ const Home = () => {
     const selectedVariation = product.variations?.find(v => v.sku === selectedSku) || product.variations?.[0];
     
     if (!selectedVariation) {
-      console.error('No variation found for product:', product);
       return;
     }
     
@@ -398,16 +394,7 @@ const Home = () => {
       }
       return [];
     })();
-    console.log('Adding to cart with:', {
-      product: product.name,
-      selectedVariation: selectedVariation?.id,
-      finalSelectedColor,
-      finalSelectedSize,
-      quantity: state.quantity,
-      variationImages
-    });
     
-    // Add to cart with proper variation data (same as ProductDetails page)
     addToCart(
       product, 
       finalSelectedColor, 
@@ -452,21 +439,8 @@ const Home = () => {
       const variationImages = selectedVariation?.images || [];
       const variationPrice = selectedVariation?.price || product.price;
       
-      // Add product to cart
-      console.log('Home Buy Now: Adding product to cart with variation data:', {
-        productName: product.name,
-        finalSelectedColor,
-        finalSelectedSize,
-        quantity: state.quantity,
-      selectedVariationId: selectedVariation?.id,
-        selectedVariation,
-        variationImages
-      });
       await addToCart(product, finalSelectedColor, finalSelectedSize, state.quantity, selectedVariation?.id, variationImages);
-      console.log('Product added to cart successfully');
 
-      // Track the event (non-blocking)
-      console.log('Tracking checkout event...');
       try {
         fbqTrack('InitiateCheckout', {
           content_ids: [product.id],
@@ -477,16 +451,11 @@ const Home = () => {
           quantity: state.quantity,
         });
       } catch (trackingError) {
-        console.warn('Tracking error (non-blocking):', trackingError);
       }
 
-      // Direct redirect to UnifiedCheckout
-      
-      // Force direct navigation
       window.location.href = '/UnifiedCheckout';
       
     } catch (error) {
-      console.error('Error in buy now process:', error);
       showValidationErrorToast('Something went wrong. Please try again.');
       setBuyNowLoadingStates(prev => ({ ...prev, [productIndex]: false }));
     }
@@ -561,6 +530,7 @@ const Home = () => {
       <Header />
       <div className="home-page">
         <HeroSlider slides={slides} />
+        <CouponStrip />
         <div className="trust-badges">
           <div className="trust-badges__container">
             <div className="trust-badge">

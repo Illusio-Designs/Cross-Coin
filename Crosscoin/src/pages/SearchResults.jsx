@@ -78,7 +78,6 @@ const SearchResults = () => {
           setError(response.message || 'No products found');
         }
       } catch (err) {
-        console.error('Search error:', err);
         setError(err.message || 'Failed to search products');
         setProducts([]);
         setTotalProducts(0);
@@ -200,7 +199,6 @@ const SearchResults = () => {
             }
           })
           .catch(err => {
-            console.error('Search error:', err);
             setError(err.message || 'Failed to search products');
             setProducts([]);
             setTotalProducts(0);

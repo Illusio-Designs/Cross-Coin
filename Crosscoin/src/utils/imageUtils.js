@@ -74,7 +74,6 @@ export async function checkImageAccessibility(imageUrl) {
     const response = await fetch(imageUrl, { method: 'HEAD' });
     return response.ok;
   } catch (error) {
-    console.warn('Image accessibility check failed:', error);
     return false;
   }
 }
@@ -95,7 +94,6 @@ export function getImageWithFallback(imageData, fallbackImage = null) { // No de
 export function handleImageError(event, fallbackSrc = null) { // No default fallback
   const img = event.target;
   if (fallbackSrc && img.src !== fallbackSrc) {
-    console.warn('Image failed to load, using fallback:', img.src);
     img.src = fallbackSrc;
   }
 }

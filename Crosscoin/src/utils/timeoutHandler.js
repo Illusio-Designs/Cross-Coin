@@ -50,7 +50,6 @@ export const retryWithTimeout = async (apiCall, maxRetries = 3, delayMs = 1000) 
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`API call attempt ${attempt}/${maxRetries}`);
       return await apiCall();
     } catch (error) {
       lastError = error;
@@ -59,8 +58,6 @@ export const retryWithTimeout = async (apiCall, maxRetries = 3, delayMs = 1000) 
       if (!isTimeoutError(error)) {
         throw error;
       }
-      
-      console.warn(`Timeout on attempt ${attempt}/${maxRetries}. Retrying in ${delayMs}ms...`);
       
       // Don't delay after the last attempt
       if (attempt < maxRetries) {
@@ -117,7 +114,6 @@ export const withTimeoutHandling = async (apiCall, options = {}) => {
         onTimeout(errorInfo);
       }
       
-      console.error('API timeout after retries:', errorInfo);
       throw new Error(errorInfo.message);
     }
     
@@ -154,3 +150,4 @@ export default {
   withTimeoutHandling,
   createTimeoutAwareApiCall
 };
+

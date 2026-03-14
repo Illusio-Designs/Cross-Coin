@@ -27,8 +27,7 @@ export default function Attributes() {
       setAttributes(data);
     } catch (err) {
       setError(err.message || "Failed to fetch attributes");
-      console.error("Error fetching attributes:", err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -114,8 +113,7 @@ export default function Attributes() {
       setIsModalOpen(true);
     } catch (err) {
       setError(err.message || "Failed to fetch attribute data");
-      console.error("Error fetching attribute data:", err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -128,8 +126,7 @@ export default function Attributes() {
         await fetchAttributes();
       } catch (err) {
         setError(err.message || "Failed to delete attribute");
-        console.error("Error deleting attribute:", err);
-      } finally {
+        } finally {
         setLoading(false);
       }
     }
@@ -213,8 +210,7 @@ export default function Attributes() {
       });
     } catch (err) {
       setError(err.message || "Failed to save attribute");
-      console.error("Error saving attribute:", err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -401,3 +397,5 @@ export default function Attributes() {
     </div>
   );
 } 
+
+

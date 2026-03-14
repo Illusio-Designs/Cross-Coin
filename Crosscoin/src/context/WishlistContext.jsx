@@ -51,12 +51,11 @@ function WishlistProvider({ children }) {
   useEffect(() => {
     if (!isHydrated || apiCalledRef.current) return; // Prevent multiple calls and wait for hydration
     apiCalledRef.current = true;
-    console.log('API BEING CALLED: Wishlist data fetch');
     const fetchWishlist = async () => {
       if (isAuthenticated) {
         try {
           const backendWishlist = await getWishlist();
-          console.log('Backend wishlist:', backendWishlist); // Debug log
+          // Debug log
           setWishlist(backendWishlist.map(item => {
             const product = item.Product;
             let primaryImage = '';
@@ -138,7 +137,6 @@ function WishlistProvider({ children }) {
           currency: 'INR',
         });
       } catch (error) {
-        console.error('WishlistContext: error adding to wishlist', error);
         showAddToWishlistErrorToast(error.message);
       }
     } else {
@@ -206,8 +204,7 @@ function WishlistProvider({ children }) {
           });
         }
       } catch (error) {
-        console.error('WishlistContext: error removing from wishlist', error);
-      }
+        }
     } else {
       setWishlist(prevWishlist => prevWishlist.filter(item => item.id !== productId));
       showRemoveFromWishlistSuccessToast(itemToRemove?.name || 'Item');
@@ -230,8 +227,7 @@ function WishlistProvider({ children }) {
         setWishlist([]);
         showClearWishlistSuccessToast();
       } catch (error) {
-        console.error('WishlistContext: error clearing wishlist', error);
-      }
+        }
     } else {
       setWishlist([]);
       localStorage.removeItem('wishlist');

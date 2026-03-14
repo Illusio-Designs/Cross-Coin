@@ -3,6 +3,43 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   
+  // Webpack configuration for development
+  webpack: (config, { dev }) => {
+    if (dev) {
+      // Prevent webpack from watching too aggressively
+      config.watchOptions = {
+        poll: false,
+        ignored: ['**/.git/**', '**/node_modules/**', '**/.next/**'],
+      };
+    }
+    
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "@": require("path").resolve(__dirname, "src"),
+    };
+    
+    // Optimize bundle size
+    if (!dev) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            default: false,
+            vendors: false,
+            commons: {
+              name: 'commons',
+              chunks: 'all',
+              minChunks: 2,
+            },
+          },
+        },
+      };
+    }
+    
+    return config;
+  },
+  
   // Image configuration - ENABLE OPTIMIZATION
   images: {
     unoptimized: false, // Enable Next.js image optimization
@@ -34,35 +71,6 @@ const nextConfig = {
   // Performance optimizations
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
-  },
-  
-  // Path aliases
-  webpack: (config, { isServer }) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      "@": require("path").resolve(__dirname, "src"),
-    };
-    
-    // Optimize bundle size
-    if (!isServer) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          chunks: 'all',
-          cacheGroups: {
-            default: false,
-            vendors: false,
-            commons: {
-              name: 'commons',
-              chunks: 'all',
-              minChunks: 2,
-            },
-          },
-        },
-      };
-    }
-    
-    return config;
   },
   
   // Headers for caching

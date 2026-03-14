@@ -148,8 +148,7 @@ const Wishlist = () => {
                       if (item.slug) {
                         router.push(`/ProductDetails?slug=${item.slug}`);
                       } else {
-                        console.error('Product slug not found:', item);
-                      }
+                        }
                     }}
                   >
                     <SafeImage

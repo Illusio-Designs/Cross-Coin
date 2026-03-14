@@ -166,8 +166,7 @@ export default function CartStep({ selectedPaymentMode: propPaymentMode, onPayme
     if (onPaymentModeChange) {
       onPaymentModeChange(mode);
     }
-    console.log('CartStep: Payment mode changed to:', mode);
-  };
+    };
 
   // Sync with prop changes
   useEffect(() => {
@@ -181,11 +180,6 @@ export default function CartStep({ selectedPaymentMode: propPaymentMode, onPayme
     if (appliedCoupon && appliedCoupon.paymentMode) {
       // Check if applied coupon's payment mode matches current payment mode
       if (appliedCoupon.paymentMode !== selectedPaymentMode) {
-        console.log('CartStep: Removing coupon due to payment mode change', {
-          couponPaymentMode: appliedCoupon.paymentMode,
-          currentPaymentMode: selectedPaymentMode
-        });
-        
         // Remove the coupon
         if (onCouponApplied) {
           onCouponApplied(null);
@@ -197,8 +191,6 @@ export default function CartStep({ selectedPaymentMode: propPaymentMode, onPayme
   }, [selectedPaymentMode, appliedCoupon, onCouponApplied]);
 
   // Debug logging
-  console.log('CartStep: cartItems:', cartItems, 'isCartLoading:', isCartLoading, 'buyNowItem:', buyNowItem);
-
   const handleInputChange = (itemId, value) => {
     // Allow only numbers
     if (/^\d*$/.test(value)) {
@@ -394,7 +386,6 @@ export default function CartStep({ selectedPaymentMode: propPaymentMode, onPayme
                       
                       <div className="cart-item-buttons">
                         <button className="cart-item-remove" onClick={() => {
-                          console.log('CartStep: Remove button clicked for item:', item);
                           removeFromCart(item.id);
                         }}><FiTrash2 /></button>
                       </div>

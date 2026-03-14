@@ -58,12 +58,10 @@ export default function Coupons() {
         setCoupons(data.coupons);
       } else {
         setCoupons([]); // Set to empty array if data is not in expected format
-        console.error("Fetched data does not contain a coupons array:", data);
-      }
+        }
     } catch (err) {
       setError(err.message || "Failed to fetch coupons");
-      console.error("Error fetching coupons:", err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -214,8 +212,7 @@ export default function Coupons() {
       setIsModalOpen(true);
     } catch (err) {
       setError(err.message || "Failed to fetch coupon data");
-      console.error("Error fetching coupon data:", err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -228,8 +225,7 @@ export default function Coupons() {
         await fetchCoupons();
       } catch (err) {
         setError(err.message || "Failed to delete coupon");
-        console.error("Error deleting coupon:", err);
-      } finally {
+        } finally {
         setLoading(false);
       }
     }
@@ -710,3 +706,5 @@ export default function Coupons() {
     </>
   );
 } 
+
+

@@ -16,20 +16,15 @@ const pendingRequests = new Map();
 export const deduplicateRequest = async (key, requestFn) => {
   // If request is already pending, return the existing promise
   if (pendingRequests.has(key)) {
-    console.log(`🔄 Request DEDUPLICATED: ${key}`);
     return pendingRequests.get(key);
   }
-  
-  console.log(`🚀 Request STARTED: ${key}`);
   
   // Create new request
   const promise = requestFn()
     .then(result => {
-      console.log(`✅ Request COMPLETED: ${key}`);
       return result;
     })
     .catch(error => {
-      console.log(`❌ Request FAILED: ${key}`);
       throw error;
     })
     .finally(() => {
@@ -81,3 +76,4 @@ export default {
   getPendingRequestsCount,
   getPendingRequestKeys
 };
+

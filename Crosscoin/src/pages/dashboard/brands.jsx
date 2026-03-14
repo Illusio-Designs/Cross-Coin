@@ -38,7 +38,6 @@ export default function BrandManager() {
                 setBrands(response.data);
             }
         } catch (error) {
-            console.error('Error fetching brands:', error);
             toast.error('Failed to load brands');
         } finally {
             setLoading(false);
@@ -75,7 +74,6 @@ export default function BrandManager() {
             resetForm();
             fetchBrands();
         } catch (error) {
-            console.error('Error saving brand:', error);
             toast.error(error.message || 'Failed to save brand');
         }
     };
@@ -107,7 +105,6 @@ export default function BrandManager() {
             toast.success('Brand deleted successfully');
             fetchBrands();
         } catch (error) {
-            console.error('Error deleting brand:', error);
             toast.error('Failed to delete brand');
         }
     };
@@ -118,7 +115,6 @@ export default function BrandManager() {
             toast.success('Brand status updated');
             fetchBrands();
         } catch (error) {
-            console.error('Error toggling brand status:', error);
             toast.error('Failed to update brand status');
         }
     };
@@ -419,4 +415,5 @@ export default function BrandManager() {
         </div>
     );
 }
+
 

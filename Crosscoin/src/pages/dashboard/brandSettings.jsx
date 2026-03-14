@@ -51,7 +51,6 @@ export default function BrandSettingsManager() {
                 setSelectedBrandId(response.data[0].id); // Select first brand by default
             }
         } catch (error) {
-            console.error('Error fetching brands:', error);
             toast.error('Failed to load brands');
         }
     };
@@ -67,7 +66,6 @@ export default function BrandSettingsManager() {
                 setSettings(response.data || []);
             }
         } catch (error) {
-            console.error('Error fetching settings:', error);
             toast.error('Failed to load settings');
         } finally {
             setLoading(false);
@@ -88,7 +86,6 @@ export default function BrandSettingsManager() {
             setEditMode(prev => ({ ...prev, [settingId]: false }));
             fetchSettings();
         } catch (error) {
-            console.error('Error updating setting:', error);
             toast.error(error.message || 'Failed to update setting');
         } finally {
             setSaving(prev => ({ ...prev, [settingId]: false }));
@@ -105,7 +102,6 @@ export default function BrandSettingsManager() {
             toast.success('Setting deleted successfully');
             fetchSettings();
         } catch (error) {
-            console.error('Error deleting setting:', error);
             toast.error('Failed to delete setting');
         }
     };
@@ -134,7 +130,6 @@ export default function BrandSettingsManager() {
             setShowAddForm(false);
             fetchSettings();
         } catch (error) {
-            console.error('Error adding setting:', error);
             toast.error(error.message || 'Failed to add setting');
         }
     };
@@ -397,4 +392,5 @@ export default function BrandSettingsManager() {
         </div>
     );
 }
+
 

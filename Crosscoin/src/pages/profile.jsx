@@ -205,8 +205,7 @@ export default function Profile() {
         const data = await getUserShippingAddresses();
         setAddresses(data);
       } catch (refetchErr) {
-        console.error('Failed to refetch addresses:', refetchErr);
-      }
+        }
     }
   };
 
@@ -238,8 +237,7 @@ export default function Profile() {
         const data = await getUserShippingAddresses();
         setAddresses(data);
       } catch (refetchErr) {
-        console.error('Failed to refetch addresses:', refetchErr);
-      }
+        }
     }
   };
 
@@ -263,8 +261,7 @@ export default function Profile() {
         const data = await getUserShippingAddresses();
         setAddresses(data);
       } catch (refetchErr) {
-        console.error('Failed to refetch addresses:', refetchErr);
-      }
+        }
     }
   };
 
@@ -824,3 +821,4 @@ export default function Profile() {
     </SeoWrapper>
   );
 }
+

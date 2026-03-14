@@ -57,7 +57,6 @@ export default function ThankYou() {
       const result = await getGuestOrder(guestEmail, order_number);
       setTrackingResult(result);
     } catch (error) {
-      console.error('Guest tracking error:', error);
       setTrackingResult({ 
         success: false, 
         message: error.message || 'Failed to track order' 
@@ -73,12 +72,10 @@ export default function ThankYou() {
       // Check if we've already tracked this order
       const trackingKey = `fb_purchase_tracked_${order_number}`;
       if (!order_number) {
-        console.log('Purchase tracking: No order number provided');
         return;
       }
       
       if (sessionStorage.getItem(trackingKey)) {
-        console.log('Purchase tracking: Already tracked for order', order_number);
         return;
       }
 
@@ -93,7 +90,6 @@ export default function ThankYou() {
               attempts++;
               setTimeout(checkFbq, 200);
             } else {
-              console.warn('Purchase tracking: fbq not available after waiting');
               resolve(false);
             }
           };
@@ -105,7 +101,6 @@ export default function ThankYou() {
         // Wait for Facebook Pixel to be ready
         const fbqReady = await waitForFbq();
         if (!fbqReady) {
-          console.error('Purchase tracking: Facebook Pixel not available');
           return;
         }
 
@@ -114,22 +109,17 @@ export default function ThankYou() {
         // Fetch order data based on user type
         if (is_guest === 'true' && guest_email) {
           // For guest users
-          console.log('Purchase tracking: Fetching guest order data...');
           try {
             const result = await getGuestOrder(guest_email, order_number);
             if (result.success && result.data) {
               orderData = result.data;
-              console.log('Purchase tracking: Guest order data fetched', orderData);
-            } else {
-              console.warn('Purchase tracking: Guest order fetch returned no data', result);
-            }
+              } else {
+              }
           } catch (error) {
-            console.error('Purchase tracking: Error fetching guest order:', error);
             return;
           }
         } else if (isAuthenticated) {
           // For authenticated users
-          console.log('Purchase tracking: Fetching authenticated user order data...');
           try {
             const result = await getUserOrders({ limit: 100 }); // Get enough orders to find the one we need
             if (result.orders && Array.isArray(result.orders)) {
@@ -153,18 +143,14 @@ export default function ThankYou() {
                       }))
                     : [],
                 };
-                console.log('Purchase tracking: Authenticated user order data fetched', orderData);
-              } else {
-                console.warn('Purchase tracking: Order not found in user orders list');
-              }
+                } else {
+                }
             }
           } catch (error) {
-            console.error('Purchase tracking: Error fetching user orders:', error);
             return;
           }
         } else {
-          console.warn('Purchase tracking: User not authenticated and not a guest');
-        }
+          }
 
         // Track purchase event if we have order data
         if (orderData && orderData.order && orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0) {
@@ -182,27 +168,20 @@ export default function ThankYou() {
 
           // Track even if contents is unavailable (Meta only requires value+currency for Purchase)
           if (purchaseData.value > 0) {
-            console.log('Purchase tracking: Tracking purchase event with data:', purchaseData);
-            
             // Track the purchase event
             fbqTrack('Purchase', purchaseData);
             
             // Mark as tracked to prevent duplicate tracking
             sessionStorage.setItem(trackingKey, 'true');
-            console.log('Purchase tracking: Purchase event tracked successfully for order', order_number);
-          } else {
-            console.warn('Purchase tracking: Invalid purchase data, skipping tracking:', purchaseData);
-          }
+            } else {
+            }
         } else {
-          console.warn('Purchase tracking: No valid order data available', {
-            hasOrderData: !!orderData,
-            hasOrder: !!(orderData && orderData.order),
+          ,
             hasItems: !!(orderData && orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0)
           });
         }
       } catch (error) {
-        console.error('Purchase tracking: Error in purchase event tracking:', error);
-      }
+        }
     };
 
     // Only track when router is ready and we have order_number

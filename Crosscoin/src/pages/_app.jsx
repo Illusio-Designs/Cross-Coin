@@ -84,8 +84,6 @@ function App({ Component, pageProps }) {
       window.__turbopack_load_page_chunks__ = () => {};
     }
     
-    console.log('🚀 App mounted - UTMTracker active');
-    
     // Defer analytics loading for better initial performance
     const timer = setTimeout(() => {
       setAnalyticsLoaded(true);
@@ -149,3 +147,4 @@ function App({ Component, pageProps }) {
 }
 
 export default App;
+

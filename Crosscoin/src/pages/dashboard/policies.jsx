@@ -47,8 +47,7 @@ export default function Policies() {
       setPolicies(data);
     } catch (err) {
       setError(err.message || "Failed to fetch policies");
-      console.error("Error fetching policies:", err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -155,8 +154,7 @@ export default function Policies() {
       setIsModalOpen(true);
     } catch (err) {
       setError(err.message || "Failed to fetch policy data");
-      console.error("Error fetching policy data:", err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -169,8 +167,7 @@ export default function Policies() {
         await fetchPolicies();
       } catch (err) {
         setError(err.message || "Failed to delete policy");
-        console.error("Error deleting policy:", err);
-      } finally {
+        } finally {
         setLoading(false);
       }
     }
@@ -351,3 +348,4 @@ export default function Policies() {
     </>
   );
 } 
+
