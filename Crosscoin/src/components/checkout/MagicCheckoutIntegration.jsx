@@ -114,7 +114,7 @@ const MagicCheckoutIntegration = ({
       };
 
       document.body.appendChild(script);
-      });
+    });
   }, []);
 
   /**
