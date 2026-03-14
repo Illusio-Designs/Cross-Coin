@@ -51,7 +51,6 @@ class CacheManager {
       const expiresAt = Date.now() + ttl;
       localStorage.setItem(metaKey, JSON.stringify({ expiresAt, ttl }));
       
-      }s)`);
       return true;
     } catch (error) {
       return false;

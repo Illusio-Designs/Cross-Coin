@@ -25,7 +25,7 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
       }
       
       if (data.images && data.images.length > 0) {
-        );
+        // Images found
       }
       
       setExistingImages(data.images || []);
