@@ -121,8 +121,7 @@ const MagicCheckoutIntegration = ({
    * Initialize Magic Checkout SDK with order_id
    */
   const initializeMagicCheckout = useCallback(async (orderId) => {
-    }...` : 'NOT SET'
-    });
+    // Initialize Magic Checkout with order ID
     
     if (!sdkLoaded || !window.Razorpay) {
       return null;
