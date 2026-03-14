@@ -18,6 +18,10 @@ const CouponStrip = dynamic(() => import("../components/CouponStrip"), {
   loading: () => null,
   ssr: true
 });
+
+// Import TrustBadges component
+import TrustBadges from "../components/TrustBadges";
+
 import { useRouter } from 'next/router';
 import { fbqTrack } from '../components/common/Analytics';
 import { showValidationErrorToast } from '../utils/toast';
@@ -29,6 +33,7 @@ import { seoService } from '../services/index';
 import '../styles/components/Footer.css';
 import '../styles/components/Header.css';
 import '../styles/components/Testimonials.css';
+import '../styles/components/TrustBadges.css';
 import '../styles/pages/Home.css';
 
 // Lazy load below-the-fold components for better performance
@@ -531,46 +536,7 @@ const Home = () => {
       <div className="home-page">
         <HeroSlider slides={slides} />
         <CouponStrip />
-        <div className="trust-badges">
-          <div className="trust-badges__container">
-            <div className="trust-badge">
-              <div className="trust-badge__icon" style={{ color: '#CE1E36' }}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="currentColor"/>
-                </svg>
-              </div>
-              <h3>Premium Quality</h3>
-              <p>Handcrafted with finest materials</p>
-            </div>
-            <div className="trust-badge">
-              <div className="trust-badge__icon" style={{ color: '#180D3E' }}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" fill="currentColor"/>
-                </svg>
-              </div>
-              <h3>Secure Shopping</h3>
-              <p>100% safe & encrypted checkout</p>
-            </div>
-            <div className="trust-badge">
-              <div className="trust-badge__icon" style={{ color: '#CE1E36' }}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" fill="currentColor"/>
-                </svg>
-              </div>
-              <h3>Fast Delivery</h3>
-              <p>Worldwide shipping available</p>
-            </div>
-            <div className="trust-badge">
-              <div className="trust-badge__icon" style={{ color: '#180D3E' }}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM13 16h-2v2h2v-2zm0-6h-2v4h2v-4z" fill="currentColor"/>
-                </svg>
-              </div>
-              <h3>Authentic Products</h3>
-              <p>Genuine Cross Coin merchandise</p>
-            </div>
-          </div>
-        </div>
+        <TrustBadges />
         <div className="shop-by-category">
           <div className="shop-by-category__container">
             <div className="category-title">
