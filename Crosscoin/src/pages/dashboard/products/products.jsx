@@ -1,9 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui";
-import InputField from "@/components/common/InputField";
-import Modal from "@/components/common/Modal";
-import Table from "@/components/common/Table";
-import Pagination from "@/components/common/Pagination";
+import { Button, Input, Modal, Table, Pagination } from "@/components/ui";
 import Loader from "@/components/Loader";
 import { productService } from "@/services";
 import { categoryService } from "@/services";
@@ -1016,7 +1012,7 @@ const ProductsPage = () => {
       case 1:
         return (
           <>
-            <InputField
+            <Input
               label="Product Name"
               type="text"
               name="name"
@@ -1058,7 +1054,7 @@ const ProductsPage = () => {
                 ))}
               </select>
             </div>
-            <InputField
+            <Input
               label="Status"
               type="select"
               name="status"
@@ -1071,7 +1067,7 @@ const ProductsPage = () => {
               ]}
               required
             />
-            <InputField
+            <Input
               label="Badge"
               type="select"
               name="badge"
@@ -1196,7 +1192,7 @@ const ProductsPage = () => {
 
             <div className="weight-dimensions-section">
               <div className="weight-section">
-                <InputField
+                <Input
                   label="Weight"
                   type="number"
                   name="weight"
@@ -1204,7 +1200,7 @@ const ProductsPage = () => {
                   onChange={handleInputChange}
                   placeholder="Enter weight"
                 />
-                <InputField
+                <Input
                   label="Weight Unit"
                   type="select"
                   name="weightUnit"
@@ -1221,7 +1217,7 @@ const ProductsPage = () => {
               <div className="dimensions-section">
                 <h6>Dimensions</h6>
                 <div className="dimensions-inputs">
-                  <InputField
+                  <Input
                     label="Length"
                     type="number"
                     name="dimensions.length"
@@ -1229,7 +1225,7 @@ const ProductsPage = () => {
                     onChange={handleInputChange}
                     placeholder="Length"
                   />
-                  <InputField
+                  <Input
                     label="Width"
                     type="number"
                     name="dimensions.width"
@@ -1237,7 +1233,7 @@ const ProductsPage = () => {
                     onChange={handleInputChange}
                     placeholder="Width"
                   />
-                  <InputField
+                  <Input
                     label="Height"
                     type="number"
                     name="dimensions.height"
@@ -1245,7 +1241,7 @@ const ProductsPage = () => {
                     onChange={handleInputChange}
                     placeholder="Height"
                   />
-                  <InputField
+                  <Input
                     label="Dimension Unit"
                     type="select"
                     name="dimensionUnit"
@@ -1284,7 +1280,7 @@ const ProductsPage = () => {
                       </Button>
                     )}
                   </div>
-                  <InputField
+                  <Input
                     label="Price"
                     type="number"
                     name={`variations.${index}.price`}
@@ -1292,7 +1288,7 @@ const ProductsPage = () => {
                     onChange={handleInputChange}
                     required
                   />
-                  <InputField
+                  <Input
                     label="Compare Price"
                     type="number"
                     name={`variations.${index}.comparePrice`}
@@ -1300,7 +1296,7 @@ const ProductsPage = () => {
                     onChange={handleInputChange}
                     placeholder="Enter compare price"
                   />
-                  <InputField
+                  <Input
                     label="Stock"
                     type="number"
                     name={`variations.${index}.stock`}
@@ -1308,7 +1304,7 @@ const ProductsPage = () => {
                     onChange={handleInputChange}
                     required
                   />
-                  <InputField
+                  <Input
                     label="SKU"
                     type="text"
                     name={`variations.${index}.sku`}
@@ -1440,7 +1436,7 @@ const ProductsPage = () => {
         return (
           <>
             <h3>SEO Settings</h3>
-            <InputField
+            <Input
               label="Meta Title"
               type="text"
               name="seo.metaTitle"
@@ -1448,7 +1444,7 @@ const ProductsPage = () => {
               onChange={handleInputChange}
               placeholder="Enter meta title"
             />
-            <InputField
+            <Input
               label="Meta Description"
               type="text"
               name="seo.metaDescription"
@@ -1456,7 +1452,7 @@ const ProductsPage = () => {
               onChange={handleInputChange}
               placeholder="Enter meta description"
             />
-            <InputField
+            <Input
               label="Meta Keywords"
               type="text"
               name="seo.metaKeywords"
@@ -1464,7 +1460,7 @@ const ProductsPage = () => {
               onChange={handleInputChange}
               placeholder="Enter meta keywords (comma-separated)"
             />
-            <InputField
+            <Input
               label="OG Title"
               type="text"
               name="seo.ogTitle"
@@ -1472,7 +1468,7 @@ const ProductsPage = () => {
               onChange={handleInputChange}
               placeholder="Enter OG title"
             />
-            <InputField
+            <Input
               label="OG Description"
               type="text"
               name="seo.ogDescription"
@@ -1480,7 +1476,7 @@ const ProductsPage = () => {
               onChange={handleInputChange}
               placeholder="Enter OG description"
             />
-            <InputField
+            <Input
               label="OG Image"
               type="file"
               name="seo.ogImage"
@@ -1497,7 +1493,7 @@ const ProductsPage = () => {
                 }
               }}
             />
-            <InputField
+            <Input
               label="Canonical URL"
               type="text"
               name="seo.canonicalUrl"
@@ -1505,7 +1501,7 @@ const ProductsPage = () => {
               onChange={handleInputChange}
               placeholder="Enter canonical URL"
             />
-            <InputField
+            <Input
               label="Structured Data (JSON-LD)"
               type="textarea"
               name="seo.structuredData"

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import Pagination from '../../../components/common/Pagination';
+import { Pagination } from '@/components/ui';
 import '../../../styles/dashboard/utmAnalytics.css';
 
 const UTMAnalytics = () => {
@@ -356,3 +356,4 @@ const UTMAnalytics = () => {
 };
 
 export default UTMAnalytics;
+

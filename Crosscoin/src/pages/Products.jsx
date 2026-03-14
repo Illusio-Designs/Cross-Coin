@@ -21,7 +21,7 @@ import { getProductImageSrc } from "../utils/imageUtils";
 import SeoWrapper from "../console/SeoWrapper";
 import { fbqTrack } from "../components/common/Analytics";
 import colorMap from "../components/products/colorMap";
-import Pagination from "../components/common/Pagination";
+import { Pagination } from "../components/ui";
 import cacheManager from "../services/cacheManager";
 import "../styles/common/TableControls.css";
 

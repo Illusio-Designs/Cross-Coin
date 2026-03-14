@@ -199,7 +199,7 @@ const InfiniteReviewsSlider = ({ reviews }) => {
               </div>
             )}
           </div>
-        ))}
+          ))}
         </div>
       </div>
       

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Modal from '@/components/common/Modal';
+import { Modal } from '@/components/ui';
 import { productService } from '@/services';
 
 const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = null }) => {

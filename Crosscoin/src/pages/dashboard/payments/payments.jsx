@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui";
-import Modal from "@/components/common/Modal";
-import Table from "@/components/common/Table";
-import Pagination from "@/components/common/Pagination";
+import { Button, Modal, Table, Pagination } from "@/components/ui";
 import Loader from "@/components/Loader";
 import { paymentService } from "@/services";
 import { debounce } from 'lodash';
@@ -490,3 +487,4 @@ export default function Payments() {
     </>
   );
 }
+

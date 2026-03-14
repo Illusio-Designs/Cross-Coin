@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { orderService } from '../../../services';
 import { debounce } from 'lodash';
-import Table from "@/components/common/Table";
-import Pagination from "@/components/common/Pagination";
+import { Table, Pagination } from "@/components/ui";
 import Loader from "@/components/Loader";
 import '../../../styles/dashboard/orders.css';
 import "../../../styles/dashboard/seo.css";

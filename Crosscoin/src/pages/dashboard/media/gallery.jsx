@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { productService } from '@/services';
 import Loader from '@/components/Loader';
-import Pagination from '@/components/common/Pagination';
+import { Pagination } from '@/components/ui';
 import '../../../styles/dashboard/media.css';
 
 const MediaGallery = () => {

@@ -1,9 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui";
-import InputField from "@/components/common/InputField";
-import Modal from "@/components/common/Modal";
-import Table from "@/components/common/Table";
-import Pagination from "@/components/common/Pagination";
+import { Button, Input, Modal, Table, Pagination } from "@/components/ui";
 import Loader from "@/components/Loader";
 import { shippingFeeService } from "@/services";
 import { debounce } from 'lodash';
@@ -274,7 +270,7 @@ export default function ShippingFees() {
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <InputField
+            <Input
               label="Order Type"
               type="select"
               name="orderType"
@@ -286,7 +282,7 @@ export default function ShippingFees() {
               ]}
               required
             />
-              <InputField
+              <Input
               label="Fee"
                 type="number"
               name="fee"
@@ -325,7 +321,7 @@ export default function ShippingFees() {
         {selectedFee && (
           <form onSubmit={handleSubmit} className="seo-form">
             <div className="modal-body">
-              <InputField
+              <Input
                 label="Order Type"
                 type="select"
                 name="orderType"
@@ -337,7 +333,7 @@ export default function ShippingFees() {
                 ]}
                 required
               />
-              <InputField
+              <Input
                 label="Fee"
                 type="number"
                 name="fee"

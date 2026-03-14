@@ -1,9 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui";
-import InputField from "@/components/common/InputField";
-import Modal from "@/components/common/Modal";
-import Table from "@/components/common/Table";
-import Pagination from "@/components/common/Pagination";
+import { Button, Input, Modal, Table, Pagination } from "@/components/ui";
 import Loader from "@/components/Loader";
 import { couponService } from "@/services";
 import { debounce } from 'lodash';
@@ -477,7 +473,7 @@ export default function Coupons() {
         <form onSubmit={handleSubmit} className="seo-form">
           {error && <div className="modal-error-banner">{error}</div>}
           <div className="modal-body">
-            <InputField
+            <Input
               label="Coupon Code"
               type="text"
               name="code"
@@ -485,7 +481,7 @@ export default function Coupons() {
               onChange={handleInputChange}
               required
             />
-            <InputField
+            <Input
               label="Description"
               type="textarea"
               name="description"
@@ -493,7 +489,7 @@ export default function Coupons() {
               onChange={handleInputChange}
               required
             />
-            <InputField
+            <Input
               label="Discount Type"
               type="select"
               name="type"
@@ -507,7 +503,7 @@ export default function Coupons() {
                 { value: "quantity_based", label: "Quantity Based" }
               ]}
             />
-            <InputField
+            <Input
               label="Discount Value"
               type="number"
               name="value"
@@ -515,28 +511,28 @@ export default function Coupons() {
               onChange={handleInputChange}
               required
             />
-            <InputField
+            <Input
               label="Minimum Purchase Amount"
               type="number"
               name="minPurchase"
               value={formData.minPurchase}
               onChange={handleInputChange}
             />
-            <InputField
+            <Input
               label="Maximum Discount Amount"
               type="number"
               name="maxDiscount"
               value={formData.maxDiscount}
               onChange={handleInputChange}
             />
-            <InputField
+            <Input
               label="Usage Limit"
               type="number"
               name="usageLimit"
               value={formData.usageLimit}
               onChange={handleInputChange}
             />
-            <InputField
+            <Input
               label="Usage Count"
               type="number"
               name="usageCount"
@@ -544,14 +540,14 @@ export default function Coupons() {
               onChange={handleInputChange}
               disabled
             />
-            <InputField
+            <Input
               label="Per User Limit"
               type="number"
               name="perUserLimit"
               value={formData.perUserLimit}
               onChange={handleInputChange}
             />
-            <InputField
+            <Input
               label="Status"
               type="select"
               name="status"
@@ -563,7 +559,7 @@ export default function Coupons() {
                 { value: "inactive", label: "Inactive" }
               ]}
             />
-            <InputField
+            <Input
               label="Applicable Category IDs"
               type="text"
               name="applicableCategories"
@@ -571,7 +567,7 @@ export default function Coupons() {
               onChange={handleInputChange}
               placeholder="e.g., 1, 2, 3"
             />
-            <InputField
+            <Input
               label="Applicable Product IDs"
               type="text"
               name="applicableProducts"
@@ -579,14 +575,14 @@ export default function Coupons() {
               onChange={handleInputChange}
               placeholder="e.g., 101, 102"
             />
-            <InputField
+            <Input
               label="Start Date"
               type="date"
               name="startDate"
               value={formData.startDate}
               onChange={handleInputChange}
             />
-            <InputField
+            <Input
               label="End Date"
               type="date"
               name="endDate"
@@ -598,7 +594,7 @@ export default function Coupons() {
             <div style={{ marginTop: '20px', borderTop: '1px solid #e0e0e0', paddingTop: '20px' }}>
               <h4 style={{ marginBottom: '15px', color: '#333' }}>Advanced Settings</h4>
               
-              <InputField
+              <Input
                 label="Payment Mode Restriction"
                 type="select"
                 name="paymentModeRestriction"
@@ -611,7 +607,7 @@ export default function Coupons() {
                 ]}
               />
               
-              <InputField
+              <Input
                 label="First Order Only"
                 type="select"
                 name="firstOrderOnly"
