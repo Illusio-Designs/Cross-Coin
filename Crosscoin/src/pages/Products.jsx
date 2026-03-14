@@ -790,7 +790,8 @@ const Products = () => {
     return sortedProducts.slice(startIdx, startIdx + itemsPerPage);
   }, [sortedProducts, currentPage, itemsPerPage]);
   
-  ? safeProducts.length : 0,
+  const debugInfo = {
+    safeProducts: Array.isArray(safeProducts) ? safeProducts.length : 0,
     filteredProducts: Array.isArray(filteredProducts) ? filteredProducts.length : 0,
     sortedProducts: Array.isArray(sortedProducts) ? sortedProducts.length : 0,
     paginatedProducts: Array.isArray(paginatedProducts) ? paginatedProducts.length : 0,

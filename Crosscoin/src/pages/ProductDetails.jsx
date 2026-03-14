@@ -166,8 +166,6 @@ export default function ProductDetails() {
     if (productApiCalledRef.current === productSlug) return; // Prevent multiple calls for same slug
     productApiCalledRef.current = productSlug;
     
-    ');
-    
     // ✅ PARALLELIZED: Fetch product and coupons simultaneously
     const fetchAllData = async () => {
       try {
@@ -738,7 +736,7 @@ export default function ProductDetails() {
           quantity,
         });
       } catch (trackingError) {
-        :', trackingError);
+        // Tracking error silently ignored
       }
 
       // Direct redirect to UnifiedCheckout

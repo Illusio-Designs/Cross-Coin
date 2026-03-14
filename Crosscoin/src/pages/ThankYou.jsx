@@ -174,9 +174,10 @@ export default function ThankYou() {
             // Mark as tracked to prevent duplicate tracking
             sessionStorage.setItem(trackingKey, 'true');
             } else {
+              // No purchase data
             }
         } else {
-          ,
+          setTrackingState({
             hasItems: !!(orderData && orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0)
           });
         }
