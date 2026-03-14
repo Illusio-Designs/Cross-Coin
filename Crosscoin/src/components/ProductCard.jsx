@@ -190,7 +190,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
         {/* Badge - positioned absolutely, outside overflow container */}
         {product?.badge && product.badge !== 'none' && (
           <>
-            {console.log('Badge Rendering:', { badge: product.badge, display: getBadgeDisplay(product.badge) })}
             <span 
               className="product-badge" 
               style={{ 
