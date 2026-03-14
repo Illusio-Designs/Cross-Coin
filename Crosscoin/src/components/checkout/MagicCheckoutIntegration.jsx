@@ -4,33 +4,6 @@ import PropTypes from "prop-types";
 /**
  * Magic Checkout SDK Integration Component
  * Handles Razorpay Magic Checkout SDK loading, initialization, and payment processing
- * 
- * IMPORTANT BEHAVIOR:
- * - SDK loads automatically on component mount (if NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED=true)
- * - API calls (shipping info, promotions) ONLY happen when user clicks "Pay with Magic Checkout" button
- * - Does NOT make API calls on page load or when props change
- * - This prevents premature 400 errors from Magic Checkout endpoints
- * 
- * FLOW:
- * 1. Component mounts → Load SDK from CDN
- * 2. User clicks "Pay with Magic Checkout" → processPayment() is called
- * 3. processPayment() creates Razorpay order
- * 4. processPayment() initializes Magic Checkout SDK with order_id
- * 5. processPayment() fetches promotions and shipping info (optional)
- * 6. processPayment() opens payment modal
- * 7. User completes payment → handlePaymentSuccess() is called
- * 
- * CONSOLE LOGGING:
- * - 🚀 = Process start
- * - 🔧 = SDK initialization
- * - 📦 = Order creation
- * - 💰 = Amount calculation
- * - 📍 = Shipping info
- * - 🎁 = Promotions
- * - 🎯 = Modal opening
- * - ✅ = Success
- * - ❌ = Error
- * - ⚠️ = Warning (non-critical)
  */
 const MagicCheckoutIntegration = ({
   cartItems = [],
@@ -54,18 +27,11 @@ const MagicCheckoutIntegration = ({
   const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
   const MAGIC_CHECKOUT_ENABLED = process.env.NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED === "true";
 
-  // Log configuration on mount
-  useEffect(() => {
-    // Configuration logged on mount
-  }, []);
-
   /**
    * Load Magic Checkout SDK from CDN
    */
   const loadMagicCheckoutSDK = useCallback(() => {
     return new Promise((resolve, reject) => {
-      });
-      
       // Check if SDK is already loaded (standard Razorpay SDK)
       if (window.Razorpay) {
         setSDKLoaded(true);
@@ -96,8 +62,6 @@ const MagicCheckoutIntegration = ({
       setSDKLoading(true);
       const script = document.createElement("script");
       script.id = "razorpay-magic-checkout-script";
-      // Note: Magic Checkout uses the standard Razorpay checkout SDK
-      // The "magic" features are enabled via API configuration, not a separate SDK
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
       script.async = true;
 
@@ -121,8 +85,6 @@ const MagicCheckoutIntegration = ({
    * Initialize Magic Checkout SDK with order_id
    */
   const initializeMagicCheckout = useCallback(async (orderId) => {
-    // Initialize Magic Checkout with order ID
-    
     if (!sdkLoaded || !window.Razorpay) {
       return null;
     }
@@ -137,40 +99,22 @@ const MagicCheckoutIntegration = ({
     }
 
     try {
-      }...` : 'NOT SET',
-        order_id: orderId,
-        hasHandler: !!handlePaymentSuccess,
-        hasModal: true,
-        magic: true, // ✅ This enables Magic Checkout UI
-        hasPrefill: !!(shippingAddress || user),
-        prefillData: {
-          name: shippingAddress?.full_name || shippingAddress?.fullName || user?.name || '',
-          email: user?.email || '',
-          contact: shippingAddress?.phone_number || shippingAddress?.phoneNumber || user?.phone || ''
-        }
-      });
-      
       const razorpayOptions = {
         key: RAZORPAY_KEY,
         order_id: orderId,
-        // ✅ Try both magic flags to ensure compatibility
-        magic: true, // Standard flag
-        "checkout.magic": true, // Alternative flag format
+        magic: true,
         handler: handlePaymentSuccess,
         modal: {
           ondismiss: handlePaymentDismiss,
         },
-        // Prefill customer data for better Magic Checkout experience
         prefill: {
           name: shippingAddress?.full_name || shippingAddress?.fullName || user?.name || '',
           email: user?.email || '',
           contact: shippingAddress?.phone_number || shippingAddress?.phoneNumber || user?.phone || ''
         },
-        // Theme customization
         theme: {
-          color: '#180D3E' // Your brand color
+          color: '#180D3E'
         },
-        // Additional Magic Checkout options
         config: {
           display: {
             language: 'en'
@@ -178,21 +122,17 @@ const MagicCheckoutIntegration = ({
         }
       };
       
-      );
-      
-      // Use standard Razorpay SDK - Magic Checkout features are enabled with magic: true
       const instance = new window.Razorpay(razorpayOptions);
-
       setMagicCheckoutInstance(instance);
       return instance;
     } catch (err) {
       setError(`Failed to initialize Magic Checkout: ${err.message}`);
       return null;
     }
-  }, [sdkLoaded, RAZORPAY_KEY]);
+  }, [sdkLoaded, RAZORPAY_KEY, shippingAddress, user]);
 
   /**
-   * Calculate total amount in paise
+   * Calculate total amount in rupees
    */
   const calculateTotalAmount = () => {
     const cartTotal = cartItems.reduce((sum, item) => {
@@ -203,7 +143,7 @@ const MagicCheckoutIntegration = ({
     const discountAmount = selectedPromotion?.discount || 0;
     const finalAmount = cartTotal + shippingFeeAmount - discountAmount;
 
-    return Math.round(finalAmount * 100) / 100; // Return in rupees
+    return Math.round(finalAmount * 100) / 100;
   };
 
   /**
@@ -279,7 +219,7 @@ const MagicCheckoutIntegration = ({
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || "Failed to apply promotion");
       }
 
@@ -289,7 +229,7 @@ const MagicCheckoutIntegration = ({
         setSelectedPromotion({
           code: data.promotion.code,
           description: data.promotion.description,
-          discount: data.discount_amount / 100, // Convert from paise to rupees
+          discount: data.discount_amount / 100,
         });
         return data;
       } else {
@@ -358,7 +298,6 @@ const MagicCheckoutIntegration = ({
    */
   const handlePaymentSuccess = async (response) => {
     try {
-      // Call the parent success handler
       if (onSuccess) {
         await onSuccess({
           razorpay_payment_id: response.razorpay_payment_id,
@@ -390,7 +329,7 @@ const MagicCheckoutIntegration = ({
       setIsProcessing(true);
       setError(null);
 
-      // Step 0: Validate shipping address serviceability BEFORE creating order
+      // Validate shipping address serviceability
       if (shippingAddress) {
         try {
           const serviceabilityCheck = await fetchShippingInfo([shippingAddress]);
@@ -403,17 +342,16 @@ const MagicCheckoutIntegration = ({
               setIsProcessing(false);
               return false;
             }
-            
-            }
+          }
         } catch (serviceError) {
-          :", serviceError);
           // Continue anyway - don't block checkout
         }
       }
 
-      // Step 1: Calculate total amount
-      const totalAmount = calculateTotalAmount() / 100; // Convert from paise to rupees
-      // Step 2: Create Razorpay order
+      // Calculate total amount
+      const totalAmount = calculateTotalAmount();
+
+      // Create Razorpay order
       const orderResponse = await fetch(
         `${API_URL}/api/payments/magic-checkout/create-order`,
         {
@@ -432,7 +370,7 @@ const MagicCheckoutIntegration = ({
               variation_id: item.variationId || item.variation?.id || null,
               quantity: item.quantity,
               price: parseFloat(item.price || 0),
-              name: item.name || item.title || 'Product', // ✅ Add product name for line_items
+              name: item.name || item.title || 'Product',
               description: item.description || '',
             })),
             shipping_address: {
@@ -458,29 +396,31 @@ const MagicCheckoutIntegration = ({
       }
 
       const orderData = await orderResponse.json();
-      // Step 3: Initialize Magic Checkout with order_id
+
+      // Initialize Magic Checkout with order_id
       const instance = await initializeMagicCheckout(orderData.order_id);
       
       if (!instance) {
         throw new Error("Failed to initialize Magic Checkout");
       }
-      // Step 4: Fetch promotions for the order (optional, non-blocking)
+
+      // Fetch promotions for the order (optional, non-blocking)
       try {
         await fetchPromotions(orderData.order_id);
-        } catch (promoError) {
-        :", promoError);
+      } catch (promoError) {
+        // Silently ignore promotion fetch error
       }
 
-      // Step 5: Optionally fetch shipping info (non-blocking)
+      // Fetch shipping info (non-blocking)
       if (shippingAddress) {
         try {
           await fetchShippingInfo([shippingAddress]);
-          } catch (shippingError) {
-          :", shippingError);
+        } catch (shippingError) {
+          // Silently ignore shipping info fetch error
         }
       }
 
-      // Step 6: Open Magic Checkout payment modal
+      // Open Magic Checkout payment modal
       instance.open();
       return true;
     } catch (err) {
@@ -505,24 +445,15 @@ const MagicCheckoutIntegration = ({
   ]);
 
   /**
-   * Fallback to standard checkout - Removed, open SDK directly
-   */
-  const fallbackToStandardCheckout = useCallback(() => {
-    setError("Magic Checkout is not available. Using standard checkout instead.");
-    
-    // Don't show alert, just log and disable Magic Checkout
-    }, [MAGIC_CHECKOUT_ENABLED, RAZORPAY_KEY]);
-
-  /**
    * Load SDK on mount if enabled
    */
   useEffect(() => {
     if (MAGIC_CHECKOUT_ENABLED) {
       loadMagicCheckoutSDK().catch((err) => {
-        fallbackToStandardCheckout();
+        // SDK load failed
       });
     }
-  }, [MAGIC_CHECKOUT_ENABLED, loadMagicCheckoutSDK, fallbackToStandardCheckout]);
+  }, [MAGIC_CHECKOUT_ENABLED, loadMagicCheckoutSDK]);
 
   /**
    * Expose processPayment function to parent component and globally
@@ -531,7 +462,6 @@ const MagicCheckoutIntegration = ({
     // Make processPayment available globally for cart drawer
     if (typeof window !== 'undefined') {
       window.openMagicCheckout = processPayment;
-      ");
     }
     
     return () => {
@@ -541,17 +471,6 @@ const MagicCheckoutIntegration = ({
       }
     };
   }, [processPayment]);
-
-  /**
-   * Fetch shipping info when address changes - DISABLED
-   * This was causing premature API calls on page load
-   * Shipping info should only be fetched when user clicks "Pay with Magic Checkout"
-   */
-  // useEffect(() => {
-  //   if (shippingAddress && sdkLoaded) {
-  //     fetchShippingInfo([shippingAddress]);
-  //   }
-  // }, [shippingAddress, sdkLoaded, fetchShippingInfo]);
 
   // Don't render anything if Magic Checkout is not enabled
   if (!MAGIC_CHECKOUT_ENABLED) {
@@ -742,4 +661,3 @@ MagicCheckoutIntegration.propTypes = {
 };
 
 export default MagicCheckoutIntegration;
-
