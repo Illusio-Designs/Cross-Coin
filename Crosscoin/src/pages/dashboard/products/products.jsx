@@ -828,7 +828,6 @@ const ProductsPage = () => {
             });
         }
         
-        .length : 0);
         // Debug preserve IDs
         if (formData.id && formData.images) {
             const existingImageIds = formData.images

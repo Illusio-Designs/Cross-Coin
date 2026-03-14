@@ -242,9 +242,6 @@ export default function Categories() {
         }
       });
 
-      )
-      });
-
       if (formData.id) {
         await categoryService.updateCategory(formData.id, formDataToSend);
       } else {

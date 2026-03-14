@@ -809,16 +809,6 @@ const Products = () => {
     return Math.ceil(filteredProducts.length / itemsPerPage) || 1;
   }, [filteredProducts, itemsPerPage]);
 
-  // Debug logs (moved after totalPages is defined)
-  ? safeProducts.length : 0,
-    filteredProducts: Array.isArray(filteredProducts) ? filteredProducts.length : 0,
-    sortedProducts: Array.isArray(sortedProducts) ? sortedProducts.length : 0,
-    paginatedProducts: Array.isArray(paginatedProducts) ? paginatedProducts.length : 0,
-    itemsPerPage,
-    loading,
-    error,
-  });
-
   // Reset to page 1 when filters change (but don't trigger API calls)
   useEffect(() => {
     if (!initialLoadRef.current) {
