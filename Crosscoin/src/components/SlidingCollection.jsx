@@ -71,20 +71,41 @@ const SlidingCollection = ({ collections = [] }) => {
     return `${baseUrl}/uploads/categories/${imageUrl}`;
   };
 
-  // Layout calculation
-  const ACTIVE_W = 480;
-  const ACTIVE_H = 420;
-  const SIDE_W = 360;
-  const SIDE_H = 355;
-  const SIDE_PEEK = 255;
-
+  // Layout calculation - responsive
   const getCardStyle = (index) => {
     if (!stageRef.current) return {};
 
     const sw = stageRef.current.offsetWidth;
+    const sh = stageRef.current.offsetHeight;
     const cx = sw / 2;
-    const cy = ACTIVE_H / 2 + 20;
+    const cy = sh / 2;
     const rel = relPos(index);
+
+    // Responsive sizing based on viewport width
+    const isMobile = sw < 768;
+    const isTablet = sw < 1024;
+
+    let ACTIVE_W, ACTIVE_H, SIDE_W, SIDE_H, SIDE_PEEK;
+
+    if (isMobile) {
+      ACTIVE_W = sw * 0.85;
+      ACTIVE_H = sh * 0.9;
+      SIDE_W = sw * 0.7;
+      SIDE_H = sh * 0.75;
+      SIDE_PEEK = sw * 0.15;
+    } else if (isTablet) {
+      ACTIVE_W = sw * 0.6;
+      ACTIVE_H = sh * 0.85;
+      SIDE_W = sw * 0.45;
+      SIDE_H = sh * 0.75;
+      SIDE_PEEK = sw * 0.2;
+    } else {
+      ACTIVE_W = 480;
+      ACTIVE_H = 420;
+      SIDE_W = 360;
+      SIDE_H = 355;
+      SIDE_PEEK = 255;
+    }
 
     let x, y, w, h, opacity, zIndex, shadow;
 
@@ -101,17 +122,17 @@ const SlidingCollection = ({ collections = [] }) => {
       h = SIDE_H;
       x = cx - SIDE_PEEK - w / 2;
       y = cy - h / 2;
-      opacity = 0.78;
-      zIndex = 5;
-      shadow = '0 8px 24px rgba(0,0,0,0.10)';
+      opacity = isMobile ? 0 : 0.78;
+      zIndex = isMobile ? 0 : 5;
+      shadow = isMobile ? 'none' : '0 8px 24px rgba(0,0,0,0.10)';
     } else if (rel === 1) {
       w = SIDE_W;
       h = SIDE_H;
       x = cx + SIDE_PEEK - w / 2;
       y = cy - h / 2;
-      opacity = 0.78;
-      zIndex = 5;
-      shadow = '0 8px 24px rgba(0,0,0,0.10)';
+      opacity = isMobile ? 0 : 0.78;
+      zIndex = isMobile ? 0 : 5;
+      shadow = isMobile ? 'none' : '0 8px 24px rgba(0,0,0,0.10)';
     } else if (rel === -2) {
       w = SIDE_W;
       h = SIDE_H;
