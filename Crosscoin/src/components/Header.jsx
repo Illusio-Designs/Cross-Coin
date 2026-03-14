@@ -207,11 +207,6 @@ const Header = () => {
         <nav className="header__nav">
           <ul>
             <li>
-              <Link href="/" className={activePage === "/" ? "active" : ""}>
-                Home
-              </Link>
-            </li>
-            <li>
               <Link
                 href="/Products"
                 className={activePage === "/Products" ? "active" : ""}
@@ -357,15 +352,6 @@ const Header = () => {
       <div className={`mobile-menu${isMobileMenuOpen ? " open" : ""}`}>
         <nav className="mobile-menu__nav">
           <ul>
-            <li>
-              <Link
-                href="/"
-                className={activePage === "/" ? "active" : ""}
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Home
-              </Link>
-            </li>
             <li>
               <Link
                 href="/Products"
