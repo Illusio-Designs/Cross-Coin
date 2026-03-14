@@ -7,6 +7,7 @@ import ProductCard from "../components/ProductCard";
 import SafeImage from "../components/common/SafeImage";
 import ProductSkeleton from "../components/common/ProductSkeleton";
 import FeaturedProductSkeleton from "../components/common/FeaturedProductSkeleton";
+import SlidingCollection from "../components/SlidingCollection";
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -537,131 +538,7 @@ const Home = () => {
         <HeroSlider slides={slides} />
         <CouponStrip />
         <TrustBadges />
-        <div className="shop-by-category">
-          <div className="shop-by-category__container">
-            <div className="category-title">
-            <h2 className="section-title">Curate Your Collection</h2>
-            <button className="hero-btn" onClick={() => {
-              if (currentCategory.name) {
-                window.location.href = `/Products?category=${encodeURIComponent(currentCategory.name)}`;
-              } else {
-                window.location.href = '/Products';
-              }
-            }}>
-              View All Products
-            </button>
-          </div>
-          <div className="category-section">
-            <div className="category-sidebar">
-              <div className="category-item" ref={categoryImageRef}>
-                <button className="slider-arrow slider-arrow-left" aria-label="Previous category" onClick={() => scrollCategoryImage('left')}>
-                  <IoIosArrowBack />
-                </button>
-                <div style={{ position: 'relative', width: 350, height: 400 }}>
-                  <img
-                    src={getCategoryImageSrc()}
-                    alt={currentCategory.name || 'Category'}
-                    className="category-card-image"
-                    loading="eager"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      display: 'block'
-                    }}
-                    onError={(e) => {
-                      e.target.style.display = 'none'; // Hide broken image
-                    }}
-                  />
-                </div>
-                <h3>{currentCategory.name}</h3>
-                <button className="slider-arrow slider-arrow-right" aria-label="Next category" onClick={() => scrollCategoryImage('right')}>
-                  <IoIosArrowForward />
-                </button>
-              </div>
-            </div>
-            <div className="category-products">
-              {categoryLoading ? (
-                <div className="products-slider" ref={categorySliderRef}>
-                  {Array(6).fill(0).map((_, idx) => (
-                    <ProductSkeleton key={`skeleton-${idx}`} />
-                  ))}
-                </div>
-              ) : currentCategoryProducts.length > 0 ? (
-                <>
-                  {showCategoryArrows && (
-                    <button className="slider-arrow slider-arrow-left" aria-label="Previous slider" onClick={() => scrollSlider('left')}>
-                      <IoIosArrowBack />
-                    </button>
-                  )}
-                  <div className="products-slider" ref={categorySliderRef}>
-                    {currentCategoryProducts.map((product) => {
-                      // Use centralized image selection
-                      const imageData = product.images?.[0] || product.image || null;
-                      
-                      // Get price from ProductVariations (API response structure)
-                      const firstVariation = product.ProductVariations?.[0] || product.variations?.[0];
-                      const productPrice = firstVariation?.price || product.price || 0;
-                      const productComparePrice = firstVariation?.comparePrice || product.comparePrice || 0;
-
-                      const formattedProduct = {
-                        id: product.id,
-                        name: product.name,
-                        slug: product.slug,
-                        description: product.description,
-                        badge: product.badge || null,
-                        images: imageData ? [imageData] : [],
-                        price: productPrice,
-                        comparePrice: productComparePrice,
-                        variations: (product.ProductVariations || product.variations || []).length > 0 ? (product.ProductVariations || product.variations).map(variation => ({
-                          id: variation.id,
-                          sku: variation.sku,
-                          price: variation.price || 0,
-                          comparePrice: variation.comparePrice || 0,
-                          stock: variation.stock || 0,
-                          attributes: variation.attributes,
-                          images: variation.images || []
-                        })) : [{
-                          id: null,
-                          sku: null,
-                          price: productPrice,
-                          comparePrice: productComparePrice,
-                          stock: 0,
-                          attributes: {},
-                          images: []
-                        }],
-                        category: {
-                          name: currentCategory.name
-                        }
-                      };
-                      
-                      return (
-                        <ProductCard
-                          key={product.id}
-                          product={formattedProduct}
-                          onProductClick={handleProductClick}
-                          onAddToCart={handleAddToCart}
-                        />
-                      );
-                    })}
-                  </div>
-                  {showCategoryArrows && (
-                    <button className="slider-arrow slider-arrow-right" aria-label="Next slider" onClick={() => scrollSlider('right')}>
-                      <IoIosArrowForward />
-                    </button>
-                  )}
-                </>
-              ) : (
-                <div className="no-products-center">
-                  <p style={{ color: '#CE1E36', fontSize: '1.2rem', fontWeight: '500' }}>
-                    No products available in this category
-                  </p>
-                </div>
-              )}
-            </div>
-            </div>
-          </div>
-        </div>
+        <SlidingCollection collections={categories} />
         <div className="featured-products-section">
           <h2 className="section-title">Unlocked Exclusives</h2>
           <div className="featured-products-container">
