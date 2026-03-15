@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Header from "../components/Header";
-import ProductCard, { filterOptions } from "../components/ProductCard";
+import ProductCard from "../components/ProductCard";
 import ProductSkeleton from "../components/common/ProductSkeleton";
 import {
   FiFilter,
