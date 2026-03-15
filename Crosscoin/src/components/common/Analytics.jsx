@@ -1,5 +1,3 @@
-"use client";
-
 import Script from "next/script";
 
 const FB_PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID || "1313610943804396"; // Facebook Pixel ID

@@ -95,6 +95,20 @@ These files create class instances or run code at module level. This is fine for
 
 ---
 
+---
+
+## Issue 4 — `"use client"` directives in Pages Router components
+
+App Router directives have no meaning in Pages Router and can confuse HMR.
+
+| Done | File | Fix |
+|------|------|-----|
+| [x] | `src/components/common/Analytics.jsx` | Removed `"use client"` |
+| [x] | `src/components/common/UTMTracker.jsx` | Removed `'use client'` |
+| [x] | `src/pages/dashboard/orders/orders.jsx` | Removed stray `import "../../../styles/dashboard/seo.css"` (already in `_app.jsx`) |
+
+---
+
 ## Priority Order
 
 1. **Issue 1 (CSS imports)** — causes build errors, fix first
