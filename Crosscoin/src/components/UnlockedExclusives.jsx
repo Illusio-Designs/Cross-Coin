@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import SafeImage from './common/SafeImage';
-import '../styles/components/UnlockedExclusives.css';
 
 const UnlockedExclusives = ({ products = [] }) => {
   const [currentProduct, setCurrentProduct] = useState(0);

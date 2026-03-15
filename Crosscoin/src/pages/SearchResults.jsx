@@ -8,8 +8,6 @@ import Loader from '../components/Loader';
 import { Pagination } from '../components/ui';
 import SeoWrapper from '../console/SeoWrapper';
 import { usePagination } from '../hooks/usePagination';
-import '../styles/pages/SearchResults.css';
-import '../styles/common/TableControls.css';
 
 // ✅ Debounce function moved outside component to prevent recreation
 function createDebouncedSearch(func, wait) {

@@ -159,6 +159,7 @@ class PerformanceMonitor {
    * Start periodic flush of metrics
    */
   startPeriodicFlush() {
+    if (typeof window === 'undefined') return; // SSR guard
     this.flushIntervalId = setInterval(() => {
       this.flush();
     }, this.flushInterval);

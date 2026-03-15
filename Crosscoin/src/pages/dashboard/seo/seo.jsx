@@ -1,4 +1,3 @@
-import "../../../styles/dashboard/seo.css";
 import { useState, useEffect, useCallback } from "react";
 import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
 import Loader from "../../../components/Loader";

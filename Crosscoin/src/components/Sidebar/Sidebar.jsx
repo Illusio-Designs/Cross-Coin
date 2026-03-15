@@ -5,7 +5,6 @@ import SafeImage from "../common/SafeImage";
 import {
   FaHome, FaUser, FaBox, FaClipboardList, FaChartBar, FaLock, FaChevronDown, FaChevronLeft, FaChevronRight, FaQuestionCircle, FaShoppingCart, FaCreditCard, FaStar, FaCog, FaTags, FaTruck, FaFileAlt, FaSignOutAlt, FaImages, FaTimes, FaStore
 } from 'react-icons/fa';
-import "./Sidebar.css";
 
 const menu = [
   {

@@ -6,7 +6,6 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import SeoWrapper from '../console/SeoWrapper';
 import Loader from '../components/Loader';
-import '../styles/pages/Collections.css';
 
 const Collections = () => {
   const [categories, setCategories] = useState([]);

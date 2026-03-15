@@ -5,10 +5,7 @@ import { useRouter } from "next/router";
 import { getPublicPolicyByName } from "@/services/publicApi";
 import DOMPurify from "dompurify";
 
-// Load page-specific CSS
-import "../styles/pages/Policy.css";
-import "../styles/components/Header.css";
-import "../styles/components/Footer.css";
+// Load page-specific CSS - moved to _app.jsx
 
 export default function Policy() {
   const router = useRouter();

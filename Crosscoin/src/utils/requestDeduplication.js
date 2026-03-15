@@ -69,11 +69,3 @@ export const getPendingRequestKeys = () => {
   return Array.from(pendingRequests.keys());
 };
 
-export default {
-  deduplicateRequest,
-  clearPendingRequest,
-  clearAllPendingRequests,
-  getPendingRequestsCount,
-  getPendingRequestKeys
-};
-

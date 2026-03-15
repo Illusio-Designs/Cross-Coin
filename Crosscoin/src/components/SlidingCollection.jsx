@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { getPublicCategoryByName } from '../services/publicApi';
-import '../styles/components/SlidingCollection.css';
 
 const SlidingCollection = ({ collections = [] }) => {
   const stageRef = useRef(null);

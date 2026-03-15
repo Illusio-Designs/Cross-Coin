@@ -1,5 +1,4 @@
 import React from 'react';
-import '../styles/components/TrustBadges.css';
 
 const TrustBadges = () => {
   const badges = [

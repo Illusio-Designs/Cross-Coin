@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import '../../styles/dashboard/Card.css';
 import { FaBox, FaShoppingCart, FaDollarSign, FaUsers, FaStar, FaClock, FaRupeeSign, FaExclamationTriangle, FaCreditCard, FaUndo, FaChartBar } from "react-icons/fa";
 import { dashboardService } from '../../services';
 import Loader from '../Loader';

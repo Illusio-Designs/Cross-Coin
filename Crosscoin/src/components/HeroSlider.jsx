@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SafeImage from './common/SafeImage';
 import HeroSliderSkeleton from './HeroSliderSkeleton';
-import '../styles/components/HeroSlider.css';
 
 const HeroSlider = ({ slides = [] }) => {
   const [current, setCurrent] = useState(0);
