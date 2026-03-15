@@ -256,4 +256,4 @@ function WishlistProvider({ children }) {
   );
 }
 
-export { WishlistContext, WishlistProvider, useWishlist }; 
+export { WishlistProvider, useWishlist }; 
