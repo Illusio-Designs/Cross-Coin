@@ -33,25 +33,6 @@ const FacebookPixel = () => {
   );
 };
 
-// Helper to track custom Facebook Pixel events
-export function fbqTrack(event, params = {}) {
-  if (typeof window !== "undefined" && window.fbq) {
-    try {
-      // Block unwanted events from browser extensions or third-party scripts
-      const blockedEvents = ['SubscribedButtonClick'];
-      if (blockedEvents.includes(event)) {
-        return false;
-      }
-      
-      window.fbq("track", event, params);
-      return true;
-    } catch (error) {
-      return false;
-    }
-  } else {
-    return false;
-  }
-}
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID || "G-XXXXXXXXXX"; // Google Analytics Measurement ID
 const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID || "lzy55n7g8h"; // Microsoft Clarity Project ID
