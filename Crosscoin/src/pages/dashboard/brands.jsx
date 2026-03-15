@@ -4,7 +4,6 @@ import { FiPlus, FiEdit2, FiTrash2, FiX, FiSave, FiToggleLeft, FiToggleRight, Fi
 import { brandService } from '@/services';
 import { Modal, Button, Input } from '@/components/ui';
 import Loader from '@/components/Loader';
-import '@/styles/dashboard/brands.css';
 
 export default function BrandManager() {
     const [brands, setBrands] = useState([]);

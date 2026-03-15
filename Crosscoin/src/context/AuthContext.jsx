@@ -144,4 +144,3 @@ function useAuth() {
 }
 
 export { AuthProvider, useAuth };
-export default AuthContext; 

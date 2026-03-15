@@ -1,4 +1,3 @@
-"use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from 'next/dynamic';
 import Header from "../components/Header";
@@ -31,12 +30,7 @@ import DOMPurify from 'dompurify';
 import colorMap from '../components/products/colorMap';
 import { seoService } from '../services/index';
 
-// Load page-specific CSS
-import '../styles/components/Footer.css';
-import '../styles/components/Header.css';
-import '../styles/components/Testimonials.css';
-import '../styles/components/TrustBadges.css';
-import '../styles/pages/Home.css';
+// Load page-specific CSS - moved to _app.jsx
 
 // Lazy load below-the-fold components for better performance
 const Footer = dynamic(() => import("../components/Footer"), {

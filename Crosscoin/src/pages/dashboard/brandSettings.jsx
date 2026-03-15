@@ -4,7 +4,6 @@ import { FiSave, FiEdit2, FiTrash2, FiX, FiLock, FiUnlock, FiPlus, FiRefreshCw }
 import { brandSettingsService, brandService } from '@/services';
 import { Modal, Button, Input } from '@/components/ui';
 import Loader from '@/components/Loader';
-import '@/styles/dashboard/brandSettings.css';
 
 export default function BrandSettingsManager() {
     const [brands, setBrands] = useState([]);

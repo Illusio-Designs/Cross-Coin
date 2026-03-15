@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Pagination } from '@/components/ui';
-import '../../../styles/dashboard/utmAnalytics.css';
 
 const UTMAnalytics = () => {
   const [utmData, setUtmData] = useState([]);

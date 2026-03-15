@@ -58,10 +58,7 @@ import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 // import MagicCheckoutIntegration from "../components/checkout/MagicCheckoutIntegration";
 // import ExpressCheckout from "../components/checkout/ExpressCheckout";
 
-// Load page-specific CSS
-import "../styles/pages/UnifiedCheckout.css";
-import "../styles/components/Header.css";
-import "../styles/components/Footer.css";
+// Load page-specific CSS - moved to _app.jsx
 
 export default function UnifiedCheckout() {
   const { user, isAuthenticated } = useAuth();

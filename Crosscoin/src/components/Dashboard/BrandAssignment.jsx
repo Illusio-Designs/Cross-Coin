@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import '@/styles/dashboard/brandAssignment.css';
 
 /**
  * BrandAssignment Component

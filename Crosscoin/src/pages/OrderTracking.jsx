@@ -6,7 +6,6 @@ import SafeImage from '../components/common/SafeImage';
 import { trackOrderByAWB, trackOrderByOrderNumber } from '../services/publicApi';
 import { formatAttributesForDisplay } from '../utils/productAttributeFormatter';
 import { getStatusColor, getStatusDisplayText } from '../utils/statusUtils';
-import '../styles/pages/OrderTracking.css';
 
 export default function OrderTracking() {
     const [trackingInput, setTrackingInput] = useState('');

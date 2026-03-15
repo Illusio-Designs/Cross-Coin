@@ -4,7 +4,6 @@ import { useCart } from '../../context/CartContext';
 import { useRouter } from 'next/router';
 import SafeImage from '../common/SafeImage';
 import QuantityOfferBar from './QuantityOfferBar';
-import './CartDrawer.css';
 
 // Helper functions from CartStep
 function pickCartItemImage(item) {

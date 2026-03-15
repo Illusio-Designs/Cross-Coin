@@ -4,8 +4,6 @@ import Loader from "@/components/Loader";
 import { paymentService } from "@/services";
 import { debounce } from 'lodash';
 import { toast } from "react-hot-toast";
-import "../../../styles/dashboard/seo.css";
-import "../../../styles/dashboard/payments.css";
 
 export default function Payments() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);

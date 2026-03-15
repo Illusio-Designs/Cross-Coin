@@ -6,9 +6,6 @@ import { sliderService, categoryService, brandService } from "../../../services"
 import { debounce } from 'lodash';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../../context/AuthContext';
-import "../../../styles/dashboard/seo.css";
-import "../../../styles/common/TableControls.css";
-import "../../../styles/dashboard/slider.css";
 import { toast } from 'react-hot-toast';
 
 export default function Slider() {

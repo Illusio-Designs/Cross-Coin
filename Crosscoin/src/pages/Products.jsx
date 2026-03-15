@@ -23,12 +23,8 @@ import { fbqTrack } from "../utils/fbqTrack";
 import colorMap from "../components/products/colorMap";
 import { Pagination } from "../components/ui";
 import cacheManager from "../services/cacheManager";
-import "../styles/common/TableControls.css";
 
-// Load page-specific CSS
-import "../styles/pages/products.css";
-import "../styles/components/Header.css";
-import "../styles/components/Footer.css";
+// Load page-specific CSS - moved to _app.jsx
 
 // Lazy load Footer
 const Footer = dynamic(() => import("../components/Footer"), {
