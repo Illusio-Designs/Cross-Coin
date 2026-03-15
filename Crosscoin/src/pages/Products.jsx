@@ -19,7 +19,7 @@ import {
 } from "../services/publicApi";
 import { getProductImageSrc } from "../utils/imageUtils";
 import SeoWrapper from "../console/SeoWrapper";
-import { fbqTrack } from "../components/common/Analytics";
+import { fbqTrack } from "../utils/fbqTrack";
 import colorMap from "../components/products/colorMap";
 import { Pagination } from "../components/ui";
 import cacheManager from "../services/cacheManager";

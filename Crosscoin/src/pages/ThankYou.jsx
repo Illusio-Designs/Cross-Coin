@@ -4,7 +4,7 @@ import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import { getGuestOrder, getUserOrders } from "../services/publicApi";
 import { useAuth } from "../context/AuthContext";
-import { fbqTrack } from "../components/common/Analytics";
+import { fbqTrack } from "../utils/fbqTrack";
 
 // Load page-specific CSS
 import "../styles/pages/ThankYou.css";

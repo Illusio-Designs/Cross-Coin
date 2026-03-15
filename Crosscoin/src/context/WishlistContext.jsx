@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { getWishlist, addToWishlist as apiAddToWishlist, removeFromWishlist as apiRemoveFromWishlist, clearWishlist as apiClearWishlist } from '../services/publicApi';
-import { fbqTrack } from '../components/common/Analytics';
+import { fbqTrack } from '../utils/fbqTrack';
 import { 
   showAddToWishlistSuccessToast, 
   showAddToWishlistErrorToast, 

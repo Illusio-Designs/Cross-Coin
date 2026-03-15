@@ -11,7 +11,7 @@ import { getPublicProductBySlug, createPublicReview, getPublicCoupons, getPublic
 import SeoWrapper from '../console/SeoWrapper';
 import { showValidationErrorToast, showReviewSubmittedSuccessToast, showReviewSubmittedErrorToast } from '../utils/toast';
 import Loader from '../components/Loader';
-import { fbqTrack } from '../components/common/Analytics';
+import { fbqTrack } from '../utils/fbqTrack';
 import InfiniteReviewsSlider from '../components/InfiniteReviewsSlider';
 import { getProductImageSrc } from '../utils/imageUtils';
 import DOMPurify from 'dompurify';

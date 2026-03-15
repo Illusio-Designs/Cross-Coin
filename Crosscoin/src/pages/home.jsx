@@ -25,7 +25,7 @@ const CouponStrip = dynamic(() => import("../components/CouponStrip"), {
 import TrustBadges from "../components/TrustBadges";
 
 import { useRouter } from 'next/router';
-import { fbqTrack } from '../components/common/Analytics';
+import { fbqTrack } from '../utils/fbqTrack';
 import { showValidationErrorToast } from '../utils/toast';
 import DOMPurify from 'dompurify';
 import colorMap from '../components/products/colorMap';
