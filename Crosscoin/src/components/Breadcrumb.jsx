@@ -1,10 +1,34 @@
-import React from "react";
+import React, { createContext, useContext, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 
+// Create a context for breadcrumb data
+const BreadcrumbContext = createContext({
+  customBreadcrumbs: null,
+  setCustomBreadcrumbs: () => {},
+});
+
+// Export the provider
+export const BreadcrumbProvider = ({ children }) => {
+  const [customBreadcrumbs, setCustomBreadcrumbs] = useState(null);
+
+  return (
+    <BreadcrumbContext.Provider value={{ customBreadcrumbs, setCustomBreadcrumbs }}>
+      {children}
+    </BreadcrumbContext.Provider>
+  );
+};
+
+// Export the hook to use breadcrumb context
+export const useBreadcrumb = () => {
+  const context = useContext(BreadcrumbContext);
+  return context;
+};
+
 const Breadcrumb = () => {
   const router = useRouter();
-  const { pathname } = router;
+  const { pathname, query } = router;
+  const { customBreadcrumbs } = useBreadcrumb();
 
   // Define breadcrumb labels for each route
   const breadcrumbLabels = {
@@ -15,7 +39,9 @@ const Breadcrumb = () => {
     "/collections": "Collections",
     "/contact": "Contact",
     "/products": "Products",
+    "/Products": "Products",
     "/product-details": "Product Details",
+    "/ProductDetails": "Product Details",
     "/search-results": "Search Results",
     "/wishlist": "Wishlist",
     "/profile": "My Profile",
@@ -29,6 +55,11 @@ const Breadcrumb = () => {
 
   // Generate breadcrumb items
   const generateBreadcrumbs = () => {
+    // If custom breadcrumbs are provided, use them
+    if (customBreadcrumbs && Array.isArray(customBreadcrumbs)) {
+      return customBreadcrumbs;
+    }
+
     const paths = pathname.split("/").filter((path) => path);
     
     let breadcrumbs = [
@@ -38,7 +69,12 @@ const Breadcrumb = () => {
     let currentPath = "";
     paths.forEach((path, index) => {
       currentPath += `/${path}`;
-      const label = breadcrumbLabels[currentPath] || path.charAt(0).toUpperCase() + path.slice(1);
+      let label = breadcrumbLabels[currentPath] || path.charAt(0).toUpperCase() + path.slice(1);
+      
+      // Handle query parameters for dynamic labels
+      if (currentPath === "/Products" && query.category) {
+        label = decodeURIComponent(query.category);
+      }
       
       // Don't add duplicate Home
       if (currentPath !== "/") {

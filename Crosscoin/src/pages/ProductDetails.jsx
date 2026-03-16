@@ -5,6 +5,7 @@ import SafeImage from "../components/common/SafeImage";
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
+import { useBreadcrumb } from '../components/Breadcrumb';
 import { useRouter as useNextRouter } from "next/navigation";
 import { getPublicProductBySlug, createPublicReview, getPublicCoupons, getPublicProductReviews } from '../services/publicApi';
 import SeoWrapper from '../console/SeoWrapper';
@@ -22,6 +23,7 @@ import colorMap from '../components/products/colorMap';
 export default function ProductDetails() {
   const router = useRouter();
   const nextRouter = useNextRouter();
+  const { setCustomBreadcrumbs } = useBreadcrumb();
   
   // Get slug from router query - add safety check for router.query
   const rawSlug = router.query?.slug;
@@ -212,6 +214,15 @@ export default function ProductDetails() {
               setSelectedAttributes(initialAttributes);
             }
           }
+          
+          // Update breadcrumbs with product name
+          if (productResponse.data.name) {
+            setCustomBreadcrumbs([
+              { label: "Home", path: "/" },
+              { label: "Products", path: "/Products" },
+              { label: productResponse.data.name, path: router.asPath, isLast: true }
+            ]);
+          }
         } else {
           setError('Product not found or no data returned');
           }
@@ -234,6 +245,13 @@ export default function ProductDetails() {
       setLoading(false);
     }
   }, [productSlug, router.isReady]);
+
+  // Cleanup breadcrumbs on unmount
+  useEffect(() => {
+    return () => {
+      setCustomBreadcrumbs(null);
+    };
+  }, [setCustomBreadcrumbs]);
 
   // Fetch reviews with pagination
   useEffect(() => {
