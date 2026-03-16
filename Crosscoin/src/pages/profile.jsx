@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import Header from "../components/Header";
 import Footer from "../components/Footer";
 import SafeImage from "../components/common/SafeImage";
 import { useRouter } from "next/router";
@@ -318,7 +317,6 @@ export default function Profile() {
 
   return (
     <SeoWrapper pageName="profile">
-      <Header />
       <div className="profile-layout">
         <aside className="profile-sidebar">
           <div className="profile-welcome">
@@ -820,4 +818,5 @@ export default function Profile() {
     </SeoWrapper>
   );
 }
+
 

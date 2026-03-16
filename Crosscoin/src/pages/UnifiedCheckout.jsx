@@ -32,7 +32,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Footer from "../components/Footer";
-import Header from "../components/Header";
 import { useCart } from "../context/CartContext";
 import { useRouter } from "next/router";
 import CartStep from "../components/checkout/CartStep";
@@ -1146,7 +1145,6 @@ export default function UnifiedCheckout() {
 
   return (
     <>
-      <Header />
       <div className="cart-main checkout-container">
         <div className="cart-section">
           {/* Products Section */}
@@ -1197,4 +1195,5 @@ export default function UnifiedCheckout() {
     </>
   );
 }
+
 

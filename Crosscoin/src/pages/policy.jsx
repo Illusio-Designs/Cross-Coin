@@ -1,5 +1,4 @@
 import Footer from "../components/Footer";
-import Header from "../components/Header";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getPublicPolicyByName } from "@/services/publicApi";
@@ -40,7 +39,6 @@ export default function Policy() {
 
   return (
     <>
-      <Header />
       <div className="policy-container">
         {loading && <div>Loading policy...</div>}
         {error && <div className="policy-section" style={{ color: 'red' }}><h2>Error</h2><p>{error}</p></div>}

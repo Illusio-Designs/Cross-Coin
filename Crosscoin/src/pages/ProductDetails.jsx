@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
-import Header from "../components/Header";
 import SafeImage from "../components/common/SafeImage";
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
@@ -798,7 +797,6 @@ export default function ProductDetails() {
         seo={null}
       >
         <div className="product-details-container">
-          <Header />
           <div className="product-details">
             <div style={{ textAlign: 'center', padding: '50px' }}>
               <Loader />
@@ -817,7 +815,6 @@ export default function ProductDetails() {
         seo={null}
       >
         <div className="product-details-container">
-          <Header />
           <div className="product-details">
             <div style={{ textAlign: 'center', padding: '50px' }}>
               <h2>Product Not Found</h2>
@@ -851,7 +848,6 @@ export default function ProductDetails() {
         seo={null}
       >
         <div className="product-details-container">
-          <Header />
           <div className="product-details">
             <div style={{ textAlign: 'center', padding: '50px' }}>
               <h2>Product Not Found</h2>
@@ -885,7 +881,6 @@ export default function ProductDetails() {
         seo={null}
       >
         <div className="product-details-container">
-          <Header />
           <div className="product-details">
             <div style={{ textAlign: 'center', padding: '50px' }}>
               <Loader />
@@ -1179,7 +1174,6 @@ export default function ProductDetails() {
       seoData={null}
     >
       <div className="product-details-container">
-        <Header />
         <div className="product-details">
           <div className="product-gallery">
             <div className="product-image-container">
@@ -1575,3 +1569,4 @@ export default function ProductDetails() {
     </SeoWrapper>
   );
 } 
+
