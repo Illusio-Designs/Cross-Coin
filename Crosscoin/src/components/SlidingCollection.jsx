@@ -224,18 +224,16 @@ const SlidingCollection = ({ collections = [] }) => {
               }}
             >
               <div className="card-inner">
-                {/* Background Image with Overlay */}
-                <div 
-                  className="card-background"
-                  style={{
-                    backgroundImage: imageSrc ? `url('${imageSrc}')` : 'none',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    position: 'absolute',
-                    inset: 0,
-                    zIndex: 0
-                  }}
-                />
+                {/* Background Image */}
+                {imageSrc && (
+                  <img
+                    src={imageSrc}
+                    alt={collection.name}
+                    className="card-bg-img"
+                    draggable={false}
+                  />
+                )}
+                {!imageSrc && <div className="card-bg-fallback" />}
 
                 {/* SVG Pattern Overlay */}
                 <svg className="card-pattern" viewBox="0 0 420 400" xmlns="http://www.w3.org/2000/svg">
