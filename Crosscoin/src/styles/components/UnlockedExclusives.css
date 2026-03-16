@@ -138,12 +138,25 @@
 
 .strip-wrap {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.strip-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #666;
+  text-transform: uppercase;
+  margin: 0;
+  padding: 0;
 }
 
 .strip-viewport {
   overflow: hidden;
   width: 100%;
-  max-width: calc(142px * 3 + 12px * 2);
+  max-width: calc(100px * 10 + 10px * 9);
   border-radius: 12px;
 }
 
@@ -156,9 +169,9 @@
 
 .strip-card {
   flex-shrink: 0;
-  width: 130px;
-  height: 160px;
-  border-radius: 12px;
+  width: 100px;
+  height: 120px;
+  border-radius: 10px;
   overflow: hidden;
   background: #f5f5f5;
   border: 2px solid #e0e0e0;
@@ -168,7 +181,6 @@
 }
 
 .strip-card:hover {
-  transform: scale(1.04);
   border-color: #CE1E36;
 }
 
@@ -207,6 +219,16 @@
 .strip-btn:hover {
   background: #CE1E36;
   border-color: #CE1E36;
+}
+
+.strip-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.strip-btn:disabled:hover {
+  background: #f5f5f5;
+  border-color: #e0e0e0;
 }
 
 .strip-btn svg {
@@ -726,8 +748,8 @@
   }
 
   .strip-card {
-    width: 120px;
-    height: 150px;
+    width: 90px;
+    height: 110px;
   }
 }
 
