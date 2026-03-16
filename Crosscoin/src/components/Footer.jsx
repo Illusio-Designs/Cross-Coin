@@ -41,8 +41,8 @@ const Footer = () => {
         <h3>Popular Searches</h3>
         <div className="footer__search-grid">
           {categories.map((cat) => (
-            <Link key={cat.id} href={`/category/${cat.slug || cat.id}`}>
-              <a className="footer__search-link">{cat.name}</a>
+            <Link key={cat.id} href={`/Products?category=${encodeURIComponent(cat.name)}`} className="footer__search-link">
+              {cat.name}
             </Link>
           ))}
         </div>
