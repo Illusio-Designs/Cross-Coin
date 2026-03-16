@@ -70,9 +70,7 @@ const Breadcrumb = () => {
                 <span className="breadcrumb__current">{crumb.label}</span>
               ) : (
                 <>
-                  <Link href={crumb.path}>
-                    <a className="breadcrumb__link">{crumb.label}</a>
-                  </Link>
+                  <Link href={crumb.path} className="breadcrumb__link">{crumb.label}</Link>
                   <span className="breadcrumb__separator">/</span>
                 </>
               )}
