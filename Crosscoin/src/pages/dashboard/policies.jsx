@@ -3,9 +3,7 @@ import { Button, Input, Modal, Table, Pagination } from "@/components/ui";
 import Loader from "@/components/Loader";
 import { policyService } from "@/services";
 import { debounce } from 'lodash';
-import "../../styles/dashboard/seo.css";
 import dynamic from "next/dynamic";
-import "react-quill/dist/quill.snow.css";
 import DOMPurify from 'dompurify';
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });

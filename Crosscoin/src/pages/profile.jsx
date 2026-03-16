@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import SafeImage from "../components/common/SafeImage";
-import "../styles/pages/Profile.css";
 import { useRouter } from "next/router";
 import SeoWrapper from "../console/SeoWrapper";
 import {

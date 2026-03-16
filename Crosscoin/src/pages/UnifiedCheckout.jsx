@@ -52,16 +52,13 @@ import {
   showOrderPlacedErrorToast,
   showValidationErrorToast,
 } from "../utils/toast";
-import { fbqTrack } from "../components/common/Analytics";
+import { fbqTrack } from "../utils/fbqTrack";
 import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 // Magic Checkout components removed - using traditional checkout only
 // import MagicCheckoutIntegration from "../components/checkout/MagicCheckoutIntegration";
 // import ExpressCheckout from "../components/checkout/ExpressCheckout";
 
-// Load page-specific CSS
-import "../styles/pages/UnifiedCheckout.css";
-import "../styles/components/Header.css";
-import "../styles/components/Footer.css";
+// Load page-specific CSS - moved to _app.jsx
 
 export default function UnifiedCheckout() {
   const { user, isAuthenticated } = useAuth();
@@ -160,10 +157,6 @@ export default function UnifiedCheckout() {
         // Load shipping fees
         
         const feeData = await getShippingFees();
-        setShippingFeeData({
-          data: feeData
-        });
-        
         const fees = Array.isArray(feeData) ? feeData : feeData?.shippingFees || feeData?.fees || [];
         setShippingFees(fees);
         if (!shippingFee && fees.length > 0) {

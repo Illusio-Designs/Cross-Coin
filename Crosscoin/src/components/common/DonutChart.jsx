@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import '../../styles/common/DonutChart.css';
 
 const DonutChart = ({ 
     data, 

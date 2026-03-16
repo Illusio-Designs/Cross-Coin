@@ -5,7 +5,6 @@ import BrandTags from "@/components/Dashboard/BrandTags";
 import BrandAssignment from "@/components/Dashboard/BrandAssignment";
 import { categoryService } from "@/services";
 import { debounce } from 'lodash';
-import "../../../styles/dashboard/seo.css";
 
 export default function Categories() {
   const [isModalOpen, setIsModalOpen] = useState(false);

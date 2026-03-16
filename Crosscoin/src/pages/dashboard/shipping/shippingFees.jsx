@@ -3,7 +3,6 @@ import { Button, Input, Modal, Table, Pagination } from "@/components/ui";
 import Loader from "@/components/Loader";
 import { shippingFeeService } from "@/services";
 import { debounce } from 'lodash';
-import "../../../styles/dashboard/seo.css";
 
 export default function ShippingFees() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);

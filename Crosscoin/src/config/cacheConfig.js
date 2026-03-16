@@ -110,5 +110,3 @@ export const getCacheKey = (type, identifier = '') => {
   }
   return config.key;
 };
-
-export default CACHE_CONFIG;

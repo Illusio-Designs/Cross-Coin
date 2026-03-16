@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { useAuth } from "../../context/AuthContext";
-import "../../styles/pages/auth/adminlogin.css";
 
 const EyeOpen = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#CE1E36" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { getPublicCoupons } from '../services/publicApi';
-import '../styles/components/CouponStrip.css';
 
 const CouponStrip = () => {
   const [coupons, setCoupons] = useState([]);

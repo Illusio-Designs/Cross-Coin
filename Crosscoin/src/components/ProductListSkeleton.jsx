@@ -1,5 +1,4 @@
 import React from 'react';
-import './ProductListSkeleton.css';
 
 const ProductListSkeleton = ({ count = 12 }) => {
   return (
