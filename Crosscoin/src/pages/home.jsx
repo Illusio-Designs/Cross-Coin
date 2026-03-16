@@ -744,6 +744,8 @@ const Home = () => {
                         images: imageData ? [imageData] : [],
                         price: productPrice,
                         comparePrice: productComparePrice,
+                        reviewCount: product.reviewCount || 0,
+                        avgRating: product.avgRating || null,
                         variations: (product.ProductVariations || product.variations || []).length > 0 ? (product.ProductVariations || product.variations).map(variation => ({
                           id: variation.id,
                           sku: variation.sku,
@@ -1116,23 +1118,27 @@ const Home = () => {
                   images: imageData ? [imageData] : [],
                   price: productPrice,
                   comparePrice: productComparePrice,
-                  variations: (product.ProductVariations || product.variations || []).length > 0 ? (product.ProductVariations || product.variations).map(variation => ({
-                    id: variation.id,
-                    sku: variation.sku,
-                    price: variation.price || 0,
-                    comparePrice: variation.comparePrice || 0,
-                    stock: variation.stock || 0,
-                    attributes: variation.attributes,
-                    images: variation.images || []
-                  })) : [{
-                    id: null,
-                    sku: null,
-                    price: productPrice,
-                    comparePrice: productComparePrice,
-                    stock: 0,
-                    attributes: {},
-                    images: []
-                  }],
+                  reviewCount: product.reviewCount || 0,
+                  avgRating: product.avgRating || null,
+                  variations: (product.ProductVariations || product.variations || []).length > 0
+                    ? (product.ProductVariations || product.variations).map(variation => ({
+                        id: variation.id,
+                        sku: variation.sku,
+                        price: variation.price || 0,
+                        comparePrice: variation.comparePrice || 0,
+                        stock: variation.stock || 0,
+                        attributes: variation.attributes,
+                        images: variation.images || []
+                      }))
+                    : [{
+                        id: null,
+                        sku: null,
+                        price: productPrice,
+                        comparePrice: productComparePrice,
+                        stock: 0,
+                        attributes: {},
+                        images: []
+                      }],
                   category: {
                     name: product.category?.name || 'Uncategorized'
                   }

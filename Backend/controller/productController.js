@@ -176,6 +176,19 @@ const formatProductResponse = (product) => {
   //     delete productData.images;
   // }
 
+  // Format reviews into reviewCount and avgRating
+  if (productData.reviews && Array.isArray(productData.reviews)) {
+    const reviews = productData.reviews;
+    productData.reviewCount = reviews.length;
+    productData.avgRating = reviews.length > 0
+      ? parseFloat((reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1))
+      : null;
+    delete productData.reviews;
+  } else {
+    productData.reviewCount = 0;
+    productData.avgRating = null;
+  }
+
   return productData;
 };
 
