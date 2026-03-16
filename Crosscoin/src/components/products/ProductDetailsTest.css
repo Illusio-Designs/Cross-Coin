@@ -18,6 +18,8 @@
   background: var(--white);
   font-size: 14px;
   line-height: 1.5;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 /* Main Product Layout */
@@ -28,6 +30,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 48px;
+  width: 100%;
 }
 
 /* Gallery */
@@ -37,6 +40,7 @@
   position: sticky;
   top: 80px;
   align-self: start;
+  width: 100%;
 }
 
 .thumb-col {
@@ -94,6 +98,7 @@
 /* Product Info */
 .product-info {
   padding-top: 4px;
+  width: 100%;
 }
 
 .brand-tag {
@@ -372,7 +377,8 @@
 .product-details {
   max-width: 1320px;
   margin: 0 auto;
-  padding: 0 24px 60px;
+  padding: 40px 24px 60px;
+  clear: both;
 }
 
 .section-title {
@@ -381,6 +387,7 @@
   font-weight: 700;
   color: var(--black);
   margin: 32px 0 18px;
+  clear: both;
 }
 
 /* Fit & Feel */
@@ -389,6 +396,8 @@
   gap: 12px;
   flex-wrap: wrap;
   margin: 24px 0 32px;
+  clear: both;
+  width: 100%;
 }
 
 .fit-item {
@@ -400,6 +409,7 @@
   padding: 10px 16px;
   background: var(--white);
   min-width: 170px;
+  flex: 0 1 auto;
 }
 
 .fit-icon {
@@ -435,6 +445,8 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 14px;
   margin-bottom: 16px;
+  clear: both;
+  width: 100%;
 }
 
 .desc-card {
@@ -443,6 +455,7 @@
   overflow: hidden;
   aspect-ratio: 3/4;
   background: var(--gray-bg);
+  width: 100%;
 }
 
 .desc-card img {
@@ -484,6 +497,8 @@
   color: var(--gray-dark);
   line-height: 1.8;
   margin-bottom: 28px;
+  clear: both;
+  width: 100%;
 }
 
 /* Ideal For */
@@ -493,6 +508,8 @@
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 36px;
+  clear: both;
+  width: 100%;
 }
 
 .ideal-label {
@@ -515,6 +532,7 @@
   font-weight: 700;
   color: var(--black);
   background: var(--white);
+  flex: 0 1 auto;
 }
 
 /* Washing Instructions */
@@ -528,6 +546,8 @@
   gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 36px;
+  clear: both;
+  width: 100%;
 }
 
 .wash-item {
@@ -552,6 +572,8 @@
   gap: 24px;
   margin-bottom: 40px;
   flex-wrap: wrap;
+  clear: both;
+  width: 100%;
 }
 
 .mfg-address {
