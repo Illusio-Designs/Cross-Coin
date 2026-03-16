@@ -11,17 +11,14 @@ import { getPublicProductBySlug, createPublicReview, getPublicCoupons, getPublic
 import SeoWrapper from '../console/SeoWrapper';
 import { showValidationErrorToast, showReviewSubmittedSuccessToast, showReviewSubmittedErrorToast } from '../utils/toast';
 import Loader from '../components/Loader';
-import { fbqTrack } from '../components/common/Analytics';
+import { fbqTrack } from '../utils/fbqTrack';
 import InfiniteReviewsSlider from '../components/InfiniteReviewsSlider';
 import { getProductImageSrc } from '../utils/imageUtils';
 import DOMPurify from 'dompurify';
 import { Modal } from "../components/ui";
 import colorMap from '../components/products/colorMap';
 
-// Load page-specific CSS
-import "../styles/pages/ProductDetails.css";
-import "../styles/components/Header.css";
-import "../styles/components/Footer.css";
+// Load page-specific CSS - moved to _app.jsx
 
 // Lazy load Footer
 const Footer = dynamic(() => import("../components/Footer"), {

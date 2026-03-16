@@ -9,10 +9,8 @@ import AttributeSelector from '@/components/products/AttributeSelector';
 import ExistingImageSelector from '@/components/products/ExistingImageSelector';
 import BrandTags from '@/components/Dashboard/BrandTags';
 import BrandAssignment from '@/components/Dashboard/BrandAssignment';
-import "../../../styles/dashboard/products.css";
 import dynamic from 'next/dynamic';
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
-import 'react-quill/dist/quill.snow.css';
 
 const ProductsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);

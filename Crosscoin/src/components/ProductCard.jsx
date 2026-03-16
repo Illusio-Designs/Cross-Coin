@@ -10,23 +10,6 @@ import { BADGE_CONFIG, getBadgeDisplay, formatBadge } from "../config/badgeConfi
 import { selectProductImage, selectProductImages } from "../utils/productImageSelector";
 import { getImageUrl } from "../utils/imageHandler";
 
-// Filter options data - This should come from API in real implementation
-export const filterOptions = {
-  categories: ["Ankle", "Long", "Short"],
-  materials: [
-    "Winter Wear",
-    "Summer Wear",
-    "Cotton",
-    "Wools",
-    "Silk",
-    "Net",
-    "Rubber",
-  ],
-  colors: ["red", "blue", "green", "yellow", "black", "gray"],
-  sizes: ["S", "M", "L", "XL"],
-  genders: ["Men", "Women", "Kids"],
-};
-
 const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
   const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
   const router = useRouter();
@@ -263,4 +246,5 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
 };
 
 export default React.memo(ProductCard);
+ProductCard.displayName = 'ProductCard';
 

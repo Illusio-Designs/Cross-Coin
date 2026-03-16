@@ -244,11 +244,5 @@ export const adminSliderService = {
   },
 };
 
-export default {
-  createAdminApi,
-  adminProductService,
-  adminCategoryService,
-  adminOrderService,
-  adminCouponService,
-  adminSliderService,
-};
+
+

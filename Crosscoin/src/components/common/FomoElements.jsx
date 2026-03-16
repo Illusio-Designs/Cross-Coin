@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import '../../../styles/common/FomoElements.css';
 
 /**
  * FOMO (Fear of Missing Out) Elements Component

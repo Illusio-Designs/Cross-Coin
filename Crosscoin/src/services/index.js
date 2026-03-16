@@ -1470,5 +1470,3 @@ export const brandSettingsService = {
   },
 };
 
-export default api;
-

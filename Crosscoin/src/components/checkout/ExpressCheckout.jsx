@@ -4,7 +4,7 @@ import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
 import { createMagicCheckoutOrder, verifyMagicCheckoutPayment, createOrder, createGuestOrder, updateOrderPayment } from "../../services/publicApi";
 import { showOrderPlacedSuccessToast, showOrderPlacedErrorToast } from "../../utils/toast";
-import { fbqTrack } from "../common/Analytics";
+import { fbqTrack } from "../../utils/fbqTrack";
 import { useRouter } from "next/router";
 
 /**

@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Button, Input, Modal, Table, Pagination } from "@/components/ui";
 import Loader from "@/components/Loader";
 import { attributeService } from "@/services";
-import "../../../styles/dashboard/seo.css";
 
 export default function Attributes() {
   const [isModalOpen, setIsModalOpen] = useState(false);

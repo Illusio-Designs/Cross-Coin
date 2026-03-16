@@ -4,7 +4,6 @@ import Loader from "@/components/Loader";
 import BrandTags from "@/components/Dashboard/BrandTags";
 import { reviewService } from "@/services";
 import { debounce } from 'lodash';
-import "../../../styles/dashboard/reviews.css";
 
 export default function Reviews() {
   const [isModalOpen, setIsModalOpen] = useState(false);
