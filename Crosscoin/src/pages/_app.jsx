@@ -34,6 +34,7 @@ import "../styles/pages/auth/adminlogin.css";
 // Components
 import "../styles/components/Header.css";
 import "../styles/components/Breadcrumb.css";
+import "../styles/components/ProductCard.css";
 import "../styles/components/Footer.css";
 import "../styles/components/Testimonials.css";
 import "../styles/components/TrustBadges.css";
