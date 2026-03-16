@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Footer from '../components/Footer';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
 import SafeImage from '../components/common/SafeImage';
@@ -96,7 +95,6 @@ const Wishlist = () => {
               </button>
             </div>
           </main>
-          <Footer />
         </div>
       </SeoWrapper>
     );
@@ -204,7 +202,6 @@ const Wishlist = () => {
             })}
           </div>
         </main>
-        <Footer />
       </div>
     </SeoWrapper>
   );

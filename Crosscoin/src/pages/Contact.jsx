@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import Footer from "../components/Footer";
 import {
   FaPhone,
   FaEnvelope,
@@ -171,7 +170,6 @@ const Contact = () => {
           </div>
         </div>
       </div>
-      <Footer />
     </SeoWrapper>
   );
 };

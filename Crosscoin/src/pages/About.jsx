@@ -1,5 +1,4 @@
 import React from 'react';
-import Footer from '../components/Footer';
 import { FaSocks, FaTshirt, FaHeart, FaUsers } from 'react-icons/fa';
 import SeoWrapper from '../console/SeoWrapper';
 
@@ -55,7 +54,6 @@ const About = () => {
           </div>
         </div>
       </div>
-      <Footer />
     </SeoWrapper>
   );
 };

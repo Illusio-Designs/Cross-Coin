@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import Footer from '../components/Footer';
 import SafeImage from '../components/common/SafeImage';
 import { trackOrderByAWB, trackOrderByOrderNumber } from '../services/publicApi';
 import { formatAttributesForDisplay } from '../utils/productAttributeFormatter';
@@ -399,7 +398,6 @@ export default function OrderTracking() {
                     )}
                 </div>
             </div>
-            <Footer />
         </>
     );
 }

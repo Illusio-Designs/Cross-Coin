@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import Footer from "../components/Footer";
 import SafeImage from "../components/common/SafeImage";
 import { useRouter } from "next/router";
 import SeoWrapper from "../console/SeoWrapper";
@@ -814,7 +813,6 @@ export default function Profile() {
           )}
         </main>
       </div>
-      <Footer />
     </SeoWrapper>
   );
 }
