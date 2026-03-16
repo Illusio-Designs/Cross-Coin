@@ -1,8 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { userService, authService } from '../services';
 import { loginUser, registerUser, getCurrentUser as getPublicCurrentUser, logout as publicLogout } from '../services/publicApi';
-import { useContext as useReactContext } from 'react';
-import { WishlistContext } from './WishlistContext';
 import { 
   showLoginSuccessToast, 
   showLoginErrorToast, 
@@ -16,7 +14,6 @@ const AuthContext = createContext(null);
 function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const { setIsAuthenticated } = useContext(WishlistContext) || {};
     const apiCalledRef = useRef(false);
 
     const checkAuth = useCallback(async () => {
@@ -39,7 +36,6 @@ function AuthProvider({ children }) {
                 }
             }
         } catch (error) {
-            console.error('Auth check failed:', error);
             localStorage.removeItem('token');
             setUser(null);
         } finally {
@@ -50,7 +46,6 @@ function AuthProvider({ children }) {
     useEffect(() => {
         if (apiCalledRef.current) return; // Prevent multiple calls
         apiCalledRef.current = true;
-        console.log('API BEING CALLED: Auth data fetch');
         checkAuth();
     }, [checkAuth]);
 
@@ -62,32 +57,26 @@ function AuthProvider({ children }) {
             }
             localStorage.setItem('token', response.token);
             setUser(response.user);
-            if (setIsAuthenticated) {
-                setIsAuthenticated(true);
-            }
             showLoginSuccessToast();
             return response;
         } catch (error) {
             showLoginErrorToast(error.message);
             throw error;
         }
-    }, [setIsAuthenticated]);
+    }, []);
 
     const adminLogin = useCallback(async (credentials) => {
         try {
             const response = await authService.login(credentials);
             localStorage.setItem('token', response.token);
             setUser(response.user);
-            if (setIsAuthenticated) {
-                setIsAuthenticated(true);
-            }
             showLoginSuccessToast();
             return response;
         } catch (error) {
             showLoginErrorToast(error.message);
             throw error;
         }
-    }, [setIsAuthenticated]);
+    }, []);
 
     const register = useCallback(async (userData) => {
         try {
@@ -102,23 +91,18 @@ function AuthProvider({ children }) {
 
     const logout = useCallback(async () => {
         try {
-            // Try public logout first
             try {
                 await publicLogout();
             } catch {
                 await userService.logout();
             }
         } catch (error) {
-            console.error('Logout error:', error);
-        } finally {
+            } finally {
             localStorage.removeItem('token');
             setUser(null);
-            if (setIsAuthenticated) {
-                setIsAuthenticated(false);
-            }
             showLogoutSuccessToast();
         }
-    }, [setIsAuthenticated]);
+    }, []);
 
     const value = {
         user,
@@ -147,4 +131,3 @@ function useAuth() {
 }
 
 export { AuthProvider, useAuth };
-export default AuthContext; 

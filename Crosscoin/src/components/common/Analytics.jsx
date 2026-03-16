@@ -1,5 +1,3 @@
-"use client";
-
 import Script from "next/script";
 
 const FB_PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID || "1313610943804396"; // Facebook Pixel ID
@@ -33,29 +31,6 @@ const FacebookPixel = () => {
   );
 };
 
-// Helper to track custom Facebook Pixel events
-export function fbqTrack(event, params = {}) {
-  if (typeof window !== "undefined" && window.fbq) {
-    try {
-      // Block unwanted events from browser extensions or third-party scripts
-      const blockedEvents = ['SubscribedButtonClick'];
-      if (blockedEvents.includes(event)) {
-        console.warn(`Blocked unwanted Facebook Pixel event: ${event}`);
-        return false;
-      }
-      
-      window.fbq("track", event, params);
-      console.log(`Facebook Pixel event tracked: ${event}`, params);
-      return true;
-    } catch (error) {
-      console.error(`Error tracking Facebook Pixel event ${event}:`, error);
-      return false;
-    }
-  } else {
-    console.warn('Facebook Pixel (fbq) not available yet');
-    return false;
-  }
-}
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID || "G-XXXXXXXXXX"; // Google Analytics Measurement ID
 const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID || "lzy55n7g8h"; // Microsoft Clarity Project ID
@@ -97,3 +72,4 @@ const Analytics = () => {
 };
 
 export default Analytics;
+

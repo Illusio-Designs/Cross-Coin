@@ -9,10 +9,8 @@ import AttributeSelector from '@/components/products/AttributeSelector';
 import ExistingImageSelector from '@/components/products/ExistingImageSelector';
 import BrandTags from '@/components/Dashboard/BrandTags';
 import BrandAssignment from '@/components/Dashboard/BrandAssignment';
-import "../../../styles/dashboard/products.css";
 import dynamic from 'next/dynamic';
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
-import 'react-quill/dist/quill.snow.css';
 
 const ProductsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -68,10 +66,6 @@ const ProductsPage = () => {
   // Test function to debug image URLs
   window.testImageUrl = (imagePath) => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-    console.log('Testing image URL construction:');
-    console.log('Input path:', imagePath);
-    console.log('Base URL:', baseUrl);
-    
     let result;
     if (!imagePath.startsWith('http')) {
       if (imagePath.startsWith('/uploads/')) {
@@ -83,7 +77,6 @@ const ProductsPage = () => {
       result = imagePath;
     }
     
-    console.log('Final URL:', result);
     return result;
   };
 
@@ -105,11 +98,9 @@ const ProductsPage = () => {
   const fetchCategories = async () => {
     try {
       const response = await categoryService.getAllCategories();
-      console.log('Raw categories response:', response);
       setCategories(response);
     } catch (err) {
-      console.error("Error fetching categories:", err);
-    }
+      }
   };
 
   useEffect(() => {
@@ -118,10 +109,8 @@ const ProductsPage = () => {
 
   // Fetch attributes
   const fetchAttributes = async () => {
-    console.log("Attempting to fetch attributes...");
     try {
       const response = await attributeService.getAllAttributes();
-      console.log('Raw attribute service response:', response);
       // Correctly access `AttributeValues` from the backend response
       // And map them to an array of just the string values
       const formattedAttributes = response.reduce((acc, attribute) => {
@@ -130,14 +119,11 @@ const ProductsPage = () => {
         return acc;
       }, {});
       setAttributes(formattedAttributes);
-      console.log('Attributes state after fetch:', formattedAttributes);
-    } catch (err) {
-      console.error("Error fetching attributes:", err);
-    }
+      } catch (err) {
+      }
   };
 
   useEffect(() => {
-    console.log("useEffect for fetchAttributes is running.");
     fetchAttributes();
   }, []);
 
@@ -307,20 +293,10 @@ const ProductsPage = () => {
       const response = await productService.getProduct(id);
       const product = response;
       
-      console.log('=== PRODUCT EDIT DEBUG ===');
-      console.log('Raw product response:', product);
-      console.log('Product brands:', product.brands);
-      console.log('Product images:', product.images);
-      console.log('Product variations:', product.variations);
-      console.log('Environment API URL:', process.env.NEXT_PUBLIC_API_URL);
-      console.log('Base URL being used:', process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in');
       if (product.variations) {
         product.variations.forEach((variation, index) => {
-          console.log(`Variation ${index} images:`, variation.images);
-        });
+          });
       }
-      console.log('=== END PRODUCT EDIT DEBUG ===');
-      
       // Format the data for the form
       const formData = {
         id: product.id,
@@ -334,8 +310,6 @@ const ProductsPage = () => {
         imagesToDelete: [], // Reset deletion tracking
         variationImagesToDelete: [], // Reset deletion tracking
         images: product.images?.map(img => {
-          console.log('Loading existing image:', img);
-          
           // Get the base URL
           const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
           
@@ -411,10 +385,7 @@ const ProductsPage = () => {
           })
         },
         variationImages: product.variations?.map((variation, vIndex) => {
-          console.log(`Loading variation images for variation ${vIndex}:`, variation.id, variation.images);
           const variationImages = variation.images?.map(img => {
-            console.log('Processing variation image:', img);
-            
             // Get the base URL
             const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
             
@@ -436,11 +407,9 @@ const ProductsPage = () => {
               type: 'image/jpeg',
               existing: true
             };
-            console.log('Processed variation image:', imageObj);
             return imageObj;
           }) || [];
           
-          console.log(`Variation ${vIndex} final images:`, variationImages);
           return variationImages;
         }) || []
       };
@@ -727,23 +696,10 @@ const ProductsPage = () => {
     setError(null);
 
     try {
-        console.log('=== FORM SUBMIT DEBUG ===');
-        console.log('Form data images:', formData.images);
-        console.log('Form data images length:', formData.images?.length || 0);
         if (formData.images) {
           formData.images.forEach((img, idx) => {
-            console.log(`Image ${idx}:`, {
-              id: img.id,
-              existing: img.existing,
-              fromLibrary: img.fromLibrary,
-              isFile: img instanceof File,
-              name: img.name
             });
-          });
         }
-        console.log('Images to delete:', formData.imagesToDelete);
-        console.log('Variation images to delete:', formData.variationImagesToDelete);
-        
         // Get the first image URL for SEO
         let firstImageUrl = null;
         if (formData.images && formData.images.length > 0) {
@@ -870,19 +826,12 @@ const ProductsPage = () => {
             });
         }
         
-        console.log('=== SENDING TO BACKEND ===');
-        console.log('New file uploads:', formData.images ? formData.images.filter(img => img instanceof File).length : 0);
-        console.log('New library images:', libraryImages.length);
-        console.log('Images to delete:', formData.imagesToDelete?.length || 0);
-        console.log('Existing images will be preserved automatically');
-        
         // Debug preserve IDs
         if (formData.id && formData.images) {
             const existingImageIds = formData.images
                 .filter(img => img.existing === true && img.id)
                 .map(img => img.id);
-            console.log('Existing image IDs to preserve:', existingImageIds);
-        }
+            }
         if (formData.id && formData.variationImages) {
             const existingVariationImageIds = [];
             formData.variationImages.forEach(images => {
@@ -894,11 +843,8 @@ const ProductsPage = () => {
                     });
                 }
             });
-            console.log('Existing variation image IDs to preserve:', existingVariationImageIds);
-        }
+            }
         
-        console.log('=== END BACKEND DATA ===');
-
         // Add library images data
         if (libraryImages.length > 0) {
             formDataToSend.append('libraryImages', JSON.stringify(libraryImages));
@@ -975,32 +921,18 @@ const ProductsPage = () => {
 
         let response;
         if (formData.id) {
-            console.log('Updating product with ID:', formData.id);
             response = await productService.updateProduct(formData.id, formDataToSend);
         } else {
-            console.log('Creating new product');
             response = await productService.createProduct(formDataToSend);
         }
 
-        console.log('=== API RESPONSE ===');
-        console.log('Response:', response);
-        console.log('Success:', response?.success);
-        console.log('=== END API RESPONSE ===');
-
         if (response.success) {
-            console.log('Product saved successfully, closing modal');
             setIsModalOpen(false);
             await fetchProducts();
         } else {
-            console.error('Save failed:', response.message);
             throw new Error(response.message || 'Failed to save product');
         }
     } catch (err) {
-        console.error('=== SAVE ERROR ===');
-        console.error('Error object:', err);
-        console.error('Error message:', err.message);
-        console.error('Error response:', err.response?.data);
-        console.error('=== END SAVE ERROR ===');
         setError(err.message || err.response?.data?.message || "Error saving product");
     } finally {
         setLoading(false);
@@ -1034,14 +966,8 @@ const ProductsPage = () => {
               <select
                 value={formData.categoryId}
                 onChange={(e) => {
-                  console.log('=== CATEGORY SELECTION DEBUG ===');
-                  console.log('Direct select onChange event:', e);
-                  console.log('Selected value:', e.target.value);
-                  console.log('Event target:', e.target);
-                  console.log('Current formData.categoryId before update:', formData.categoryId);
                   handleInputChange(e);
-                  console.log('=== END CATEGORY SELECTION DEBUG ===');
-                }}
+                  }}
                 name="categoryId"
                 required
                 className="select-input"
@@ -1124,10 +1050,7 @@ const ProductsPage = () => {
               </div>
               <div className="images-preview" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 8 }}>
                 {formData.images && formData.images.map((img, imgIdx) => {
-                  console.log(`Rendering product image ${imgIdx}:`, img);
                   const imageUrl = img instanceof File ? URL.createObjectURL(img) : (img.url || img.image_url);
-                  console.log(`Product image URL ${imgIdx}:`, imageUrl);
-                  
                   return (
                     <div key={imgIdx} style={{ position: 'relative' }}>
                       <img
@@ -1135,7 +1058,6 @@ const ProductsPage = () => {
                         alt={`Product Image ${imgIdx + 1}`}
                         style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
                         onError={(e) => {
-                          console.error(`Failed to load product image ${imgIdx}:`, imageUrl);
                           e.target.style.backgroundColor = '#f5f5f5';
                           e.target.style.display = 'flex';
                           e.target.style.alignItems = 'center';
@@ -1143,8 +1065,7 @@ const ProductsPage = () => {
                           e.target.alt = 'Failed to load';
                         }}
                         onLoad={() => {
-                          console.log(`Successfully loaded product image ${imgIdx}:`, imageUrl);
-                        }}
+                          }}
                       />
                       <button
                         type="button"
@@ -1349,10 +1270,7 @@ const ProductsPage = () => {
                     <div className="variation-images-preview" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 8 }}>
                       {(formData.variationImages && formData.variationImages[index] && formData.variationImages[index].length > 0) ? 
                         formData.variationImages[index].map((img, imgIdx) => {
-                          console.log(`Rendering variation ${index} image ${imgIdx}:`, img);
                           const imageUrl = img instanceof File ? URL.createObjectURL(img) : (img.url || img.image_url);
-                          console.log(`Image URL for variation ${index} image ${imgIdx}:`, imageUrl);
-                          
                           return (
                             <div key={imgIdx} style={{ position: 'relative' }}>
                               <img
@@ -1360,7 +1278,6 @@ const ProductsPage = () => {
                                 alt={`Variation ${index + 1} Image ${imgIdx + 1}`}
                                 style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
                                 onError={(e) => {
-                                  console.error(`Failed to load variation ${index} image ${imgIdx}:`, imageUrl);
                                   e.target.style.backgroundColor = '#f5f5f5';
                                   e.target.style.display = 'flex';
                                   e.target.style.alignItems = 'center';
@@ -1368,8 +1285,7 @@ const ProductsPage = () => {
                                   e.target.alt = 'Failed to load';
                                 }}
                                 onLoad={() => {
-                                  console.log(`Successfully loaded variation ${index} image ${imgIdx}:`, imageUrl);
-                                }}
+                                  }}
                               />
                               <button
                                 type="button"
@@ -1658,3 +1574,5 @@ const ProductsPage = () => {
 };
 
 export default ProductsPage;
+
+

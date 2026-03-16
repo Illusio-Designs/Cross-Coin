@@ -3,8 +3,6 @@ import { orderService } from '../../../services';
 import { debounce } from 'lodash';
 import { Table, Pagination } from "@/components/ui";
 import Loader from "@/components/Loader";
-import '../../../styles/dashboard/orders.css';
-import "../../../styles/dashboard/seo.css";
 import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusUtils';
 
 const OrderStatus = () => {
@@ -202,3 +200,4 @@ const OrderStatus = () => {
 };
 
 export default OrderStatus; 
+

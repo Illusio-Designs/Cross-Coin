@@ -4,7 +4,6 @@ import { useCart } from '../../context/CartContext';
 import { useRouter } from 'next/router';
 import SafeImage from '../common/SafeImage';
 import QuantityOfferBar from './QuantityOfferBar';
-import './CartDrawer.css';
 
 // Helper functions from CartStep
 function pickCartItemImage(item) {
@@ -105,8 +104,7 @@ const CartDrawer = ({ isOpen, onClose, lastAddedItem }) => {
           setSelectedPaymentMode(coupon.paymentMode);
         }
       } catch (e) {
-        console.error('Failed to parse applied coupon', e);
-      }
+        }
     }
   }, [isOpen]);
 
@@ -293,3 +291,4 @@ const CartDrawer = ({ isOpen, onClose, lastAddedItem }) => {
 };
 
 export default CartDrawer;
+

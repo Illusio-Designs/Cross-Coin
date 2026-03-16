@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Header from "../components/Header";
-import ProductCard, { filterOptions } from "../components/ProductCard";
+import ProductCard from "../components/ProductCard";
 import ProductSkeleton from "../components/common/ProductSkeleton";
 import {
   FiFilter,
@@ -19,16 +19,12 @@ import {
 } from "../services/publicApi";
 import { getProductImageSrc } from "../utils/imageUtils";
 import SeoWrapper from "../console/SeoWrapper";
-import { fbqTrack } from "../components/common/Analytics";
+import { fbqTrack } from "../utils/fbqTrack";
 import colorMap from "../components/products/colorMap";
 import { Pagination } from "../components/ui";
 import cacheManager from "../services/cacheManager";
-import "../styles/common/TableControls.css";
 
-// Load page-specific CSS
-import "../styles/pages/products.css";
-import "../styles/components/Header.css";
-import "../styles/components/Footer.css";
+// Load page-specific CSS - moved to _app.jsx
 
 // Lazy load Footer
 const Footer = dynamic(() => import("../components/Footer"), {
@@ -105,7 +101,6 @@ const Products = () => {
       if (cachedCategories) {
         setCategories(cachedCategories);
         categoriesLoadedRef.current = true;
-        console.log("✅ Categories loaded from cache:", cachedCategories.length);
         return;
       }
 
@@ -115,14 +110,11 @@ const Products = () => {
       if (cached) {
         setCategories(cached);
         categoriesLoadedRef.current = true;
-        console.log("Categories loaded from legacy cache:", cached.length);
         return;
       }
 
       try {
         const data = await getPublicCategories();
-        console.log("Categories API response:", data);
-        
         // Ensure data is an array
         if (Array.isArray(data)) {
           setCategories(data);
@@ -130,22 +122,16 @@ const Products = () => {
           cacheManager.setByType('categories', data);
           setCachedData(cacheKey, data); // Also cache in legacy system
           categoriesLoadedRef.current = true;
-          console.log("✅ Categories loaded and cached:", data.length);
-        } else {
-          console.warn("Categories response is not an array:", data);
+          } else {
           setCategories([]);
           categoriesLoadedRef.current = true;
         }
       } catch (error) {
-        console.error("Error fetching categories:", error);
-        console.error("Categories error details:", error.response?.data || error.message);
-        
         // Don't show error for categories - just set empty array and continue
         // Categories are optional for browsing products
         setCategories([]);
         categoriesLoadedRef.current = true;
-        console.log("Categories failed to load, continuing without categories");
-      }
+        }
     };
     fetchCategories();
   }, []); // Empty dependency array - only run once on mount
@@ -153,11 +139,8 @@ const Products = () => {
   // Main data fetching function - optimized to prevent multiple calls
   const fetchProductsData = useCallback(
     async (categoryName = null, isCategorySpecific = false) => {
-      console.log('fetchProductsData called:', { categoryName, isCategorySpecific, isLoading: isLoadingRef.current });
-      
       // Prevent multiple simultaneous API calls
       if (isLoadingRef.current) {
-        console.log("API call already in progress, skipping...");
         return;
       }
 
@@ -175,7 +158,6 @@ const Products = () => {
           cacheKey = `products_category_${categoryName}`;
           const cachedProducts = cacheManager.get(cacheKey);
           if (cachedProducts) {
-            console.log(`✅ Products for category "${categoryName}" loaded from cache`);
             setProducts(cachedProducts.products);
             setTotalProducts(cachedProducts.total);
             setCacheHit(true);
@@ -187,10 +169,7 @@ const Products = () => {
           }
 
           // Cache miss - fetch from API
-          console.log(`⚠️ Cache miss for category "${categoryName}" - fetching from API`);
           response = await getPublicCategoryByName(categoryName);
-          console.log("Category API Response:", response);
-
           // The backend response structure is different - it doesn't have a 'success' field
           if (response && response.products) {
             // Transform category-specific products to match standard format
@@ -223,14 +202,11 @@ const Products = () => {
                 ],
               };
             });
-            console.log("Transformed products:", transformedProducts);
             setProducts(transformedProducts);
             setTotalProducts(transformedProducts.length);
             
             // Cache the category products (30 minute TTL)
             cacheManager.set(cacheKey, { products: transformedProducts, total: transformedProducts.length }, 30 * 60 * 1000);
-            console.log(`✅ Category products cached for 30 minutes`);
-            
             setLoading(false); // Ensure loading is set to false
             if (isCategorySpecific) {
               productsLoadedRef.current = false; // Reset for category-specific loads
@@ -245,7 +221,6 @@ const Products = () => {
           cacheKey = 'products_all';
           const cachedProducts = cacheManager.getByType('products');
           if (cachedProducts) {
-            console.log('✅ All products loaded from cache');
             setProducts(cachedProducts.products);
             setTotalProducts(cachedProducts.total);
             setCacheHit(true);
@@ -255,14 +230,11 @@ const Products = () => {
           }
 
           // Cache miss - fetch from API
-          console.log('⚠️ Products cache miss - fetching from API');
           const params = {
             page: 1,
             limit: 100, // Reduced from 1000 to 100 for better performance
           };
           response = await getAllPublicProducts(params);
-          console.log("All products API Response:", response);
-
           if (response?.success) {
             // Transform products to ensure price fields are populated
             const transformedProducts = (response.data?.products || []).map(p => ({
@@ -281,8 +253,6 @@ const Products = () => {
               products: transformedProducts,
               total: response.data?.total || response.data?.totalProducts || 0
             });
-            console.log('✅ All products cached for 30 minutes');
-            
             setLoading(false); // Ensure loading is set to false
             productsLoadedRef.current = true; // Mark as loaded
           } else if (response?.data?.products) {
@@ -311,7 +281,6 @@ const Products = () => {
           }
         }
       } catch (err) {
-        console.error("Error fetching products:", err);
         setError(
           err?.response?.data?.message ||
             err?.message ||
@@ -342,9 +311,6 @@ const Products = () => {
       if (categoryFromQuery && categories.length > 0) {
         // Decode and set category filter
         const decodedCategoryName = decodeURIComponent(categoryFromQuery);
-        console.log("Loading category from URL:", decodedCategoryName);
-        console.log("Available categories:", categories);
-
         // Find category ID for filter state - try multiple matching strategies
         let matchedCategory = categories.find(
           (cat) => cat.name.toLowerCase() === decodedCategoryName.toLowerCase()
@@ -377,21 +343,16 @@ const Products = () => {
           );
         }
 
-        console.log("Matched category:", matchedCategory);
-
         if (matchedCategory) {
           setSelectedCategory([String(matchedCategory.id)]);
           // Use the actual category name from database for API call
           fetchProductsData(matchedCategory.name, true);
         } else {
-          console.error("No matching category found for:", decodedCategoryName);
           // Still load all products even if category not found
-          console.log("Loading all products instead...");
           fetchProductsData();
         }
       } else {
         // No category in URL, fetch all products
-        console.log("No category in URL, fetching all products...");
         fetchProductsData();
       }
     }
@@ -403,7 +364,6 @@ const Products = () => {
     if (Array.isArray(categories) && categories.length > 0 && 
         Array.isArray(safeProducts) && safeProducts.length === 0 && 
         !loading && !isLoadingRef.current && !initialLoadRef.current) {
-      console.log("Safety check: Categories loaded but no products, fetching immediately...");
       fetchProductsData();
     }
   }, [categories.length, safeProducts.length, loading, fetchProductsData]);
@@ -496,7 +456,6 @@ const Products = () => {
   }, []);
 
   const handleProductClick = (product) => {
-    console.log("Product Click:", product);
     router.push(`/ProductDetails?slug=${product.slug}`);
   };
 
@@ -827,8 +786,8 @@ const Products = () => {
     return sortedProducts.slice(startIdx, startIdx + itemsPerPage);
   }, [sortedProducts, currentPage, itemsPerPage]);
   
-  console.log("Filtering results:", {
-    totalProducts: Array.isArray(safeProducts) ? safeProducts.length : 0,
+  const debugInfo = {
+    safeProducts: Array.isArray(safeProducts) ? safeProducts.length : 0,
     filteredProducts: Array.isArray(filteredProducts) ? filteredProducts.length : 0,
     sortedProducts: Array.isArray(sortedProducts) ? sortedProducts.length : 0,
     paginatedProducts: Array.isArray(paginatedProducts) ? paginatedProducts.length : 0,
@@ -838,29 +797,13 @@ const Products = () => {
     selectedGender,
     selectedMaterial,
     priceRange,
-  });
+  };
 
   // Compute total pages based on filtered products
   const totalPages = useMemo(() => {
     if (!Array.isArray(filteredProducts)) return 1;
     return Math.ceil(filteredProducts.length / itemsPerPage) || 1;
   }, [filteredProducts, itemsPerPage]);
-
-  // Debug logs (moved after totalPages is defined)
-  console.log("Products Component State:", {
-    selectedCategory,
-    sortBy,
-    priceRange,
-    currentPage,
-    totalPages,
-    totalProducts: Array.isArray(safeProducts) ? safeProducts.length : 0,
-    filteredProducts: Array.isArray(filteredProducts) ? filteredProducts.length : 0,
-    sortedProducts: Array.isArray(sortedProducts) ? sortedProducts.length : 0,
-    paginatedProducts: Array.isArray(paginatedProducts) ? paginatedProducts.length : 0,
-    itemsPerPage,
-    loading,
-    error,
-  });
 
   // Reset to page 1 when filters change (but don't trigger API calls)
   useEffect(() => {
@@ -887,16 +830,12 @@ const Products = () => {
   // Safety check: ensure loading is false when products are available or after timeout
   useEffect(() => {
     if (safeProducts.length > 0 && loading) {
-      console.log(
-        "Safety check: Setting loading to false because products are available"
-      );
       setLoading(false);
     }
     
     // Add timeout to prevent infinite loading
     const loadingTimeout = setTimeout(() => {
       if (loading) {
-        console.log("Loading timeout reached, setting loading to false");
         setLoading(false);
         if (safeProducts.length === 0) {
           setError("");
@@ -1468,3 +1407,4 @@ const Products = () => {
 };
 
 export default Products;
+

@@ -19,12 +19,10 @@ export const captureUTMParameters = () => {
     .some(([, value]) => value !== null);
 
   if (hasUTMParams) {
-    console.log('✅ UTM Parameters Captured:', utmData);
     localStorage.setItem('utm_data', JSON.stringify(utmData));
     return utmData;
   } else {
-    console.log('ℹ️ No UTM parameters found in URL');
-  }
+    }
   
   return null;
 };
@@ -43,12 +41,8 @@ export const clearUTMData = () => {
 // Send UTM data to backend
 export const sendUTMToBackend = async (utmData) => {
   try {
-    console.log('📤 Sending UTM data to backend...', utmData);
-    
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
     const url = `${apiUrl}/api/utm/track`;
-    
-    console.log('🔗 API URL:', url);
     
     const response = await fetch(url, {
       method: 'POST',
@@ -62,21 +56,15 @@ export const sendUTMToBackend = async (utmData) => {
     const result = await response.json();
     
     if (response.ok && result.success) {
-      console.log('✅ UTM data successfully sent to backend:', result);
-      console.log('📊 Stored with ID:', result.data?.id);
-      
       // Store session_id in localStorage for order tracking
       if (result.data?.session_id) {
         localStorage.setItem('utm_session_id', result.data.session_id);
-        console.log('💾 Session ID stored in localStorage:', result.data.session_id);
-      }
+        }
     } else {
-      console.error('❌ Failed to send UTM data:', result);
-    }
+      }
     
     return result;
   } catch (error) {
-    console.error('❌ Error sending UTM data to backend:', error);
     return null;
   }
 };
@@ -85,3 +73,4 @@ export const sendUTMToBackend = async (utmData) => {
 export const getUTMSessionId = () => {
   return localStorage.getItem('utm_session_id');
 };
+

@@ -75,5 +75,3 @@ export const handleTimeoutError = (error) => {
   }
   return error.message || 'An error occurred';
 };
-
-export default API_TIMEOUTS;

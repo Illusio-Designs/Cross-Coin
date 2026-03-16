@@ -6,17 +6,6 @@ import { getTimeoutForEndpoint, handleTimeoutError } from '../config/apiConfig';
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
 
-// Debug logging only in development
-const isDevelopment = process.env.NODE_ENV === 'development';
-
-// Debug logging to see what URL is being used
-if (isDevelopment) {
-  console.log("=== API URL Debug ===");
-  console.log("NEXT_PUBLIC_API_URL from env:", process.env.NEXT_PUBLIC_API_URL);
-  console.log("Final API_BASE_URL:", API_BASE_URL);
-  console.log("========================");
-}
-
 // Create axios instance with default timeout
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -31,29 +20,13 @@ const api = axios.create({
 // Request interceptor - set dynamic timeout based on endpoint
 api.interceptors.request.use(
   (config) => {
-    if (isDevelopment) {
-      console.log("=== API Request ===");
-      console.log("URL:", config.url);
-      console.log("Method:", config.method);
-      console.log("Base URL:", API_BASE_URL);
-    }
-
     // Set timeout based on endpoint
     const timeout = getTimeoutForEndpoint(config.url || '');
     config.timeout = timeout;
-    
-    if (isDevelopment) {
-      console.log("Timeout set to:", timeout, "ms");
-    }
 
     const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      if (isDevelopment) {
-        console.log("Authorization header set");
-      }
-    } else if (isDevelopment) {
-      console.log("No token found for request");
     }
 
     if (config.data instanceof FormData) {
@@ -62,10 +35,6 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    if (isDevelopment) {
-      console.log("=== Request Error ===");
-      console.log("Error:", error.message);
-    }
     return Promise.reject(error);
   }
 );
@@ -73,34 +42,16 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    if (isDevelopment) {
-      console.log("=== API Response Success ===");
-      console.log("Status:", response.status);
-      console.log("Data:", response.data);
-    }
     return response;
   },
   (error) => {
-    if (isDevelopment) {
-      console.log("=== API Response Error ===");
-      console.log("Status:", error.response?.status);
-      console.log("Message:", error.message);
-      console.log("Error Data:", error.response?.data);
-    }
-
     // Handle timeout errors
     if (error.code === "ECONNABORTED") {
       const userMessage = handleTimeoutError(error);
-      if (isDevelopment) {
-        console.log("Request timed out:", userMessage);
-      }
       return Promise.reject(new Error(userMessage));
     }
 
     if (error.response?.status === 401) {
-      if (isDevelopment) {
-        console.log("Unauthorized - clearing token");
-      }
       localStorage.removeItem("token");
       // Don't redirect here, let the component handle the redirect
     }
@@ -458,7 +409,6 @@ export const orderService = {
 
       return { success: true, message: 'Export downloaded successfully' };
     } catch (error) {
-      console.error('Export error:', error);
       throw error.response?.data || error.message;
     }
   },
@@ -672,30 +622,19 @@ export const authService = {
 // User Services
 export const userService = {
   getCurrentUser: async () => {
-    console.log("=== getCurrentUser API Call ===");
     try {
       const token = localStorage.getItem("token");
-      console.log("Token being used:", token ? "Present" : "Missing");
 
       const response = await api.get("/api/users/me");
-      console.log("API Response:", response.data);
 
       // The API returns user data directly, not nested under a user property
       if (!response.data) {
-        console.log("No user data in response");
         return null;
       }
 
       return response.data;
     } catch (error) {
-      console.log("API Error:", {
-        status: error.response?.status,
-        message: error.message,
-        data: error.response?.data,
-      });
-
       if (error.response?.status === 401) {
-        console.log("Unauthorized - removing token");
         localStorage.removeItem("token");
       }
       throw error.response?.data || error.message;
@@ -794,28 +733,18 @@ export const categoryService = {
 
   createCategory: async (formData) => {
     try {
-      console.log(
-        "Creating category with data:",
-        Object.fromEntries(formData.entries())
-      );
       const response = await api.post("/api/categories", formData);
       return response.data;
     } catch (error) {
-      console.error("Create category error:", error);
       throw error.response?.data || error.message;
     }
   },
 
   updateCategory: async (id, formData) => {
     try {
-      console.log(
-        "Updating category with data:",
-        Object.fromEntries(formData.entries())
-      );
       const response = await api.put(`/api/categories/${id}`, formData);
       return response.data;
     } catch (error) {
-      console.error("Update category error:", error);
       throw error.response?.data || error.message;
     }
   },
@@ -846,7 +775,6 @@ export const sliderService = {
       // Return the response data directly since it already contains the sliders array
       return response.data;
     } catch (error) {
-      console.error("Error in getAllSliders:", error);
       throw handleApiError(error);
     }
   },
@@ -903,10 +831,6 @@ export const sliderService = {
 export const productService = {
   createProduct: async (productData) => {
     try {
-      console.log(
-        "Creating product with data:",
-        Object.fromEntries(productData.entries())
-      );
       const response = await api.post("/api/products", productData, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -915,7 +839,6 @@ export const productService = {
       });
       return response.data;
     } catch (error) {
-      console.error("Create product error:", error);
       throw error.response?.data || error.message;
     }
   },
@@ -936,21 +859,15 @@ export const productService = {
   getProduct: async (id) => {
     try {
       const response = await api.get(`/api/products/${id}`);
-      console.log("Product Service Response:", response);
       // Return the data directly since the API response is already in the correct format
       return response.data;
     } catch (error) {
-      console.error("Error fetching product:", error);
       throw error.response?.data || error.message;
     }
   },
 
   updateProduct: async (id, productData) => {
     try {
-      console.log(
-        "Updating product with data:",
-        Object.fromEntries(productData.entries())
-      );
       const response = await api.put(`/api/products/${id}`, productData, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -959,7 +876,6 @@ export const productService = {
       });
       return response.data;
     } catch (error) {
-      console.error("Update product error:", error);
       throw error.response?.data || error.message;
     }
   },
@@ -1061,7 +977,6 @@ export const couponService = {
     return deduplicateRequest(cacheKey, async () => {
       try {
         const response = await api.get("/api/coupons");
-        console.log("API Response:", response.data);
         const data = response.data;
         
         // Cache for 30 minutes
@@ -1069,7 +984,6 @@ export const couponService = {
         
         return data;
       } catch (error) {
-        console.error("Error in getAllCoupons:", error);
         throw handleApiError(error);
       }
     });
@@ -1160,28 +1074,22 @@ export const reviewService = {
 
   moderateReview: async (id, moderationData) => {
     try {
-      console.log("Moderating review:", { id, moderationData });
       // Ensure the data is in the correct format
       const formattedData = {
         status: moderationData.status,
         is_featured: moderationData.is_featured,
         admin_notes: moderationData.admin_notes,
       };
-      console.log("Formatted moderation data:", formattedData);
-
       const response = await api.put(
         `/api/reviews/admin/${id}/moderate`,
         formattedData
       );
-      console.log("Moderation response:", response.data);
-
       if (!response.data) {
         throw new Error("No response data received");
       }
 
       return response.data;
     } catch (error) {
-      console.error("Moderation error:", error.response?.data || error);
       throw handleApiError(error);
     }
   },
@@ -1235,8 +1143,6 @@ export const seoService = {
         data.append("meta_image", image);
       }
 
-      console.log("Creating SEO data:", Object.fromEntries(data.entries()));
-
       const response = await api.post("/api/seo/create", data, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -1244,17 +1150,12 @@ export const seoService = {
       });
       return response.data;
     } catch (error) {
-      console.error("Error in createSEOData:", error);
       throw handleApiError(error);
     }
   },
 
   updateSEOData: async (formData) => {
     try {
-      console.log(
-        "Sending SEO update data:",
-        Object.fromEntries(formData.entries())
-      );
 
       const response = await api.put("/api/seo/update", formData, {
         headers: {
@@ -1263,7 +1164,6 @@ export const seoService = {
       });
       return response.data;
     } catch (error) {
-      console.error("Error in updateSEOData:", error);
       throw handleApiError(error);
     }
   },
@@ -1570,4 +1470,3 @@ export const brandSettingsService = {
   },
 };
 
-export default api;

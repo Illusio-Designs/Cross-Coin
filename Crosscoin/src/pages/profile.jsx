@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import SafeImage from "../components/common/SafeImage";
-import "../styles/pages/Profile.css";
 import { useRouter } from "next/router";
 import SeoWrapper from "../console/SeoWrapper";
 import {
@@ -205,8 +204,7 @@ export default function Profile() {
         const data = await getUserShippingAddresses();
         setAddresses(data);
       } catch (refetchErr) {
-        console.error('Failed to refetch addresses:', refetchErr);
-      }
+        }
     }
   };
 
@@ -238,8 +236,7 @@ export default function Profile() {
         const data = await getUserShippingAddresses();
         setAddresses(data);
       } catch (refetchErr) {
-        console.error('Failed to refetch addresses:', refetchErr);
-      }
+        }
     }
   };
 
@@ -263,8 +260,7 @@ export default function Profile() {
         const data = await getUserShippingAddresses();
         setAddresses(data);
       } catch (refetchErr) {
-        console.error('Failed to refetch addresses:', refetchErr);
-      }
+        }
     }
   };
 
@@ -824,3 +820,4 @@ export default function Profile() {
     </SeoWrapper>
   );
 }
+

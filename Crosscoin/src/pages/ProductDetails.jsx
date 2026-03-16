@@ -11,17 +11,14 @@ import { getPublicProductBySlug, createPublicReview, getPublicCoupons, getPublic
 import SeoWrapper from '../console/SeoWrapper';
 import { showValidationErrorToast, showReviewSubmittedSuccessToast, showReviewSubmittedErrorToast } from '../utils/toast';
 import Loader from '../components/Loader';
-import { fbqTrack } from '../components/common/Analytics';
+import { fbqTrack } from '../utils/fbqTrack';
 import InfiniteReviewsSlider from '../components/InfiniteReviewsSlider';
 import { getProductImageSrc } from '../utils/imageUtils';
 import DOMPurify from 'dompurify';
 import { Modal } from "../components/ui";
 import colorMap from '../components/products/colorMap';
 
-// Load page-specific CSS
-import "../styles/pages/ProductDetails.css";
-import "../styles/components/Header.css";
-import "../styles/components/Footer.css";
+// Load page-specific CSS - moved to _app.jsx
 
 // Lazy load Footer
 const Footer = dynamic(() => import("../components/Footer"), {
@@ -105,7 +102,6 @@ export default function ProductDetails() {
     
     // Priority 1: Use images from the selected variation if available
     if (selectedVariation?.images && Array.isArray(selectedVariation.images) && selectedVariation.images.length > 0) {
-      console.log('Using selectedVariation.images:', selectedVariation.images);
       return selectedVariation.images;
     }
     
@@ -113,36 +109,25 @@ export default function ProductDetails() {
     if (product?.images && Array.isArray(product.images) && product.images.length > 0 && selectedVariation?.id) {
       const filteredImages = product.images.filter(img => img && img.product_variation_id === selectedVariation.id);
       if (filteredImages.length > 0) {
-        console.log('Using filtered product images for variation:', selectedVariation.id, filteredImages);
         return filteredImages;
       }
     }
     
     // Priority 3: Fallback to all product images
     if (product?.images && Array.isArray(product.images) && product.images.length > 0) {
-      console.log('Using all product images as fallback');
       return product.images;
     }
     
     // If no images available, return empty array
-    console.log('No images available');
     return [];
   }, [selectedVariation, product]);
 
   // Debug: Log variation images data
   useEffect(() => {
-    console.log('=== ProductDetails Image Debug ===');
-    console.log('selectedVariation:', selectedVariation);
-    console.log('product?.images:', product?.images);
-    console.log('variationImages:', variationImages);
-    console.log('selectedThumbnail:', selectedThumbnail);
-    console.log('Current image:', variationImages[selectedThumbnail]);
-    console.log('================================');
-  }, [selectedVariation, variationImages, selectedThumbnail, product]);
+    }, [selectedVariation, variationImages, selectedThumbnail, product]);
 
   // Reset selectedThumbnail when variation changes
   useEffect(() => {
-    console.log('Variation changed, resetting thumbnail to 0');
     setSelectedThumbnail(0);
   }, [selectedVariation?.id]);
 
@@ -157,7 +142,6 @@ export default function ProductDetails() {
         ? JSON.parse(selectedVariationBySku.attributes)
         : selectedVariationBySku.attributes || {};
     } catch (error) {
-      console.error('Error parsing variation attributes:', error);
       return {};
     }
   }, [selectedVariationBySku]);
@@ -179,8 +163,6 @@ export default function ProductDetails() {
     if (productApiCalledRef.current === productSlug) return; // Prevent multiple calls for same slug
     productApiCalledRef.current = productSlug;
     
-    console.log('API BEING CALLED: ProductDetails data fetch (PARALLELIZED)');
-    
     // ✅ PARALLELIZED: Fetch product and coupons simultaneously
     const fetchAllData = async () => {
       try {
@@ -201,7 +183,6 @@ export default function ProductDetails() {
             try {
               return await getPublicProductBySlug(productSlug);
             } catch (err) {
-              console.error('Error fetching product:', err);
               throw err;
             }
           })(),
@@ -212,7 +193,6 @@ export default function ProductDetails() {
               const data = await getPublicCoupons();
               return Array.isArray(data) ? data : data.coupons || [];
             } catch (err) {
-              console.error('Error fetching coupons:', err);
               return [];
             }
           })()
@@ -240,15 +220,13 @@ export default function ProductDetails() {
           }
         } else {
           setError('Product not found or no data returned');
-          console.error('API returned no product data:', productResponse);
-        }
+          }
 
         // Set coupons
         setCoupons(couponsData);
 
         setLoading(false);
       } catch (err) {
-        console.error('ProductDetails fetch error:', err);
         setError(err.message || 'Failed to fetch product');
         setLoading(false);
       }
@@ -258,7 +236,6 @@ export default function ProductDetails() {
     try {
       fetchAllData();
     } catch (syncError) {
-      console.error('ProductDetails sync error:', syncError);
       setError('An unexpected error occurred');
       setLoading(false);
     }
@@ -271,7 +248,6 @@ export default function ProductDetails() {
     const fetchReviews = async () => {
       try {
         setReviewsLoading(true);
-        console.log('API BEING CALLED: ProductDetails reviews fetch for product:', product.id, 'page:', reviewsPage);
         const response = await getPublicProductReviews(product.id, { 
           page: reviewsPage, 
           limit: 10 // Fetch 10 reviews per page instead of 100
@@ -298,7 +274,6 @@ export default function ProductDetails() {
           }
         }
       } catch (err) {
-        console.error('Error fetching reviews:', err);
         // Fallback to product reviews on error
         if (reviewsPage === 1) {
           setAllReviews(product.reviews || []);
@@ -502,8 +477,7 @@ export default function ProductDetails() {
         setTooltipStyle({});
       }, 2000);
     } catch (err) {
-      console.error('Failed to copy coupon code:', err);
-    }
+      }
   };
 
   const renderStars = (rating) => {
@@ -530,11 +504,9 @@ export default function ProductDetails() {
       });
       if (matchingVariation) {
         setSelectedVariation(matchingVariation);
-        console.log('Variation selected:', matchingVariation);
-      }
+        }
       if(attributeName === 'color') {
-        console.log('Color selected:', value, 'SelectedAttributes:', newAttributes);
-      }
+        }
       return newAttributes;
     });
   };
@@ -605,8 +577,7 @@ export default function ProductDetails() {
               setReviewsHasMore(hasMore);
             }
           } catch (err) {
-            console.error('Error refreshing reviews:', err);
-          }
+            }
         }
       }
     } catch (error) {
@@ -679,7 +650,6 @@ export default function ProductDetails() {
         txt.innerHTML = html;
         return txt.value;
       } catch (error) {
-        console.error('Error decoding HTML:', error);
         return html;
       }
     }
@@ -696,18 +666,13 @@ export default function ProductDetails() {
     let imagesForVariation = [];
     if (product?.images && product.images.length > 0 && selectedVariation?.id) {
       imagesForVariation = product.images.filter(img => img && img.product_variation_id === selectedVariation.id);
-      console.log('All product images:', product.images);
-      console.log('Selected variation id:', selectedVariation.id);
-      console.log('Images for this variation:', imagesForVariation);
       if (imagesForVariation.length > 0) {
         selectedImage = [imagesForVariation[0]];
       }
     }
     if (selectedImage.length === 0 && selectedVariation?.images && selectedVariation.images.length > 0) {
       selectedImage = [selectedVariation.images[0]];
-      console.log('Fallback to selectedVariation.images:', selectedVariation.images);
-    }
-    console.log('Final image sent to cart:', selectedImage);
+      }
     addToCart(
       product,
       selectedColor,
@@ -729,13 +694,6 @@ export default function ProductDetails() {
   };
 
   const handleBuyNow = async () => {
-    console.log('=== BUY NOW CLICKED ===');
-    console.log('Product:', product);
-    console.log('Selected variation:', selectedVariation);
-    console.log('Selected attributes:', selectedAttributes);
-    console.log('Selected size for pack:', selectedSizeForPack);
-    console.log('User authenticated:', isAuthenticated);
-    
     setIsBuyNowLoading(true);
 
     try {
@@ -748,29 +706,14 @@ export default function ProductDetails() {
       let imagesForVariation = [];
       if (product?.images && product.images.length > 0 && selectedVariation?.id) {
         imagesForVariation = product.images.filter(img => img && img.product_variation_id === selectedVariation.id);
-        console.log('All product images:', product.images);
-        console.log('Selected variation id:', selectedVariation.id);
-        console.log('Images for this variation:', imagesForVariation);
         if (imagesForVariation.length > 0) {
           selectedImage = [imagesForVariation[0]];
         }
       }
       if (selectedImage.length === 0 && selectedVariation?.images && selectedVariation.images.length > 0) {
         selectedImage = [selectedVariation.images[0]];
-        console.log('Fallback to selectedVariation.images:', selectedVariation.images);
-      }
-      console.log('Final image sent to buy now:', selectedImage);
-      
+        }
       // Use Buy Now function instead of Add to Cart
-      console.log('ProductDetails Buy Now: Setting buy now item with variation data:', {
-        productName: product.name,
-        selectedColor,
-        selectedSize,
-        quantity,
-        selectedVariationId: selectedVariation?.id,
-        selectedVariation,
-        selectedImage
-      });
       await buyNow(
         product,
         selectedColor,
@@ -779,10 +722,7 @@ export default function ProductDetails() {
         selectedVariation?.id,
         selectedImage
       );
-      console.log('Buy now item set successfully');
-
       // Track the event (non-blocking)
-      console.log('Tracking checkout event...');
       try {
         fbqTrack('InitiateCheckout', {
           content_ids: [product.id],
@@ -793,17 +733,14 @@ export default function ProductDetails() {
           quantity,
         });
       } catch (trackingError) {
-        console.warn('Tracking error (non-blocking):', trackingError);
+        // Tracking error silently ignored
       }
 
       // Direct redirect to UnifiedCheckout
-      console.log('Redirecting to UnifiedCheckout...');
-      
       // Use router.replace for clean navigation
       nextRouter.replace('/UnifiedCheckout');
       
     } catch (error) {
-      console.error('Error in buy now process:', error);
       showValidationErrorToast('Something went wrong. Please try again.');
       setIsBuyNowLoading(false);
     }
@@ -960,12 +897,9 @@ export default function ProductDetails() {
   }
 
   // Log product description and image URL
-  console.log('Product Description:', product.description);
   const mainImageUrl = product.images && product.images.length > 0
     ? (product.images[0].image_url || product.images[0].url || product.images[0])
     : '';
-  console.log('Main Image URL:', mainImageUrl);
-
   // Use home page logic for image URL (getCategoryImageSrc equivalent)
   function getProductImageSrcForDetails(imageObj) {
     if (!imageObj) return null; // Return null instead of fallback
@@ -1157,8 +1091,6 @@ export default function ProductDetails() {
   const totalReviews = allReviews ? allReviews.length : 0;
 
   // Log color options and selected color for debugging
-  console.log('Color options:', colorOptions, 'Selected color:', selectedColor);
-
   // Add this function inside the ProductDetails component
   const renderColorSelection = () => {
     // Always show color selection if at least one variation has a color attribute
@@ -1521,7 +1453,6 @@ export default function ProductDetails() {
                         try {
                           return DOMPurify.sanitize(decodeHtml(product.description || "-"));
                         } catch (error) {
-                          console.error('Error sanitizing HTML:', error);
                           return product.description || "-";
                         }
                       })()

@@ -3,7 +3,6 @@ import { Button, Input, Modal, Table, Pagination } from "@/components/ui";
 import Loader from "@/components/Loader";
 import { shippingFeeService } from "@/services";
 import { debounce } from 'lodash';
-import "../../../styles/dashboard/seo.css";
 
 export default function ShippingFees() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -41,8 +40,7 @@ export default function ShippingFees() {
       setShippingFees(data);
     } catch (err) {
       setError(err.message || "Failed to fetch shipping fees");
-      console.error("Error fetching shipping fees:", err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -133,8 +131,7 @@ export default function ShippingFees() {
         await fetchShippingFees();
       } catch (err) {
         setError(err.message || "Failed to delete shipping fee");
-        console.error("Error deleting shipping fee:", err);
-      } finally {
+        } finally {
         setLoading(false);
       }
     }
@@ -190,8 +187,7 @@ export default function ShippingFees() {
       handleModalClose();
     } catch (err) {
       setError(err.message || "Failed to save shipping fee");
-      console.error("Error saving shipping fee:", err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -366,3 +362,4 @@ export default function ShippingFees() {
     </div>
   );
 } 
+

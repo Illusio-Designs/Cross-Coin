@@ -8,8 +8,6 @@ import Loader from '../components/Loader';
 import { Pagination } from '../components/ui';
 import SeoWrapper from '../console/SeoWrapper';
 import { usePagination } from '../hooks/usePagination';
-import '../styles/pages/SearchResults.css';
-import '../styles/common/TableControls.css';
 
 // ✅ Debounce function moved outside component to prevent recreation
 function createDebouncedSearch(func, wait) {
@@ -78,7 +76,6 @@ const SearchResults = () => {
           setError(response.message || 'No products found');
         }
       } catch (err) {
-        console.error('Search error:', err);
         setError(err.message || 'Failed to search products');
         setProducts([]);
         setTotalProducts(0);
@@ -200,7 +197,6 @@ const SearchResults = () => {
             }
           })
           .catch(err => {
-            console.error('Search error:', err);
             setError(err.message || 'Failed to search products');
             setProducts([]);
             setTotalProducts(0);

@@ -84,8 +84,7 @@ export default function Consumers() {
         setIsViewModalOpen(true);
       }
     } catch (error) {
-      console.error('Error viewing consumer:', error);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -242,3 +241,5 @@ export default function Consumers() {
     </>
   );
 } 
+
+

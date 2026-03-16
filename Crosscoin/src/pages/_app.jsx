@@ -9,12 +9,75 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import Loader from "../components/Loader";
 import CartDrawer from "../components/cart/CartDrawer";
-// Critical CSS only - loaded immediately
+import Breadcrumb from "../components/Breadcrumb";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
+// Global CSS — all imports must live here (Next.js Pages Router rule)
 import "../styles/globals.css";
 import "../styles/responsive.css";
 import "../styles/mobile-utilities.css";
-import "../styles/components/ProductCard.css";
-// Page-specific CSS will be loaded by individual pages
+import "../styles/skeleton.css";
+// Pages
+import "../styles/pages/Home.css";
+import "../styles/pages/Login.css";
+import "../styles/pages/Profile.css";
+import "../styles/pages/products.css";
+import "../styles/pages/ProductDetails.css";
+import "../styles/pages/UnifiedCheckout.css";
+import "../styles/pages/Wishlist.css";
+import "../styles/pages/ThankYou.css";
+import "../styles/pages/OrderTracking.css";
+import "../styles/pages/SearchResults.css";
+import "../styles/pages/Policy.css";
+import "../styles/pages/Contact.css";
+import "../styles/pages/auth/adminlogin.css";
+// Components
+import "../styles/components/Header.css";
+import "../styles/components/Breadcrumb.css";
+import "../styles/components/Footer.css";
+import "../styles/components/Testimonials.css";
+import "../styles/components/TrustBadges.css";
+import "../styles/components/HeroSlider.css";
+import "../styles/components/SlidingCollection.css";
+import "../styles/components/UnlockedExclusives.css";
+import "../styles/components/CouponStrip.css";
+// Common
+import "../styles/common/TableControls.css";
+import "../styles/common/FomoElements.css";
+import "../styles/common/DonutChart.css";
+// Dashboard
+import "../styles/dashboard/layout.css";
+import "../styles/dashboard/sidebar.css";
+import "../styles/dashboard/full-width-fix.css";
+import "../styles/dashboard/mobile.css";
+import "../styles/dashboard/brands.css";
+import "../styles/dashboard/brandSettings.css";
+import "../styles/dashboard/brandTags.css";
+import "../styles/dashboard/brandAssignment.css";
+import "../styles/dashboard/reviews.css";
+import "../styles/dashboard/seo.css";
+import "../styles/dashboard/slider.css";
+import "../styles/dashboard/header.css";
+import "../styles/dashboard/Card.css";
+// Component-local CSS (co-located with components)
+import "../components/Sidebar/Sidebar.css";
+import "../components/cart/CartDrawer.css";
+import "../components/cart/QuantityOfferBar.css";
+import "../components/ProductListSkeleton.css";
+import "../components/DashboardSkeleton.css";
+// Additional dashboard CSS
+import "../styles/dashboard/payments.css";
+import "../styles/dashboard/products.css";
+import "../styles/dashboard/orders.css";
+import "../styles/dashboard/media.css";
+import "../styles/dashboard/utmAnalytics.css";
+import "../styles/dashboard/attributes.css";
+// Additional page CSS
+import "../styles/pages/Collections.css";
+import "../styles/pages/About.css";
+// Third-party
+import "react-quill/dist/quill.snow.css";
+
 import Analytics from "../components/common/Analytics";
 import UTMTracker from "../components/common/UTMTracker";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -34,8 +97,11 @@ function AppContent({ Component, pageProps, progressRef }) {
           style={{ height: 0 }}
         />
       </div>
+      <Header />
+      <Breadcrumb />
       {/* Removed blocking loader - pages load instantly */}
       <Component {...pageProps} />
+      <Footer />
       <CartDrawer 
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)}
@@ -84,8 +150,6 @@ function App({ Component, pageProps }) {
     if (typeof window !== 'undefined' && !window.__turbopack_load_page_chunks__) {
       window.__turbopack_load_page_chunks__ = () => {};
     }
-    
-    console.log('🚀 App mounted - UTMTracker active');
     
     // Defer analytics loading for better initial performance
     const timer = setTimeout(() => {
@@ -150,3 +214,4 @@ function App({ Component, pageProps }) {
 }
 
 export default App;
+

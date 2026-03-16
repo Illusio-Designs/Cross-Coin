@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { FiGift, FiCheck } from 'react-icons/fi';
 import { useCart } from '../../context/CartContext';
 import { getPublicCoupons } from '../../services/publicApi';
-import './QuantityOfferBar.css';
 
 const QuantityOfferBar = ({ selectedPaymentMode = 'cod', appliedCoupon, onCouponApply }) => {
   const { cartItems, cartTotal } = useCart();
@@ -237,7 +236,6 @@ const QuantityOfferBar = ({ selectedPaymentMode = 'cod', appliedCoupon, onCoupon
           setOfferData({ type: 'no_offers', paymentMode: selectedPaymentMode });
         }
       } catch (error) {
-        console.error('Error fetching offers:', error);
         setOfferData(null);
       }
     };
@@ -407,3 +405,4 @@ const QuantityOfferBar = ({ selectedPaymentMode = 'cod', appliedCoupon, onCoupon
 };
 
 export default QuantityOfferBar;
+

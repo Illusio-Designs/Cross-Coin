@@ -6,9 +6,6 @@ import { sliderService, categoryService, brandService } from "../../../services"
 import { debounce } from 'lodash';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../../context/AuthContext';
-import "../../../styles/dashboard/seo.css";
-import "../../../styles/common/TableControls.css";
-import "../../../styles/dashboard/slider.css";
 import { toast } from 'react-hot-toast';
 
 export default function Slider() {
@@ -47,8 +44,7 @@ export default function Slider() {
       const response = await categoryService.getAllCategories();
       setCategories(response);
     } catch (err) {
-      console.error("Error fetching categories:", err);
-    }
+      }
   };
 
   // Fetch brands
@@ -59,8 +55,7 @@ export default function Slider() {
         setBrands(response.data);
       }
     } catch (err) {
-      console.error("Error fetching brands:", err);
-    }
+      }
   };
 
   useEffect(() => {
@@ -88,20 +83,14 @@ export default function Slider() {
     setError(null);
     try {
       const response = await sliderService.getAllSliders();
-      console.log('API Response:', response);
-      
       if (Array.isArray(response)) {
         setSliders(response);
-        console.log('Sliders data:', response);
-      } else if (response.sliders && Array.isArray(response.sliders)) {
+        } else if (response.sliders && Array.isArray(response.sliders)) {
         setSliders(response.sliders);
-        console.log('Sliders data:', response.sliders);
-      } else {
-        console.warn('Unexpected response format:', response);
+        } else {
         setSliders([]);
       }
     } catch (err) {
-      console.error('Error fetching sliders:', err);
       setError(err.message || "Failed to fetch sliders");
       toast.error(err.message || "Failed to fetch sliders");
     } finally {
@@ -145,8 +134,6 @@ export default function Slider() {
   // Helper function to get image URL
   const getImageUrl = (imagePath) => {
     if (!imagePath) return '';
-    console.log('Processing image path:', imagePath);
-    
     // If the image path contains localhost, replace it with the production URL
     if (imagePath.includes('localhost:5000') || imagePath.includes('localhost')) {
       const productionUrl = imagePath.replace(/http:\/\/localhost(:\d+)?/, 'https://api.crosscoin.in');
@@ -182,7 +169,6 @@ export default function Slider() {
                   borderRadius: '4px'
                 }}
                 onError={(e) => {
-                  console.error('Image failed to load:', imageUrl);
                   e.target.style.display = 'none';
                   e.target.nextSibling.style.display = 'flex';
                 }}
@@ -281,8 +267,6 @@ export default function Slider() {
       setLoading(true);
       const response = await sliderService.getSliderById(id);
       const data = response.slider || response; // Handle both response formats
-      console.log('Edit slider data:', data);
-      
       // Extract brand IDs from brands array
       const brandIds = data.brands && Array.isArray(data.brands) 
         ? data.brands.map(b => typeof b === 'object' ? b.id : b)
@@ -302,8 +286,7 @@ export default function Slider() {
       setIsModalOpen(true);
     } catch (err) {
       setError(err.message || "Failed to fetch slider data");
-      console.error("Error fetching slider data:", err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -318,8 +301,7 @@ export default function Slider() {
       } catch (err) {
         setError(err.message || "Failed to delete slider");
         toast.error(err.message || "Failed to delete slider");
-        console.error("Error deleting slider:", err);
-      } finally {
+        } finally {
         setLoading(false);
       }
     }
@@ -358,13 +340,6 @@ export default function Slider() {
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
-    console.log('Input Change:', {
-      name,
-      value,
-      type,
-      currentFormData: formData
-    });
-    
     if (type === 'file') {
       setFormData(prev => ({
         ...prev,
@@ -656,3 +631,4 @@ export default function Slider() {
     </>
   );
 } 
+

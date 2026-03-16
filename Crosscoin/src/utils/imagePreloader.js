@@ -153,4 +153,3 @@ class ImagePreloader {
 const globalPreloader = new ImagePreloader(3);
 
 export default globalPreloader;
-export { ImagePreloader };
