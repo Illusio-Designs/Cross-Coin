@@ -7,6 +7,7 @@ const SlidingCollection = ({ collections = [] }) => {
   const [loading, setLoading] = useState(false);
   const [current, setCurrent] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [loadedImages, setLoadedImages] = useState({});
   const router = useRouter();
   const total = collections.length;
 
@@ -231,9 +232,11 @@ const SlidingCollection = ({ collections = [] }) => {
                     alt={collection.name}
                     className="card-bg-img"
                     draggable={false}
+                    onLoad={() => setLoadedImages(prev => ({ ...prev, [index]: true }))}
+                    style={{ opacity: loadedImages[index] ? 1 : 0 }}
                   />
                 )}
-                {!imageSrc && <div className="card-bg-fallback" />}
+                {(!imageSrc || !loadedImages[index]) && <div className="card-bg-fallback" />}
 
                 {/* SVG Pattern Overlay */}
                 <svg className="card-pattern" viewBox="0 0 420 400" xmlns="http://www.w3.org/2000/svg">

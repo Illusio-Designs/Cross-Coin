@@ -89,13 +89,21 @@
   object-fit: cover;
   object-position: center;
   z-index: 0;
+  font-size: 0;
 }
 
 .card-bg-fallback {
   position: absolute;
   inset: 0;
-  background: #e5e5e5;
+  background: linear-gradient(135deg, #d0d0d0 0%, #b8b8b8 50%, #d0d0d0 100%);
+  background-size: 200% 200%;
+  animation: shimmer 1.5s infinite;
   z-index: 0;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* SVG decorative pattern */
