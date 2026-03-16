@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from 'next/dynamic';
-import Header from "../components/Header";
 import HeroSlider from "../components/HeroSlider";
 import ProductCard from "../components/ProductCard";
 import SafeImage from "../components/common/SafeImage";
@@ -33,10 +32,6 @@ import { seoService } from '../services/index';
 // Load page-specific CSS - moved to _app.jsx
 
 // Lazy load below-the-fold components for better performance
-const Footer = dynamic(() => import("../components/Footer"), {
-  loading: () => <div style={{ minHeight: '200px', background: '#f9fafb' }} />
-});
-
 const Testimonials = dynamic(() => import("../components/Testimonials"), {
   loading: () => <div style={{ minHeight: '300px', background: '#fff' }} />
 });
@@ -337,9 +332,7 @@ const Home = () => {
   };
 
   return (
-    <>
-      <Header />
-      <div className="home-page">
+    <div className="home-page">
         <HeroSlider slides={slides} />
         <CouponStrip />
         <TrustBadges />
@@ -427,9 +420,7 @@ const Home = () => {
         </div>
         <Testimonials />
       </div>
-      <Footer collections={categories} />
-    </>
-  );
-};
+    );
+  };
 
 export default Home;
