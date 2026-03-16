@@ -87,23 +87,23 @@ const SlidingCollection = ({ collections = [] }) => {
     let ACTIVE_W, ACTIVE_H, SIDE_W, SIDE_H, SIDE_PEEK;
 
     if (isMobile) {
-      ACTIVE_W = sw * 0.85;
-      ACTIVE_H = sh * 0.9;
-      SIDE_W = sw * 0.7;
-      SIDE_H = sh * 0.75;
-      SIDE_PEEK = sw * 0.15;
+      ACTIVE_W = sw * 0.78;
+      ACTIVE_H = sh * 0.88;
+      SIDE_W = sw * 0.78;
+      SIDE_H = sh * 0.72;
+      SIDE_PEEK = sw * 0.22;
     } else if (isTablet) {
-      ACTIVE_W = sw * 0.6;
-      ACTIVE_H = sh * 0.85;
-      SIDE_W = sw * 0.45;
-      SIDE_H = sh * 0.75;
-      SIDE_PEEK = sw * 0.2;
+      ACTIVE_W = sw * 0.55;
+      ACTIVE_H = sh * 0.82;
+      SIDE_W = sw * 0.55;
+      SIDE_H = sh * 0.7;
+      SIDE_PEEK = sw * 0.28;
     } else {
       ACTIVE_W = 480;
       ACTIVE_H = 420;
-      SIDE_W = 360;
-      SIDE_H = 355;
-      SIDE_PEEK = 255;
+      SIDE_W = 480;
+      SIDE_H = 360;
+      SIDE_PEEK = 320;
     }
 
     let x, y, w, h, opacity, zIndex, shadow;
