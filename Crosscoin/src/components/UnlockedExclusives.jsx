@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import SafeImage from './common/SafeImage';
 import { getPublicProductReviews } from '../services/publicApi';
 
@@ -13,9 +13,12 @@ const UnlockedExclusives = ({ products = [] }) => {
   const [reviewCount, setReviewCount] = useState(0);
   const [avgRating, setAvgRating] = useState(null);
 
+  const dragRef = useRef({ dragging: false, startX: 0, startOffset: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+
   const VISIBLE_CARDS = 3;
-  const CARD_WIDTH = 142;
-  const GAP = 12;
+  const CARD_WIDTH = 100;
+  const GAP = 10;
   const CARD_TOTAL_WIDTH = CARD_WIDTH + GAP;
 
   useEffect(() => {
@@ -51,13 +54,46 @@ const UnlockedExclusives = ({ products = [] }) => {
     setQty(1);
     setShowDetail(false);
     setActiveTab('details');
+    // Keep selected card visible in strip
+    const maxOffset = Math.max(0, (products.length - VISIBLE_CARDS) * CARD_TOTAL_WIDTH);
+    const idealOffset = index * CARD_TOTAL_WIDTH - Math.floor(VISIBLE_CARDS / 2) * CARD_TOTAL_WIDTH;
+    setStripOffset(Math.max(0, Math.min(idealOffset, maxOffset)));
   };
 
   const handleChangeQty = (delta) => setQty(Math.max(1, qty + delta));
 
   const scrollStrip = (direction) => {
-    const maxOffset = Math.max(0, (products.length - VISIBLE_CARDS) * CARD_TOTAL_WIDTH);
-    setStripOffset(Math.max(0, Math.min(stripOffset + direction * CARD_TOTAL_WIDTH, maxOffset)));
+    const maxOffset = (products.length - VISIBLE_CARDS) * CARD_TOTAL_WIDTH;
+    const newOffset = Math.max(0, Math.min(stripOffset + direction * CARD_TOTAL_WIDTH, maxOffset));
+    setStripOffset(newOffset);
+    const nextProduct = Math.max(0, Math.min(currentProduct + direction, products.length - 1));
+    handleSelectProduct(nextProduct);
+  };
+
+  const getMaxOffset = () => Math.max(0, (products.length - VISIBLE_CARDS) * CARD_TOTAL_WIDTH);
+
+  const onDragStart = (clientX) => {
+    dragRef.current = { dragging: true, startX: clientX, startOffset: stripOffset };
+    setIsDragging(true);
+  };
+
+  const onDragMove = (clientX) => {
+    if (!dragRef.current.dragging) return;
+    const delta = dragRef.current.startX - clientX;
+    const newOffset = Math.max(0, Math.min(dragRef.current.startOffset + delta, getMaxOffset()));
+    setStripOffset(newOffset);
+  };
+
+  const onDragEnd = () => {
+    if (!dragRef.current.dragging) return;
+    dragRef.current.dragging = false;
+    setIsDragging(false);
+    // Snap to nearest card with smooth transition
+    const snapped = Math.round(stripOffset / CARD_TOTAL_WIDTH) * CARD_TOTAL_WIDTH;
+    const finalOffset = Math.max(0, Math.min(snapped, getMaxOffset()));
+    setStripOffset(finalOffset);
+    const nearestIndex = Math.round(finalOffset / CARD_TOTAL_WIDTH);
+    handleSelectProduct(Math.min(nearestIndex, products.length - 1));
   };
 
   const openGallery = (index) => { setGalleryImageIndex(index); setGalleryOpen(true); };
@@ -97,20 +133,30 @@ const UnlockedExclusives = ({ products = [] }) => {
           <div className="right-col">
             {/* Product strip */}
             <div className="strip-wrap">
-              <div className="strip-viewport">
-                <div className="strip" style={{ transform: `translateX(-${stripOffset}px)`, transition: 'transform 0.3s ease' }}>
+              <p className="strip-label">Other Products</p>
+              <div className="strip-viewport"
+                onMouseDown={(e) => onDragStart(e.clientX)}
+                onMouseMove={(e) => onDragMove(e.clientX)}
+                onMouseUp={onDragEnd}
+                onMouseLeave={onDragEnd}
+                onTouchStart={(e) => onDragStart(e.touches[0].clientX)}
+                onTouchMove={(e) => onDragMove(e.touches[0].clientX)}
+                onTouchEnd={onDragEnd}
+                style={{ cursor: dragRef.current.dragging ? 'grabbing' : 'grab' }}
+              >
+                <div className="strip" style={{ transform: `translateX(-${stripOffset}px)`, transition: isDragging ? 'none' : 'transform 0.3s ease' }}>
                   {products.map((prod, idx) => (
-                    <div key={idx} className={`strip-card ${idx === currentProduct ? 'active' : ''}`} onClick={() => handleSelectProduct(idx)} style={{ cursor: 'pointer' }}>
+                    <div key={idx} className={`strip-card ${idx === currentProduct ? 'active' : ''}`} onClick={() => !dragRef.current.dragging && handleSelectProduct(idx)} style={{ cursor: 'pointer' }}>
                       <SafeImage imageData={{ image_url: prod.images?.[0]?.image_url }} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                   ))}
                 </div>
               </div>
               <div className="strip-nav">
-                <button className="strip-btn" onClick={() => scrollStrip(-1)}>
+                <button className="strip-btn" onClick={() => scrollStrip(-1)} disabled={stripOffset === 0}>
                   <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></svg>
                 </button>
-                <button className="strip-btn" onClick={() => scrollStrip(1)}>
+                <button className="strip-btn" onClick={() => scrollStrip(1)} disabled={stripOffset >= (products.length - VISIBLE_CARDS) * CARD_TOTAL_WIDTH}>
                   <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" /></svg>
                 </button>
               </div>

@@ -172,8 +172,9 @@ const Home = () => {
           (async () => {
             try {
               const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/public?sort=featured&limit=3`,
+                `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/public?sort=featured&limit=100`,
                 {
+                  cache: 'no-store',
                   headers: {
                     'Content-Type': 'application/json',
                     'X-Brand-Name': 'crosscoin'
