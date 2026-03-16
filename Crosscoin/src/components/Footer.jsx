@@ -1,143 +1,173 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { AiOutlineMail } from "react-icons/ai";
-import { FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn } from "react-icons/fa";
+import { FaFacebookF, FaInstagram } from "react-icons/fa";
 import { MdOutlinePhoneInTalk } from "react-icons/md"; 
 import SafeImage from "./common/SafeImage";
 import { getPublicCategories } from "../services/publicApi";
 
 const Footer = () => {
-  const [collections, setCollections] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [email, setEmail] = useState("");
   const [hoveredLink, setHoveredLink] = useState(null);
 
   useEffect(() => {
-    const fetchCollections = async () => {
+    const fetchCategories = async () => {
       try {
         const data = await getPublicCategories();
-        // Handle both array and object response
         if (Array.isArray(data)) {
-          setCollections(data.slice(0, 5));
+          setCategories(data.slice(0, 8));
         } else if (data && Array.isArray(data.categories)) {
-          setCollections(data.categories.slice(0, 5));
+          setCategories(data.categories.slice(0, 8));
         } else {
-          setCollections([]);
+          setCategories([]);
         }
       } catch (error) {
-        setCollections([]);
+        setCategories([]);
       }
     };
-    fetchCollections();
+    fetchCategories();
   }, []);
+
+  const handleNewsletterSubmit = (e) => {
+    e.preventDefault();
+    setEmail("");
+  };
 
   return (
     <footer className="footer">
+      {/* Popular Searches Section */}
+      <div className="footer__popular-searches">
+        <h3>Popular Searches</h3>
+        <div className="footer__search-grid">
+          {categories.map((cat) => (
+            <Link key={cat.id} href={`/category/${cat.slug || cat.id}`}>
+              <a className="footer__search-link">{cat.name}</a>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Newsletter Section */}
+      <div className="footer__newsletter-section">
+        <h3>BE THE FIRST TO KNOW</h3>
+        <p>Subscribe to our newsletter for exclusive offers, new arrivals, and insider updates.</p>
+        <form className="footer__newsletter-form" onSubmit={handleNewsletterSubmit}>
+          <input
+            type="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <button type="submit">Subscribe</button>
+        </form>
+      </div>
+
+      {/* Main Footer Content */}
       <div className="footer__main">
+        <div className="footer__col footer__about">
+          <h4>About</h4>
+          <ul>
+            <li><Link href="/about"><a>About Us</a></Link></li>
+            <li><Link href="/careers"><a>Careers</a></Link></li>
+            <li><Link href="/blog"><a>Blog</a></Link></li>
+            <li><Link href="/press"><a>Press</a></Link></li>
+          </ul>
+        </div>
+
+        <div className="footer__col footer__account">
+          <h4>Account</h4>
+          <ul>
+            <li><Link href="/account"><a>My Account</a></Link></li>
+            <li><Link href="/orders"><a>My Orders</a></Link></li>
+            <li><Link href="/wishlist"><a>Wishlist</a></Link></li>
+            <li><Link href="/cart"><a>Shopping Cart</a></Link></li>
+          </ul>
+        </div>
+
+        <div className="footer__col footer__policy">
+          <h4>Policy</h4>
+          <ul>
+            <li><Link href="/policy?name=privacy-policy"><a>Privacy Policy</a></Link></li>
+            <li><Link href="/policy?name=terms-and-conditions"><a>Terms & Conditions</a></Link></li>
+            <li><Link href="/policy?name=shipping-policy"><a>Shipping Policy</a></Link></li>
+            <li><Link href="/policy?name=cancellation-and-refund"><a>Cancellation & Refund</a></Link></li>
+          </ul>
+        </div>
+
+        <div className="footer__col footer__help">
+          <h4>Help</h4>
+          <div className="footer__contact">
+            <div className="contact-item">
+              <MdOutlinePhoneInTalk className="contact-icon" />
+              <div className="contact-info">
+                <p className="contact-label">Monday - Friday: 8:00 AM - 9:00 PM</p>
+                <a 
+                  href="tel:+919712891700" 
+                  className="contact-link"
+                  onMouseEnter={() => setHoveredLink('phone')}
+                  onMouseLeave={() => setHoveredLink(null)}
+                >
+                  +91 9712891700
+                </a>
+              </div>
+            </div>
+            <div className="contact-item">
+              <AiOutlineMail className="contact-icon" />
+              <div className="contact-info">
+                <p className="contact-label">Email Support</p>
+                <a 
+                  href="mailto:Crosscoinindia@gmail.com" 
+                  className="contact-link"
+                  onMouseEnter={() => setHoveredLink('email')}
+                  onMouseLeave={() => setHoveredLink(null)}
+                >
+                  Crosscoinindia@gmail.com
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="footer__col footer__brand">
           <div className="footer__logo">
-            <span className="footer__logo">
             <SafeImage 
               imageData={{ image_url: "/assets/crosscoin_logo.webp" }}
-              alt="logo" 
-              width={200} 
-              height={80}
+              alt="CrossCoin Logo" 
+              width={150} 
+              height={60}
               quality={90}
               style={{ objectFit: 'contain' }}
               isLogo={true}
             />
-            </span>
           </div>
-          <p>Discover premium quality socks designed for comfort and style. Join our community for exclusive deals, new arrivals, and special offers on your favorite Cross Coin collections!</p>
+          <p>Premium quality socks designed for comfort and style. Join our community for exclusive deals and special offers.</p>
           <div className="footer__social">
-            <h2>Follow us on social media:</h2>
+            <h5>Follow Us</h5>
             <div className="footer__social-icons">
-            <a href="https://www.facebook.com/people/Cross-Coin/61577195743730/" className="facebook" aria-label="Facebook" target="_blank" rel="noopener noreferrer"><FaFacebookF /></a>
-            <a href="https://www.instagram.com/crosscoin99/?igsh=d2FiY29iemhtb2Nl" className="instagram" aria-label="Instagram" target="_blank" rel="noopener noreferrer"><FaInstagram /></a>
-            </div>
-          </div>
-        </div>
-        <div className="footer__col">
-          <h4>Popular Collections</h4>
-          <ul>
-            {collections.map((col) => (
-              <li key={col.id}>{col.name}</li>
-            ))}
-          </ul>
-        </div>
-        <div className="footer__col footer__help">
-          <h4>Do You Need Help ?</h4>
-          <p>Our customer support team is here to assist you with orders, product inquiries, and any questions about our premium sock collections. Reach out anytime!</p>
-          <div className="footer__contact">
-            <div className="contact-item">
-              <MdOutlinePhoneInTalk /> 
-              <span className="gap">
-                Monday - Friday: 8:00 AM - 9:00 PM<br />
-                <a 
-                  href="tel:+919712891700" 
-                  className="contact-link"
-                  title="Click to call +91 9712891700"
-                  onMouseEnter={() => setHoveredLink('phone')}
-                  onMouseLeave={() => setHoveredLink(null)}
-                  style={{
-                    textDecoration: 'none',
-                    color: hoveredLink === 'phone' ? '#d32f2f' : '#111827',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    display: 'inline-block',
-                    padding: '2px 4px',
-                    borderRadius: '3px',
-                    backgroundColor: hoveredLink === 'phone' ? 'rgba(211, 47, 47, 0.1)' : 'transparent',
-                    transform: hoveredLink === 'phone' ? 'translateY(-1px)' : 'translateY(0)'
-                  }}
-                >
-                  <b className="bold" style={{ color: hoveredLink === 'phone' ? '#d32f2f' : 'inherit' }}>+91 9712891700</b>
-                </a>
-              </span>
-            </div> 
-            <div className="contact-item">
-              <AiOutlineMail /> 
-              <span className="gap">
-                Need help with your order?<br />
-                <a 
-                  href="mailto:Crosscoinindia@gmail.com" 
-                  className="contact-link"
-                  title="Click to send email to Crosscoinindia@gmail.com"
-                  onMouseEnter={() => setHoveredLink('email')}
-                  onMouseLeave={() => setHoveredLink(null)}
-                  style={{
-                    textDecoration: 'none',
-                    color: hoveredLink === 'email' ? '#d32f2f' : '#111827',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    display: 'inline-block',
-                    padding: '2px 4px',
-                    borderRadius: '3px',
-                    backgroundColor: hoveredLink === 'email' ? 'rgba(211, 47, 47, 0.1)' : 'transparent',
-                    transform: hoveredLink === 'email' ? 'translateY(-1px)' : 'translateY(0)'
-                  }}
-                >
-                  <b className="bold" style={{ color: hoveredLink === 'email' ? '#d32f2f' : 'inherit' }}>Crosscoinindia@gmail.com</b>
-                </a>
-              </span>
+              <a href="https://www.facebook.com/people/Cross-Coin/61577195743730/" className="social-icon facebook" aria-label="Facebook" target="_blank" rel="noopener noreferrer">
+                <FaFacebookF />
+              </a>
+              <a href="https://www.instagram.com/crosscoin99/?igsh=d2FiY29iemhtb2Nl" className="social-icon instagram" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
+                <FaInstagram />
+              </a>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Footer Bottom */}
       <div className="footer__bottom">
         <span className="footer__copyright">
-          Copyright 2025 &copy; CrossCoin Manage by OBZUS INDIA PRIVATE LIMITED. All right reserved
+          Copyright 2025 &copy; CrossCoin. All rights reserved.
         </span>
         <span className="footer__credit">
-          Design & Develop with <span role="img" aria-label="love">❤️️</span> by - 
+          Design & Develop with <span role="img" aria-label="love">❤️</span> by 
           <a href="https://illusiodesigns.agency/" target="_blank" rel="noopener noreferrer">
             Illusio Designs
           </a>
         </span>
-      </div>
-      <div className="footer__links">
-        <Link href="/policy?name=terms-and-conditions">Terms and Conditions</Link>
-        <Link href="/policy?name=privacy-policy">Privacy Policy</Link>
-        <Link href="/policy?name=shipping-policy">Shipping Policy</Link>
-        <Link href="/policy?name=cancellation-and-refund">Cancellation & Refund</Link>
       </div>
     </footer>
   );
