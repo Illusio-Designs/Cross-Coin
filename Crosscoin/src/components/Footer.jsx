@@ -69,30 +69,30 @@ const Footer = () => {
         <div className="footer__col footer__about">
           <h4>About</h4>
           <ul>
-            <li><Link href="/about"><a>About Us</a></Link></li>
-            <li><Link href="/careers"><a>Careers</a></Link></li>
-            <li><Link href="/blog"><a>Blog</a></Link></li>
-            <li><Link href="/press"><a>Press</a></Link></li>
+            <li><Link href="/about">About Us</Link></li>
+            <li><Link href="/careers">Careers</Link></li>
+            <li><Link href="/blog">Blog</Link></li>
+            <li><Link href="/press">Press</Link></li>
           </ul>
         </div>
 
         <div className="footer__col footer__account">
           <h4>Account</h4>
           <ul>
-            <li><Link href="/account"><a>My Account</a></Link></li>
-            <li><Link href="/orders"><a>My Orders</a></Link></li>
-            <li><Link href="/wishlist"><a>Wishlist</a></Link></li>
-            <li><Link href="/cart"><a>Shopping Cart</a></Link></li>
+            <li><Link href="/account">My Account</Link></li>
+            <li><Link href="/orders">My Orders</Link></li>
+            <li><Link href="/wishlist">Wishlist</Link></li>
+            <li><Link href="/cart">Shopping Cart</Link></li>
           </ul>
         </div>
 
         <div className="footer__col footer__policy">
           <h4>Policy</h4>
           <ul>
-            <li><Link href="/policy?name=privacy-policy"><a>Privacy Policy</a></Link></li>
-            <li><Link href="/policy?name=terms-and-conditions"><a>Terms & Conditions</a></Link></li>
-            <li><Link href="/policy?name=shipping-policy"><a>Shipping Policy</a></Link></li>
-            <li><Link href="/policy?name=cancellation-and-refund"><a>Cancellation & Refund</a></Link></li>
+            <li><Link href="/policy?name=privacy-policy">Privacy Policy</Link></li>
+            <li><Link href="/policy?name=terms-and-conditions">Terms & Conditions</Link></li>
+            <li><Link href="/policy?name=shipping-policy">Shipping Policy</Link></li>
+            <li><Link href="/policy?name=cancellation-and-refund">Cancellation & Refund</Link></li>
           </ul>
         </div>
 
