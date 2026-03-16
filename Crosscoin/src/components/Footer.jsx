@@ -40,6 +40,20 @@ const Footer = () => {
         </div>
       </div>
 
+      {/* Categories strip */}
+      {categories.length > 0 && (
+        <div className="footer__categories">
+          <span className="footer__categories-label">Popular Searches</span>
+          <div className="footer__categories-links">
+            {categories.map((cat) => (
+              <Link key={cat.id} href={`/Products?category=${encodeURIComponent(cat.name)}`} className="footer__cat-link">
+                {cat.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Main Grid */}
       <div className="footer__main">
 
@@ -115,20 +129,6 @@ const Footer = () => {
         </div>
 
       </div>
-
-      {/* Categories strip */}
-      {categories.length > 0 && (
-        <div className="footer__categories">
-          <span className="footer__categories-label">Popular Searches</span>
-          <div className="footer__categories-links">
-            {categories.map((cat) => (
-              <Link key={cat.id} href={`/Products?category=${encodeURIComponent(cat.name)}`} className="footer__cat-link">
-                {cat.name}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Bottom bar */}
       <div className="footer__bottom">
