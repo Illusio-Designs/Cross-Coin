@@ -1,7 +1,6 @@
 import { FiMaximize, FiMinimize, FiMenu } from "react-icons/fi";
 import { getPageTitle } from "../../utils/dashboardRouting";
 import { useState, useEffect } from "react";
-import "../../styles/dashboard/header.css";
 
 function DashboardHeader({ isCollapsed, isFullscreen, onToggleFullscreen, currentView,  sidebarWidth, isMobile, onMobileMenuToggle }) {
   const [isSmallMobile, setIsSmallMobile] = useState(false);

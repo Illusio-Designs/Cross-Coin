@@ -146,12 +146,10 @@ class PerformanceMonitor {
       });
 
       if (!response.ok) {
-        console.warn('Failed to send performance metrics:', response.statusText);
         // Re-add metrics if send failed
         this.metrics = metricsToSend.concat(this.metrics);
       }
     } catch (error) {
-      console.warn('Error sending performance metrics:', error);
       // Re-add metrics if send failed
       this.metrics = metricsToSend.concat(this.metrics);
     }
@@ -161,6 +159,7 @@ class PerformanceMonitor {
    * Start periodic flush of metrics
    */
   startPeriodicFlush() {
+    if (typeof window === 'undefined') return; // SSR guard
     this.flushIntervalId = setInterval(() => {
       this.flush();
     }, this.flushInterval);
@@ -195,3 +194,4 @@ class PerformanceMonitor {
 const performanceMonitor = new PerformanceMonitor();
 
 export default performanceMonitor;
+

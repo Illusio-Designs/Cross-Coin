@@ -4,8 +4,6 @@ import Loader from "@/components/Loader";
 import { paymentService } from "@/services";
 import { debounce } from 'lodash';
 import { toast } from "react-hot-toast";
-import "../../../styles/dashboard/seo.css";
-import "../../../styles/dashboard/payments.css";
 
 export default function Payments() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -40,8 +38,6 @@ export default function Payments() {
       setLoading(true);
       
       const response = await paymentService.getAllPayments();
-      console.log('Payment API Response:', response);
-      
       if (response.success && response.payments) {
         const transformedPayments = response.payments.map(payment => {
           let customerName = 'Guest User';
@@ -74,19 +70,15 @@ export default function Payments() {
           };
         });
         
-        console.log('Transformed Payments:', transformedPayments);
-        
         setPayments(transformedPayments);
         setTotalPayments(response.pagination?.total || transformedPayments.length);
         setTotalPages(Math.ceil((response.pagination?.total || transformedPayments.length) / itemsPerPage));
       } else {
-        console.log('No payments data in response');
         setPayments([]);
         setTotalPayments(0);
         setTotalPages(0);
       }
     } catch (err) {
-      console.error('Error fetching payments:', err);
       toast.error('Failed to load payments');
       setPayments([]);
       setTotalPayments(0);
@@ -159,7 +151,6 @@ export default function Payments() {
         toast.success('Payment refunded successfully');
         fetchPayments();
       } catch (error) {
-        console.error('Error refunding payment:', error);
         toast.error('Failed to refund payment');
       }
     }
@@ -471,7 +462,6 @@ export default function Payments() {
                         setIsViewModalOpen(false);
                         fetchPayments();
                       } catch (error) {
-                        console.error('Error refunding payment:', error);
                         toast.error('Failed to refund payment');
                       }
                     }}
@@ -487,4 +477,6 @@ export default function Payments() {
     </>
   );
 }
+
+
 

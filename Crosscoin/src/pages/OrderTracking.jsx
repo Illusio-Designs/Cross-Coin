@@ -6,7 +6,6 @@ import SafeImage from '../components/common/SafeImage';
 import { trackOrderByAWB, trackOrderByOrderNumber } from '../services/publicApi';
 import { formatAttributesForDisplay } from '../utils/productAttributeFormatter';
 import { getStatusColor, getStatusDisplayText } from '../utils/statusUtils';
-import '../styles/pages/OrderTracking.css';
 
 export default function OrderTracking() {
     const [trackingInput, setTrackingInput] = useState('');
@@ -36,23 +35,13 @@ export default function OrderTracking() {
                 response = await trackOrderByAWB(trackingInput.trim());
             }
             
-            console.log('=== TRACKING RESPONSE ===', response);
-            
             if (response.success) {
                 const data = response.data || response;
-                console.log('=== ORDER DATA ===', data);
-                console.log('=== ORDER OBJECT ===', data.order);
-                console.log('=== ORDER CREATED_AT ===', data.order.created_at);
-                console.log('=== ORDER UPDATED_AT ===', data.order.updated_at);
-                console.log('=== ITEMS ===', data.items);
-                console.log('=== STATUS HISTORY ===', data.status_history);
-                console.log('=== FSHIP DATA ===', data.fship_data);
                 setOrderData(data);
             } else {
                 setError(response.message || 'Order not found');
             }
         } catch (err) {
-            console.error('=== TRACKING ERROR ===', err);
             setError(err.message || 'Failed to track order');
         } finally {
             setLoading(false);
@@ -60,28 +49,19 @@ export default function OrderTracking() {
     };
 
     const formatDate = (dateValue) => {
-        console.log('=== FORMAT DATE CALLED ===');
-        console.log('Input dateValue:', dateValue);
-        console.log('Type:', typeof dateValue);
-        
         if (!dateValue) {
-            console.log('No date value provided');
             return 'Date not available';
         }
         try {
             const date = new Date(dateValue);
-            console.log('Parsed date:', date);
-            console.log('Is valid date:', !isNaN(date.getTime()));
             
             const formatted = date.toLocaleDateString('en-IN', { 
                 day: 'numeric',
                 month: 'short',
                 year: 'numeric'
             });
-            console.log('Formatted date:', formatted);
             return formatted;
         } catch (e) {
-            console.error('Date formatting error:', e);
             return 'Date not available';
         }
     };
@@ -255,18 +235,12 @@ export default function OrderTracking() {
                                         <div className="order-items-card">
                                             <h3>Order Items</h3>
                                             {orderData.items.map((item, index) => {
-                                                console.log(`=== ITEM ${index} ===`, item);
-                                                console.log('Product:', item.product);
-                                                console.log('Product Image:', item.product?.image);
-                                                
                                                 // Fix image URL - prepend API URL if it's a relative path
                                                 const imageUrl = item.product?.image 
                                                     ? (item.product.image.startsWith('http') 
                                                         ? item.product.image 
                                                         : `https://api.crosscoin.in${item.product.image}`)
                                                     : null;
-                                                
-                                                console.log('Fixed Image URL:', imageUrl);
                                                 
                                                 return (
                                                     <div key={index} className="item-box">
@@ -282,7 +256,6 @@ export default function OrderTracking() {
                                                                         borderRadius: '6px'
                                                                     }}
                                                                     onError={(e) => {
-                                                                        console.error('Image failed to load:', imageUrl);
                                                                         e.target.style.display = 'none';
                                                                         e.target.parentElement.innerHTML = '<div class="no-img">No Image</div>';
                                                                     }}
@@ -432,3 +405,4 @@ export default function OrderTracking() {
         </>
     );
 }
+

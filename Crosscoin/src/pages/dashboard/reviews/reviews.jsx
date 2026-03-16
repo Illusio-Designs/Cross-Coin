@@ -4,7 +4,6 @@ import Loader from "@/components/Loader";
 import BrandTags from "@/components/Dashboard/BrandTags";
 import { reviewService } from "@/services";
 import { debounce } from 'lodash';
-import "../../../styles/dashboard/reviews.css";
 
 export default function Reviews() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -49,8 +48,6 @@ export default function Reviews() {
       };
       
       const response = await reviewService.getAllReviews('all', params);
-      console.log('API Response:', response);
-      
       if (response && response.reviews) {
         const mappedReviews = response.reviews.map(review => ({
           id: review.id,
@@ -86,8 +83,7 @@ export default function Reviews() {
       }
     } catch (err) {
       setError(err.message || "Failed to fetch reviews");
-      console.error("Error fetching reviews:", err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   }, [currentPage, itemsPerPage]);
@@ -175,7 +171,6 @@ export default function Reviews() {
     try {
       setLoading(true);
       const data = await reviewService.getReviewById(id);
-      console.log('Fetched review data:', data);
       setFormData({
         id: id,
         status: data.status || "pending",
@@ -185,8 +180,7 @@ export default function Reviews() {
       setIsModalOpen(true);
     } catch (err) {
       setError(err.message || "Failed to fetch review data");
-      console.error("Error fetching review data:", err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -199,8 +193,7 @@ export default function Reviews() {
         await fetchReviews();
       } catch (err) {
         setError(err.message || "Failed to delete review");
-        console.error("Error deleting review:", err);
-      } finally {
+        } finally {
         setLoading(false);
       }
     }
@@ -217,31 +210,17 @@ export default function Reviews() {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    console.log('Input Change:', {
-      name,
-      value,
-      type,
-      checked,
-      currentFormData: formData
-    });
-    
     setFormData(prev => {
       const newData = {
         ...prev,
         [name]: type === 'checkbox' ? checked : value
       };
-      console.log('New Form Data:', newData);
       return newData;
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form Submit:', {
-      formData,
-      isEdit: !!formData.id
-    });
-    
     if (!formData.id) {
       setError("Review ID is missing");
       return;
@@ -255,11 +234,7 @@ export default function Reviews() {
         admin_notes: formData.admin_notes
       };
 
-      console.log('Moderation data being sent:', moderationData);
-
       const response = await reviewService.moderateReview(formData.id, moderationData);
-      console.log('Moderation response:', response);
-      
       // Update the reviews state with the new data
       setReviews(prevReviews => {
         const updatedReviews = prevReviews.map(review => {
@@ -273,7 +248,6 @@ export default function Reviews() {
           }
           return review;
         });
-        console.log('Updated reviews:', updatedReviews);
         return updatedReviews;
       });
 
@@ -285,7 +259,6 @@ export default function Reviews() {
         admin_notes: ""
       });
     } catch (err) {
-      console.error('Submit Error:', err);
       setError(err.message || "Failed to moderate review");
     } finally {
       setLoading(false);
@@ -419,3 +392,4 @@ export default function Reviews() {
     </>
   );
 } 
+

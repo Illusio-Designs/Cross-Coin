@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import '@/styles/dashboard/brandAssignment.css';
 
 /**
  * BrandAssignment Component
@@ -35,7 +34,6 @@ const BrandAssignment = ({ selectedBrands = [], onChange, disabled = false }) =>
                 setError('Failed to load brands');
             }
         } catch (err) {
-            console.error('Error fetching brands:', err);
             setError('Error loading brands');
         } finally {
             setLoading(false);
@@ -154,3 +152,4 @@ const BrandAssignment = ({ selectedBrands = [], onChange, disabled = false }) =>
 };
 
 export default BrandAssignment;
+

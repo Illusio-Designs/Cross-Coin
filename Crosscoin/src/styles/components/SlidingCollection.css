@@ -1,0 +1,321 @@
+* {
+  box-sizing: border-box;
+}
+
+.sliding-collection-section {
+  width: 100%;
+  background: #ffffff;
+  padding: 60px 20px;
+  overflow: hidden;
+  margin: 0;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 48px;
+  padding: 0;
+  max-width: 100%;
+}
+
+.section-header h2 {
+  font-size: clamp(20px, 5vw, 40px);
+  font-weight: 300;
+  letter-spacing: 0.16em;
+  color: #1a1a1a;
+  text-transform: uppercase;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.section-header h2 strong {
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #CE1E36;
+}
+
+.section-header p {
+  margin: 8px 0 0 0;
+  font-size: clamp(11px, 2vw, 13px);
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  color: #999;
+  padding: 0;
+}
+
+/* ── Stage ── */
+.stage {
+  position: relative;
+  width: 100%;
+  height: clamp(260px, 60vw, 460px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* ── Cards ── */
+.card {
+  position: absolute;
+  width: clamp(220px, 50vw, 480px);
+  height: clamp(200px, 45vw, 420px);
+  border-radius: clamp(12px, 3vw, 20px);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              opacity 0.5s ease,
+              z-index 0s;
+  user-select: none;
+}
+
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.card-background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+/* SVG decorative pattern */
+.card-pattern {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.2;
+  z-index: 1;
+}
+
+/* content */
+.card-content {
+  position: absolute;
+  inset: 0;
+  padding: clamp(16px, 4vw, 34px) clamp(14px, 3vw, 32px) clamp(12px, 3vw, 28px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.line1 {
+  display: block;
+  font-size: clamp(11px, 2.5vw, 18px);
+  font-weight: 300;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  line-height: 1;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  margin: 0;
+  padding: 0;
+}
+
+.line1-bold {
+  display: block;
+  font-size: clamp(18px, 6vw, 38px);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  line-height: 1;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  margin: 0;
+  padding: 0;
+}
+
+.line2 {
+  display: block;
+  font-size: clamp(18px, 5vw, 38px);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1;
+  margin-top: clamp(2px, 1vw, 2px);
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  padding: 0;
+}
+
+.line2-small {
+  display: block;
+  font-size: clamp(11px, 2.5vw, 18px);
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1;
+  margin-top: clamp(2px, 1vw, 2px);
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  padding: 0;
+}
+
+.line2-regular {
+  display: block;
+  font-size: clamp(14px, 3.5vw, 24px);
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  margin-top: clamp(2px, 1vw, 4px);
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  padding: 0;
+}
+
+.explore-btn {
+  display: inline-block;
+  border: 1.5px solid #ffffff;
+  border-radius: 4px;
+  padding: clamp(6px, 1.5vw, 9px) clamp(12px, 2.5vw, 18px);
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: clamp(7px, 1.5vw, 10px);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  pointer-events: all;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  margin: 0;
+  padding: clamp(6px, 1.5vw, 9px) clamp(12px, 2.5vw, 18px);
+}
+
+.explore-btn:hover {
+  background: #ffffff;
+  color: #CE1E36;
+  text-shadow: none;
+}
+
+.explore-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Nav Arrows ── */
+.nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+  width: clamp(32px, 8vw, 46px);
+  height: clamp(32px, 8vw, 46px);
+  border-radius: 50%;
+  border: 1.5px solid #ccc;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  transition: background 0.2s, border-color 0.2s;
+  padding: 0;
+}
+
+.nav-btn:hover {
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+}
+
+.nav-btn:hover svg path {
+  stroke: #fff;
+}
+
+.nav-btn svg {
+  width: clamp(12px, 3vw, 18px);
+  height: clamp(12px, 3vw, 18px);
+}
+
+.nav-btn svg path {
+  stroke: #555;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 0.2s;
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nav-prev {
+  left: clamp(4px, 2vw, 24px);
+}
+
+.nav-next {
+  right: clamp(4px, 2vw, 24px);
+}
+
+/* ── Dots ── */
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: clamp(4px, 1vw, 8px);
+  margin-top: clamp(16px, 4vw, 24px);
+  padding: 0;
+}
+
+.dot {
+  width: clamp(5px, 1.5vw, 8px);
+  height: clamp(5px, 1.5vw, 8px);
+  border-radius: 50%;
+  border: none;
+  background: #ccc;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.25s, transform 0.25s;
+}
+
+.dot.active {
+  background: #1a1a1a;
+  transform: scale(1.4);
+}
+
+/* Responsive design - All handled by clamp() */
+@media (max-width: 768px) {
+  .sliding-collection-section {
+    padding: 48px 16px;
+  }
+
+  .section-header {
+    margin-bottom: 36px;
+  }
+
+  .stage {
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .sliding-collection-section {
+    padding: 32px 12px;
+  }
+
+  .section-header {
+    margin-bottom: 24px;
+  }
+
+  .stage {
+    margin: 0 auto;
+  }
+}

@@ -3,9 +3,7 @@ import { Button, Input, Modal, Table, Pagination } from "@/components/ui";
 import Loader from "@/components/Loader";
 import { policyService } from "@/services";
 import { debounce } from 'lodash';
-import "../../styles/dashboard/seo.css";
 import dynamic from "next/dynamic";
-import "react-quill/dist/quill.snow.css";
 import DOMPurify from 'dompurify';
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
@@ -47,8 +45,7 @@ export default function Policies() {
       setPolicies(data);
     } catch (err) {
       setError(err.message || "Failed to fetch policies");
-      console.error("Error fetching policies:", err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -155,8 +152,7 @@ export default function Policies() {
       setIsModalOpen(true);
     } catch (err) {
       setError(err.message || "Failed to fetch policy data");
-      console.error("Error fetching policy data:", err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -169,8 +165,7 @@ export default function Policies() {
         await fetchPolicies();
       } catch (err) {
         setError(err.message || "Failed to delete policy");
-        console.error("Error deleting policy:", err);
-      } finally {
+        } finally {
         setLoading(false);
       }
     }
@@ -351,3 +346,4 @@ export default function Policies() {
     </>
   );
 } 
+

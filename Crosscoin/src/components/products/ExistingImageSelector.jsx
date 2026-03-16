@@ -13,44 +13,23 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
     setLoading(true);
     setError(null);
     try {
-      console.log('=== Fetching Existing Images ===');
-      console.log('Image Source:', imageSource);
-      console.log('Product ID:', productId);
-      console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
-      
       // Check if user is authenticated
       const token = localStorage.getItem('token');
-      console.log('Auth Token:', token ? 'Present' : 'Missing');
-      
       let data;
       if (imageSource === 'current_product' && productId) {
         // Get images for specific product
-        console.log('Fetching images for specific product:', productId);
         data = await productService.getExistingImages('products', productId);
       } else {
         // Get all images from selected source
-        console.log('Fetching all images from source:', imageSource);
         data = await productService.getExistingImages(imageSource);
       }
       
-      console.log('API Response:', data);
-      console.log('Images found:', data.images?.length || 0);
-      
       if (data.images && data.images.length > 0) {
-        console.log('Sample image paths:', data.images.slice(0, 3));
+        // Images found
       }
       
       setExistingImages(data.images || []);
     } catch (err) {
-      console.error('Error fetching existing images:', err);
-      console.error('Error details:', {
-        message: err.message,
-        status: err.response?.status,
-        statusText: err.response?.statusText,
-        data: err.response?.data,
-        url: err.config?.url
-      });
-      
       let errorMessage = 'Failed to fetch existing images';
       
       if (err.response?.status === 401) {

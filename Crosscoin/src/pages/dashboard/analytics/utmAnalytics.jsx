@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Pagination } from '@/components/ui';
-import '../../../styles/dashboard/utmAnalytics.css';
 
 const UTMAnalytics = () => {
   const [utmData, setUtmData] = useState([]);
@@ -57,13 +56,10 @@ const UTMAnalytics = () => {
 
       if (!analyticsResponse.ok) {
         const errorText = await analyticsResponse.text();
-        console.error('Analytics API Error:', errorText);
         throw new Error('Failed to fetch UTM analytics');
       }
 
       const analyticsData = await analyticsResponse.json();
-      console.log('Analytics Data:', analyticsData);
-      
       // Fetch all UTM tracking data with order information
       const trackingResponse = await fetch(trackingUrl, {
         credentials: 'include',
@@ -76,12 +72,10 @@ const UTMAnalytics = () => {
       let trackingData = [];
       if (trackingResponse.ok) {
         const trackingResult = await trackingResponse.json();
-        console.log('Tracking Data:', trackingResult);
         trackingData = trackingResult.data || [];
       } else {
         const errorText = await trackingResponse.text();
-        console.error('Tracking API Error:', errorText);
-      }
+        }
 
       // Process data
       const processedData = processUTMData(analyticsData.data || [], trackingData);
@@ -95,7 +89,6 @@ const UTMAnalytics = () => {
       
       setError(null);
     } catch (err) {
-      console.error('Error fetching UTM data:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -356,4 +349,6 @@ const UTMAnalytics = () => {
 };
 
 export default UTMAnalytics;
+
+
 

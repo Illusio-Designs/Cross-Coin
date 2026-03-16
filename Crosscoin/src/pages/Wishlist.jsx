@@ -11,10 +11,7 @@ import SeoWrapper from '../console/SeoWrapper';
 import { getProductImageSrc } from '../utils/imageUtils';
 import { seoService } from '../services/index';
 
-// Load page-specific CSS
-import '../styles/pages/Wishlist.css';
-import '../styles/components/Header.css';
-import '../styles/components/Footer.css';
+// Load page-specific CSS - moved to _app.jsx
 
 // Helper to pick the best image for a wishlist item
 function pickWishlistItemImage(item) {
@@ -148,8 +145,7 @@ const Wishlist = () => {
                       if (item.slug) {
                         router.push(`/ProductDetails?slug=${item.slug}`);
                       } else {
-                        console.error('Product slug not found:', item);
-                      }
+                        }
                     }}
                   >
                     <SafeImage

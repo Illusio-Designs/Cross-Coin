@@ -1,4 +1,4 @@
-import '@/styles/dashboard/brandTags.css';
+
 
 /**
  * BrandTags Component

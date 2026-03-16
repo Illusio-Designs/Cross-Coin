@@ -2,7 +2,6 @@ import React from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { FaSocks, FaTshirt, FaHeart, FaUsers } from 'react-icons/fa';
-import '../styles/pages/About.css';
 import SeoWrapper from '../console/SeoWrapper';
 
 const About = () => {

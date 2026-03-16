@@ -4,7 +4,7 @@ import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
 import { createMagicCheckoutOrder, verifyMagicCheckoutPayment, createOrder, createGuestOrder, updateOrderPayment } from "../../services/publicApi";
 import { showOrderPlacedSuccessToast, showOrderPlacedErrorToast } from "../../utils/toast";
-import { fbqTrack } from "../common/Analytics";
+import { fbqTrack } from "../../utils/fbqTrack";
 import { useRouter } from "next/router";
 
 /**
@@ -100,14 +100,9 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
    * Load Razorpay Magic Checkout SDK
    */
   const loadMagicCheckoutSDK = useCallback(() => {
-    console.log("=== LOADING RAZORPAY SDK ===");
-    console.log("MAGIC_CHECKOUT_ENABLED:", MAGIC_CHECKOUT_ENABLED);
-    console.log("RAZORPAY_KEY:", RAZORPAY_KEY);
-    
     return new Promise((resolve, reject) => {
       // Check if SDK is already loaded
       if (window.Razorpay) {
-        console.log("✓ Razorpay SDK already loaded");
         setSDKLoaded(true);
         resolve(true);
         return;
@@ -115,11 +110,9 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
 
       // Check if script tag already exists
       if (document.getElementById("razorpay-checkout-script")) {
-        console.log("Script tag exists, waiting for SDK to load...");
         const checkInterval = setInterval(() => {
           if (window.Razorpay) {
             clearInterval(checkInterval);
-            console.log("✓ Razorpay SDK loaded from existing script");
             setSDKLoaded(true);
             resolve(true);
           }
@@ -128,14 +121,12 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
         setTimeout(() => {
           clearInterval(checkInterval);
           if (!window.Razorpay) {
-            console.error("✗ SDK load timeout");
             reject(new Error("SDK load timeout"));
           }
         }, 10000);
         return;
       }
 
-      console.log("Creating new script tag for Razorpay SDK...");
       setSDKLoading(true);
       const script = document.createElement("script");
       script.id = "razorpay-checkout-script";
@@ -143,22 +134,19 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
       script.async = true;
 
       script.onload = () => {
-        console.log("✓ Razorpay SDK loaded successfully");
         setSDKLoaded(true);
         setSDKLoading(false);
         resolve(true);
       };
 
       script.onerror = () => {
-        console.error("✗ Failed to load Razorpay SDK");
         setSDKLoading(false);
         setError("Failed to load payment gateway");
         reject(new Error("Failed to load Razorpay SDK"));
       };
 
       document.body.appendChild(script);
-      console.log("Script tag appended to body");
-    });
+      });
   }, [RAZORPAY_KEY, MAGIC_CHECKOUT_ENABLED]);
 
   /**
@@ -179,8 +167,6 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
    */
   const handlePaymentSuccess = useCallback(async (response) => {
     try {
-      console.log("Express Checkout payment success:", response);
-      
       // Prepare order data
       const allItems = [
         ...(buyNowItem ? [{
@@ -266,7 +252,7 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
           sessionStorage.setItem(`fb_purchase_tracked_${orderNumber}`, "true");
         }
       } catch (e) {
-        console.warn("Purchase tracking (Express Checkout): failed to send fbq Purchase", e);
+        // Silently ignore fbq tracking error
       }
 
       // Clear cart and redirect
@@ -286,7 +272,6 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
         onSuccess(orderResult);
       }
     } catch (error) {
-      console.error("Error handling Express Checkout success:", error);
       showOrderPlacedErrorToast("Payment successful but order creation failed. Please contact support.");
       setIsProcessing(false);
       
@@ -300,40 +285,24 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
    * Process Express Checkout
    */
   const processExpressCheckout = useCallback(async () => {
-    console.log("=== PROCESS EXPRESS CHECKOUT CALLED ===");
-    console.log("isAuthenticated:", isAuthenticated);
-    console.log("showGuestForm:", showGuestForm);
-    
     // For guest users, show form first
     if (!isAuthenticated && !showGuestForm) {
-      console.log("Showing guest form...");
       setShowGuestForm(true);
       return;
     }
     
     // For guest users, validate form
     if (!isAuthenticated && !validateGuestDetails()) {
-      console.log("Guest form validation failed");
       return;
     }
     
-    console.log("Validation passed, proceeding with checkout...");
-    
     // Get customer details
     const customerDetails = getCustomerDetails();
-    console.log("Customer details:", customerDetails);
-    
     // Calculate total amount
     const totalAmount = calculateTotalAmount();
-    console.log("Total amount:", totalAmount);
-    
     // Check SDK loaded
-    console.log("SDK loaded:", sdkLoaded);
-    console.log("window.Razorpay exists:", typeof window !== 'undefined' ? !!window.Razorpay : false);
-    
     // Proceed with payment gateway
     if (!sdkLoaded || !window.Razorpay) {
-      console.error("Razorpay SDK not loaded");
       setError("Payment gateway not loaded. Please refresh the page.");
       return false;
     }
@@ -341,8 +310,6 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
     try {
       setIsProcessing(true);
       setError(null);
-      console.log("Processing started...");
-
       if (totalAmount <= 0) {
         throw new Error("Cart is empty");
       }
@@ -363,10 +330,7 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
         }))
       ];
 
-      console.log("Cart items prepared:", allItems);
-
       // Step 3: Create Razorpay order
-      console.log("Creating Razorpay order...");
       const orderData = await createMagicCheckoutOrder({
         amount: totalAmount,
         currency: "INR",
@@ -378,10 +342,7 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
         },
       });
 
-      console.log("Order created successfully:", orderData);
-
       // Step 4: Open Razorpay Checkout
-      console.log("Opening Razorpay checkout...");
       const options = {
         key: RAZORPAY_KEY,
         amount: orderData.amount, // Use amount from order (already in paise from backend)
@@ -405,7 +366,6 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
         
         modal: {
           ondismiss: function() {
-            console.log("Express Checkout dismissed by user");
             setIsProcessing(false);
           },
           confirm_close: true,
@@ -415,24 +375,16 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
         },
       };
 
-      console.log("Razorpay options:", options);
-      console.log("Creating Razorpay instance...");
-      
       const rzp = new window.Razorpay(options);
       
       rzp.on('payment.failed', function (response) {
-        console.error("Payment failed:", response.error);
         showOrderPlacedErrorToast("Payment failed: " + (response.error.description || "Please try again"));
         setIsProcessing(false);
       });
 
-      console.log("Opening Razorpay modal...");
       rzp.open();
-      console.log("Razorpay modal opened successfully");
       return true;
     } catch (err) {
-      console.error("Error processing Express Checkout:", err);
-      console.error("Error stack:", err.stack);
       setError(err.message || "Failed to process checkout");
       setIsProcessing(false);
       
@@ -449,7 +401,6 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
   useEffect(() => {
     if (MAGIC_CHECKOUT_ENABLED) {
       loadMagicCheckoutSDK().catch((err) => {
-        console.error("Failed to load Razorpay SDK:", err);
         setError("Failed to load payment gateway");
       });
     }
@@ -710,3 +661,4 @@ ExpressCheckout.propTypes = {
 };
 
 export default ExpressCheckout;
+

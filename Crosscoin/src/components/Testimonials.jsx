@@ -23,7 +23,6 @@ const Testimonials = () => {
           setReviews([]);
         }
       } catch (err) {
-        console.error('Error fetching reviews:', err);
         setReviews([]);
       } finally {
         setLoading(false);

@@ -10,7 +10,6 @@ import {
   FaInstagram,
   FaWhatsapp,
 } from "react-icons/fa";
-import "../styles/pages/Contact.css";
 import SeoWrapper from "../console/SeoWrapper";
 
 const Contact = () => {
@@ -31,8 +30,7 @@ const Contact = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     // Handle form submission
-    console.log(formData);
-  };
+    };
 
   return (
     <SeoWrapper pageName="contact">
@@ -181,3 +179,4 @@ const Contact = () => {
 };
 
 export default Contact;
+

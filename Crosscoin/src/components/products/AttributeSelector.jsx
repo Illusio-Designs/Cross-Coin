@@ -30,9 +30,6 @@ const AttributeSelector = ({
         // Normalize attributeName to lowercase for consistent access with selectedAttributes
         const normalizedAttributeName = attributeName.toLowerCase();
 
-        console.log(`AttributeSelector: Processing attribute: ${attributeName}`);
-        console.log(`AttributeSelector: Available values for ${attributeName}:`, values);
-        console.log(`AttributeSelector: Selected values for ${attributeName}:`, selectedAttributes[normalizedAttributeName]);
         return (
           <div key={attributeName} className="attribute-group">
             <label>{attributeName}</label>

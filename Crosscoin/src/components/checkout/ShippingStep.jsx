@@ -63,7 +63,7 @@ export default function ShippingStep({
         const fees = Array.isArray(feeData)
           ? feeData
           : feeData?.shippingFees || feeData?.fees || [];
-        console.log("Shipping fees data:", fees); // Debug log
+        // Debug log
         setShippingFees(fees);
         if (!selectedFee && fees.length > 0) {
           onSelectFee(fees.find((f) => f.isDefault) || fees[0]);
@@ -405,3 +405,4 @@ export default function ShippingStep({
     </div>
   );
 }
+

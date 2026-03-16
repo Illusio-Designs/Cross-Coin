@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { productService } from '@/services';
 import Loader from '@/components/Loader';
 import { Pagination } from '@/components/ui';
-import '../../../styles/dashboard/media.css';
 
 const MediaGallery = () => {
   const [images, setImages] = useState([]);
@@ -27,7 +26,6 @@ const MediaGallery = () => {
       const data = await productService.getExistingImages('products');
       setImages(data.images || []);
     } catch (err) {
-      console.error('Media Gallery fetch error:', err);
       setError(err.message || 'Failed to fetch images');
     } finally {
       setLoading(false);
@@ -107,7 +105,6 @@ const MediaGallery = () => {
         alert('Failed to upload images: ' + result.message);
       }
     } catch (error) {
-      console.error('Upload error:', error);
       alert('Failed to upload images: ' + (error.message || 'Unknown error'));
     } finally {
       setUploading(false);
@@ -149,7 +146,6 @@ const MediaGallery = () => {
           alert('Failed to delete images: ' + result.message);
         }
       } catch (error) {
-        console.error('Delete error:', error);
         alert('Failed to delete images: ' + (error.message || 'Unknown error'));
       } finally {
         setLoading(false);
@@ -182,7 +178,6 @@ const MediaGallery = () => {
           alert('Failed to delete image: ' + result.message);
         }
       } catch (error) {
-        console.error('Delete error:', error);
         alert('Failed to delete image: ' + (error.message || 'Unknown error'));
       } finally {
         setLoading(false);
@@ -730,3 +725,5 @@ const MediaGallery = () => {
 };
 
 export default MediaGallery;
+
+

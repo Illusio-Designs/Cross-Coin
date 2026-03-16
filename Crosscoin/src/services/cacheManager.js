@@ -23,7 +23,6 @@ class CacheManager {
       localStorage.removeItem(test);
       return true;
     } catch (e) {
-      console.warn('localStorage not available:', e.message);
       return false;
     }
   }
@@ -38,7 +37,6 @@ class CacheManager {
   set(key, value, ttl = 3600000) {
     try {
       if (!this.isStorageAvailable()) {
-        console.warn('Cache SET skipped: localStorage not available');
         return false;
       }
 
@@ -53,10 +51,8 @@ class CacheManager {
       const expiresAt = Date.now() + ttl;
       localStorage.setItem(metaKey, JSON.stringify({ expiresAt, ttl }));
       
-      console.log(`✅ Cache SET: ${key} (TTL: ${Math.floor(ttl / 1000)}s)`);
       return true;
     } catch (error) {
-      console.error(`❌ Cache SET error for key ${key}:`, error.message);
       return false;
     }
   }
@@ -78,7 +74,6 @@ class CacheManager {
       // Get metadata
       const metaData = localStorage.getItem(metaKey);
       if (!metaData) {
-        console.log(`⚠️ Cache MISS: ${key} (no metadata)`);
         return null;
       }
 
@@ -86,7 +81,6 @@ class CacheManager {
       
       // Check if expired
       if (Date.now() > meta.expiresAt) {
-        console.log(`⚠️ Cache EXPIRED: ${key}`);
         this.delete(key);
         return null;
       }
@@ -94,21 +88,17 @@ class CacheManager {
       // Get the cached value
       const data = localStorage.getItem(storageKey);
       if (data === null) {
-        console.log(`⚠️ Cache MISS: ${key} (no data)`);
         return null;
       }
 
       try {
         const parsed = JSON.parse(data);
-        console.log(`✅ Cache HIT: ${key}`);
         return parsed;
       } catch (parseError) {
-        console.error(`❌ Cache parse error for key ${key}:`, parseError.message);
         this.delete(key);
         return null;
       }
     } catch (error) {
-      console.error(`❌ Cache GET error for key ${key}:`, error.message);
       return null;
     }
   }
@@ -130,10 +120,8 @@ class CacheManager {
       localStorage.removeItem(storageKey);
       localStorage.removeItem(metaKey);
       
-      console.log(`✅ Cache DELETE: ${key}`);
       return true;
     } catch (error) {
-      console.error(`❌ Cache DELETE error for key ${key}:`, error.message);
       return false;
     }
   }
@@ -159,7 +147,6 @@ class CacheManager {
       const meta = JSON.parse(metaData);
       return Date.now() <= meta.expiresAt;
     } catch (error) {
-      console.error(`❌ Cache EXISTS error for key ${key}:`, error.message);
       return false;
     }
   }
@@ -187,7 +174,6 @@ class CacheManager {
       
       return remaining > 0 ? remaining : -1;
     } catch (error) {
-      console.error(`❌ Cache TTL error for key ${key}:`, error.message);
       return -1;
     }
   }
@@ -212,10 +198,8 @@ class CacheManager {
         }
       });
       
-      console.log(`✅ Cache CLEAR: ${cleared} entries cleared`);
       return true;
     } catch (error) {
-      console.error('❌ Cache CLEAR error:', error.message);
       return false;
     }
   }
@@ -261,7 +245,6 @@ class CacheManager {
         storageUsage: `${((totalSize / (5 * 1024 * 1024)) * 100).toFixed(2)}%` // Assuming 5MB limit
       };
     } catch (error) {
-      console.error('❌ Cache STATS error:', error.message);
       return { available: false, error: error.message };
     }
   }
@@ -276,7 +259,6 @@ class CacheManager {
   setByType(type, value, identifier = '') {
     const config = getCacheConfig(type);
     if (!config) {
-      console.warn(`Unknown cache type: ${type}`);
       return false;
     }
 
@@ -293,7 +275,6 @@ class CacheManager {
   getByType(type, identifier = '') {
     const config = getCacheConfig(type);
     if (!config) {
-      console.warn(`Unknown cache type: ${type}`);
       return null;
     }
 
@@ -310,7 +291,6 @@ class CacheManager {
   deleteByType(type, identifier = '') {
     const config = getCacheConfig(type);
     if (!config) {
-      console.warn(`Unknown cache type: ${type}`);
       return false;
     }
 
@@ -321,3 +301,4 @@ class CacheManager {
 
 // Export singleton instance
 export default new CacheManager();
+
