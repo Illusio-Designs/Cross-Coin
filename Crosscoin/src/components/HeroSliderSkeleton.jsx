@@ -14,13 +14,13 @@ const HeroSliderSkeleton = () => {
         </div>
         <div className="hero-slide__content">
           <div className="hero-slide__content-text">
-            <h1>
+            <div>
               <Shimmer width="60%" height="60px" borderRadius="4px" style={{ marginBottom: '1rem' }} />
-            </h1>
-            <p>
+            </div>
+            <div>
               <Shimmer width="100%" height="24px" borderRadius="4px" style={{ marginBottom: '0.5rem' }} />
               <Shimmer width="95%" height="24px" borderRadius="4px" style={{ marginBottom: '3rem' }} />
-            </p>
+            </div>
             <Shimmer width="150px" height="48px" borderRadius="4px" />
           </div>
         </div>
