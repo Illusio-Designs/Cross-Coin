@@ -266,10 +266,10 @@
   letter-spacing: 0.05em;
 }
 
-.product-name {
+.info-card-header .product-name {
   font-size: 15px;
   font-weight: 600;
-  color: #fff;
+  color: #ffffff;
   line-height: 1.4;
 }
 
@@ -389,6 +389,7 @@
 .feature-icon {
   width: 36px;
   height: 36px;
+  min-width: 36px;
   border-radius: 8px;
   background: #f0f0f0;
   display: flex;
@@ -402,17 +403,27 @@
   height: 18px;
 }
 
+.feature-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .feature-name {
   font-size: 13px;
   font-weight: 600;
   color: #111;
   line-height: 1.2;
+  margin: 0;
+  padding: 0;
 }
 
 .feature-sub {
   font-size: 11px;
   color: #999;
   font-weight: 500;
+  margin: 0;
+  padding: 0;
 }
 
 /* Detail Panel */
@@ -442,6 +453,38 @@
   gap: 12px;
   margin-bottom: 16px;
   flex-wrap: wrap;
+}
+
+.detail-rating-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #180d3e;
+  border-radius: 20px;
+  padding: 4px 4px 4px 10px;
+  gap: 6px;
+}
+
+.detail-rating-pill .rating-pill__star {
+  font-size: 11px;
+  color: #f5a623;
+  line-height: 1;
+}
+
+.detail-rating-pill .rating-pill__score {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+.detail-rating-pill .rating-pill__count {
+  background: #fff;
+  border-radius: 20px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #CE1E36;
+  line-height: 1.4;
 }
 
 .detail-price {
@@ -478,6 +521,20 @@
   grid-template-columns: 1fr 1fr;
   gap: 8px 16px;
   margin-bottom: 16px;
+}
+
+.detail-sku-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 16px;
+}
+
+.detail-sku-row strong {
+  color: #111;
+  font-weight: 600;
 }
 
 .detail-row {
@@ -630,6 +687,31 @@
 
 .tab-panel.active {
   display: block;
+}
+
+.back-btn {
+  width: 100%;
+  background: none;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: #888;
+  cursor: pointer;
+  text-decoration: underline;
+  text-align: left;
+  padding: 0;
+  margin-top: 12px;
+}
+
+.back-btn:hover {
+  color: #555;
+}
+
+.detail-description {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.7;
+  margin-bottom: 16px;
 }
 
 /* Responsive */
