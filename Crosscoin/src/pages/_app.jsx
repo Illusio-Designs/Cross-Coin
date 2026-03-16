@@ -5,6 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { CartProvider, useCart } from "../context/CartContext";
 import { WishlistProvider } from "../context/WishlistContext";
+import { BreadcrumbProvider } from "../components/Breadcrumb";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import Loader from "../components/Loader";
@@ -134,11 +135,13 @@ function AppWrapper({ Component, pageProps, progressRef }) {
     <AuthProvider>
       <CartProvider>
         <WishlistProvider>
-          <AppContent 
-            Component={Component} 
-            pageProps={pageProps}
-            progressRef={progressRef}
-          />
+          <BreadcrumbProvider>
+            <AppContent 
+              Component={Component} 
+              pageProps={pageProps}
+              progressRef={progressRef}
+            />
+          </BreadcrumbProvider>
         </WishlistProvider>
       </CartProvider>
     </AuthProvider>

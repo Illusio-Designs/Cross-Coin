@@ -10,6 +10,7 @@ import {
 } from "react-icons/fi";
 import { useRouter } from "next/router";
 import { useCart } from "../context/CartContext";
+import { useBreadcrumb } from "../components/Breadcrumb";
 import { getCachedData, setCachedData } from '../utils/apiCache';
 import {
   getAllPublicProducts,
@@ -28,6 +29,7 @@ import cacheManager from "../services/cacheManager";
 const Products = () => {
   const router = useRouter();
   const { addToCart } = useCart();
+  const { setCustomBreadcrumbs } = useBreadcrumb();
 
   // UI State
   const [showFilters, setShowFilters] = useState(false);
@@ -339,18 +341,28 @@ const Products = () => {
 
         if (matchedCategory) {
           setSelectedCategory([String(matchedCategory.id)]);
+          // Update breadcrumbs with category name
+          setCustomBreadcrumbs([
+            { label: "Home", path: "/" },
+            { label: "Products", path: "/Products" },
+            { label: matchedCategory.name, path: router.asPath, isLast: true }
+          ]);
           // Use the actual category name from database for API call
           fetchProductsData(matchedCategory.name, true);
         } else {
           // Still load all products even if category not found
+          // Reset breadcrumbs to default
+          setCustomBreadcrumbs(null);
           fetchProductsData();
         }
       } else {
         // No category in URL, fetch all products
+        // Reset breadcrumbs to default
+        setCustomBreadcrumbs(null);
         fetchProductsData();
       }
     }
-  }, [categories, router.query.category, fetchProductsData, categoriesLoadedRef.current]);
+  }, [categories, router.query.category, fetchProductsData, categoriesLoadedRef.current, setCustomBreadcrumbs, router.asPath]);
   
   // Safety check: If categories loaded but products didn't load
   useEffect(() => {
@@ -392,6 +404,13 @@ const Products = () => {
       return () => window.removeEventListener("resize", handleResize);
     }
   }, []);
+
+  // Cleanup breadcrumbs on unmount
+  useEffect(() => {
+    return () => {
+      setCustomBreadcrumbs(null);
+    };
+  }, [setCustomBreadcrumbs]);
 
   // Debounced filter change handler
   const debounceRef = useRef(null);
