@@ -1,11 +1,21 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { FiMenu, FiX } from "react-icons/fi";
 import SafeImage from "./common/SafeImage";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import { useAuth } from "../context/AuthContext";
+
+// Hamburger Icon (3 lines)
+const HamburgerIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M3 6H21" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M3 12H21" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M3 18H21" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+
 
 // Custom SVG icons matching reference design
 const SearchIcon = () => (
@@ -185,7 +195,8 @@ const Header = () => {
 
   return (
     <header className={`header ${isSticky ? "header--sticky" : ""} ${!isHeaderVisible ? "header--hidden" : ""}`}>
-        <div className="header__top">
+      {/* Desktop Header */}
+      <div className="header__top header__desktop">
         <div className="header__logo" onClick={() => window.location.href = '/'} style={{ cursor: 'pointer' }}>
           <SafeImage
             imageData={{ image_url: "/assets/crosscoin_logo.webp" }}
@@ -332,17 +343,68 @@ const Header = () => {
             </Link>
           )}
         </div>
-        {/* Hamburger Icon for Mobile */}
-        <button
-          className={`header__hamburger${isMobileMenuOpen ? " open" : ""}`}
-          onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-          aria-label="Toggle menu"
-        >
-          {isMobileMenuOpen ? <FiX /> : <FiMenu />}
-        </button>
       </div>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Header */}
+      <div className="header__top header__mobile">
+        {/* Hamburger Menu */}
+        <button
+          className="header__mobile-hamburger"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          <HamburgerIcon />
+        </button>
+
+        {/* Logo */}
+        <div className="header__mobile-logo" onClick={() => window.location.href = '/'} style={{ cursor: 'pointer' }}>
+          <SafeImage
+            imageData={{ image_url: "/assets/crosscoin_logo.webp" }}
+            alt="logo"
+            width={80}
+            height={32}
+            priority={true}
+            quality={90}
+            style={{ objectFit: 'contain' }}
+            isLogo={true}
+          />
+        </div>
+
+        {/* Search Icon */}
+        <button
+          className="header__mobile-search"
+          onClick={() => router.push("/SearchResults")}
+          aria-label="Search"
+        >
+          <SearchIcon />
+        </button>
+
+        {/* Wishlist Icon */}
+        <Link href="/Wishlist" className="header__mobile-wishlist">
+          <WishlistIcon />
+          {wishlistCount > 0 && (
+            <span className="header__badge">{wishlistCount}</span>
+          )}
+        </Link>
+
+        {/* Cart Icon */}
+        <Link href="/UnifiedCheckout" className="header__mobile-cart">
+          <CartIcon />
+          {cartCount > 0 && (
+            <span className="header__badge">{cartCount}</span>
+          )}
+        </Link>
+
+        {/* User Icon */}
+        <Link
+          href={isAuthenticated ? "/profile" : "/login"}
+          className="header__mobile-user"
+        >
+          <UserIcon />
+        </Link>
+      </div>
+
+      {/* Mobile Menu Sidebar */}
       <div className={`mobile-menu${isMobileMenuOpen ? " open" : ""}`}>
         <nav className="mobile-menu__nav">
           <ul>
@@ -392,27 +454,9 @@ const Header = () => {
               </Link>
             </li>
           </ul>
-          <div className="mobile-menu__actions">
-            {isAuthenticated && user ? (
-              <Link href="/profile" className="header__account" onClick={() => setIsMobileMenuOpen(false)}>
-                <UserIcon />
-              </Link>
-            ) : (
-              <Link href="/login" className="header__account" onClick={() => setIsMobileMenuOpen(false)}>
-                <UserIcon />
-              </Link>
-            )}
-            <Link href="/Wishlist" className="header__wishlist" onClick={() => setIsMobileMenuOpen(false)}>
-              <WishlistIcon />
-              {wishlistCount > 0 && <span className="header__badge">{wishlistCount}</span>}
-            </Link>
-            <Link href="/UnifiedCheckout" className="header__cart" onClick={() => setIsMobileMenuOpen(false)}>
-              <CartIcon />
-              {cartCount > 0 && <span className="header__badge">{cartCount}</span>}
-            </Link>
-          </div>
         </nav>
       </div>
+
       {/* Mobile Menu Backdrop */}
       {isMobileMenuOpen && (
         <div
@@ -420,8 +464,6 @@ const Header = () => {
           onClick={() => setIsMobileMenuOpen(false)}
         ></div>
       )}
-
-      {/* search handled inline in header__search-wrap */}
     </header>
   );
 };
