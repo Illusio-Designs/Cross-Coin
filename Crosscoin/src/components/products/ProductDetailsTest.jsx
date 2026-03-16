@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import './ProductDetailsTest.css';
 
 const ProductDetailsTest = ({ product }) => {
   const [selectedImage, setSelectedImage] = useState(0);

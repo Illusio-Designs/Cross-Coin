@@ -81,6 +81,8 @@ import "../styles/pages/About.css";
 // Third-party
 import "react-quill/dist/quill.snow.css";
 
+import "../components/products/ProductDetailsTest.css"
+
 import Analytics from "../components/common/Analytics";
 import UTMTracker from "../components/common/UTMTracker";
 import { SpeedInsights } from "@vercel/speed-insights/next";
