@@ -87,6 +87,10 @@ import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 function AppContent({ Component, pageProps, progressRef }) {
   const { isDrawerOpen, setIsDrawerOpen, lastAddedItem, cartItems } = useCart();
   const { user } = useAuth();
+  const router = useRouter();
+  
+  // Check if current route is a dashboard route
+  const isDashboard = router.pathname.startsWith('/dashboard');
 
   return (
     <>
@@ -98,11 +102,11 @@ function AppContent({ Component, pageProps, progressRef }) {
           style={{ height: 0 }}
         />
       </div>
-      <Header />
-      <Breadcrumb />
+      {!isDashboard && <Header />}
+      {!isDashboard && <Breadcrumb />}
       {/* Removed blocking loader - pages load instantly */}
       <Component {...pageProps} />
-      <Footer />
+      {!isDashboard && <Footer />}
       <CartDrawer 
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)}
