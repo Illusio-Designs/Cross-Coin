@@ -1,0 +1,132 @@
+.breadcrumb {
+  background: linear-gradient(90deg, #f9fafb 0%, #ffffff 50%, #f3f4f6 100%);
+  border-bottom: 2px solid #e5e7eb;
+  padding: 16px 0;
+}
+
+.breadcrumb__container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 8%;
+}
+
+.breadcrumb__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.breadcrumb__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.breadcrumb__link {
+  color: #6b7280;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.breadcrumb__link:hover {
+  color: #CE1E36;
+  background-color: rgba(206, 30, 54, 0.08);
+  transform: translateX(2px);
+}
+
+.breadcrumb__separator {
+  color: #d1d5db;
+  font-weight: 300;
+  margin: 0 4px;
+}
+
+.breadcrumb__current {
+  color: #1f2937;
+  font-weight: 600;
+  padding: 4px 8px;
+}
+
+/* Responsive Design */
+@media (max-width: 1440px) {
+  .breadcrumb__container {
+    padding: 0 6%;
+  }
+}
+
+@media (max-width: 1024px) {
+  .breadcrumb__container {
+    padding: 0 5%;
+  }
+
+  .breadcrumb__item {
+    font-size: 13px;
+  }
+
+  .breadcrumb__link,
+  .breadcrumb__current {
+    padding: 3px 6px;
+  }
+}
+
+@media (max-width: 768px) {
+  .breadcrumb {
+    padding: 12px 0;
+  }
+
+  .breadcrumb__container {
+    padding: 0 4%;
+  }
+
+  .breadcrumb__list {
+    gap: 6px;
+  }
+
+  .breadcrumb__item {
+    font-size: 12px;
+  }
+
+  .breadcrumb__link,
+  .breadcrumb__current {
+    padding: 2px 4px;
+  }
+
+  .breadcrumb__separator {
+    margin: 0 2px;
+  }
+}
+
+@media (max-width: 600px) {
+  .breadcrumb {
+    padding: 10px 0;
+  }
+
+  .breadcrumb__container {
+    padding: 0 3%;
+  }
+
+  .breadcrumb__list {
+    gap: 4px;
+  }
+
+  .breadcrumb__item {
+    font-size: 11px;
+  }
+
+  .breadcrumb__link,
+  .breadcrumb__current {
+    padding: 2px 3px;
+  }
+
+  .breadcrumb__separator {
+    margin: 0 1px;
+    font-size: 10px;
+  }
+}

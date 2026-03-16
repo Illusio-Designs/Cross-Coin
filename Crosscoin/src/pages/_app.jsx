@@ -9,6 +9,9 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import Loader from "../components/Loader";
 import CartDrawer from "../components/cart/CartDrawer";
+import Breadcrumb from "../components/Breadcrumb";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 // Global CSS — all imports must live here (Next.js Pages Router rule)
 import "../styles/globals.css";
 import "../styles/responsive.css";
@@ -30,6 +33,7 @@ import "../styles/pages/Contact.css";
 import "../styles/pages/auth/adminlogin.css";
 // Components
 import "../styles/components/Header.css";
+import "../styles/components/Breadcrumb.css";
 import "../styles/components/Footer.css";
 import "../styles/components/Testimonials.css";
 import "../styles/components/TrustBadges.css";
@@ -93,8 +97,11 @@ function AppContent({ Component, pageProps, progressRef }) {
           style={{ height: 0 }}
         />
       </div>
+      <Header />
+      <Breadcrumb />
       {/* Removed blocking loader - pages load instantly */}
       <Component {...pageProps} />
+      <Footer />
       <CartDrawer 
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)}
