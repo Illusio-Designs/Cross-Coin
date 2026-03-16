@@ -6,7 +6,6 @@ import { getBadgeDisplay, formatBadge } from "../config/badgeConfig";
 import { selectProductImage } from "../utils/productImageSelector";
 import colorMap from "./products/colorMap";
 import { getPublicProductReviews } from "../services/publicApi";
-import "../styles/components/ProductCard.css";
 
 // Filter options data - This should come from API in real implementation
 export const filterOptions = {
