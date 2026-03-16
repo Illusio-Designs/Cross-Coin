@@ -1,6 +1,5 @@
 import { useState } from "react";
 import Footer from "../components/Footer";
-import Header from "../components/Header";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { registerUser } from '@/services/publicApi';
@@ -37,7 +36,6 @@ export default function Register() {
 
   return (
     <>
-      <Header />
       <div className="auth-container">
         <div className="auth-tabs">
           <Link href="/login" className="inactive">Login</Link>

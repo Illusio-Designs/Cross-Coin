@@ -1,6 +1,5 @@
 import { useState } from "react";
 import Footer from "../components/Footer";
-import Header from "../components/Header";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { useAuth } from '../context/AuthContext';
@@ -47,7 +46,6 @@ export default function Login() {
 
   return (
     <>
-      <Header />
       <div className="auth-container">
         <div className="auth-tabs">
           <span className="active">Login</span>

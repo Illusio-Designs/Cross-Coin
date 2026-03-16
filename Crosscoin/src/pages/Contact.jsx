@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import Header from "../components/Header";
 import Footer from "../components/Footer";
 import {
   FaPhone,
@@ -34,7 +33,6 @@ const Contact = () => {
 
   return (
     <SeoWrapper pageName="contact">
-      <Header />
       <div className="contact-page">
         <div className="contact-hero">
           <div className="container">
@@ -179,4 +177,5 @@ const Contact = () => {
 };
 
 export default Contact;
+
 

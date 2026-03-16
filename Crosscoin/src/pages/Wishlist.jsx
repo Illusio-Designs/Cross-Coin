@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
@@ -84,7 +83,6 @@ const Wishlist = () => {
     return (
       <SeoWrapper pageName="wishlist">
         <div className="wishlist-page">
-          <Header />
           <main className="wishlist-main">
             <div className="wishlist-empty">
               <FiHeart className="wishlist-empty-icon" />
@@ -107,7 +105,6 @@ const Wishlist = () => {
   return (
     <SeoWrapper pageName="wishlist">
       <div className="wishlist-page">
-        <Header />
         <main className="wishlist-main">
           <div className="wishlist-header">
             <h1>My Wishlist ({wishlist.length} items)</h1>
@@ -214,3 +211,4 @@ const Wishlist = () => {
 };
 
 export default Wishlist;
+

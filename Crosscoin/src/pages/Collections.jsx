@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getPublicCategories } from '../services/publicApi';
 import { getCachedData, setCachedData } from '../utils/apiCache';
-import Header from '../components/Header';
 import Footer from '../components/Footer';
 import SeoWrapper from '../console/SeoWrapper';
 import Loader from '../components/Loader';
@@ -103,7 +102,7 @@ const Collections = () => {
   if (loading || !isMounted) {
     return (
       <SeoWrapper pageName="categories">
-        <Header />
+
         <div className="collections-container">
           <h1 className="section-title">Collections</h1>
           <div className="loading-state">
@@ -118,7 +117,7 @@ const Collections = () => {
   if (error) {
     return (
       <SeoWrapper pageName="categories">
-        <Header />
+
         <div className="collections-container">
           <h1 className="section-title">Collections</h1>
           <div className="error-state">
@@ -140,7 +139,7 @@ const Collections = () => {
 
   return (
     <SeoWrapper pageName="categories">
-      <Header />
+
       <div className="collections-container">
         <h1 className="section-title">Collections</h1>
         <div className="collections-grid">
