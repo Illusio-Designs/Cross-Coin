@@ -13,6 +13,7 @@ import CartDrawer from "../components/cart/CartDrawer";
 import "../styles/globals.css";
 import "../styles/responsive.css";
 import "../styles/mobile-utilities.css";
+import "../styles/components/ProductCard.css";
 // Page-specific CSS will be loaded by individual pages
 import Analytics from "../components/common/Analytics";
 import UTMTracker from "../components/common/UTMTracker";

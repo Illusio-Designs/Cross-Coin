@@ -1,27 +1,17 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import SafeImage from "./common/SafeImage";
-import { Button } from "../components/ui";
-import { FiHeart, FiShoppingCart } from "react-icons/fi";
-import { HiOutlineEye } from "react-icons/hi2";
-import { useRouter } from "next/router";
+import { FiHeart } from "react-icons/fi";
 import { useWishlist } from "../context/WishlistContext";
-import imagePreloader from "../utils/imagePreloader";
-import { BADGE_CONFIG, getBadgeDisplay, formatBadge } from "../config/badgeConfig";
-import { selectProductImage, selectProductImages } from "../utils/productImageSelector";
-import { getImageUrl } from "../utils/imageHandler";
+import { getBadgeDisplay, formatBadge } from "../config/badgeConfig";
+import { selectProductImage } from "../utils/productImageSelector";
+import colorMap from "./products/colorMap";
+import { getPublicProductReviews } from "../services/publicApi";
+import "../styles/components/ProductCard.css";
 
 // Filter options data - This should come from API in real implementation
 export const filterOptions = {
   categories: ["Ankle", "Long", "Short"],
-  materials: [
-    "Winter Wear",
-    "Summer Wear",
-    "Cotton",
-    "Wools",
-    "Silk",
-    "Net",
-    "Rubber",
-  ],
+  materials: ["Winter Wear", "Summer Wear", "Cotton", "Wools", "Silk", "Net", "Rubber"],
   colors: ["red", "blue", "green", "yellow", "black", "gray"],
   sizes: ["S", "M", "L", "XL"],
   genders: ["Men", "Women", "Kids"],
@@ -29,266 +19,145 @@ export const filterOptions = {
 
 const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
   const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
-  const router = useRouter();
-  const [isHovered, setIsHovered] = useState(false);
-  const [hoverImagePreloaded, setHoverImagePreloaded] = useState(false);
-  const hoverImageRef = useRef(null);
-  const isAboveFold = index < 6; // Above-the-fold cards
 
-  // Debug logging for badge and wishlist
   useEffect(() => {
-    console.log('ProductCard Loaded:', {
-      productId: product?.id,
-      productName: product?.name,
-      badge: product?.badge,
-      badgeIsNull: product?.badge === null,
-      badgeIsUndefined: product?.badge === undefined,
-      badgeValue: product?.badge || 'NOT SET',
-      wishlistStatus: isInWishlist(product?.id),
-      allProductData: product
-    });
+    if (process.env.NODE_ENV === "development") {
+      console.log("ProductCard:", { id: product?.id, badge: product?.badge });
+    }
   }, [product?.id, product?.badge]);
 
   const variation = product?.variations?.[0];
-
-  // Safety check: if no variation and no product price, log warning
-  if (!variation && !product?.price) {
-    console.warn('ProductCard: No variation or product price found for product:', product?.id);
-  }
-
-  // Get hover image using centralized utility
-  const allImages = selectProductImages(product, variation);
-  const hoverImageData = allImages.length > 1 ? allImages[1] : null;
-
-  // Get hover image URL for prefetch
-  const getHoverImageUrl = () => {
-    if (!hoverImageData) return null;
-    return getImageUrl(hoverImageData);
-  };
-
-  // Monitor preload queue size to prevent memory issues
-  useEffect(() => {
-    // Log queue size for monitoring (can be used for performance metrics)
-    const queueSize = imagePreloader.getQueueSize();
-    if (queueSize > 10) {
-      // Queue is getting large, but this is handled by the preloader's maxConcurrent limit
-      console.debug(`Preload queue size: ${queueSize}`);
-    }
-  }, [hoverImagePreloaded]);
-
-  // Preload hover images on component mount for above-the-fold cards
-  // DISABLED: Aggressive preloading causes performance issues
-  // Hover images will be loaded on-demand when user hovers
-  useEffect(() => {
-    // Preloading disabled to improve initial page load performance
-    // Hover images will load on first hover instead
-  }, [isAboveFold, hoverImageData]);
-
-  // Handle hover - preload for below-the-fold cards on first hover
-  const handleMouseEnter = () => {
-    setIsHovered(true);
-    
-    // Preload hover image on first hover for below-the-fold cards
-    if (!isAboveFold && !hoverImagePreloaded && hoverImageData) {
-      const hoverImageUrl = getHoverImageUrl();
-      if (hoverImageUrl) {
-        // Don't use requestIdleCallback for hover - preload immediately
-        imagePreloader.preloadImage(hoverImageUrl, false).then(() => {
-          setHoverImagePreloaded(true);
-        }).catch(() => {
-          // Silently fail
-        });
-      }
-    }
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovered(false);
-  };
-
-  const handleWishlistClick = (e) => {
-    e.stopPropagation(); // Prevent triggering product click
-    if (isInWishlist(product.id)) {
-      removeFromWishlist(product.id);
-    } else {
-      const productToSend = {
-        ...product,
-        variationImages:
-          variation?.images?.map((img) => img.image_url || img.url || img) ||
-          [],
-      };
-      addToWishlist(productToSend);
-    }
-  };
-
-  // Get the primary image or first image from the images array using centralized utility
   const imageData = selectProductImage(product, variation);
-
-  // Get the first variation for price - with fallback to product price if no variation
   const price = variation?.price || product?.price || 0;
   const comparePrice = variation?.comparePrice || product?.comparePrice || 0;
 
-  // Get category name
-  const categoryName = product?.category?.name || "";
+  const [reviewCount, setReviewCount] = useState(product?.reviewCount || 0);
+  const [avgRating, setAvgRating] = useState(product?.avgRating || null);
 
-  // Get default color and size from the first variation
-  let defaultColor = "";
-  let defaultSize = "";
-  let variationId = variation?.id || null;
-  if (variation && variation.attributes) {
-    const attrs =
-      typeof variation.attributes === "string"
-        ? JSON.parse(variation.attributes)
-        : variation.attributes;
-    defaultColor = attrs.color?.[0] || "";
-    defaultSize = attrs.size?.[0] || "";
-  }
+  useEffect(() => {
+    if (!product?.id) return;
+    // If already provided by API, use them directly
+    if (product.reviewCount !== undefined && product.avgRating !== undefined) {
+      setReviewCount(product.reviewCount);
+      setAvgRating(product.avgRating);
+      return;
+    }
+    // Otherwise fetch from API
+    getPublicProductReviews(product.id, { limit: 100 })
+      .then(data => {
+        const reviews = data?.reviews || data || [];
+        const count = Array.isArray(reviews) ? reviews.length : 0;
+        const avg = count > 0
+          ? parseFloat((reviews.reduce((s, r) => s + (r.rating || 0), 0) / count).toFixed(1))
+          : null;
+        setReviewCount(count);
+        setAvgRating(avg);
+      })
+      .catch(() => {});
+  }, [product?.id]);
+
+  const [showAllColors, setShowAllColors] = useState(false);
+
+  const handleWishlistClick = (e) => {
+    e.stopPropagation();
+    if (isInWishlist(product.id)) {
+      removeFromWishlist(product.id);
+    } else {
+      addToWishlist({
+        ...product,
+        variationImages: variation?.images?.map((img) => img.image_url || img.url || img) || [],
+      });
+    }
+  };
+
+  // Collect unique colors from all variations
+  const colors = [];
+  (product?.variations || []).forEach((v) => {
+    const attrs = typeof v.attributes === "string" ? JSON.parse(v.attributes) : v.attributes;
+    const varColors = Array.isArray(attrs?.color) ? attrs.color : attrs?.color ? [attrs.color] : [];
+    varColors.forEach((c) => { if (c && !colors.includes(c)) colors.push(c); });
+  });
 
   return (
-    <div
-      className="product-card"
-      onClick={() => onProductClick(product)}
-      style={{ cursor: "pointer" }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      <div className="product-image" style={{ position: "relative" }}>
-        {/* Main image container with hover image overlay */}
-        <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden" }}>
-          {/* Main image */}
-          <div style={{ position: "relative", width: "100%", height: "100%" }}>
-            <SafeImage
-              imageData={imageData}
-              alt={product?.name || "Product Image"}
-              priority={index < 6}
-              fetchPriority={index < 6 ? "high" : "low"}
-              quality={75}
-              style={{ 
-                background: "#ffffff",
-                opacity: isHovered && hoverImagePreloaded ? 0 : 1,
-                transition: 'opacity 0.3s ease-in-out'
-              }}
-              isProductCard={true}
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            />
-          </div>
-          
-          {/* Hover image overlay - only render if hover image exists */}
-          {hoverImageData && (
-            <div 
-              ref={hoverImageRef}
-              style={{ 
-                position: "absolute", 
-                top: 0, 
-                left: 0, 
-                width: "100%", 
-                height: "100%",
-                opacity: isHovered && hoverImagePreloaded ? 1 : 0,
-                transition: 'opacity 0.3s ease-in-out',
-                pointerEvents: 'none'
-              }}
-            >
-              <SafeImage
-                imageData={hoverImageData}
-                alt={`${product?.name || "Product Image"} - Hover`}
-                priority={false}
-                fetchPriority="low"
-                quality={75}
-                style={{ 
-                  background: "#ffffff",
-                  width: "100%",
-                  height: "100%"
-                }}
-                isProductCard={true}
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              />
-            </div>
-          )}
+    <div className="product-card" onClick={() => onProductClick(product)} style={{ cursor: "pointer" }}>
+      <div className="product-image">
+        <div className="product-image__inner">
+          <SafeImage
+            imageData={imageData}
+            alt={product?.name || "Product Image"}
+            priority={index < 6}
+            fetchPriority={index < 6 ? "high" : "low"}
+            quality={75}
+            isProductCard={true}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          />
         </div>
 
-        {/* Badge - positioned absolutely, outside overflow container */}
-        {product?.badge && product.badge !== 'none' && (
-          <>
-            {console.log('Badge Rendering:', { badge: product.badge, display: getBadgeDisplay(product.badge) })}
-            <span 
-              className="product-badge" 
-              style={{ 
-                background: getBadgeDisplay(product.badge).color,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                position: 'absolute',
-                top: '1rem',
-                left: '1rem',
-                zIndex: 10
-              }}
-              aria-label={getBadgeDisplay(product.badge).label}
-              title={getBadgeDisplay(product.badge).description}
-            >
-              <span>{getBadgeDisplay(product.badge).icon}</span>
-              <span>{formatBadge(product.badge)}</span>
-            </span>
-          </>
+        {product?.badge && product.badge !== "none" && product.badge !== "" && (
+          <div className="product-badge__ribbon" aria-label={getBadgeDisplay(product.badge).label}>
+            <span>{formatBadge(product.badge)}</span>
+          </div>
         )}
-        {!product?.badge && console.log('Badge is NULL or UNDEFINED for product:', product?.id)}
-        {product?.badge === 'none' && console.log('Badge is "none" for product:', product?.id)}
-        
-        {/* Wishlist Button - positioned absolutely, outside overflow container */}
+
+        {avgRating ? (
+          <div className="rating-pill">
+            <span className="rating-pill__star">★</span>
+            <span className="rating-pill__score">{avgRating}/5</span>
+            <span className="rating-pill__count">{reviewCount}</span>
+          </div>
+        ) : null}
+
         <button
-          className={`wishlist-btn ${
-            isInWishlist(product?.id) ? "active" : ""
-          }`}
-          onClick={(e) => {
-            console.log('Wishlist Button Clicked:', {
-              productId: product?.id,
-              isCurrentlyInWishlist: isInWishlist(product?.id),
-              action: isInWishlist(product?.id) ? 'REMOVE' : 'ADD'
-            });
-            handleWishlistClick(e);
-          }}
-          aria-label="Add to wishlist"
-          style={{
-            position: 'absolute',
-            top: '1rem',
-            right: '1rem',
-            zIndex: 10,
-            pointerEvents: 'auto'
-          }}
+          className={`wishlist-btn ${isInWishlist(product?.id) ? "active" : ""}`}
+          onClick={handleWishlistClick}
+          aria-label={isInWishlist(product?.id) ? "Remove from wishlist" : "Add to wishlist"}
         >
-          {console.log('Wishlist Button Rendered:', { 
-            productId: product?.id, 
-            isInWishlist: isInWishlist(product?.id),
-            buttonElement: 'SHOULD_BE_VISIBLE'
-          })}
           <FiHeart />
         </button>
       </div>
+
       <div className="product-info">
-        <div className="product-main-info">
-          <h3>{product?.name}</h3>
-        </div>
-        <div className="product-meta">
+        <h3 className="product-name">{product?.name}</h3>
+
+        {colors.length > 0 && (
+          <div className="product-colors">
+            {(showAllColors ? colors : colors.slice(0, 5)).map((color, i) => (
+              <span
+                key={i}
+                className="product-color-dot"
+                style={{ background: colorMap[color?.toLowerCase()] || color }}
+                title={color}
+              />
+            ))}
+            {colors.length > 5 && !showAllColors && (
+              <button
+                className="product-color-more-btn"
+                onClick={(e) => { e.stopPropagation(); setShowAllColors(true); }}
+                aria-label="Show more colors"
+              >
+                +{colors.length - 5}
+              </button>
+            )}
+          </div>
+        )}
+
+        <div className="product-footer">
           <span className="product-price">
             ₹{price}
-            {comparePrice > 0 && (
-              <span className="original-price">₹{comparePrice}</span>
-            )}
+            {comparePrice > 0 && <span className="original-price">₹{comparePrice}</span>}
           </span>
-          <Button
-            size="sm"
-            variant="outline"
-            icon={<HiOutlineEye />}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (product.slug) {
-                router.push(`/ProductDetails?slug=${product.slug}`);
-              } else {
-                router.push(`/ProductDetails/${product.id}`);
-              }
-            }}
-            aria-label="View product details"
-            className="view-details-btn"
-          />
+          <button
+            className="add-to-bag-btn"
+            onClick={(e) => { e.stopPropagation(); onAddToCart && onAddToCart(product); }}
+            aria-label="Add to bag"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M3 6H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M16 10C16 11.0609 15.5786 12.0783 14.8284 12.8284C14.0783 13.5786 13.0609 14 12 14C10.9391 14 9.92172 13.5786 9.17157 12.8284C8.42143 12.0783 8 11.0609 8 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            ADD TO BAG
+          </button>
         </div>
       </div>
     </div>
