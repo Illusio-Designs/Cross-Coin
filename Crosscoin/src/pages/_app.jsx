@@ -67,6 +67,7 @@ import "../components/cart/CartDrawer.css";
 import "../components/cart/QuantityOfferBar.css";
 import "../components/ProductListSkeleton.css";
 import "../components/DashboardSkeleton.css";
+import "../components/products/ProductDetailsTest.css";
 // Additional dashboard CSS
 import "../styles/dashboard/payments.css";
 import "../styles/dashboard/products.css";
