@@ -60,8 +60,8 @@ const TrustBadges = () => {
     <section className="trust-badges-section">
       <div className="trust-badges-container">
         <div className="trust-badges-header">
-          <p className="trust-badges-label">Why choose us</p>
-          <h2 className="trust-badges-title">Built on trust, delivered with care</h2>
+          <h2 className="trust-badges-title">Built on <strong>Trust</strong></h2>
+          <p className="trust-badges-subtitle">Delivered with care, every single time</p>
         </div>
         
         <div className="trust-badges-grid">

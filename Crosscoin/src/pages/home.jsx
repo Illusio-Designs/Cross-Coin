@@ -340,7 +340,10 @@ const Home = () => {
         <UnlockedExclusives products={exclusiveProducts} />
         <div className="shop-by-category">
           <div className="latest-title">
-            <h2 className="section-title">Latest Products</h2>
+            <div className="section-header-inline">
+              <h2 className="section-header-h2">Latest <strong>Products</strong></h2>
+              <p className="section-header-sub">Fresh drops, just in</p>
+            </div>
             <button className="hero-btn" onClick={() => window.location.href = '/Products'}>
               View All Products
             </button>
