@@ -62,8 +62,9 @@ const UnlockedExclusives = ({ products = [] }) => {
   return (
     <div className="unlocked-exclusives-section">
       <div className="section">
-        <div className="top-bar">
-          <h2 className="section-title"><strong>Unlocked</strong> <span>Exclusives</span></h2>
+        <div className="section-header">
+          <h2 className="section-title">Unlocked <strong>Exclusives</strong></h2>
+          <p className="section-subtitle">Our most coveted pieces, now available</p>
         </div>
 
         <div className="main-layout">

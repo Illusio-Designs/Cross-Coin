@@ -150,17 +150,6 @@
   position: relative;
 }
 
-.section-title::after {
-  content: "";
-  position: absolute;
-  bottom: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60px;
-  height: 3px;
-  background: #ce1e36;
-}
-
 .category-section {
   display: flex;
   gap: 2rem;
@@ -931,10 +920,39 @@
 /* Latest Products Section */
 .latest-title{
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
     margin-bottom: 3rem;
-    gap: 20rem;
+}
+
+.section-header-inline {
+  text-align: left;
+}
+
+.section-header-h2 {
+  font-size: clamp(20px, 5vw, 40px);
+  font-weight: 300;
+  letter-spacing: 0.16em;
+  color: #1a1a1a;
+  text-transform: uppercase;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.section-header-h2 strong {
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #CE1E36;
+}
+
+.section-header-sub {
+  margin: 6px 0 0 0;
+  font-size: clamp(11px, 2vw, 13px);
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  color: #999;
+  padding: 0;
 }
 
 .latest-products-section {

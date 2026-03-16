@@ -123,7 +123,10 @@ const Testimonials = () => {
   if (loading) {
     return (
       <section className="testimonials-section">
-        <h3 className="section-title">CUSTOMER SATISFACTION</h3>
+        <div className="section-header">
+          <h2>Customer <strong>Satisfaction</strong></h2>
+          <p>What our customers are saying</p>
+        </div>
         <div className="testimonials-container">
           <div className="loading">Loading testimonials...</div>
         </div>
@@ -134,7 +137,10 @@ const Testimonials = () => {
   if (!reviews.length) {
     return (
       <section className="testimonials-section">
-        <h3 className="section-title">CUSTOMER SATISFACTION</h3>
+        <div className="section-header">
+          <h2>Customer <strong>Satisfaction</strong></h2>
+          <p>What our customers are saying</p>
+        </div>
         <div className="testimonials-container">
           <div className="loading">No testimonials available yet.</div>
         </div>
@@ -147,7 +153,10 @@ const Testimonials = () => {
 
   return (
     <section className="testimonials-section" ref={sectionRef}>
-      <h3 className="section-title">CUSTOMER SATISFACTION</h3>
+      <div className="section-header">
+        <h2>Customer <strong>Satisfaction</strong></h2>
+        <p>What our customers are saying</p>
+      </div>
       <div className="testimonials-container">
         {reviews.length > 2 && (
           <button className="slider-arrow slider-arrow-left" aria-label="Previous testimonial" onClick={() => scrollSlider('left')}>
