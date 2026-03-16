@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { searchProducts } from '../services/publicApi';
 import ProductCard from '../components/ProductCard';
-import Footer from '../components/Footer';
 import Loader from '../components/Loader';
 import { Pagination } from '../components/ui';
 import SeoWrapper from '../console/SeoWrapper';
@@ -306,7 +305,6 @@ const SearchResults = () => {
         )}
       </div>
 
-        <Footer />
       </div>
     </SeoWrapper>
   );

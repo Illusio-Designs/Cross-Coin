@@ -31,7 +31,6 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import Footer from "../components/Footer";
 import { useCart } from "../context/CartContext";
 import { useRouter } from "next/router";
 import CartStep from "../components/checkout/CartStep";
@@ -1191,7 +1190,6 @@ export default function UnifiedCheckout() {
           </div>
         )}
       </div>
-      <Footer />
     </>
   );
 }

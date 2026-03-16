@@ -1,5 +1,4 @@
 import { useState } from "react";
-import Footer from "../components/Footer";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { registerUser } from '@/services/publicApi';
@@ -90,7 +89,6 @@ export default function Register() {
           </button>
         </form>
       </div>
-      <Footer />
     </>
   );
 } 

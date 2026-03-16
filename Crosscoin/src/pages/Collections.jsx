@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getPublicCategories } from '../services/publicApi';
 import { getCachedData, setCachedData } from '../utils/apiCache';
-import Footer from '../components/Footer';
 import SeoWrapper from '../console/SeoWrapper';
 import Loader from '../components/Loader';
 
@@ -109,7 +108,6 @@ const Collections = () => {
             <Loader />
           </div>
         </div>
-        <Footer />
       </SeoWrapper>
     );
   }
@@ -132,7 +130,6 @@ const Collections = () => {
             </button>
           </div>
         </div>
-        <Footer />
       </SeoWrapper>
     );
   }
@@ -199,7 +196,6 @@ const Collections = () => {
           )}
         </div>
       </div>
-      <Footer />
     </SeoWrapper>
   );
 };

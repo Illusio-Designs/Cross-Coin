@@ -1,4 +1,3 @@
-import Footer from "../components/Footer";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getPublicPolicyByName } from "@/services/publicApi";
@@ -58,7 +57,6 @@ export default function Policy() {
           </div>
         )}
       </div>
-      <Footer />
     </>
   );
 } 

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import Footer from "../components/Footer";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { useAuth } from '../context/AuthContext';
@@ -105,7 +104,6 @@ export default function Login() {
           </button>
         </form>
       </div>
-      <Footer />
     </>
   );
 } 

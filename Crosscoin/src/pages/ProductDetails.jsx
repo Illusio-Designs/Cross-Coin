@@ -19,11 +19,6 @@ import colorMap from '../components/products/colorMap';
 
 // Load page-specific CSS - moved to _app.jsx
 
-// Lazy load Footer
-const Footer = dynamic(() => import("../components/Footer"), {
-  loading: () => <div style={{ minHeight: '200px', background: '#f9fafb' }} />
-});
-
 export default function ProductDetails() {
   const router = useRouter();
   const nextRouter = useNextRouter();
@@ -1564,7 +1559,6 @@ export default function ProductDetails() {
           </div>
         )}
         
-        <Footer />
       </div>
     </SeoWrapper>
   );

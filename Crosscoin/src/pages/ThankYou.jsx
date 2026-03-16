@@ -1,4 +1,3 @@
-import Footer from "../components/Footer";
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import { getGuestOrder, getUserOrders } from "../services/publicApi";
@@ -299,7 +298,6 @@ export default function ThankYou() {
           <button className="track-order" onClick={handleTrackOrder}>Track Your Order</button>
         </div>
       </div>
-      <Footer />
     </>
   );
 } 
