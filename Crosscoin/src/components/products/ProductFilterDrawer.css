@@ -159,6 +159,34 @@
   gap: 8px;
 }
 
+/* Color swatches */
+.color-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.color-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid #ddd;
+  background-color: #fff;
+}
+
+.color-swatch:hover {
+  transform: scale(1.1);
+  border-color: #999;
+}
+
+.color-swatch.selected {
+  border: 3px solid #1a1a1a;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1a1a1a;
+}
+
 .filter-opt {
   border: 1.5px solid #d8d8d8;
   border-radius: 50px;

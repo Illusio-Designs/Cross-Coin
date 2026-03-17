@@ -1,16 +1,24 @@
 import { useState, useEffect } from 'react';
+import colorMap from './colorMap';
 
-const ProductFilterDrawer = ({ isOpen, onClose, onApplyFilters, categories = [], attributes = {} }) => {
+const ProductFilterDrawer = ({ 
+  isOpen, 
+  onClose, 
+  onApplyFilters, 
+  categories = [], 
+  attributes = {},
+  minPrice = 20,
+  maxPrice = 250
+}) => {
   const [filters, setFilters] = useState({
     categories: [],
-    priceRange: { min: 0, max: 10000 },
-    status: [],
+    priceRange: { min: minPrice, max: maxPrice },
     badge: [],
     attributes: {}
   });
 
-  const [priceMin, setPriceMin] = useState(0);
-  const [priceMax, setPriceMax] = useState(10000);
+  const [priceMin, setPriceMin] = useState(minPrice);
+  const [priceMax, setPriceMax] = useState(maxPrice);
 
   // Initialize attributes filters
   useEffect(() => {
@@ -20,9 +28,12 @@ const ProductFilterDrawer = ({ isOpen, onClose, onApplyFilters, categories = [],
     });
     setFilters(prev => ({
       ...prev,
-      attributes: initialAttributes
+      attributes: initialAttributes,
+      priceRange: { min: minPrice, max: maxPrice }
     }));
-  }, [attributes]);
+    setPriceMin(minPrice);
+    setPriceMax(maxPrice);
+  }, [attributes, minPrice, maxPrice]);
 
   const handleCategoryToggle = (categoryId) => {
     setFilters(prev => ({
@@ -30,15 +41,6 @@ const ProductFilterDrawer = ({ isOpen, onClose, onApplyFilters, categories = [],
       categories: prev.categories.includes(categoryId)
         ? prev.categories.filter(id => id !== categoryId)
         : [...prev.categories, categoryId]
-    }));
-  };
-
-  const handleStatusToggle = (status) => {
-    setFilters(prev => ({
-      ...prev,
-      status: prev.status.includes(status)
-        ? prev.status.filter(s => s !== status)
-        : [...prev.status, status]
     }));
   };
 
@@ -64,8 +66,8 @@ const ProductFilterDrawer = ({ isOpen, onClose, onApplyFilters, categories = [],
   };
 
   const handlePriceChange = () => {
-    const min = Math.min(priceMin, priceMax - 100);
-    const max = Math.max(priceMax, priceMin + 100);
+    const min = Math.min(priceMin, priceMax - 1);
+    const max = Math.max(priceMax, priceMin + 1);
     setPriceMin(min);
     setPriceMax(max);
     setFilters(prev => ({
@@ -77,13 +79,12 @@ const ProductFilterDrawer = ({ isOpen, onClose, onApplyFilters, categories = [],
   const handleClearAll = () => {
     setFilters({
       categories: [],
-      priceRange: { min: 0, max: 10000 },
-      status: [],
+      priceRange: { min: minPrice, max: maxPrice },
       badge: [],
       attributes: {}
     });
-    setPriceMin(0);
-    setPriceMax(10000);
+    setPriceMin(minPrice);
+    setPriceMax(maxPrice);
   };
 
   const handleApply = () => {
@@ -170,16 +171,16 @@ const ProductFilterDrawer = ({ isOpen, onClose, onApplyFilters, categories = [],
                   <div
                     className="range-fill"
                     style={{
-                      left: `${(priceMin / 10000) * 100}%`,
-                      right: `${100 - (priceMax / 10000) * 100}%`
+                      left: `${((priceMin - minPrice) / (maxPrice - minPrice)) * 100}%`,
+                      right: `${100 - ((priceMax - minPrice) / (maxPrice - minPrice)) * 100}%`
                     }}
                   />
                   <input
                     type="range"
-                    min="0"
-                    max="10000"
+                    min={minPrice}
+                    max={maxPrice}
                     value={priceMin}
-                    step="100"
+                    step="1"
                     onChange={(e) => {
                       setPriceMin(Number(e.target.value));
                       handlePriceChange();
@@ -187,39 +188,16 @@ const ProductFilterDrawer = ({ isOpen, onClose, onApplyFilters, categories = [],
                   />
                   <input
                     type="range"
-                    min="0"
-                    max="10000"
+                    min={minPrice}
+                    max={maxPrice}
                     value={priceMax}
-                    step="100"
+                    step="1"
                     onChange={(e) => {
                       setPriceMax(Number(e.target.value));
                       handlePriceChange();
                     }}
                   />
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Status */}
-          <div className="filter-row">
-            <button className="filter-trigger" onClick={toggleFilterRow}>
-              <span className="filter-name">Status</span>
-              <svg className="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-            <div className="filter-body">
-              <div className="filter-options">
-                {['active', 'inactive', 'draft'].map(status => (
-                  <button
-                    key={status}
-                    className={`filter-opt ${filters.status.includes(status) ? 'selected' : ''}`}
-                    onClick={() => handleStatusToggle(status)}
-                  >
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                  </button>
-                ))}
               </div>
             </div>
           </div>
@@ -258,19 +236,38 @@ const ProductFilterDrawer = ({ isOpen, onClose, onApplyFilters, categories = [],
                   </svg>
                 </button>
                 <div className="filter-body">
-                  <div className="filter-options">
-                    {values.map(value => (
-                      <button
-                        key={value}
-                        className={`filter-opt ${
-                          filters.attributes[attrName]?.includes(value) ? 'selected' : ''
-                        }`}
-                        onClick={() => handleAttributeToggle(attrName, value)}
-                      >
-                        {value}
-                      </button>
-                    ))}
-                  </div>
+                  {attrName.toLowerCase() === 'color' ? (
+                    <div className="color-options">
+                      {values.map(value => (
+                        <button
+                          key={value}
+                          className={`color-swatch ${
+                            filters.attributes[attrName]?.includes(value) ? 'selected' : ''
+                          }`}
+                          style={{
+                            backgroundColor: colorMap[value?.toLowerCase()] || value,
+                            border: filters.attributes[attrName]?.includes(value) ? '3px solid #1a1a1a' : '2px solid #ddd'
+                          }}
+                          onClick={() => handleAttributeToggle(attrName, value)}
+                          title={value}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="filter-options">
+                      {values.map(value => (
+                        <button
+                          key={value}
+                          className={`filter-opt ${
+                            filters.attributes[attrName]?.includes(value) ? 'selected' : ''
+                          }`}
+                          onClick={() => handleAttributeToggle(attrName, value)}
+                        >
+                          {value}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )

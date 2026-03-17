@@ -922,8 +922,30 @@ const Products = () => {
             <button
               className={`filter-toggle${isMobile ? " mobile-fixed" : ""}`}
               onClick={() => setShowFilters(!showFilters)}
+              style={{
+                padding: '10px 16px',
+                background: '#f5f5f5',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s',
+                color: '#1a1a1a'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = '#efefef';
+                e.target.style.borderColor = '#999';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = '#f5f5f5';
+                e.target.style.borderColor = '#ddd';
+              }}
             >
-              <FiFilter /> Filters
+              <FiFilter size={18} /> Filters
             </button>
             <select
               className="sort-select"
@@ -1418,20 +1440,20 @@ const Products = () => {
         isOpen={showFilters}
         onClose={() => setShowFilters(false)}
         onApplyFilters={(filters) => {
-          if (filters.material && filters.material.length > 0) {
-            setSelectedMaterial(filters.material);
+          if (filters.attributes?.material && filters.attributes.material.length > 0) {
+            setSelectedMaterial(filters.attributes.material);
           }
-          if (filters.price) {
-            setPriceRange(filters.price);
+          if (filters.priceRange) {
+            setPriceRange([filters.priceRange.min, filters.priceRange.max]);
           }
-          if (filters.colors && filters.colors.length > 0) {
-            setSelectedColors(filters.colors);
+          if (filters.attributes?.color && filters.attributes.color.length > 0) {
+            setSelectedColors(filters.attributes.color);
           }
-          if (filters.sizes && filters.sizes.length > 0) {
-            setSelectedSizes(filters.sizes);
+          if (filters.attributes?.size && filters.attributes.size.length > 0) {
+            setSelectedSizes(filters.attributes.size);
           }
-          if (filters.gender && filters.gender.length > 0) {
-            setSelectedGender(filters.gender);
+          if (filters.attributes?.gender && filters.attributes.gender.length > 0) {
+            setSelectedGender(filters.attributes.gender);
           }
           setShowFilters(false);
         }}
@@ -1442,6 +1464,8 @@ const Products = () => {
           size: filterOptionsDynamic?.sizes || [],
           gender: filterOptionsDynamic?.genders || [],
         }}
+        minPrice={minPrice}
+        maxPrice={maxPrice}
       />
     </SeoWrapper>
   );
