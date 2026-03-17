@@ -113,7 +113,8 @@ const SafeImage = ({
       setImageError(true);
       setImageLoading(false);
       if (isLogo) {
-        setImageSrc(null);
+        // For logos, keep trying to show the image, don't set to null
+        // This allows the fallback text to show
       }
       else if (!isProductCard && imageSrc !== fallbackSrc) {
         setImageSrc(fallbackSrc);
@@ -130,7 +131,24 @@ const SafeImage = ({
   };
 
   if (isLogo && (!imageSrc || imageError)) {
-    return null;
+    // Show fallback text for logo if image fails to load
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: width || '120px',
+        height: height || '48px',
+        backgroundColor: '#CE1E36',
+        borderRadius: '4px',
+        fontSize: '14px',
+        color: 'white',
+        fontWeight: 'bold',
+        fontFamily: 'Arial, sans-serif'
+      }}>
+        CrossCoin
+      </div>
+    );
   }
 
   if (isProductCard && !imageSrc) {
