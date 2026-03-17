@@ -20,7 +20,6 @@ const CouponStrip = dynamic(() => import("../components/CouponStrip"), {
 
 // Import TrustBadges component
 import TrustBadges from "../components/TrustBadges";
-import BlogSection from "../components/BlogSection";
 
 import { useRouter } from 'next/router';
 import { fbqTrack } from '../utils/fbqTrack';
@@ -422,7 +421,6 @@ const Home = () => {
             )}
           </div>
         </div>
-        <BlogSection />
         <Testimonials />
       </div>
     );
