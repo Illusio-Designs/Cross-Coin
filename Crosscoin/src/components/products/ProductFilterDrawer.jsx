@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import './ProductFilterDrawer.css';
 
 const ProductFilterDrawer = ({ isOpen, onClose, onApplyFilters, categories = [], attributes = {} }) => {
   const [filters, setFilters] = useState({
