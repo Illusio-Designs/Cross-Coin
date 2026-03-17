@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import ProductCard from "../components/ProductCard";
-import ProductSkeleton from "../components/common/ProductSkeleton";
+import Skeleton from "../components/Skeleton";
 import ProductFilterDrawer from "../components/products/ProductFilterDrawer";
 import Dropdown from "../components/ui/Dropdown";
 import {
@@ -895,7 +895,7 @@ const Products = () => {
             <div className="product-listing">
               <div className="products-grid">
                 {Array(12).fill(0).map((_, idx) => (
-                  <ProductSkeleton key={`skeleton-${idx}`} />
+                  <Skeleton key={`skeleton-${idx}`} type="product" />
                 ))}
               </div>
             </div>
@@ -1397,7 +1397,7 @@ const Products = () => {
               {loading ? (
                 <>
                   {Array(12).fill(0).map((_, idx) => (
-                    <ProductSkeleton key={`products-skeleton-${idx}`} />
+                    <Skeleton key={`products-skeleton-${idx}`} type="product" />
                   ))}
                 </>
               ) : error ? (

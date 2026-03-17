@@ -3,8 +3,7 @@ import dynamic from 'next/dynamic';
 import HeroSlider from "../components/HeroSlider";
 import ProductCard from "../components/ProductCard";
 import SafeImage from "../components/common/SafeImage";
-import ProductSkeleton from "../components/common/ProductSkeleton";
-import FeaturedProductSkeleton from "../components/common/FeaturedProductSkeleton";
+import Skeleton from "../components/Skeleton";
 import SlidingCollection from "../components/SlidingCollection";
 import UnlockedExclusives from "../components/UnlockedExclusives";
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
@@ -353,7 +352,7 @@ const Home = () => {
             {latestProductsLoading ? (
               <div className="products-slider" ref={latestSliderRef}>
                 {Array(8).fill(0).map((_, idx) => (
-                  <ProductSkeleton key={`latest-skeleton-${idx}`} />
+                  <Skeleton key={`latest-skeleton-${idx}`} type="product" />
                 ))}
               </div>
             ) : (
