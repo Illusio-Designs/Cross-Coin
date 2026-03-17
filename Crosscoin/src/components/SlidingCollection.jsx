@@ -67,13 +67,16 @@ const SlidingCollection = ({ collections = [], isLoading = false }) => {
     }
 
     if (imageUrl.startsWith('http')) {
+      // Already a full URL (ImageKit or external)
       return imageUrl;
     }
 
-    if (imageUrl.startsWith('/uploads/')) {
+    if (imageUrl.startsWith('/')) {
+      // ImageKit path or /uploads/ path - add base URL
       return `${baseUrl}${imageUrl}`;
     }
 
+    // Legacy: just a filename, add full path
     return `${baseUrl}/uploads/categories/${imageUrl}`;
   };
 

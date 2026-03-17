@@ -15,6 +15,7 @@ const { fileURLToPath } = require('url');
 const { initializeSeoData } = require('./utils/initializeSeoData.js');
 const fs = require('fs');
 const { setupDatabase } = require('./scripts/setupDatabase.js');
+const { runMigrations } = require('./scripts/migrateToImageKit.js');
 const corsOptions = require('./config/corsConfig.js');
 const { sendFacebookEvent } = require('./integration/facebookPixel.js');
 const { initializeCronJobs } = require('./config/cronJobs.js');
@@ -334,6 +335,16 @@ const startServer = async () => {
         logger.info('Setting up database...');
         await setupDatabase();
         logger.info('✓ Database setup completed');
+
+        // Run ImageKit migration for existing images
+        logger.info('Checking for images to migrate to ImageKit...');
+        try {
+            await runMigrations();
+            logger.info('✓ ImageKit migration completed');
+        } catch (error) {
+            logger.warn('ImageKit migration skipped or failed:', error.message);
+            logger.warn('You can run migration manually later if needed');
+        }
 
         // Initialize SEO data
         logger.info('Initializing SEO data...');

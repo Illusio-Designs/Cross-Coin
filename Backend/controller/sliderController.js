@@ -8,6 +8,7 @@ const fs = require('fs/promises');
 const fsSync = require('fs');
 const ImageHandler = require('../utils/imageHandler.js');
 const multer = require('multer');
+const imagekitService = require('../services/imagekitService.js');
 
 // In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/slider'));
@@ -30,19 +31,12 @@ const formatSliderResponse = (slider) => {
     const sliderData = slider.toJSON();
     sliderData.categoryName = slider.category ? slider.category.name : null;
     
-    // Debug environment variables
-    console.log('Environment variables:', {
-        API_URL: process.env.API_URL,
-        BACKEND_URL: process.env.BACKEND_URL,
-        NODE_ENV: process.env.NODE_ENV
-    });
+    // Use ImageKit optimized URL if image exists
+    if (sliderData.image) {
+        sliderData.image = imagekitService.getOptimizedUrl(sliderData.image, 'large');
+    }
     
-    // Add full image path with API URL
-    const baseUrl = process.env.API_URL || process.env.BACKEND_URL || 'https://api.crosscoin.in';
-    sliderData.image = `${baseUrl}/uploads/slider/${sliderData.image}`;
     console.log('Formatted slider image path:', sliderData.image);
-    // Keep category object for frontend to access Brands
-    // delete sliderData.category;
     return sliderData;
 };
 
@@ -55,42 +49,49 @@ const createSlider = async (req, res) => {
             return res.status(400).json({ message: 'Image is required' });
         }
 
-        // Process image
-        const result = await imageHandler.processImage(req.file.path, {
-            width: 1920,
-            height: 800,
-            quality: 80,
-            format: 'webp',
-            filename: `slider-${Date.now()}`,
-            type: 'slider'
-        });
+        // Upload to ImageKit
+        try {
+            const fileBuffer = await fs.readFile(req.file.path);
+            
+            const uploadResult = await imagekitService.uploadImage(
+                fileBuffer,
+                `slider-${Date.now()}.webp`,
+                '/sliders'
+            );
 
-        if (!result.success) {
+            if (!uploadResult.success) {
+                throw new Error('Failed to upload image to ImageKit');
+            }
+
+            const image = uploadResult.filePath; // Store ImageKit file path
+            console.log('Created slider image path:', image);
+            
+            // Delete temporary file
+            await fs.unlink(req.file.path);
+
+            // Use brand_id from request body if provided, otherwise use req.brand or default to 1
+            const brandIdToUse = brand_id || (req.brand ? req.brand.id : 1);
+
+            const slider = await Slider.create({
+                title,
+                description,
+                image,
+                brand_id: brandIdToUse,
+            });
+
+            res.status(201).json({ 
+                success: true, 
+                message: 'Slider created successfully', 
+                data: slider 
+            });
+        } catch (imageError) {
+            console.error('Error processing image:', imageError);
             return res.status(500).json({ 
                 success: false,
-                message: 'Failed to process image',
-                error: result.error 
+                message: 'Error processing image', 
+                error: imageError.message 
             });
         }
-
-        const image = result.filename; // Store only filename
-        console.log('Created slider image filename:', image);
-
-        // Use brand_id from request body if provided, otherwise use req.brand or default to 1
-        const brandIdToUse = brand_id || (req.brand ? req.brand.id : 1);
-
-        const slider = await Slider.create({
-            title,
-            description,
-            image,
-            brand_id: brandIdToUse,
-        });
-
-        res.status(201).json({ 
-            success: true, 
-            message: 'Slider created successfully', 
-            data: slider 
-        });
     } catch (error) {
         console.error('Error creating slider:', error);
         res.status(500).json({ 
@@ -211,20 +212,23 @@ const updateSlider = async (req, res) => {
         let image = slider.image;
         if (req.file) {
             try {
-                const updatedImagePath = await imageHandler.handleImageUpdate(
-                    slider.image,
-                    req.file.path,
-                    {
-                        width: 1920,
-                        height: 800,
-                        quality: 80,
-                        format: 'webp',
-                        filename: `slider-${Date.now()}`,
-                        type: 'slider'
-                    }
+                const fileBuffer = await fs.readFile(req.file.path);
+                
+                const uploadResult = await imagekitService.uploadImage(
+                    fileBuffer,
+                    `slider-${Date.now()}.webp`,
+                    '/sliders'
                 );
-                // Extract just the filename from the returned path
-                image = updatedImagePath ? updatedImagePath.split('/').pop() : slider.image;
+
+                if (!uploadResult.success) {
+                    throw new Error('Failed to upload image to ImageKit');
+                }
+
+                image = uploadResult.filePath; // Store ImageKit file path
+                console.log('Updated slider image path:', image);
+                
+                // Delete temporary file
+                await fs.unlink(req.file.path);
             } catch (error) {
                 console.error('Error handling image update:', error);
                 return res.status(500).json({ 
@@ -310,8 +314,8 @@ const getPublicSliders = async (req, res) => {
             const sliderData = slider.toJSON();
             sliderData.categoryName = slider.category ? slider.category.name : null;
             sliderData.categorySlug = slider.category ? slider.category.slug : null;
-            // Add full image path
-            sliderData.image = `${process.env.API_URL || process.env.BACKEND_URL || 'https://api.crosscoin.in'}/uploads/slider/${sliderData.image}`;
+            // Use ImageKit optimized URL
+            sliderData.image = slider.image ? imagekitService.getOptimizedUrl(slider.image, 'large') : null;
             // Add brands info
             sliderData.brands = slider.Brands ? slider.Brands.map(brand => brand.name) : [];
             delete sliderData.category;
