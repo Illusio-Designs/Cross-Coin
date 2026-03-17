@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import SafeImage from './common/SafeImage';
 import { getPublicProductReviews } from '../services/publicApi';
 
-const UnlockedExclusives = ({ products = [] }) => {
+const UnlockedExclusives = ({ products = [], loading = false }) => {
   const [currentProduct, setCurrentProduct] = useState(0);
   const [qty, setQty] = useState(1);
   const [showDetail, setShowDetail] = useState(false);
@@ -41,7 +41,57 @@ const UnlockedExclusives = ({ products = [] }) => {
       .catch(() => {});
   }, [currentProduct, products]);
 
-  if (!products || products.length === 0) return null;
+  const shimmer = {
+    background: 'linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%)',
+    backgroundSize: '200% 100%',
+    animation: 'shimmer-skeleton 1.5s infinite linear',
+  };
+
+  if (loading || !products || products.length === 0) {
+    return (
+      <div className="unlocked-exclusives-section">
+        <div className="section">
+          <div className="section-header">
+            <h2 className="section-title">Unlocked <strong>Exclusives</strong></h2>
+            <p className="section-subtitle">Our most coveted pieces, now available</p>
+          </div>
+          <div className="main-layout">
+            {/* Left thumb col */}
+            <div className="thumb-col">
+              <div style={{ ...shimmer, width: '80px', height: '14px', borderRadius: '4px', marginBottom: '10px' }} />
+              <div className="thumb-grid">
+                {[0,1,2,3].map(i => (
+                  <div key={i} className="thumb" style={{ ...shimmer }} />
+                ))}
+              </div>
+            </div>
+            {/* Center hero */}
+            <div className="hero-col">
+              <div className="hero-img-wrap" style={{ ...shimmer }} />
+            </div>
+            {/* Right col */}
+            <div className="right-col">
+              <div className="strip-wrap">
+                <div style={{ ...shimmer, width: '100px', height: '14px', borderRadius: '4px', marginBottom: '10px' }} />
+                <div className="strip-viewport" style={{ ...shimmer, height: '100px' }} />
+                <div className="strip-nav" style={{ marginTop: '8px' }}>
+                  <div style={{ ...shimmer, width: '32px', height: '32px', borderRadius: '50%' }} />
+                  <div style={{ ...shimmer, width: '32px', height: '32px', borderRadius: '50%' }} />
+                </div>
+              </div>
+              <div className="info-card" style={{ ...shimmer, minHeight: '160px', borderRadius: '12px' }} />
+            </div>
+          </div>
+        </div>
+        <style jsx>{`
+          @keyframes shimmer-skeleton {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   const product = products[currentProduct];
   const firstVariation = product.variations?.[0];

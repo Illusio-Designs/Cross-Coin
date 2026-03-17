@@ -47,7 +47,7 @@
   margin-bottom: 1.5rem;
   font-size: 1.13rem;
   outline: none;
-  width: 88%;
+  width: 100%;
   transition: box-shadow 0.2s, border 0.2s;
   box-shadow: 0 2px 6px rgba(31, 41, 55, 0.07);
   color: #180d3e;

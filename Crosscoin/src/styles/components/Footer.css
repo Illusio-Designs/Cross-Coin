@@ -218,28 +218,42 @@
 
 /* Responsive */
 @media (max-width: 1100px) {
-  .footer__main { grid-template-columns: 1.5fr 1fr 1fr 1fr; }
+  .footer__main { grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 32px; }
   .footer__brand { grid-column: 1 / -1; flex-direction: row; gap: 40px; align-items: flex-start; }
-  .footer__brand-desc { max-width: 320px; }
+  .footer__brand-desc { max-width: 300px; }
+}
+
+@media (max-width: 860px) {
+  .footer__main { grid-template-columns: 1fr 1fr 1fr; gap: 28px; padding: 40px 6%; }
+  .footer__brand { grid-column: 1 / -1; flex-direction: column; }
+  .footer__brand-desc { max-width: 100%; }
 }
 
 @media (max-width: 768px) {
-  .footer__newsletter { padding: 36px 5%; }
-  .footer__newsletter-inner { flex-direction: column; gap: 24px; }
-  .footer__newsletter-form { max-width: 100%; width: 100%; }
-  .footer__main { grid-template-columns: 1fr 1fr; padding: 40px 5%; gap: 28px; }
-  .footer__brand { grid-column: 1 / -1; flex-direction: column; }
+  .footer__newsletter { padding: 32px 5%; }
+  .footer__newsletter-inner { flex-direction: column; gap: 20px; }
+  .footer__newsletter-form { max-width: 100%; width: 100%; min-width: unset; }
+  .footer__main { grid-template-columns: 1fr 1fr; padding: 36px 5%; gap: 24px; }
+  .footer__brand { grid-column: 1 / -1; }
   .footer__categories { padding: 24px 5%; }
   .footer__categories-links { gap: 8px; }
-  .footer__bottom { padding: 16px 5%; flex-direction: column; align-items: flex-start; }
+  .footer__bottom { padding: 16px 5%; flex-direction: column; align-items: flex-start; gap: 8px; }
 }
 
 @media (max-width: 480px) {
-  .footer__main { grid-template-columns: 1fr; padding: 32px 4%; }
-  .footer__newsletter { padding: 28px 4%; }
-  .footer__newsletter-form { flex-direction: column; }
+  .footer__newsletter { padding: 24px 4%; }
+  .footer__newsletter-text h3 { font-size: 18px; }
+  .footer__newsletter-form { flex-direction: column; gap: 8px; }
   .footer__newsletter-form input { border-radius: 8px; border-right: 1px solid rgba(255,255,255,0.2); }
-  .footer__newsletter-form button { border-radius: 8px; }
-  .footer__categories { padding: 14px 4%; }
+  .footer__newsletter-form button { border-radius: 8px; width: 100%; }
+  .footer__main { grid-template-columns: 1fr 1fr; padding: 28px 4%; gap: 20px; }
+  .footer__brand { grid-column: 1 / -1; }
+  .footer__categories { padding: 18px 4%; }
+  .footer__cat-link { font-size: 12px; padding: 5px 12px; }
   .footer__bottom { padding: 14px 4%; }
+  .footer__copyright, .footer__credit { font-size: 12px; }
+}
+
+@media (max-width: 360px) {
+  .footer__main { grid-template-columns: 1fr; }
 }

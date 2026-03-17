@@ -43,15 +43,15 @@
   width: 100%;
 }
 
-.thumb-col {
+.product-wrapper .thumb-col {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: 74px;
+   width: 74px;
   flex-shrink: 0;
 }
 
-.thumb {
+.product-wrapper .thumb {
   width: 74px;
   height: 90px;
   border: 2px solid transparent;
@@ -61,15 +61,15 @@
   transition: border-color 0.2s;
 }
 
-.thumb.active {
+.product-wrapper .thumb.active {
   border-color: var(--black);
 }
 
-.thumb:hover {
+.product-wrapper .thumb:hover {
   border-color: var(--gray-mid);
 }
 
-.thumb img {
+.product-wrapper .thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;

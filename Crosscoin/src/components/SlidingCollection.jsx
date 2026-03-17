@@ -2,7 +2,13 @@ import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { getPublicCategoryByName } from '../services/publicApi';
 
-const SlidingCollection = ({ collections = [] }) => {
+const shimmerStyle = {
+  background: 'linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%)',
+  backgroundSize: '200% 100%',
+  animation: 'shimmer-skeleton 1.5s infinite linear',
+};
+
+const SlidingCollection = ({ collections = [], isLoading = false }) => {
   const stageRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [current, setCurrent] = useState(0);
@@ -171,8 +177,34 @@ const SlidingCollection = ({ collections = [] }) => {
     };
   };
 
-  if (!collections || collections.length === 0) {
-    return null;
+  if (isLoading || !collections || collections.length === 0) {
+    return (
+      <div className="sliding-collection-section">
+        <div className="section-header">
+          <h2>On-Trend <strong>Picks</strong></h2>
+          <p>Explore our promising line-up</p>
+        </div>
+        <div className="stage" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', position: 'relative' }}>
+          {/* side card left */}
+          <div style={{ ...shimmerStyle, width: '340px', height: '300px', borderRadius: '16px', opacity: 0.5, flexShrink: 0 }} />
+          {/* center card */}
+          <div style={{ ...shimmerStyle, width: '480px', height: '380px', borderRadius: '16px', flexShrink: 0 }} />
+          {/* side card right */}
+          <div style={{ ...shimmerStyle, width: '340px', height: '300px', borderRadius: '16px', opacity: 0.5, flexShrink: 0 }} />
+        </div>
+        <div className="dots" style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '16px' }}>
+          {[0,1,2,3].map(i => (
+            <div key={i} style={{ ...shimmerStyle, width: '10px', height: '10px', borderRadius: '50%' }} />
+          ))}
+        </div>
+        <style jsx>{`
+          @keyframes shimmer-skeleton {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+          }
+        `}</style>
+      </div>
+    );
   }
 
   return (
