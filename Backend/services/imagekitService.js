@@ -18,6 +18,8 @@ class ImageKitService {
   getOptimizedUrl(imagePath, size = 'medium') {
     if (!imagePath) return null;
 
+    console.log('🔍 ImageKit getOptimizedUrl input:', imagePath);
+
     const sizeConfig = {
       thumbnail: { width: 300, height: 300, quality: 70 },
       medium: { width: 600, height: 600, quality: 75 },
@@ -43,20 +45,27 @@ class ImageKitService {
       const imagekitPath = `/categories/${imagePath}`;
       const fullUrl = `${urlEndpoint}${imagekitPath}`;
       const separator = fullUrl.includes('?') ? '&' : '?';
-      return `${fullUrl}${separator}tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
+      const result = `${fullUrl}${separator}tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
+      console.log('✅ ImageKit URL (legacy filename):', result);
+      return result;
     }
 
     // Fix legacy /uploads/ paths - convert to ImageKit format
     let cleanPath = imagePath;
     if (cleanPath.includes('/uploads/categories/')) {
+      console.log('🔧 Fixing /uploads/categories/ path');
       cleanPath = cleanPath.replace('/uploads/categories/', '/categories/');
     }
     if (cleanPath.includes('/uploads/sliders/')) {
+      console.log('🔧 Fixing /uploads/sliders/ path');
       cleanPath = cleanPath.replace('/uploads/sliders/', '/sliders/');
     }
     if (cleanPath.includes('/uploads/products/')) {
+      console.log('🔧 Fixing /uploads/products/ path');
       cleanPath = cleanPath.replace('/uploads/products/', '/products/');
     }
+
+    console.log('🔧 Clean path:', cleanPath);
 
     // Construct full URL: endpoint + path
     let fullUrl = `${urlEndpoint}${cleanPath}`;
