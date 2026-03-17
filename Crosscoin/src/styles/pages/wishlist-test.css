@@ -127,8 +127,8 @@
 /* Wishlist Grid */
 .wishlist-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(clamp(160px, 20vw, 240px), 1fr));
+  gap: clamp(12px, 2vw, 20px);
   margin-bottom: 60px;
 }
 
@@ -231,8 +231,8 @@
 /* Recommendations Grid */
 .reco-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(clamp(160px, 20vw, 240px), 1fr));
+  gap: clamp(12px, 2vw, 20px);
 }
 
 /* Responsive */
@@ -255,13 +255,13 @@
   }
 
   .wishlist-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
   }
 
   .reco-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
   }
 
   .reco-title {
@@ -280,11 +280,12 @@
 
   .wishlist-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    gap: 10px;
   }
 
   .reco-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
   }
 
   .reco-section {
