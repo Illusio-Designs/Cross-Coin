@@ -148,24 +148,6 @@ const Collections = () => {
               return null;
             }
             
-            // Simple image URL construction
-            let imageUrl = null; // No fallback image
-            
-            if (cat.image) {
-              const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-              
-              if (cat.image.startsWith('http')) {
-                // Already a full URL (ImageKit or external)
-                imageUrl = cat.image;
-              } else if (cat.image.startsWith('/')) {
-                // ImageKit path or /uploads/ path - add base URL
-                imageUrl = `${baseUrl}${cat.image}`;
-              } else {
-                // Just a filename (legacy), add full path
-                imageUrl = `${baseUrl}/uploads/categories/${cat.image}`;
-              }
-            }
-            
             return (
               <Link
                 key={cat.id || cat._id || cat.name}
@@ -173,9 +155,9 @@ const Collections = () => {
                 className="category-card"
               >
                 <div className="category-card-image-wrapper">
-                  {imageUrl && (
+                  {cat.image && (
                     <SafeImage
-                      imageData={{ image_url: imageUrl }}
+                      imageData={cat.image}
                       alt={cat.name}
                       className="category-card-image"
                       width="100%"
