@@ -101,15 +101,16 @@ function AppContent({ Component, pageProps, progressRef }) {
       
       <ToastContainer
         position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
+        autoClose={2500}
+        hideProgressBar={true}
+        newestOnTop={true}
+        closeOnClick={true}
         rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
+        pauseOnFocusLoss={false}
+        draggable={true}
+        pauseOnHover={false}
         theme="light"
+        limit={3}
       />
     </>
   );
