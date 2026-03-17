@@ -4,6 +4,7 @@ import { useCart } from '../../context/CartContext';
 import { useRouter } from 'next/router';
 import SafeImage from '../common/SafeImage';
 import QuantityOfferBar from './QuantityOfferBar';
+import { showSuccess, showError } from '../../utils/toastNotification';
 
 // Helper functions from CartStep
 function pickCartItemImage(item) {
@@ -121,6 +122,11 @@ const CartDrawer = ({ isOpen, onClose, lastAddedItem }) => {
   const handleCouponRemoved = () => {
     setAppliedCoupon(null);
     sessionStorage.removeItem('appliedCoupon');
+  };
+
+  const handleRemoveItem = (itemId) => {
+    removeFromCart(itemId);
+    showSuccess('removedFromCart');
   };
 
   // Calculate discount
@@ -248,7 +254,7 @@ const CartDrawer = ({ isOpen, onClose, lastAddedItem }) => {
 
                   <button 
                     className="cart-drawer-item-remove"
-                    onClick={() => removeFromCart(item.id)}
+                    onClick={() => handleRemoveItem(item.id)}
                   >
                     <FiTrash2 />
                   </button>
