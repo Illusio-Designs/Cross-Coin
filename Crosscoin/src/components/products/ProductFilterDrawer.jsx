@@ -65,15 +65,17 @@ const ProductFilterDrawer = ({
     }));
   };
 
-  const handlePriceChange = () => {
-    const min = Math.min(priceMin, priceMax - 1);
-    const max = Math.max(priceMax, priceMin + 1);
-    setPriceMin(min);
-    setPriceMax(max);
-    setFilters(prev => ({
-      ...prev,
-      priceRange: { min, max }
-    }));
+  const handlePriceChange = (type, value) => {
+    const num = Number(value);
+    if (type === 'min') {
+      const newMin = Math.min(num, priceMax - 1);
+      setPriceMin(newMin);
+      setFilters(prev => ({ ...prev, priceRange: { min: newMin, max: priceMax } }));
+    } else {
+      const newMax = Math.max(num, priceMin + 1);
+      setPriceMax(newMax);
+      setFilters(prev => ({ ...prev, priceRange: { min: priceMin, max: newMax } }));
+    }
   };
 
   const handleClearAll = () => {
@@ -181,10 +183,7 @@ const ProductFilterDrawer = ({
                     max={maxPrice}
                     value={priceMin}
                     step="1"
-                    onChange={(e) => {
-                      setPriceMin(Number(e.target.value));
-                      handlePriceChange();
-                    }}
+                    onChange={(e) => handlePriceChange('min', e.target.value)}
                   />
                   <input
                     type="range"
@@ -192,10 +191,7 @@ const ProductFilterDrawer = ({
                     max={maxPrice}
                     value={priceMax}
                     step="1"
-                    onChange={(e) => {
-                      setPriceMax(Number(e.target.value));
-                      handlePriceChange();
-                    }}
+                    onChange={(e) => handlePriceChange('max', e.target.value)}
                   />
                 </div>
               </div>
