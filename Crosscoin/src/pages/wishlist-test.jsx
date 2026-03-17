@@ -1,129 +1,92 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import '../styles/pages/wishlist-test.css';
+import { useWishlist } from '../context/WishlistContext';
+import { useCart } from '../context/CartContext';
+import SafeImage from '../components/common/SafeImage';
+import { getAllPublicProducts } from '../services/publicApi';
 
 const WishlistTest = () => {
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      brand: 'Jockey',
-      name: 'Tactel Microfiber Elastane Stretch Solid Trunk - Black',
-      price: 629,
-      mrp: 729,
-      colors: ['#111', '#1e3a6e', '#2e7d7d'],
-      sizes: ['S', 'M', 'L', 'XL'],
-      cat: 'innerwear',
-      badge: '',
-      img: 'https://www.jockey.in/cdn/shop/products/IC28_BLACK_0105_S123_JKY_1.webp?v=1700008414&width=420',
-    },
-    {
-      id: 2,
-      brand: 'Jockey',
-      name: 'Microfiber Thermal Socks StayWarm Technology - Black',
-      price: 229,
-      mrp: 299,
-      colors: ['#111', '#555'],
-      sizes: ['Free Size'],
-      cat: 'socks',
-      badge: 'sale',
-      img: 'https://www.jockey.in/cdn/shop/files/7150_BLACK_0110_S126_Jky_0.webp?v=1764578239&width=420',
-    },
-    {
-      id: 3,
-      brand: 'Jockey',
-      name: 'Cotton Stretch Solid Brief with Natural StayFresh Properties - Red',
-      price: 349,
-      mrp: 399,
-      colors: ['#c0392b', '#1e3a6e', '#111'],
-      sizes: ['S', 'M', 'L', 'XL'],
-      cat: 'innerwear',
-      badge: 'new',
-      img: 'https://www.jockey.in/cdn/shop/products/IC08_TRED_0104_S123_JKY_1.webp?v=1700008547&width=420',
-    },
-    {
-      id: 4,
-      brand: 'Jockey',
-      name: '100% Cotton Solid Brief - Pack of 2 with StayFresh Properties',
-      price: 449,
-      mrp: 598,
-      colors: ['#111', '#888'],
-      sizes: ['M', 'L', 'XL'],
-      cat: 'innerwear',
-      badge: 'sale',
-      img: 'https://www.jockey.in/cdn/shop/products/8001_ASSORTED_0104_S123_JKY_1.webp?v=1700038400&width=420',
-    },
-    {
-      id: 5,
-      brand: 'Jockey',
-      name: 'Modal Stretch Solid Brief with Natural Crosshatch Texture - Olive',
-      price: 479,
-      mrp: 499,
-      colors: ['#6b7c3a', '#111', '#5c3a1a'],
-      sizes: ['S', 'M', 'L'],
-      cat: 'innerwear',
-      badge: 'new',
-      img: 'https://www.jockey.in/cdn/shop/products/IC18_OLIVE_0104_S123_JKY_1.webp?v=1700009463&width=420',
-    },
-    {
-      id: 6,
-      brand: 'Jockey',
-      name: 'Tactel Nylon Elastane Printed Brief with Moisture Move Properties - Teal',
-      price: 629,
-      mrp: 729,
-      colors: ['#2e7d7d', '#1a5cba'],
-      sizes: ['S', 'M', 'L', 'XL'],
-      cat: 'men',
-      badge: '',
-      img: 'https://www.jockey.in/cdn/shop/products/IC31_TEAL_0105_S123_JKY_1.webp?v=1700015907&width=420',
-    },
-  ]);
-
-  const recos = [
-    {
-      name: 'Tactel Microfiber Brief - Ebony',
-      price: 579,
-      img: 'https://www.jockey.in/cdn/shop/products/IC29_EGEPR_0105_S123_JKY_5.webp?v=1700015337&width=420',
-    },
-    {
-      name: 'Cotton Solid Brief - Navy',
-      price: 279,
-      img: 'https://www.jockey.in/cdn/shop/products/IC23_WHITE_0104_S123_JKY_1.webp?v=1700010516&width=420',
-    },
-    {
-      name: 'Trunk Pack of 2 - Black',
-      price: 1199,
-      img: 'https://www.jockey.in/cdn/shop/products/IC28_BLACK_0105_S123_JKY_2.webp?v=1700008414&width=420',
-    },
-    {
-      name: 'Cotton Brief - Royal Blue',
-      price: 329,
-      img: 'https://www.jockey.in/cdn/shop/products/IC14_NBPR_0104_S123_JKY_1.webp?v=1700009803&width=420',
-    },
-    {
-      name: 'Microfiber Trunk - Forest Night',
-      price: 629,
-      img: 'https://www.jockey.in/cdn/shop/products/IC28_BLACK_0105_S123_JKY_4.webp?v=1700008414&width=420',
-    },
-  ];
+  const { wishlist, removeFromWishlist } = useWishlist();
+  const { addToCart } = useCart();
+  const [recos, setRecos] = useState([]);
 
   const [selectedSizes, setSelectedSizes] = useState({});
   const [currentView, setCurrentView] = useState('grid');
   const [activeCat, setActiveCat] = useState('all');
   const [toast, setToast] = useState('');
+  const [sortOrder, setSortOrder] = useState('newest');
+
+  // Fetch recommendations on mount
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      try {
+        const response = await getAllPublicProducts({ page: 1, limit: 5 });
+        if (response?.data?.products) {
+          setRecos(response.data.products.slice(0, 5));
+        }
+      } catch (error) {
+        console.error('Failed to fetch recommendations:', error);
+      }
+    };
+    fetchRecommendations();
+  }, []);
 
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 2200);
   };
 
+  // Sort wishlist items
+  const sortWishlist = (items) => {
+    const sorted = [...items];
+    switch (sortOrder) {
+      case 'newest':
+        return sorted.sort((a, b) => new Date(b.addedAt || 0) - new Date(a.addedAt || 0));
+      case 'oldest':
+        return sorted.sort((a, b) => new Date(a.addedAt || 0) - new Date(b.addedAt || 0));
+      case 'price-high':
+        return sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
+      case 'price-low':
+        return sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
+      default:
+        return sorted;
+    }
+  };
+
+  const sortedWishlist = sortWishlist(wishlist);
+
+  // Get color dots from product variations
+  const getColorDots = (product) => {
+    const colors = new Set();
+    if (product.variations) {
+      product.variations.forEach(v => {
+        if (v.attributes?.color) {
+          const colorArray = Array.isArray(v.attributes.color) ? v.attributes.color : [v.attributes.color];
+          colorArray.forEach(c => colors.add(c));
+        }
+      });
+    }
+    return Array.from(colors).slice(0, 4);
+  };
+
+  // Get image URL
+  const getImageUrl = (product) => {
+    if (product.variationImages && product.variationImages.length > 0) {
+      return product.variationImages[0];
+    }
+    if (Array.isArray(product.images) && product.images.length > 0) {
+      const primary = product.images.find(img => img.is_primary);
+      return primary ? primary.image_url : product.images[0].image_url;
+    }
+    return product.image || null;
+  };
+
   const filtered = activeCat === 'all' 
-    ? items 
-    : activeCat === 'sale' 
-    ? items.filter(i => i.badge === 'sale') 
-    : items.filter(i => i.cat === activeCat);
+    ? sortedWishlist 
+    : sortedWishlist.filter(i => i.category?.name?.toLowerCase() === activeCat.toLowerCase());
 
   const removeItem = (id) => {
-    setItems(items.filter(i => i.id !== id));
+    removeFromWishlist(id);
     showToast('Removed from wishlist');
   };
 
@@ -131,15 +94,28 @@ const WishlistTest = () => {
     setSelectedSizes({ ...selectedSizes, [id]: size });
   };
 
-  const addToCart = (id) => {
-    if (!selectedSizes[id]) {
+  const addToCartHandler = (product) => {
+    if (!selectedSizes[product.id]) {
       showToast('Please select a size first');
       return;
     }
+    const color = product.selectedVariation?.attributes?.color?.join(', ') || '';
+    const size = selectedSizes[product.id];
+    addToCart(product, color, size, 1, product.selectedVariation?.id);
     showToast('✓ Added to bag!');
   };
 
   const addAllToCart = () => {
+    if (filtered.length === 0) {
+      showToast('No items to add');
+      return;
+    }
+    filtered.forEach(item => {
+      if (selectedSizes[item.id]) {
+        const color = item.selectedVariation?.attributes?.color?.join(', ') || '';
+        addToCart(item, color, selectedSizes[item.id], 1, item.selectedVariation?.id);
+      }
+    });
     showToast('✓ All items added to bag!');
   };
 
@@ -181,18 +157,15 @@ const WishlistTest = () => {
           <div className={`ft ${activeCat === 'all' ? 'active' : ''}`} onClick={() => setActiveCat('all')}>
             All Items
           </div>
-          <div className={`ft ${activeCat === 'men' ? 'active' : ''}`} onClick={() => setActiveCat('men')}>
-            Men
-          </div>
-          <div className={`ft ${activeCat === 'innerwear' ? 'active' : ''}`} onClick={() => setActiveCat('innerwear')}>
-            Innerwear
-          </div>
-          <div className={`ft ${activeCat === 'socks' ? 'active' : ''}`} onClick={() => setActiveCat('socks')}>
-            Socks
-          </div>
-          <div className={`ft ${activeCat === 'sale' ? 'active' : ''}`} onClick={() => setActiveCat('sale')}>
-            On Sale
-          </div>
+          {[...new Set(wishlist.map(i => i.category?.name).filter(Boolean))].map(cat => (
+            <div 
+              key={cat}
+              className={`ft ${activeCat === cat ? 'active' : ''}`} 
+              onClick={() => setActiveCat(cat)}
+            >
+              {cat}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -200,10 +173,15 @@ const WishlistTest = () => {
         <div className="sort-bar">
           <div className="sb-left">
             <span className="sb-label">Sort by:</span>
-            <select className="sort-select">
-              <option>Recently Added</option>
-              <option>Price: Low to High</option>
-              <option>Price: High to Low</option>
+            <select 
+              className="sort-select"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+            >
+              <option value="newest">Recently Added</option>
+              <option value="oldest">Oldest First</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
             </select>
           </div>
           <div className="view-toggle">
@@ -251,12 +229,19 @@ const WishlistTest = () => {
             </div>
           ) : (
             filtered.map(item => {
-              const dis = item.mrp > item.price ? Math.round((item.mrp - item.price) / item.mrp * 100) : 0;
+              const dis = item.comparePrice > item.price ? Math.round((item.comparePrice - item.price) / item.comparePrice * 100) : 0;
+              const imageUrl = getImageUrl(item);
+              const colorDots = getColorDots(item);
+              const sizes = item.variations?.[0]?.attributes?.size || ['S', 'M', 'L', 'XL'];
+              
               return (
-                <div key={item.id} className="wl-card" data-cat={item.cat}>
+                <div key={item.id} className="wl-card" data-cat={item.category?.name}>
                   <div className="wl-card-img">
-                    {item.badge === 'sale' && <div className="card-badge badge-sale">SALE</div>}
-                    {item.badge === 'new' && <div className="card-badge badge-new">NEW</div>}
+                    {item.badge && item.badge !== 'none' && (
+                      <div className={`card-badge badge-${item.badge}`}>
+                        {item.badge === 'new_arrival' ? 'NEW' : item.badge.toUpperCase()}
+                      </div>
+                    )}
                     <button 
                       className="remove-btn" 
                       onClick={() => removeItem(item.id)} 
@@ -267,13 +252,23 @@ const WishlistTest = () => {
                         <line x1="6" y1="6" x2="18" y2="18" />
                       </svg>
                     </button>
-                    <img src={item.img} alt={item.name} loading="lazy" />
+                    {imageUrl && (
+                      <SafeImage
+                        imageData={{ image_url: imageUrl }}
+                        alt={item.name}
+                        width={400}
+                        height={400}
+                        quality={75}
+                        style={{ objectFit: 'cover' }}
+                        isProductCard={true}
+                      />
+                    )}
                   </div>
                   <div className="wl-card-body">
-                    <div className="wc-brand">{item.brand}</div>
+                    <div className="wc-brand">{item.brands?.[0]?.name || 'CrossCoin'}</div>
                     <div className="wc-name">{item.name}</div>
                     <div className="wc-colors">
-                      {item.colors.slice(0, 4).map((color, idx) => (
+                      {colorDots.map((color, idx) => (
                         <div key={idx} className="wc-dot" style={{ background: color }} />
                       ))}
                     </div>
@@ -281,13 +276,13 @@ const WishlistTest = () => {
                       <span className="wc-price">₹{item.price}</span>
                       {dis > 0 && (
                         <>
-                          <span className="wc-mrp">₹{item.mrp}</span>
+                          <span className="wc-mrp">₹{item.comparePrice}</span>
                           <span className="wc-off">{dis}% off</span>
                         </>
                       )}
                     </div>
                     <div className="wc-size-row">
-                      {item.sizes.map(size => (
+                      {(Array.isArray(sizes) ? sizes : [sizes]).map(size => (
                         <button
                           key={size}
                           className={`wc-size ${selectedSizes[item.id] === size ? 'selected' : ''}`}
@@ -300,7 +295,7 @@ const WishlistTest = () => {
                     <div className="wc-actions">
                       <button 
                         className="btn-atb" 
-                        onClick={() => addToCart(item.id)}
+                        onClick={() => addToCartHandler(item)}
                       >
                         Add to Bag
                       </button>
@@ -330,23 +325,39 @@ const WishlistTest = () => {
           </div>
         </div>
         <div className="reco-grid">
-          {recos.map((reco, idx) => (
-            <div key={idx} className="reco-card">
-              <div className="reco-img">
-                <img src={reco.img} alt={reco.name} loading="lazy" />
-                <button className="reco-add" onClick={() => showToast('Added to bag!')}>
-                  Add to Bag
-                </button>
-                <button className="reco-wl" onClick={() => showToast('❤️ Saved to wishlist')}>
-                  <svg viewBox="0 0 24 24">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                  </svg>
-                </button>
+          {recos.map((reco, idx) => {
+            const imageUrl = getImageUrl(reco);
+            return (
+              <div key={idx} className="reco-card">
+                <div className="reco-img">
+                  {imageUrl && (
+                    <SafeImage
+                      imageData={{ image_url: imageUrl }}
+                      alt={reco.name}
+                      width={300}
+                      height={300}
+                      quality={75}
+                      style={{ objectFit: 'cover' }}
+                      isProductCard={true}
+                    />
+                  )}
+                  <button className="reco-add" onClick={() => {
+                    addToCart(reco, '', 'M', 1);
+                    showToast('Added to bag!');
+                  }}>
+                    Add to Bag
+                  </button>
+                  <button className="reco-wl" onClick={() => showToast('❤️ Saved to wishlist')}>
+                    <svg viewBox="0 0 24 24">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="reco-name">{reco.name}</div>
+                <div className="reco-price">₹{reco.price}</div>
               </div>
-              <div className="reco-name">{reco.name}</div>
-              <div className="reco-price">₹{reco.price}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
