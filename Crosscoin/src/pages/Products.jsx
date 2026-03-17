@@ -138,8 +138,10 @@ const Products = () => {
   // Main data fetching function - optimized to prevent multiple calls
   const fetchProductsData = useCallback(
     async (categoryName = null, isCategorySpecific = false) => {
+      console.log('[fetchProductsData] called:', { categoryName, isCategorySpecific, isLoadingRef: isLoadingRef.current });
       // Prevent multiple simultaneous API calls
       if (isLoadingRef.current) {
+        console.log('[fetchProductsData] BLOCKED by isLoadingRef');
         return;
       }
 
@@ -169,51 +171,20 @@ const Products = () => {
 
           // Cache miss - fetch from API
           response = await getPublicCategoryByName(categoryName);
-          // The backend response structure is different - it doesn't have a 'success' field
           if (response && response.products) {
-            // Transform category-specific products to match standard format
-            const transformedProducts = (response.products || []).map((p) => {
-              let imageUrl = null;
-              if (p.image) {
-                const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-                if (p.image.startsWith("http")) {
-                  imageUrl = p.image;
-                } else if (p.image.startsWith("/uploads/")) {
-                  imageUrl = `${baseUrl}${p.image}`;
-                } else {
-                  imageUrl = `${baseUrl}/uploads/products/${p.image}`;
-                }
-              }
-              return {
-                ...p,
-                category_id: response.id, // Set the category ID from the response
-                category: {
-                  id: response.id,
-                  name: response.name,
-                },
-                images: imageUrl ? [{ image_url: imageUrl }] : [], // Keep empty array for no images
-                variations: [
-                  {
-                    price: parseFloat(p.variations?.[0]?.price || p.price || 0) || 0,
-                    comparePrice: parseFloat(p.variations?.[0]?.comparePrice || p.comparePrice || 0) || 0,
-                    stock: parseInt(p.variations?.[0]?.stock || p.stock || 0) || 0,
-                  },
-                ],
-              };
-            });
+            // Backend already returns correctly formatted images and variations — use them directly
+            const transformedProducts = (response.products || []).map((p) => ({
+              ...p,
+              category_id: response.id,
+              category: { id: response.id, name: response.name },
+            }));
             setProducts(transformedProducts);
             setTotalProducts(transformedProducts.length);
-            
-            // Cache the category products (30 minute TTL)
             cacheManager.set(cacheKey, { products: transformedProducts, total: transformedProducts.length }, 30 * 60 * 1000);
-            setLoading(false); // Ensure loading is set to false
-            if (isCategorySpecific) {
-              productsLoadedRef.current = false; // Reset for category-specific loads
-            }
+            setLoading(false);
+            productsLoadedRef.current = false;
           } else {
-            throw new Error(
-              response?.message || "Failed to fetch category products"
-            );
+            throw new Error(response?.message || "Failed to fetch category products");
           }
         } else {
           // Check cache for all products (30 minute TTL)
@@ -295,87 +266,76 @@ const Products = () => {
     [] // No dependencies to prevent recreation
   );
 
-  // Handle category from URL query - run when categories are loaded OR after timeout
+  // Handle category from URL query
   useEffect(() => {
+    // Don't run until categories are loaded
+    if (categories.length === 0 && !categoriesLoadedRef.current) return;
+
     const categoryFromQuery = router.query.category;
 
-    // Wait for categories to load, but don't wait forever
-    const shouldProceed = (categories.length > 0 || categoriesLoadedRef.current) && 
-                          initialLoadRef.current && 
-                          !isLoadingRef.current;
+    console.log('[Products] URL effect fired:', { categoryFromQuery, categoriesLen: categories.length, isLoading: isLoadingRef.current });
 
-    if (shouldProceed) {
-      initialLoadRef.current = false;
+    // Always reset so navigation triggers a fresh fetch
+    isLoadingRef.current = false;
+    initialLoadRef.current = false;
 
-      if (categoryFromQuery && categories.length > 0) {
-        // Decode and set category filter
-        const decodedCategoryName = decodeURIComponent(categoryFromQuery);
-        // Find category ID for filter state - try multiple matching strategies
-        let matchedCategory = categories.find(
-          (cat) => cat.name.toLowerCase() === decodedCategoryName.toLowerCase()
+    const normalizeString = (str) =>
+      str.toLowerCase().replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
+
+    if (categoryFromQuery) {
+      const decodedName = decodeURIComponent(categoryFromQuery);
+
+      let matched = categories.find(
+        (cat) => cat.name.toLowerCase() === decodedName.toLowerCase()
+      );
+      if (!matched) {
+        matched = categories.find(
+          (cat) => normalizeString(cat.name) === normalizeString(decodedName)
         );
+      }
+      if (!matched) {
+        matched = categories.find(
+          (cat) =>
+            decodedName.toLowerCase().includes(cat.name.toLowerCase()) ||
+            cat.name.toLowerCase().includes(decodedName.toLowerCase())
+        );
+      }
 
-        // If exact match fails, try removing special characters and matching
-        if (!matchedCategory) {
-          const normalizeString = (str) =>
-            str
-              .toLowerCase()
-              .replace(/[^\w\s]/g, "")
-              .replace(/\s+/g, " ")
-              .trim();
-          const normalizedUrlCategory = normalizeString(decodedCategoryName);
-
-          matchedCategory = categories.find((cat) => {
-            const normalizedCatName = normalizeString(cat.name);
-            return normalizedCatName === normalizedUrlCategory;
-          });
-        }
-
-        // If still no match, try partial matching
-        if (!matchedCategory) {
-          matchedCategory = categories.find(
-            (cat) =>
-              decodedCategoryName
-                .toLowerCase()
-                .includes(cat.name.toLowerCase()) ||
-              cat.name.toLowerCase().includes(decodedCategoryName.toLowerCase())
-          );
-        }
-
-        if (matchedCategory) {
-          setSelectedCategory([String(matchedCategory.id)]);
-          // Update breadcrumbs with category name
-          setCustomBreadcrumbs([
-            { label: "Home", path: "/" },
-            { label: "Products", path: "/Products" },
-            { label: matchedCategory.name, path: router.asPath, isLast: true }
-          ]);
-          // Use the actual category name from database for API call
-          fetchProductsData(matchedCategory.name, true);
-        } else {
-          // Still load all products even if category not found
-          // Reset breadcrumbs to default
-          setCustomBreadcrumbs(null);
-          fetchProductsData();
-        }
+      if (matched) {
+        setSelectedCategory([String(matched.id)]);
+        setCustomBreadcrumbs([
+          { label: "Home", path: "/" },
+          { label: "Products", path: "/Products" },
+          { label: matched.name, path: router.asPath, isLast: true },
+        ]);
+        fetchProductsData(matched.name, true);
       } else {
-        // No category in URL, fetch all products
-        // Reset breadcrumbs to default
+        // category param present but no match — fetch all
+        setSelectedCategory([]);
         setCustomBreadcrumbs(null);
         fetchProductsData();
       }
-    }
-  }, [categories, router.query.category, fetchProductsData, categoriesLoadedRef.current, setCustomBreadcrumbs, router.asPath]);
-  
-  // Safety check: If categories loaded but products didn't load
-  useEffect(() => {
-    // Only run if categories exist, no products, not currently loading, and initial load is done
-    if (Array.isArray(categories) && categories.length > 0 && 
-        Array.isArray(safeProducts) && safeProducts.length === 0 && 
-        !loading && !isLoadingRef.current && !initialLoadRef.current) {
+    } else {
+      // No category param — fetch all products
+      setSelectedCategory([]);
+      setCustomBreadcrumbs(null);
       fetchProductsData();
     }
-  }, [categories.length, safeProducts.length, loading, fetchProductsData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.query.category, categories.length]);
+
+  // Safety check: fetch all products if nothing loaded and no category param
+  useEffect(() => {
+    if (
+      categories.length > 0 &&
+      safeProducts.length === 0 &&
+      !loading &&
+      !isLoadingRef.current &&
+      !router.query.category
+    ) {
+      fetchProductsData();
+    }
+  }, [categories.length, safeProducts.length, loading, fetchProductsData, router.query.category]);
 
   // After products and categories are loaded, compute dynamic filters
   useEffect(() => {
@@ -671,7 +631,8 @@ const Products = () => {
       if (Array.isArray(selectedCategory) && selectedCategory.length > 0) {
         const catId =
           product.category_id || (product.category && product.category.id);
-        if (!selectedCategory.includes(String(catId))) return false;
+        // If catId is missing, don't filter out (category-specific fetch already scoped)
+        if (catId && !selectedCategory.includes(String(catId))) return false;
       }
       
       // Material filter
