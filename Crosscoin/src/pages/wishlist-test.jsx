@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
-import SafeImage from '../components/common/SafeImage';
 import { getAllPublicProducts } from '../services/publicApi';
+import ProductCard from '../components/ProductCard';
+import { toast } from 'react-toastify';
 
 const WishlistTest = () => {
   const { wishlist, removeFromWishlist } = useWishlist();
   const { addToCart } = useCart();
+  const router = useRouter();
   const [recos, setRecos] = useState([]);
 
-  const [selectedSizes, setSelectedSizes] = useState({});
-  const [currentView, setCurrentView] = useState('grid');
   const [activeCat, setActiveCat] = useState('all');
-  const [toast, setToast] = useState('');
   const [sortOrder, setSortOrder] = useState('newest');
 
   // Fetch recommendations on mount
@@ -32,8 +32,7 @@ const WishlistTest = () => {
   }, []);
 
   const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 2200);
+    toast.info(msg, { position: 'top-right', autoClose: 2200 });
   };
 
   // Sort wishlist items
@@ -55,32 +54,6 @@ const WishlistTest = () => {
 
   const sortedWishlist = sortWishlist(wishlist);
 
-  // Get color dots from product variations
-  const getColorDots = (product) => {
-    const colors = new Set();
-    if (product.variations) {
-      product.variations.forEach(v => {
-        if (v.attributes?.color) {
-          const colorArray = Array.isArray(v.attributes.color) ? v.attributes.color : [v.attributes.color];
-          colorArray.forEach(c => colors.add(c));
-        }
-      });
-    }
-    return Array.from(colors).slice(0, 4);
-  };
-
-  // Get image URL
-  const getImageUrl = (product) => {
-    if (product.variationImages && product.variationImages.length > 0) {
-      return product.variationImages[0];
-    }
-    if (Array.isArray(product.images) && product.images.length > 0) {
-      const primary = product.images.find(img => img.is_primary);
-      return primary ? primary.image_url : product.images[0].image_url;
-    }
-    return product.image || null;
-  };
-
   const filtered = activeCat === 'all' 
     ? sortedWishlist 
     : sortedWishlist.filter(i => i.category?.name?.toLowerCase() === activeCat.toLowerCase());
@@ -88,39 +61,6 @@ const WishlistTest = () => {
   const removeItem = (id) => {
     removeFromWishlist(id);
     showToast('Removed from wishlist');
-  };
-
-  const selectSize = (id, size) => {
-    setSelectedSizes({ ...selectedSizes, [id]: size });
-  };
-
-  const addToCartHandler = (product) => {
-    if (!selectedSizes[product.id]) {
-      showToast('Please select a size first');
-      return;
-    }
-    const color = product.selectedVariation?.attributes?.color?.join(', ') || '';
-    const size = selectedSizes[product.id];
-    addToCart(product, color, size, 1, product.selectedVariation?.id);
-    showToast('✓ Added to bag!');
-  };
-
-  const addAllToCart = () => {
-    if (filtered.length === 0) {
-      showToast('No items to add');
-      return;
-    }
-    filtered.forEach(item => {
-      if (selectedSizes[item.id]) {
-        const color = item.selectedVariation?.attributes?.color?.join(', ') || '';
-        addToCart(item, color, selectedSizes[item.id], 1, item.selectedVariation?.id);
-      }
-    });
-    showToast('✓ All items added to bag!');
-  };
-
-  const shareWishlist = () => {
-    showToast('🔗 Wishlist link copied!');
   };
 
   return (
@@ -138,7 +78,7 @@ const WishlistTest = () => {
             <div className="ph-count">{filtered.length} saved item{filtered.length !== 1 ? 's' : ''}</div>
           </div>
           <div className="ph-actions">
-            <button className="ph-btn" onClick={shareWishlist}>
+            <button className="ph-btn" onClick={() => showToast('🔗 Wishlist link copied!')}>
               <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ display: 'inline', marginRight: '5px', verticalAlign: 'middle' }}>
                 <circle cx="18" cy="5" r="3" />
                 <circle cx="6" cy="12" r="3" />
@@ -148,7 +88,16 @@ const WishlistTest = () => {
               </svg>
               Share Wishlist
             </button>
-            <button className="ph-btn primary" onClick={addAllToCart}>
+            <button className="ph-btn primary" onClick={() => {
+              if (filtered.length === 0) {
+                showToast('No items to add');
+                return;
+              }
+              filtered.forEach(item => {
+                addToCart(item, '', 'M', 1);
+              });
+              showToast('✓ All items added to bag!');
+            }}>
               Add All to Bag
             </button>
           </div>
@@ -184,35 +133,9 @@ const WishlistTest = () => {
               <option value="price-high">Price: High to Low</option>
             </select>
           </div>
-          <div className="view-toggle">
-            <button 
-              className={`vt-btn ${currentView === 'grid' ? 'active' : ''}`} 
-              onClick={() => setCurrentView('grid')}
-            >
-              <svg fill="currentColor" viewBox="0 0 16 16">
-                <rect x="1" y="1" width="6" height="6" rx="1" />
-                <rect x="9" y="1" width="6" height="6" rx="1" />
-                <rect x="1" y="9" width="6" height="6" rx="1" />
-                <rect x="9" y="9" width="6" height="6" rx="1" />
-              </svg>
-            </button>
-            <button 
-              className={`vt-btn ${currentView === 'list' ? 'active' : ''}`} 
-              onClick={() => setCurrentView('list')}
-            >
-              <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <line x1="8" y1="6" x2="21" y2="6" />
-                <line x1="8" y1="12" x2="21" y2="12" />
-                <line x1="8" y1="18" x2="21" y2="18" />
-                <line x1="3" y1="6" x2="3.01" y2="6" />
-                <line x1="3" y1="12" x2="3.01" y2="12" />
-                <line x1="3" y1="18" x2="3.01" y2="18" />
-              </svg>
-            </button>
-          </div>
         </div>
 
-        <div className={`wishlist-grid ${currentView === 'list' ? 'list-view' : ''}`}>
+        <div className="wishlist-grid">
           {filtered.length === 0 ? (
             <div className="empty-wishlist">
               <div className="empty-icon">
@@ -228,82 +151,19 @@ const WishlistTest = () => {
               <button className="empty-cta">Start Shopping</button>
             </div>
           ) : (
-            filtered.map(item => {
-              const dis = item.comparePrice > item.price ? Math.round((item.comparePrice - item.price) / item.comparePrice * 100) : 0;
-              const imageUrl = getImageUrl(item);
-              const colorDots = getColorDots(item);
-              const sizes = item.variations?.[0]?.attributes?.size || ['S', 'M', 'L', 'XL'];
-              
-              return (
-                <div key={item.id} className="wl-card" data-cat={item.category?.name}>
-                  <div className="wl-card-img">
-                    {item.badge && item.badge !== 'none' && (
-                      <div className={`card-badge badge-${item.badge}`}>
-                        {item.badge === 'new_arrival' ? 'NEW' : item.badge.toUpperCase()}
-                      </div>
-                    )}
-                    <button 
-                      className="remove-btn" 
-                      onClick={() => removeItem(item.id)} 
-                      title="Remove"
-                    >
-                      <svg viewBox="0 0 24 24">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </button>
-                    {imageUrl && (
-                      <SafeImage
-                        imageData={{ image_url: imageUrl }}
-                        alt={item.name}
-                        width={400}
-                        height={400}
-                        quality={75}
-                        style={{ objectFit: 'cover' }}
-                        isProductCard={true}
-                      />
-                    )}
-                  </div>
-                  <div className="wl-card-body">
-                    <div className="wc-brand">{item.brands?.[0]?.name || 'CrossCoin'}</div>
-                    <div className="wc-name">{item.name}</div>
-                    <div className="wc-colors">
-                      {colorDots.map((color, idx) => (
-                        <div key={idx} className="wc-dot" style={{ background: color }} />
-                      ))}
-                    </div>
-                    <div className="wc-price-row">
-                      <span className="wc-price">₹{item.price}</span>
-                      {dis > 0 && (
-                        <>
-                          <span className="wc-mrp">₹{item.comparePrice}</span>
-                          <span className="wc-off">{dis}% off</span>
-                        </>
-                      )}
-                    </div>
-                    <div className="wc-size-row">
-                      {(Array.isArray(sizes) ? sizes : [sizes]).map(size => (
-                        <button
-                          key={size}
-                          className={`wc-size ${selectedSizes[item.id] === size ? 'selected' : ''}`}
-                          onClick={() => selectSize(item.id, size)}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="wc-actions">
-                      <button 
-                        className="btn-atb" 
-                        onClick={() => addToCartHandler(item)}
-                      >
-                        Add to Bag
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+            filtered.map((item, idx) => (
+              <ProductCard
+                key={item.id}
+                product={item}
+                index={idx}
+                onProductClick={(product) => router.push(`/product/${product.id}`)}
+                onAddToCart={(e, product, color, size, variationId) => {
+                  e.stopPropagation();
+                  addToCart(product, color || '', 'M', 1, variationId);
+                  showToast('✓ Added to bag!');
+                }}
+              />
+            ))
           )}
         </div>
       </div>
@@ -317,7 +177,7 @@ const WishlistTest = () => {
             </div>
             <div className="reco-title">Recommended For You</div>
           </div>
-          <div className="see-all">
+          <div className="see-all" onClick={() => router.push('/products')}>
             Browse All
             <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <polyline points="9 18 15 12 9 6" />
@@ -325,45 +185,20 @@ const WishlistTest = () => {
           </div>
         </div>
         <div className="reco-grid">
-          {recos.map((reco, idx) => {
-            const imageUrl = getImageUrl(reco);
-            return (
-              <div key={idx} className="reco-card">
-                <div className="reco-img">
-                  {imageUrl && (
-                    <SafeImage
-                      imageData={{ image_url: imageUrl }}
-                      alt={reco.name}
-                      width={300}
-                      height={300}
-                      quality={75}
-                      style={{ objectFit: 'cover' }}
-                      isProductCard={true}
-                    />
-                  )}
-                  <button className="reco-add" onClick={() => {
-                    addToCart(reco, '', 'M', 1);
-                    showToast('Added to bag!');
-                  }}>
-                    Add to Bag
-                  </button>
-                  <button className="reco-wl" onClick={() => showToast('❤️ Saved to wishlist')}>
-                    <svg viewBox="0 0 24 24">
-                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="reco-name">{reco.name}</div>
-                <div className="reco-price">₹{reco.price}</div>
-              </div>
-            );
-          })}
+          {recos.map((reco, idx) => (
+            <ProductCard
+              key={reco.id}
+              product={reco}
+              index={idx}
+              onProductClick={(product) => router.push(`/product/${product.id}`)}
+              onAddToCart={(e, product, color, size, variationId) => {
+                e.stopPropagation();
+                addToCart(product, color || '', 'M', 1, variationId);
+                showToast('✓ Added to bag!');
+              }}
+            />
+          ))}
         </div>
-      </div>
-
-      {/* Toast */}
-      <div className={`toast ${toast ? 'show' : ''}`}>
-        {toast}
       </div>
     </>
   );
