@@ -11,11 +11,13 @@ class ImageKitService {
 
   /**
    * Get optimized image URL with automatic size conversion
-   * @param {string} imagePath - Image path in ImageKit (e.g., /products/image.png?updatedAt=123)
+   * @param {string} imagePath - Image path in ImageKit (e.g., /products/image.png?updatedAt=123) or legacy filename
    * @param {string} size - 'thumbnail' (300), 'medium' (600), 'large' (1000)
    * @returns {string} Optimized URL with ImageKit endpoint and transformations
    */
   getOptimizedUrl(imagePath, size = 'medium') {
+    if (!imagePath) return null;
+
     const sizeConfig = {
       thumbnail: { width: 300, height: 300, quality: 70 },
       medium: { width: 600, height: 600, quality: 75 },
@@ -29,6 +31,13 @@ class ImageKitService {
     if (!urlEndpoint) {
       console.error('IMAGEKIT_URL_ENDPOINT not configured in environment');
       return imagePath;
+    }
+
+    // Handle legacy local file paths (for backward compatibility during migration)
+    if (!imagePath.startsWith('/')) {
+      // Legacy filename - return local path for now
+      const baseUrl = process.env.API_URL || process.env.BACKEND_URL || 'https://api.crosscoin.in';
+      return `${baseUrl}/uploads/categories/${imagePath}`;
     }
 
     // Construct full URL: endpoint + path
