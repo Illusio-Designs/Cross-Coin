@@ -96,6 +96,10 @@ const ProductFilterDrawer = ({ isOpen, onClose, onApplyFilters, categories = [],
     row?.classList.toggle('open');
   };
 
+  useEffect(() => {
+    console.log('ProductFilterDrawer - isOpen:', isOpen);
+  }, [isOpen]);
+
   return (
     <>
       {/* Overlay */}
