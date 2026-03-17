@@ -46,8 +46,20 @@ class ImageKitService {
       return `${fullUrl}${separator}tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
     }
 
+    // Fix legacy /uploads/ paths - convert to ImageKit format
+    let cleanPath = imagePath;
+    if (cleanPath.includes('/uploads/categories/')) {
+      cleanPath = cleanPath.replace('/uploads/categories/', '/categories/');
+    }
+    if (cleanPath.includes('/uploads/sliders/')) {
+      cleanPath = cleanPath.replace('/uploads/sliders/', '/sliders/');
+    }
+    if (cleanPath.includes('/uploads/products/')) {
+      cleanPath = cleanPath.replace('/uploads/products/', '/products/');
+    }
+
     // Construct full URL: endpoint + path
-    let fullUrl = `${urlEndpoint}${imagePath}`;
+    let fullUrl = `${urlEndpoint}${cleanPath}`;
 
     // Add transformation parameters
     // f-auto: Automatic format conversion (WebP for modern browsers)
