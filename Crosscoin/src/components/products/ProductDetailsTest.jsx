@@ -296,58 +296,43 @@ const ProductDetailsTest = ({ product }) => {
 
       {/* Product Details Section */}
       <div className="product-details">
-        {/* Fit & Feel */}
-        <div className="fit-feel-row">
-          {productData.features.map((feature, idx) => (
-            <div key={idx} className="fit-item">
-              <div className="fit-icon">
-                <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 6v6l4 2" />
-                </svg>
-              </div>
-              <div className="fit-text">
-                <strong>{feature.title}</strong>
-                <span>{feature.subtitle}</span>
+        {/* Product Description */}
+        <h2 className="section-title">Product Description</h2>
+        
+        {/* Description Cards */}
+        <div className="desc-cards">
+          {productData.descCards.map((card, idx) => (
+            <div key={idx} className="desc-card">
+              <img src={card.image} alt={card.title} />
+              <div className="desc-card-label">
+                <div className="desc-card-title">
+                  {card.title}
+                  <br />
+                  <span>{card.subtitle}</span>
+                </div>
+                <div className="desc-card-sub">{card.desc}</div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Product Description */}
-        <h2 className="section-title">Product Description</h2>
+        {/* Description Text */}
         {productData.description ? (
           <div 
             className="desc-body-text"
             dangerouslySetInnerHTML={{__html: productData.description}}
-            style={{marginBottom: '30px'}}
+            style={{marginBottom: '20px', marginTop: '20px'}}
           />
         ) : (
-          <div className="desc-cards">
-            {productData.descCards.map((card, idx) => (
-              <div key={idx} className="desc-card">
-                <img src={card.image} alt={card.title} />
-                <div className="desc-card-label">
-                  <div className="desc-card-title">
-                    {card.title}
-                    <br />
-                    <span>{card.subtitle}</span>
-                  </div>
-                  <div className="desc-card-sub">{card.desc}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <p className="desc-body-text" style={{marginBottom: '20px', marginTop: '20px'}}>
+            Tactel Microfiber Elastane Stretch Fabric | Fabric Composition : Tactel Nylon and Elastane | 
+            Moisture Move Treatment to Wick Sweat Away From the Body | Engineered to Prevent Ride Up | 
+            Ultrasoft and Durable Waistband | Label Free for All Day Comfort
+          </p>
         )}
 
-        <p className="desc-body-text">
-          Tactel Microfiber Elastane Stretch Fabric | Fabric Composition : Tactel Nylon and Elastane | 
-          Moisture Move Treatment to Wick Sweat Away From the Body | Engineered to Prevent Ride Up | 
-          Ultrasoft and Durable Waistband | Label Free for All Day Comfort
-        </p>
-
         {/* Ideal For */}
-        <div className="ideal-row">
+        <div className="ideal-row" style={{marginBottom: '40px'}}>
           <span className="ideal-label">Ideal For</span>
           <div className="ideal-chip">
             <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
@@ -400,6 +385,25 @@ const ProductDetailsTest = ({ product }) => {
             </svg>
             <span>Tumble dry<br />low</span>
           </div>
+          <div className="wash-item">
+            <svg width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <path d="M12 2v20M12 8h8M12 16h8" />
+            </svg>
+            <span>Do not iron</span>
+          </div>
+          <div className="wash-item">
+            <svg width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v8M8 12h8" />
+            </svg>
+            <span>Do not dry<br />clean</span>
+          </div>
+          <div className="wash-item">
+            <svg width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <path d="M3 6h18M6 6v12a2 2 0 002 2h8a2 2 0 002-2V6" />
+            </svg>
+            <span>Wash with like<br />colours</span>
+          </div>
         </div>
 
         {/* Manufacturing Details */}
@@ -425,8 +429,8 @@ const ProductDetailsTest = ({ product }) => {
 
         {/* Customer Reviews */}
         {productData.reviews && productData.reviews.length > 0 && (
-          <div className="reviews-section" style={{marginTop: '30px'}}>
-            <h2 className="section-title">Customer Reviews ({productData.reviewCount})</h2>
+          <div className="reviews-section" style={{marginTop: '40px'}}>
+            <h2 className="section-title">Customer Reviews</h2>
             <div style={{display: 'grid', gap: '15px'}}>
               {productData.reviews.slice(0, 5).map((review, idx) => (
                 <div key={idx} style={{padding: '15px', border: '1px solid #eee', borderRadius: '8px'}}>
