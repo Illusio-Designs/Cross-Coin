@@ -4,9 +4,9 @@ import { toast } from 'react-toastify';
 const toastConfig = {
   position: 'top-right',
   autoClose: 3000,
-  hideProgressBar: false,
+  hideProgressBar: true,
   closeOnClick: true,
-  pauseOnHover: true,
+  pauseOnHover: false,
   draggable: true,
   theme: 'light',
 };

@@ -5,7 +5,7 @@ import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
 import { getAllPublicProducts } from '../services/publicApi';
 import ProductCard from '../components/ProductCard';
-import { showSuccess, showError, showWarning } from '../utils/toastNotification';
+import { showSuccess, showError } from '../utils/toastNotification';
 import SeoWrapper from '../console/SeoWrapper';
 
 const Wishlist = () => {
@@ -20,9 +20,11 @@ const Wishlist = () => {
   useEffect(() => {
     const fetchRecommendations = async () => {
       try {
-        const response = await getAllPublicProducts({ page: 1, limit: 5 });
+        const response = await getAllPublicProducts({ page: 1, limit: 12 });
         if (response?.data?.products) {
-          setRecos(response.data.products.slice(0, 5));
+          setRecos(response.data.products.slice(0, 12));
+        } else if (Array.isArray(response)) {
+          setRecos(response.slice(0, 12));
         }
       } catch (error) {
         console.error('Failed to fetch recommendations:', error);
@@ -30,10 +32,6 @@ const Wishlist = () => {
     };
     fetchRecommendations();
   }, []);
-
-  const showToast = (msg) => {
-    toast.info(msg, { position: 'top-right', autoClose: 2200 });
-  };
 
   // Sort wishlist items
   const sortWishlist = (items) => {

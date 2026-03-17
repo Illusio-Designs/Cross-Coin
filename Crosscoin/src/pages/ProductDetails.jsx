@@ -9,7 +9,7 @@ import { useBreadcrumb } from '../components/Breadcrumb';
 import { useRouter as useNextRouter } from "next/navigation";
 import { getPublicProductBySlug, createPublicReview, getPublicCoupons, getPublicProductReviews } from '../services/publicApi';
 import SeoWrapper from '../console/SeoWrapper';
-import { showValidationErrorToast, showReviewSubmittedSuccessToast, showReviewSubmittedErrorToast } from '../utils/toast';
+import { showSuccess, showError, showInfo } from '../utils/toastNotification';
 import Loader from '../components/Loader';
 import { fbqTrack } from '../utils/fbqTrack';
 import InfiniteReviewsSlider from '../components/InfiniteReviewsSlider';
@@ -694,6 +694,7 @@ export default function ProductDetails() {
       selectedImage
     );
     setShowAddedToCart(true);
+    showSuccess('addedToCart');
     setTimeout(() => setShowAddedToCart(false), 2000);
     fbqTrack('AddToCart', {
       content_ids: [product.id],
@@ -734,6 +735,7 @@ export default function ProductDetails() {
         selectedVariation?.id,
         selectedImage
       );
+      showSuccess('orderPlaced');
       // Track the event (non-blocking)
       try {
         fbqTrack('InitiateCheckout', {
@@ -753,7 +755,7 @@ export default function ProductDetails() {
       nextRouter.replace('/UnifiedCheckout');
       
     } catch (error) {
-      showValidationErrorToast('Something went wrong. Please try again.');
+      showError('orderFailed');
       setIsBuyNowLoading(false);
     }
   };
@@ -766,6 +768,7 @@ export default function ProductDetails() {
       selectedSize: selectedSizeForPack,
     };
     addToWishlist(productToSend);
+    showSuccess('addedToWishlist');
     fbqTrack('AddToWishlist', {
       content_ids: [product.id],
       content_name: product.name,
@@ -777,6 +780,7 @@ export default function ProductDetails() {
 
   const handleRemoveFromWishlist = () => {
     removeFromWishlist(product.id);
+    showSuccess('removedFromWishlist');
     fbqTrack('RemoveFromWishlist', {
       content_ids: [product.id],
       content_name: product.name,

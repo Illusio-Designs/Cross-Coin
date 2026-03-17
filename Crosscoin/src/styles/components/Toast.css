@@ -12,9 +12,8 @@
   border-radius: 8px;
   padding: 16px 20px;
   margin-bottom: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   min-height: 56px;
   display: flex;
   align-items: center;
@@ -23,56 +22,52 @@
   font-weight: 500;
   line-height: 1.5;
   animation: slideInRight 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: #ffffff !important;
 }
 
 /* Success Toast */
 .Toastify__toast--success {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: #fff;
+  color: #10b981;
 }
 
 .Toastify__toast--success .Toastify__toast-icon {
-  color: #fff;
+  color: #10b981;
 }
 
 /* Error Toast */
 .Toastify__toast--error {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: #fff;
+  color: #ef4444;
 }
 
 .Toastify__toast--error .Toastify__toast-icon {
-  color: #fff;
+  color: #ef4444;
 }
 
 /* Info Toast */
 .Toastify__toast--info {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: #fff;
+  color: #3b82f6;
 }
 
 .Toastify__toast--info .Toastify__toast-icon {
-  color: #fff;
+  color: #3b82f6;
 }
 
 /* Warning Toast */
 .Toastify__toast--warning {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: #fff;
+  color: #f59e0b;
 }
 
 .Toastify__toast--warning .Toastify__toast-icon {
-  color: #fff;
+  color: #f59e0b;
 }
 
 /* Loading Toast */
 .Toastify__toast--loading {
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-  color: #fff;
+  color: #8b5cf6;
 }
 
 .Toastify__toast--loading .Toastify__toast-icon {
-  color: #fff;
+  color: #8b5cf6;
 }
 
 /* Toast Icon */
@@ -97,7 +92,7 @@
 
 /* Close Button */
 .Toastify__close-button {
-  color: rgba(255, 255, 255, 0.8);
+  color: #999;
   opacity: 1;
   padding: 0;
   min-width: 20px;
@@ -109,7 +104,7 @@
 }
 
 .Toastify__close-button:hover {
-  color: #fff;
+  color: #333;
   opacity: 1;
 }
 
@@ -118,26 +113,9 @@
   height: 16px;
 }
 
-/* Progress Bar */
+/* Progress Bar - Hidden */
 .Toastify__progress-bar {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.4);
-}
-
-.Toastify__progress-bar--success {
-  background: rgba(255, 255, 255, 0.5);
-}
-
-.Toastify__progress-bar--error {
-  background: rgba(255, 255, 255, 0.5);
-}
-
-.Toastify__progress-bar--info {
-  background: rgba(255, 255, 255, 0.5);
-}
-
-.Toastify__progress-bar--warning {
-  background: rgba(255, 255, 255, 0.5);
+  display: none !important;
 }
 
 /* Animations */
