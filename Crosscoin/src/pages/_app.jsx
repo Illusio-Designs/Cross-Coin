@@ -49,8 +49,6 @@ import "../components/ui/Dropdown.css";
 import "../components/Sidebar/Sidebar.css";
 import "../components/cart/CartDrawer.css";
 import "../components/cart/QuantityOfferBar.css";
-import "../components/ProductListSkeleton.css";
-import "../components/DashboardSkeleton.css";
 import "../components/products/ProductDetailsTest.css";
 import "../components/products/ProductFilterDrawer.css";
 // Additional dashboard CSS

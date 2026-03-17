@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SafeImage from './common/SafeImage';
-import HeroSliderSkeleton from './HeroSliderSkeleton';
+import Skeleton from './Skeleton';
 
 const HeroSlider = ({ slides = [] }) => {
   const [current, setCurrent] = useState(0);
@@ -43,7 +43,7 @@ const HeroSlider = ({ slides = [] }) => {
 
   // Show skeleton while loading
   if (isLoading || !slides || slides.length === 0) {
-    return <HeroSliderSkeleton />;
+    return <Skeleton type="hero" />;
   }
 
   return (
