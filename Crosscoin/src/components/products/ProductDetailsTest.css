@@ -442,7 +442,7 @@
 /* Description Cards */
 .desc-cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 1fr;
   gap: 14px;
   margin-bottom: 16px;
   clear: both;
@@ -716,7 +716,7 @@
   }
 
   .desc-cards {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
   }
 }
 
@@ -730,7 +730,7 @@
   }
 
   .desc-cards {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .fit-feel-row {
