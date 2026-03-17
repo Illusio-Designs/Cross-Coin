@@ -44,7 +44,7 @@ async function migrateCategoryImages() {
             try {
                 // Check if image is already an ImageKit path
                 if (category.image.startsWith('/')) {
-                    logger.info(`Category ${category.id} already has ImageKit path: ${category.image}`);
+                    logger.info(`Category ${category.id} (${category.name}) already has ImageKit path: ${category.image}`);
                     skippedCount++;
                     continue;
                 }
@@ -53,16 +53,21 @@ async function migrateCategoryImages() {
                 
                 // Check if file exists
                 if (!fsSync.existsSync(imagePath)) {
-                    logger.warn(`Image file not found for category ${category.id}: ${imagePath}`);
-                    logger.warn(`Category image: ${category.image}`);
+                    logger.warn(`Image file not found for category ${category.id} (${category.name})`);
+                    logger.warn(`Expected path: ${imagePath}`);
+                    logger.warn(`Stored filename: ${category.image}`);
                     failureCount++;
                     continue;
                 }
 
+                logger.info(`Reading file for category ${category.id} (${category.name}): ${imagePath}`);
+                
                 // Read file
                 const fileBuffer = await fs.readFile(imagePath);
+                logger.info(`File read successfully, size: ${fileBuffer.length} bytes`);
                 
                 // Upload to ImageKit
+                logger.info(`Uploading to ImageKit for category ${category.id}...`);
                 const uploadResult = await imagekitService.uploadImage(
                     fileBuffer,
                     `category-${category.id}-${Date.now()}.webp`,
@@ -73,6 +78,8 @@ async function migrateCategoryImages() {
                     throw new Error('Upload failed');
                 }
 
+                logger.info(`Upload successful. ImageKit path: ${uploadResult.filePath}`);
+
                 // Update database with ImageKit path
                 await category.update({
                     image: uploadResult.filePath
@@ -82,7 +89,8 @@ async function migrateCategoryImages() {
                 successCount++;
 
             } catch (error) {
-                logger.error(`✗ Failed to migrate category ${category.id}:`, error.message);
+                logger.error(`✗ Failed to migrate category ${category.id} (${category.name}):`, error.message);
+                logger.error(`Stack: ${error.stack}`);
                 failureCount++;
             }
         }
@@ -119,7 +127,7 @@ async function migrateSliderImages() {
             try {
                 // Check if image is already an ImageKit path
                 if (slider.image.startsWith('/')) {
-                    logger.info(`Slider ${slider.id} already has ImageKit path: ${slider.image}`);
+                    logger.info(`Slider ${slider.id} (${slider.title}) already has ImageKit path: ${slider.image}`);
                     skippedCount++;
                     continue;
                 }
@@ -128,16 +136,21 @@ async function migrateSliderImages() {
                 
                 // Check if file exists
                 if (!fsSync.existsSync(imagePath)) {
-                    logger.warn(`Image file not found for slider ${slider.id}: ${imagePath}`);
-                    logger.warn(`Slider image: ${slider.image}`);
+                    logger.warn(`Image file not found for slider ${slider.id} (${slider.title})`);
+                    logger.warn(`Expected path: ${imagePath}`);
+                    logger.warn(`Stored filename: ${slider.image}`);
                     failureCount++;
                     continue;
                 }
 
+                logger.info(`Reading file for slider ${slider.id} (${slider.title}): ${imagePath}`);
+                
                 // Read file
                 const fileBuffer = await fs.readFile(imagePath);
+                logger.info(`File read successfully, size: ${fileBuffer.length} bytes`);
                 
                 // Upload to ImageKit
+                logger.info(`Uploading to ImageKit for slider ${slider.id}...`);
                 const uploadResult = await imagekitService.uploadImage(
                     fileBuffer,
                     `slider-${slider.id}-${Date.now()}.webp`,
@@ -148,6 +161,8 @@ async function migrateSliderImages() {
                     throw new Error('Upload failed');
                 }
 
+                logger.info(`Upload successful. ImageKit path: ${uploadResult.filePath}`);
+
                 // Update database with ImageKit path
                 await slider.update({
                     image: uploadResult.filePath
@@ -157,7 +172,8 @@ async function migrateSliderImages() {
                 successCount++;
 
             } catch (error) {
-                logger.error(`✗ Failed to migrate slider ${slider.id}:`, error.message);
+                logger.error(`✗ Failed to migrate slider ${slider.id} (${slider.title}):`, error.message);
+                logger.error(`Stack: ${error.stack}`);
                 failureCount++;
             }
         }
