@@ -19,6 +19,11 @@ export const getImageUrl = (imageData) => {
 
   if (!rawUrl || rawUrl.trim() === '') return null;
 
+  // Handle /assets/ paths - return directly (public folder)
+  if (rawUrl.startsWith('/assets/')) {
+    return rawUrl;
+  }
+
   // Handle different URL formats
   if (rawUrl.startsWith('http')) {
     // Already a full URL (ImageKit or external)
@@ -30,10 +35,6 @@ export const getImageUrl = (imageData) => {
   if (rawUrl.startsWith('/')) {
     // ImageKit path (/categories, /sliders, /products) or /uploads/ path
     return `${baseUrl}${rawUrl}`;
-  }
-
-  if (rawUrl.startsWith('/assets/')) {
-    return rawUrl;
   }
 
   // Legacy: just a filename, assume it's a product image
