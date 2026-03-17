@@ -21,12 +21,14 @@ export const getImageUrl = (imageData) => {
 
   // Handle different URL formats
   if (rawUrl.startsWith('http')) {
+    // Already a full URL (ImageKit or external)
     return rawUrl;
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
-  if (rawUrl.startsWith('/uploads/')) {
+  if (rawUrl.startsWith('/')) {
+    // ImageKit path (/categories, /sliders, /products) or /uploads/ path
     return `${baseUrl}${rawUrl}`;
   }
 
@@ -34,6 +36,7 @@ export const getImageUrl = (imageData) => {
     return rawUrl;
   }
 
+  // Legacy: just a filename, assume it's a product image
   return `${baseUrl}/uploads/products/${rawUrl}`;
 };
 

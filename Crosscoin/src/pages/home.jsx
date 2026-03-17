@@ -317,17 +317,17 @@ const Home = () => {
       return imageUrl;
     }
     
-    // If already a full URL, use it
+    // If already a full URL (ImageKit or external), use it
     if (imageUrl.startsWith('http')) {
       return imageUrl;
     }
     
-    // If it starts with /uploads/, prepend base URL
-    if (imageUrl.startsWith('/uploads/')) {
+    // If it starts with /, it's either ImageKit path or /uploads/
+    if (imageUrl.startsWith('/')) {
       return `${baseUrl}${imageUrl}`;
     }
     
-    // Otherwise assume it's just a filename
+    // Legacy: just a filename
     return `${baseUrl}/uploads/categories/${imageUrl}`;
   };
 

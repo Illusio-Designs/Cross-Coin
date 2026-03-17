@@ -154,13 +154,13 @@ const Collections = () => {
               const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
               
               if (cat.image.startsWith('http')) {
-                // Already a full URL
+                // Already a full URL (ImageKit or external)
                 imageUrl = cat.image;
-              } else if (cat.image.startsWith('/uploads/')) {
-                // Already has /uploads/ prefix, just add base URL
+              } else if (cat.image.startsWith('/')) {
+                // ImageKit path or /uploads/ path - add base URL
                 imageUrl = `${baseUrl}${cat.image}`;
               } else {
-                // Just a filename, add full path
+                // Just a filename (legacy), add full path
                 imageUrl = `${baseUrl}/uploads/categories/${cat.image}`;
               }
             }
