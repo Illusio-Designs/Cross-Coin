@@ -38,9 +38,12 @@ class ImageKitService {
 
     // Handle legacy local file paths (for backward compatibility during migration)
     if (!imagePath.startsWith('/')) {
-      // Legacy filename - return local path for now
-      const baseUrl = process.env.API_URL || process.env.BACKEND_URL || 'https://api.crosscoin.in';
-      return `${baseUrl}/uploads/categories/${imagePath}`;
+      // Legacy filename - convert to ImageKit path format
+      // Assume it's a category image if it's just a filename
+      const imagekitPath = `/categories/${imagePath}`;
+      const fullUrl = `${urlEndpoint}${imagekitPath}`;
+      const separator = fullUrl.includes('?') ? '&' : '?';
+      return `${fullUrl}${separator}tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
     }
 
     // Construct full URL: endpoint + path

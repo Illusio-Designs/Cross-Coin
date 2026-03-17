@@ -200,9 +200,8 @@ const getAllCategories = async (req, res) => {
                     // ImageKit path
                     categoryData.image = imagekitService.getOptimizedUrl(categoryData.image, 'medium');
                 } else {
-                    // Legacy filename - return local path for backward compatibility
-                    const baseUrl = process.env.API_URL || process.env.BACKEND_URL || 'https://api.crosscoin.in';
-                    categoryData.image = `${baseUrl}/uploads/categories/${categoryData.image}`;
+                    // Legacy filename - convert to ImageKit format
+                    categoryData.image = imagekitService.getOptimizedUrl(categoryData.image, 'medium');
                 }
             }
             
@@ -440,7 +439,7 @@ const getPublicCategoryByName = async (req, res) => {
             image: category.image ? (
                 category.image.startsWith('/') 
                     ? imagekitService.getOptimizedUrl(category.image, 'medium')
-                    : `${process.env.API_URL || process.env.BACKEND_URL || 'https://api.crosscoin.in'}/uploads/categories/${category.image}`
+                    : imagekitService.getOptimizedUrl(category.image, 'medium')
             ) : null,
             slug: category.slug,
             products: category.products ? category.products.map(product => {

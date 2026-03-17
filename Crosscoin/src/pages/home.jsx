@@ -327,8 +327,8 @@ const Home = () => {
       return `${baseUrl}${imageUrl}`;
     }
     
-    // Legacy: just a filename
-    return `${baseUrl}/uploads/categories/${imageUrl}`;
+    // Legacy: just a filename - convert to ImageKit format
+    return `${baseUrl}/categories/${imageUrl}`;
   };
 
   return (
