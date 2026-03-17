@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import ProductCard from "../components/ProductCard";
 import ProductSkeleton from "../components/common/ProductSkeleton";
 import ProductFilterDrawer from "../components/products/ProductFilterDrawer";
+import Dropdown from "../components/ui/Dropdown";
 import {
   FiFilter,
   FiChevronDown,
@@ -949,16 +950,17 @@ const Products = () => {
             >
               <FiFilter size={18} /> Filters
             </button>
-            <select
-              className="sort-select"
+            <Dropdown
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="featured">Featured</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="rating">Top Rated</option>
-            </select>
+              onChange={setSortBy}
+              options={[
+                { value: 'featured', label: 'Featured' },
+                { value: 'price-low', label: 'Price: Low to High' },
+                { value: 'price-high', label: 'Price: High to Low' },
+                { value: 'rating', label: 'Top Rated' }
+              ]}
+              placeholder="Sort by"
+            />
           </div>
         </div>
 
