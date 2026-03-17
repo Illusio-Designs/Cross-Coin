@@ -134,6 +134,10 @@
   align-items: start;
 }
 
+.wishlist-grid .product-card {
+  height: fit-content;
+}
+
 /* Empty State */
 .empty-wishlist {
   grid-column: 1 / -1;
@@ -199,6 +203,8 @@
   max-width: 1400px;
   margin-left: auto;
   margin-right: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .reco-header {
@@ -244,12 +250,16 @@
   gap: 12px;
 }
 
-/* Recommendations Grid - ProductCard handles its own styling */
+/* Recommendations Grid - Match products-grid exactly */
 .reco-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1.5rem;
   width: 100%;
+}
+
+.reco-grid .product-card {
+  height: fit-content;
 }
 
 /* Responsive */
