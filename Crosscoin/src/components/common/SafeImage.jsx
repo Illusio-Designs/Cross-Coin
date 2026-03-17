@@ -100,6 +100,11 @@ const SafeImage = ({
       newSrc = fallbackSrc;
     }
     
+    // For logos with /assets/ path, use directly without modification
+    if (isLogo && imageData && typeof imageData === 'string' && imageData.startsWith('/assets/')) {
+      newSrc = imageData;
+    }
+    
     // Only reset loading state if the source URL actually changed
     if (newSrc !== imageSrc) {
       setImageSrc(newSrc);

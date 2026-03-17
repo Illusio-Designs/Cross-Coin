@@ -4,6 +4,7 @@ import { getPublicCategories } from '../services/publicApi';
 import { getCachedData, setCachedData } from '../utils/apiCache';
 import SeoWrapper from '../console/SeoWrapper';
 import Loader from '../components/Loader';
+import SafeImage from '../components/common/SafeImage';
 
 const Collections = () => {
   const [categories, setCategories] = useState([]);
@@ -173,13 +174,13 @@ const Collections = () => {
               >
                 <div className="category-card-image-wrapper">
                   {imageUrl && (
-                    <img
-                      src={imageUrl}
+                    <SafeImage
+                      imageData={{ image_url: imageUrl }}
                       alt={cat.name}
                       className="category-card-image"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                      }}
+                      width="100%"
+                      height="auto"
+                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                     />
                   )}
                 </div>
