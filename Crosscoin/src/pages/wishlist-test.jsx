@@ -14,7 +14,6 @@ const WishlistTest = () => {
   const [recos, setRecos] = useState([]);
 
   const [activeCat, setActiveCat] = useState('all');
-  const [sortOrder, setSortOrder] = useState('newest');
 
   // Fetch recommendations on mount
   useEffect(() => {
@@ -38,18 +37,7 @@ const WishlistTest = () => {
   // Sort wishlist items
   const sortWishlist = (items) => {
     const sorted = [...items];
-    switch (sortOrder) {
-      case 'newest':
-        return sorted.sort((a, b) => new Date(b.addedAt || 0) - new Date(a.addedAt || 0));
-      case 'oldest':
-        return sorted.sort((a, b) => new Date(a.addedAt || 0) - new Date(b.addedAt || 0));
-      case 'price-high':
-        return sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
-      case 'price-low':
-        return sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
-      default:
-        return sorted;
-    }
+    return sorted.sort((a, b) => new Date(b.addedAt || 0) - new Date(a.addedAt || 0));
   };
 
   const sortedWishlist = sortWishlist(wishlist);
@@ -119,22 +107,6 @@ const WishlistTest = () => {
       </div>
 
       <div className="wishlist-main">
-        <div className="sort-bar">
-          <div className="sb-left">
-            <span className="sb-label">Sort by:</span>
-            <select 
-              className="sort-select"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-            >
-              <option value="newest">Recently Added</option>
-              <option value="oldest">Oldest First</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-            </select>
-          </div>
-        </div>
-
         <div className="wishlist-grid">
           {filtered.length === 0 ? (
             <div className="empty-wishlist">
