@@ -38,12 +38,14 @@ async function migrateCategoryImages() {
 
         let successCount = 0;
         let failureCount = 0;
+        let skippedCount = 0;
 
         for (const category of categories) {
             try {
                 // Check if image is already an ImageKit path
                 if (category.image.startsWith('/')) {
                     logger.info(`Category ${category.id} already has ImageKit path: ${category.image}`);
+                    skippedCount++;
                     continue;
                 }
 
@@ -52,6 +54,7 @@ async function migrateCategoryImages() {
                 // Check if file exists
                 if (!fsSync.existsSync(imagePath)) {
                     logger.warn(`Image file not found for category ${category.id}: ${imagePath}`);
+                    logger.warn(`Category image: ${category.image}`);
                     failureCount++;
                     continue;
                 }
@@ -75,7 +78,7 @@ async function migrateCategoryImages() {
                     image: uploadResult.filePath
                 });
 
-                logger.info(`✓ Migrated category ${category.id}: ${category.name}`);
+                logger.info(`✓ Migrated category ${category.id}: ${category.name} to ${uploadResult.filePath}`);
                 successCount++;
 
             } catch (error) {
@@ -84,8 +87,8 @@ async function migrateCategoryImages() {
             }
         }
 
-        logger.info(`Category migration completed: ${successCount} success, ${failureCount} failed`);
-        return { successCount, failureCount };
+        logger.info(`Category migration completed: ${successCount} success, ${failureCount} failed, ${skippedCount} skipped`);
+        return { successCount, failureCount, skippedCount };
 
     } catch (error) {
         logger.error('Category migration error:', error);
@@ -110,12 +113,14 @@ async function migrateSliderImages() {
 
         let successCount = 0;
         let failureCount = 0;
+        let skippedCount = 0;
 
         for (const slider of sliders) {
             try {
                 // Check if image is already an ImageKit path
                 if (slider.image.startsWith('/')) {
                     logger.info(`Slider ${slider.id} already has ImageKit path: ${slider.image}`);
+                    skippedCount++;
                     continue;
                 }
 
@@ -124,6 +129,7 @@ async function migrateSliderImages() {
                 // Check if file exists
                 if (!fsSync.existsSync(imagePath)) {
                     logger.warn(`Image file not found for slider ${slider.id}: ${imagePath}`);
+                    logger.warn(`Slider image: ${slider.image}`);
                     failureCount++;
                     continue;
                 }
@@ -147,7 +153,7 @@ async function migrateSliderImages() {
                     image: uploadResult.filePath
                 });
 
-                logger.info(`✓ Migrated slider ${slider.id}: ${slider.title}`);
+                logger.info(`✓ Migrated slider ${slider.id}: ${slider.title} to ${uploadResult.filePath}`);
                 successCount++;
 
             } catch (error) {
@@ -156,8 +162,8 @@ async function migrateSliderImages() {
             }
         }
 
-        logger.info(`Slider migration completed: ${successCount} success, ${failureCount} failed`);
-        return { successCount, failureCount };
+        logger.info(`Slider migration completed: ${successCount} success, ${failureCount} failed, ${skippedCount} skipped`);
+        return { successCount, failureCount, skippedCount };
 
     } catch (error) {
         logger.error('Slider migration error:', error);
