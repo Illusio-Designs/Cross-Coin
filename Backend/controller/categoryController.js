@@ -20,21 +20,9 @@ const formatCategoryResponse = (category) => {
     const categoryData = category.toJSON();
     categoryData.parentName = category.parent ? category.parent.name : null;
     
-    // Handle image path formatting
+    // Use ImageKit optimized URL if image exists
     if (categoryData.image) {
-        // If it's already an ImageKit path (/categories, /sliders, /products), return as-is
-        if (categoryData.image.startsWith('/categories') || categoryData.image.startsWith('/sliders') || categoryData.image.startsWith('/products')) {
-            // ImageKit path - return as-is
-            categoryData.image = categoryData.image;
-        }
-        // If it's already a full /uploads/ path, return as-is
-        else if (categoryData.image.startsWith('/uploads/')) {
-            categoryData.image = categoryData.image;
-        }
-        // If it's a legacy filename (no leading slash), add /uploads/categories/ prefix
-        else if (!categoryData.image.startsWith('/')) {
-            categoryData.image = `/uploads/categories/${categoryData.image}`;
-        }
+        categoryData.image = imagekitService.getOptimizedUrl(categoryData.image, 'medium');
     }
     
     delete categoryData.parent;

@@ -31,21 +31,9 @@ const formatSliderResponse = (slider) => {
     const sliderData = slider.toJSON();
     sliderData.categoryName = slider.category ? slider.category.name : null;
     
-    // Handle image path formatting
+    // Use ImageKit optimized URL if image exists
     if (sliderData.image) {
-        // If it's already an ImageKit path (/categories, /sliders, /products), return as-is
-        if (sliderData.image.startsWith('/categories') || sliderData.image.startsWith('/sliders') || sliderData.image.startsWith('/products')) {
-            // ImageKit path - return as-is
-            sliderData.image = sliderData.image;
-        }
-        // If it's already a full /uploads/ path, return as-is
-        else if (sliderData.image.startsWith('/uploads/')) {
-            sliderData.image = sliderData.image;
-        }
-        // If it's a legacy filename (no leading slash), add /uploads/slider/ prefix
-        else if (!sliderData.image.startsWith('/')) {
-            sliderData.image = `/uploads/slider/${sliderData.image}`;
-        }
+        sliderData.image = imagekitService.getOptimizedUrl(sliderData.image, 'large');
     }
     
     return sliderData;

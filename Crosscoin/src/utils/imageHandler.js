@@ -26,12 +26,12 @@ export const getImageUrl = (imageData) => {
 
   // Handle different URL formats
   if (rawUrl.startsWith('http')) {
-    // Already a full URL (ImageKit or external)
+    // Already a full URL (ImageKit or external) - return as-is
     return rawUrl;
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-  const imageKitEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/your_id';
+  const imageKitEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/your_imagekit_id';
 
   if (rawUrl.startsWith('/')) {
     // Check if it's an ImageKit path (/categories, /sliders, /products)
