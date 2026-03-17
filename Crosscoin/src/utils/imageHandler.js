@@ -31,9 +31,15 @@ export const getImageUrl = (imageData) => {
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+  const imageKitEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/your_id';
 
   if (rawUrl.startsWith('/')) {
-    // ImageKit path (/categories, /sliders, /products) or /uploads/ path
+    // Check if it's an ImageKit path (/categories, /sliders, /products)
+    if (rawUrl.startsWith('/categories') || rawUrl.startsWith('/sliders') || rawUrl.startsWith('/products')) {
+      // ImageKit path - prepend ImageKit endpoint
+      return `${imageKitEndpoint}${rawUrl}`;
+    }
+    // Legacy /uploads/ path - prepend API base URL
     return `${baseUrl}${rawUrl}`;
   }
 

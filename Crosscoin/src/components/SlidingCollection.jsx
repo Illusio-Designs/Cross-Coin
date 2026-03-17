@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { getPublicCategoryByName } from '../services/publicApi';
+import SafeImage from './common/SafeImage';
 
 const shimmerStyle = {
   background: 'linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%)',
@@ -57,30 +58,6 @@ const SlidingCollection = ({ collections = [], isLoading = false }) => {
     setTimeout(() => setBusy(false), 520);
   };
 
-  const getImageSrc = (imageUrl) => {
-    if (!imageUrl || typeof imageUrl !== 'string') return null;
-
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-
-    if (imageUrl.startsWith('/assets/')) {
-      return imageUrl;
-    }
-
-    if (imageUrl.startsWith('http')) {
-      // Already a full URL (ImageKit or external)
-      return imageUrl;
-    }
-
-    if (imageUrl.startsWith('/')) {
-      // ImageKit path or /uploads/ path - add base URL
-      return `${baseUrl}${imageUrl}`;
-    }
-
-    // Legacy: just a filename, add full path
-    return `${baseUrl}/uploads/categories/${imageUrl}`;
-  };
-
-  // Layout calculation - responsive
   const getCardStyle = (index) => {
     if (!stageRef.current) return {};
 
@@ -231,7 +208,6 @@ const SlidingCollection = ({ collections = [], isLoading = false }) => {
 
         {collections.map((collection, index) => {
           const rel = relPos(index);
-          const imageSrc = getImageSrc(collection.image);
           
           // Check if collection name starts with "Crosscoin"
           let isCrosscoin = collection.name.toLowerCase().startsWith('crosscoin');
@@ -261,17 +237,16 @@ const SlidingCollection = ({ collections = [], isLoading = false }) => {
             >
               <div className="card-inner">
                 {/* Background Image */}
-                {imageSrc && (
-                  <img
-                    src={imageSrc}
+                {collection.image && (
+                  <SafeImage
+                    imageData={collection.image}
                     alt={collection.name}
                     className="card-bg-img"
-                    draggable={false}
-                    onLoad={() => setLoadedImages(prev => ({ ...prev, [index]: true }))}
                     style={{ opacity: loadedImages[index] ? 1 : 0 }}
+                    onLoadingComplete={() => setLoadedImages(prev => ({ ...prev, [index]: true }))}
                   />
                 )}
-                {(!imageSrc || !loadedImages[index]) && <div className="card-bg-fallback" />}
+                {(!collection.image || !loadedImages[index]) && <div className="card-bg-fallback" />}
 
                 {/* SVG Pattern Overlay */}
                 <svg className="card-pattern" viewBox="0 0 420 400" xmlns="http://www.w3.org/2000/svg">
