@@ -43,8 +43,19 @@ export const getImageUrl = (imageData) => {
     return `${baseUrl}${rawUrl}`;
   }
 
-  // Legacy: just a filename, assume it's a product image
-  return `${baseUrl}/uploads/products/${rawUrl}`;
+  // Legacy: just a filename
+  // Check if it's a category image (starts with 'category-')
+  if (rawUrl.startsWith('category-')) {
+    return `${imageKitEndpoint}/categories/${rawUrl}`;
+  }
+  
+  // Check if it's a slider image (starts with 'slider-')
+  if (rawUrl.startsWith('slider-')) {
+    return `${imageKitEndpoint}/sliders/${rawUrl}`;
+  }
+  
+  // Default: assume it's a product image
+  return `${imageKitEndpoint}/products/${rawUrl}`;
 };
 
 export const getOptimizedImageUrl = (imageData, size = 'medium') => {
