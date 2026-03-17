@@ -53,6 +53,7 @@ const Products = () => {
   const [selectedSizes, setSelectedSizes] = useState([]);
   const [selectedGender, setSelectedGender] = useState([]);
   const [selectedMaterial, setSelectedMaterial] = useState([]);
+  const [selectedBadge, setSelectedBadge] = useState([]);
 
   // Data State - CRITICAL: Initialize with empty array to prevent undefined errors
   const [products, setProducts] = useState([]);
@@ -588,24 +589,29 @@ const Products = () => {
 
   // Compute min and max price from all products for the slider
   const [minPrice, maxPrice] = useMemo(() => {
-    // Safety check
     if (!Array.isArray(safeProducts) || safeProducts.length === 0) {
-      return [20, 250];
+      return [0, 1000];
     }
-    
-    let min = Infinity,
-      max = 0;
+    let min = Infinity, max = 0;
     safeProducts.forEach((product) => {
-      if (!product || !Array.isArray(product.variations)) return;
+      if (!product) return;
+      // Check top-level price fields too
+      const topPrice = parseFloat(product.price) || 0;
+      if (topPrice > 0) {
+        if (topPrice < min) min = topPrice;
+        if (topPrice > max) max = topPrice;
+      }
       (product.variations || []).forEach((variation) => {
-        if (!variation || typeof variation.price !== 'number') return;
-        if (variation.price < min) min = variation.price;
-        if (variation.price > max) max = variation.price;
+        if (!variation) return;
+        const price = parseFloat(variation.price) || 0;
+        if (price > 0) {
+          if (price < min) min = price;
+          if (price > max) max = price;
+        }
       });
     });
-    if (min === Infinity) min = 20;
-    if (max === 0) max = 250;
-    return [Math.floor(min), Math.ceil(max)];
+    if (min === Infinity) min = 0;
+    return [Math.floor(min), Math.ceil(max) || 1000];
   }, [safeProducts]);
 
   // On products load, set priceRange to [minPrice, maxPrice]
@@ -714,20 +720,31 @@ const Products = () => {
       }
       
       // Price filter (only if user changed slider)
-      if (Array.isArray(priceRange) && priceRange.length === 2 && 
+      if (Array.isArray(priceRange) && priceRange.length === 2 &&
           (priceRange[0] !== minPrice || priceRange[1] !== maxPrice)) {
-        const inPriceRange = (product.variations || []).some((variation) => {
-          if (!variation || typeof variation.price !== 'number') return false;
-          return (
-            variation.price >= priceRange[0] && variation.price <= priceRange[1]
-          );
+        const prices = [];
+        // Check top-level price
+        const topPrice = parseFloat(product.price) || 0;
+        if (topPrice > 0) prices.push(topPrice);
+        // Check variation prices
+        (product.variations || []).forEach((variation) => {
+          if (!variation) return;
+          const p = parseFloat(variation.price) || 0;
+          if (p > 0) prices.push(p);
         });
-        if (!inPriceRange) return false;
+        const inRange = prices.some(p => p >= priceRange[0] && p <= priceRange[1]);
+        if (!inRange) return false;
       }
-      
+
+      // Badge filter
+      if (Array.isArray(selectedBadge) && selectedBadge.length > 0) {
+        const productBadge = product.badge || 'none';
+        if (!selectedBadge.includes(productBadge)) return false;
+      }
+
       return true;
     });
-  }, [safeProducts, selectedCategory, selectedMaterial, selectedColors, selectedSizes, selectedGender, priceRange, minPrice, maxPrice]);
+  }, [safeProducts, selectedCategory, selectedMaterial, selectedColors, selectedSizes, selectedGender, priceRange, minPrice, maxPrice, selectedBadge]);
 
   // Sort products - memoized for performance
   const sortedProducts = useMemo(() => {
@@ -1403,20 +1420,18 @@ const Products = () => {
         isOpen={showFilters}
         onClose={() => setShowFilters(false)}
         onApplyFilters={(filters) => {
-          if (filters.attributes?.material && filters.attributes.material.length > 0) {
-            setSelectedMaterial(filters.attributes.material);
-          }
+          // Always set — even empty arrays reset the filter
+          setSelectedMaterial(filters.attributes?.material || []);
+          setSelectedColors(filters.attributes?.color || []);
+          setSelectedSizes(filters.attributes?.size || []);
+          setSelectedGender(filters.attributes?.gender || []);
+          setSelectedBadge(filters.badge || []);
           if (filters.priceRange) {
             setPriceRange([filters.priceRange.min, filters.priceRange.max]);
           }
-          if (filters.attributes?.color && filters.attributes.color.length > 0) {
-            setSelectedColors(filters.attributes.color);
-          }
-          if (filters.attributes?.size && filters.attributes.size.length > 0) {
-            setSelectedSizes(filters.attributes.size);
-          }
-          if (filters.attributes?.gender && filters.attributes.gender.length > 0) {
-            setSelectedGender(filters.attributes.gender);
+          // Only override category if user picked one in drawer
+          if (filters.categories && filters.categories.length > 0) {
+            setSelectedCategory(filters.categories.map(String));
           }
           setShowFilters(false);
         }}
