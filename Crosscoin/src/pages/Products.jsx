@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import dynamic from "next/dynamic";
 import ProductCard from "../components/ProductCard";
 import ProductSkeleton from "../components/common/ProductSkeleton";
+import ProductFilterDrawer from "../components/products/ProductFilterDrawer";
 import {
   FiFilter,
   FiChevronDown,
@@ -1411,6 +1412,37 @@ const Products = () => {
           </div>
         </div>
       </div>
+
+      {/* Product Filter Drawer */}
+      <ProductFilterDrawer
+        isOpen={showFilters}
+        onClose={() => setShowFilters(false)}
+        onApplyFilters={(filters) => {
+          if (filters.material && filters.material.length > 0) {
+            setSelectedMaterial(filters.material);
+          }
+          if (filters.price) {
+            setPriceRange(filters.price);
+          }
+          if (filters.colors && filters.colors.length > 0) {
+            setSelectedColors(filters.colors);
+          }
+          if (filters.sizes && filters.sizes.length > 0) {
+            setSelectedSizes(filters.sizes);
+          }
+          if (filters.gender && filters.gender.length > 0) {
+            setSelectedGender(filters.gender);
+          }
+          setShowFilters(false);
+        }}
+        categories={categories}
+        attributes={{
+          material: filterOptionsDynamic?.materials || [],
+          color: filterOptionsDynamic?.colors || [],
+          size: filterOptionsDynamic?.sizes || [],
+          gender: filterOptionsDynamic?.genders || [],
+        }}
+      />
     </SeoWrapper>
   );
 };
