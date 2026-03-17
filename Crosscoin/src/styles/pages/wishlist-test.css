@@ -127,8 +127,8 @@
 /* Wishlist Grid */
 .wishlist-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(clamp(160px, 20vw, 240px), 1fr));
-  gap: clamp(12px, 2vw, 20px);
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.5rem;
   margin-bottom: 60px;
 }
 
@@ -260,12 +260,80 @@
 /* Recommendations Grid */
 .reco-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(clamp(160px, 20vw, 240px), 1fr));
-  gap: clamp(12px, 2vw, 20px);
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.5rem;
 }
 
 /* Responsive */
+@media (max-width: 1200px) {
+  .page-header {
+    padding: 35px 15px;
+  }
+
+  .ph-top {
+    gap: 15px;
+  }
+
+  .ph-title {
+    font-size: 36px;
+  }
+
+  .wishlist-main {
+    padding: 35px 15px;
+  }
+
+  .reco-section {
+    padding: 50px 15px;
+  }
+}
+
+@media (max-width: 992px) {
+  .page-header {
+    padding: 30px 15px;
+  }
+
+  .ph-title {
+    font-size: 32px;
+  }
+
+  .ph-actions {
+    gap: 10px;
+  }
+
+  .ph-btn {
+    padding: 10px 20px;
+    font-size: 12px;
+  }
+
+  .wishlist-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .reco-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .reco-title {
+    font-size: 28px;
+  }
+
+  .filter-tabs {
+    gap: 20px;
+  }
+
+  .ft {
+    padding: 12px 0;
+    font-size: 13px;
+  }
+}
+
 @media (max-width: 768px) {
+  .page-header {
+    padding: 24px 12px;
+  }
+
   .ph-top {
     flex-direction: column;
     gap: 16px;
@@ -275,53 +343,307 @@
     font-size: 28px;
   }
 
+  .ph-eyebrow {
+    font-size: 10px;
+  }
+
+  .ph-count {
+    font-size: 13px;
+  }
+
   .ph-actions {
     width: 100%;
+    gap: 10px;
   }
 
   .ph-btn {
     flex: 1;
+    padding: 10px 16px;
+    font-size: 12px;
+  }
+
+  .filter-tabs {
+    gap: 20px;
+    padding: 12px 0;
+  }
+
+  .ft {
+    padding: 12px 0;
+    font-size: 13px;
+  }
+
+  .wishlist-main {
+    padding: 24px 12px;
   }
 
   .wishlist-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 40px;
   }
 
-  .reco-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  .reco-section {
+    padding: 40px 12px;
+    margin-top: 30px;
+  }
+
+  .reco-header {
+    flex-direction: column;
+    align-items: flex-start;
     gap: 12px;
+    margin-bottom: 24px;
   }
 
   .reco-title {
     font-size: 24px;
   }
+
+  .reco-eyebrow {
+    font-size: 10px;
+  }
+
+  .reco-browse-all {
+    font-size: 12px;
+  }
+
+  .reco-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+  }
+
+  .empty-wishlist {
+    padding: 40px 12px;
+  }
+
+  .empty-title {
+    font-size: 20px;
+  }
+
+  .empty-sub {
+    font-size: 13px;
+  }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .page-header {
-    padding: 24px 16px;
+    padding: 20px 12px;
   }
 
   .ph-title {
-    font-size: 22px;
+    font-size: 24px;
+  }
+
+  .ph-actions {
+    flex-direction: column;
+  }
+
+  .ph-btn {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 11px;
+  }
+
+  .filter-tabs {
+    gap: 15px;
+    padding: 10px 0;
+  }
+
+  .ft {
+    padding: 10px 0;
+    font-size: 12px;
+  }
+
+  .wishlist-main {
+    padding: 20px 12px;
   }
 
   .wishlist-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-  }
-
-  .reco-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    gap: 0.75rem;
+    margin-bottom: 30px;
   }
 
   .reco-section {
-    padding: 40px 16px;
+    padding: 30px 12px;
+    margin-top: 20px;
+  }
+
+  .reco-header {
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
   }
 
   .reco-title {
     font-size: 20px;
+  }
+
+  .reco-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .empty-wishlist {
+    padding: 30px 12px;
+  }
+
+  .empty-icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .empty-title {
+    font-size: 18px;
+  }
+
+  .empty-sub {
+    font-size: 12px;
+  }
+
+  .empty-cta {
+    padding: 10px 24px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-header {
+    padding: 16px 10px;
+  }
+
+  .ph-title {
+    font-size: 20px;
+  }
+
+  .ph-eyebrow {
+    font-size: 9px;
+    margin-bottom: 6px;
+  }
+
+  .ph-count {
+    font-size: 12px;
+  }
+
+  .ph-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ph-btn {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 10px;
+    border-radius: 4px;
+  }
+
+  .filter-tabs {
+    gap: 12px;
+    padding: 8px 0;
+    margin-bottom: 0;
+  }
+
+  .ft {
+    padding: 8px 0;
+    font-size: 11px;
+  }
+
+  .wishlist-main {
+    padding: 16px 10px;
+  }
+
+  .wishlist-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 24px;
+  }
+
+  .reco-section {
+    padding: 24px 10px;
+    margin-top: 16px;
+  }
+
+  .reco-section > div {
+    padding: 0;
+  }
+
+  .reco-header {
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .reco-eyebrow {
+    font-size: 9px;
+    margin-bottom: 4px;
+  }
+
+  .reco-title {
+    font-size: 18px;
+  }
+
+  .reco-browse-all {
+    font-size: 11px;
+    gap: 6px;
+  }
+
+  .reco-browse-all:hover {
+    gap: 8px;
+  }
+
+  .reco-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .empty-wishlist {
+    padding: 24px 10px;
+  }
+
+  .empty-icon {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 16px;
+  }
+
+  .empty-title {
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+
+  .empty-sub {
+    font-size: 11px;
+    margin-bottom: 16px;
+  }
+
+  .empty-cta {
+    padding: 8px 20px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 360px) {
+  .page-header {
+    padding: 12px 8px;
+  }
+
+  .ph-title {
+    font-size: 18px;
+  }
+
+  .ph-btn {
+    padding: 6px 8px;
+    font-size: 9px;
+  }
+
+  .wishlist-grid {
+    gap: 0.4rem;
+  }
+
+  .reco-grid {
+    gap: 0.4rem;
+  }
+
+  .reco-title {
+    font-size: 16px;
   }
 }
