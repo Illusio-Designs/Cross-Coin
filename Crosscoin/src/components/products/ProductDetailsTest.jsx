@@ -6,6 +6,7 @@ import Loader from '../Loader';
 const ProductDetailsTest = ({ product }) => {
   const router = useRouter();
   const slug = router.query?.slug ? decodeURIComponent(router.query.slug) : null;
+
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState(0);
@@ -15,10 +16,6 @@ const ProductDetailsTest = ({ product }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [productData, setProductData] = useState(null);
-  const [selectedVariation, setSelectedVariation] = useState(null);
-  const [selectedSku, setSelectedSku] = useState('');
-  const [coupons, setCoupons] = useState([]);
-  const [allReviews, setAllReviews] = useState([]);
 
   // Sample product data for fallback
   const sampleProduct = {
@@ -28,28 +25,6 @@ const ProductDetailsTest = ({ product }) => {
     price: 629.00,
     images: [
       'https://www.jockey.in/cdn/shop/products/IC28_BLACK_0105_S123_JKY_1.webp?v=1700008414&width=560',
-      'https://www.jockey.in/cdn/shop/products/IC28_BLACK_0105_S123_JKY_2.webp?v=1700008414&width=560',
-      'https://www.jockey.in/cdn/shop/products/IC28_BLACK_0105_S123_JKY_3.webp?v=1700008414&width=560',
-      'https://www.jockey.in/cdn/shop/products/IC28_BLACK_0105_S123_JKY_4.webp?v=1700008414&width=560',
-      'https://www.jockey.in/cdn/shop/products/IC28_BLACK_0105_S123_JKY_5.webp?v=1700008414&width=560',
-      'https://www.jockey.in/cdn/shop/products/IC28_BLACK_0105_S123_JKY_6.webp?v=1700008414&width=560',
-    ],
-    colors: [
-      { name: 'Black', image: 'https://www.jockey.in/cdn/shop/products/IC28_BLACK_0105_S123_JKY_1.webp?v=1700008414&width=108' },
-      { name: 'Blue Shadow', image: 'https://www.jockey.in/cdn/shop/files/IC28_BUSHD_0105_S123_JKY_1_e181c59d-dc4b-4a15-8d85-b738f6ee1c58.webp?v=1725619823&width=108' },
-      { name: 'Brown', image: 'https://www.jockey.in/cdn/shop/files/IC28_BROWN_0105_S123_JKY_1.webp?v=1725619828&width=108' },
-      { name: 'Ebony', image: 'https://www.jockey.in/cdn/shop/products/IC28_EBONY_0105_S123_JKY_1.webp?v=1700015373&width=108' },
-    ],
-    features: [
-      { icon: 'feather', title: 'Feather Soft', subtitle: 'Comfort' },
-      { icon: 'lightweight', title: 'Lightweight', subtitle: 'For All Day Comfort' },
-      { icon: 'moisture', title: 'Moisture Move', subtitle: 'Wicks Sweat Away' },
-    ],
-    descCards: [
-      { image: 'https://www.jockey.in/cdn/shop/files/IC28_01_09Feb2024.webp?v=1707810913&width=400', title: 'Tactel Microfiber', subtitle: 'Elastane', desc: 'With Feather-Like Softness' },
-      { image: 'https://www.jockey.in/cdn/shop/files/IC28_03_09Feb2024.webp?v=1707810913&width=400', title: 'Moisture Move', subtitle: 'Treatment', desc: 'Wicks Sweat Away' },
-      { image: 'https://www.jockey.in/cdn/shop/files/IC28_04_09Feb2024.webp?v=1707810913&width=400', title: 'Ultrasoft', subtitle: 'Waistband', desc: 'For All Day Comfort' },
-      { image: 'https://www.jockey.in/cdn/shop/files/IC28_02_09Feb2024.webp?v=1707810913&width=400', title: 'Free From', subtitle: 'Ride-Ups', desc: 'Prevents Sagging & Roll-Ups' },
     ],
   };
 
@@ -70,37 +45,19 @@ const ProductDetailsTest = ({ product }) => {
 
         if (productResponse && productResponse.success && productResponse.data) {
           setProductData(productResponse.data);
-          if (productResponse.data.variations && productResponse.data.variations.length > 0) {
-            setSelectedVariation(productResponse.data.variations[0]);
-            setSelectedSku(productResponse.data.variations[0].sku);
-          }
-          
-          // Fetch reviews
-          if (productResponse.data.id) {
-            try {
-              const reviewsResponse = await getPublicProductReviews(productResponse.data.id, { page: 1, limit: 10 });
-              if (reviewsResponse.success && reviewsResponse.reviews) {
-                setAllReviews(reviewsResponse.reviews);
-              }
-            } catch (err) {
-              setAllReviews(productResponse.data.reviews || []);
-            }
-          }
         } else {
           setProductData(sampleProduct);
         }
 
-        setCoupons(Array.isArray(couponsData) ? couponsData : couponsData.coupons || []);
         setLoading(false);
       } catch (err) {
         setProductData(sampleProduct);
-        setCoupons([]);
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [router.isReady, slug]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -133,16 +90,45 @@ const ProductDetailsTest = ({ product }) => {
     );
   }
 
-  if (error) {
+  if (error || !productData) {
     return (
       <div className="product-details-test">
         <div style={{ textAlign: 'center', padding: '50px' }}>
           <h2>Error Loading Product</h2>
-          <p>{error}</p>
+          <p>{error || 'Product not found'}</p>
         </div>
       </div>
     );
   }
+
+  // Safety checks for arrays - extract from API response
+  const images = productData?.images || [];
+  const variations = productData?.variations || [];
+  const currentVariation = variations[0] || {};
+  const currentVariationImages = currentVariation?.images || [];
+  
+  // Extract colors from first variation attributes
+  const getColorsFromVariations = () => {
+    const colors = new Set();
+    variations.forEach(v => {
+      try {
+        const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
+        if (attrs?.color) {
+          if (Array.isArray(attrs.color)) {
+            attrs.color.forEach(c => colors.add(c));
+          } else {
+            colors.add(attrs.color);
+          }
+        }
+      } catch (e) {
+        // ignore parse errors
+      }
+    });
+    return Array.from(colors);
+  };
+
+  const colorOptions = getColorsFromVariations();
+  const displayImages = currentVariationImages.length > 0 ? currentVariationImages : images;
 
   return (
     <div className="product-details-test">
@@ -151,52 +137,69 @@ const ProductDetailsTest = ({ product }) => {
         {/* Gallery Section */}
         <div className="gallery-section">
           <div className="thumb-col">
-            {productData.images.map((img, idx) => (
+            {displayImages.map((img, idx) => (
               <div
                 key={idx}
                 className={`thumb ${selectedImage === idx ? 'active' : ''}`}
                 onClick={() => setSelectedImage(idx)}
               >
-                <img src={img} alt={`Thumbnail ${idx + 1}`} />
+                <img 
+                  src={img.thumbnail || img.image_url || img} 
+                  alt={`Thumbnail ${idx + 1}`} 
+                />
               </div>
             ))}
           </div>
           <div className="main-image-wrap">
-            <img src={productData.images[selectedImage]} alt={productData.title} />
+            {displayImages[selectedImage] && (
+              <img 
+                src={displayImages[selectedImage].large || displayImages[selectedImage].image_url || displayImages[selectedImage]} 
+                alt={productData.name} 
+              />
+            )}
           </div>
         </div>
 
         {/* Product Info Section */}
         <div className="product-info">
-          <div className="brand-tag">{productData.brand}</div>
-          <h1 className="product-title">{productData.title}</h1>
-          <div className="style-no">Style: #{productData.styleNo}</div>
+          <div className="brand-tag">{productData.name?.split('–')[0]?.trim() || 'Brand'}</div>
+          <h1 className="product-title">{productData.name || 'Product Title'}</h1>
+          <div className="style-no">SKU: {currentVariation.sku || 'N/A'}</div>
 
           <div className="price-block">
-            <div className="price-main">₹{parseFloat(productData.price).toFixed(2)}</div>
+            <div className="price-main">₹{parseFloat(currentVariation.price || productData.price || 0).toFixed(2)}</div>
+            {currentVariation.comparePrice && (
+              <div className="price-original" style={{textDecoration: 'line-through', color: '#999'}}>
+                ₹{parseFloat(currentVariation.comparePrice).toFixed(2)}
+              </div>
+            )}
             <div className="price-note">MRP (Incl. Of All Taxes)</div>
           </div>
 
           <hr className="divider" />
 
           {/* Color Selector */}
-          <div className="selector-label">
-            Color: <span>{productData.colors[selectedColor].name}</span>
-          </div>
-          <div className="color-list">
-            {productData.colors.map((color, idx) => (
-              <div
-                key={idx}
-                className={`color-item ${selectedColor === idx ? 'active' : ''}`}
-                onClick={() => setSelectedColor(idx)}
-              >
-                <div className="color-img">
-                  <img src={color.image} alt={color.name} />
-                </div>
-                <div className="color-name">{color.name}</div>
+          {colorOptions.length > 0 && (
+            <>
+              <div className="selector-label">
+                Color: <span>{colorOptions[selectedColor] || 'N/A'}</span>
               </div>
-            ))}
-          </div>
+              <div className="color-list">
+                {colorOptions.map((color, idx) => (
+                  <div
+                    key={idx}
+                    className={`color-item ${selectedColor === idx ? 'active' : ''}`}
+                    onClick={() => setSelectedColor(idx)}
+                  >
+                    <div className="color-img" style={{backgroundColor: color.toLowerCase()}}>
+                      {color}
+                    </div>
+                    <div className="color-name">{color}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
 
           {/* Quantity + Add to Bag */}
           <div className="qty-row">
@@ -265,133 +268,47 @@ const ProductDetailsTest = ({ product }) => {
 
       {/* Product Details Section */}
       <div className="product-details">
-        {/* Fit & Feel */}
-        <div className="fit-feel-row">
-          {productData.features.map((feature, idx) => (
-            <div key={idx} className="fit-item">
-              <div className="fit-icon">
-                <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 6v6l4 2" />
-                </svg>
-              </div>
-              <div className="fit-text">
-                <strong>{feature.title}</strong>
-                <span>{feature.subtitle}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
         {/* Product Description */}
         <h2 className="section-title">Product Description</h2>
-        <div className="desc-cards">
-          {productData.descCards.map((card, idx) => (
-            <div key={idx} className="desc-card">
-              <img src={card.image} alt={card.title} />
-              <div className="desc-card-label">
-                <div className="desc-card-title">
-                  {card.title}
-                  <br />
-                  <span>{card.subtitle}</span>
+        {productData.description && (
+          <div 
+            className="desc-body-text"
+            dangerouslySetInnerHTML={{__html: productData.description}}
+            style={{marginBottom: '30px'}}
+          />
+        )}
+
+        {/* Rating & Reviews */}
+        {productData.reviews && productData.reviews.length > 0 && (
+          <div className="reviews-section" style={{marginTop: '30px', marginBottom: '30px'}}>
+            <h2 className="section-title">Customer Reviews ({productData.reviewCount || productData.reviews.length})</h2>
+            <div style={{display: 'grid', gap: '15px'}}>
+              {productData.reviews.slice(0, 5).map((review, idx) => (
+                <div key={idx} style={{padding: '15px', border: '1px solid #eee', borderRadius: '8px'}}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center'}}>
+                    <strong>{review.reviewerName}</strong>
+                    <span style={{color: '#FFB800'}}>{'★'.repeat(review.rating)}{'☆'.repeat(5-review.rating)}</span>
+                  </div>
+                  <p style={{margin: '0', color: '#666', fontSize: '14px'}}>{review.review}</p>
+                  <small style={{color: '#999'}}>{new Date(review.createdAt).toLocaleDateString()}</small>
                 </div>
-                <div className="desc-card-sub">{card.desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <p className="desc-body-text">
-          Tactel Microfiber Elastane Stretch Fabric | Fabric Composition : Tactel Nylon and Elastane | 
-          Moisture Move Treatment to Wick Sweat Away From the Body | Engineered to Prevent Ride Up | 
-          Ultrasoft and Durable Waistband | Label Free for All Day Comfort
-        </p>
-
-        {/* Ideal For */}
-        <div className="ideal-row">
-          <span className="ideal-label">Ideal For</span>
-          <div className="ideal-chip">
-            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <path d="M9 3v18M15 3v18M3 9h18M3 15h18" />
-            </svg>
-            <strong>Work</strong>
-          </div>
-          <div className="ideal-chip">
-            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-              <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
-            </svg>
-            <strong>Travel</strong>
-          </div>
-          <div className="ideal-chip">
-            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            <strong>Everyday Wear</strong>
-          </div>
-        </div>
-
-        {/* Washing Instructions */}
-        <h2 className="section-title">Washing Instructions</h2>
-        <div className="wash-box">
-          <div className="wash-item">
-            <svg width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-            </svg>
-            <span>Gentle wash<br />40°C</span>
-          </div>
-          <div className="wash-item">
-            <svg width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-            <span>Do not<br />bleach</span>
-          </div>
-          <div className="wash-item">
-            <svg width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-              <path d="M12 2v20M17 7l-5-5-5 5" />
-            </svg>
-            <span>Do not wring</span>
-          </div>
-          <div className="wash-item">
-            <svg width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 8v8" />
-            </svg>
-            <span>Tumble dry<br />low</span>
-          </div>
-        </div>
-
-        {/* Manufacturing Details */}
-        <h2 className="section-title">Manufacturing Details</h2>
-        <div className="mfg-row">
-          <div className="mfg-address">
-            Page Industries Ltd., Cessna Park, Umiya Bay, T-1, 7th Flr, ORR, Bengaluru - 560103,
-            <br />
-            Karnataka. CIN: L18101KA1994PLC016554
-          </div>
-          <div className="mfg-origin">
-            <span className="origin-label">Country of Origin</span>
-            <div className="origin-badge">
-              <svg width="24" height="16" fill="none" viewBox="0 0 24 16">
-                <rect width="24" height="16" fill="#FF9933" />
-                <rect y="5.33" width="24" height="5.33" fill="#fff" />
-                <rect y="10.67" width="24" height="5.33" fill="#138808" />
-              </svg>
-              <span>India</span>
+              ))}
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Sticky Bag Bar */}
       <div className={`sticky-bag ${showStickyBar ? 'visible' : ''}`}>
         <div className="sticky-product-info">
-          <img className="sticky-img" src={productData.images[0]} alt={productData.title} />
+          <img 
+            className="sticky-img" 
+            src={displayImages[0]?.thumbnail || displayImages[0]?.image_url || displayImages[0]} 
+            alt={productData.name} 
+          />
           <div>
-            <div className="sticky-name">{productData.title}</div>
-            <div className="sticky-price">₹{parseFloat(productData.price).toFixed(2)}</div>
+            <div className="sticky-name">{productData.name}</div>
+            <div className="sticky-price">₹{parseFloat(currentVariation.price || productData.price || 0).toFixed(2)}</div>
           </div>
         </div>
         <div className="sticky-actions">
