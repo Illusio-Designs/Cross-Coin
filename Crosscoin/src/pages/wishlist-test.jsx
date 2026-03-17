@@ -83,6 +83,7 @@ const WishlistTest = () => {
               }
               filtered.forEach(item => {
                 addToCart(item, '', 'M', 1);
+                removeFromWishlist(item.id);
               });
               showToast('✓ All items added to bag!');
             }}>
@@ -124,17 +125,47 @@ const WishlistTest = () => {
             </div>
           ) : (
             filtered.map((item, idx) => (
-              <ProductCard
-                key={item.id}
-                product={item}
-                index={idx}
-                onProductClick={(product) => router.push(`/product/${product.id}`)}
-                onAddToCart={(e, product, color, size, variationId) => {
-                  e.stopPropagation();
-                  addToCart(product, color || '', 'M', 1, variationId);
-                  showToast('✓ Added to bag!');
-                }}
-              />
+              <div key={item.id} style={{ position: 'relative' }}>
+                <ProductCard
+                  product={item}
+                  index={idx}
+                  onProductClick={(product) => router.push(`/product/${product.id}`)}
+                  onAddToCart={(e, product, color, size, variationId) => {
+                    e.stopPropagation();
+                    addToCart(product, color || '', 'M', 1, variationId);
+                    showToast('✓ Added to bag!');
+                  }}
+                />
+                <button
+                  className="wishlist-remove-btn"
+                  onClick={() => removeItem(item.id)}
+                  title="Remove from wishlist"
+                  style={{
+                    position: 'absolute',
+                    top: '8px',
+                    left: '8px',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: 'rgba(0, 0, 0, 0.7)',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 11,
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.target.style.background = 'rgba(0, 0, 0, 0.9)'}
+                  onMouseLeave={(e) => e.target.style.background = 'rgba(0, 0, 0, 0.7)'}
+                >
+                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
             ))
           )}
         </div>
