@@ -1,76 +1,52 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
-import SafeImage from '../components/common/SafeImage';
-import { useRouter } from 'next/router';
-import { FiHeart, FiShoppingCart, FiTrash2 } from 'react-icons/fi';
-import { AiFillHeart } from 'react-icons/ai';
+import { getAllPublicProducts } from '../services/publicApi';
+import ProductCard from '../components/ProductCard';
+import { toast } from 'react-toastify';
 import SeoWrapper from '../console/SeoWrapper';
-import { getProductImageSrc } from '../utils/imageUtils';
-import { seoService } from '../services/index';
-
-// Load page-specific CSS - moved to _app.jsx
-
-// Helper to pick the best image for a wishlist item
-function pickWishlistItemImage(item) {
-  if (item.variationImages && item.variationImages.length > 0) {
-    return item.variationImages[0];
-  }
-  if (Array.isArray(item.images) && item.images.length > 0) {
-    const primary = item.images.find(img => img.is_primary);
-    return primary ? primary.image_url : item.images[0].image_url;
-  }
-  return item.image || null; // Return null instead of fallback
-}
-
 
 const Wishlist = () => {
-  const { wishlist, removeFromWishlist, clearWishlist, isInWishlist, addToWishlist } = useWishlist();
+  const { wishlist, removeFromWishlist, clearWishlist } = useWishlist();
   const { addToCart } = useCart();
   const router = useRouter();
+  const [recos, setRecos] = useState([]);
+  const [activeCat, setActiveCat] = useState('all');
   const [sortOrder, setSortOrder] = useState('newest');
-  // const [seoData, setSeoData] = useState(null); // REMOVE
-  // const seoApiCalledRef = useRef(false); // REMOVE
 
-  // useEffect(() => { // REMOVE
-  //   if (!seoApiCalledRef.current) {
-  //     seoApiCalledRef.current = true;
-  //     seoService.getSEOData('wishlist').then(res => {
-  //       setSeoData(res.data || res);
-  //     });
-  //   }
-  // }, []);
+  // Fetch recommendations on mount
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      try {
+        const response = await getAllPublicProducts({ page: 1, limit: 5 });
+        if (response?.data?.products) {
+          setRecos(response.data.products.slice(0, 5));
+        }
+      } catch (error) {
+        console.error('Failed to fetch recommendations:', error);
+      }
+    };
+    fetchRecommendations();
+  }, []);
 
-  const handleMoveToCart = (item) => {
-    const productToAdd = { ...item };
-    const color = item.selectedVariation?.attributes?.color?.join(', ') || item.color;
-    const size = item.selectedSize || item.selectedVariation?.attributes?.size?.join(', ');
-
-    addToCart(productToAdd, color, size, 1, item.selectedVariation?.id);
-    removeFromWishlist(item.id);
+  const showToast = (msg) => {
+    toast.info(msg, { position: 'top-right', autoClose: 2200 });
   };
 
-  const handleRemove = (productId) => {
-    removeFromWishlist(productId);
-  };
-
-  const handleClearWishlist = () => {
-    if (window.confirm('Are you sure you want to clear your wishlist?')) {
-      clearWishlist();
-    }
-  };
-
+  // Sort wishlist items
   const sortWishlist = (items) => {
     const sorted = [...items];
     switch (sortOrder) {
       case 'newest':
-        return sorted.sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
+        return sorted.sort((a, b) => new Date(b.addedAt || 0) - new Date(a.addedAt || 0));
       case 'oldest':
-        return sorted.sort((a, b) => new Date(a.addedAt) - new Date(b.addedAt));
+        return sorted.sort((a, b) => new Date(a.addedAt || 0) - new Date(b.addedAt || 0));
       case 'price-high':
-        return sorted.sort((a, b) => b.price - a.price);
+        return sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
       case 'price-low':
-        return sorted.sort((a, b) => a.price - b.price);
+        return sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
       default:
         return sorted;
     }
@@ -78,23 +54,48 @@ const Wishlist = () => {
 
   const sortedWishlist = sortWishlist(wishlist);
 
+  const filtered = activeCat === 'all' 
+    ? sortedWishlist 
+    : sortedWishlist.filter(i => i.category?.name?.toLowerCase() === activeCat.toLowerCase());
+
+  const removeItem = (id) => {
+    removeFromWishlist(id);
+    showToast('Removed from wishlist');
+  };
+
+  const handleClearWishlist = () => {
+    if (window.confirm('Are you sure you want to clear your wishlist?')) {
+      clearWishlist();
+      showToast('Wishlist cleared');
+    }
+  };
+
   if (wishlist.length === 0) {
     return (
       <SeoWrapper pageName="wishlist">
-        <div className="wishlist-page">
-          <main className="wishlist-main">
-            <div className="wishlist-empty">
-              <FiHeart className="wishlist-empty-icon" />
-              <h2>Your Wishlist is Empty</h2>
-              <p>Looks like you haven't added any products to your wishlist yet.</p>
-              <button 
-                className="wishlist-browse-btn"
-                onClick={() => router.push('/Products')}
-              >
-                Browse Products
-              </button>
+        <div className="page-header">
+          <div className="ph-top">
+            <div>
+              <div className="ph-eyebrow">My Collection</div>
+              <h1 className="ph-title">My Wishlist</h1>
+              <div className="ph-count">0 saved items</div>
             </div>
-          </main>
+          </div>
+        </div>
+        <div className="wishlist-main">
+          <div className="empty-wishlist">
+            <div className="empty-icon">
+              <svg viewBox="0 0 24 24">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            </div>
+            <div className="empty-title">Nothing here yet</div>
+            <div className="empty-sub">
+              No items in your wishlist.<br />
+              Browse our collection and save what you love.
+            </div>
+            <button className="empty-cta" onClick={() => router.push('/Products')}>Start Shopping</button>
+          </div>
         </div>
       </SeoWrapper>
     );
@@ -102,106 +103,182 @@ const Wishlist = () => {
 
   return (
     <SeoWrapper pageName="wishlist">
-      <div className="wishlist-page">
-        <main className="wishlist-main">
-          <div className="wishlist-header">
-            <h1>My Wishlist ({wishlist.length} items)</h1>
-            <div className="wishlist-controls">
-              <div className="wishlist-sort">
-                <label>Sort by:</label>
-                <select 
-                  value={sortOrder} 
-                  onChange={(e) => setSortOrder(e.target.value)}
-                  className="wishlist-sort-select"
-                >
-                  <option value="newest">Newest First</option>
-                  <option value="oldest">Oldest First</option>
-                  <option value="price-high">Price: High to Low</option>
-                  <option value="price-low">Price: Low to High</option>
-                </select>
-              </div>
-              <button 
-                className="wishlist-clear-btn"
-                onClick={handleClearWishlist}
-              >
-                <FiTrash2 /> Clear Wishlist
-              </button>
-            </div>
-          </div>
+      <Head>
+        <title>My Wishlist | CrossCoin</title>
+      </Head>
 
-          <div className="wishlist-items">
-            {sortedWishlist.map((item) => {
-              const imageUrl = pickWishlistItemImage(item);
-              return (
-                <div key={item.id} className="wishlist-item">
-                  <div
-                    className="wishlist-item-image"
-                    onClick={() => {
-                      if (item.slug) {
-                        router.push(`/ProductDetails?slug=${item.slug}`);
-                      } else {
-                        }
-                    }}
-                  >
-                    <SafeImage
-                      imageData={{ image_url: imageUrl }}
-                      alt={item.name}
-                      width={400}
-                      height={400}
-                      quality={75}
-                      style={{ objectFit: 'cover' }}
-                      isProductCard={true}
-                    />
-                    <button
-                      className="wishlist-icon-btn"
-                      onClick={e => {
-                        e.stopPropagation();
-                        isInWishlist(item.id) ? removeFromWishlist(item.id) : addToWishlist(item);
-                      }}
-                      aria-label={isInWishlist(item.id) ? 'Remove from wishlist' : 'Add to wishlist'}
-                    >
-                      {isInWishlist(item.id) ? <AiFillHeart color="#e11d48" size={24} /> : <FiHeart size={24} />}
-                    </button>
-                  </div>
-                  <div className="wishlist-item-details">
-                    <h3>{item.name}</h3>
-                    {item.selectedVariation?.attributes?.color && (
-                      <p className="wishlist-item-color">
-                        Color: {item.selectedVariation.attributes.color.join(', ')}
-                      </p>
-                    )}
-                    {item.selectedSize && (
-                      <p className="wishlist-item-size">
-                        Size: {item.selectedSize}
-                      </p>
-                    )}
-                    <div className="wishlist-item-price">
-                      <span className="current-price">₹{item.price}</span>
-                      {item.comparePrice > item.price && (
-                        <span className="original-price">₹{item.comparePrice}</span>
-                      )}
-                      
-                    </div>
-                    <div className="wishlist-item-actions">
-                      <button 
-                        className="move-to-cart-btn"
-                        onClick={() => handleMoveToCart(item)}
-                      >
-                        <FiShoppingCart /> Move to Cart
-                      </button>
-                      <button 
-                        className="remove-btn"
-                        onClick={() => handleRemove(item.id)}
-                      >
-                        <FiTrash2 /> Remove
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+      <div className="page-header">
+        <div className="ph-top">
+          <div>
+            <div className="ph-eyebrow">My Collection</div>
+            <h1 className="ph-title">My Wishlist</h1>
+            <div className="ph-count">{filtered.length} saved item{filtered.length !== 1 ? 's' : ''}</div>
           </div>
-        </main>
+          <div className="ph-actions">
+            <div className="wishlist-sort">
+              <label>Sort by:</label>
+              <select 
+                value={sortOrder} 
+                onChange={(e) => setSortOrder(e.target.value)}
+                className="sort-select"
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="price-low">Price: Low to High</option>
+              </select>
+            </div>
+            <button className="ph-btn" onClick={() => showToast('🔗 Wishlist link copied!')}>
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ display: 'inline', marginRight: '5px', verticalAlign: 'middle' }}>
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+              </svg>
+              Share Wishlist
+            </button>
+            <button className="ph-btn primary" onClick={() => {
+              if (filtered.length === 0) {
+                showToast('No items to add');
+                return;
+              }
+              filtered.forEach(item => {
+                addToCart(item, '', 'M', 1);
+                removeFromWishlist(item.id);
+              });
+              showToast('✓ All items added to bag!');
+            }}>
+              Add All to Bag
+            </button>
+            <button className="ph-btn" onClick={handleClearWishlist}>
+              Clear Wishlist
+            </button>
+          </div>
+        </div>
+        <div className="filter-tabs">
+          <div className={`ft ${activeCat === 'all' ? 'active' : ''}`} onClick={() => setActiveCat('all')}>
+            All Items
+          </div>
+          {[...new Set(wishlist.map(i => i.category?.name).filter(Boolean))].map(cat => (
+            <div 
+              key={cat}
+              className={`ft ${activeCat === cat ? 'active' : ''}`} 
+              onClick={() => setActiveCat(cat)}
+            >
+              {cat}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="wishlist-main">
+        <div className="wishlist-grid">
+          {filtered.length === 0 ? (
+            <div className="empty-wishlist">
+              <div className="empty-icon">
+                <svg viewBox="0 0 24 24">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                </svg>
+              </div>
+              <div className="empty-title">Nothing here yet</div>
+              <div className="empty-sub">
+                No items in this category.<br />
+                Browse our collection and save what you love.
+              </div>
+              <button className="empty-cta" onClick={() => router.push('/Products')}>Start Shopping</button>
+            </div>
+          ) : (
+            filtered.map((item, idx) => (
+              <div key={item.id} style={{ position: 'relative' }}>
+                <ProductCard
+                  product={item}
+                  index={idx}
+                  onProductClick={(product) => {
+                    if (product.slug) {
+                      router.push(`/ProductDetails?slug=${product.slug}`);
+                    } else {
+                      router.push(`/product/${product.id}`);
+                    }
+                  }}
+                  onAddToCart={(e, product, color, variationId) => {
+                    e.stopPropagation();
+                    addToCart(product, color || '', 'M', 1, variationId);
+                    showToast('✓ Added to bag!');
+                  }}
+                />
+                <button
+                  className="wishlist-remove-btn"
+                  onClick={() => removeItem(item.id)}
+                  title="Remove from wishlist"
+                  style={{
+                    position: 'absolute',
+                    top: '8px',
+                    left: '8px',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: 'rgba(0, 0, 0, 0.7)',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 11,
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.target.style.background = 'rgba(0, 0, 0, 0.9)'}
+                  onMouseLeave={(e) => e.target.style.background = 'rgba(0, 0, 0, 0.7)'}
+                >
+                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Recommendations */}
+      <div className="reco-section">
+        <div>
+          <div className="reco-header">
+            <div>
+              <div className="reco-eyebrow">You May Also Like</div>
+              <h2 className="reco-title">Recommended For You</h2>
+            </div>
+            <button className="reco-browse-all" onClick={() => router.push('/Products')}>
+              Browse All
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          </div>
+          <div className="reco-grid">
+            {recos.map((reco, idx) => (
+              <ProductCard
+                key={reco.id}
+                product={reco}
+                index={idx}
+                onProductClick={(product) => {
+                  if (product.slug) {
+                    router.push(`/ProductDetails?slug=${product.slug}`);
+                  } else {
+                    router.push(`/product/${product.id}`);
+                  }
+                }}
+                onAddToCart={(e, product, color, variationId) => {
+                  e.stopPropagation();
+                  addToCart(product, color || '', 'M', 1, variationId);
+                  showToast('✓ Added to bag!');
+                }}
+              />
+            ))}
+          </div>
+        </div>
       </div>
     </SeoWrapper>
   );

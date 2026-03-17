@@ -61,7 +61,6 @@ import "../styles/dashboard/attributes.css";
 // Additional page CSS
 import "../styles/pages/Collections.css";
 import "../styles/pages/About.css";
-import "../styles/pages/wishlist-test.css";
 // Third-party
 import "react-quill/dist/quill.snow.css";
 
