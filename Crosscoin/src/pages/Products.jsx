@@ -477,6 +477,7 @@ const Products = () => {
   const handleAddToCart = (e, product, color, size, variationId) => {
     e.stopPropagation();
     addToCart(product, color, size, 1, variationId);
+    showSuccess('addedToCart');
     fbqTrack("AddToCart", {
       content_ids: [product.id],
       content_name: product.name,
