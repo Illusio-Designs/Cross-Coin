@@ -755,17 +755,23 @@ const Products = () => {
     
     switch (sortBy) {
       case "price-low":
-        return [...filteredProducts].sort(
-          (a, b) =>
-            (a.variations?.[0]?.price || 0) - (b.variations?.[0]?.price || 0)
-        );
+        return [...filteredProducts].sort((a, b) => {
+          const priceA = parseFloat(a.variations?.[0]?.price || a.price) || 0;
+          const priceB = parseFloat(b.variations?.[0]?.price || b.price) || 0;
+          return priceA - priceB;
+        });
       case "price-high":
-        return [...filteredProducts].sort(
-          (a, b) =>
-            (b.variations?.[0]?.price || 0) - (a.variations?.[0]?.price || 0)
-        );
+        return [...filteredProducts].sort((a, b) => {
+          const priceA = parseFloat(a.variations?.[0]?.price || a.price) || 0;
+          const priceB = parseFloat(b.variations?.[0]?.price || b.price) || 0;
+          return priceB - priceA;
+        });
       case "rating":
-        return [...filteredProducts].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        return [...filteredProducts].sort((a, b) => {
+          const ratingA = parseFloat(a.avgRating) || parseFloat(a.rating) || 0;
+          const ratingB = parseFloat(b.avgRating) || parseFloat(b.rating) || 0;
+          return ratingB - ratingA;
+        });
       case "featured":
       default:
         return filteredProducts; // Default order or implement your own featured logic
