@@ -43,6 +43,7 @@ import "../styles/components/HeroSlider.css";
 import "../styles/components/SlidingCollection.css";
 import "../styles/components/UnlockedExclusives.css";
 import "../styles/components/CouponStrip.css";
+import "../components/products/ProductFilterDrawer.css"
 // Common
 import "../styles/common/TableControls.css";
 import "../styles/common/FomoElements.css";
