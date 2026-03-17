@@ -43,25 +43,6 @@ import "../styles/components/HeroSlider.css";
 import "../styles/components/SlidingCollection.css";
 import "../styles/components/UnlockedExclusives.css";
 import "../styles/components/CouponStrip.css";
-import "../components/products/ProductFilterDrawer.css"
-// Common
-import "../styles/common/TableControls.css";
-import "../styles/common/FomoElements.css";
-import "../styles/common/DonutChart.css";
-// Dashboard
-import "../styles/dashboard/layout.css";
-import "../styles/dashboard/sidebar.css";
-import "../styles/dashboard/full-width-fix.css";
-import "../styles/dashboard/mobile.css";
-import "../styles/dashboard/brands.css";
-import "../styles/dashboard/brandSettings.css";
-import "../styles/dashboard/brandTags.css";
-import "../styles/dashboard/brandAssignment.css";
-import "../styles/dashboard/reviews.css";
-import "../styles/dashboard/seo.css";
-import "../styles/dashboard/slider.css";
-import "../styles/dashboard/header.css";
-import "../styles/dashboard/Card.css";
 // Component-local CSS (co-located with components)
 import "../components/Sidebar/Sidebar.css";
 import "../components/cart/CartDrawer.css";
@@ -69,6 +50,7 @@ import "../components/cart/QuantityOfferBar.css";
 import "../components/ProductListSkeleton.css";
 import "../components/DashboardSkeleton.css";
 import "../components/products/ProductDetailsTest.css";
+import "../components/products/ProductFilterDrawer.css";
 // Additional dashboard CSS
 import "../styles/dashboard/payments.css";
 import "../styles/dashboard/products.css";
@@ -81,8 +63,6 @@ import "../styles/pages/Collections.css";
 import "../styles/pages/About.css";
 // Third-party
 import "react-quill/dist/quill.snow.css";
-
-import "../components/products/ProductDetailsTest.css"
 
 import Analytics from "../components/common/Analytics";
 import UTMTracker from "../components/common/UTMTracker";
