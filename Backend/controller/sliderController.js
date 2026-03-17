@@ -33,7 +33,15 @@ const formatSliderResponse = (slider) => {
     
     // Use ImageKit optimized URL if image exists
     if (sliderData.image) {
-        sliderData.image = imagekitService.getOptimizedUrl(sliderData.image, 'large');
+        // Check if it's already an ImageKit path or a legacy filename
+        if (sliderData.image.startsWith('/')) {
+            // ImageKit path
+            sliderData.image = imagekitService.getOptimizedUrl(sliderData.image, 'large');
+        } else {
+            // Legacy filename - return local path for backward compatibility
+            const baseUrl = process.env.API_URL || process.env.BACKEND_URL || 'https://api.crosscoin.in';
+            sliderData.image = `${baseUrl}/uploads/slider/${sliderData.image}`;
+        }
     }
     
     console.log('Formatted slider image path:', sliderData.image);
@@ -314,8 +322,12 @@ const getPublicSliders = async (req, res) => {
             const sliderData = slider.toJSON();
             sliderData.categoryName = slider.category ? slider.category.name : null;
             sliderData.categorySlug = slider.category ? slider.category.slug : null;
-            // Use ImageKit optimized URL
-            sliderData.image = slider.image ? imagekitService.getOptimizedUrl(slider.image, 'large') : null;
+            // Use ImageKit optimized URL or legacy path
+            sliderData.image = slider.image ? (
+                slider.image.startsWith('/') 
+                    ? imagekitService.getOptimizedUrl(slider.image, 'large')
+                    : `${process.env.API_URL || process.env.BACKEND_URL || 'https://api.crosscoin.in'}/uploads/slider/${slider.image}`
+            ) : null;
             // Add brands info
             sliderData.brands = slider.Brands ? slider.Brands.map(brand => brand.name) : [];
             delete sliderData.category;

@@ -22,7 +22,15 @@ const formatCategoryResponse = (category) => {
     
     // Use ImageKit optimized URL if image exists
     if (categoryData.image) {
-        categoryData.image = imagekitService.getOptimizedUrl(categoryData.image, 'medium');
+        // Check if it's already an ImageKit path or a legacy filename
+        if (categoryData.image.startsWith('/')) {
+            // ImageKit path
+            categoryData.image = imagekitService.getOptimizedUrl(categoryData.image, 'medium');
+        } else {
+            // Legacy filename - return local path for backward compatibility
+            const baseUrl = process.env.API_URL || process.env.BACKEND_URL || 'https://api.crosscoin.in';
+            categoryData.image = `${baseUrl}/uploads/categories/${categoryData.image}`;
+        }
     }
     
     console.log('Formatted category image path:', categoryData.image);
@@ -196,7 +204,15 @@ const getAllCategories = async (req, res) => {
             
             // Use ImageKit optimized URL if image exists
             if (categoryData.image) {
-                categoryData.image = imagekitService.getOptimizedUrl(categoryData.image, 'medium');
+                // Check if it's already an ImageKit path or a legacy filename
+                if (categoryData.image.startsWith('/')) {
+                    // ImageKit path
+                    categoryData.image = imagekitService.getOptimizedUrl(categoryData.image, 'medium');
+                } else {
+                    // Legacy filename - return local path for backward compatibility
+                    const baseUrl = process.env.API_URL || process.env.BACKEND_URL || 'https://api.crosscoin.in';
+                    categoryData.image = `${baseUrl}/uploads/categories/${categoryData.image}`;
+                }
             }
             
             // Add brand assignments
@@ -430,7 +446,11 @@ const getPublicCategoryByName = async (req, res) => {
             description: category.description,
             parentId: category.parentId,
             parentName: category.parent ? category.parent.name : null,
-            image: category.image ? imagekitService.getOptimizedUrl(category.image, 'medium') : null,
+            image: category.image ? (
+                category.image.startsWith('/') 
+                    ? imagekitService.getOptimizedUrl(category.image, 'medium')
+                    : `${process.env.API_URL || process.env.BACKEND_URL || 'https://api.crosscoin.in'}/uploads/categories/${category.image}`
+            ) : null,
             slug: category.slug,
             products: category.products ? category.products.map(product => {
                 // Format images array to match Products API structure
