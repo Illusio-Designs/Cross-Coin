@@ -124,7 +124,7 @@
   padding: 40px 20px;
 }
 
-/* Wishlist Grid */
+/* Wishlist Grid - ProductCard handles its own styling */
 .wishlist-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -242,22 +242,7 @@
   gap: 12px;
 }
 
-.see-all {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--accent);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.see-all:hover {
-  gap: 12px;
-}
-
-/* Recommendations Grid */
+/* Recommendations Grid - ProductCard handles its own styling */
 .reco-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
