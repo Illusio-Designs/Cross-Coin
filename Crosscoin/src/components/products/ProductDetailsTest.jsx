@@ -173,7 +173,7 @@ const ProductDetailsTest = ({ product }) => {
           <div className="style-no">Style: #{productData.styleNo}</div>
 
           <div className="price-block">
-            <div className="price-main">₹{productData.price.toFixed(2)}</div>
+            <div className="price-main">₹{parseFloat(productData.price).toFixed(2)}</div>
             <div className="price-note">MRP (Incl. Of All Taxes)</div>
           </div>
 
@@ -391,7 +391,7 @@ const ProductDetailsTest = ({ product }) => {
           <img className="sticky-img" src={productData.images[0]} alt={productData.title} />
           <div>
             <div className="sticky-name">{productData.title}</div>
-            <div className="sticky-price">₹{productData.price.toFixed(2)}</div>
+            <div className="sticky-price">₹{parseFloat(productData.price).toFixed(2)}</div>
           </div>
         </div>
         <div className="sticky-actions">
