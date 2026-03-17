@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { getPublicProductBySlug, getPublicCoupons, getPublicProductReviews } from '../../services/publicApi';
+import Loader from '../Loader';
 
 const ProductDetailsTest = ({ product }) => {
   const [selectedImage, setSelectedImage] = useState(0);
@@ -7,8 +9,15 @@ const ProductDetailsTest = ({ product }) => {
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [pincode, setPincode] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [productData, setProductData] = useState(null);
+  const [selectedVariation, setSelectedVariation] = useState(null);
+  const [selectedSku, setSelectedSku] = useState('');
+  const [coupons, setCoupons] = useState([]);
+  const [allReviews, setAllReviews] = useState([]);
 
-  // Sample product data for testing
+  // Sample product data for fallback
   const sampleProduct = {
     brand: 'Jockey',
     title: 'Tactel Microfiber Elastane Stretch Solid Trunk with Moisture Move Properties - Black',
@@ -41,7 +50,52 @@ const ProductDetailsTest = ({ product }) => {
     ],
   };
 
-  const productData = product || sampleProduct;
+  // Fetch product data on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch product and coupons in parallel
+        const [productResponse, couponsData] = await Promise.all([
+          getPublicProductBySlug('test-product'),
+          getPublicCoupons()
+        ]);
+
+        if (productResponse && productResponse.success && productResponse.data) {
+          setProductData(productResponse.data);
+          if (productResponse.data.variations && productResponse.data.variations.length > 0) {
+            setSelectedVariation(productResponse.data.variations[0]);
+            setSelectedSku(productResponse.data.variations[0].sku);
+          }
+          
+          // Fetch reviews
+          if (productResponse.data.id) {
+            try {
+              const reviewsResponse = await getPublicProductReviews(productResponse.data.id, { page: 1, limit: 10 });
+              if (reviewsResponse.success && reviewsResponse.reviews) {
+                setAllReviews(reviewsResponse.reviews);
+              }
+            } catch (err) {
+              setAllReviews(productResponse.data.reviews || []);
+            }
+          }
+        } else {
+          setProductData(sampleProduct);
+        }
+
+        setCoupons(Array.isArray(couponsData) ? couponsData : couponsData.coupons || []);
+        setLoading(false);
+      } catch (err) {
+        setProductData(sampleProduct);
+        setCoupons([]);
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -63,6 +117,27 @@ const ProductDetailsTest = ({ product }) => {
       alert('Please enter a valid 6-digit pincode.');
     }
   };
+
+  if (loading) {
+    return (
+      <div className="product-details-test">
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          <Loader />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="product-details-test">
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          <h2>Error Loading Product</h2>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="product-details-test">
