@@ -20,11 +20,11 @@ const Wishlist = () => {
   useEffect(() => {
     const fetchRecommendations = async () => {
       try {
-        const response = await getAllPublicProducts({ page: 1, limit: 12 });
+        const response = await getAllPublicProducts({ page: 1, limit: 4 });
         if (response?.data?.products) {
-          setRecos(response.data.products.slice(0, 12));
+          setRecos(response.data.products.slice(0, 4));
         } else if (Array.isArray(response)) {
-          setRecos(response.slice(0, 12));
+          setRecos(response.slice(0, 4));
         }
       } catch (error) {
         console.error('Failed to fetch recommendations:', error);
