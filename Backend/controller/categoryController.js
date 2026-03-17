@@ -20,20 +20,23 @@ const formatCategoryResponse = (category) => {
     const categoryData = category.toJSON();
     categoryData.parentName = category.parent ? category.parent.name : null;
     
-    // Use ImageKit optimized URL if image exists
+    // Handle image path formatting
     if (categoryData.image) {
-        // Check if it's already an ImageKit path or a legacy filename
-        if (categoryData.image.startsWith('/')) {
-            // ImageKit path
-            categoryData.image = imagekitService.getOptimizedUrl(categoryData.image, 'medium');
-        } else {
-            // Legacy filename - return local path for backward compatibility
-            const baseUrl = process.env.API_URL || process.env.BACKEND_URL || 'https://api.crosscoin.in';
-            categoryData.image = `${baseUrl}/uploads/categories/${categoryData.image}`;
+        // If it's already an ImageKit path (/categories, /sliders, /products), return as-is
+        if (categoryData.image.startsWith('/categories') || categoryData.image.startsWith('/sliders') || categoryData.image.startsWith('/products')) {
+            // ImageKit path - return as-is
+            categoryData.image = categoryData.image;
+        }
+        // If it's already a full /uploads/ path, return as-is
+        else if (categoryData.image.startsWith('/uploads/')) {
+            categoryData.image = categoryData.image;
+        }
+        // If it's a legacy filename (no leading slash), add /uploads/categories/ prefix
+        else if (!categoryData.image.startsWith('/')) {
+            categoryData.image = `/uploads/categories/${categoryData.image}`;
         }
     }
     
-    console.log('Formatted category image path:', categoryData.image);
     delete categoryData.parent;
     return categoryData;
 };
