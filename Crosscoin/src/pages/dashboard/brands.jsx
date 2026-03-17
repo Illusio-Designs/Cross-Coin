@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { toast } from 'react-toastify';
+import { showSuccess, showError } from '@/utils/toastNotification';
 import { FiPlus, FiEdit2, FiTrash2, FiX, FiSave, FiToggleLeft, FiToggleRight, FiSearch, FiRefreshCw } from 'react-icons/fi';
 import { brandService } from '@/services';
 import { Modal, Button, Input } from '@/components/ui';
@@ -37,7 +37,7 @@ export default function BrandManager() {
                 setBrands(response.data);
             }
         } catch (error) {
-            toast.error('Failed to load brands');
+            showError('loadingFailed');
         } finally {
             setLoading(false);
         }
@@ -55,7 +55,7 @@ export default function BrandManager() {
         e.preventDefault();
         
         if (!formData.name.trim()) {
-            toast.error('Brand name is required');
+            showError('fieldRequired');
             return;
         }
 
@@ -63,17 +63,17 @@ export default function BrandManager() {
             if (editingBrand) {
                 // Update existing brand
                 await brandService.updateBrand(editingBrand.id, formData);
-                toast.success('Brand updated successfully');
+                showSuccess('brandUpdated');
             } else {
                 // Create new brand
                 await brandService.createBrand(formData);
-                toast.success('Brand created successfully');
+                showSuccess('brandCreated');
             }
             
             resetForm();
             fetchBrands();
         } catch (error) {
-            toast.error(error.message || 'Failed to save brand');
+            showError('saveFailed', error.message);
         }
     };
 
@@ -101,20 +101,20 @@ export default function BrandManager() {
 
         try {
             await brandService.deleteBrand(id);
-            toast.success('Brand deleted successfully');
+            showSuccess('brandDeleted');
             fetchBrands();
         } catch (error) {
-            toast.error('Failed to delete brand');
+            showError('deleteFailed');
         }
     };
 
     const handleToggleStatus = async (id) => {
         try {
             await brandService.toggleBrandStatus(id);
-            toast.success('Brand status updated');
+            showSuccess('brandStatusUpdated');
             fetchBrands();
         } catch (error) {
-            toast.error('Failed to update brand status');
+            showError('updateFailed');
         }
     };
 

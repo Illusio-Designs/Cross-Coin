@@ -24,6 +24,7 @@ import { fbqTrack } from "../utils/fbqTrack";
 import colorMap from "../components/products/colorMap";
 import { Pagination } from "../components/ui";
 import cacheManager from "../services/cacheManager";
+import { showSuccess } from "../utils/toastNotification";
 
 // Load page-specific CSS - moved to _app.jsx
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { toast } from 'react-toastify';
+import { showSuccess, showError } from '@/utils/toastNotification';
 import { FiSave, FiEdit2, FiTrash2, FiX, FiLock, FiUnlock, FiPlus, FiRefreshCw } from 'react-icons/fi';
 import { brandSettingsService, brandService } from '@/services';
 import { Modal, Button, Input } from '@/components/ui';
@@ -50,7 +50,7 @@ export default function BrandSettingsManager() {
                 setSelectedBrandId(response.data[0].id); // Select first brand by default
             }
         } catch (error) {
-            toast.error('Failed to load brands');
+            showError('loadingFailed');
         }
     };
 
@@ -65,7 +65,7 @@ export default function BrandSettingsManager() {
                 setSettings(response.data || []);
             }
         } catch (error) {
-            toast.error('Failed to load settings');
+            showError('loadingFailed');
         } finally {
             setLoading(false);
         }
@@ -81,11 +81,11 @@ export default function BrandSettingsManager() {
                 is_encrypted: setting.is_encrypted
             });
             
-            toast.success('Setting updated successfully');
+            showSuccess('settingUpdated');
             setEditMode(prev => ({ ...prev, [settingId]: false }));
             fetchSettings();
         } catch (error) {
-            toast.error(error.message || 'Failed to update setting');
+            showError('updateFailed', error.message);
         } finally {
             setSaving(prev => ({ ...prev, [settingId]: false }));
         }
@@ -98,16 +98,16 @@ export default function BrandSettingsManager() {
 
         try {
             await brandSettingsService.deleteSetting(selectedBrandId, key);
-            toast.success('Setting deleted successfully');
+            showSuccess('settingDeleted');
             fetchSettings();
         } catch (error) {
-            toast.error('Failed to delete setting');
+            showError('deleteFailed');
         }
     };
 
     const handleAdd = async () => {
         if (!newKey.trim() || !newValue.trim()) {
-            toast.error('Key and value are required');
+            showError('fieldRequired');
             return;
         }
 
@@ -121,7 +121,7 @@ export default function BrandSettingsManager() {
                 is_encrypted: false
             });
             
-            toast.success('Setting added successfully');
+            showSuccess('settingAdded');
             setNewKey('');
             setNewValue('');
             setNewCategory('general');
@@ -129,7 +129,7 @@ export default function BrandSettingsManager() {
             setShowAddForm(false);
             fetchSettings();
         } catch (error) {
-            toast.error(error.message || 'Failed to add setting');
+            showError('saveFailed', error.message);
         }
     };
 
