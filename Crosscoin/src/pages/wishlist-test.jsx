@@ -173,34 +173,34 @@ const WishlistTest = () => {
 
       {/* Recommendations */}
       <div className="reco-section">
-        <div className="reco-header">
-          <div>
-            <div style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '5px' }}>
-              You May Also Like
+        <div>
+          <div className="reco-header">
+            <div>
+              <div className="reco-eyebrow">You May Also Like</div>
+              <h2 className="reco-title">Recommended For You</h2>
             </div>
-            <div className="reco-title">Recommended For You</div>
+            <button className="reco-browse-all" onClick={() => router.push('/products')}>
+              Browse All
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
           </div>
-          <div className="see-all" onClick={() => router.push('/products')}>
-            Browse All
-            <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
+          <div className="reco-grid">
+            {recos.map((reco, idx) => (
+              <ProductCard
+                key={reco.id}
+                product={reco}
+                index={idx}
+                onProductClick={(product) => router.push(`/product/${product.id}`)}
+                onAddToCart={(e, product, color, size, variationId) => {
+                  e.stopPropagation();
+                  addToCart(product, color || '', 'M', 1, variationId);
+                  showToast('✓ Added to bag!');
+                }}
+              />
+            ))}
           </div>
-        </div>
-        <div className="reco-grid">
-          {recos.map((reco, idx) => (
-            <ProductCard
-              key={reco.id}
-              product={reco}
-              index={idx}
-              onProductClick={(product) => router.push(`/product/${product.id}`)}
-              onAddToCart={(e, product, color, size, variationId) => {
-                e.stopPropagation();
-                addToCart(product, color || '', 'M', 1, variationId);
-                showToast('✓ Added to bag!');
-              }}
-            />
-          ))}
         </div>
       </div>
     </>
