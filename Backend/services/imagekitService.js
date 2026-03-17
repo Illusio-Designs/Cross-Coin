@@ -28,8 +28,11 @@ class ImageKitService {
 
     // Get ImageKit URL endpoint from environment
     const urlEndpoint = process.env.IMAGEKIT_URL_ENDPOINT;
-    if (!urlEndpoint) {
-      console.error('IMAGEKIT_URL_ENDPOINT not configured in environment');
+    
+    if (!urlEndpoint || urlEndpoint.includes('your_id')) {
+      console.warn('⚠️ IMAGEKIT_URL_ENDPOINT not properly configured:', urlEndpoint);
+      console.warn('Please set IMAGEKIT_URL_ENDPOINT to your actual ImageKit endpoint');
+      // Return path as-is if not configured
       return imagePath;
     }
 
@@ -50,7 +53,10 @@ class ImageKitService {
     
     // Check if URL already has query parameters
     const separator = fullUrl.includes('?') ? '&' : '?';
-    return `${fullUrl}${separator}tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
+    const optimizedUrl = `${fullUrl}${separator}tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
+    
+    console.log('✅ ImageKit URL generated:', optimizedUrl);
+    return optimizedUrl;
   }
 
   /**

@@ -268,24 +268,7 @@ class CategoryService {
    * @returns {Object} Formatted category
    */
   static _formatCategory(category) {
-    let imageUrl = category.image;
-    
-    // Handle image path formatting
-    if (imageUrl) {
-      // If it's already an ImageKit path (/categories, /sliders, /products), return as-is
-      if (imageUrl.startsWith('/categories') || imageUrl.startsWith('/sliders') || imageUrl.startsWith('/products')) {
-        // ImageKit path - return as-is
-        imageUrl = imageUrl;
-      }
-      // If it's already a full /uploads/ path, return as-is
-      else if (imageUrl.startsWith('/uploads/')) {
-        imageUrl = imageUrl;
-      }
-      // If it's a legacy filename (no leading slash), add /uploads/categories/ prefix
-      else if (!imageUrl.startsWith('/')) {
-        imageUrl = `/uploads/categories/${imageUrl}`;
-      }
-    }
+    const imagekitService = require('./imagekitService');
     
     return {
       id: category.id,
@@ -293,7 +276,7 @@ class CategoryService {
       description: category.description,
       parentId: category.parentId,
       parentName: category.parent ? category.parent.name : null,
-      image: imageUrl,
+      image: category.image ? imagekitService.getOptimizedUrl(category.image, 'medium') : null,
       slug: category.slug
     };
   }
