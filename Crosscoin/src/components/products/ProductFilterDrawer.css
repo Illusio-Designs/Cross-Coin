@@ -1,0 +1,310 @@
+/* Overlay */
+.filter-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 100;
+  transition: opacity 0.3s;
+}
+
+.filter-overlay.open {
+  display: block;
+}
+
+/* Drawer */
+.filter-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.filter-drawer.open {
+  transform: translateX(0);
+}
+
+/* Header */
+.filter-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 20px;
+  border-bottom: 1px solid #e8e8e8;
+  flex-shrink: 0;
+}
+
+.filter-drawer-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a1a;
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+
+.filter-close-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid #d0d0d0;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.filter-close-btn:hover {
+  background: #f5f5f5;
+  border-color: #999;
+}
+
+.filter-close-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: #1a1a1a;
+  stroke-width: 2;
+}
+
+/* Filter list — scrollable */
+.filter-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 24px;
+}
+
+.filter-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.filter-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.filter-list::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 4px;
+}
+
+/* Each filter accordion row */
+.filter-row {
+  border-bottom: 1px solid #ebebeb;
+}
+
+.filter-row:last-child {
+  border-bottom: none;
+}
+
+.filter-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 0;
+  cursor: pointer;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  gap: 12px;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.filter-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  letter-spacing: 0.1px;
+}
+
+.chevron {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+  color: #1a1a1a;
+}
+
+.filter-row.open .chevron {
+  transform: rotate(180deg);
+}
+
+/* Accordion body */
+.filter-body {
+  display: none;
+  padding-bottom: 18px;
+}
+
+.filter-row.open .filter-body {
+  display: block;
+}
+
+/* Option items */
+.filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-opt {
+  border: 1.5px solid #d8d8d8;
+  border-radius: 50px;
+  padding: 7px 16px;
+  font-size: 12px;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  background: #fff;
+}
+
+.filter-opt:hover {
+  border-color: #999;
+  color: #1a1a1a;
+}
+
+.filter-opt.selected {
+  background: #1a1a1a;
+  color: #fff;
+  border-color: #1a1a1a;
+}
+
+/* Price range */
+.price-range-wrap {
+  padding: 4px 0 8px;
+}
+
+.price-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #555;
+  margin-bottom: 12px;
+}
+
+.price-labels span {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.range-track {
+  position: relative;
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  margin: 8px 0 16px;
+}
+
+.range-fill {
+  position: absolute;
+  height: 100%;
+  background: #1a1a1a;
+  border-radius: 4px;
+}
+
+input[type='range'] {
+  position: absolute;
+  width: 100%;
+  top: -6px;
+  height: 16px;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: none;
+}
+
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #1a1a1a;
+  cursor: pointer;
+  pointer-events: all;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #1a1a1a;
+  cursor: pointer;
+  pointer-events: all;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+/* Footer */
+.filter-drawer-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px 24px;
+  border-top: 1px solid #e8e8e8;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.btn-clear {
+  flex: 1;
+  height: 52px;
+  border: 1.5px solid #d0d0d0;
+  background: #fff;
+  border-radius: 50px;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.btn-clear:hover {
+  border-color: #999;
+  background: #f9f9f9;
+}
+
+.btn-apply {
+  flex: 1.4;
+  height: 52px;
+  border: none;
+  background: #1a1a1a;
+  border-radius: 50px;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-apply:hover {
+  background: #333;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .filter-drawer {
+    max-width: 100%;
+  }
+}

@@ -9,15 +9,24 @@ import AttributeSelector from '@/components/products/AttributeSelector';
 import ExistingImageSelector from '@/components/products/ExistingImageSelector';
 import BrandTags from '@/components/Dashboard/BrandTags';
 import BrandAssignment from '@/components/Dashboard/BrandAssignment';
+import ProductFilterDrawer from '@/components/products/ProductFilterDrawer';
 import dynamic from 'next/dynamic';
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
 const ProductsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [totalProducts, setTotalProducts] = useState(0);
   const [filterValue, setFilterValue] = useState("");
+  const [activeFilters, setActiveFilters] = useState({
+    categories: [],
+    priceRange: { min: 0, max: 10000 },
+    status: [],
+    badge: [],
+    attributes: {}
+  });
   const [loading, setLoading] = useState(false);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -149,6 +158,12 @@ const ProductsPage = () => {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  // Handle filter application
+  const handleApplyFilters = (filters) => {
+    setActiveFilters(filters);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
 
   // Backend handles filtering and pagination
   const filteredData = products;
@@ -1452,6 +1467,35 @@ const ProductsPage = () => {
               />
             </div>
           </form>
+          <button
+            onClick={() => setIsFilterDrawerOpen(true)}
+            style={{
+              padding: '10px 16px',
+              background: '#f5f5f5',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = '#efefef';
+              e.target.style.borderColor = '#999';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = '#f5f5f5';
+              e.target.style.borderColor = '#ddd';
+            }}
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            Filter
+          </button>
           <Button onClick={handleAddNew} variant="primary" className="add-new-btn">Add New Product</Button>
         </div>
       </div>
@@ -1567,6 +1611,15 @@ const ProductsPage = () => {
         }}
         onSelectImages={handleVariationExistingImagesSelect}
         productId={formData.id} // Pass the product ID when editing
+      />
+
+      {/* Product Filter Drawer */}
+      <ProductFilterDrawer
+        isOpen={isFilterDrawerOpen}
+        onClose={() => setIsFilterDrawerOpen(false)}
+        onApplyFilters={handleApplyFilters}
+        categories={categories}
+        attributes={attributes}
       />
     </div>
     </>

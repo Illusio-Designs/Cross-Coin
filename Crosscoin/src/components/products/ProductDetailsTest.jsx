@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/router';
 import { getPublicProductBySlug, getPublicCoupons, getPublicProductReviews } from '../../services/publicApi';
 import Loader from '../Loader';
 
 const ProductDetailsTest = ({ product }) => {
+  const router = useRouter();
+  const slug = router.query?.slug ? decodeURIComponent(router.query.slug) : null;
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState(0);
@@ -52,6 +55,8 @@ const ProductDetailsTest = ({ product }) => {
 
   // Fetch product data on mount
   useEffect(() => {
+    if (!router.isReady || !slug) return;
+
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -59,7 +64,7 @@ const ProductDetailsTest = ({ product }) => {
 
         // Fetch product and coupons in parallel
         const [productResponse, couponsData] = await Promise.all([
-          getPublicProductBySlug('test-product'),
+          getPublicProductBySlug(slug),
           getPublicCoupons()
         ]);
 
