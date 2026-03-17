@@ -43,6 +43,7 @@ import "../styles/components/HeroSlider.css";
 import "../styles/components/SlidingCollection.css";
 import "../styles/components/UnlockedExclusives.css";
 import "../styles/components/CouponStrip.css";
+import "../styles/components/Toast.css";
 // Component-local CSS (co-located with components)
 import "../components/Sidebar/Sidebar.css";
 import "../components/cart/CartDrawer.css";

@@ -5,7 +5,7 @@ import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
 import { getAllPublicProducts } from '../services/publicApi';
 import ProductCard from '../components/ProductCard';
-import { toast } from 'react-toastify';
+import { showSuccess, showError, showWarning } from '../utils/toastNotification';
 import SeoWrapper from '../console/SeoWrapper';
 
 const Wishlist = () => {
@@ -60,13 +60,13 @@ const Wishlist = () => {
 
   const removeItem = (id) => {
     removeFromWishlist(id);
-    showToast('Removed from wishlist');
+    showSuccess('removedFromWishlist');
   };
 
   const handleClearWishlist = () => {
     if (window.confirm('Are you sure you want to clear your wishlist?')) {
       clearWishlist();
-      showToast('Wishlist cleared');
+      showSuccess('wishlistCleared');
     }
   };
 
@@ -128,7 +128,7 @@ const Wishlist = () => {
                 <option value="price-low">Price: Low to High</option>
               </select>
             </div>
-            <button className="ph-btn" onClick={() => showToast('🔗 Wishlist link copied!')}>
+            <button className="ph-btn" onClick={() => showSuccess('wishlistShared')}>
               <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ display: 'inline', marginRight: '5px', verticalAlign: 'middle' }}>
                 <circle cx="18" cy="5" r="3" />
                 <circle cx="6" cy="12" r="3" />
@@ -140,14 +140,14 @@ const Wishlist = () => {
             </button>
             <button className="ph-btn primary" onClick={() => {
               if (filtered.length === 0) {
-                showToast('No items to add');
+                showError('noItemsToAdd');
                 return;
               }
               filtered.forEach(item => {
                 addToCart(item, '', 'M', 1);
                 removeFromWishlist(item.id);
               });
-              showToast('✓ All items added to bag!');
+              showSuccess('allAddedToCart');
             }}>
               Add All to Bag
             </button>
@@ -204,7 +204,7 @@ const Wishlist = () => {
                   onAddToCart={(e, product, color, variationId) => {
                     e.stopPropagation();
                     addToCart(product, color || '', 'M', 1, variationId);
-                    showToast('✓ Added to bag!');
+                    showSuccess('addedToCart');
                   }}
                 />
                 <button
@@ -273,7 +273,7 @@ const Wishlist = () => {
                 onAddToCart={(e, product, color, variationId) => {
                   e.stopPropagation();
                   addToCart(product, color || '', 'M', 1, variationId);
-                  showToast('✓ Added to bag!');
+                  showSuccess('addedToCart');
                 }}
               />
             ))}
