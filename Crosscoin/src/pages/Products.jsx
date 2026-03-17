@@ -927,25 +927,23 @@ const Products = () => {
               onClick={() => setShowFilters(!showFilters)}
               style={{
                 padding: '10px 16px',
-                background: '#f5f5f5',
-                border: '1px solid #ddd',
+                background: '#CE1E36',
+                border: 'none',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontSize: '14px',
-                fontWeight: '500',
+                fontWeight: '600',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
                 transition: 'all 0.2s',
-                color: '#1a1a1a'
+                color: '#fff'
               }}
               onMouseEnter={(e) => {
-                e.target.style.background = '#efefef';
-                e.target.style.borderColor = '#999';
+                e.currentTarget.style.background = '#a0182b';
               }}
               onMouseLeave={(e) => {
-                e.target.style.background = '#f5f5f5';
-                e.target.style.borderColor = '#ddd';
+                e.currentTarget.style.background = '#CE1E36';
               }}
             >
               <FiFilter size={18} /> Filters

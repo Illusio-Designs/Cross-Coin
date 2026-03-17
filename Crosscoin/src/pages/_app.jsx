@@ -78,6 +78,7 @@ function AppContent({ Component, pageProps, progressRef }) {
   
   // Check if current route is a dashboard route
   const isDashboard = router.pathname.startsWith('/dashboard');
+  const isAuthPage = router.pathname === '/login' || router.pathname === '/register';
 
   return (
     <>
@@ -89,11 +90,11 @@ function AppContent({ Component, pageProps, progressRef }) {
           style={{ height: 0 }}
         />
       </div>
-      {!isDashboard && <Header />}
-      {!isDashboard && <Breadcrumb />}
+      {!isDashboard && !isAuthPage && <Header />}
+      {!isDashboard && !isAuthPage && <Breadcrumb />}
       {/* Removed blocking loader - pages load instantly */}
       <Component {...pageProps} />
-      {!isDashboard && <Footer />}
+      {!isDashboard && !isAuthPage && <Footer />}
       <CartDrawer 
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)}

@@ -337,8 +337,8 @@ const Home = () => {
         <HeroSlider slides={slides} />
         <CouponStrip />
         <TrustBadges />
-        <SlidingCollection collections={categories} />
-        <UnlockedExclusives products={exclusiveProducts} />
+        <SlidingCollection collections={categories} isLoading={loading} />
+        <UnlockedExclusives products={exclusiveProducts} loading={exclusiveProductsLoading} />
         <div className="shop-by-category">
           <div className="latest-title">
             <div className="section-header-inline">

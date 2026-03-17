@@ -348,10 +348,6 @@
 }
 
 @media (max-width: 768px) {
-  .pagination {
-    gap: 4px;
-  }
-  
   .pagination-btn {
     min-width: 32px;
     height: 32px;

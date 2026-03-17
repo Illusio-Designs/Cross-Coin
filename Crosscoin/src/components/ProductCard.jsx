@@ -162,7 +162,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
               <path d="M3 6H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M16 10C16 11.0609 15.5786 12.0783 14.8284 12.8284C14.0783 13.5786 13.0609 14 12 14C10.9391 14 9.92172 13.5786 9.17157 12.8284C8.42143 12.0783 8 11.0609 8 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            ADD TO BAG
+            <span className="btn-text">ADD TO BAG</span>
           </button>
         </div>
       </div>
