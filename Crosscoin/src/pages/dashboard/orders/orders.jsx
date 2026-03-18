@@ -967,19 +967,14 @@ const Orders = () => {
                     <div className={`notification notification-${notification.type}`}>
                         <div className="notification-content">
                             <span className="notification-message">{notification.message}</span>
-                            <button 
-                                className="notification-close"
-                                onClick={() => setNotification(null)}
-                            >
-                                ×
-                            </button>
+                            <button className="notification-close" onClick={() => setNotification(null)}>×</button>
                         </div>
                     </div>
                 )}
 
                 <div className="orders-header-container">
                     {/* Page Header */}
-                    <div className="sl-page-header" style={{ marginBottom: '20px' }}>
+                    <div className="sl-page-header">
                         <div className="sl-header-left">
                             <div className="sl-header-icon">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
@@ -1007,135 +1002,39 @@ const Orders = () => {
                     </div>
                     
                     {/* Analytics Charts */}
-                    <div className="orders-analytics" style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(3, 1fr)',
-                        gap: '16px',
-                        marginBottom: '24px'
-                    }}>
+                    <div className="orders-analytics">
                         <PaymentChart allOrdersStats={allOrdersStats} />
                         <PaymentStatusChart allOrdersStats={allOrdersStats} />
                         <ShippingChart orders={allOrdersData} allOrdersStats={allOrdersStats} />
                     </div>
                     
-                    {/* Add responsive styles */}
-                    <style jsx>{`
-                        @media (max-width: 1400px) {
-                            .orders-analytics {
-                                grid-template-columns: repeat(3, 1fr) !important;
-                                gap: 12px !important;
-                            }
-                        }
-                        @media (max-width: 1200px) {
-                            .orders-analytics {
-                                grid-template-columns: repeat(2, 1fr) !important;
-                            }
-                        }
-                        @media (max-width: 768px) {
-                            .orders-analytics {
-                                grid-template-columns: 1fr !important;
-                            }
-                        }
-                    `}</style>
-                    
                     {/* Export Section */}
-                    <div className="export-section" style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '16px 20px',
-                        background: 'linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%)',
-                        borderRadius: '8px',
-                        marginBottom: '20px',
-                        border: '2px solid #180D3E',
-                        flexWrap: 'wrap'
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto' }}>
-                            <svg width="20" height="20" fill="none" stroke="#180D3E" strokeWidth="2" viewBox="0 0 24 24">
+                    <div className="orders-export-section">
+                        <div className="orders-export-left">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                            <span style={{ fontWeight: '600', color: '#180D3E', fontSize: '14px' }}>Export Delivered Orders</span>
+                            <span>Export Delivered Orders</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <label style={{ fontSize: '13px', color: '#180D3E', fontWeight: '500' }}>From:</label>
-                            <input 
-                                type="date" 
-                                value={exportStartDate}
-                                onChange={(e) => setExportStartDate(e.target.value)}
-                                style={{
-                                    padding: '6px 10px',
-                                    border: '2px solid #180D3E',
-                                    borderRadius: '6px',
-                                    fontSize: '13px',
-                                    outline: 'none',
-                                    cursor: 'pointer'
-                                }}
-                            />
+                        <div className="orders-export-dates">
+                            <label>From:</label>
+                            <input type="date" value={exportStartDate} onChange={(e) => setExportStartDate(e.target.value)} className="orders-date-input" />
+                            <label>To:</label>
+                            <input type="date" value={exportEndDate} onChange={(e) => setExportEndDate(e.target.value)} className="orders-date-input" />
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <label style={{ fontSize: '13px', color: '#180D3E', fontWeight: '500' }}>To:</label>
-                            <input 
-                                type="date" 
-                                value={exportEndDate}
-                                onChange={(e) => setExportEndDate(e.target.value)}
-                                style={{
-                                    padding: '6px 10px',
-                                    border: '2px solid #180D3E',
-                                    borderRadius: '6px',
-                                    fontSize: '13px',
-                                    outline: 'none',
-                                    cursor: 'pointer'
-                                }}
-                            />
-                        </div>
-                        <button 
+                        <button
                             onClick={handleExportDeliveredOrders}
                             disabled={isExporting || !exportStartDate || !exportEndDate}
-                            style={{
-                                padding: '8px 16px',
-                                background: isExporting || !exportStartDate || !exportEndDate ? '#ccc' : 'linear-gradient(135deg, #180D3E 0%, #2a1a4d 100%)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                cursor: isExporting || !exportStartDate || !exportEndDate ? 'not-allowed' : 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                transition: 'all 0.3s ease',
-                                boxShadow: isExporting || !exportStartDate || !exportEndDate ? 'none' : '0 2px 8px rgba(24, 13, 62, 0.2)'
-                            }}
-                            onMouseOver={(e) => {
-                                if (!isExporting && exportStartDate && exportEndDate) {
-                                    e.target.style.background = 'linear-gradient(135deg, #CE1E36 0%, #b71c1c 100%)';
-                                    e.target.style.transform = 'translateY(-2px)';
-                                    e.target.style.boxShadow = '0 4px 12px rgba(206, 30, 54, 0.3)';
-                                }
-                            }}
-                            onMouseOut={(e) => {
-                                if (!isExporting && exportStartDate && exportEndDate) {
-                                    e.target.style.background = 'linear-gradient(135deg, #180D3E 0%, #2a1a4d 100%)';
-                                    e.target.style.transform = 'translateY(0)';
-                                    e.target.style.boxShadow = '0 2px 8px rgba(24, 13, 62, 0.2)';
-                                }
-                            }}
+                            className={`sl-add-btn${isExporting || !exportStartDate || !exportEndDate ? ' sl-add-btn--disabled' : ''}`}
                         >
-                            {isExporting ? (
-                                <>
-                                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="animate-spin">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                    </svg>
-                                    Exporting...
-                                </>
-                            ) : (
-                                <>
-                                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    Export to Excel
-                                </>
-                            )}
+                            <span className="sl-add-btn-icon">
+                                {isExporting ? (
+                                    <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="animate-spin"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                ) : (
+                                    <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                )}
+                            </span>
+                            {isExporting ? 'Exporting...' : 'Export Excel'}
                         </button>
                     </div>
                     

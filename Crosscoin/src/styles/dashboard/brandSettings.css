@@ -76,10 +76,10 @@
 /* Add Form */
 .add-form-card {
     background: white;
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 24px;
     margin-bottom: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .add-form-card h3 {
@@ -143,8 +143,9 @@
     margin-bottom: 24px;
     padding: 16px;
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    box-shadow: none;
+    border: 1px solid #ebebf0;
 }
 
 .category-btn {
@@ -193,9 +194,9 @@
 
 .setting-card {
     background: white;
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     transition: box-shadow 0.2s;
 }
 
@@ -221,7 +222,7 @@
 .category-badge {
     display: inline-block;
     padding: 4px 10px;
-    border-radius: 12px;
+    border-radius: 20px;
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;

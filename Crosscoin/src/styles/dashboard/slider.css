@@ -20,7 +20,7 @@
 .sl-header-icon {
   width: 44px; height: 44px;
   background: #f0eeff;
-  border-radius: 10px;
+  border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   color: #180D3E; flex-shrink: 0;
 }
@@ -65,7 +65,7 @@
 .sl-add-btn-icon svg { width: 16px; height: 16px; }
 
 .sl-table-wrap {
-  background: #fff; border-radius: 10px;
+  background: #fff; border-radius: 8px;
   border: 1px solid #ebebf0; overflow: hidden;
 }
 
