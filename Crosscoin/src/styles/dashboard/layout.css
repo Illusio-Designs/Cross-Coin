@@ -215,3 +215,131 @@
     font-size: 0.9rem;
   }
 }
+
+/* ── Dashboard Header (dh) ──────────────────────────────────── */
+.dh {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border-bottom: 1px solid #e8e8f0;
+  box-shadow: 0 1px 6px rgba(24,13,62,0.05);
+  padding: 0 20px;
+  box-sizing: border-box;
+  transition: left 0.3s cubic-bezier(.4,0,.2,1), width 0.3s cubic-bezier(.4,0,.2,1);
+}
+
+.dh-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.dh-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #180D3E;
+  font-family: 'DM Sans', sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dh-hamburger {
+  background: #180D3E;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.18s;
+}
+
+.dh-hamburger:hover {
+  background: #CE1E36;
+}
+
+.dh-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.dh-action {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #180D3E;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s;
+}
+
+.dh-action:hover {
+  background: #f4f3ff;
+}
+
+/* ── Dashboard Footer (df) ──────────────────────────────────── */
+.df {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  background: #ffffff;
+  border-top: 1px solid #e8e8f0;
+  font-size: 0.82rem;
+  color: #9999bb;
+  font-family: 'DM Sans', sans-serif;
+  box-sizing: border-box;
+  transition: left 0.3s cubic-bezier(.4,0,.2,1), width 0.3s cubic-bezier(.4,0,.2,1);
+}
+
+@media (max-width: 900px) {
+  .dh {
+    left: 0 !important;
+    width: 100% !important;
+    padding: 0 14px;
+  }
+
+  .dh-title {
+    font-size: 1.1rem;
+  }
+
+  .df {
+    left: 0 !important;
+    width: 100% !important;
+    height: 40px;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dh-title {
+    font-size: 1rem;
+  }
+
+  .df {
+    height: 36px;
+    font-size: 0.7rem;
+  }
+}

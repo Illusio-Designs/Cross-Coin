@@ -228,7 +228,7 @@ function Dashboard() {
           isMobile={isMobile}
           onMobileMenuToggle={handleMobileMenuToggle}
         />
-        <DashboardFooter isCollapsed={isCollapsed} sidebarWidth={sidebarWidth} />
+        <DashboardFooter sidebarWidth={sidebarWidth} isMobile={isMobile} />
         <div
           className="dashboard-main"
           style={{
