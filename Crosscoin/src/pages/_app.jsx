@@ -78,6 +78,7 @@ import "../styles/dashboard/orders.css";
 import "../styles/dashboard/media.css";
 import "../styles/dashboard/utmAnalytics.css";
 import "../styles/dashboard/attributes.css";
+import "../styles/dashboard/slider.css";
 // Additional page CSS
 import "../styles/pages/Collections.css";
 import "../styles/pages/About.css";
