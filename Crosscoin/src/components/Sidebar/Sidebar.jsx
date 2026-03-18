@@ -51,7 +51,8 @@ const MENU = [
 
 export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, currentView, isMobileMenuOpen, onMobileMenuToggle }) {
   const [openMenu, setOpenMenu] = React.useState(null);
-  const [hoveredIdx, setHoveredIdx] = React.useState(null);
+  // tooltip: { idx, top } — top is the vertical centre of the hovered item
+  const [tooltip, setTooltip] = React.useState(null);
   const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
@@ -60,6 +61,17 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+  const handleMouseEnter = (e, idx) => {
+    if (isMobile || !isCollapsed) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltip({ idx, top: rect.top + rect.height / 2 });
+  };
+
+  const handleMouseLeave = () => {
+    if (isMobile || !isCollapsed) return;
+    setTooltip(null);
+  };
 
   const isActive = (item) => {
     if (item.view && currentView === item.view) return true;
@@ -111,24 +123,22 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
           ) : null}
         </div>
 
-        {/* Nav */}
         <nav className="sb-nav">
           {MENU.map((item, idx) => {
             const active = isActive(item);
             const isOpen = openMenu === idx;
-            const showTooltip = !isMobile && isCollapsed && hoveredIdx === idx;
+            const showTooltip = !isMobile && isCollapsed && tooltip?.idx === idx;
 
             return (
               <div
                 key={item.label}
                 className="sb-item"
-                onMouseEnter={() => !isMobile && isCollapsed && setHoveredIdx(idx)}
-                onMouseLeave={() => !isMobile && isCollapsed && setHoveredIdx(null)}
+                onMouseEnter={(e) => handleMouseEnter(e, idx)}
+                onMouseLeave={handleMouseLeave}
               >
                 <button
                   className={`sb-link${active ? ' sb-link--active' : ''}`}
                   onClick={() => handleItemClick(item, idx)}
-                  title={isCollapsed && !isMobile ? item.label : undefined}
                 >
                   <span className="sb-icon">{item.icon}</span>
                   {expanded && <span className="sb-label">{item.label}</span>}
@@ -152,12 +162,14 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
                   </div>
                 )}
 
-                {/* Tooltip for collapsed desktop */}
+                {/* Tooltip for collapsed desktop — vertically centred on the hovered row */}
                 {showTooltip && !item.submenu && (
-                  <div className="sb-tooltip">{item.label}</div>
+                  <div className="sb-tooltip" style={{ top: tooltip.top }}>
+                    {item.label}
+                  </div>
                 )}
                 {showTooltip && item.submenu && (
-                  <div className="sb-tooltip-menu">
+                  <div className="sb-tooltip-menu" style={{ top: tooltip.top }}>
                     <div className="sb-tooltip-title">{item.label}</div>
                     {item.submenu.map(s => (
                       <button
