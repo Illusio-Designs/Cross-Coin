@@ -644,7 +644,8 @@ export const getGuestOrder = async (email, orderNumber) => {
 export const trackOrderByOrderNumber = async (orderNumber) => {
   try {
     const response = await axios.get(
-      `${API_URL}/api/orders/track/${encodeURIComponent(orderNumber)}`
+      `${API_URL}/api/orders/track/${encodeURIComponent(orderNumber)}`,
+      addBrandHeader()
     );
     return response.data;
   } catch (error) {
@@ -655,7 +656,8 @@ export const trackOrderByOrderNumber = async (orderNumber) => {
 export const trackOrderByAWB = async (awbNumber) => {
   try {
     const response = await axios.get(
-      `${API_URL}/api/orders/track/awb?awb_number=${encodeURIComponent(awbNumber)}`
+      `${API_URL}/api/orders/track/awb?awb_number=${encodeURIComponent(awbNumber)}`,
+      addBrandHeader()
     );
     return response.data;
   } catch (error) {
