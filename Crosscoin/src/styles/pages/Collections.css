@@ -1,32 +1,43 @@
 .collections-container {
-  padding: 60px 8%;
+  padding: 60px 40px;
   background: #ffffff;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-.collections-title {
-  text-align: center;
-  margin-bottom: 60px;
-  font-size: 3rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: #180d3e;
-  position: relative;
-  display: block;
-  width: 100%;
+.collections-header {
+  margin-bottom: 48px;
+  text-align: left;
 }
 
-.collections-title::after {
-  content: '';
-  position: absolute;
-  bottom: -15px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100px;
-  height: 4px;
-  background: linear-gradient(90deg, #ce1e36 0%, #180d3e 100%);
-  border-radius: 2px;
+.section-header-inline {
+  text-align: left;
+}
+
+.section-header-h2 {
+  font-size: clamp(20px, 5vw, 40px);
+  font-weight: 300;
+  letter-spacing: 0.16em;
+  color: #1a1a1a;
+  text-transform: uppercase;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.section-header-h2 strong {
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #CE1E36;
+}
+
+.section-header-sub {
+  margin: 6px 0 0 0;
+  font-size: clamp(11px, 2vw, 13px);
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  color: #999;
+  padding: 0;
 }
 
 .collections-grid {
@@ -115,17 +126,21 @@
 /* Mobile Responsive Styles */
 @media (max-width: 768px) {
   .collections-container {
-    padding: 40px 4%;
+    padding: 40px 20px;
     max-width: 100%;
   }
 
-  .collections-title {
-    font-size: 2.2rem;
-    margin-bottom: 40px;
+  .collections-header {
+    margin-bottom: 32px;
   }
-  
-  .collections-title::after {
-    width: 80px;
+
+  .section-header-h2 {
+    font-size: 28px;
+    letter-spacing: 0.12em;
+  }
+
+  .section-header-sub {
+    font-size: 12px;
   }
 
   .collections-grid {
@@ -153,17 +168,20 @@
 
 @media (max-width: 426px) {
   .collections-container {
-    padding: 30px 3%;
+    padding: 30px 16px;
   }
 
-  .collections-title {
-    font-size: 1.9rem;
-    margin-bottom: 30px;
+  .collections-header {
+    margin-bottom: 24px;
   }
-  
-  .collections-title::after {
-    width: 70px;
-    height: 3px;
+
+  .section-header-h2 {
+    font-size: 22px;
+    letter-spacing: 0.1em;
+  }
+
+  .section-header-sub {
+    font-size: 11px;
   }
 
   .collections-grid {

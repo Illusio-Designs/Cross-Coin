@@ -104,7 +104,12 @@ const Collections = () => {
       <SeoWrapper pageName="categories">
 
         <div className="collections-container">
-          <h1 className="section-title">Collections</h1>
+          <div className="collections-header">
+            <div className="section-header-inline">
+              <h1 className="section-header-h2">Our <strong>Collections</strong></h1>
+              <p className="section-header-sub">Explore our curated selection</p>
+            </div>
+          </div>
           <div className="loading-state">
             <Loader />
           </div>
@@ -118,7 +123,12 @@ const Collections = () => {
       <SeoWrapper pageName="categories">
 
         <div className="collections-container">
-          <h1 className="section-title">Collections</h1>
+          <div className="collections-header">
+            <div className="section-header-inline">
+              <h1 className="section-header-h2">Our <strong>Collections</strong></h1>
+              <p className="section-header-sub">Explore our curated selection</p>
+            </div>
+          </div>
           <div className="error-state">
             <p>Error: {error}</p>
             <button 
@@ -139,7 +149,12 @@ const Collections = () => {
     <SeoWrapper pageName="categories">
 
       <div className="collections-container">
-        <h1 className="section-title">Collections</h1>
+        <div className="collections-header">
+          <div className="section-header-inline">
+            <h1 className="section-header-h2">Our <strong>Collections</strong></h1>
+            <p className="section-header-sub">Explore our curated selection</p>
+          </div>
+        </div>
         <div className="collections-grid">
           {safeCategories.length > 0 ? (
             safeCategories.map((cat) => {
