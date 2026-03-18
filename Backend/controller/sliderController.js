@@ -313,12 +313,24 @@ const getPublicSliders = async (req, res) => {
             const sliderData = slider.toJSON();
             sliderData.categoryName = slider.category ? slider.category.name : null;
             sliderData.categorySlug = slider.category ? slider.category.slug : null;
-            // Use ImageKit optimized URL or legacy path
-            sliderData.image = slider.image ? (
-                slider.image.startsWith('/') 
-                    ? imagekitService.getOptimizedUrl(slider.image, 'large')
-                    : `${process.env.API_URL || process.env.BACKEND_URL || 'https://api.crosscoin.in'}/uploads/slider/${slider.image}`
-            ) : null;
+
+            // Send responsive image sizes so the frontend can pick the right one per device
+            if (slider.image) {
+                const imagePath = slider.image.startsWith('/')
+                    ? slider.image
+                    : `/sliders/${slider.image}`;
+
+                sliderData.image = imagekitService.getOptimizedUrl(imagePath, 'large');
+                sliderData.imageMobile = imagekitService.getOptimizedUrl(imagePath, 'medium');
+                sliderData.imageThumbnail = imagekitService.getOptimizedUrl(imagePath, 'thumbnail');
+                sliderData.imageSrcSet = imagekitService.getResponsiveSrcSet(imagePath);
+            } else {
+                sliderData.image = null;
+                sliderData.imageMobile = null;
+                sliderData.imageThumbnail = null;
+                sliderData.imageSrcSet = null;
+            }
+
             // Add brands info
             sliderData.brands = slider.Brands ? slider.Brands.map(brand => brand.name) : [];
             delete sliderData.category;

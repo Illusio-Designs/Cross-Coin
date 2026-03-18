@@ -2049,3 +2049,20 @@
 .featured-product-card.skeleton-card .product-info {
   flex: 1;
 }
+
+
+/* ── HOME REVIEWS SECTION ── */
+.home-reviews-section {
+  padding: 60px 10%;
+  background: #fff;
+}
+
+.home-reviews-header {
+  margin-bottom: 32px;
+}
+
+@media (max-width: 768px) {
+  .home-reviews-section {
+    padding: 40px 5%;
+  }
+}
