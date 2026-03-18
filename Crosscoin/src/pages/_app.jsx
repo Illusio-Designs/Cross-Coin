@@ -130,6 +130,7 @@ function AppContent({ Component, pageProps, progressRef }) {
         hideProgressBar={true}
         newestOnTop={true}
         closeOnClick={true}
+        closeButton={true}
         rtl={false}
         pauseOnFocusLoss={false}
         draggable={true}
