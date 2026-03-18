@@ -467,7 +467,7 @@ const Orders = () => {
                         </button>
                     </div>
 
-                    {/* Filters Section */}
+                    {/* Filters + Sort Section */}
                     <div className="orders-filters-section">
                         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pay-filter-select">
                             <option value="all">All Order Status</option>
@@ -501,10 +501,23 @@ const Orders = () => {
                             <option value="refund_pending">Refund Pending</option>
                             <option value="cancelled">Cancelled</option>
                         </select>
-                    </div>
-
-                    {/* Action Buttons + Label Stats */}
-                    <div className="orders-actions-bar">
+                        <div className="orders-filter-divider" />
+                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="pay-filter-select">
+                            <option value="createdAt">Sort: Date</option>
+                            <option value="total">Sort: Total</option>
+                            <option value="status">Sort: Status</option>
+                            <option value="payment_status">Sort: Payment</option>
+                        </select>
+                        <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} className="pay-filter-select">
+                            <option value="desc">Newest First</option>
+                            <option value="asc">Oldest First</option>
+                        </select>
+                        <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="pay-filter-select">
+                            <option value={10}>Show: 10</option>
+                            <option value={25}>Show: 25</option>
+                            <option value={50}>Show: 50</option>
+                            <option value={100}>Show: 100</option>
+                        </select>
                         {selectedOrders.size > 0 && (
                             <button className={`sl-add-btn${isDownloadingBulk ? ' sl-add-btn--disabled' : ''}`}
                                 onClick={handleBulkDownload} disabled={isDownloadingBulk}>
@@ -516,13 +529,9 @@ const Orders = () => {
                                 {isDownloadingBulk ? 'Downloading...' : `Download ${selectedOrders.size} Labels`}
                             </button>
                         )}
-                        <div className="orders-label-stats">
-                            <span className="orders-label-stat">Labels: <strong>{labelStats.totalLabels}</strong></span>
-                            <span className="orders-label-stat downloaded">Downloaded: <strong>{labelStats.downloadedLabels}</strong></span>
-                            <span className="orders-label-stat pending">Pending: <strong>{labelStats.pendingLabels}</strong></span>
-                        </div>
                     </div>
-                </div>
+
+                </div>{/* end orders-header-container */}
 
                 {/* Table Section */}
                 <div className="sl-table-wrap">
@@ -537,34 +546,6 @@ const Orders = () => {
                         </div>
                     ) : (
                         <>
-                            {/* Sort Controls */}
-                            <div className="orders-sort-bar">
-                                <div className="sort-group">
-                                    <label>Sort by:</label>
-                                    <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="sort-select">
-                                        <option value="createdAt">Date</option>
-                                        <option value="total">Total Amount</option>
-                                        <option value="status">Order Status</option>
-                                        <option value="payment_status">Payment Status</option>
-                                    </select>
-                                </div>
-                                <div className="sort-group">
-                                    <label>Order:</label>
-                                    <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} className="sort-select">
-                                        <option value="desc">Newest First</option>
-                                        <option value="asc">Oldest First</option>
-                                    </select>
-                                </div>
-                                <div className="sort-group">
-                                    <label>Show:</label>
-                                    <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="sort-select">
-                                        <option value={10}>10 results</option>
-                                        <option value={25}>25 results</option>
-                                        <option value={50}>50 results</option>
-                                        <option value={100}>100 results</option>
-                                    </select>
-                                </div>
-                            </div>
                             <Table columns={columns} data={currentItemsWithSN} striped={true} hoverable={true} />
                             {totalOrders > itemsPerPage && (
                                 <div className="sl-pagination">

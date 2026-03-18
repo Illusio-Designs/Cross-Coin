@@ -451,7 +451,7 @@
 
 .desc-card {
   position: relative;
-  border-radius: 10px;
+  border-radius: 8px;
   overflow: hidden;
   aspect-ratio: 3/4;
   background: var(--gray-bg);
@@ -525,7 +525,7 @@
   align-items: center;
   gap: 8px;
   border: 1px solid var(--gray-border);
-  border-radius: 50px;
+  border-radius: 8px;
   padding: 7px 16px;
   font-family: var(--font-main);
   font-size: 13px;
@@ -601,7 +601,7 @@
   align-items: center;
   gap: 6px;
   border: 1px solid var(--gray-border);
-  border-radius: 50px;
+  border-radius: 8px;
   padding: 5px 14px 5px 8px;
   font-family: var(--font-main);
   font-size: 13px;
@@ -688,7 +688,7 @@
   background: var(--black);
   color: var(--white);
   padding: 10px 24px;
-  border-radius: 30px;
+  border-radius: 8px;
   font-family: var(--font-main);
   font-size: 13px;
   font-weight: 600;
@@ -746,3 +746,4 @@
     align-items: flex-start;
   }
 }
+

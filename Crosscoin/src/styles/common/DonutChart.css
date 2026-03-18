@@ -5,7 +5,7 @@
 /* Card wrapper */
 .dc-chart-card {
   background: #fff;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid #ebebf0;
   padding: 18px 20px 14px;
   display: flex;
@@ -201,7 +201,7 @@
 
 .dc-modal {
   background: #fff;
-  border-radius: 14px;
+  border-radius: 8px;
   max-width: 680px;
   width: 100%;
   max-height: 90vh;
@@ -369,8 +369,9 @@
 
 @media (max-width: 480px) {
   .dc-chart-card { padding: 12px; min-height: 220px; }
-  .dc-modal { border-radius: 10px; }
+  .dc-modal { border-radius: 8px; }
   .dc-modal-header { padding: 18px 18px 14px; }
   .dc-modal-body { padding: 18px; }
   .dc-modal-title { font-size: 16px; }
 }
+
