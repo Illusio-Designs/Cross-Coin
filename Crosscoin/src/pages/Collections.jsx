@@ -176,9 +176,14 @@ const Collections = () => {
                       alt={cat.name}
                       className="category-card-image"
                       width="100%"
-                      height="auto"
-                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                      height="300"
+                      style={{ objectFit: 'cover', width: '100%', height: '100%', display: 'block' }}
                     />
+                  )}
+                  {!cat.image && (
+                    <div className="category-card-placeholder">
+                      <span>{cat.name}</span>
+                    </div>
                   )}
                 </div>
                 <div className="category-card-info">
