@@ -102,7 +102,7 @@ function AppContent({ Component, pageProps, progressRef }) {
   
   // Check if current route is a dashboard route
   const isDashboard = router.pathname.startsWith('/dashboard');
-  const isAuthPage = router.pathname === '/login' || router.pathname === '/register';
+  const isAuthPage = router.pathname.startsWith('/auth');
 
   return (
     <>
