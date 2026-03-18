@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import SeoWrapper from '../console/SeoWrapper';
-import '../styles/blog-details.css';
 
 const BlogDetails = () => {
   const router = useRouter();
