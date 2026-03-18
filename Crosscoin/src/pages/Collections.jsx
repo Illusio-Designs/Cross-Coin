@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { getPublicCategories } from '../services/publicApi';
 import { getCachedData, setCachedData } from '../utils/apiCache';
 import SeoWrapper from '../console/SeoWrapper';
-import Loader from '../components/Loader';
+import Loader from '../components/common/Loader';
 import SafeImage from '../components/common/SafeImage';
 
 const Collections = () => {

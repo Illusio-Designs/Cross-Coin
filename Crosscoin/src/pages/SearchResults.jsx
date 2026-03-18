@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { searchProducts } from '../services/publicApi';
-import ProductCard from '../components/ProductCard';
-import Loader from '../components/Loader';
+import ProductCard from '../components/products/ProductCard';
+import Loader from '../components/common/Loader';
 import { Pagination } from '../components/ui';
 import SeoWrapper from '../console/SeoWrapper';
 import { usePagination } from '../hooks/usePagination';
