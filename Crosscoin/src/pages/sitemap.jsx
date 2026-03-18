@@ -6,21 +6,15 @@ const Sitemap = () => {
   return (
     <SeoWrapper pageName="sitemap">
       <div className="sitemap-page">
-        {/* BREADCRUMB */}
-        <nav className="breadcrumb">
-          <Link href="/">Home</Link>
-          <span className="sep">/</span>
-          <span>Sitemap</span>
-        </nav>
-
         {/* PAGE TITLE */}
         <div className="page-title">
           <h1>Sitemap</h1>
+          <p className="page-subtitle">Explore all pages and sections of Crosscoin</p>
         </div>
 
         {/* MAIN */}
         <div className="sitemap-wrap">
-          {/* ══════════════ SHOP ══════════════ */}
+        {/* ══════════════ SHOP ══════════════ */}
           <div className="section-block">
             <Link href="/Products" className="section-heading">Shop</Link>
             <p className="section-desc">Browse through our range of exclusive Crosscoin products. Shop for apparel, accessories and more from our latest collection.</p>
@@ -88,7 +82,7 @@ const Sitemap = () => {
 
           {/* ══════════════ CONTENT ══════════════ */}
           <div className="section-block">
-            <a href="#" className="section-heading">Content</a>
+            <Link href="/blog" className="section-heading">Content</Link>
             <p className="section-desc">Explore our blog, guides and resources to learn more about fashion, style tips and product care.</p>
             <div className="category-grid">
               <div className="cat-col">
@@ -102,22 +96,22 @@ const Sitemap = () => {
               </div>
 
               <div className="cat-col">
-                <a href="#" className="cat-heading">Resources</a>
+                <Link href="/About" className="cat-heading">Resources</Link>
                 <ul className="cat-links">
-                  <li><a href="#">Size Guide</a></li>
-                  <li><a href="#">Care Instructions</a></li>
-                  <li><a href="#">Fabric Guide</a></li>
-                  <li><a href="#">Style Tips</a></li>
+                  <li><Link href="/About">Size Guide</Link></li>
+                  <li><Link href="/policy?name=shipping-policy">Care Instructions</Link></li>
+                  <li><Link href="/About">Fabric Guide</Link></li>
+                  <li><Link href="/blog">Style Tips</Link></li>
                 </ul>
               </div>
 
               <div className="cat-col">
-                <a href="#" className="cat-heading">Popular Topics</a>
+                <Link href="/blog" className="cat-heading">Popular Topics</Link>
                 <ul className="cat-links">
-                  <li><a href="#">Winter Fashion</a></li>
-                  <li><a href="#">Summer Collection</a></li>
-                  <li><a href="#">Comfort Wear</a></li>
-                  <li><a href="#">Sustainable Fashion</a></li>
+                  <li><Link href="/blog">Winter Fashion</Link></li>
+                  <li><Link href="/blog">Summer Collection</Link></li>
+                  <li><Link href="/blog">Comfort Wear</Link></li>
+                  <li><Link href="/blog">Sustainable Fashion</Link></li>
                 </ul>
               </div>
             </div>
@@ -127,7 +121,7 @@ const Sitemap = () => {
 
           {/* ══════════════ ACCOUNT & ORDERS ══════════════ */}
           <div className="section-block">
-            <a href="#" className="section-heading">Account & Orders</a>
+            <Link href="/profile" className="section-heading">Account & Orders</Link>
             <p className="section-desc">Manage your account, track orders and view your purchase history.</p>
             <div className="category-grid">
               <div className="cat-col">
@@ -136,7 +130,7 @@ const Sitemap = () => {
                   <li><Link href="/profile">Profile</Link></li>
                   <li><Link href="/profile">My Orders</Link></li>
                   <li><Link href="/Wishlist">Wishlist</Link></li>
-                  <li><a href="#">Saved Addresses</a></li>
+                  <li><Link href="/profile">Saved Addresses</Link></li>
                 </ul>
               </div>
 
@@ -144,19 +138,19 @@ const Sitemap = () => {
                 <Link href="/OrderTracking" className="cat-heading">Orders</Link>
                 <ul className="cat-links">
                   <li><Link href="/OrderTracking">Track Order</Link></li>
-                  <li><a href="#">Order History</a></li>
-                  <li><a href="#">Returns</a></li>
-                  <li><a href="#">Refunds</a></li>
+                  <li><Link href="/profile">Order History</Link></li>
+                  <li><Link href="/policy?name=cancellation-and-refund">Returns</Link></li>
+                  <li><Link href="/policy?name=cancellation-and-refund">Refunds</Link></li>
                 </ul>
               </div>
 
               <div className="cat-col">
-                <a href="#" className="cat-heading">Checkout</a>
+                <Link href="/UnifiedCheckout" className="cat-heading">Checkout</Link>
                 <ul className="cat-links">
                   <li><Link href="/UnifiedCheckout">Checkout</Link></li>
-                  <li><a href="#">Payment Methods</a></li>
-                  <li><a href="#">Shipping Info</a></li>
-                  <li><a href="#">Delivery Tracking</a></li>
+                  <li><Link href="/policy?name=terms-and-conditions">Payment Methods</Link></li>
+                  <li><Link href="/policy?name=shipping-policy">Shipping Info</Link></li>
+                  <li><Link href="/OrderTracking">Delivery Tracking</Link></li>
                 </ul>
               </div>
             </div>
@@ -166,16 +160,16 @@ const Sitemap = () => {
 
           {/* ══════════════ COMPANY INFO ══════════════ */}
           <div className="section-block">
-            <a href="#" className="section-heading">Company Info</a>
+            <Link href="/About" className="section-heading">Company Info</Link>
             <p className="section-desc">Learn more about Crosscoin, our policies and how we can help you.</p>
             <div className="category-grid">
               <div className="cat-col">
                 <Link href="/About" className="cat-heading">About</Link>
                 <ul className="cat-links">
                   <li><Link href="/About">About Us</Link></li>
-                  <li><a href="#">Our Story</a></li>
-                  <li><a href="#">Careers</a></li>
-                  <li><a href="#">Press</a></li>
+                  <li><Link href="/About">Our Story</Link></li>
+                  <li><Link href="/Contact">Careers</Link></li>
+                  <li><Link href="/Contact">Press</Link></li>
                 </ul>
               </div>
 
@@ -183,29 +177,29 @@ const Sitemap = () => {
                 <Link href="/Contact" className="cat-heading">Contact</Link>
                 <ul className="cat-links">
                   <li><Link href="/Contact">Get in Touch</Link></li>
-                  <li><a href="#">Customer Support</a></li>
-                  <li><a href="#">Feedback</a></li>
-                  <li><a href="#">Report Issue</a></li>
+                  <li><Link href="/Contact">Customer Support</Link></li>
+                  <li><Link href="/Contact">Feedback</Link></li>
+                  <li><Link href="/Contact">Report Issue</Link></li>
                 </ul>
               </div>
 
               <div className="cat-col">
                 <Link href="/policy" className="cat-heading">Policies</Link>
                 <ul className="cat-links">
-                  <li><Link href="/policy">Privacy Policy</Link></li>
-                  <li><a href="#">Terms of Service</a></li>
-                  <li><a href="#">Return Policy</a></li>
-                  <li><a href="#">Shipping Policy</a></li>
+                  <li><Link href="/policy?name=privacy-policy">Privacy Policy</Link></li>
+                  <li><Link href="/policy?name=terms-and-conditions">Terms of Service</Link></li>
+                  <li><Link href="/policy?name=cancellation-and-refund">Return Policy</Link></li>
+                  <li><Link href="/policy?name=shipping-policy">Shipping Policy</Link></li>
                 </ul>
               </div>
 
               <div className="cat-col">
-                <a href="#" className="cat-heading">Help & Support</a>
+                <Link href="/Contact" className="cat-heading">Help & Support</Link>
                 <ul className="cat-links">
-                  <li><a href="#">FAQs</a></li>
-                  <li><a href="#">Troubleshooting</a></li>
-                  <li><a href="#">Grievance Redressal</a></li>
-                  <li><a href="#">Sitemap</a></li>
+                  <li><Link href="/Contact">FAQs</Link></li>
+                  <li><Link href="/Contact">Troubleshooting</Link></li>
+                  <li><Link href="/Contact">Grievance Redressal</Link></li>
+                  <li><Link href="/sitemap">Sitemap</Link></li>
                 </ul>
               </div>
             </div>
@@ -215,7 +209,7 @@ const Sitemap = () => {
 
           {/* ══════════════ AUTHENTICATION ══════════════ */}
           <div className="section-block">
-            <a href="#" className="section-heading">Authentication</a>
+            <Link href="/login" className="section-heading">Authentication</Link>
             <p className="section-desc">Sign in, create an account or manage your authentication preferences.</p>
             <div className="category-grid">
               <div className="cat-col">
@@ -223,16 +217,16 @@ const Sitemap = () => {
                 <ul className="cat-links">
                   <li><Link href="/login">Sign In</Link></li>
                   <li><Link href="/register">Create Account</Link></li>
-                  <li><Link href="/auth/forgot-password">Forgot Password</Link></li>
+                  <li><Link href="/login">Forgot Password</Link></li>
                 </ul>
               </div>
 
               <div className="cat-col">
-                <a href="#" className="cat-heading">Security</a>
+                <Link href="/profile" className="cat-heading">Security</Link>
                 <ul className="cat-links">
-                  <li><a href="#">Password Reset</a></li>
-                  <li><a href="#">Two-Factor Auth</a></li>
-                  <li><a href="#">Security Settings</a></li>
+                  <li><Link href="/profile">Password Reset</Link></li>
+                  <li><Link href="/profile">Two-Factor Auth</Link></li>
+                  <li><Link href="/profile">Security Settings</Link></li>
                 </ul>
               </div>
             </div>
@@ -242,7 +236,7 @@ const Sitemap = () => {
 
           {/* ══════════════ SPECIAL PAGES ══════════════ */}
           <div className="section-block">
-            <a href="#" className="section-heading">Special Pages</a>
+            <Link href="/" className="section-heading">Special Pages</Link>
             <p className="section-desc">Explore our special pages and unique experiences.</p>
             <div className="category-grid">
               <div className="cat-col">
@@ -258,17 +252,17 @@ const Sitemap = () => {
                 <Link href="/SearchResults" className="cat-heading">Search</Link>
                 <ul className="cat-links">
                   <li><Link href="/SearchResults">Search Results</Link></li>
-                  <li><a href="#">Advanced Search</a></li>
-                  <li><a href="#">Popular Searches</a></li>
+                  <li><Link href="/Products">Advanced Search</Link></li>
+                  <li><Link href="/Products">Popular Searches</Link></li>
                 </ul>
               </div>
 
               <div className="cat-col">
-                <a href="#" className="cat-heading">Other Pages</a>
+                <Link href="/blog" className="cat-heading">Other Pages</Link>
                 <ul className="cat-links">
                   <li><Link href="/ThankYou">Thank You</Link></li>
-                  <li><a href="#">Error Page</a></li>
-                  <li><a href="#">Coming Soon</a></li>
+                  <li><Link href="/blog">Blog</Link></li>
+                  <li><Link href="/sitemap">Sitemap</Link></li>
                 </ul>
               </div>
             </div>
