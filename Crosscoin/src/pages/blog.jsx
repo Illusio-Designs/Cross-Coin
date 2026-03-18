@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import SeoWrapper from '../console/SeoWrapper';
-import '../styles/blog.css';
 
 const BlogPage = () => {
   const router = useRouter();
@@ -112,10 +111,11 @@ const BlogPage = () => {
       <div className="blog-page">
         {/* Header */}
         <div className="blog-page-header">
-          <h1 className="blog-page-title">CROSSCOIN JOURNAL</h1>
-          <p className="blog-page-subtitle">Stories, Tips & Style</p>
+          <div className="section-header-inline">
+            <h1 className="section-header-h2">Crosscoin <strong>Journal</strong></h1>
+            <p className="section-header-sub">Stories, Tips & Style</p>
+          </div>
         </div>
-
         {/* Category Filter */}
         <div className="blog-category-filter">
           <button 

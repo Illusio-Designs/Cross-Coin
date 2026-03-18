@@ -56,7 +56,10 @@ const BlogSection = () => {
   return (
     <div className="blog-section-wrapper">
       <div className="blog-section-header">
-        <div className="section-title">CROSSCOIN JOURNAL</div>
+        <div className="section-header-inline">
+          <h2 className="section-header-h2">Crosscoin <strong>Journal</strong></h2>
+          <p className="section-header-sub">Stories, Tips & Style</p>
+        </div>
       </div>
 
       <div className="blog-grid-home">
