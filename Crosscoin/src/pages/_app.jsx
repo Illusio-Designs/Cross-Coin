@@ -19,6 +19,7 @@ import "../styles/common/responsive.css";
 import "../styles/common/mobile-utilities.css";
 import "../styles/common/skeleton.css";
 import "../styles/common/critical.css";
+import "../styles/common/DonutChart.css";
 // Components
 import "../styles/components/InfiniteReviewsSlider.css";
 // Pages
