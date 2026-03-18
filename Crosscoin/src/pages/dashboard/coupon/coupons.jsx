@@ -23,6 +23,8 @@ export default function Coupons() {
   const [coupons, setCoupons] = useState([]);
   const [formData, setFormData] = useState(EMPTY_FORM);
 
+  const [statusFilter, setStatusFilter] = useState("");
+
   const fetchCoupons = async () => {
     try {
       setLoading(true);
@@ -40,6 +42,7 @@ export default function Coupons() {
   useEffect(() => { setCurrentPage(1); }, [search]);
 
   const filteredData = coupons.filter(item => {
+    if (statusFilter && item.status !== statusFilter) return false;
     if (!search) return true;
     const s = search.toLowerCase();
     return item.code?.toLowerCase().includes(s) || item.description?.toLowerCase().includes(s);
@@ -97,7 +100,7 @@ export default function Coupons() {
   };
 
   const columns = [
-    { header: "#", accessor: "serial_number" },
+    { header: "Sr. No", accessor: "serial_number" },
     { header: "Code", accessor: "code", cell: ({ code }) => <span className="cat-name-cell" style={{ fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.5px' }}>{code}</span> },
     { header: "Type", accessor: "type", cell: (row) => <span className={`sl-status-badge sl-status-${row.type === 'percentage' ? 'active' : 'inactive'}`}>{row.type === 'percentage' ? `${row.value}%` : `₹${row.value}`}</span> },
     { header: "Min Purchase", accessor: "minPurchase", cell: ({ minPurchase }) => minPurchase ? `₹${minPurchase}` : <span className="sl-na">—</span> },
@@ -114,6 +117,9 @@ export default function Coupons() {
       )
     }
   ];
+
+  const activeCount = coupons.filter(c => c.status === 'active').length;
+  const expiredCount = coupons.filter(c => c.endDate && new Date(c.endDate) < new Date()).length;
 
   return (
     <>
@@ -134,12 +140,48 @@ export default function Coupons() {
             <button className="sl-add-btn" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>
               <span className="sl-add-btn-icon">{IC.add}</span>Add Coupon
             </button>
+            <select className="pay-filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Stat Cards */}
+        <div className="sl-stat-cards">
+          <div className="sl-stat-card">
+            <div className="sl-stat-icon sl-stat-icon--blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            </div>
+            <div className="sl-stat-body">
+              <span className="sl-stat-label">Total Coupons</span>
+              <span className="sl-stat-value">{coupons.length}</span>
+            </div>
+          </div>
+          <div className="sl-stat-card">
+            <div className="sl-stat-icon sl-stat-icon--green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div className="sl-stat-body">
+              <span className="sl-stat-label">Active</span>
+              <span className="sl-stat-value">{activeCount}</span>
+            </div>
+          </div>
+          <div className="sl-stat-card">
+            <div className="sl-stat-icon sl-stat-icon--red">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </div>
+            <div className="sl-stat-body">
+              <span className="sl-stat-label">Expired</span>
+              <span className="sl-stat-value">{expiredCount}</span>
+            </div>
           </div>
         </div>
 
         <div className="sl-table-wrap">
           {loading ? (
-            <div style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>
+            <div className="sl-loader-wrap"><Loader /></div>
           ) : error ? (
             <div className="sl-error">{error}</div>
           ) : filteredData.length === 0 ? (

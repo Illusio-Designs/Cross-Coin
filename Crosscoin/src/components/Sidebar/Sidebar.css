@@ -254,7 +254,7 @@
 /* ── Tooltip (collapsed desktop) ───────────────────────────── */
 .sb-tooltip {
   position: fixed;
-  left: 78px;
+  left: 72px;
   transform: translateY(-50%);
   background: #180D3E;
   color: #fff;
@@ -270,7 +270,7 @@
 
 .sb-tooltip-menu {
   position: fixed;
-  left: 78px;
+  left: 72px;
   transform: translateY(-50%);
   background: #fff;
   border: 1px solid #e8e8f0;
@@ -279,6 +279,8 @@
   min-width: 170px;
   z-index: 9999;
   box-shadow: 0 8px 24px rgba(24,13,62,0.12);
+  /* Extend left edge to cover the gap between sidebar and popup */
+  padding-left: 6px;
 }
 
 .sb-tooltip-title {

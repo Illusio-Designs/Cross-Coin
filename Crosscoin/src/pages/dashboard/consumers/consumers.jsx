@@ -55,7 +55,7 @@ export default function Consumers() {
   };
 
   const columns = [
-    { header: "#", accessor: "serial_number" },
+    { header: "Sr. No", accessor: "serial_number" },
     { header: "Name", accessor: "username", cell: ({ username }) => <span className="cat-name-cell">{username}</span> },
     { header: "Email", accessor: "email" },
     { header: "Role", accessor: "role", cell: ({ role }) => <span className="sl-cat-badge">{role}</span> },
@@ -88,9 +88,22 @@ export default function Consumers() {
           </div>
         </div>
 
+        {/* Stat Cards */}
+        <div className="sl-stat-cards">
+          <div className="sl-stat-card">
+            <div className="sl-stat-icon sl-stat-icon--blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            </div>
+            <div className="sl-stat-body">
+              <span className="sl-stat-label">Total Consumers</span>
+              <span className="sl-stat-value">{filteredData.length}</span>
+            </div>
+          </div>
+        </div>
+
         <div className="sl-table-wrap">
           {loading ? (
-            <div style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>
+            <div className="sl-loader-wrap"><Loader /></div>
           ) : error ? (
             <div className="sl-error">{error}</div>
           ) : filteredData.length === 0 ? (

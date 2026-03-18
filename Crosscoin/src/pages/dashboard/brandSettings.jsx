@@ -145,7 +145,7 @@ export default function BrandSettingsManager() {
 
       {/* Settings Grid */}
       {loading ? (
-        <div style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>
+        <div className="sl-loader-wrap"><Loader /></div>
       ) : filteredSettings.length === 0 ? (
         <div className="sl-empty">
           <div className="sl-empty-icon">{IC.settings}</div>

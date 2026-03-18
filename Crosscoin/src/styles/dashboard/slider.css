@@ -90,7 +90,7 @@
 .sl-cat-badge {
   display: inline-block; padding: 3px 10px;
   background: #f0eeff; color: #180D3E;
-  border-radius: 20px; font-size: 11px; font-weight: 600;
+  border-radius: 8px; font-size: 11px; font-weight: 600;
 }
 .sl-na { color: #d1d5db; font-size: 13px; }
 
@@ -98,7 +98,7 @@
 .sl-brand-tag {
   display: inline-block; padding: 2px 8px;
   background: #dbeafe; color: #1e40af;
-  border-radius: 20px; font-size: 11px; font-weight: 600;
+  border-radius: 6px; font-size: 11px; font-weight: 600;
 }
 
 .sl-status-badge {

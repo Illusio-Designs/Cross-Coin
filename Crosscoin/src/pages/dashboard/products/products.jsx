@@ -201,18 +201,7 @@ const ProductsPage = () => {
     const style = badgeStyles[badge] || { color: '#6B7280', bgColor: '#F3F4F6' };
 
     return (
-      <span
-        style={{
-          padding: '4px 8px',
-          borderRadius: '4px',
-          fontSize: '12px',
-          fontWeight: '500',
-          color: style.color,
-          backgroundColor: style.bgColor,
-          display: 'inline-block',
-          marginLeft: '8px'
-        }}
-      >
+      <span className={`prod-badge prod-badge--${badge}`}>
         {badgeLabels[badge] || badge}
       </span>
     );
@@ -227,8 +216,8 @@ const ProductsPage = () => {
     {
       header: "Product",
       accessor: row => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontWeight: '500' }}>{row.name}</span>
+        <div className="prod-name-cell">
+          <span className="prod-name">{row.name}</span>
           <BadgeDisplay badge={row.badge} />
         </div>
       )
@@ -236,12 +225,7 @@ const ProductsPage = () => {
     {
       header: "Category",
       accessor: row => (
-        <span style={{
-          backgroundColor: '#F3F4F6',
-          padding: '4px 8px',
-          borderRadius: '4px',
-          fontSize: '13px'
-        }}>
+        <span className="sl-cat-badge">
           {row.category?.name || 'Uncategorized'}
         </span>
       )
@@ -253,22 +237,15 @@ const ProductsPage = () => {
     {
       header: "Avg. Rating",
       accessor: row => (
-        <span style={{ fontWeight: '500' }}>
-          {row.avg_rating ? `${Number(row.avg_rating).toFixed(1)} / 5` : 'N/A'}
+        <span className="prod-rating">
+          {row.avg_rating ? `${Number(row.avg_rating).toFixed(1)} / 5` : <span className="sl-na">N/A</span>}
         </span>
       )
     },
     {
       header: "Status",
       accessor: row => (
-        <span style={{
-          backgroundColor: row.status === 'active' ? '#D1FAE5' : '#FEE2E2',
-          color: row.status === 'active' ? '#059669' : '#DC2626',
-          padding: '4px 8px',
-          borderRadius: '4px',
-          fontSize: '13px',
-          fontWeight: '500'
-        }}>
+        <span className={`sl-status-badge ${row.status === 'active' ? 'sl-status-active' : 'sl-status-inactive'}`}>
           {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
         </span>
       )
@@ -277,22 +254,14 @@ const ProductsPage = () => {
       header: "Actions",
       accessor: "actions",
       cell: ({ id, name }) => (
-        <div className="action-buttons">
-          <button
-            className="action-btn edit"
-            data-tooltip="Edit"
-            onClick={() => handleEdit(id)}
-          >
-            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <div className="sl-actions">
+          <button className="sl-btn-edit" onClick={() => handleEdit(id)}>
+            <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z"/>
             </svg>
           </button>
-          <button
-            className="action-btn delete"
-            data-tooltip="Delete"
-            onClick={() => handleDelete(id)}
-          >
-            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <button className="sl-btn-delete" onClick={() => handleDelete(id)}>
+            <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
           </button>
@@ -1448,68 +1417,49 @@ const ProductsPage = () => {
   return (
     <>
     <div className="dashboard-page">
-      <div className="seo-header-container">
-        <h1 className="seo-title">Products Management</h1>
-        <div className="adding-button">
-          <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
-            <div className="modern-searchbar-group">
-              <span className="modern-searchbar-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </span>
-              <input
-                type="text"
-                className="modern-searchbar-input"
-                placeholder="Search products..."
-                onChange={handleSearchChange}
-                defaultValue={filterValue}
-              />
-            </div>
-          </form>
-          <button
-            onClick={() => setIsFilterDrawerOpen(true)}
-            style={{
-              padding: '10px 16px',
-              background: '#f5f5f5',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.background = '#efefef';
-              e.target.style.borderColor = '#999';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.background = '#f5f5f5';
-              e.target.style.borderColor = '#ddd';
-            }}
-          >
-            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-            </svg>
+      <div className="sl-page-header">
+        <div className="sl-header-left">
+          <div className="sl-header-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          </div>
+          <div>
+            <h1 className="sl-page-title">Products Management</h1>
+            <p className="sl-page-sub">Manage your product catalog</p>
+          </div>
+        </div>
+        <div className="sl-header-right">
+          <div className="sl-search-wrap">
+            <span className="sl-search-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+            <input type="text" className="sl-search-input" placeholder="Search products..."
+              onChange={handleSearchChange} defaultValue={filterValue} />
+          </div>
+          <button className="sl-add-btn sl-filter-btn" onClick={() => setIsFilterDrawerOpen(true)}>
+            <span className="sl-add-btn-icon">
+              <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
+            </span>
             Filter
           </button>
-          <Button onClick={handleAddNew} variant="primary" className="add-new-btn">Add New Product</Button>
+          <button className="sl-add-btn" onClick={handleAddNew}>
+            <span className="sl-add-btn-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </span>
+            Add Product
+          </button>
         </div>
       </div>
       {/* Table Section */}
-      <div className="seo-table-container products-table">
+      <div className="sl-table-wrap">
         {loading ? (
-          <div style={{ position: 'relative', minHeight: '400px' }}>
+          <div className="sl-loader-wrap">
             <Loader />
           </div>
         ) : (
           <>
             {filteredData.length === 0 ? (
-              <div className="seo-empty-state">
-                {filterValue ? "No results found for your search" : "No products found"}
+              <div className="sl-empty">
+                <p>{filterValue ? "No results found for your search" : "No products found"}</p>
               </div>
             ) : (
               <>
@@ -1523,7 +1473,7 @@ const ProductsPage = () => {
                   hoverable={true}
                 />
                 {totalProducts > itemsPerPage && (
-                  <div className="seo-pagination-container">
+                  <div className="sl-pagination">
                     <Pagination
                       currentPage={currentPage}
                       totalPages={totalPages}

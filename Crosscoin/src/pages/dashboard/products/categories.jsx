@@ -21,6 +21,7 @@ export default function Categories() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -41,6 +42,7 @@ export default function Categories() {
   useEffect(() => { setCurrentPage(1); }, [search]);
 
   const filteredData = categories.filter(item => {
+    if (statusFilter && item.status !== statusFilter) return false;
     if (!search) return true;
     const s = search.toLowerCase();
     return item.name?.toLowerCase().includes(s) || item.description?.toLowerCase().includes(s);
@@ -96,7 +98,7 @@ export default function Categories() {
   };
 
   const columns = [
-    { header: "#", accessor: "serial_number" },
+    { header: "Sr. No", accessor: "serial_number" },
     { header: "Name", accessor: "name", cell: ({ name }) => <span className="cat-name-cell">{name}</span> },
     { header: "Description", accessor: "description", cell: ({ description }) => <span className="cat-desc-cell">{description}</span> },
     { header: "Brands", accessor: row => <BrandTags brands={row.brands || []} /> },
@@ -111,6 +113,8 @@ export default function Categories() {
       )
     }
   ];
+
+  const activeCount = categories.filter(c => c.status === 'active').length;
 
   return (
     <>
@@ -131,12 +135,39 @@ export default function Categories() {
             <button className="sl-add-btn" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>
               <span className="sl-add-btn-icon">{IC.add}</span>Add Category
             </button>
+            <select className="pay-filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Stat Cards */}
+        <div className="sl-stat-cards">
+          <div className="sl-stat-card">
+            <div className="sl-stat-icon sl-stat-icon--blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            </div>
+            <div className="sl-stat-body">
+              <span className="sl-stat-label">Total Categories</span>
+              <span className="sl-stat-value">{categories.length}</span>
+            </div>
+          </div>
+          <div className="sl-stat-card">
+            <div className="sl-stat-icon sl-stat-icon--green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div className="sl-stat-body">
+              <span className="sl-stat-label">Active</span>
+              <span className="sl-stat-value">{activeCount}</span>
+            </div>
           </div>
         </div>
 
         <div className="sl-table-wrap">
           {loading ? (
-            <div style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>
+            <div className="sl-loader-wrap"><Loader /></div>
           ) : filteredData.length === 0 ? (
             <div className="sl-empty">
               <div className="sl-empty-icon">{IC.category}</div>

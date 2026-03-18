@@ -87,7 +87,7 @@ export default function ShippingFees() {
   };
 
   const columns = [
-    { header: "#", accessor: "serial_number" },
+    { header: "Sr. No", accessor: "serial_number" },
     { header: "Order Type", accessor: "orderType", cell: ({ orderType }) => <span className="sl-cat-badge">{orderType.toUpperCase()}</span> },
     { header: "Fee", accessor: "fee", cell: ({ fee }) => <span className="cat-name-cell">₹{parseFloat(fee).toFixed(2)}</span> },
     {
@@ -125,7 +125,7 @@ export default function ShippingFees() {
 
         <div className="sl-table-wrap">
           {loading ? (
-            <div style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>
+            <div className="sl-loader-wrap"><Loader /></div>
           ) : error ? (
             <div className="sl-error">{error}</div>
           ) : filteredData.length === 0 ? (

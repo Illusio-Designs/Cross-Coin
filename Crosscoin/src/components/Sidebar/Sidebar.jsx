@@ -54,6 +54,7 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
   // tooltip: { idx, top } — top is the vertical centre of the hovered item
   const [tooltip, setTooltip] = React.useState(null);
   const [isMobile, setIsMobile] = React.useState(false);
+  const hideTimeoutRef = React.useRef(null);
 
   React.useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 900);
@@ -64,13 +65,22 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
 
   const handleMouseEnter = (e, idx) => {
     if (isMobile || !isCollapsed) return;
+    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
     const rect = e.currentTarget.getBoundingClientRect();
     setTooltip({ idx, top: rect.top + rect.height / 2 });
   };
 
   const handleMouseLeave = () => {
     if (isMobile || !isCollapsed) return;
-    setTooltip(null);
+    hideTimeoutRef.current = setTimeout(() => setTooltip(null), 120);
+  };
+
+  const handleTooltipEnter = () => {
+    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+  };
+
+  const handleTooltipLeave = () => {
+    hideTimeoutRef.current = setTimeout(() => setTooltip(null), 80);
   };
 
   const isActive = (item) => {
@@ -169,7 +179,9 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
                   </div>
                 )}
                 {showTooltip && item.submenu && (
-                  <div className="sb-tooltip-menu" style={{ top: tooltip.top }}>
+                  <div className="sb-tooltip-menu" style={{ top: tooltip.top }}
+                    onMouseEnter={handleTooltipEnter}
+                    onMouseLeave={handleTooltipLeave}>
                     <div className="sb-tooltip-title">{item.label}</div>
                     {item.submenu.map(s => (
                       <button
