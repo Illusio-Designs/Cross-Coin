@@ -14,10 +14,10 @@ import Breadcrumb from "../components/common/Breadcrumb";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
 // Global CSS — all imports must live here (Next.js Pages Router rule)
-import "../styles/common/globals.css";
-import "../styles/common/responsive.css";
-import "../styles/common/mobile-utilities.css";
-import "../styles/common/skeleton.css";
+import "../styles/globals.css";
+import "../styles/responsive.css";
+import "../styles/mobile-utilities.css";
+import "../styles/skeleton.css";
 // Pages
 import "../styles/pages/Home.css";
 import "../styles/pages/Login.css";
@@ -34,30 +34,35 @@ import "../styles/pages/Contact.css";
 import "../styles/pages/Collections.css";
 import "../styles/pages/About.css";
 import "../styles/pages/auth/adminlogin.css";
-import '../styles/pages/blog.css';
-import '../styles/pages/blog-details.css';
-import '../styles/pages/sitemap.css';
+import '../styles/blog.css';
+import '../styles/blog-details.css';
+import '../styles/sitemap.css';
 
-
-// Components
+// Components - Layout
 import "../styles/components/Header.css";
-import "../styles/components/Breadcrumb.css";
-import "../styles/components/ProductCard.css";
 import "../styles/components/Footer.css";
-import "../styles/components/Testimonials.css";
-import "../styles/components/TrustBadges.css";
+import "../styles/components/Breadcrumb.css";
+
+// Components - Products
+import "../styles/components/ProductCard.css";
 import "../styles/components/HeroSlider.css";
 import "../styles/components/SlidingCollection.css";
 import "../styles/components/UnlockedExclusives.css";
+
+// Components - Common
+import "../styles/components/Testimonials.css";
+import "../styles/components/TrustBadges.css";
 import "../styles/components/CouponStrip.css";
 import "../styles/components/Toast.css";
-import "../styles/components/blog-section.css";
-import "../styles/components/Dropdown.css";
-// Component-local CSS (co-located with components)
-import "../styles/components/Sidebar.css";
-import "../styles/components/CartDrawer.css";
-import "../styles/components/QuantityOfferBar.css";
-import "../styles/components/ProductDetailsTest.css";
+
+// Components - Co-located CSS (in component directories)
+import "../components/BlogSection.css";
+import "../components/Sidebar/Sidebar.css";
+import "../components/cart/CartDrawer.css";
+import "../components/cart/QuantityOfferBar.css";
+import "../components/products/ProductDetailsTest.css";
+import "../components/products/ProductFilterDrawer.css";
+import "../components/ui/Dropdown.css";
 import "../styles/components/ProductFilterDrawer.css";
 // Additional dashboard CSS
 import "../styles/dashboard/payments.css";
