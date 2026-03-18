@@ -51,12 +51,19 @@ const HeroSlider = ({ slides = [] }) => {
       <div className="hero-slide" key={current}>
         <div className="hero-slide__image">
           <SafeImage 
-            imageData={{ image_url: slides[current].image }}
+            imageData={{ 
+              image_url: slides[current].image,
+              // Add ImageKit transformation parameters
+              tr: 'w-1920,h-1080,c-fill,q-85,f-auto'
+            }}
             alt={slides[current].title}
             priority={true}
             quality={85}
             isSlider={true}
-            style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+            width="100%"
+            height="100%"
+            sizes="100vw"
+            style={{ objectFit: 'cover', width: '100%', height: '100%', display: 'block' }}
           />
         </div>
         <div className="hero-slide__content">
