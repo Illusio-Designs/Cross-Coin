@@ -155,7 +155,6 @@
   padding: 20px 24px;
   border: 1px solid #ebebf0;
   width: 100%;
-  overflow: hidden;
 }
 
 .dc-section-title {
@@ -252,25 +251,31 @@
   gap: 20px;
 }
 
+/* Chart section: just a grid cell, no extra wrapper styling needed */
 .dashboard-chart-section {
   display: flex;
   flex-direction: column;
-  min-height: 420px;
 }
 
+/* Remove the extra container padding — dc-chart-card handles its own padding */
 .dashboard-chart-container {
   flex: 1;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 16px;
-  min-height: 300px;
+  width: 100%;
 }
 
-.dashboard-chart-section .donut-chart-container { width: 100%; }
-.dashboard-chart-section .donut-chart-content { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; }
-.dashboard-chart-section .donut-chart-wrapper { display: flex; justify-content: center; align-items: center; position: relative; }
-.dashboard-chart-section .donut-chart-legend { width: 100%; overflow-y: auto; overflow-x: hidden; }
+/* dc-chart-card fills the container */
+.dashboard-chart-container .dc-chart-card {
+  flex: 1;
+  width: 100%;
+  min-height: 320px;
+  /* no double border — section already has one */
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
 
 /* ===================================
    ALERT CARDS
@@ -440,8 +445,6 @@
   .dc-stat-icon { width: 38px; height: 38px; }
   .dc-stat-icon svg { width: 17px; height: 17px; }
   .dashboard-section { padding: 12px; }
-  .dashboard-chart-container { min-height: 240px; padding: 10px; }
-  .dashboard-chart-section { min-height: 280px; }
   .alert-value { font-size: 18px; }
   .dashboard-table { min-width: 520px; }
 }
