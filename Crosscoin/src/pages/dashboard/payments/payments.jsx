@@ -85,7 +85,7 @@ export default function Payments() {
   };
 
   const columns = [
-    { header: "#", accessor: "serial_number" },
+    { header: "Sr. No", accessor: "serial_number" },
     { header: "Order", accessor: "orderNumber", cell: ({ orderNumber }) => <span className="cat-name-cell">{orderNumber}</span> },
     { header: "Customer", accessor: "customerName" },
     { header: "Amount", accessor: "amount_paid", cell: (row) => `₹${parseFloat(row.amount_paid || 0).toFixed(2)}` },
@@ -103,6 +103,11 @@ export default function Payments() {
     }
   ];
 
+  const totalAmount = filteredData.reduce((sum, p) => sum + parseFloat(p.amount_paid || 0), 0);
+  const successCount = payments.filter(p => p.status === 'successful').length;
+  const pendingCount = payments.filter(p => p.status === 'pending').length;
+  const refundedCount = payments.filter(p => p.status === 'refunded').length;
+
   return (
     <>
       <div className="dashboard-page">
@@ -118,6 +123,46 @@ export default function Payments() {
             <div className="sl-search-wrap">
               <span className="sl-search-icon">{IC.search}</span>
               <input type="text" className="sl-search-input" placeholder="Search by order, customer, transaction..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        {/* Stat Cards */}
+        <div className="sl-stat-cards">
+          <div className="sl-stat-card">
+            <div className="sl-stat-icon sl-stat-icon--blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            </div>
+            <div className="sl-stat-body">
+              <span className="sl-stat-label">Total Payments</span>
+              <span className="sl-stat-value">{payments.length}</span>
+            </div>
+          </div>
+          <div className="sl-stat-card">
+            <div className="sl-stat-icon sl-stat-icon--green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div className="sl-stat-body">
+              <span className="sl-stat-label">Successful</span>
+              <span className="sl-stat-value">{successCount}</span>
+            </div>
+          </div>
+          <div className="sl-stat-card">
+            <div className="sl-stat-icon sl-stat-icon--yellow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <div className="sl-stat-body">
+              <span className="sl-stat-label">Pending</span>
+              <span className="sl-stat-value">{pendingCount}</span>
+            </div>
+          </div>
+          <div className="sl-stat-card">
+            <div className="sl-stat-icon sl-stat-icon--red">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+            </div>
+            <div className="sl-stat-body">
+              <span className="sl-stat-label">Total Revenue</span>
+              <span className="sl-stat-value">₹{totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
             </div>
           </div>
         </div>
@@ -153,7 +198,7 @@ export default function Payments() {
 
         <div className="sl-table-wrap">
           {loading ? (
-            <div style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>
+            <div className="sl-loader-wrap"><Loader /></div>
           ) : filteredData.length === 0 ? (
             <div className="sl-empty">
               <div className="sl-empty-icon">{IC.payments}</div>

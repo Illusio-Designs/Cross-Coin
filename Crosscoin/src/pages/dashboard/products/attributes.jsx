@@ -102,7 +102,7 @@ export default function Attributes() {
   };
 
   const columns = [
-    { header: "#", accessor: "serial_number" },
+    { header: "Sr. No", accessor: "serial_number" },
     { header: "Name", accessor: "name", cell: ({ name }) => <span className="cat-name-cell">{name}</span> },
     { header: "Type", accessor: "type_label", cell: ({ type_label }) => <span className="sl-cat-badge">{type_label}</span> },
     { header: "Values", accessor: "values_label", cell: ({ values_label }) => <span className="cat-desc-cell">{values_label}</span> },
@@ -142,7 +142,7 @@ export default function Attributes() {
 
         <div className="sl-table-wrap">
           {loading ? (
-            <div style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>
+            <div className="sl-loader-wrap"><Loader /></div>
           ) : error ? (
             <div className="sl-error">{error}</div>
           ) : filteredData.length === 0 ? (

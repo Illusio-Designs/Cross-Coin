@@ -168,7 +168,7 @@ export default function Slider() {
   };
 
   const columns = [
-    { header: "#", accessor: "serial_number" },
+    { header: "Sr. No", accessor: "serial_number" },
     {
       header: "Preview",
       accessor: "image",
@@ -261,7 +261,7 @@ export default function Slider() {
         {/* Table */}
         <div className="sl-table-wrap">
           {loading ? (
-            <div style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>
+            <div className="sl-loader-wrap"><Loader /></div>
           ) : error ? (
             <div className="sl-error">{error}</div>
           ) : filteredData.length === 0 ? (

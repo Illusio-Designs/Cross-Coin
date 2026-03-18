@@ -95,7 +95,7 @@ export default function Policies() {
   };
 
   const columns = [
-    { header: "#", accessor: "serial_number" },
+    { header: "Sr. No", accessor: "serial_number" },
     { header: "Title", accessor: "title", cell: ({ title }) => <span className="cat-name-cell">{title}</span> },
     { header: "Content Preview", accessor: "content", cell: ({ content }) => <span className="cat-desc-cell">{getPlainText(content).slice(0, 80)}{getPlainText(content).length > 80 ? '...' : ''}</span> },
     {
@@ -133,7 +133,7 @@ export default function Policies() {
 
         <div className="sl-table-wrap">
           {loading ? (
-            <div style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>
+            <div className="sl-loader-wrap"><Loader /></div>
           ) : error ? (
             <div className="sl-error">{error}</div>
           ) : filteredData.length === 0 ? (

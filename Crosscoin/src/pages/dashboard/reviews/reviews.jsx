@@ -32,6 +32,8 @@ export default function Reviews() {
   const [totalPages, setTotalPages] = useState(0);
   const [formData, setFormData] = useState({ status: "pending", is_featured: false, admin_notes: "" });
 
+  const [statusFilter, setStatusFilter] = useState("");
+
   const fetchReviews = useCallback(async () => {
     try {
       setLoading(true);
@@ -53,6 +55,7 @@ export default function Reviews() {
   useEffect(() => { setCurrentPage(1); }, [search]);
 
   const filteredData = reviews.filter(item => {
+    if (statusFilter && item.status !== statusFilter) return false;
     if (!search) return true;
     const s = search.toLowerCase();
     return item.customerName?.toLowerCase().includes(s) || item.productName?.toLowerCase().includes(s) || item.review?.toLowerCase().includes(s);
@@ -100,7 +103,7 @@ export default function Reviews() {
   };
 
   const columns = [
-    { header: "#", accessor: "serial_number" },
+    { header: "Sr. No", accessor: "serial_number" },
     { header: "Customer", accessor: "customerName", cell: ({ customerName }) => <span className="cat-name-cell">{customerName}</span> },
     { header: "Product", accessor: "productName", cell: ({ productName }) => <span className="cat-desc-cell">{productName}</span> },
     { header: "Brands", accessor: row => { const brands = row.Product?.Brands || row.Product?.brands || []; return <BrandTags brands={brands} />; } },
@@ -118,6 +121,11 @@ export default function Reviews() {
     }
   ];
 
+  const approvedCount = reviews.filter(r => r.status === 'approved').length;
+  const pendingCount = reviews.filter(r => r.status === 'pending').length;
+  const rejectedCount = reviews.filter(r => r.status === 'rejected').length;
+  const avgRating = reviews.length > 0 ? (reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length).toFixed(1) : '0.0';
+
   return (
     <>
       <div className="dashboard-page">
@@ -134,12 +142,58 @@ export default function Reviews() {
               <span className="sl-search-icon">{IC.search}</span>
               <input type="text" className="sl-search-input" placeholder="Search reviews..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
+            <select className="pay-filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Stat Cards */}
+        <div className="sl-stat-cards">
+          <div className="sl-stat-card">
+            <div className="sl-stat-icon sl-stat-icon--blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            </div>
+            <div className="sl-stat-body">
+              <span className="sl-stat-label">Total Reviews</span>
+              <span className="sl-stat-value">{totalReviews}</span>
+            </div>
+          </div>
+          <div className="sl-stat-card">
+            <div className="sl-stat-icon sl-stat-icon--green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div className="sl-stat-body">
+              <span className="sl-stat-label">Approved</span>
+              <span className="sl-stat-value">{approvedCount}</span>
+            </div>
+          </div>
+          <div className="sl-stat-card">
+            <div className="sl-stat-icon sl-stat-icon--yellow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <div className="sl-stat-body">
+              <span className="sl-stat-label">Pending</span>
+              <span className="sl-stat-value">{pendingCount}</span>
+            </div>
+          </div>
+          <div className="sl-stat-card">
+            <div className="sl-stat-icon sl-stat-icon--purple">
+              <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <div className="sl-stat-body">
+              <span className="sl-stat-label">Avg. Rating</span>
+              <span className="sl-stat-value">{avgRating} / 5</span>
+            </div>
           </div>
         </div>
 
         <div className="sl-table-wrap">
           {loading ? (
-            <div style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>
+            <div className="sl-loader-wrap"><Loader /></div>
           ) : error ? (
             <div className="sl-error">{error}</div>
           ) : filteredData.length === 0 ? (

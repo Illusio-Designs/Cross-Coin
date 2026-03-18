@@ -138,7 +138,7 @@ export default function BrandManager() {
 
       {/* Brands Grid */}
       {loading ? (
-        <div style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>
+        <div className="sl-loader-wrap"><Loader /></div>
       ) : filteredBrands.length === 0 ? (
         <div className="sl-empty">
           <div className="sl-empty-icon">{IC.brand}</div>
