@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Table, Pagination, Modal } from "@/components/ui";
-import Loader from "@/components/Loader";
+import { Button, Table, Pagination, Modal } from "../../../components/ui";
+import Loader from "../../../components/common/Loader";
 import { debounce } from 'lodash';
-import { userService } from '@/services';
+import { userService } from '../../../services';
 
 export default function Consumers() {
   const [currentPage, setCurrentPage] = useState(1);

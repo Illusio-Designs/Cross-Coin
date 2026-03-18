@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Input, Modal, Table, Pagination } from "@/components/ui";
-import Loader from "@/components/Loader";
-import BrandTags from "@/components/Dashboard/BrandTags";
-import { reviewService } from "@/services";
+import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
+import Loader from "../../../components/common/Loader";
+import BrandTags from "../../../components/Dashboard/BrandTags";
+import { reviewService } from "../../../services";
 import { debounce } from 'lodash';
 
 export default function Reviews() {

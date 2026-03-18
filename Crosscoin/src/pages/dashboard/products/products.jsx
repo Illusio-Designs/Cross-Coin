@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Input, Modal, Table, Pagination } from "@/components/ui";
-import Loader from "@/components/Loader";
-import { productService } from "@/services";
-import { categoryService } from "@/services";
-import { attributeService } from "@/services";
+import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
+import Loader from "../../../components/common/Loader";
+import { productService } from "../../../services";
+import { categoryService } from "../../../services";
+import { attributeService } from "../../../services";
 import { debounce } from 'lodash';
-import AttributeSelector from '@/components/products/AttributeSelector';
-import ExistingImageSelector from '@/components/products/ExistingImageSelector';
-import BrandTags from '@/components/Dashboard/BrandTags';
-import BrandAssignment from '@/components/Dashboard/BrandAssignment';
-import ProductFilterDrawer from '@/components/products/ProductFilterDrawer';
+import AttributeSelector from '../../../components/products/AttributeSelector';
+import ExistingImageSelector from '../../../components/products/ExistingImageSelector';
+import BrandTags from '../../../components/Dashboard/BrandTags';
+import BrandAssignment from '../../../components/Dashboard/BrandAssignment';
+import ProductFilterDrawer from '../../../components/products/ProductFilterDrawer';
 import dynamic from 'next/dynamic';
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { orderService } from '../../../services';
 import { debounce } from 'lodash';
-import { Table, Pagination } from "@/components/ui";
-import Loader from "@/components/Loader";
+import { Table, Pagination } from "../../../components/ui";
+import Loader from "../../../components/common/Loader";
 import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusUtils';
 
 const OrderStatus = () => {

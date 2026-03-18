@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Table, Pagination } from "@/components/ui";
-import Loader from "@/components/Loader";
-import { paymentService } from "@/services";
+import { Button, Modal, Table, Pagination } from "../../../components/ui";
+import Loader from "../../../components/common/Loader";
+import { paymentService } from "../../../services";
 import { debounce } from 'lodash';
 import { toast } from "react-hot-toast";
 
