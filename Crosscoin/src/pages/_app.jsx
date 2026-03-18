@@ -66,7 +66,17 @@ import "../components/cart/CartDrawer.css";
 import "../components/cart/QuantityOfferBar.css";
 import "../components/products/ProductDetailsTest.css";
 import "../components/products/ProductFilterDrawer.css";
-import "../components/ui/Dropdown.css";
+import "../styles/common/Dropdown.css";
+
+// UI Components CSS
+import "../styles/dashboard/ui-button.css";
+import "../styles/dashboard/ui-input.css";
+import "../styles/dashboard/ui-modal.css";
+import "../styles/dashboard/ui-table.css";
+import "../styles/dashboard/ui-pagination.css";
+import "../styles/dashboard/ui-badge.css";
+import "../styles/dashboard/ui-select.css";
+import "../styles/dashboard/ui-switch.css";
 
 // Additional dashboard CSS
 import "../styles/dashboard/layout.css";
