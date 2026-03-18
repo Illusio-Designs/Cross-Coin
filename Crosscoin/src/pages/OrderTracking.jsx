@@ -64,8 +64,16 @@ function getTimeline(orderData) {
 
     // Fall back to status_history — use real status field directly
     const statusHistory = orderData?.status_history;
+    const finalStatus = (orderData?.order?.status || '').toLowerCase();
+
     if (statusHistory && Array.isArray(statusHistory) && statusHistory.length > 0) {
-        return [...statusHistory].reverse().map(h => ({
+        // If order is not cancelled, filter out intermediate cancelled entries
+        // (e.g. admin cancelled then reinstated) — only keep if final status is cancelled
+        const filtered = finalStatus !== 'cancelled'
+            ? statusHistory.filter(h => h.status !== 'cancelled')
+            : statusHistory;
+
+        return [...filtered].reverse().map(h => ({
             status: h.status,
             note: h.notes || '',
             time: h.created_at || h.createdAt || ''
@@ -306,7 +314,7 @@ export default function OrderTracking() {
                                 rel="noopener noreferrer"
                                 className="ot-btn ot-btn-outline"
                             >
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8l5 3-5 3V8z"/></svg>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
                                 Track Shipment
                             </a>
                         )}
