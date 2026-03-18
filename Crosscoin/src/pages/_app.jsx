@@ -19,6 +19,8 @@ import "../styles/common/responsive.css";
 import "../styles/common/mobile-utilities.css";
 import "../styles/common/skeleton.css";
 import "../styles/common/critical.css";
+// Components
+import "../styles/components/InfiniteReviewsSlider.css";
 // Pages
 import "../styles/pages/Home.css";
 import "../styles/pages/Login.css";

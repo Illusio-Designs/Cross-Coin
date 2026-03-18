@@ -53,7 +53,7 @@ const HeroSlider = ({ slides = [] }) => {
           <SafeImage 
             imageData={{ 
               image_url: slides[current].image,
-              // Add ImageKit transformation parameters
+              // Override backend transformations for hero slider
               tr: 'w-1920,h-1080,c-fill,q-85,f-auto'
             }}
             alt={slides[current].title}
