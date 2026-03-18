@@ -340,13 +340,31 @@ export const updateUserProfile = async (profileData) => {
       Authorization: `Bearer ${token}`,
       "X-Brand-Name": "crosscoin"
     };
-    let data = profileData;
     if (profileData instanceof FormData) {
       headers["Content-Type"] = "multipart/form-data";
     }
-    const response = await axios.put(`${API_URL}/api/users/me`, data, {
+    const response = await axios.put(`${API_URL}/api/users/update`, profileData, {
       headers,
     });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const updateUserPassword = async ({ currentPassword, newPassword, confirmPassword }) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.put(
+      `${API_URL}/api/users/update-password`,
+      { currentPassword, newPassword, confirmPassword },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "X-Brand-Name": "crosscoin",
+        },
+      }
+    );
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
