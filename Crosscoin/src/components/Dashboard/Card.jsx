@@ -97,7 +97,7 @@ function CardGrid() {
   return (
     <div className="dashboard-sections">
 
-      {/* Hero Revenue Card */}
+      {/* ── Hero Revenue Card ── */}
       <div className="dc-hero-card">
         <div className="dc-hero-bg-orb dc-hero-orb1" aria-hidden="true" />
         <div className="dc-hero-bg-orb dc-hero-orb2" aria-hidden="true" />
@@ -133,7 +133,7 @@ function CardGrid() {
         </div>
       </div>
 
-      {/* Order Overview */}
+      {/* ── Order Overview ── */}
       <div className="dashboard-section">
         <SectionTitle icon={IC.cart}>Order Overview</SectionTitle>
         <div className="dashboard-card-grid">
@@ -141,7 +141,7 @@ function CardGrid() {
         </div>
       </div>
 
-      {/* Product Overview */}
+      {/* ── Product Overview ── */}
       <div className="dashboard-section">
         <SectionTitle icon={IC.box}>Product Overview</SectionTitle>
         <div className="dashboard-card-grid dashboard-card-grid-3">
@@ -149,48 +149,51 @@ function CardGrid() {
         </div>
       </div>
 
-      {/* Charts Row */}
+      {/* ── Charts Row — DonutChart is the card itself, no wrapper needed ── */}
       <div className="dashboard-charts-row">
         {stats.revenue?.donutChart?.length > 0 && (
-          <div className="dashboard-section dashboard-chart-section">
-            <SectionTitle icon={IC.rupee}>Revenue by Status</SectionTitle>
-            <div className="dashboard-chart-container">
-              <DonutChart data={stats.revenue.donutChart} title="Revenue Distribution" subtitle="By order status"
-                totalValue={`₹${stats.revenue.total.toLocaleString('en-IN',{minimumFractionDigits:2})}`}
-                totalLabel="Total Revenue" size={180} strokeWidth={25} showLegend={true} />
-            </div>
-          </div>
+          <DonutChart
+            data={stats.revenue.donutChart}
+            title="Revenue by Status"
+            subtitle="By order status"
+            totalValue={`₹${stats.revenue.total.toLocaleString('en-IN',{minimumFractionDigits:2})}`}
+            totalLabel="Total Revenue"
+            size={160} strokeWidth={22} showLegend={true}
+          />
         )}
         {stats.paymentDistribution?.chart?.length > 0 && (
-          <div className="dashboard-section dashboard-chart-section">
-            <SectionTitle icon={IC.card}>Payment Methods</SectionTitle>
-            <div className="dashboard-chart-container">
-              <DonutChart data={stats.paymentDistribution.chart} title="Payment Distribution" subtitle="COD vs Prepaid"
-                totalValue={`${stats.orders.total}`} totalLabel="Total Orders" size={180} strokeWidth={25} showLegend={true} />
-            </div>
-          </div>
+          <DonutChart
+            data={stats.paymentDistribution.chart}
+            title="Payment Methods"
+            subtitle="COD vs Prepaid"
+            totalValue={`${stats.orders.total}`}
+            totalLabel="Total Orders"
+            size={160} strokeWidth={22} showLegend={true}
+          />
         )}
         {stats.paymentStatusDistribution?.chart?.length > 0 && (
-          <div className="dashboard-section dashboard-chart-section">
-            <SectionTitle icon={IC.card}>Payment Status</SectionTitle>
-            <div className="dashboard-chart-container">
-              <DonutChart data={stats.paymentStatusDistribution.chart} title="Payment Status" subtitle="All payment statuses"
-                totalValue={`${stats.orders.total}`} totalLabel="Total Orders" size={180} strokeWidth={25} showLegend={true} />
-            </div>
-          </div>
+          <DonutChart
+            data={stats.paymentStatusDistribution.chart}
+            title="Payment Status"
+            subtitle="All payment statuses"
+            totalValue={`${stats.orders.total}`}
+            totalLabel="Total Orders"
+            size={160} strokeWidth={22} showLegend={true}
+          />
         )}
         {stats.orders?.statusChart?.length > 0 && (
-          <div className="dashboard-section dashboard-chart-section">
-            <SectionTitle icon={IC.cart}>Order Pipeline</SectionTitle>
-            <div className="dashboard-chart-container">
-              <DonutChart data={stats.orders.statusChart} title="Order Status" subtitle="Current pipeline"
-                totalValue={`${stats.orders.total}`} totalLabel="Total Orders" size={180} strokeWidth={25} showLegend={true} />
-            </div>
-          </div>
+          <DonutChart
+            data={stats.orders.statusChart}
+            title="Order Pipeline"
+            subtitle="Current pipeline"
+            totalValue={`${stats.orders.total}`}
+            totalLabel="Total Orders"
+            size={160} strokeWidth={22} showLegend={true}
+          />
         )}
       </div>
 
-      {/* RTO Statistics */}
+      {/* ── RTO Statistics ── */}
       {stats.rtoStats?.totalRTO > 0 && (
         <div className="dashboard-section">
           <SectionTitle icon={IC.undo}>RTO Statistics</SectionTitle>
@@ -202,7 +205,7 @@ function CardGrid() {
         </div>
       )}
 
-      {/* Marketing Performance */}
+      {/* ── Marketing Performance ── */}
       {stats.utmTracking && (stats.utmTracking.topSources?.length > 0 || stats.utmTracking.conversions?.length > 0) && (
         <div className="dashboard-section">
           <SectionTitle icon={IC.chart}>Marketing Performance (Last 30 Days)</SectionTitle>
@@ -233,16 +236,21 @@ function CardGrid() {
             </div>
           )}
           {stats.utmTracking.sourceChart?.length > 0 && (
-            <div className="dashboard-chart-container" style={{marginTop:'20px'}}>
-              <DonutChart data={stats.utmTracking.sourceChart} title="Traffic Sources" subtitle="Top 5 sources"
+            <div style={{ marginTop:'20px' }}>
+              <DonutChart
+                data={stats.utmTracking.sourceChart}
+                title="Traffic Sources"
+                subtitle="Top 5 sources"
                 totalValue={stats.utmTracking.sourceChart.reduce((s,i)=>s+i.value,0).toString()}
-                totalLabel="Total Sessions" size={180} strokeWidth={25} showLegend={true} />
+                totalLabel="Total Sessions"
+                size={160} strokeWidth={22} showLegend={true}
+              />
             </div>
           )}
         </div>
       )}
 
-      {/* Stock Alerts */}
+      {/* ── Stock Alerts ── */}
       {stats.lowStock && (stats.lowStock.lowStockCount > 0 || stats.lowStock.outOfStockCount > 0) && (
         <div className="dashboard-section">
           <SectionTitle icon={IC.warn}>Stock Alerts</SectionTitle>
@@ -281,7 +289,7 @@ function CardGrid() {
         </div>
       )}
 
-      {/* Top Selling Products */}
+      {/* ── Top Selling Products ── */}
       {stats.topProducts?.length > 0 && (
         <div className="dashboard-section">
           <SectionTitle icon={IC.star}>Top Selling Products</SectionTitle>
@@ -296,7 +304,7 @@ function CardGrid() {
         </div>
       )}
 
-      {/* Recent Orders */}
+      {/* ── Recent Orders ── */}
       {stats.recentOrders?.length > 0 && (
         <div className="dashboard-section">
           <SectionTitle icon={IC.cart}>Recent Orders</SectionTitle>
