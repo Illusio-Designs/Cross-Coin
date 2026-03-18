@@ -35,6 +35,10 @@ const Testimonials = dynamic(() => import("../components/Testimonials"), {
   loading: () => <div style={{ minHeight: '300px', background: '#fff' }} />
 });
 
+const BlogSection = dynamic(() => import("../components/BlogSection"), {
+  loading: () => <div style={{ minHeight: '400px', background: '#fff' }} />
+});
+
 // Helper functions moved inside component for Fast Refresh compatibility
 const Home = () => {
   // Helper functions
@@ -422,6 +426,7 @@ const Home = () => {
           </div>
         </div>
         <Testimonials />
+        <BlogSection />
       </div>
     );
   };
