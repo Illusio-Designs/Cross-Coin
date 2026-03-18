@@ -47,9 +47,9 @@
 .blog-card-home {
   width: 100%;
   background: #fff;
-  border-radius: 20px;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
   cursor: pointer;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   display: flex;
@@ -57,8 +57,8 @@
 }
 
 .blog-card-home:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.16);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 /* ── IMAGE ── */
@@ -94,7 +94,7 @@
   font-weight: 600;
   letter-spacing: 0.4px;
   padding: 5px 11px;
-  border-radius: 20px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -156,7 +156,7 @@
   align-items: center;
   gap: 5px;
   background: #f5f0ea;
-  border-radius: 10px;
+  border-radius: 4px;
   padding: 6px 11px;
   font-size: 12px;
   font-weight: 500;
@@ -188,7 +188,7 @@
   font-weight: 500;
   color: #6b5540;
   background: #f0ece6;
-  border-radius: 8px;
+  border-radius: 3px;
   padding: 4px 10px;
   border: 1px solid #e2d8cc;
   transition: background 0.2s, color 0.2s;
@@ -212,7 +212,7 @@
   font-weight: 600;
   letter-spacing: 0.3px;
   border: none;
-  border-radius: 13px;
+  border-radius: 4px;
   cursor: pointer;
   position: relative;
   overflow: hidden;
@@ -251,7 +251,7 @@
   width: 18px;
   height: 18px;
   background: rgba(255, 255, 255, 0.15);
-  border-radius: 50%;
+  border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -274,23 +274,23 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1.5px solid #CE1E36;
+  border: none;
   background: #CE1E36;
   color: #fff;
-  border-radius: 2px;
-  padding: 12px 32px;
+  border-radius: 6px;
+  padding: 16px 56px;
   font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.8px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
 }
 
 .view-all-btn-home:hover {
-  background: transparent;
-  color: #CE1E36;
+  background: #a8172a;
+  transform: translateY(-1px);
 }
 
 .view-all-btn-home svg {
