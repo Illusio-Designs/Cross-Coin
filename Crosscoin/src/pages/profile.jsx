@@ -6,6 +6,7 @@ import {
   resetPassword,
   getCurrentUser,
   updateUserProfile,
+  updateUserPassword,
   createShippingAddress,
   getUserShippingAddresses,
   updateShippingAddress,
@@ -89,9 +90,17 @@ export default function Profile() {
   // Profile image
   const [profileImage, setProfileImage] = useState(null);
   const [profileImageUrl, setProfileImageUrl] = useState("");
+  const [accountUsername, setAccountUsername] = useState("");
+  const [accountEmail, setAccountEmail] = useState("");
 
   useEffect(() => { if (!isAuthenticated) router.push("/login"); }, [isAuthenticated, router]);
-  useEffect(() => { if (user) setProfileImageUrl(user.profileImageUrl || ""); }, [user]);
+  useEffect(() => {
+    if (user) {
+      setProfileImageUrl(user.profileImageUrl || "");
+      setAccountUsername(user.username || "");
+      setAccountEmail(user.email || "");
+    }
+  }, [user]);
 
   useEffect(() => {
     if (activeTab === 0) {
@@ -152,11 +161,11 @@ export default function Profile() {
     e.preventDefault();
     try {
       const formData = new FormData();
-      formData.append("username", user?.username || "");
-      formData.append("email", user?.email || "");
-      if (profileImage) formData.append("profileImage", profileImage);
-      await updateUserProfile(formData);
-      showProfileUpdateSuccessToast();
+      formData.append("username", accountUsername);
+      formData.append("email", accountEmail);
+      if (profileImage) formData.append("profilePic", profileImage);
+      const res = await updateUserProfile(formData);
+      showProfileUpdateSuccessToast(res.message || "Profile updated.");
       if (profileImage) setProfileImageUrl(URL.createObjectURL(profileImage));
     } catch (err) { showProfileUpdateErrorToast(err.message || "Failed to update profile."); }
   };
@@ -166,8 +175,7 @@ export default function Profile() {
     if (!currentPassword || !newPassword || !confirmPassword) { showValidationErrorToast("All fields are required."); return; }
     if (newPassword !== confirmPassword) { showValidationErrorToast("Passwords do not match."); return; }
     try {
-      const token = localStorage.getItem("token");
-      const res = await resetPassword({ resetToken: token, password: newPassword, confirmPassword });
+      const res = await updateUserPassword({ currentPassword, newPassword, confirmPassword });
       showProfileUpdateSuccessToast(res.message || "Password updated.");
       setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
     } catch (err) { showProfileUpdateErrorToast(err.message || "Failed to update password."); }
@@ -307,11 +315,11 @@ export default function Profile() {
                 <form className="pf-form" onSubmit={handleProfileUpdate}>
                   <div className="pf-form-group">
                     <label>Username</label>
-                    <input type="text" value={user?.username || ""} readOnly />
+                    <input type="text" value={accountUsername} onChange={e => setAccountUsername(e.target.value)} placeholder="Enter username" required />
                   </div>
                   <div className="pf-form-group">
                     <label>Email Address</label>
-                    <input type="email" value={user?.email || ""} readOnly />
+                    <input type="email" value={accountEmail} onChange={e => setAccountEmail(e.target.value)} placeholder="Enter email" required />
                   </div>
                   <div className="pf-form-group">
                     <label>Profile Image</label>
