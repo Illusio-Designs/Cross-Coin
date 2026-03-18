@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import SafeImage from '../common/SafeImage';
 import Skeleton from '../common/Skeleton';
 
 const HeroSlider = ({ slides = [] }) => {
@@ -50,19 +49,13 @@ const HeroSlider = ({ slides = [] }) => {
     <div className="hero-slider">
       <div className="hero-slide" key={current}>
         <div className="hero-slide__image">
-          <SafeImage 
-            imageData={{ 
-              image_url: slides[current].image,
-              // Override backend transformations for hero slider
-              tr: 'w-1920,h-1080,c-fill,q-85,f-auto'
-            }}
+          <img
+            src={slides[current].image}
+            srcSet={slides[current].imageSrcSet || `${slides[current].imageThumbnail || slides[current].image} 300w, ${slides[current].imageMobile || slides[current].image} 600w, ${slides[current].image} 1000w`}
+            sizes="(max-width: 600px) 300px, (max-width: 1024px) 600px, 1000px"
             alt={slides[current].title}
-            priority={true}
-            quality={85}
-            isSlider={true}
-            width="100%"
-            height="100%"
-            sizes="100vw"
+            fetchpriority="high"
+            loading="eager"
             style={{ objectFit: 'cover', width: '100%', height: '100%', display: 'block' }}
           />
         </div>

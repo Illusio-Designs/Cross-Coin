@@ -2,15 +2,13 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from 'next/dynamic';
 import HeroSlider from "../components/products/HeroSlider";
 import ProductCard from "../components/products/ProductCard";
-import SafeImage from "../components/common/SafeImage";
 import Skeleton from "../components/common/Skeleton";
 import SlidingCollection from "../components/products/SlidingCollection";
 import UnlockedExclusives from "../components/common/UnlockedExclusives";
+import InfiniteReviewsSlider from "../components/common/InfiniteReviewsSlider";
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
-import { useAuth } from '../context/AuthContext';
-import { getPublicSliders, getPublicCategories, getPublicCategoryByName, getPublicProductReviews } from '../services/publicApi';
-import SeoWrapper from '../console/SeoWrapper';
+import { getPublicSliders, getPublicCategories, getPublicCategoryByName, getAllPublicReviews } from '../services/publicApi';
 
 // Lazy load CouponStrip to prevent module-level side effects
 const CouponStrip = dynamic(() => import("../components/common/CouponStrip"), {
@@ -18,77 +16,32 @@ const CouponStrip = dynamic(() => import("../components/common/CouponStrip"), {
   ssr: true
 });
 
-// Import TrustBadges component
 import TrustBadges from "../components/common/TrustBadges";
 
 import { useRouter } from 'next/router';
-import { fbqTrack } from '../utils/fbqTrack';
-import { showValidationErrorToast } from '../utils/toast';
-import DOMPurify from 'dompurify';
-import colorMap from '../components/products/colorMap';
-import { seoService } from '../services/index';
-
-// Load page-specific CSS - moved to _app.jsx
 
 // Lazy load below-the-fold components for better performance
-const Testimonials = dynamic(() => import("../components/common/Testimonials"), {
-  loading: () => <div style={{ minHeight: '300px', background: '#fff' }} />
-});
-
 const BlogSection = dynamic(() => import("../components/blog/BlogSection"), {
   loading: () => <div style={{ minHeight: '400px', background: '#fff' }} />
 });
 
-// Helper functions moved inside component for Fast Refresh compatibility
 const Home = () => {
-  // Helper functions
-  const formatTwoDigits = (num) => num.toString().padStart(2, '0');
-
-  const forceEnvImageBase = (url) => {
-    if (!url || typeof url !== 'string') return null;
-    
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-    
-    if (url.startsWith('http')) {
-      if (url.includes('localhost:5000') || url.includes('localhost')) {
-        const path = url.replace(/^https?:\/\/[^/]+/, '');
-        return `${baseUrl}${path}`;
-      }
-      return url;
-    }
-    
-    if (url.startsWith('/')) {
-      return `${baseUrl}${url}`;
-    }
-    return `${baseUrl}/${url}`;
-  };
   const router = useRouter();
-  const [slides, setSlides] = useState([]);
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const { addToCart } = useCart();
-  const { isAuthenticated, user } = useAuth();
-  const [selectedThumbnail, setSelectedThumbnail] = useState(0);
-  const [selectedColor, setSelectedColor] = useState("");
-  const [selectedSize, setSelectedSize] = useState("");
-  const [quantity, setQuantity] = useState(1);
+  const [slides, setSlides] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState([]);
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
   const [currentCategoryProducts, setCurrentCategoryProducts] = useState([]);
-  const [categoryLoading, setCategoryLoading] = useState(false);
   const [latestProducts, setLatestProducts] = useState([]);
   const [latestProductsLoading, setLatestProductsLoading] = useState(false);
   const [exclusiveProducts, setExclusiveProducts] = useState([]);
   const [exclusiveProductsLoading, setExclusiveProductsLoading] = useState(true);
-  const [categoryImageLoaded, setCategoryImageLoaded] = useState(false);
-  const [latestProductsImageLoaded, setLatestProductsImageLoaded] = useState(false);
-  const [seoData, setSeoData] = useState(null);
+  const [reviews, setReviews] = useState([]);
   
   const categorySliderRef = useRef(null);
   const latestSliderRef = useRef(null);
-  const categoryImageRef = useRef(null);
 
-  const [showCategoryArrows, setShowCategoryArrows] = useState(false);
   const [showLatestArrows, setShowLatestArrows] = useState(false);
 
   const apiCalledRef = useRef(false); // Add a ref to guard API calls
@@ -103,7 +56,6 @@ const Home = () => {
   // Check on mount, when products change, and on resize
   useEffect(() => {
     const handleResize = () => {
-      checkSliderScrollable(categorySliderRef, setShowCategoryArrows);
       checkSliderScrollable(latestSliderRef, setShowLatestArrows);
     };
     handleResize();
@@ -127,7 +79,7 @@ const Home = () => {
         setExclusiveProductsLoading(true);
 
         // Execute all 4 API calls in parallel using Promise.all()
-        const [slidersData, categoriesData, latestData, exclusiveData] = await Promise.all([
+        const [slidersData, categoriesData, latestData, exclusiveData, reviewsData] = await Promise.all([
           // 1. Fetch sliders
           (async () => {
             try {
@@ -189,6 +141,15 @@ const Home = () => {
             } catch (error) {
               return [];
             }
+          })(),
+
+          // 5. Fetch reviews
+          (async () => {
+            try {
+              return await getAllPublicReviews({ limit: 30, sort: 'highest' });
+            } catch (error) {
+              return [];
+            }
           })()
         ]);
 
@@ -196,6 +157,7 @@ const Home = () => {
         setSlides(slidersData);
         setCategories(categoriesData);
         setLatestProducts(latestData);
+        setReviews(Array.isArray(reviewsData) ? reviewsData : (reviewsData?.reviews || reviewsData?.data || []));
 
         // Process exclusive products
         if (exclusiveData && exclusiveData.length > 0) {
@@ -219,13 +181,10 @@ const Home = () => {
 
   const fetchCategoryProducts = useCallback(async (categoryName) => {
     try {
-      setCategoryLoading(true);
       const data = await getPublicCategoryByName(categoryName);
       setCurrentCategoryProducts(data.products || []);
     } catch (error) {
       setCurrentCategoryProducts([]);
-    } finally {
-      setCategoryLoading(false);
     }
   }, []);
 
@@ -235,42 +194,6 @@ const Home = () => {
       fetchCategoryProducts(categories[currentCategoryIndex].name);
     }
   }, [currentCategoryIndex, categories, fetchCategoryProducts]);
-
-  useEffect(() => {
-    // Set your target date here (e.g., 7 days from now)
-    const targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() + 7);
-
-    const updateTimer = () => {
-      const now = new Date();
-      const diff = targetDate - now;
-      if (diff > 0) {
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-        const minutes = Math.floor((diff / (1000 * 60)) % 60);
-        const seconds = Math.floor((diff / 1000) % 60);
-        setTimeLeft({ days, hours, minutes, seconds });
-      } else {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-      }
-    };
-    updateTimer();
-    const timerInterval = setInterval(updateTimer, 1000);
-    return () => clearInterval(timerInterval);
-  }, []);
-
-  const { days, hours, minutes, seconds } = timeLeft;
-
-  const scrollSlider = (direction) => {
-    const scrollAmount = 300;
-    if (categorySliderRef.current) {
-      if (direction === 'left') {
-        categorySliderRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-      } else {
-        categorySliderRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-      }
-    }
-  };
 
   const scrollLatestSlider = (direction) => {
     const scrollAmount = 300;
@@ -283,56 +206,10 @@ const Home = () => {
     }
   };
 
-  const scrollCategoryImage = (direction) => {
-    if (direction === 'left') {
-      setCurrentCategoryIndex(prev => prev > 0 ? prev - 1 : categories.length - 1);
-    } else {
-      setCurrentCategoryIndex(prev => prev < categories.length - 1 ? prev + 1 : 0);
-    }
-  };
-
-  const handleCategoryChange = async (categoryName) => {
-    await fetchCategoryProducts(categoryName);
-  };
-
   const handleProductClick = (product) => {
     if (product && product.slug) {
       router.push(`/ProductDetails?slug=${product.slug}`);
     }
-  };
-
-  const currentCategory = categories[currentCategoryIndex] || {
-    id: null,
-    name: 'Loading...',
-    image: null // No fallback image
-  };
-
-  // Get the image source with fallback - simple version
-  const getCategoryImageSrc = () => {
-    if (!currentCategory || !currentCategory.image) {
-      return null; // No fallback image
-    }
-
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-    const imageUrl = currentCategory.image;
-    
-    // If it's already a fallback asset, return it directly
-    if (imageUrl.startsWith('/assets/')) {
-      return imageUrl;
-    }
-    
-    // If already a full URL (ImageKit or external), use it
-    if (imageUrl.startsWith('http')) {
-      return imageUrl;
-    }
-    
-    // If it starts with /, it's either ImageKit path or /uploads/
-    if (imageUrl.startsWith('/')) {
-      return `${baseUrl}${imageUrl}`;
-    }
-    
-    // Legacy: just a filename - convert to ImageKit format
-    return `${baseUrl}/categories/${imageUrl}`;
   };
 
   return (
@@ -425,10 +302,16 @@ const Home = () => {
             )}
           </div>
         </div>
-        <Testimonials />
+        <section className="home-reviews-section">
+          <div className="home-reviews-header">
+            <h2 className="section-header-h2">Customer <strong>Reviews</strong></h2>
+            <p className="section-header-sub">What our customers are saying</p>
+          </div>
+          <InfiniteReviewsSlider reviews={reviews} />
+        </section>
         <BlogSection />
       </div>
     );
-  };
+};
 
 export default Home;
