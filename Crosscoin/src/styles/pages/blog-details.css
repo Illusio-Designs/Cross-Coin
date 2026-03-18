@@ -326,7 +326,7 @@
 
 /* ── IMAGES ── */
 .article-img {
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
   margin: 28px 0;
   position: relative;
@@ -412,7 +412,7 @@
 /* ── PRODUCT SPOTLIGHT ── */
 .product-spotlight {
   border: 1.5px solid var(--bd-gray-border);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 20px;
   margin: 32px 0;
   display: flex;
@@ -430,7 +430,7 @@
 .product-spotlight-img {
   width: 90px;
   height: 110px;
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
   background: var(--bd-gray-bg);
   flex-shrink: 0;
@@ -719,7 +719,7 @@
 .sb-img {
   width: 64px;
   height: 64px;
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
   background: var(--bd-gray-bg);
   flex-shrink: 0;
@@ -795,7 +795,7 @@
 
 .related-card-img {
   aspect-ratio: 16/10;
-  border-radius: 10px;
+  border-radius: 6px;
   overflow: hidden;
   margin-bottom: 14px;
   background: var(--bd-gray-bg);

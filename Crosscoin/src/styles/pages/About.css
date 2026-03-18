@@ -53,7 +53,7 @@
   text-align: center;
   padding: 2rem;
   background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid #e8e8e8;
   transition: all 0.3s ease;
 }
@@ -126,7 +126,7 @@
   text-align: center;
   padding: 2.5rem 2rem;
   background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid #e8e8e8;
   transition: all 0.3s ease;
 }
@@ -182,7 +182,7 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
   border: 1px solid #e8e8e8;
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
 .feature-card:hover {
@@ -244,7 +244,7 @@
 .highlight-card {
   padding: 2rem;
   background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid #e8e8e8;
   transition: all 0.3s ease;
 }
@@ -294,7 +294,7 @@
   background: white;
   color: #CE1E36;
   text-decoration: none;
-  border-radius: 50px;
+  border-radius: 4px;
   font-weight: 700;
   font-size: 1rem;
   transition: all 0.3s ease;
