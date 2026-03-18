@@ -1,265 +1,207 @@
 import React, { useState } from 'react';
 
-const DonutChart = ({ 
-    data, 
-    title, 
-    subtitle, 
-    totalValue, 
-    totalLabel,
-    size = 140,
-    strokeWidth = 20,
-    showLegend = true,
-    colors = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6', '#f97316', '#84cc16']
+const DEFAULT_COLORS = [
+  '#CE1E36', '#180D3E', '#7c3aed', '#2563eb',
+  '#059669', '#d97706', '#0891b2', '#db2777',
+  '#65a30d', '#ea580c'
+];
+
+const DonutChart = ({
+  data,
+  title,
+  subtitle,
+  totalValue,
+  totalLabel,
+  size = 160,
+  strokeWidth = 22,
+  showLegend = true,
+  colors = DEFAULT_COLORS,
 }) => {
-    const [isExpanded, setIsExpanded] = useState(false);
-    const [hoveredSegment, setHoveredSegment] = useState(null);
-    // Safety check for data
-    if (!data || !Array.isArray(data) || data.length === 0) {
-        return (
-            <div className="donut-chart-container">
-                <div className="donut-chart-header">
-                    <h3 className="donut-chart-title">{title}</h3>
-                    {subtitle && <p className="donut-chart-subtitle">{subtitle}</p>}
-                </div>
-                <div className="donut-chart-content">
-                    <p style={{ textAlign: 'center', padding: '20px', color: '#6b7280' }}>
-                        No data available
-                    </p>
-                </div>
-            </div>
-        );
-    }
+  const [hovered, setHovered] = useState(null);
+  const [expanded, setExpanded] = useState(false);
 
-    const radius = (size - strokeWidth) / 2;
-    const circumference = 2 * Math.PI * radius;
-    const center = size / 2;
-
-    // Calculate percentages and cumulative values
-    const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
-    
-    if (total === 0) {
-        return (
-            <div className="donut-chart-container">
-                <div className="donut-chart-header">
-                    <h3 className="donut-chart-title">{title}</h3>
-                    {subtitle && <p className="donut-chart-subtitle">{subtitle}</p>}
-                </div>
-                <div className="donut-chart-content">
-                    <p style={{ textAlign: 'center', padding: '20px', color: '#6b7280' }}>
-                        No revenue data available
-                    </p>
-                </div>
-            </div>
-        );
-    }
-    
-    let cumulativePercentage = 0;
-
-    const segments = data.map((item, index) => {
-        const percentage = (item.value / total) * 100;
-        const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
-        const strokeDashoffset = -((cumulativePercentage / 100) * circumference);
-        
-        const segment = {
-            ...item,
-            percentage: percentage.toFixed(1),
-            strokeDasharray,
-            strokeDashoffset,
-            // Use color from data if available, otherwise use default colors
-            color: item.color || colors[index % colors.length]
-        };
-        
-        cumulativePercentage += percentage;
-        return segment;
-    });
-
+  if (!data || !Array.isArray(data) || data.length === 0) {
     return (
-        <>
-            <div className="donut-chart-container" onClick={() => setIsExpanded(true)}>
-                <div className="donut-chart-header">
-                    <h3 className="donut-chart-title">{title}</h3>
-                    {subtitle && <p className="donut-chart-subtitle">{subtitle}</p>}
-                </div>
-                
-                <div className="donut-chart-content">
-                    <div className="donut-chart-wrapper">
-                        <svg width={size} height={size} className="donut-chart-svg">
-                            {/* Background circle */}
-                            <circle
-                                cx={center}
-                                cy={center}
-                                r={radius}
-                                fill="none"
-                                stroke="#f3f4f6"
-                                strokeWidth={strokeWidth}
-                            />
-                            
-                            {/* Data segments with rounded caps for separation */}
-                            {segments.map((segment, index) => (
-                                <circle
-                                    key={index}
-                                    cx={center}
-                                    cy={center}
-                                    r={radius}
-                                    fill="none"
-                                    stroke={segment.color}
-                                    strokeWidth={strokeWidth - 4}
-                                    strokeDasharray={segment.strokeDasharray}
-                                    strokeDashoffset={segment.strokeDashoffset}
-                                    strokeLinecap="round"
-                                    className="donut-segment"
-                                    onMouseEnter={() => setHoveredSegment(index)}
-                                    onMouseLeave={() => setHoveredSegment(null)}
-                                    style={{
-                                        transform: 'rotate(-90deg)',
-                                        transformOrigin: `${center}px ${center}px`,
-                                        transition: 'all 0.3s ease',
-                                        opacity: hoveredSegment === null || hoveredSegment === index ? 1 : 0.6,
-                                        cursor: 'pointer'
-                                    }}
-                                />
-                            ))}
-                        </svg>
-                        
-                        {/* Center content */}
-                        <div className="donut-chart-center">
-                            <div className="donut-chart-total-value">{totalValue}</div>
-                            <div className="donut-chart-total-label">{totalLabel}</div>
-                        </div>
+      <div className="dc-chart-card">
+        <div className="dc-chart-header">
+          <p className="dc-chart-title">{title}</p>
+          {subtitle && <p className="dc-chart-subtitle">{subtitle}</p>}
+        </div>
+        <div className="dc-chart-empty">No data available</div>
+      </div>
+    );
+  }
+
+  const total = data.reduce((s, d) => s + (d.value || 0), 0);
+  if (total === 0) {
+    return (
+      <div className="dc-chart-card">
+        <div className="dc-chart-header">
+          <p className="dc-chart-title">{title}</p>
+          {subtitle && <p className="dc-chart-subtitle">{subtitle}</p>}
+        </div>
+        <div className="dc-chart-empty">No data available</div>
+      </div>
+    );
+  }
+
+  const r = (size - strokeWidth) / 2;
+  const circ = 2 * Math.PI * r;
+  const cx = size / 2;
+
+  let cum = 0;
+  const segments = data.map((item, i) => {
+    const pct = (item.value / total) * 100;
+    const seg = {
+      ...item,
+      pct: pct.toFixed(1),
+      color: item.color || colors[i % colors.length],
+      dashArray: `${(pct / 100) * circ} ${circ}`,
+      dashOffset: -((cum / 100) * circ),
+    };
+    cum += pct;
+    return seg;
+  });
+
+  const ChartSVG = ({ s, sw, highlight }) => {
+    const rr = (s - sw) / 2;
+    const cc = 2 * Math.PI * rr;
+    const ctr = s / 2;
+    let c2 = 0;
+    return (
+      <svg width={s} height={s} className="dc-chart-svg">
+        <circle cx={ctr} cy={ctr} r={rr} fill="none" stroke="#f0f0f5" strokeWidth={sw} />
+        {segments.map((seg, i) => {
+          const p = (seg.value / total) * 100;
+          const da = `${(p / 100) * cc} ${cc}`;
+          const doff = -((c2 / 100) * cc);
+          c2 += p;
+          return (
+            <circle
+              key={i}
+              cx={ctr} cy={ctr} r={rr}
+              fill="none"
+              stroke={seg.color}
+              strokeWidth={highlight === i ? sw + 3 : sw - 3}
+              strokeDasharray={da}
+              strokeDashoffset={doff}
+              strokeLinecap="round"
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+              style={{
+                transform: `rotate(-90deg)`,
+                transformOrigin: `${ctr}px ${ctr}px`,
+                transition: 'stroke-width 0.2s ease, opacity 0.2s ease',
+                opacity: highlight === null || highlight === i ? 1 : 0.45,
+                cursor: 'pointer',
+              }}
+            />
+          );
+        })}
+      </svg>
+    );
+  };
+
+  return (
+    <>
+      <div className="dc-chart-card" onClick={() => setExpanded(true)} role="button" tabIndex={0} onKeyDown={e => e.key === 'Enter' && setExpanded(true)}>
+        <div className="dc-chart-header">
+          <p className="dc-chart-title">{title}</p>
+          {subtitle && <p className="dc-chart-subtitle">{subtitle}</p>}
+        </div>
+
+        <div className="dc-chart-body">
+          {/* SVG donut */}
+          <div className="dc-chart-donut-wrap">
+            <ChartSVG s={size} sw={strokeWidth} highlight={hovered} />
+            <div className="dc-chart-center">
+              <div className="dc-chart-center-val">{totalValue}</div>
+              <div className="dc-chart-center-lbl">{totalLabel}</div>
+            </div>
+          </div>
+
+          {/* Legend */}
+          {showLegend && (
+            <div className="dc-chart-legend">
+              {segments.map((seg, i) => (
+                <div
+                  key={i}
+                  className="dc-legend-row"
+                  onMouseEnter={() => setHovered(i)}
+                  onMouseLeave={() => setHovered(null)}
+                  style={{ opacity: hovered === null || hovered === i ? 1 : 0.45 }}
+                >
+                  <span className="dc-legend-dot" style={{ background: seg.color }} />
+                  <div className="dc-legend-info">
+                    <div className="dc-legend-top">
+                      <span className="dc-legend-label">{seg.label}</span>
+                      <span className="dc-legend-pct">{seg.pct}%</span>
                     </div>
-                    
-                    {/* Legend */}
-                    {showLegend && (
-                        <div className="donut-chart-legend">
-                            {segments.map((segment, index) => (
-                                <div 
-                                    key={index} 
-                                    className="donut-legend-item"
-                                    onMouseEnter={() => setHoveredSegment(index)}
-                                    onMouseLeave={() => setHoveredSegment(null)}
-                                    style={{
-                                        opacity: hoveredSegment === null || hoveredSegment === index ? 1 : 0.5,
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    <div 
-                                        className="donut-legend-color" 
-                                        style={{ backgroundColor: segment.color }}
-                                    ></div>
-                                    <div className="donut-legend-content">
-                                        <span className="donut-legend-label">{segment.label}</span>
-                                        <span className="donut-legend-value">
-                                            {segment.value.toLocaleString()} ({segment.percentage}%)
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                    <div className="dc-legend-bar-track">
+                      <div className="dc-legend-bar-fill" style={{ width: `${seg.pct}%`, background: seg.color }} />
+                    </div>
+                    <span className="dc-legend-val">{seg.value.toLocaleString()}</span>
+                  </div>
                 </div>
-                <div className="donut-chart-expand-hint">Click to expand</div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="dc-chart-hint">Click to expand</div>
+      </div>
+
+      {/* Expanded modal */}
+      {expanded && (
+        <div className="dc-modal-overlay" onClick={() => setExpanded(false)}>
+          <div className="dc-modal" onClick={e => e.stopPropagation()}>
+            <button className="dc-modal-close" onClick={() => setExpanded(false)} aria-label="Close">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+
+            <div className="dc-modal-header">
+              <p className="dc-modal-title">{title}</p>
+              {subtitle && <p className="dc-modal-subtitle">{subtitle}</p>}
             </div>
 
-            {/* Expanded Modal */}
-            {isExpanded && (
-                <div className="donut-chart-modal-overlay" onClick={() => setIsExpanded(false)}>
-                    <div className="donut-chart-modal" onClick={(e) => e.stopPropagation()}>
-                        <button className="donut-chart-modal-close" onClick={() => setIsExpanded(false)}>
-                            ×
-                        </button>
-                        <div className="donut-chart-modal-header">
-                            <h2 className="donut-chart-modal-title">{title}</h2>
-                            {subtitle && <p className="donut-chart-modal-subtitle">{subtitle}</p>}
-                        </div>
-                        
-                        <div className="donut-chart-modal-content">
-                            <div className="donut-chart-modal-chart">
-                                <svg width={280} height={280} className="donut-chart-svg">
-                                    {/* Background circle */}
-                                    <circle
-                                        cx={140}
-                                        cy={140}
-                                        r={120}
-                                        fill="none"
-                                        stroke="#f3f4f6"
-                                        strokeWidth={40}
-                                    />
-                                    
-                                    {/* Data segments */}
-                                    {segments.map((segment, index) => {
-                                        const modalCircumference = 2 * Math.PI * 120;
-                                        const percentage = (segment.value / total) * 100;
-                                        let cumulativePercent = 0;
-                                        for (let i = 0; i < index; i++) {
-                                            cumulativePercent += (segments[i].value / total) * 100;
-                                        }
-                                        const strokeDasharray = `${(percentage / 100) * modalCircumference} ${modalCircumference}`;
-                                        const strokeDashoffset = -((cumulativePercent / 100) * modalCircumference);
-                                        
-                                        return (
-                                            <circle
-                                                key={index}
-                                                cx={140}
-                                                cy={140}
-                                                r={120}
-                                                fill="none"
-                                                stroke={segment.color}
-                                                strokeWidth={40}
-                                                strokeDasharray={strokeDasharray}
-                                                strokeDashoffset={strokeDashoffset}
-                                                strokeLinecap="round"
-                                                className="donut-segment-modal"
-                                                onMouseEnter={() => setHoveredSegment(index)}
-                                                onMouseLeave={() => setHoveredSegment(null)}
-                                                style={{
-                                                    transform: 'rotate(-90deg)',
-                                                    transformOrigin: '140px 140px',
-                                                    transition: 'all 0.3s ease',
-                                                    opacity: hoveredSegment === null || hoveredSegment === index ? 1 : 0.5
-                                                }}
-                                            />
-                                        );
-                                    })}
-                                </svg>
-                                
-                                {/* Center content */}
-                                <div className="donut-chart-modal-center">
-                                    <div className="donut-chart-modal-total-value">{totalValue}</div>
-                                    <div className="donut-chart-modal-total-label">{totalLabel}</div>
-                                </div>
-                            </div>
-                            
-                            {/* Legend */}
-                            <div className="donut-chart-modal-legend">
-                                {segments.map((segment, index) => (
-                                    <div 
-                                        key={index} 
-                                        className="donut-modal-legend-item"
-                                        onMouseEnter={() => setHoveredSegment(index)}
-                                        onMouseLeave={() => setHoveredSegment(null)}
-                                        style={{
-                                            opacity: hoveredSegment === null || hoveredSegment === index ? 1 : 0.5
-                                        }}
-                                    >
-                                        <div 
-                                            className="donut-modal-legend-color" 
-                                            style={{ backgroundColor: segment.color }}
-                                        ></div>
-                                        <div className="donut-modal-legend-content">
-                                            <span className="donut-modal-legend-label">{segment.label}</span>
-                                            <span className="donut-modal-legend-value">
-                                                {segment.value.toLocaleString()} ({segment.percentage}%)
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+            <div className="dc-modal-body">
+              <div className="dc-modal-donut-wrap">
+                <ChartSVG s={260} sw={34} highlight={hovered} />
+                <div className="dc-modal-center">
+                  <div className="dc-modal-center-val">{totalValue}</div>
+                  <div className="dc-modal-center-lbl">{totalLabel}</div>
                 </div>
-            )}
-        </>
-    );
+              </div>
+
+              <div className="dc-modal-legend">
+                {segments.map((seg, i) => (
+                  <div
+                    key={i}
+                    className="dc-modal-legend-row"
+                    onMouseEnter={() => setHovered(i)}
+                    onMouseLeave={() => setHovered(null)}
+                    style={{ opacity: hovered === null || hovered === i ? 1 : 0.45 }}
+                  >
+                    <span className="dc-modal-legend-dot" style={{ background: seg.color }} />
+                    <div className="dc-modal-legend-info">
+                      <div className="dc-modal-legend-top">
+                        <span className="dc-modal-legend-label">{seg.label}</span>
+                        <span className="dc-modal-legend-pct">{seg.pct}%</span>
+                      </div>
+                      <div className="dc-legend-bar-track">
+                        <div className="dc-legend-bar-fill" style={{ width: `${seg.pct}%`, background: seg.color }} />
+                      </div>
+                      <span className="dc-modal-legend-val">{seg.value.toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 };
 
 export default DonutChart;
