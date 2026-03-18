@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
-import Loader from "../../../components/Loader";
+import Loader from "../../../components/common/Loader";
 import BrandTags from "../../../components/Dashboard/BrandTags";
 import { sliderService, categoryService, brandService } from "../../../services";
 import { debounce } from 'lodash';

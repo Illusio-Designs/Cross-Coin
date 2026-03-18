@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { orderService, dashboardService } from '../../../services';
 import { debounce } from 'lodash';
-import { Table, Pagination, Modal, Button } from "@/components/ui";
-import SafeImage from "@/components/common/SafeImage";
-import Loader from "@/components/Loader";
-import BrandTags from "@/components/Dashboard/BrandTags";
+import { Table, Pagination, Modal, Button } from "../../../components/ui";
+import SafeImage from "../../../components/common/SafeImage";
+import Loader from "../../../components/common/Loader";
+import BrandTags from "../../../components/Dashboard/BrandTags";
 import { toast } from 'react-hot-toast';
 import { getProductImageSrc } from '../../../utils/imageUtils';
 import { getAttributeComponents } from '../../../utils/productAttributeFormatter';

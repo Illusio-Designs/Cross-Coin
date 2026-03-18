@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Input, Modal, Table, Pagination } from "@/components/ui";
-import Loader from "@/components/Loader";
-import { couponService } from "@/services";
+import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
+import Loader from "../../../components/common/Loader";
+import { couponService } from "../../../services";
 import { debounce } from 'lodash';
 
 export default function Coupons() {

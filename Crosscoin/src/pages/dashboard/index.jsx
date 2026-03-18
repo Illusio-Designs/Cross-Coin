@@ -1,11 +1,11 @@
-import ProtectedRoute from "@/components/ProtectedRoute";
-import Sidebar from "@/components/Sidebar/Sidebar.jsx";
-import CardGrid from '@/components/Dashboard/Card';
-import DashboardHeader from '@/components/Dashboard/DashboardHeader';
-import DashboardFooter from '@/components/Dashboard/DashboardFooter';
+import ProtectedRoute from "../../components/common/ProtectedRoute";
+import Sidebar from "../../components/Sidebar/Sidebar.jsx";
+import CardGrid from '../../components/Dashboard/Card';
+import DashboardHeader from '../../components/Dashboard/DashboardHeader';
+import DashboardFooter from '../../components/Dashboard/DashboardFooter';
 import { useState, useEffect } from "react";
-import Loader from "@/components/Loader";
-import { handleViewChange, getViewFromPath } from "@/utils/dashboardRouting";
+import Loader from "../../components/common/Loader";
+import { handleViewChange, getViewFromPath } from "../../utils/dashboardRouting";
 
 // Load dashboard-specific CSS - moved to _app.jsx
 

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { showSuccess, showError } from '@/utils/toastNotification';
+import { showSuccess, showError } from '../../utils/toastNotification';
 import { FiSave, FiEdit2, FiTrash2, FiX, FiLock, FiUnlock, FiPlus, FiRefreshCw } from 'react-icons/fi';
-import { brandSettingsService, brandService } from '@/services';
-import { Modal, Button, Input } from '@/components/ui';
-import Loader from '@/components/Loader';
+import { brandSettingsService, brandService } from '../../services';
+import { Modal, Button, Input } from '../../components/ui';
+import Loader from '../../components/common/Loader';
 
 export default function BrandSettingsManager() {
     const [brands, setBrands] = useState([]);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { productService } from '@/services';
-import Loader from '@/components/Loader';
-import { Pagination } from '@/components/ui';
+import { productService } from '../../../services';
+import Loader from '../../../components/common/Loader';
+import { Pagination } from '../../../components/ui';
 
 const MediaGallery = () => {
   const [images, setImages] = useState([]);
