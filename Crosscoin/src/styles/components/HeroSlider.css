@@ -47,7 +47,7 @@
   align-items: center;
   justify-content: flex-start;
   z-index: 2;
-  background: linear-gradient(to right, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.3) 40%, transparent 70%);
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.4) 35%, transparent 65%);
   padding-left: 5%;
 }
 
@@ -70,6 +70,7 @@
   animation: fadeInUp 1s ease-out 0.3s both;
   font-weight: 800;
   letter-spacing: -1px;
+  color: white;
 }
 
 .hero-slide__content-text h1::after {
@@ -301,6 +302,7 @@
   .hero-slide__content-text p {
     font-size: 0.95rem;
     margin-bottom: 1.5rem;
+    color: #666;
   }
 
   .hero-btn {
