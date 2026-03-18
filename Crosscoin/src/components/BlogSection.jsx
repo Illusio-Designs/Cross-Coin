@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/router';
 import Link from 'next/link';
 
 const BlogSection = () => {
+  const router = useRouter();
   const [activeCategory, setActiveCategory] = useState('all');
 
   const blogs = [
@@ -47,6 +49,10 @@ const BlogSection = () => {
     setActiveCategory(category);
   };
 
+  const handleBlogClick = (blogId) => {
+    router.push(`/blog-details?id=${blogId}`);
+  };
+
   return (
     <div className="blog-section-wrapper">
       <div className="blog-section-header">
@@ -59,6 +65,7 @@ const BlogSection = () => {
             <div 
               key={blog.id} 
               className="blog-card-home"
+              onClick={() => handleBlogClick(blog.id)}
             >
               <div className="blog-card-img-home">
                 <img src={blog.img} alt={blog.title} loading="lazy" />
@@ -76,6 +83,18 @@ const BlogSection = () => {
         <div className="pagination-dot active"></div>
         <div className="pagination-dot"></div>
         <div className="pagination-dot"></div>
+      </div>
+
+      <div className="blog-view-all-home">
+        <button 
+          className="view-all-btn-home"
+          onClick={() => router.push('/blog')}
+        >
+          View All Articles
+          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
       </div>
     </div>
   );
