@@ -236,7 +236,7 @@
 /* Card responsive utilities */
 .card-responsive {
   background: white;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 1.5rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin-bottom: 1rem;
@@ -298,7 +298,7 @@
   max-height: 90vh;
   overflow-y: auto;
   background: white;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 2rem;
   z-index: 1000;
 }
@@ -361,3 +361,4 @@
     transition-duration: 0.01ms !important;
   }
 }
+

@@ -25,7 +25,7 @@
   background: transparent;
   font-size: 1rem;
   padding: 0.75rem 1rem 0.75rem 2.5rem;
-  border-radius: 2rem;
+  border-radius: 8px;
   width: 100%;
 }
 
@@ -106,7 +106,7 @@
 .seo-image-preview {
   max-width: 100%;
   margin-top: 0.5rem;
-  border-radius: 0.5rem;
+  border-radius: 8px;
 }
 
 /* Action Buttons */

@@ -745,7 +745,7 @@
   height: 32px;
   padding: 0 12px;
   border: 1px solid #ebebf0;
-  border-radius: 20px;
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
   color: #666;
@@ -768,7 +768,7 @@
 
 .bset-cat-count {
   background: rgba(255,255,255,0.25);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 0 6px;
   font-size: 11px;
   min-width: 18px;
@@ -1041,3 +1041,4 @@
     align-items: flex-start;
   }
 }
+

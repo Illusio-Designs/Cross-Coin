@@ -152,7 +152,7 @@
     padding: 8px 16px;
     border: 1px solid #ddd;
     background: white;
-    border-radius: 20px;
+    border-radius: 8px;
     font-size: 14px;
     font-weight: 500;
     color: #666;
@@ -177,7 +177,7 @@
 .category-btn .count {
     background: rgba(0, 0, 0, 0.1);
     padding: 2px 8px;
-    border-radius: 10px;
+    border-radius: 8px;
     font-size: 12px;
 }
 
@@ -450,3 +450,4 @@
 .modal-content .form-group.full-width {
     grid-column: 1 / -1;
 }
+
