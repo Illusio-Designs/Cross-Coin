@@ -133,7 +133,7 @@
 
 .bc-desc {
   font-size: 12.5px;
-  color: #7a6a55;
+  color: #666;
   line-height: 1.5;
   font-weight: 400;
   margin-bottom: 14px;
@@ -155,12 +155,12 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  background: #f5f0ea;
+  background: #F3F4F6;
   border-radius: 4px;
   padding: 6px 11px;
   font-size: 12px;
   font-weight: 500;
-  color: #3d2f1e;
+  color: #180D3E;
 }
 
 .bc-meta-item svg {
@@ -171,8 +171,8 @@
 }
 
 .bc-meta-diff {
-  background: #fef3e2;
-  color: #92500a;
+  background: rgba(206, 30, 54, 0.08);
+  color: #CE1E36;
 }
 
 /* ── TAGS ── */
@@ -186,18 +186,19 @@
 .bc-tag {
   font-size: 11.5px;
   font-weight: 500;
-  color: #6b5540;
-  background: #f0ece6;
+  color: #180D3E;
+  background: #F3F4F6;
   border-radius: 3px;
   padding: 4px 10px;
-  border: 1px solid #e2d8cc;
+  border: 1px solid #E5E7EB;
   transition: background 0.2s, color 0.2s;
   cursor: default;
 }
 
 .bc-tag:hover {
-  background: #e8dfd4;
-  color: #3d2f1e;
+  background: #CE1E36;
+  color: #fff;
+  border-color: #CE1E36;
 }
 
 /* ── BUTTON ── */

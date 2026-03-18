@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
-import Link from 'next/link';
 import SeoWrapper from '../console/SeoWrapper';
 
 const BlogPage = () => {
@@ -141,33 +140,63 @@ const BlogPage = () => {
         {/* Blog Grid */}
         <div className="blog-page-grid">
           {filteredBlogs.map((blog) => (
-            <div 
+            <div
               key={blog.id}
-              className="blog-page-card"
+              className="blog-card-home"
               onClick={() => handleBlogClick(blog.id)}
             >
-              <div className="blog-page-card-img">
+              {/* Image */}
+              <div className="bc-img-wrap">
                 <img src={blog.img} alt={blog.title} loading="lazy" />
+                <div className="bc-badge">
+                  <span className="bc-badge-dot" />
+                  {blog.catLabel}
+                </div>
               </div>
-              <div className="blog-page-card-content">
-                <div className="blog-page-card-meta">
-                  <span className="blog-page-card-date">{blog.date}</span>
-                  <span className="blog-page-card-readtime">{blog.readTime}</span>
-                </div>
-                <h3 className="blog-page-card-title">{blog.title}</h3>
-                <p className="blog-page-card-excerpt">{blog.excerpt}</p>
-                <div className="blog-page-card-footer">
-                  <div className="blog-page-card-author">
-                    <div className="author-avatar">{blog.author.split(' ').map(w => w[0]).join('')}</div>
-                    <span className="author-name">{blog.author}</span>
-                  </div>
-                  <div className="read-more-link">
-                    Read More
-                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <polyline points="9 18 15 12 9 6"/>
+
+              {/* Body */}
+              <div className="bc-body">
+                <h3 className="bc-title">{blog.title}</h3>
+                <p className="bc-desc">{blog.excerpt}</p>
+
+                {/* Meta */}
+                <div className="bc-meta">
+                  <div className="bc-meta-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                     </svg>
+                    {blog.readTime}
+                  </div>
+                  <div className="bc-meta-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    {blog.date}
+                  </div>
+                  <div className="bc-meta-item bc-meta-diff">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                    </svg>
+                    {blog.author}
                   </div>
                 </div>
+
+                {/* Tags */}
+                <div className="bc-tags">
+                  <span className="bc-tag">{blog.catLabel}</span>
+                  <span className="bc-tag">Fashion</span>
+                  <span className="bc-tag">+2</span>
+                </div>
+
+                {/* CTA */}
+                <button className="bc-btn">
+                  <div className="bc-btn-inner">
+                    <div className="bc-btn-icon">
+                      <svg viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    </div>
+                    Read Article
+                  </div>
+                </button>
               </div>
             </div>
           ))}
