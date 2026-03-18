@@ -39,20 +39,23 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 14px;
   height: 72px;
   min-height: 72px;
   border-bottom: 1px solid #f0f0f0;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
+/* Collapsed: logo icon centred, toggle below it */
 .sb--collapsed .sb-header {
-  padding: 0 12px;
-  justify-content: center;
   flex-direction: column;
-  gap: 8px;
-  height: 80px;
-  min-height: 80px;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0;
+  gap: 6px;
+  height: 88px;
+  min-height: 88px;
 }
 
 .sb-logo {
@@ -60,6 +63,21 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
+  flex-shrink: 0;
+}
+
+/* Logo image — controlled via CSS so it's consistent */
+.sb-logo img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: block;
+}
+
+.sb--collapsed .sb-logo img {
+  width: 36px;
+  height: 36px;
 }
 
 .sb-logo-text {
@@ -69,35 +87,37 @@
 }
 
 .sb-logo-name {
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #180D3E;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   white-space: nowrap;
+  font-family: 'DM Sans', sans-serif;
 }
 
 .sb-logo-sub {
-  font-size: 0.65rem;
-  font-weight: 600;
+  font-size: 0.6rem;
+  font-weight: 700;
   color: #CE1E36;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.8px;
   text-transform: uppercase;
-  margin-top: 1px;
+  margin-top: 2px;
+  white-space: nowrap;
 }
 
 .sb-toggle {
-  background: #f4f4f6;
+  background: #f0f0f5;
   border: none;
   cursor: pointer;
   color: #180D3E;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: background 0.18s;
+  transition: background 0.18s, color 0.18s;
 }
 
 .sb-toggle:hover {
