@@ -91,6 +91,13 @@ function AppContent({ Component, pageProps, progressRef }) {
   const { isDrawerOpen, setIsDrawerOpen, lastAddedItem, cartItems } = useCart();
   const { user } = useAuth();
   const router = useRouter();
+  const [showBackTop, setShowBackTop] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setShowBackTop(window.scrollY > 400);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
   
   // Check if current route is a dashboard route
   const isDashboard = router.pathname.startsWith('/dashboard');
@@ -98,7 +105,7 @@ function AppContent({ Component, pageProps, progressRef }) {
 
   return (
     <>
-      {/* Custom vertical scroll progress bar */}
+      {/* Global reading progress bar */}
       <div className="custom-scrollbar-progress">
         <div
           className="custom-scrollbar-progress-fill"
@@ -130,6 +137,19 @@ function AppContent({ Component, pageProps, progressRef }) {
         theme="light"
         limit={3}
       />
+
+      {/* Back to top button */}
+      {showBackTop && (
+        <button
+          className="back-to-top"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Back to top"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="18 15 12 9 6 15" />
+          </svg>
+        </button>
+      )}
     </>
   );
 }

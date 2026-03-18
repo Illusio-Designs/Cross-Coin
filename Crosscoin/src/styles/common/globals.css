@@ -229,3 +229,48 @@ html, body {
 img {
   transition: opacity 0.3s ease-in-out;
 }
+
+/* ── BACK TO TOP BUTTON ── */
+.back-to-top {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  width: 44px;
+  height: 44px;
+  background: #CE1E36;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 9998;
+  box-shadow: 0 4px 16px rgba(206, 30, 54, 0.35);
+  transition: background 0.2s ease, transform 0.2s ease;
+  animation: btt-fade-in 0.25s ease;
+}
+
+.back-to-top:hover {
+  background: #a01729;
+  transform: translateY(-3px);
+}
+
+.back-to-top svg {
+  width: 20px;
+  height: 20px;
+}
+
+@keyframes btt-fade-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+  .back-to-top {
+    bottom: 20px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+  }
+}
