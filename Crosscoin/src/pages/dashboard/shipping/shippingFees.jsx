@@ -2,35 +2,27 @@ import { useState, useEffect, useCallback } from "react";
 import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { shippingFeeService } from "../../../services";
-import { debounce } from 'lodash';
+
+const IC = {
+  add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  edit: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+  trash: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>,
+  shipping: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+};
+
+const EMPTY_FORM = { orderType: "cod", fee: "" };
 
 export default function ShippingFees() {
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFee, setSelectedFee] = useState(null);
   const [shippingFees, setShippingFees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  const [filterValue, setFilterValue] = useState("");
-  
-  const [formData, setFormData] = useState({
-    orderType: "cod",
-    fee: ""
-  });
-
-  const debouncedSearch = useCallback((searchTerm) => {
-    const timeoutId = setTimeout(() => {
-      setFilterValue(searchTerm);
-    }, 300);
-    return () => clearTimeout(timeoutId);
-  }, []);
-
-  const handleSearchChange = (e) => {
-    const value = e.target.value;
-    debouncedSearch(value);
-  };
+  const [search, setSearch] = useState("");
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
   const fetchShippingFees = async () => {
     try {
@@ -40,326 +32,132 @@ export default function ShippingFees() {
       setShippingFees(data);
     } catch (err) {
       setError(err.message || "Failed to fetch shipping fees");
-      } finally {
+    } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchShippingFees();
-  }, []);
+  useEffect(() => { fetchShippingFees(); }, []);
+  useEffect(() => { setCurrentPage(1); }, [search]);
 
   const filteredData = shippingFees.filter(item => {
-    if (!filterValue) return true;
-    
-    const searchTerm = filterValue.toLowerCase();
-    return (
-      (item.orderType?.toLowerCase().includes(searchTerm)) ||
-      (item.fee?.toString().toLowerCase().includes(searchTerm))
-    );
+    if (!search) return true;
+    const s = search.toLowerCase();
+    return item.orderType?.toLowerCase().includes(s) || item.fee?.toString().includes(s);
   });
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+  const start = (currentPage - 1) * itemsPerPage;
+  const currentItems = filteredData.slice(start, start + itemsPerPage).map((item, i) => ({ ...item, serial_number: start + i + 1 }));
 
-  const currentItemsWithSN = currentItems.map((item, idx) => ({
-    ...item,
-    serial_number: indexOfFirstItem + idx + 1
-  }));
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filterValue]);
-
-  const columns = [
-    {
-      header: "S/N",
-      accessor: "serial_number"
-    },
-    {
-      header: "Order Type",
-      accessor: row => row.orderType.toUpperCase()
-    },
-    {
-      header: "Fee",
-      accessor: row => `₹${parseFloat(row.fee).toFixed(2)}`
-    },
-    {
-      header: "Actions",
-      accessor: "actions",
-      cell: ({ id, ...row }) => (
-        <div className="action-buttons">
-          <button
-            className="action-btn edit"
-            title="Edit Shipping Fee"
-            onClick={() => handleEdit(id, row)}
-          >
-            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z"/>
-            </svg>
-          </button>
-          <button
-            className="action-btn delete"
-            title="Delete Shipping Fee"
-            onClick={() => handleDelete(id)}
-          >
-            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </button>
-        </div>
-      )
-    }
-  ];
-
-  const handleEdit = async (id, rowData) => {
-    setSelectedFee({
-      id: id,
-      orderType: rowData.orderType || "cod",
-      fee: parseFloat(rowData.fee || 0)
-    });
-        setIsEditModalOpen(true);
+  const handleEdit = (id, rowData) => {
+    setSelectedFee({ id, orderType: rowData.orderType || "cod", fee: parseFloat(rowData.fee || 0) });
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this shipping fee?")) {
-      try {
-        setLoading(true);
-        await shippingFeeService.deleteShippingFee(id);
-        await fetchShippingFees();
-      } catch (err) {
-        setError(err.message || "Failed to delete shipping fee");
-        } finally {
-        setLoading(false);
-      }
-    }
+    if (!window.confirm("Delete this shipping fee?")) return;
+    try {
+      setLoading(true);
+      await shippingFeeService.deleteShippingFee(id);
+      await fetchShippingFees();
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
   };
 
-  const handleAddNew = () => {
-    setFormData({
-      orderType: "cod",
-      fee: ""
-    });
-    setIsAddModalOpen(true);
-  };
-
-  const handleModalClose = () => {
-    setIsAddModalOpen(false);
-    setIsEditModalOpen(false);
-    setSelectedFee(null);
-    setFormData({
-      orderType: "cod",
-      fee: ""
-    });
-  };
+  const handleModalClose = () => { setIsModalOpen(false); setSelectedFee(null); setFormData(EMPTY_FORM); };
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
-    if (isAddModalOpen) {
-      setFormData(prev => ({
-        ...prev,
-        [name]: type === 'number' ? (value ? Number(value) : '') : value
-      }));
-    } else if (isEditModalOpen) {
-      setSelectedFee(prev => ({
-        ...prev,
-        [name]: type === 'number' ? (value ? Number(value) : '') : value
-      }));
-    }
+    const val = type === 'number' ? (value ? Number(value) : '') : value;
+    if (selectedFee) setSelectedFee(prev => ({ ...prev, [name]: val }));
+    else setFormData(prev => ({ ...prev, [name]: val }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       setLoading(true);
-      
-      if (selectedFee) {
-        await shippingFeeService.updateShippingFee(selectedFee.id, {
-          orderType: selectedFee.orderType,
-          fee: selectedFee.fee
-        });
-      } else {
-        await shippingFeeService.createShippingFee(formData);
-      }
+      if (selectedFee) await shippingFeeService.updateShippingFee(selectedFee.id, { orderType: selectedFee.orderType, fee: selectedFee.fee });
+      else await shippingFeeService.createShippingFee(formData);
       await fetchShippingFees();
       handleModalClose();
-    } catch (err) {
-      setError(err.message || "Failed to save shipping fee");
-      } finally {
-      setLoading(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
   };
 
+  const columns = [
+    { header: "#", accessor: "serial_number" },
+    { header: "Order Type", accessor: "orderType", cell: ({ orderType }) => <span className="sl-cat-badge">{orderType.toUpperCase()}</span> },
+    { header: "Fee", accessor: "fee", cell: ({ fee }) => <span className="cat-name-cell">₹{parseFloat(fee).toFixed(2)}</span> },
+    {
+      header: "Actions", accessor: "actions",
+      cell: ({ id, ...row }) => (
+        <div className="sl-actions">
+          <button className="sl-btn-edit" title="Edit" onClick={() => handleEdit(id, row)}>{IC.edit}</button>
+          <button className="sl-btn-delete" title="Delete" onClick={() => handleDelete(id)}>{IC.trash}</button>
+        </div>
+      )
+    }
+  ];
+
   return (
-    <div className="dashboard-page">
-      <div className="seo-header-container">
-        <h1 className="seo-title">Shipping Fees Management</h1>
-        <div className="adding-button">
-          <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
-            <div className="modern-searchbar-group">
-              <span className="modern-searchbar-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </span>
-              <input
-                type="text"
-                className="modern-searchbar-input"
-                placeholder="Search"
-                onChange={handleSearchChange}
-                defaultValue={filterValue}
-              />
+    <>
+      <div className="dashboard-page">
+        <div className="sl-page-header">
+          <div className="sl-header-left">
+            <div className="sl-header-icon">{IC.shipping}</div>
+            <div>
+              <h1 className="sl-page-title">Shipping Fees</h1>
+              <p className="sl-page-sub">{shippingFees.length} fee{shippingFees.length !== 1 ? 's' : ''} configured</p>
             </div>
-          </form>
-        <Button 
-          variant="primary"
-            onClick={handleAddNew}
-            className="add-new-btn"
-        >
-          Add New Fee
-        </Button>
+          </div>
+          <div className="sl-header-right">
+            <div className="sl-search-wrap">
+              <span className="sl-search-icon">{IC.search}</span>
+              <input type="text" className="sl-search-input" placeholder="Search fees..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <button className="sl-add-btn" onClick={() => { setFormData(EMPTY_FORM); setSelectedFee(null); setIsModalOpen(true); }}>
+              <span className="sl-add-btn-icon">{IC.add}</span>Add Fee
+            </button>
+          </div>
+        </div>
+
+        <div className="sl-table-wrap">
+          {loading ? (
+            <div style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>
+          ) : error ? (
+            <div className="sl-error">{error}</div>
+          ) : filteredData.length === 0 ? (
+            <div className="sl-empty">
+              <div className="sl-empty-icon">{IC.shipping}</div>
+              <p>{search ? "No fees match your search" : "No shipping fees configured"}</p>
+            </div>
+          ) : (
+            <>
+              <Table columns={columns} data={currentItems} striped hoverable />
+              {filteredData.length > itemsPerPage && (
+                <div className="sl-pagination">
+                  <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 
-      <div className="seo-table-container">
-        {loading ? (
-          <div style={{ position: 'relative', minHeight: '400px' }}>
-            <Loader />
-          </div>
-        ) : (
-          <>
-            {filteredData.length === 0 ? (
-              <div className="seo-empty-state">
-                {filterValue ? "No results found for your search" : "No shipping fees found"}
-              </div>
-            ) : (
-              <>
-                <Table
-        columns={columns}
-                  data={currentItemsWithSN}
-                  className="w-full"
-                  striped={true}
-                  hoverable={true}
-                />
-                {filteredData.length > itemsPerPage && (
-                  <div className="seo-pagination-container">
-                    <Pagination
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={setCurrentPage}
-                    />
-                  </div>
-                )}
-              </>
-            )}
-          </>
-        )}
-      </div>
-
-      <Modal
-        isOpen={isAddModalOpen}
-        onClose={handleModalClose}
-        title="Add New Shipping Fee"
-        closeOnOverlayClick={false}
-      >
+      <Modal isOpen={isModalOpen} onClose={handleModalClose} title={selectedFee ? "Edit Shipping Fee" : "Add Shipping Fee"} closeOnOverlayClick={false}>
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <Input
-              label="Order Type"
-              type="select"
-              name="orderType"
-              value={formData.orderType}
-              onChange={handleInputChange}
-              options={[
-                { value: "cod", label: "Cash On Delivery" },
-                { value: "prepaid", label: "Prepaid" }
-              ]}
-              required
-            />
-              <Input
-              label="Fee"
-                type="number"
-              name="fee"
-              value={formData.fee}
-              onChange={handleInputChange}
-              required
-            />
+            <Input label="Order Type" type="select" name="orderType" value={selectedFee ? selectedFee.orderType : formData.orderType} onChange={handleInputChange} required options={[{ value: "cod", label: "Cash On Delivery" }, { value: "prepaid", label: "Prepaid" }]} />
+            <Input label="Fee (₹)" type="number" name="fee" value={selectedFee ? selectedFee.fee : formData.fee} onChange={handleInputChange} required />
           </div>
           <div className="modal-footer">
-              <Button
-                variant="secondary"
-              size="medium"
-              onClick={handleModalClose}
-              type="button"
-              >
-                Cancel
-              </Button>
-              <Button
-              type="submit"
-                variant="primary"
-              size="medium"
-              disabled={loading}
-              >
-              {loading ? "Adding..." : "Add Fee"}
-              </Button>
+            <Button variant="secondary" size="medium" onClick={handleModalClose} type="button">Cancel</Button>
+            <Button type="submit" variant="primary" size="medium" disabled={loading}>{loading ? "Saving..." : selectedFee ? "Save Changes" : "Add Fee"}</Button>
           </div>
         </form>
       </Modal>
-
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={handleModalClose}
-        title="Edit Shipping Fee"
-        closeOnOverlayClick={false}
-      >
-        {selectedFee && (
-          <form onSubmit={handleSubmit} className="seo-form">
-            <div className="modal-body">
-              <Input
-                label="Order Type"
-                type="select"
-                name="orderType"
-                value={selectedFee.orderType}
-                onChange={handleInputChange}
-                options={[
-                  { value: "cod", label: "Cash On Delivery" },
-                  { value: "prepaid", label: "Prepaid" }
-                ]}
-                required
-              />
-              <Input
-                label="Fee"
-                type="number"
-                name="fee"
-                value={selectedFee.fee}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="modal-footer">
-            <Button
-              variant="secondary"
-                size="medium"
-                onClick={handleModalClose}
-                type="button"
-            >
-              Cancel
-            </Button>
-                <Button
-                  variant="primary"
-                size="medium"
-                  type="submit"
-                disabled={loading}
-                >
-                {loading ? "Saving..." : "Save Changes"}
-            </Button>
-        </div>
-          </form>
-        )}
-      </Modal>
-    </div>
+    </>
   );
-} 
-
+}

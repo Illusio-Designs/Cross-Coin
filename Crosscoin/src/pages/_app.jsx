@@ -79,6 +79,9 @@ import "../styles/dashboard/media.css";
 import "../styles/dashboard/utmAnalytics.css";
 import "../styles/dashboard/attributes.css";
 import "../styles/dashboard/slider.css";
+import "../styles/dashboard/pages.css";
+import "../styles/dashboard/brands.css";
+import "../styles/dashboard/brandSettings.css";
 // Additional page CSS
 import "../styles/pages/Collections.css";
 import "../styles/pages/About.css";
