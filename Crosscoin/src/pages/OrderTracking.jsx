@@ -11,15 +11,17 @@ const STEPS = [
     { key: 'delivered', label: 'Delivered' },
 ];
 
+// Map order.status directly to stepper index
 function getStepIndex(orderData) {
     const status = (orderData?.order?.status || '').toLowerCase();
-    const history = orderData?.fship_data?.tracking_history || orderData?.status_history || [];
-    const allStatuses = [status, ...history.map(h => (h.status || '').toLowerCase())];
 
-    if (allStatuses.some(s => s.includes('deliver') && !s.includes('undeliver') && !s.includes('out'))) return 4;
-    if (allStatuses.some(s => s.includes('out_for_delivery') || s.includes('out for delivery'))) return 3;
-    if (allStatuses.some(s => s.includes('transit') || s.includes('shipped') || s.includes('dispatch') || s.includes('pickup'))) return 2;
-    if (allStatuses.some(s => s.includes('confirm') || s.includes('processing') || s.includes('booked'))) return 1;
+    if (status === 'delivered') return 4;
+    if (status === 'out_for_delivery' || status === 'out for delivery') return 3;
+    if (status === 'shipped' || status === 'in_transit' || status === 'in transit' ||
+        status === 'processing' || status === 'booked' || status === 'pickup_initiated' ||
+        status === 'manifested') return 2;
+    if (status === 'confirmed') return 1;
+    // pending / cancelled / unknown
     return 0;
 }
 
@@ -40,22 +42,34 @@ function formatDateTime(dateValue) {
 }
 
 function getOrderDate(orderData) {
-    const date = orderData.order.created_at || orderData.order.createdAt ||
-        orderData.status_history?.[0]?.created_at || orderData.status_history?.[0]?.createdAt;
+    // Try order-level date fields first
+    const date = orderData.order.created_at || orderData.order.createdAt;
     if (date) return formatDate(date);
+    // Fall back to parsing from order number: ORD-YYYYMMDD-XXXX
     const match = orderData.order.order_number?.match(/ORD-(\d{4})(\d{2})(\d{2})-/);
     if (match) return formatDate(`${match[1]}-${match[2]}-${match[3]}`);
     return 'N/A';
 }
 
 function getTimeline(orderData) {
-    const history = orderData?.fship_data?.tracking_history;
-    if (history && Array.isArray(history) && history.length > 0) {
-        return history.map(h => ({ status: h.status, note: h.location || h.description || '', time: h.timestamp || h.created_at || '' }));
+    // Use fship tracking history if available
+    const fshipHistory = orderData?.fship_data?.tracking_history;
+    if (fshipHistory && Array.isArray(fshipHistory) && fshipHistory.length > 0) {
+        return [...fshipHistory].reverse().map(h => ({
+            status: h.status,
+            note: h.location || h.description || '',
+            time: h.timestamp || h.created_at || ''
+        }));
     }
+
+    // Fall back to status_history — use real status field directly
     const statusHistory = orderData?.status_history;
     if (statusHistory && Array.isArray(statusHistory) && statusHistory.length > 0) {
-        return statusHistory.map(h => ({ status: h.status, note: h.notes || '', time: h.created_at || h.createdAt || '' }));
+        return [...statusHistory].reverse().map(h => ({
+            status: h.status,
+            note: h.notes || '',
+            time: h.created_at || h.createdAt || ''
+        })).filter(item => item.status);
     }
     return [];
 }
@@ -176,17 +190,21 @@ export default function OrderTracking() {
                                     style={{ width: activeStep >= 0 ? `${(activeStep / (STEPS.length - 1)) * 100}%` : '0%' }}
                                 />
                             </div>
-                            {STEPS.map((step, i) => (
-                                <div key={step.key} className={`ot-step ${i <= activeStep ? 'completed' : ''} ${i === activeStep ? 'active' : ''}`}>
-                                    <div className="ot-step-circle">
-                                        {i <= activeStep
-                                            ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                            : <span className="ot-step-num">{i + 1}</span>
-                                        }
+                            {STEPS.map((step, i) => {
+                                const isCompleted = i < activeStep;
+                                const isActive = i === activeStep;
+                                return (
+                                    <div key={step.key} className={`ot-step ${isCompleted || isActive ? 'completed' : ''} ${isActive ? 'active' : ''}`}>
+                                        <div className="ot-step-circle">
+                                            {isCompleted || isActive
+                                                ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                                : <span className="ot-step-num">{i + 1}</span>
+                                            }
+                                        </div>
+                                        <div className="ot-step-label">{step.label}</div>
                                     </div>
-                                    <div className="ot-step-label">{step.label}</div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
 
