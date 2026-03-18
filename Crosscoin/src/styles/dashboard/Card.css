@@ -243,38 +243,18 @@
 }
 
 /* ===================================
-   CHARTS ROW
+   CHARTS ROW — DonutChart cards sit directly in the grid
    =================================== */
 .dashboard-charts-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  align-items: stretch;
 }
 
-/* Chart section: just a grid cell, no extra wrapper styling needed */
-.dashboard-chart-section {
-  display: flex;
-  flex-direction: column;
-}
-
-/* Remove the extra container padding — dc-chart-card handles its own padding */
-.dashboard-chart-container {
-  flex: 1;
-  display: flex;
-  width: 100%;
-}
-
-/* dc-chart-card fills the container */
-.dashboard-chart-container .dc-chart-card {
-  flex: 1;
-  width: 100%;
-  min-height: 320px;
-  /* no double border — section already has one */
-  border: none;
-  border-radius: 0;
-  padding: 0;
-  background: transparent;
-  box-shadow: none;
+/* Each dc-chart-card in the row fills its cell height */
+.dashboard-charts-row .dc-chart-card {
+  height: 100%;
 }
 
 /* ===================================
@@ -407,7 +387,6 @@
 @media (max-width: 1100px) {
   .dc-hero-amount { font-size: 32px; }
   .dc-hero-pill-value { font-size: 16px; }
-  .dashboard-charts-row { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 900px) {
@@ -417,6 +396,7 @@
   .dashboard-card-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .dashboard-card-grid-3 { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .dashboard-section { padding: 16px; }
+  .dashboard-charts-row { grid-template-columns: repeat(2, 1fr); gap: 14px; }
 }
 
 @media (max-width: 768px) {
@@ -429,6 +409,7 @@
   .dashboard-card-grid, .dashboard-card-grid-3 { grid-template-columns: 1fr; gap: 10px; }
   .dc-stat-value { font-size: 22px; }
   .dashboard-alert-cards { grid-template-columns: 1fr; }
+  .dashboard-charts-row { grid-template-columns: 1fr; gap: 12px; }
   .dashboard-table-container { margin-left: -16px; margin-right: -16px; border-radius: 0; border-left: none; border-right: none; }
   .dashboard-table { font-size: 12px; }
   .dashboard-table th { padding: 8px 10px; font-size: 9px; }
