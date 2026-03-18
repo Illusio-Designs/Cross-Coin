@@ -13,24 +13,6 @@
   --bd-font: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-/* ── READING PROGRESS ── */
-.reading-progress {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--bd-gray-border);
-  z-index: 100;
-}
-
-.reading-progress-fill {
-  height: 100%;
-  background: var(--bd-primary);
-  width: 0%;
-  transition: width 0.1s linear;
-}
-
 /* ── TOP BAR ── */
 .top-bar {
   display: flex;

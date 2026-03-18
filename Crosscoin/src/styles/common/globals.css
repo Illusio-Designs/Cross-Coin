@@ -127,23 +127,6 @@ body{
   overflow: hidden !important;
 }
 
-/* Chrome, Edge, Safari */
-*::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-  background: transparent;
-}
-
-*::-webkit-scrollbar-thumb {
-  background: #CE1E36;         /* Your accent color */
-  border-radius: 8px;
-  min-height: 40px;
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background: #a81a2b;         /* Slightly darker on hover */
-}
-
 /* Product Card Images - Force contain to show full image without cropping */
 .product-card-image-contain {
   object-fit: contain !important;
@@ -152,52 +135,32 @@ body{
   background: #ffffff !important;
 }
 
-*::-webkit-scrollbar-track {
-  background: #f3f4f6;         /* Light background for track */
-  border-radius: 8px;
-}
-
-
-/* Custom Scrollbar Styles */
-*::-webkit-scrollbar {
-  width: 12px;
-  background: #f3f4f6;
-}
-*::-webkit-scrollbar-thumb {
-  background: #180D3E;
-  border-radius: 0px;
-  min-height: 40px;
-  border: 3px solid #f3f4f6;
-}
-*::-webkit-scrollbar-track {
-  background: #f3f4f6;
-  border-radius: 0px;
-}
+/* Hide all scrollbars site-wide */
+*::-webkit-scrollbar { display: none !important; }
+* { scrollbar-width: none !important; -ms-overflow-style: none !important; }
 
 html, body {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
   overflow-y: scroll;
 }
-html::-webkit-scrollbar, body::-webkit-scrollbar {
-  width: 0 !important;
-  background: transparent !important;
-}
 
+/* ── GLOBAL READING PROGRESS BAR (top horizontal) ── */
 .custom-scrollbar-progress {
   position: fixed;
   top: 0;
+  left: 0;
   right: 0;
-  width: 10px;
-  height: 100vh;
-  background: #f3f4f6;
-  z-index: 9999;
-  box-shadow: 0 0 4px rgba(24,13,62,0.08);
-}
-.custom-scrollbar-progress-fill {
   width: 100%;
-  background: #180D3E;
-  transition: height 0.15s cubic-bezier(.4,0,.2,1);
+  height: 3px;
+  background: transparent;
+  z-index: 99999;
+  pointer-events: none;
+}
+
+.custom-scrollbar-progress-fill {
+  height: 3px;
+  width: 0%;
+  background: #CE1E36;
+  transition: width 0.1s linear;
 }
 
 .shimmer-placeholder {

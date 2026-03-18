@@ -6,7 +6,6 @@ import BlogSection from '../components/blog/BlogSection';
 const BlogDetails = () => {
   const router = useRouter();
   const [isBookmarked, setIsBookmarked] = useState(false);
-  const [readingProgress, setReadingProgress] = useState(0);
   const [activeSection, setActiveSection] = useState(0);
 
   const blog = {
@@ -39,12 +38,6 @@ const BlogDetails = () => {
     const handleScroll = () => {
       const body = document.getElementById('articleBody');
       if (!body) return;
-
-      const rect = body.getBoundingClientRect();
-      const total = body.offsetHeight;
-      const scrolled = window.scrollY - body.offsetTop + window.innerHeight * 0.2;
-      const pct = Math.min(100, Math.max(0, (scrolled / total) * 100));
-      setReadingProgress(pct);
 
       // Update active TOC item
       sections.forEach((section, i) => {
@@ -90,10 +83,6 @@ const BlogDetails = () => {
   return (
     <SeoWrapper pageName="blog-details">
       <div className="blog-details-page">
-        {/* Reading Progress */}
-        <div className="reading-progress">
-          <div className="reading-progress-fill" style={{ width: `${readingProgress}%` }}></div>
-        </div>
 
         {/* Top Bar */}
         <div className="top-bar">
