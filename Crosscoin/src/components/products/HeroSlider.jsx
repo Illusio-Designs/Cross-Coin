@@ -56,7 +56,6 @@ const HeroSlider = ({ slides = [] }) => {
             alt={slides[current].title}
             fetchpriority="high"
             loading="eager"
-            style={{ objectFit: 'cover', width: '100%', height: '100%', display: 'block' }}
           />
         </div>
         <div className="hero-slide__content">
