@@ -32,6 +32,8 @@ import "../styles/pages/SearchResults.css";
 import "../styles/pages/Policy.css";
 import "../styles/pages/Contact.css";
 import "../styles/pages/auth/adminlogin.css";
+import '../styles/blog.css';
+
 // Components
 import "../styles/components/Header.css";
 import "../styles/components/Breadcrumb.css";
