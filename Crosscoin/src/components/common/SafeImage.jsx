@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import Skeleton from '../Skeleton';
+import Skeleton from './Skeleton';
 import { getImageUrl, getOptimizedImageUrl } from '../../utils/imageHandler';
 
 /**

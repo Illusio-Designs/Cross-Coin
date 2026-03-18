@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getPublicCoupons } from '../services/publicApi';
+import { getPublicCoupons } from '../../services/publicApi';
 
 const CouponStrip = () => {
   const [coupons, setCoupons] = useState([]);

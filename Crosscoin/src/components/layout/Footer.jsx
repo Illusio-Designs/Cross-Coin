@@ -3,8 +3,8 @@ import Link from "next/link";
 import { AiOutlineMail } from "react-icons/ai";
 import { FaFacebookF, FaInstagram } from "react-icons/fa";
 import { MdOutlinePhoneInTalk } from "react-icons/md";
-import SafeImage from "./common/SafeImage";
-import { getPublicCategories } from "../services/publicApi";
+import SafeImage from "../common/SafeImage";
+import { getPublicCategories } from "../../services/publicApi";
 
 const Footer = () => {
   const [categories, setCategories] = useState([]);

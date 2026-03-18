@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import SafeImage from './common/SafeImage';
-import { getPublicProductReviews } from '../services/publicApi';
+import SafeImage from './SafeImage';
+import { getPublicProductReviews } from '../../services/publicApi';
 
 const UnlockedExclusives = ({ products = [], loading = false }) => {
   const [currentProduct, setCurrentProduct] = useState(0);

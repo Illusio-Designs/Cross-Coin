@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaBox, FaShoppingCart, FaDollarSign, FaUsers, FaStar, FaClock, FaRupeeSign, FaExclamationTriangle, FaCreditCard, FaUndo, FaChartBar } from "react-icons/fa";
 import { dashboardService } from '../../services';
-import Loader from '../Loader';
+import Loader from '../common/Loader';
 import DonutChart from '../common/DonutChart';
 import cacheManager from '../../services/cacheManager';
 

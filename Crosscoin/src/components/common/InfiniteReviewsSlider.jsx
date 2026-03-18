@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import SafeImage from './common/SafeImage';
+import SafeImage from './SafeImage';
 
 const InfiniteReviewsSlider = ({ reviews }) => {
   const sliderRef = useRef(null);
