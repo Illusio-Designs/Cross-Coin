@@ -68,6 +68,7 @@ import "../components/products/ProductFilterDrawer.css";
 import "../components/ui/Dropdown.css";
 
 // Additional dashboard CSS
+import "../styles/dashboard/layout.css";
 import "../styles/dashboard/payments.css";
 import "../styles/dashboard/products.css";
 import "../styles/dashboard/orders.css";

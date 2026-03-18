@@ -1,122 +1,59 @@
-import { FiMaximize, FiMinimize, FiMenu } from "react-icons/fi";
 import { getPageTitle } from "../../utils/dashboardRouting";
 import { useState, useEffect } from "react";
 
-function DashboardHeader({ isCollapsed, isFullscreen, onToggleFullscreen, currentView,  sidebarWidth, isMobile, onMobileMenuToggle }) {
+const IC = {
+  menu: (
+    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  ),
+  maximize: (
+    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+      <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+    </svg>
+  ),
+  minimize: (
+    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+      <path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/>
+    </svg>
+  ),
+};
+
+function DashboardHeader({ isCollapsed, isFullscreen, onToggleFullscreen, currentView, sidebarWidth, isMobile, onMobileMenuToggle }) {
   const [isSmallMobile, setIsSmallMobile] = useState(false);
-  
+
   useEffect(() => {
-    const checkMobile = () => {
-      setIsSmallMobile(window.innerWidth <= 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    const check = () => setIsSmallMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
   }, []);
-  
-  const headerHeight = isSmallMobile ? 60 : 80;
-  const fontSize = isSmallMobile ? '1rem' : '1.7rem';
-  const iconSize = isSmallMobile ? 18 : 24;
-  const padding = isSmallMobile ? '0 10px' : '0 20px';
 
   return (
     <header
-      className="dashboard-header"
+      className="dh"
       style={{
-        position: 'fixed',
-        top: 0,
         left: isMobile ? 0 : sidebarWidth,
-        right: 0,
-        width: isMobile ? '100%' : 'auto',
-        zIndex: 100,
-        transition: 'left 0.3s cubic-bezier(.4,0,.2,1)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        height: headerHeight,
-        background: '#F3F4F5',
-        borderBottom: '1px solid #E6E6E6',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
-        padding: padding,
-        boxSizing: 'border-box',
+        width: isMobile ? '100%' : `calc(100% - ${sidebarWidth}px)`,
+        height: isSmallMobile ? 60 : 72,
       }}
     >
-      {/* Left group: Hamburger (mobile) + Title */}
-      <div style={{ display: 'flex', alignItems: 'center', minWidth: 0, gap: isSmallMobile ? 8 : 14, marginRight: 20, flex: '1 1 auto', maxWidth: 'calc(100% - 80px)' }}>
+      <div className="dh-left">
         {isMobile && (
-          <button
-            onClick={onMobileMenuToggle}
-            className="hamburger-menu-btn"
-            style={{
-              background: '#180D3E',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: iconSize,
-              color: '#ffffff',
-              outline: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: isSmallMobile ? 36 : 44,
-              height: isSmallMobile ? 36 : 44,
-              borderRadius: '10px',
-              flexShrink: 0,
-              transition: 'all 0.2s ease',
-              boxShadow: '0 2px 8px rgba(24, 13, 62, 0.2)',
-            }}
-            title="Open Menu"
-          >
-            <FiMenu />
+          <button className="dh-hamburger" onClick={onMobileMenuToggle} aria-label="Open menu">
+            {IC.menu}
           </button>
         )}
-        <div 
-          className="header-title" 
-          style={{ 
-            fontWeight: 700, 
-            fontSize: fontSize, 
-            color: '#180D3E', 
-            letterSpacing: 0.2,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            lineHeight: 1.2
-          }}
-        >
-          {getPageTitle(currentView)}
-        </div>
+        <span className="dh-title">{getPageTitle(currentView)}</span>
       </div>
-      {/* Right group: Fullscreen button only */}
-      <div 
-        className="header-actions" 
-        style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'flex-end',
-          flexShrink: 0,
-          minWidth: 50,
-          paddingRight: 10
-        }}
-      >
+
+      <div className="dh-right">
         <button
+          className="dh-action"
           onClick={onToggleFullscreen}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: iconSize,
-            color: '#180D3E',
-            outline: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            marginRight: 0,
-            transition: 'transform 0.2s ease',
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
           title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
         >
-          {isFullscreen ? <FiMinimize /> : <FiMaximize />}
+          {isFullscreen ? IC.minimize : IC.maximize}
         </button>
       </div>
     </header>
