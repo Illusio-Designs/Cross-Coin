@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import SeoWrapper from '../console/SeoWrapper';
+import BlogSection from '../components/blog/BlogSection';
 
 const BlogDetails = () => {
   const router = useRouter();
@@ -113,11 +114,11 @@ const BlogDetails = () => {
               </svg>
               Share
             </button>
-            <button 
+            <button
               className={`bookmark-btn ${isBookmarked ? 'saved' : ''}`}
               onClick={handleBookmark}
             >
-              <svg viewBox="0 0 24 24">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
               </svg>
             </button>
@@ -340,56 +341,7 @@ const BlogDetails = () => {
         </div>
 
         {/* Related Articles */}
-        <div className="related-section">
-          <div className="related-header">
-            <div className="related-label">Keep Reading</div>
-            <div className="related-title">You Might Also Enjoy</div>
-          </div>
-          <div className="related-grid">
-            <div className="related-card">
-              <div className="related-card-img">
-                <img src="https://www.jockey.in/cdn/shop/articles/Winter-Jackets-For-Women_1db4088d-3e23-4561-8377-89d8e9e0e3a3.jpg?v=1773214308&width=640" alt="" />
-                <div className="rc-cat cat-woman">Woman</div>
-              </div>
-              <div className="rc-date">26 Nov, 2025</div>
-              <div className="rc-title">Why Jockey's Winter Jackets for Women Are a Must-Have This Season</div>
-              <div className="rc-read">
-                Read Story
-                <svg fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" width="11" height="11">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </div>
-            </div>
-            <div className="related-card">
-              <div className="related-card-img">
-                <img src="https://www.jockey.in/cdn/shop/articles/M9Blog_Travel-Friendly-Winter-Sweatshirts-for-Men-You-Can-Carry-Anywhere_Jan-2026_f321a56c-6e83-4f84-9cd8-68accae9f17a.jpg?v=1773212658&width=640" alt="" />
-                <div className="rc-cat cat-lifestyle">Lifestyle</div>
-              </div>
-              <div className="rc-date">17 Nov, 2025</div>
-              <div className="rc-title">Winter Sweatshirts for Men That Make Travel Effortless</div>
-              <div className="rc-read">
-                Read Story
-                <svg fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" width="11" height="11">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </div>
-            </div>
-            <div className="related-card">
-              <div className="related-card-img">
-                <img src="https://www.jockey.in/cdn/shop/articles/M8_Blog_Winter-Trendy-and-Comfortable-Winter-Hoodies-for-Men_Uodated_3cb0a447-2d30-471d-8bd7-956c2a13c04e.jpg?v=1773220598&width=640" alt="" />
-                <div className="rc-cat cat-fashion">Fashion</div>
-              </div>
-              <div className="rc-date">03 Nov, 2025</div>
-              <div className="rc-title">Trendy and Comfortable Winter Hoodies for Men — Styled Right</div>
-              <div className="rc-read">
-                Read Story
-                <svg fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" width="11" height="11">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
+        <BlogSection />
       </div>
     </SeoWrapper>
   );
