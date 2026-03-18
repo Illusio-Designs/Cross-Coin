@@ -1,12 +1,6 @@
 /* ===================================
-   MODERN E-COMMERCE DASHBOARD STYLES
+   DASHBOARD CARD / SECTIONS STYLES
    =================================== */
-
-/* Prevent horizontal overflow globally */
-html, body {
-  overflow-x: hidden !important;
-  max-width: 100vw !important;
-}
 
 /* Universal Box Sizing */
 .dashboard-sections *,
@@ -15,20 +9,14 @@ html, body {
   box-sizing: border-box;
 }
 
-/* Main Container */
+/* Main Container — no extra padding, dl-content handles it */
 .dashboard-sections {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 20px;
-  background: #f8f9fa;
-  min-height: 100vh;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  overflow-x: hidden !important;
-  overflow-y: auto;
-  position: relative;
 }
 
 /* ===================================

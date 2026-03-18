@@ -9,7 +9,6 @@ function CardGrid() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [cacheHit, setCacheHit] = useState(false);
 
   useEffect(() => {
     fetchDashboardStats();
@@ -18,13 +17,11 @@ function CardGrid() {
   const fetchDashboardStats = async () => {
     try {
       setLoading(true);
-      setCacheHit(false);
 
       // Check cache first (5 minute TTL for dashboard)
       const cachedStats = cacheManager.getByType('dashboard');
       if (cachedStats) {
         setStats(cachedStats);
-        setCacheHit(true);
         setError(null);
         setLoading(false);
         return;
@@ -34,10 +31,8 @@ function CardGrid() {
       const response = await dashboardService.getDashboardStats();
       if (response.success) {
         setStats(response.stats);
-        
-        // Cache the response (5 minute TTL)
         cacheManager.setByType('dashboard', response.stats);
-        }
+      }
       setError(null);
     } catch (err) {
       setError('Failed to load dashboard statistics');
@@ -75,21 +70,6 @@ function CardGrid() {
   if (!stats) {
     return null;
   }
-
-  // Cache status indicator
-  const cacheStatusStyle = {
-    position: 'fixed',
-    top: '20px',
-    right: '20px',
-    padding: '8px 12px',
-    borderRadius: '4px',
-    fontSize: '12px',
-    fontWeight: '500',
-    zIndex: 1000,
-    opacity: 0.8,
-    backgroundColor: cacheHit ? '#10b981' : '#f59e0b',
-    color: 'white'
-  };
 
   const productCards = [
     {
@@ -148,10 +128,6 @@ function CardGrid() {
 
   return (
     <div className="dashboard-sections">
-      {/* Cache Status Indicator */}
-      <div style={cacheStatusStyle}>
-        {cacheHit ? '✅ Cached' : '🔄 Fresh'}
-      </div>
 
       {/* Revenue Overview - Hero Section */}
       <div className="dashboard-hero-section">
