@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { getPublicProductBySlug, getPublicCoupons, getPublicProductReviews } from '../../services/publicApi';
-import Loader from '../Loader';
+import Loader from '../common/Loader';
 
 const ProductDetailsTest = ({ product }) => {
   const router = useRouter();

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import SafeImage from "./common/SafeImage";
+import SafeImage from "../common/SafeImage";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useCart } from "../context/CartContext";
-import { useWishlist } from "../context/WishlistContext";
-import { useAuth } from "../context/AuthContext";
+import { useCart } from "../../context/CartContext";
+import { useWishlist } from "../../context/WishlistContext";
+import { useAuth } from "../../context/AuthContext";
 
 // Hamburger Icon (3 lines)
 const HamburgerIcon = () => (

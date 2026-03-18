@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import SafeImage from './common/SafeImage';
-import Skeleton from './Skeleton';
+import SafeImage from '../common/SafeImage';
+import Skeleton from '../common/Skeleton';
 
 const HeroSlider = ({ slides = [] }) => {
   const [current, setCurrent] = useState(0);

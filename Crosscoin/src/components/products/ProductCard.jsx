@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import SafeImage from "./common/SafeImage";
+import SafeImage from "../common/SafeImage";
 import { FiHeart } from "react-icons/fi";
-import { useWishlist } from "../context/WishlistContext";
-import { getBadgeDisplay, formatBadge } from "../config/badgeConfig";
-import { selectProductImage } from "../utils/productImageSelector";
-import colorMap from "./products/colorMap";
-import { getPublicProductReviews } from "../services/publicApi";
+import { useWishlist } from "../../context/WishlistContext";
+import { getBadgeDisplay, formatBadge } from "../../config/badgeConfig";
+import { selectProductImage } from "../../utils/productImageSelector";
+import colorMap from "./colorMap";
+import { getPublicProductReviews } from "../../services/publicApi";
 
 // Filter options data - This should come from API in real implementation
 export const filterOptions = {

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/router';
-import { getPublicCategoryByName } from '../services/publicApi';
-import SafeImage from './common/SafeImage';
+import { getPublicCategoryByName } from '../../services/publicApi';
+import SafeImage from '../common/SafeImage';
 
 const shimmerStyle = {
   background: 'linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%)',
