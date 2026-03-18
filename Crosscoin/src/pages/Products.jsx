@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
-import ProductCard from "../components/ProductCard";
-import Skeleton from "../components/Skeleton";
+import ProductCard from "../components/products/ProductCard";
+import Skeleton from "../components/common/Skeleton";
 import ProductFilterDrawer from "../components/products/ProductFilterDrawer";
 import Dropdown from "../components/ui/Dropdown";
 import {
@@ -12,7 +12,7 @@ import {
 } from "react-icons/fi";
 import { useRouter } from "next/router";
 import { useCart } from "../context/CartContext";
-import { useBreadcrumb } from "../components/Breadcrumb";
+import { useBreadcrumb } from "../components/common/Breadcrumb";
 import { getCachedData, setCachedData } from '../utils/apiCache';
 import {
   getAllPublicProducts,

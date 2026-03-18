@@ -5,19 +5,19 @@ import "react-toastify/dist/ReactToastify.css";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { CartProvider, useCart } from "../context/CartContext";
 import { WishlistProvider } from "../context/WishlistContext";
-import { BreadcrumbProvider } from "../components/Breadcrumb";
+import { BreadcrumbProvider } from "../components/common/Breadcrumb";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
-import Loader from "../components/Loader";
+import Loader from "../components/common/Loader";
 import CartDrawer from "../components/cart/CartDrawer";
-import Breadcrumb from "../components/Breadcrumb";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
+import Breadcrumb from "../components/common/Breadcrumb";
+import Header from "../components/layout/Header";
+import Footer from "../components/layout/Footer";
 // Global CSS — all imports must live here (Next.js Pages Router rule)
-import "../styles/globals.css";
-import "../styles/responsive.css";
-import "../styles/mobile-utilities.css";
-import "../styles/skeleton.css";
+import "../styles/common/globals.css";
+import "../styles/common/responsive.css";
+import "../styles/common/mobile-utilities.css";
+import "../styles/common/skeleton.css";
 // Pages
 import "../styles/pages/Home.css";
 import "../styles/pages/Login.css";
@@ -31,9 +31,12 @@ import "../styles/pages/OrderTracking.css";
 import "../styles/pages/SearchResults.css";
 import "../styles/pages/Policy.css";
 import "../styles/pages/Contact.css";
+import "../styles/pages/Collections.css";
+import "../styles/pages/About.css";
 import "../styles/pages/auth/adminlogin.css";
-import '../styles/blog.css';
-import '../styles/blog-details.css';
+import '../styles/pages/blog.css';
+import '../styles/pages/blog-details.css';
+import '../styles/pages/sitemap.css';
 
 
 // Components
@@ -48,13 +51,14 @@ import "../styles/components/SlidingCollection.css";
 import "../styles/components/UnlockedExclusives.css";
 import "../styles/components/CouponStrip.css";
 import "../styles/components/Toast.css";
-import "../components/ui/Dropdown.css";
+import "../styles/components/blog-section.css";
+import "../styles/components/Dropdown.css";
 // Component-local CSS (co-located with components)
-import "../components/Sidebar/Sidebar.css";
-import "../components/cart/CartDrawer.css";
-import "../components/cart/QuantityOfferBar.css";
-import "../components/products/ProductDetailsTest.css";
-import "../components/products/ProductFilterDrawer.css";
+import "../styles/components/Sidebar.css";
+import "../styles/components/CartDrawer.css";
+import "../styles/components/QuantityOfferBar.css";
+import "../styles/components/ProductDetailsTest.css";
+import "../styles/components/ProductFilterDrawer.css";
 // Additional dashboard CSS
 import "../styles/dashboard/payments.css";
 import "../styles/dashboard/products.css";
@@ -66,7 +70,7 @@ import "../styles/dashboard/attributes.css";
 import "../styles/pages/Collections.css";
 import "../styles/pages/About.css";
 import "../styles/pages/BlogDetails.css";
-import "../components/BlogSection.css";
+import "../styles/components/blog-section.css";
 // Third-party
 import "react-quill/dist/quill.snow.css";
 

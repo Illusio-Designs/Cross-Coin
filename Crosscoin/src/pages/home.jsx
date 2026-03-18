@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from 'next/dynamic';
-import HeroSlider from "../components/HeroSlider";
-import ProductCard from "../components/ProductCard";
+import HeroSlider from "../components/products/HeroSlider";
+import ProductCard from "../components/products/ProductCard";
 import SafeImage from "../components/common/SafeImage";
-import Skeleton from "../components/Skeleton";
-import SlidingCollection from "../components/SlidingCollection";
-import UnlockedExclusives from "../components/UnlockedExclusives";
+import Skeleton from "../components/common/Skeleton";
+import SlidingCollection from "../components/products/SlidingCollection";
+import UnlockedExclusives from "../components/common/UnlockedExclusives";
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -13,13 +13,13 @@ import { getPublicSliders, getPublicCategories, getPublicCategoryByName, getPubl
 import SeoWrapper from '../console/SeoWrapper';
 
 // Lazy load CouponStrip to prevent module-level side effects
-const CouponStrip = dynamic(() => import("../components/CouponStrip"), {
+const CouponStrip = dynamic(() => import("../components/common/CouponStrip"), {
   loading: () => null,
   ssr: true
 });
 
 // Import TrustBadges component
-import TrustBadges from "../components/TrustBadges";
+import TrustBadges from "../components/common/TrustBadges";
 
 import { useRouter } from 'next/router';
 import { fbqTrack } from '../utils/fbqTrack';
@@ -31,11 +31,11 @@ import { seoService } from '../services/index';
 // Load page-specific CSS - moved to _app.jsx
 
 // Lazy load below-the-fold components for better performance
-const Testimonials = dynamic(() => import("../components/Testimonials"), {
+const Testimonials = dynamic(() => import("../components/common/Testimonials"), {
   loading: () => <div style={{ minHeight: '300px', background: '#fff' }} />
 });
 
-const BlogSection = dynamic(() => import("../components/BlogSection"), {
+const BlogSection = dynamic(() => import("../components/blog/BlogSection"), {
   loading: () => <div style={{ minHeight: '400px', background: '#fff' }} />
 });
 
