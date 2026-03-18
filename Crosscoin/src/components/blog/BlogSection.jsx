@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/router';
 
 const BlogSection = () => {
@@ -127,9 +127,6 @@ const BlogSection = () => {
       <div className="blog-view-all-home">
         <button className="view-all-btn-home" onClick={() => router.push('/blog')}>
           View All Articles
-          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
         </button>
       </div>
     </div>
