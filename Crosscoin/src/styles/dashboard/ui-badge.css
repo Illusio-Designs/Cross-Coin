@@ -1,0 +1,46 @@
+/* UI Badge Component */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  border-radius: 20px;
+  white-space: nowrap;
+  vertical-align: middle;
+  font-family: 'DM Sans', sans-serif;
+  line-height: 1;
+}
+
+.badge-sm { padding: 2px 7px; font-size: 11px; min-height: 18px; }
+.badge-md { padding: 3px 9px; font-size: 12px; min-height: 22px; }
+.badge-lg { padding: 4px 12px; font-size: 13px; min-height: 26px; }
+
+.badge-default { background: #f0f0f5; color: #6b7280; }
+.badge-primary { background: #CE1E36; color: #fff; }
+.badge-secondary { background: #180D3E; color: #fff; }
+.badge-success { background: #16a34a; color: #fff; }
+.badge-danger { background: #CE1E36; color: #fff; }
+.badge-warning { background: #d97706; color: #fff; }
+.badge-info { background: #2563eb; color: #fff; }
+
+.badge-outline-default { background: transparent; color: #6b7280; border: 1px solid #d1d5db; }
+.badge-outline-primary { background: transparent; color: #CE1E36; border: 1px solid #CE1E36; }
+.badge-outline-secondary { background: transparent; color: #180D3E; border: 1px solid #180D3E; }
+.badge-outline-success { background: transparent; color: #16a34a; border: 1px solid #16a34a; }
+.badge-outline-danger { background: transparent; color: #CE1E36; border: 1px solid #CE1E36; }
+.badge-outline-warning { background: transparent; color: #d97706; border: 1px solid #d97706; }
+.badge-outline-info { background: transparent; color: #2563eb; border: 1px solid #2563eb; }
+
+.badge-soft-default { background: #f0f0f5; color: #6b7280; }
+.badge-soft-primary { background: rgba(206,30,54,0.1); color: #a8172b; }
+.badge-soft-secondary { background: rgba(24,13,62,0.1); color: #180D3E; }
+.badge-soft-success { background: rgba(22,163,74,0.1); color: #15803d; }
+.badge-soft-danger { background: rgba(206,30,54,0.1); color: #a8172b; }
+.badge-soft-warning { background: rgba(217,119,6,0.1); color: #b45309; }
+.badge-soft-info { background: rgba(37,99,235,0.1); color: #1d4ed8; }
+
+.badge-dot { padding: 0; width: 8px; height: 8px; min-height: 8px; border-radius: 50%; }
+.badge-dot.badge-sm { width: 6px; height: 6px; min-height: 6px; }
+.badge-dot.badge-md { width: 8px; height: 8px; min-height: 8px; }
+.badge-dot.badge-lg { width: 10px; height: 10px; min-height: 10px; }
