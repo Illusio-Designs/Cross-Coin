@@ -2,7 +2,8 @@ import React, { useRef, useEffect, useState } from 'react';
 import SafeImage from './SafeImage';
 
 const InfiniteReviewsSlider = ({ reviews }) => {
-  const sliderRef = useRef(null);
+  const topRowRef = useRef(null);
+  const bottomRowRef = useRef(null);
   const containerRef = useRef(null);
   const [hoveredReview, setHoveredReview] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -52,46 +53,146 @@ const InfiniteReviewsSlider = ({ reviews }) => {
   };
 
   useEffect(() => {
-    if (!reviews || reviews.length < 3) return;
+    if (!reviews || reviews.length < 2) return;
 
-    const slider = sliderRef.current;
-    if (!slider) return;
+    const topRow = topRowRef.current;
+    const bottomRow = bottomRowRef.current;
+    if (!topRow || !bottomRow) return;
 
-    let animationId;
-    let scrollSpeed = 0.5; // Increased speed for better visibility
+    let topAnimationId;
+    let bottomAnimationId;
+    let scrollSpeed = 0.5;
     let isPaused = false;
 
-    const autoScroll = () => {
-      // ✅ Only scroll if component is visible AND not paused
-      if (!isPaused && isVisible) {
-        slider.scrollLeft += scrollSpeed;
-        
-        // Reset scroll position for infinite loop
-        // When we've scrolled past the original content, reset to beginning
-        const originalContentWidth = slider.scrollWidth / 2;
-        if (slider.scrollLeft >= originalContentWidth) {
-          slider.scrollLeft = 0;
-        }
-      }
-      animationId = requestAnimationFrame(autoScroll);
+    // Split reviews into two rows
+    const midPoint = Math.ceil(reviews.length / 2);
+    const topReviews = reviews.slice(0, midPoint);
+    const bottomReviews = reviews.slice(midPoint);
+
+    // Clone items for seamless infinite loop
+    const cloneItems = (row, reviewsArray) => {
+      row.innerHTML = '';
+      reviewsArray.forEach(review => {
+        row.appendChild(createReviewCard(review));
+      });
+      // Clone for infinite scroll
+      reviewsArray.forEach(review => {
+        row.appendChild(createReviewCard(review));
+      });
     };
 
-    // Start auto-scrolling
-    animationId = requestAnimationFrame(autoScroll);
+    const createReviewCard = (review) => {
+      const div = document.createElement('div');
+      div.className = 'review-slide';
+      div.style.cssText = `
+        min-width: 240px;
+        max-width: 260px;
+        background: #fafbfc;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        padding: 12px;
+        box-shadow: 0 2px 8px #eee;
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+        position: relative;
+        flex-shrink: 0;
+      `;
+
+      div.innerHTML = `
+        <div class="reviewer-name" style="font-weight: bold; margin-bottom: 4px; font-size: 13px;">
+          ${review.reviewerName || review.User?.username || review.guestName || 'Anonymous'}
+        </div>
+        <div class="review-stars" style="color: #f59e42; margin-bottom: 4px; font-size: 14px;">
+          ${Array.from({ length: review.rating }).map(() => '★').join('')}
+        </div>
+        <div class="review-text" style="font-size: 12px; margin-bottom: 6px; line-height: 1.3; min-height: 32px;">
+          ${truncateText(review.review)}
+        </div>
+        <div class="review-date" style="font-size: 11px; color: #888;">
+          ${new Date(review.createdAt).toLocaleDateString()}
+        </div>
+        ${review.ReviewImages && review.ReviewImages.length > 0 ? `
+          <div class="review-images" style="margin-top: 6px; display: flex; gap: 3px;">
+            ${review.ReviewImages.slice(0, 2).map((image, idx) => `
+              <img src="/uploads/reviews/${image.fileName}" alt="Review image ${idx + 1}" 
+                   style="width: 32px; height: 32px; object-fit: cover; border-radius: 3px;" />
+            `).join('')}
+            ${review.ReviewImages.length > 2 ? `
+              <div style="width: 32px; height: 32px; background-color: #f0f0f0; border-radius: 3px; 
+                          display: flex; align-items: center; justify-content: center; font-size: 10px; color: #666;">
+                +${review.ReviewImages.length - 2}
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
+      `;
+
+      div.addEventListener('mouseenter', (e) => {
+        e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.boxShadow = '0 4px 16px rgba(206,30,54,0.10)';
+        handleReviewMouseEnter(review, e);
+      });
+
+      div.addEventListener('mouseleave', (e) => {
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = '0 2px 8px #eee';
+        handleReviewMouseLeave();
+      });
+
+      return div;
+    };
+
+    cloneItems(topRow, topReviews);
+    cloneItems(bottomRow, bottomReviews);
+
+    // Auto scroll animation
+    let topScrollPos = 0;
+    let bottomScrollPos = 0;
+
+    const animateScroll = () => {
+      if (!isPaused && isVisible) {
+        // Top row scrolls left
+        topScrollPos += scrollSpeed;
+        const topContentWidth = topRow.scrollWidth / 2;
+        if (topScrollPos >= topContentWidth) {
+          topScrollPos = 0;
+        }
+        topRow.style.transform = `translateX(-${topScrollPos}px)`;
+
+        // Bottom row scrolls right
+        bottomScrollPos += scrollSpeed;
+        const bottomContentWidth = bottomRow.scrollWidth / 2;
+        if (bottomScrollPos >= bottomContentWidth) {
+          bottomScrollPos = 0;
+        }
+        bottomRow.style.transform = `translateX(${bottomScrollPos}px)`;
+      }
+
+      topAnimationId = requestAnimationFrame(animateScroll);
+    };
+
+    animateScroll();
 
     // Pause on hover
     const handleMouseEnter = () => { isPaused = true; };
     const handleMouseLeave = () => { isPaused = false; };
 
-    slider.addEventListener('mouseenter', handleMouseEnter);
-    slider.addEventListener('mouseleave', handleMouseLeave);
+    topRow.addEventListener('mouseenter', handleMouseEnter);
+    topRow.addEventListener('mouseleave', handleMouseLeave);
+    bottomRow.addEventListener('mouseenter', handleMouseEnter);
+    bottomRow.addEventListener('mouseleave', handleMouseLeave);
 
     // Cleanup
     return () => {
-      if (animationId) cancelAnimationFrame(animationId);
-      if (slider) {
-        slider.removeEventListener('mouseenter', handleMouseEnter);
-        slider.removeEventListener('mouseleave', handleMouseLeave);
+      if (topAnimationId) cancelAnimationFrame(topAnimationId);
+      if (bottomAnimationId) cancelAnimationFrame(bottomAnimationId);
+      if (topRow) {
+        topRow.removeEventListener('mouseenter', handleMouseEnter);
+        topRow.removeEventListener('mouseleave', handleMouseLeave);
+      }
+      if (bottomRow) {
+        bottomRow.removeEventListener('mouseenter', handleMouseEnter);
+        bottomRow.removeEventListener('mouseleave', handleMouseLeave);
       }
     };
   }, [reviews, isVisible]);
@@ -104,105 +205,37 @@ const InfiniteReviewsSlider = ({ reviews }) => {
     );
   }
 
-  // Duplicate reviews for infinite scroll if we have enough reviews
-  const displayReviews = reviews.length >= 3 ? [...reviews, ...reviews] : reviews;
-
   return (
     <>
-      <div ref={containerRef}>
+      <div ref={containerRef} style={{ width: '100%', overflow: 'hidden' }}>
+        <style jsx>{`
+          .reviews-row {
+            display: flex;
+            gap: 12px;
+            padding: 8px 0;
+            will-change: transform;
+          }
+          .reviews-row::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
+
+        {/* Top Row - Scrolls Left */}
         <div
-          ref={sliderRef}
-          className="infinite-reviews-slider"
+          ref={topRowRef}
+          className="reviews-row"
           style={{
-            display: 'flex',
-            overflowX: 'auto',
-            gap: '12px',
-            padding: '8px 0',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
+            marginBottom: '20px'
           }}
-        >
-          <style jsx>{`
-            .infinite-reviews-slider::-webkit-scrollbar {
-              display: none;
-            }
-          `}</style>
-          
-          {displayReviews.map((review, idx) => (
-          <div
-            key={`${review.id || idx}-${idx}`}
-            className="review-slide"
-            style={{
-              minWidth: '240px',
-              maxWidth: '260px',
-              background: '#fafbfc',
-              border: '1px solid #eee',
-              borderRadius: '8px',
-              padding: '12px',
-              boxShadow: '0 2px 8px #eee',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              cursor: 'pointer',
-              position: 'relative'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 4px 16px rgba(206,30,54,0.10)';
-              handleReviewMouseEnter(review, e);
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 2px 8px #eee';
-              handleReviewMouseLeave();
-            }}
-          >
-            <div className="reviewer-name" style={{ fontWeight: 'bold', marginBottom: 4, fontSize: '13px' }}>
-              {review.reviewerName || review.User?.username || review.guestName || 'Anonymous'}
-            </div>
-            <div className="review-stars" style={{ color: '#f59e42', marginBottom: 4, fontSize: '14px' }}>
-              {Array.from({ length: review.rating }).map((_, i) => (
-                <span key={i}>★</span>
-              ))}
-            </div>
-            <div className="review-text" style={{ fontSize: 12, marginBottom: 6, lineHeight: 1.3, minHeight: '32px' }}>
-              {truncateText(review.review)}
-            </div>
-            <div className="review-date" style={{ fontSize: 11, color: '#888' }}>
-              {new Date(review.createdAt).toLocaleDateString()}
-            </div>
-            {review.ReviewImages && review.ReviewImages.length > 0 && (
-              <div className="review-images" style={{ marginTop: 6, display: 'flex', gap: 3 }}>
-                {review.ReviewImages.slice(0, 2).map((image, imgIdx) => (
-                  <SafeImage
-                    key={imgIdx}
-                    imageData={{
-                      image_url: `/uploads/reviews/${image.fileName}`
-                    }}
-                    alt={`Review image ${imgIdx + 1}`}
-                    style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 3 }}
-                  />
-                ))}
-                {review.ReviewImages.length > 2 && (
-                  <div style={{ 
-                    width: 32, 
-                    height: 32, 
-                    backgroundColor: '#f0f0f0', 
-                    borderRadius: 3, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    fontSize: 10,
-                    color: '#666'
-                  }}>
-                    +{review.ReviewImages.length - 2}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          ))}
-        </div>
+        />
+
+        {/* Bottom Row - Scrolls Right */}
+        <div
+          ref={bottomRowRef}
+          className="reviews-row"
+        />
       </div>
-      
+
       {/* Tooltip for full review text */}
       {hoveredReview && (
         <div
