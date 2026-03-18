@@ -103,7 +103,7 @@ function AppContent({ Component, pageProps, progressRef }) {
         <div
           className="custom-scrollbar-progress-fill"
           ref={progressRef}
-          style={{ height: 0 }}
+          style={{ width: 0 }}
         />
       </div>
       {!isDashboard && !isAuthPage && <Header />}
@@ -181,7 +181,7 @@ function App({ Component, pageProps }) {
         document.documentElement.scrollHeight - window.innerHeight;
       const percent = docHeight > 0 ? scrollTop / docHeight : 0;
       if (progressRef.current) {
-        progressRef.current.style.height = `${percent * 100}%`;
+        progressRef.current.style.width = `${percent * 100}%`;
       }
       ticking = false;
     }
