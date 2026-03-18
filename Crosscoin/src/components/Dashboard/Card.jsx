@@ -235,18 +235,7 @@ function CardGrid() {
               </div>
             </div>
           )}
-          {stats.utmTracking.sourceChart?.length > 0 && (
-            <div style={{ marginTop:'20px' }}>
-              <DonutChart
-                data={stats.utmTracking.sourceChart}
-                title="Traffic Sources"
-                subtitle="Top 5 sources"
-                totalValue={stats.utmTracking.sourceChart.reduce((s,i)=>s+i.value,0).toString()}
-                totalLabel="Total Sessions"
-                size={160} strokeWidth={22} showLegend={true}
-              />
-            </div>
-          )}
+
         </div>
       )}
 

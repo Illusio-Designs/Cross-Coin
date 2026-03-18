@@ -18,9 +18,9 @@
   margin-bottom: 20px;
   padding: 16px;
   background: white;
-  border-radius: 12px;
-  border: 2px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-radius: 8px;
+  border: 1px solid #ebebf0;
+  box-shadow: none;
 }
 
 .date-input-group {
@@ -77,9 +77,9 @@
 .stat-card {
   background: white;
   padding: 18px;
-  border-radius: 12px;
-  border: 2px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-radius: 8px;
+  border: 1px solid #ebebf0;
+  box-shadow: none;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -125,9 +125,9 @@
 .utm-table-container {
   background: white;
   padding: 20px;
-  border-radius: 12px;
-  border: 2px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-radius: 8px;
+  border: 1px solid #ebebf0;
+  box-shadow: none;
 }
 
 .utm-table-container h2 {
@@ -236,9 +236,9 @@
   justify-content: center;
   padding: 60px 20px;
   background: white;
-  border-radius: 12px;
-  border: 2px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-radius: 8px;
+  border: 1px solid #ebebf0;
+  box-shadow: none;
 }
 
 .loader {

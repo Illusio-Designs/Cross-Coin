@@ -18,7 +18,7 @@
 .dc-hero-card {
   position: relative;
   background: linear-gradient(135deg, #180D3E 0%, #2d1a6e 55%, #3d1a5a 100%);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 28px 32px 24px;
   color: #fff;
   overflow: hidden;
@@ -55,7 +55,7 @@
   width: 56px; height: 56px;
   background: rgba(255,255,255,0.12);
   border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 12px;
+  border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
   color: #fff;
@@ -111,7 +111,7 @@
   gap: 0;
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 10px;
+  border-radius: 8px;
   overflow: hidden;
   position: relative;
   z-index: 1;
@@ -151,7 +151,7 @@
    =================================== */
 .dashboard-section {
   background: #fff;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 20px 24px;
   border: 1px solid #ebebf0;
   width: 100%;
@@ -198,7 +198,7 @@
   gap: 14px;
   background: #fafafa;
   border: 1px solid #ebebf0;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 16px 18px;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
@@ -272,7 +272,7 @@
   align-items: center;
   gap: 14px;
   padding: 16px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid;
   background: #fff;
 }
