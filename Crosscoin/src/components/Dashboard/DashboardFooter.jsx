@@ -1,12 +1,6 @@
-function DashboardFooter({ sidebarWidth, isMobile }) {
+function DashboardFooter() {
   return (
-    <footer
-      className="df"
-      style={{
-        left: isMobile ? 0 : sidebarWidth,
-        width: isMobile ? '100%' : `calc(100% - ${sidebarWidth}px)`,
-      }}
-    >
+    <footer className="df">
       &copy; {new Date().getFullYear()} CrossCoin. All rights reserved.
     </footer>
   );
