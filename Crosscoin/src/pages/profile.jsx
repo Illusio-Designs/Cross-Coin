@@ -13,7 +13,6 @@ import {
   setDefaultShippingAddress,
   getUserOrders,
 } from "../services/publicApi";
-import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import {
   showProfileUpdateSuccessToast,
@@ -22,799 +21,364 @@ import {
   showAddressUpdatedSuccessToast,
   showAddressDeletedSuccessToast,
   showValidationErrorToast,
-  showLogoutSuccessToast,
 } from "../utils/toast";
-import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 
-const tabs = [
-  { label: "My Orders" },
-  { label: "Shipping Addresses" },
-  { label: "Account Details" },
-  { label: "Reset Password" },
-  { label: "Logout" },
-];
+const TABS = ["My Orders", "Addresses", "Account Details", "Reset Password"];
 
-function forceEnvImageBase(url) {
-  if (!url || typeof url !== "string") return null; // Return null instead of fallback
-  if (url.startsWith("http")) {
-    if (url.includes("localhost:5000")) {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
-      const path = url.replace(/^https?:\/\/[^/]+/, "");
-      return `${baseUrl}${path}`;
-    }
-    return url;
-  }
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
-  return `${baseUrl}${url}`;
+const EyeIcon = () => (
+  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>
+  </svg>
+);
+const EyeOffIcon = () => (
+  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+    <path d="M17.94 17.94A10.06 10.06 0 0112 20c-5.52 0-10-8-10-8a17.7 17.7 0 013.07-4.11"/><path d="M1 1l22 22"/><path d="M9.53 9.53A3 3 0 0012 15a3 3 0 002.47-5.47"/><path d="M12 4a10.06 10.06 0 015.94 1.94"/>
+  </svg>
+);
+
+function getInitials(name) {
+  if (!name) return "U";
+  return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+}
+
+function formatDate(d) {
+  if (!d) return "";
+  try { return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }); }
+  catch { return ""; }
+}
+
+function getStatusColor(status) {
+  const s = (status || "").toLowerCase();
+  if (s === "delivered") return { bg: "#e8f5e9", color: "#2e7d32" };
+  if (s === "shipped" || s === "processing" || s === "booked") return { bg: "#e8f4ff", color: "#1a5cb5" };
+  if (s === "out_for_delivery" || s === "out for delivery") return { bg: "#fff3e0", color: "#e65100" };
+  if (s === "cancelled" || s === "order_cancelled") return { bg: "#fce4ec", color: "#c62828" };
+  return { bg: "#f3f4f6", color: "#555" };
+}
+
+function getStatusLabel(status) {
+  if (!status) return "Pending";
+  return status.split(/[_\s]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
 export default function Profile() {
-  const [selectedTab, setSelectedTab] = useState(0);
+  const [activeTab, setActiveTab] = useState(0);
   const router = useRouter();
   const { user, isAuthenticated, logout: authLogout } = useAuth();
+
+  // Orders
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [ordersError, setOrdersError] = useState("");
+
+  // Addresses
+  const [addresses, setAddresses] = useState([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [addressForm, setAddressForm] = useState({ address: "", city: "", state: "", postalCode: "", country: "", phoneNumber: "", isDefault: false });
+
+  // Password
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // Profile image
   const [profileImage, setProfileImage] = useState(null);
   const [profileImageUrl, setProfileImageUrl] = useState("");
-  const [addresses, setAddresses] = useState([]);
-  const [loadingAddresses, setLoadingAddresses] = useState(true);
-  const [addressError, setAddressError] = useState("");
-  const [addressForm, setAddressForm] = useState({
-    address: "",
-    city: "",
-    state: "",
-    postalCode: "",
-    country: "",
-    phoneNumber: "",
-    isDefault: false,
-  });
-  const [editingId, setEditingId] = useState(null);
-  const [showAddressModal, setShowAddressModal] = useState(false);
-  const [orders, setOrders] = useState([]);
-  const [loadingOrders, setLoadingOrders] = useState(true);
-  const [ordersError, setOrdersError] = useState("");
 
-  // Check authentication on component mount
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/login");
-    }
-  }, [router, isAuthenticated]);
-
-  // Set user details from context
-  useEffect(() => {
-    if (user) {
-      setProfileImageUrl(user.profileImageUrl || "");
-    }
-  }, [user]);
+  useEffect(() => { if (!isAuthenticated) router.push("/login"); }, [isAuthenticated, router]);
+  useEffect(() => { if (user) setProfileImageUrl(user.profileImageUrl || ""); }, [user]);
 
   useEffect(() => {
-    const fetchAddresses = async () => {
-      setLoadingAddresses(true);
-      try {
-        const data = await getUserShippingAddresses();
-        setAddresses(data);
-      } catch (err) {
-        setAddressError(err.message || "Failed to load addresses");
-      }
-      setLoadingAddresses(false);
-    };
-    fetchAddresses();
-  }, []);
-
-  useEffect(() => {
-    const fetchOrders = async () => {
+    if (activeTab === 0) {
       setLoadingOrders(true);
-      try {
-        const data = await getUserOrders();
-        setOrders(data.orders);
-        setOrdersError("");
-      } catch (err) {
-        setOrdersError(err.message || "Failed to load orders");
-      }
-      setLoadingOrders(false);
-    };
-
-    if (selectedTab === 0) {
-      fetchOrders();
+      getUserOrders().then(d => { setOrders(d.orders || []); setOrdersError(""); }).catch(e => setOrdersError(e.message || "Failed to load orders")).finally(() => setLoadingOrders(false));
     }
-  }, [selectedTab]);
+    if (activeTab === 1) {
+      setLoadingAddresses(true);
+      getUserShippingAddresses().then(d => setAddresses(d || [])).catch(() => {}).finally(() => setLoadingAddresses(false));
+    }
+  }, [activeTab]);
 
-  // Handle Logout
   const handleLogout = async () => {
-    try {
-      await authLogout();
-      sessionStorage.removeItem("isLoggedIn");
-      localStorage.removeItem("user");
-      router.push("/");
-    } catch (err) {
-      showProfileUpdateErrorToast("Logout failed. Please try again.");
-    }
+    try { await authLogout(); sessionStorage.removeItem("isLoggedIn"); localStorage.removeItem("user"); router.push("/"); }
+    catch { showProfileUpdateErrorToast("Logout failed."); }
   };
 
-  // Handle tab click
-  const handleTabClick = (idx) => {
-    if (tabs[idx].label === "Logout") {
-      handleLogout();
-      return;
-    }
-    setSelectedTab(idx);
+  const openAddAddress = () => {
+    setEditingId(null);
+    setAddressForm({ address: "", city: "", state: "", postalCode: "", country: "", phoneNumber: "", isDefault: false });
+    setShowAddressModal(true);
   };
 
-  const handleAddressInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setAddressForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+  const openEditAddress = (addr) => {
+    setEditingId(addr.id);
+    setAddressForm({ address: addr.address, city: addr.city, state: addr.state, postalCode: addr.postal_code, country: addr.country, phoneNumber: addr.phone_number, isDefault: addr.is_default });
+    setShowAddressModal(true);
   };
 
   const handleAddressSubmit = async (e) => {
     e.preventDefault();
     try {
       if (editingId) {
-        // Update existing address
         await updateShippingAddress(editingId, addressForm);
-        
-        // Optimistic update - update local state instead of refetching
-        setAddresses(prev => prev.map(addr => 
-          addr.id === editingId 
-            ? { ...addr, ...addressForm }
-            : addr
-        ));
-        
+        setAddresses(prev => prev.map(a => a.id === editingId ? { ...a, ...addressForm, postal_code: addressForm.postalCode, phone_number: addressForm.phoneNumber, is_default: addressForm.isDefault } : a));
         showAddressUpdatedSuccessToast();
       } else {
-        // Create new address
-        const response = await createShippingAddress(addressForm);
-        
-        // Optimistic update - add to local state instead of refetching
-        if (response && response.shippingAddress) {
-          setAddresses(prev => [...prev, response.shippingAddress]);
-        } else {
-          // Fallback: refetch if response format unexpected
-          const data = await getUserShippingAddresses();
-          setAddresses(data);
-        }
-        
+        const res = await createShippingAddress(addressForm);
+        if (res?.shippingAddress) setAddresses(prev => [...prev, res.shippingAddress]);
+        else { const d = await getUserShippingAddresses(); setAddresses(d); }
         showAddressAddedSuccessToast();
       }
-      
-      setAddressForm({
-        address: "",
-        city: "",
-        state: "",
-        postalCode: "",
-        country: "",
-        phoneNumber: "",
-        isDefault: false,
-      });
-      setEditingId(null);
-    } catch (err) {
-      showProfileUpdateErrorToast(err.message || "Failed to save address");
-      // On error, refetch to ensure consistency
-      try {
-        const data = await getUserShippingAddresses();
-        setAddresses(data);
-      } catch (refetchErr) {
-        }
-    }
-  };
-
-  const handleEditAddress = (address) => {
-    setEditingId(address.id);
-    setAddressForm({
-      address: address.address,
-      city: address.city,
-      state: address.state,
-      postalCode: address.postalCode,
-      country: address.country,
-      phoneNumber: address.phoneNumber,
-      isDefault: address.isDefault,
-    });
+      setShowAddressModal(false);
+    } catch (err) { showProfileUpdateErrorToast(err.message || "Failed to save address"); }
   };
 
   const handleDeleteAddress = async (id) => {
+    try { await deleteShippingAddress(id); setAddresses(prev => prev.filter(a => a.id !== id)); showAddressDeletedSuccessToast(); }
+    catch (err) { showProfileUpdateErrorToast(err.message || "Failed to delete"); }
+  };
+
+  const handleSetDefault = async (id) => {
+    try { await setDefaultShippingAddress(id); setAddresses(prev => prev.map(a => ({ ...a, is_default: a.id === id }))); showAddressUpdatedSuccessToast(); }
+    catch (err) { showProfileUpdateErrorToast(err.message || "Failed"); }
+  };
+
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
     try {
-      await deleteShippingAddress(id);
-      
-      // Optimistic update - remove from local state instead of refetching
-      setAddresses(prev => prev.filter(addr => addr.id !== id));
-      
-      showAddressDeletedSuccessToast();
-    } catch (err) {
-      showProfileUpdateErrorToast(err.message || "Failed to delete address");
-      // On error, refetch to ensure consistency
-      try {
-        const data = await getUserShippingAddresses();
-        setAddresses(data);
-      } catch (refetchErr) {
-        }
-    }
+      const formData = new FormData();
+      formData.append("username", user?.username || "");
+      formData.append("email", user?.email || "");
+      if (profileImage) formData.append("profileImage", profileImage);
+      await updateUserProfile(formData);
+      showProfileUpdateSuccessToast();
+      if (profileImage) setProfileImageUrl(URL.createObjectURL(profileImage));
+    } catch (err) { showProfileUpdateErrorToast(err.message || "Failed to update profile."); }
   };
 
-  const handleSetDefaultAddress = async (id) => {
+  const handlePasswordReset = async (e) => {
+    e.preventDefault();
+    if (!currentPassword || !newPassword || !confirmPassword) { showValidationErrorToast("All fields are required."); return; }
+    if (newPassword !== confirmPassword) { showValidationErrorToast("Passwords do not match."); return; }
     try {
-      await setDefaultShippingAddress(id);
-      
-      // Optimistic update - update local state instead of refetching
-      setAddresses(prev => prev.map(addr => ({
-        ...addr,
-        isDefault: addr.id === id
-      })));
-      
-      showAddressUpdatedSuccessToast();
-    } catch (err) {
-      showProfileUpdateErrorToast(
-        err.message || "Failed to set default address"
-      );
-      // On error, refetch to ensure consistency
-      try {
-        const data = await getUserShippingAddresses();
-        setAddresses(data);
-      } catch (refetchErr) {
-        }
-    }
-  };
-
-  // SVGs for eye and eye-off (stroke only, correct color)
-  const EyeIcon = (
-    <svg
-      width="20"
-      height="20"
-      fill="none"
-      stroke="#180D3E"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      viewBox="0 0 24 24"
-    >
-      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-  const EyeOffIcon = (
-    <svg
-      width="20"
-      height="20"
-      fill="none"
-      stroke="#180D3E"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      viewBox="0 0 24 24"
-    >
-      <path d="M17.94 17.94A10.06 10.06 0 0 1 12 20c-5.52 0-10-8-10-8a17.7 17.7 0 0 1 3.07-4.11" />
-      <path d="M1 1l22 22" />
-      <path d="M9.53 9.53A3 3 0 0 0 12 15a3 3 0 0 0 2.47-5.47" />
-      <path d="M12 4a10.06 10.06 0 0 1 5.94 1.94" />
-      <path d="M22 12s-4.48 8-10 8a10.06 10.06 0 0 1-5.94-1.94" />
-    </svg>
-  );
-
-  // Helper function to format currency
-  const formatCurrency = (amount) => {
-    return `₹${parseFloat(amount || 0).toFixed(2)}`;
-  };
-
-  // Helper function to calculate order total
-  const calculateOrderTotal = (order) => {
-    const subtotal =
-      order.OrderItems?.reduce(
-        (sum, item) => sum + parseFloat(item.subtotal || 0),
-        0
-      ) || 0;
-    const shippingFee = parseFloat(order.shipping_fee || 0);
-    const discountAmount = parseFloat(order.discount_amount || 0);
-    return Math.max(0, subtotal - discountAmount + shippingFee);
+      const token = localStorage.getItem("token");
+      const res = await resetPassword({ resetToken: token, password: newPassword, confirmPassword });
+      showProfileUpdateSuccessToast(res.message || "Password updated.");
+      setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
+    } catch (err) { showProfileUpdateErrorToast(err.message || "Failed to update password."); }
   };
 
   return (
     <SeoWrapper pageName="profile">
-      <div className="profile-layout">
-        <aside className="profile-sidebar">
-          <div className="profile-welcome">
-            <span className="profile-avatar">👤</span>
-            <div>
-              <div className="profile-hello">Welcome back,</div>
-              <div className="profile-name">{user?.username}</div>
+      <div className="pf-page">
+        {/* Hero */}
+        <div className="pf-hero">
+          <div className="pf-hero-inner">
+            <div className="pf-avatar">{getInitials(user?.username)}</div>
+            <div className="pf-hero-info">
+              <div className="pf-greeting">Welcome back,</div>
+              <div className="pf-name">{user?.username || "User"}</div>
+              <div className="pf-email">{user?.email}</div>
             </div>
+            <button className="pf-logout-btn" onClick={handleLogout}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Sign Out
+            </button>
           </div>
-          <nav className="profile-tabs">
-            {tabs.map((tab, idx) => (
-              <div
-                key={tab.label}
-                className={`profile-tab${selectedTab === idx ? " active" : ""}`}
-                onClick={() => handleTabClick(idx)}
-              >
-                {tab.label}
-              </div>
-            ))}
-          </nav>
-        </aside>
-        <main className="profile-content">
-          {selectedTab === 0 && (
-            <div>
-              <div className="orders-list">
-                {loadingOrders ? (
-                  <div>Loading orders...</div>
-                ) : ordersError ? (
-                  <div className="profile-error-message">{ordersError}</div>
-                ) : orders.length === 0 ? (
-                  <div>No orders found.</div>
-                ) : (
-                  orders.map((order) => (
-                    <div className="order-card" key={order.id}>
-                      <div className="order-card-header">
-                        <div>
-                          <div className="order-meta">
-                            <span>
-                              Order Placed
-                              <br />
-                              <b style={{ color: "#000000" }}>
-                                {new Date(order.createdAt).toLocaleDateString()}
-                              </b>
-                            </span>
-                            <span>
-                              Total
-                              <br />
-                              <b style={{ color: "#000000" }}>
-                                {formatCurrency(calculateOrderTotal(order))}
-                              </b>
-                            </span>
-                            <span>
-                              Ship to
-                              <br />
-                              <b style={{ color: "#000000" }}>
-                                {user?.username}
-                              </b>
-                            </span>
+        </div>
+
+        {/* Stats */}
+        <div className="pf-stats">
+          <div className="pf-stat"><div className="pf-stat-val">{orders.length}</div><div className="pf-stat-label">Orders</div></div>
+          <div className="pf-stat"><div className="pf-stat-val">{addresses.length}</div><div className="pf-stat-label">Addresses</div></div>
+          <div className="pf-stat"><div className="pf-stat-val">{orders.filter(o => o.status === "delivered").length}</div><div className="pf-stat-label">Delivered</div></div>
+          <div className="pf-stat"><div className="pf-stat-val">{orders.filter(o => ["pending","processing","shipped","booked"].includes(o.status)).length}</div><div className="pf-stat-label">Active</div></div>
+        </div>
+
+        {/* Body */}
+        <div className="pf-body">
+          {/* Sidebar */}
+          <aside className="pf-sidebar">
+            <nav className="pf-nav">
+              {TABS.map((tab, i) => (
+                <button key={tab} className={`pf-nav-btn${activeTab === i ? " active" : ""}`} onClick={() => setActiveTab(i)}>
+                  {i === 0 && <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>}
+                  {i === 1 && <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>}
+                  {i === 2 && <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
+                  {i === 3 && <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>}
+                  {tab}
+                </button>
+              ))}
+            </nav>
+          </aside>
+
+          {/* Content */}
+          <main className="pf-main">
+
+            {/* ORDERS */}
+            {activeTab === 0 && (
+              <div className="pf-section">
+                <div className="pf-section-title">My Orders</div>
+                {loadingOrders ? <div className="pf-loading">Loading orders...</div>
+                  : ordersError ? <div className="pf-error">{ordersError}</div>
+                  : orders.length === 0 ? <div className="pf-empty">No orders yet.</div>
+                  : orders.map(order => {
+                    const sc = getStatusColor(order.status);
+                    return (
+                      <div className="pf-order-card" key={order.id}>
+                        <div className="pf-order-head">
+                          <div className="pf-order-meta">
+                            <span className="pf-order-num">#{order.order_number}</span>
+                            <span className="pf-order-date">{formatDate(order.createdAt)}</span>
                           </div>
+                          <span className="pf-order-status" style={{ background: sc.bg, color: sc.color }}>{getStatusLabel(order.status)}</span>
                         </div>
-                        <div className="order-actions">
-                          <span className="order-id">
-                            Order #{order.order_number}
-                          </span>
-                          <div className="order-actions-buttons">
-                            <a href="#" className="order-link">
-                              View order details
-                            </a>
-                            <span className="part">|</span>
-                            <a href="#" className="order-link">
-                              View Invoice
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="order-status">{order.status}</div>
-                      {order.OrderItems &&
-                        order.OrderItems.map((item) => (
-                          <div className="order-card-body" key={item.id}>
-                            <SafeImage
-                              imageData={{
-                                image_url: item.Product?.ProductImages?.[0]?.image_url
-                              }}
-                              alt={item.Product?.name}
-                              className="order-product-img"
-                              width="100px"
-                              height="100px"
-                              style={{ objectFit: 'cover' }}
-                            />
-                            <div className="order-product-info">
-                              <div className="order-product-title">
-                                {item.Product?.name}
-                              </div>
-                              <div className="order-product-desc">
-                                Quantity: {item.quantity}
-                              </div>
-                              <div className="order-card-buttons">
-                                <button className="order-btn buy-again">
-                                  Buy Again
-                                </button>
-                                <button className="order-btn view-product">
-                                  View your product
-                                </button>
-                              </div>
+                        {order.OrderItems?.map(item => (
+                          <div className="pf-order-item" key={item.id}>
+                            <div className="pf-order-img">
+                              <SafeImage imageData={{ image_url: item.Product?.ProductImages?.[0]?.image_url }} alt={item.Product?.name} width="72" height="72" style={{ objectFit: "cover", width: "100%", height: "100%" }} />
                             </div>
+                            <div className="pf-order-item-info">
+                              <div className="pf-order-item-name">{item.Product?.name}</div>
+                              <div className="pf-order-item-meta">Qty: {item.quantity} &nbsp;·&nbsp; ₹{parseFloat(item.subtotal || 0).toFixed(2)}</div>
+                            </div>
+                            <div className="pf-order-item-total">₹{parseFloat(item.subtotal || 0).toFixed(2)}</div>
                           </div>
                         ))}
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-          {selectedTab === 1 && (
-            <div className="shipping-addresses-section">
-              <h3>Shipping Addresses</h3>
-              <button
-                onClick={() => {
-                  setEditingId(null);
-                  setAddressForm({
-                    address: "",
-                    city: "",
-                    state: "",
-                    postalCode: "",
-                    country: "",
-                    phoneNumber: "",
-                    isDefault: false,
-                  });
-                  setShowAddressModal(true);
-                }}
-              >
-                <FaPlus /> Add Address
-              </button>
-              <div className="shipping-address-list">
-                {loadingAddresses ? (
-                  <div>Loading addresses...</div>
-                ) : addresses.length === 0 ? (
-                  <div>No addresses found.</div>
-                ) : (
-                  addresses.map((address) => (
-                    <div
-                      key={address.id}
-                      className={`shipping-address-item${
-                        address.is_default ? " default" : ""
-                      }`}
-                    >
-                      <div>
-                        <b>Address:</b> {address.address}
-                      </div>
-                      <div>
-                        <b>City:</b> {address.city}
-                      </div>
-                      <div>
-                        <b>State:</b> {address.state}
-                      </div>
-                      <div>
-                        <b>Postal Code:</b> {address.postal_code}
-                      </div>
-                      <div>
-                        <b>Country:</b> {address.country}
-                      </div>
-                      <div>
-                        <b>Phone Number:</b> {address.phone_number}
-                      </div>
-                      <div className="address-actions">
-                        <div className="left-actions">
-                          {address.is_default ? (
-                            <span className="default-badge">
-                              Default
-                            </span>
-                          ) : (
-                            <button
-                              onClick={() => handleSetDefaultAddress(address.id)}
-                            >
-                              Set Default
-                            </button>
-                          )}
-                        </div>
-                        <div className="right-actions">
-                          <button
-                            onClick={() => {
-                              handleEditAddress({
-                                ...address,
-                                postalCode: address.postal_code,
-                                phoneNumber: address.phone_number,
-                                isDefault: address.is_default,
-                              });
-                              setShowAddressModal(true);
-                            }}
-                            title="Edit Address"
-                          >
-                            <FaEdit />
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteAddress(address.id)}
-                            title="Delete Address"
-                          >
-                            <FaTrash />
-                          </button>
+                        <div className="pf-order-foot">
+                          <span className="pf-order-total">Total: ₹{parseFloat(order.final_amount || 0).toFixed(2)}</span>
+                          <div className="pf-order-actions">
+                            <button className="pf-btn-ghost" onClick={() => router.push(`/order-tracking?order=${order.order_number}`)}>Track Order</button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
-                )}
-              </div>
-              {showAddressModal && (
-                <div
-                  className="modal-overlay"
-                  onClick={() => setShowAddressModal(false)}
-                >
-                  <div
-                    className="modal-content"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <h4>{editingId ? "Edit Address" : "Add New Address"}</h4>
-                    <form
-                      onSubmit={async (e) => {
-                        await handleAddressSubmit(e);
-                        setShowAddressModal(false);
-                      }}
-                      className="shipping-address-form"
-                    >
-                      <div className="form-group">
-                        <label>Phone Number *</label>
-                        <input
-                          type="text"
-                          name="phoneNumber"
-                          value={addressForm.phoneNumber}
-                          onChange={handleAddressInputChange}
-                          placeholder="Enter your phone number"
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Address *</label>
-                        <input
-                          type="text"
-                          name="address"
-                          value={addressForm.address}
-                          onChange={handleAddressInputChange}
-                          placeholder="Street address, apartment, suite, etc."
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>City *</label>
-                        <input
-                          type="text"
-                          name="city"
-                          value={addressForm.city}
-                          onChange={handleAddressInputChange}
-                          placeholder="Enter city"
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>State *</label>
-                        <input
-                          type="text"
-                          name="state"
-                          value={addressForm.state}
-                          onChange={handleAddressInputChange}
-                          placeholder="Enter state"
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Postal Code *</label>
-                        <input
-                          type="text"
-                          name="postalCode"
-                          value={addressForm.postalCode}
-                          onChange={handleAddressInputChange}
-                          placeholder="Enter postal code"
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Country *</label>
-                        <input
-                          type="text"
-                          name="country"
-                          value={addressForm.country}
-                          onChange={handleAddressInputChange}
-                          placeholder="Enter country"
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>
-                          <input
-                            type="checkbox"
-                            name="isDefault"
-                            checked={addressForm.isDefault}
-                            onChange={handleAddressInputChange}
-                          />
-                          Set as default address
-                        </label>
-                      </div>
-                      <div className="button-row">
-                        <button type="submit">
-                          {editingId ? "Update Address" : "Save Address"}
-                        </button>
-                        <button
-                          type="button"
-                          className="cancel-btn"
-                          onClick={() => setShowAddressModal(false)}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          {selectedTab === 2 && (
-            <div className="account-details-form">
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  try {
-                    const formData = new FormData();
-                    formData.append("username", user?.username || "");
-                    formData.append("email", user?.email || "");
-                    if (profileImage) {
-                      formData.append("profileImage", profileImage);
-                    }
-                    await updateUserProfile(formData);
-                    showProfileUpdateSuccessToast();
-                    // Optionally refresh image
-                    if (profileImage) {
-                      setProfileImageUrl(URL.createObjectURL(profileImage));
-                    }
-                  } catch (err) {
-                    showProfileUpdateErrorToast(
-                      err.message || "Failed to update profile."
                     );
-                  }
-                }}
-              >
-                <div className="form-group">
-                  <label htmlFor="username">Username</label>
-                  <input
-                    id="username"
-                    type="text"
-                    value={user?.username || ""}
-                    readOnly
-                  />
+                  })
+                }
+              </div>
+            )}
+
+            {/* ADDRESSES */}
+            {activeTab === 1 && (
+              <div className="pf-section">
+                <div className="pf-section-header">
+                  <div className="pf-section-title">Saved Addresses</div>
+                  <button className="pf-btn-primary" onClick={openAddAddress}>
+                    <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add Address
+                  </button>
                 </div>
-                <div className="form-group">
-                  <label htmlFor="email">Email address</label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={user?.email || ""}
-                    readOnly
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="profileImage">Profile Image</label>
-                  <input
-                    id="profileImage"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setProfileImage(e.target.files[0])}
-                  />
-                  {profileImageUrl && (
-                    <div style={{ marginTop: 8 }}>
-                      <img
-                        src={profileImageUrl}
-                        alt="Profile"
-                        style={{ width: 80, height: 80, borderRadius: "50%" }}
-                      />
+                {loadingAddresses ? <div className="pf-loading">Loading...</div>
+                  : addresses.length === 0 ? <div className="pf-empty">No addresses saved.</div>
+                  : <div className="pf-addr-grid">
+                    {addresses.map(addr => (
+                      <div className={`pf-addr-card${addr.is_default ? " default" : ""}`} key={addr.id}>
+                        <div className="pf-addr-icon">
+                          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        </div>
+                        <div className="pf-addr-body">
+                          {addr.is_default && <span className="pf-addr-default">Default</span>}
+                          <div className="pf-addr-text">{addr.address}</div>
+                          <div className="pf-addr-text">{addr.city}, {addr.state} — {addr.postal_code}</div>
+                          <div className="pf-addr-text">{addr.country}</div>
+                          <div className="pf-addr-text">📞 {addr.phone_number}</div>
+                          <div className="pf-addr-actions">
+                            {!addr.is_default && <button className="pf-addr-btn" onClick={() => handleSetDefault(addr.id)}>Set Default</button>}
+                            <button className="pf-addr-btn" onClick={() => openEditAddress(addr)}>Edit</button>
+                            <button className="pf-addr-btn danger" onClick={() => handleDeleteAddress(addr.id)}>Delete</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                }
+              </div>
+            )}
+
+            {/* ACCOUNT DETAILS */}
+            {activeTab === 2 && (
+              <div className="pf-section">
+                <div className="pf-section-title">Account Details</div>
+                <form className="pf-form" onSubmit={handleProfileUpdate}>
+                  <div className="pf-form-group">
+                    <label>Username</label>
+                    <input type="text" value={user?.username || ""} readOnly />
+                  </div>
+                  <div className="pf-form-group">
+                    <label>Email Address</label>
+                    <input type="email" value={user?.email || ""} readOnly />
+                  </div>
+                  <div className="pf-form-group">
+                    <label>Profile Image</label>
+                    <input type="file" accept="image/*" onChange={e => setProfileImage(e.target.files[0])} />
+                    {profileImageUrl && <img src={profileImageUrl} alt="Profile" className="pf-profile-preview" />}
+                  </div>
+                  <button type="submit" className="pf-btn-primary pf-btn-full">Update Profile</button>
+                </form>
+              </div>
+            )}
+
+            {/* RESET PASSWORD */}
+            {activeTab === 3 && (
+              <div className="pf-section">
+                <div className="pf-section-title">Reset Password</div>
+                <form className="pf-form" onSubmit={handlePasswordReset}>
+                  {[
+                    { label: "Current Password", val: currentPassword, set: setCurrentPassword, show: showCurrent, toggle: () => setShowCurrent(v => !v) },
+                    { label: "New Password", val: newPassword, set: setNewPassword, show: showNew, toggle: () => setShowNew(v => !v) },
+                    { label: "Confirm Password", val: confirmPassword, set: setConfirmPassword, show: showConfirm, toggle: () => setShowConfirm(v => !v) },
+                  ].map(({ label, val, set, show, toggle }) => (
+                    <div className="pf-form-group" key={label}>
+                      <label>{label}</label>
+                      <div className="pf-pw-wrap">
+                        <input type={show ? "text" : "password"} value={val} onChange={e => set(e.target.value)} />
+                        <button type="button" className="pf-pw-eye" onClick={toggle}>{show ? <EyeOffIcon /> : <EyeIcon />}</button>
+                      </div>
                     </div>
-                  )}
+                  ))}
+                  <button type="submit" className="pf-btn-primary pf-btn-full">Update Password</button>
+                </form>
+              </div>
+            )}
+          </main>
+        </div>
+
+        {/* Address Modal */}
+        {showAddressModal && (
+          <div className="pf-modal-overlay" onClick={() => setShowAddressModal(false)}>
+            <div className="pf-modal" onClick={e => e.stopPropagation()}>
+              <div className="pf-modal-title">{editingId ? "Edit Address" : "Add New Address"}</div>
+              <form onSubmit={handleAddressSubmit} className="pf-form">
+                {[
+                  { name: "phoneNumber", label: "Phone Number", placeholder: "Enter phone number" },
+                  { name: "address", label: "Address", placeholder: "Street, apartment, etc." },
+                  { name: "city", label: "City", placeholder: "City" },
+                  { name: "state", label: "State", placeholder: "State" },
+                  { name: "postalCode", label: "Postal Code", placeholder: "Postal code" },
+                  { name: "country", label: "Country", placeholder: "Country" },
+                ].map(f => (
+                  <div className="pf-form-group" key={f.name}>
+                    <label>{f.label}</label>
+                    <input type="text" name={f.name} value={addressForm[f.name]} onChange={e => setAddressForm(p => ({ ...p, [e.target.name]: e.target.value }))} placeholder={f.placeholder} required />
+                  </div>
+                ))}
+                <div className="pf-form-group pf-checkbox-group">
+                  <label><input type="checkbox" name="isDefault" checked={addressForm.isDefault} onChange={e => setAddressForm(p => ({ ...p, isDefault: e.target.checked }))} /> Set as default address</label>
                 </div>
-                <button className="update-profile-btn" type="submit">
-                  Update Profile
-                </button>
+                <div className="pf-modal-btns">
+                  <button type="submit" className="pf-btn-primary">{editingId ? "Update" : "Save"}</button>
+                  <button type="button" className="pf-btn-cancel" onClick={() => setShowAddressModal(false)}>Cancel</button>
+                </div>
               </form>
             </div>
-          )}
-          {selectedTab === 3 && (
-            <div className="reset-password-form">
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (!currentPassword || !newPassword || !confirmPassword) {
-                    showValidationErrorToast("All fields are required.");
-                    return;
-                  }
-                  if (newPassword !== confirmPassword) {
-                    showValidationErrorToast("New passwords do not match.");
-                    return;
-                  }
-                  try {
-                    const token = localStorage.getItem("token");
-                    const response = await resetPassword({
-                      resetToken: token,
-                      password: newPassword,
-                      confirmPassword: confirmPassword,
-                    });
-                    showProfileUpdateSuccessToast(
-                      response.message || "Password updated successfully."
-                    );
-                    setCurrentPassword("");
-                    setNewPassword("");
-                    setConfirmPassword("");
-                  } catch (err) {
-                    showProfileUpdateErrorToast(
-                      err.message || "Failed to update password."
-                    );
-                  }
-                }}
-              >
-                <div className="form-group">
-                  <label htmlFor="currentPassword">Current Password</label>
-                  <div className="password-input-wrapper">
-                    <input
-                      id="currentPassword"
-                      type={showCurrent ? "text" : "password"}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="password-eye"
-                      onClick={() => setShowCurrent((v) => !v)}
-                      tabIndex={0}
-                      aria-label={
-                        showCurrent ? "Hide password" : "Show password"
-                      }
-                    >
-                      {showCurrent ? EyeOffIcon : EyeIcon}
-                    </button>
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="newPassword">New Password</label>
-                  <div className="password-input-wrapper">
-                    <input
-                      id="newPassword"
-                      type={showNew ? "text" : "password"}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="password-eye"
-                      onClick={() => setShowNew((v) => !v)}
-                      tabIndex={0}
-                      aria-label={showNew ? "Hide password" : "Show password"}
-                    >
-                      {showNew ? EyeOffIcon : EyeIcon}
-                    </button>
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="confirmPassword">Confirm Password</label>
-                  <div className="password-input-wrapper">
-                    <input
-                      id="confirmPassword"
-                      type={showConfirm ? "text" : "password"}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="password-eye"
-                      onClick={() => setShowConfirm((v) => !v)}
-                      tabIndex={0}
-                      aria-label={
-                        showConfirm ? "Hide password" : "Show password"
-                      }
-                    >
-                      {showConfirm ? EyeOffIcon : EyeIcon}
-                    </button>
-                  </div>
-                </div>
-                <button className="update-profile-btn" type="submit">
-                  Update Password
-                </button>
-              </form>
-            </div>
-          )}
-          {selectedTab === 4 && (
-            <div>
-              <h2>Logout</h2>
-              <div className="profile-placeholder">
-                Logout action goes here.
-              </div>
-            </div>
-          )}
-        </main>
+          </div>
+        )}
       </div>
     </SeoWrapper>
   );
 }
-
-
