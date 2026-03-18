@@ -148,8 +148,13 @@ export default function Profile() {
   };
 
   const handleDeleteAddress = async (id) => {
-    try { await deleteShippingAddress(id); setAddresses(prev => prev.filter(a => a.id !== id)); showAddressDeletedSuccessToast(); }
-    catch (err) { showProfileUpdateErrorToast(err.message || "Failed to delete"); }
+    try {
+      await deleteShippingAddress(id);
+      // Re-fetch to get accurate default state after backend auto-promotes
+      const updated = await getUserShippingAddresses();
+      setAddresses(updated || []);
+      showAddressDeletedSuccessToast();
+    } catch (err) { showProfileUpdateErrorToast(err.message || "Failed to delete"); }
   };
 
   const handleSetDefault = async (id) => {
