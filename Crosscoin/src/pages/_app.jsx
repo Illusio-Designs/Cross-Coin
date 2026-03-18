@@ -33,6 +33,8 @@ import "../styles/pages/Policy.css";
 import "../styles/pages/Contact.css";
 import "../styles/pages/auth/adminlogin.css";
 import '../styles/blog.css';
+import '../styles/blog-details.css';
+
 
 // Components
 import "../styles/components/Header.css";
