@@ -2,249 +2,102 @@ import { useState, useEffect, useCallback } from "react";
 import { Button, Modal, Table, Pagination } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { paymentService } from "../../../services";
-import { debounce } from 'lodash';
 import { toast } from "react-hot-toast";
+
+const IC = {
+  search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  view: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+  refund: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>,
+  payments: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
+  filter: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
+};
+
+const METHOD_LABELS = { credit_card: "Credit Card", debit_card: "Debit Card", razorpay: "Razorpay", upi: "UPI", cod: "COD", wallet: "Wallet", bank_transfer: "Bank Transfer" };
+
+const getMethodLabel = (m) => !m || m === 'N/A' ? 'Not Specified' : (METHOD_LABELS[m.toLowerCase()] || m.toUpperCase());
+
+const StatusBadge = ({ status }) => {
+  const map = { successful: 'active', pending: 'pending', failed: 'inactive', refunded: 'refunded' };
+  return <span className={`sl-status-badge sl-status-${map[status] || 'inactive'}`}>{status}</span>;
+};
 
 export default function Payments() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  const [filterValue, setFilterValue] = useState("");
+  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [methodFilter, setMethodFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const [payments, setPayments] = useState([]);
-  const [totalPayments, setTotalPayments] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
 
-  // Debounced search function
-  const debouncedSearch = useCallback((searchTerm) => {
-    const timeoutId = setTimeout(() => {
-      setFilterValue(searchTerm);
-    }, 300);
-    return () => clearTimeout(timeoutId);
-  }, []);
-
-  // Handle search input change
-  const handleSearchChange = (e) => {
-    const value = e.target.value;
-    debouncedSearch(value);
-  };
-
-  // Fetch payments data
   const fetchPayments = useCallback(async () => {
     try {
       setLoading(true);
-      
       const response = await paymentService.getAllPayments();
       if (response.success && response.payments) {
-        const transformedPayments = response.payments.map(payment => {
+        const transformed = response.payments.map(p => {
           let customerName = 'Guest User';
-          
-          if (payment.Order?.User?.username) {
-            customerName = payment.Order.User.username;
-          } 
-          else if (payment.Order?.GuestUser) {
-            const guest = payment.Order.GuestUser;
-            customerName = `${guest.firstName || ''} ${guest.lastName || ''}`.trim() || guest.email || 'Guest User';
-          }
-          
-          let paymentMethod = payment.payment_type || payment.Order?.payment_type;
-          
-          if (!paymentMethod && payment.payment_gateway) {
-            paymentMethod = payment.payment_gateway.toLowerCase();
-          }
-          
-          if (!paymentMethod && payment.transaction_id) {
-            if (payment.transaction_id.startsWith('pay_')) {
-              paymentMethod = 'razorpay';
-            }
-          }
-          
-          return {
-            ...payment,
-            customerName,
-            orderNumber: payment.Order?.order_number || `ORD-${payment.order_id}`,
-            displayPaymentMethod: paymentMethod || 'N/A'
-          };
+          if (p.Order?.User?.username) customerName = p.Order.User.username;
+          else if (p.Order?.GuestUser) { const g = p.Order.GuestUser; customerName = `${g.firstName || ''} ${g.lastName || ''}`.trim() || g.email || 'Guest User'; }
+          let method = p.payment_type || p.Order?.payment_type;
+          if (!method && p.payment_gateway) method = p.payment_gateway.toLowerCase();
+          if (!method && p.transaction_id?.startsWith('pay_')) method = 'razorpay';
+          return { ...p, customerName, orderNumber: p.Order?.order_number || `ORD-${p.order_id}`, displayPaymentMethod: method || 'N/A' };
         });
-        
-        setPayments(transformedPayments);
-        setTotalPayments(response.pagination?.total || transformedPayments.length);
-        setTotalPages(Math.ceil((response.pagination?.total || transformedPayments.length) / itemsPerPage));
+        setPayments(transformed);
       } else {
         setPayments([]);
-        setTotalPayments(0);
-        setTotalPages(0);
       }
     } catch (err) {
       toast.error('Failed to load payments');
       setPayments([]);
-      setTotalPayments(0);
-      setTotalPages(0);
     } finally {
       setLoading(false);
     }
-  }, [itemsPerPage]);
+  }, []);
 
-  useEffect(() => {
-    fetchPayments();
-  }, [fetchPayments]);
+  useEffect(() => { fetchPayments(); }, [fetchPayments]);
+  useEffect(() => { setCurrentPage(1); }, [search, statusFilter, methodFilter]);
 
-  // Filter data based on search
   const filteredData = payments.filter(item => {
-    // Search filter
-    if (filterValue) {
-      const searchTerm = filterValue.toLowerCase();
-      const matchesSearch = (
-        (item.orderNumber?.toLowerCase().includes(searchTerm)) ||
-        (item.customerName?.toLowerCase().includes(searchTerm)) ||
-        (item.transaction_id?.toLowerCase().includes(searchTerm))
-      );
-      if (!matchesSearch) return false;
+    if (search) {
+      const s = search.toLowerCase();
+      if (!item.orderNumber?.toLowerCase().includes(s) && !item.customerName?.toLowerCase().includes(s) && !item.transaction_id?.toLowerCase().includes(s)) return false;
     }
-    
-    // Status filter
-    if (statusFilter && item.status !== statusFilter) {
-      return false;
-    }
-    
-    // Method filter
-    if (methodFilter && item.displayPaymentMethod !== methodFilter) {
-      return false;
-    }
-    
+    if (statusFilter && item.status !== statusFilter) return false;
+    if (methodFilter && item.displayPaymentMethod !== methodFilter) return false;
     return true;
   });
 
-  // Calculate pagination
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  
-  // Get current page items
-  const currentItems = filteredData.slice(startIndex, endIndex);
-
-  // Add serial number to each row based on current page
-  const currentItemsWithSN = currentItems.map((item, idx) => ({
-    ...item,
-    serial_number: startIndex + idx + 1
-  }));
-
-  // Calculate total pages based on filtered data
-  const calculatedTotalPages = Math.ceil(filteredData.length / itemsPerPage);
-
-  // Reset to first page when filter changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filterValue, statusFilter, methodFilter]);
-
-  const handleViewPayment = (payment) => {
-    setSelectedPayment(payment);
-    setIsViewModalOpen(true);
-  };
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const start = (currentPage - 1) * itemsPerPage;
+  const currentItems = filteredData.slice(start, start + itemsPerPage).map((item, i) => ({ ...item, serial_number: start + i + 1 }));
 
   const handleRefund = async (payment) => {
-    if (window.confirm(`Are you sure you want to refund payment ${payment.transaction_id || payment.id}?`)) {
-      try {
-        await paymentService.updatePaymentStatus(payment.id, { status: 'refunded' });
-        toast.success('Payment refunded successfully');
-        fetchPayments();
-      } catch (error) {
-        toast.error('Failed to refund payment');
-      }
-    }
+    if (!window.confirm(`Refund payment ${payment.transaction_id || payment.id}?`)) return;
+    try {
+      await paymentService.updatePaymentStatus(payment.id, { status: 'refunded' });
+      toast.success('Payment refunded');
+      fetchPayments();
+    } catch { toast.error('Failed to refund'); }
   };
 
-  const getPaymentMethodLabel = (method) => {
-    if (!method || method === 'N/A') return 'Not Specified';
-    
-    const methods = {
-      credit_card: "Credit Card",
-      debit_card: "Debit Card",
-      razorpay: "Razorpay",
-      upi: "UPI",
-      cod: "COD",
-      wallet: "Wallet",
-      bank_transfer: "Bank Transfer"
-    };
-    return methods[method.toLowerCase()] || method.toUpperCase();
-  };
-
-  const getStatusBadge = (status) => {
-    const statusStyles = {
-      successful: "status-badge status-active",
-      pending: "status-badge status-pending",
-      failed: "status-badge status-inactive",
-      refunded: "status-badge status-refunded"
-    };
-    return (
-      <span className={statusStyles[status] || "status-badge"}>
-        {status}
-      </span>
-    );
-  };
-
-  // Columns definition
   const columns = [
+    { header: "#", accessor: "serial_number" },
+    { header: "Order", accessor: "orderNumber", cell: ({ orderNumber }) => <span className="cat-name-cell">{orderNumber}</span> },
+    { header: "Customer", accessor: "customerName" },
+    { header: "Amount", accessor: "amount_paid", cell: (row) => `₹${parseFloat(row.amount_paid || 0).toFixed(2)}` },
+    { header: "Method", accessor: "displayPaymentMethod", cell: (row) => getMethodLabel(row.displayPaymentMethod) },
+    { header: "Status", accessor: "status", cell: (row) => <StatusBadge status={row.status} /> },
+    { header: "Date", accessor: "createdAt", cell: (row) => new Date(row.createdAt).toLocaleDateString('en-IN') },
     {
-      header: "S/N",
-      accessor: "serial_number"
-    },
-    { 
-      header: "Order Number",
-      accessor: "orderNumber"
-    },
-    { 
-      header: "Customer",
-      accessor: "customerName"
-    },
-    { 
-      header: "Amount",
-      accessor: "amount_paid",
-      cell: (row) => `₹${parseFloat(row.amount_paid || 0).toFixed(2)}`
-    },
-    { 
-      header: "Method",
-      accessor: "displayPaymentMethod",
-      cell: (row) => getPaymentMethodLabel(row.displayPaymentMethod || row.payment_type)
-    },
-    { 
-      header: "Status",
-      accessor: "status",
-      cell: (row) => getStatusBadge(row.status)
-    },
-    { 
-      header: "Date",
-      accessor: "createdAt",
-      cell: (row) => new Date(row.createdAt).toLocaleDateString('en-IN')
-    },
-    {
-      header: "Actions",
-      accessor: "actions",
+      header: "Actions", accessor: "actions",
       cell: (row) => (
-        <div className="action-buttons">
-          <button
-            className="action-btn view"
-            data-tooltip="View"
-            onClick={() => handleViewPayment(row)}
-          >
-            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-          </button>
-          {row.status === 'successful' && (
-            <button
-              className="action-btn delete"
-              data-tooltip="Refund"
-              onClick={() => handleRefund(row)}
-            >
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-              </svg>
-            </button>
-          )}
+        <div className="sl-actions">
+          <button className="sl-btn-edit" title="View" onClick={() => { setSelectedPayment(row); setIsViewModalOpen(true); }}>{IC.view}</button>
+          {row.status === 'successful' && <button className="sl-btn-delete" title="Refund" onClick={() => handleRefund(row)}>{IC.refund}</button>}
         </div>
       )
     }
@@ -253,45 +106,27 @@ export default function Payments() {
   return (
     <>
       <div className="dashboard-page">
-        <div className="seo-header-container">
-          <h1 className="seo-title">Payments Management</h1>
-          <div className="adding-button">
-            <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
-              <div className="modern-searchbar-group">
-                <span className="modern-searchbar-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </span>
-                <input
-                  type="text"
-                  className="modern-searchbar-input"
-                  placeholder="Search by order, customer, or transaction ID..."
-                  onChange={handleSearchChange}
-                  defaultValue={filterValue}
-                />
-              </div>
-            </form>
+        <div className="sl-page-header">
+          <div className="sl-header-left">
+            <div className="sl-header-icon">{IC.payments}</div>
+            <div>
+              <h1 className="sl-page-title">Payments</h1>
+              <p className="sl-page-sub">{payments.length} payment{payments.length !== 1 ? 's' : ''} total</p>
+            </div>
+          </div>
+          <div className="sl-header-right">
+            <div className="sl-search-wrap">
+              <span className="sl-search-icon">{IC.search}</span>
+              <input type="text" className="sl-search-input" placeholder="Search by order, customer, transaction..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
           </div>
         </div>
 
-        {/* Filter Section */}
-        <div className="seo-controls" style={{ marginBottom: '20px', display: 'flex', gap: '15px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <label style={{ fontWeight: '600', color: '#374151', minWidth: '80px' }}>Status:</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '6px',
-                border: '1px solid #e5e7eb',
-                backgroundColor: 'white',
-                cursor: 'pointer',
-                minWidth: '150px',
-                fontSize: '14px'
-              }}
-            >
+        {/* Filters */}
+        <div className="pay-filters">
+          <div className="pay-filter-group">
+            <span className="pay-filter-label">{IC.filter} Status</span>
+            <select className="pay-filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
               <option value="">All Status</option>
               <option value="successful">Successful</option>
               <option value="pending">Pending</option>
@@ -299,22 +134,9 @@ export default function Payments() {
               <option value="refunded">Refunded</option>
             </select>
           </div>
-
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <label style={{ fontWeight: '600', color: '#374151', minWidth: '80px' }}>Method:</label>
-            <select
-              value={methodFilter}
-              onChange={(e) => setMethodFilter(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '6px',
-                border: '1px solid #e5e7eb',
-                backgroundColor: 'white',
-                cursor: 'pointer',
-                minWidth: '150px',
-                fontSize: '14px'
-              }}
-            >
+          <div className="pay-filter-group">
+            <span className="pay-filter-label">Method</span>
+            <select className="pay-filter-select" value={methodFilter} onChange={e => setMethodFilter(e.target.value)}>
               <option value="">All Methods</option>
               <option value="cod">COD</option>
               <option value="upi">UPI</option>
@@ -322,154 +144,54 @@ export default function Payments() {
               <option value="credit_card">Credit Card</option>
               <option value="debit_card">Debit Card</option>
               <option value="wallet">Wallet</option>
-              <option value="bank_transfer">Bank Transfer</option>
             </select>
           </div>
-
           {(statusFilter || methodFilter) && (
-            <button
-              onClick={() => {
-                setStatusFilter('');
-                setMethodFilter('');
-              }}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '6px',
-                border: '1px solid #e5e7eb',
-                backgroundColor: '#f9fafb',
-                cursor: 'pointer',
-                fontSize: '14px',
-                color: '#6b7280',
-                fontWeight: '500'
-              }}
-            >
-              Clear Filters
-            </button>
+            <button className="pay-clear-btn" onClick={() => { setStatusFilter(''); setMethodFilter(''); }}>Clear Filters</button>
           )}
         </div>
 
-        {/* Table Section */}
-        <div className="seo-table-container">
+        <div className="sl-table-wrap">
           {loading ? (
-            <div style={{ position: 'relative', minHeight: '400px', zIndex: '1' }}>
-              <Loader />
+            <div style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>
+          ) : filteredData.length === 0 ? (
+            <div className="sl-empty">
+              <div className="sl-empty-icon">{IC.payments}</div>
+              <p>{search ? "No payments match your search" : "No payments found"}</p>
             </div>
           ) : (
             <>
-              {filteredData.length === 0 ? (
-                <div className="seo-empty-state">
-                  {filterValue ? "No results found for your search" : "No payments found"}
+              <Table columns={columns} data={currentItems} striped hoverable />
+              {filteredData.length > itemsPerPage && (
+                <div className="sl-pagination">
+                  <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                 </div>
-              ) : (
-                <>
-                  <Table
-                    columns={columns}
-                    data={currentItemsWithSN}
-                    className="w-full"
-                    striped={true}
-                    hoverable={true}
-                  />
-                  {calculatedTotalPages > 1 && (
-                    <div className="seo-pagination-container">
-                      <Pagination
-                        currentPage={currentPage}
-                        totalPages={calculatedTotalPages}
-                        onPageChange={setCurrentPage}
-                      />
-                    </div>
-                  )}
-                </>
               )}
             </>
           )}
         </div>
       </div>
 
-      {/* View Payment Modal */}
-      <Modal
-        isOpen={isViewModalOpen}
-        onClose={() => setIsViewModalOpen(false)}
-        title="Payment Details"
-      >
+      <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title="Payment Details">
         {selectedPayment && (
           <div className="seo-form">
             <div className="modal-body">
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Order Number:</label>
-                  <p>{selectedPayment.orderNumber}</p>
-                </div>
-                
-                <div className="form-group">
-                  <label>Customer:</label>
-                  <p>{selectedPayment.customerName}</p>
-                </div>
-                
-                <div className="form-group">
-                  <label>Amount:</label>
-                  <p>₹{parseFloat(selectedPayment.amount_paid || 0).toFixed(2)}</p>
-                </div>
-                
-                <div className="form-group">
-                  <label>Payment Method:</label>
-                  <p>{getPaymentMethodLabel(selectedPayment.displayPaymentMethod || selectedPayment.payment_type)}</p>
-                </div>
-                
-                <div className="form-group">
-                  <label>Status:</label>
-                  <p>{getStatusBadge(selectedPayment.status)}</p>
-                </div>
-                
-                <div className="form-group">
-                  <label>Date:</label>
-                  <p>{new Date(selectedPayment.createdAt).toLocaleString('en-IN')}</p>
-                </div>
-                
-                <div className="form-group">
-                  <label>Transaction ID:</label>
-                  <p>{selectedPayment.transaction_id || 'N/A'}</p>
-                </div>
-                
-                {selectedPayment.payment_gateway && selectedPayment.payment_gateway !== 'N/A' && (
-                  <div className="form-group">
-                    <label>Payment Gateway:</label>
-                    <p>{selectedPayment.payment_gateway}</p>
-                  </div>
-                )}
-                
-                {selectedPayment.notes && (
-                  <div className="form-group full-width">
-                    <label>Notes:</label>
-                    <p>{selectedPayment.notes}</p>
-                  </div>
-                )}
+              <div className="con-detail-grid">
+                <div className="con-detail-item"><span className="con-detail-label">Order Number</span><span className="con-detail-value">{selectedPayment.orderNumber}</span></div>
+                <div className="con-detail-item"><span className="con-detail-label">Customer</span><span className="con-detail-value">{selectedPayment.customerName}</span></div>
+                <div className="con-detail-item"><span className="con-detail-label">Amount</span><span className="con-detail-value">₹{parseFloat(selectedPayment.amount_paid || 0).toFixed(2)}</span></div>
+                <div className="con-detail-item"><span className="con-detail-label">Method</span><span className="con-detail-value">{getMethodLabel(selectedPayment.displayPaymentMethod)}</span></div>
+                <div className="con-detail-item"><span className="con-detail-label">Status</span><span className="con-detail-value"><StatusBadge status={selectedPayment.status} /></span></div>
+                <div className="con-detail-item"><span className="con-detail-label">Date</span><span className="con-detail-value">{new Date(selectedPayment.createdAt).toLocaleString('en-IN')}</span></div>
+                <div className="con-detail-item"><span className="con-detail-label">Transaction ID</span><span className="con-detail-value" style={{ fontFamily: 'monospace', fontSize: '13px' }}>{selectedPayment.transaction_id || '—'}</span></div>
+                {selectedPayment.payment_gateway && <div className="con-detail-item"><span className="con-detail-label">Gateway</span><span className="con-detail-value">{selectedPayment.payment_gateway}</span></div>}
               </div>
-
-              <div className="modal-actions">
-                <Button
-                  variant="secondary"
-                  onClick={() => setIsViewModalOpen(false)}
-                >
-                  Close
-                </Button>
-                {selectedPayment.status === "successful" && (
-                  <Button
-                    variant="danger"
-                    onClick={async () => {
-                      try {
-                        await paymentService.updatePaymentStatus(selectedPayment.id, { status: 'refunded' });
-                        toast.success('Payment refunded successfully');
-                        setIsViewModalOpen(false);
-                        fetchPayments();
-                      } catch (error) {
-                        toast.error('Failed to refund payment');
-                      }
-                    }}
-                  >
-                    Refund Payment
-                  </Button>
-                )}
-              </div>
+            </div>
+            <div className="modal-footer">
+              <Button variant="secondary" onClick={() => setIsViewModalOpen(false)}>Close</Button>
+              {selectedPayment.status === "successful" && (
+                <Button variant="danger" onClick={async () => { try { await paymentService.updatePaymentStatus(selectedPayment.id, { status: 'refunded' }); toast.success('Refunded'); setIsViewModalOpen(false); fetchPayments(); } catch { toast.error('Failed to refund'); } }}>Refund Payment</Button>
+              )}
             </div>
           </div>
         )}
@@ -477,6 +199,3 @@ export default function Payments() {
     </>
   );
 }
-
-
-

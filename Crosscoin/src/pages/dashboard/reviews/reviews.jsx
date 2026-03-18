@@ -3,393 +3,181 @@ import { Button, Input, Modal, Table, Pagination } from "../../../components/ui"
 import Loader from "../../../components/common/Loader";
 import BrandTags from "../../../components/Dashboard/BrandTags";
 import { reviewService } from "../../../services";
-import { debounce } from 'lodash';
+
+const IC = {
+  search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  moderate: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+  trash: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>,
+  star: <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+  reviews: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+};
+
+const StarRating = ({ rating }) => (
+  <div style={{ display: 'flex', gap: '2px', color: '#f59e0b' }}>
+    {[1,2,3,4,5].map(i => (
+      <span key={i} style={{ width: '14px', height: '14px', opacity: i <= rating ? 1 : 0.25 }}>{IC.star}</span>
+    ))}
+  </div>
+);
 
 export default function Reviews() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [filterValue, setFilterValue] = useState("");
+  const [itemsPerPage] = useState(10);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [totalReviews, setTotalReviews] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [formData, setFormData] = useState({
-    status: "pending",
-    is_featured: false,
-    admin_notes: ""
-  });
+  const [formData, setFormData] = useState({ status: "pending", is_featured: false, admin_notes: "" });
 
-  // Debounced search function
-  const debouncedSearch = useCallback((searchTerm) => {
-    const timeoutId = setTimeout(() => {
-      setFilterValue(searchTerm);
-    }, 300);
-    return () => clearTimeout(timeoutId);
-  }, []);
-
-  // Handle search input change
-  const handleSearchChange = (e) => {
-    const value = e.target.value;
-    debouncedSearch(value);
-  };
-
-  // Fetch reviews data with backend pagination
   const fetchReviews = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const params = {
-        page: currentPage,
-        limit: itemsPerPage,
-        status: 'all'
-      };
-      
-      const response = await reviewService.getAllReviews('all', params);
-      if (response && response.reviews) {
-        const mappedReviews = response.reviews.map(review => ({
-          id: review.id,
-          customerName: review.customerName || 'Guest',
-          productName: review.productName || 'N/A',
-          Product: review.Product, // Keep full Product object for brands
-          rating: review.rating,
-          review: review.review,
-          status: review.status,
-          is_featured: review.is_featured,
-          admin_notes: review.admin_notes
-        }));
-        
-        setReviews(mappedReviews);
-        setTotalReviews(response.pagination?.total || mappedReviews.length);
-        setTotalPages(response.pagination?.totalPages || Math.ceil(mappedReviews.length / itemsPerPage));
-      } else {
-        const mappedReviews = response.map(review => ({
-          id: review.id,
-          customerName: review.customerName || 'Guest',
-          productName: review.productName || 'N/A',
-          Product: review.Product, // Keep full Product object for brands
-          rating: review.rating,
-          review: review.review,
-          status: review.status,
-          is_featured: review.is_featured,
-          admin_notes: review.admin_notes
-        }));
-        
-        setReviews(mappedReviews);
-        setTotalReviews(mappedReviews.length);
-        setTotalPages(Math.ceil(mappedReviews.length / itemsPerPage));
-      }
+      const response = await reviewService.getAllReviews('all', { page: currentPage, limit: itemsPerPage, status: 'all' });
+      const list = response?.reviews || response || [];
+      const mapped = list.map(r => ({ id: r.id, customerName: r.customerName || 'Guest', productName: r.productName || 'N/A', Product: r.Product, rating: r.rating, review: r.review, status: r.status, is_featured: r.is_featured, admin_notes: r.admin_notes }));
+      setReviews(mapped);
+      setTotalReviews(response?.pagination?.total || mapped.length);
+      setTotalPages(response?.pagination?.totalPages || Math.ceil(mapped.length / itemsPerPage));
     } catch (err) {
       setError(err.message || "Failed to fetch reviews");
-      } finally {
+    } finally {
       setLoading(false);
     }
   }, [currentPage, itemsPerPage]);
 
-  useEffect(() => {
-    fetchReviews();
-  }, [currentPage, itemsPerPage, fetchReviews]);
+  useEffect(() => { fetchReviews(); }, [fetchReviews]);
+  useEffect(() => { setCurrentPage(1); }, [search]);
 
-  // Enhanced filter function - now just for display, backend handles actual filtering
   const filteredData = reviews.filter(item => {
-    if (!filterValue) return true;
-    
-    const searchTerm = filterValue.toLowerCase();
-    return (
-      (item.customerName?.toLowerCase().includes(searchTerm)) ||
-      (item.productName?.toLowerCase().includes(searchTerm)) ||
-      (item.review?.toLowerCase().includes(searchTerm))
-    );
+    if (!search) return true;
+    const s = search.toLowerCase();
+    return item.customerName?.toLowerCase().includes(s) || item.productName?.toLowerCase().includes(s) || item.review?.toLowerCase().includes(s);
   });
 
-  // Backend handles pagination, so we just display what we get
-  const currentItems = filteredData;
-
-  // Add serial number to each row based on current page
-  const currentItemsWithSN = currentItems.map((item, idx) => ({
-    ...item,
-    serial_number: (currentPage - 1) * itemsPerPage + idx + 1
-  }));
-
-  // Reset to first page when filter or itemsPerPage changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filterValue, itemsPerPage]);
-
-  // Columns definition
-  const columns = [
-    {
-      header: "S/N",
-      accessor: "serial_number"
-    },
-    { header: "Customer", accessor: "customerName" },
-    { header: "Product", accessor: "productName" },
-    {
-      header: "Brands",
-      accessor: row => {
-        const brands = row.Product?.Brands || row.Product?.brands || [];
-        return <BrandTags brands={brands} />;
-      }
-    },
-    { header: "Rating", accessor: "rating" },
-    { header: "Review", accessor: "review" },
-    { header: "Status", accessor: "status" },
-    {
-      header: "Actions",
-      accessor: "actions",
-      cell: (row) => {
-        const reviewId = row.id;
-        return (
-          <div className="action-buttons">
-            <button
-              className="action-btn moderate"
-              data-tooltip="Moderate"
-              onClick={() => handleModerate(reviewId)}
-            >
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </button>
-            <button
-              className="action-btn delete"
-              data-tooltip="Delete"
-              onClick={() => handleDelete(reviewId)}
-            >
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
-          </div>
-        );
-      }
-    }
-  ];
+  const currentItemsWithSN = filteredData.map((item, idx) => ({ ...item, serial_number: (currentPage - 1) * itemsPerPage + idx + 1 }));
 
   const handleModerate = async (id) => {
     try {
       setLoading(true);
       const data = await reviewService.getReviewById(id);
-      setFormData({
-        id: id,
-        status: data.status || "pending",
-        is_featured: data.is_featured || false,
-        admin_notes: data.admin_notes || ""
-      });
+      setFormData({ id, status: data.status || "pending", is_featured: data.is_featured || false, admin_notes: data.admin_notes || "" });
       setIsModalOpen(true);
-    } catch (err) {
-      setError(err.message || "Failed to fetch review data");
-      } finally {
-      setLoading(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this review?")) {
-      try {
-        setLoading(true);
-        await reviewService.deleteReview(id);
-        await fetchReviews();
-      } catch (err) {
-        setError(err.message || "Failed to delete review");
-        } finally {
-        setLoading(false);
-      }
-    }
+    if (!window.confirm("Delete this review?")) return;
+    try {
+      setLoading(true);
+      await reviewService.deleteReview(id);
+      await fetchReviews();
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
   };
 
-  const handleModalClose = () => {
-    setIsModalOpen(false);
-    setFormData({
-      status: "pending",
-      is_featured: false,
-      admin_notes: ""
-    });
-  };
+  const handleModalClose = () => { setIsModalOpen(false); setFormData({ status: "pending", is_featured: false, admin_notes: "" }); };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => {
-      const newData = {
-        ...prev,
-        [name]: type === 'checkbox' ? checked : value
-      };
-      return newData;
-    });
+    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.id) {
-      setError("Review ID is missing");
-      return;
-    }
-
+    if (!formData.id) return;
     try {
       setLoading(true);
-      const moderationData = {
-        status: formData.status,
-        is_featured: formData.is_featured,
-        admin_notes: formData.admin_notes
-      };
-
-      const response = await reviewService.moderateReview(formData.id, moderationData);
-      // Update the reviews state with the new data
-      setReviews(prevReviews => {
-        const updatedReviews = prevReviews.map(review => {
-          if (review.id === formData.id) {
-            return {
-              ...review,
-              status: moderationData.status,
-              is_featured: moderationData.is_featured,
-              admin_notes: moderationData.admin_notes
-            };
-          }
-          return review;
-        });
-        return updatedReviews;
-      });
-
-      // Close modal and reset form
-      setIsModalOpen(false);
-      setFormData({
-        status: "pending",
-        is_featured: false,
-        admin_notes: ""
-      });
-    } catch (err) {
-      setError(err.message || "Failed to moderate review");
-    } finally {
-      setLoading(false);
-    }
+      await reviewService.moderateReview(formData.id, { status: formData.status, is_featured: formData.is_featured, admin_notes: formData.admin_notes });
+      setReviews(prev => prev.map(r => r.id === formData.id ? { ...r, status: formData.status, is_featured: formData.is_featured, admin_notes: formData.admin_notes } : r));
+      handleModalClose();
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
   };
+
+  const columns = [
+    { header: "#", accessor: "serial_number" },
+    { header: "Customer", accessor: "customerName", cell: ({ customerName }) => <span className="cat-name-cell">{customerName}</span> },
+    { header: "Product", accessor: "productName", cell: ({ productName }) => <span className="cat-desc-cell">{productName}</span> },
+    { header: "Brands", accessor: row => { const brands = row.Product?.Brands || row.Product?.brands || []; return <BrandTags brands={brands} />; } },
+    { header: "Rating", accessor: "rating", cell: ({ rating }) => <StarRating rating={rating} /> },
+    { header: "Review", accessor: "review", cell: ({ review }) => <span className="cat-desc-cell">{review}</span> },
+    { header: "Status", accessor: "status", cell: ({ status }) => <span className={`sl-status-badge sl-status-${status}`}>{status}</span> },
+    {
+      header: "Actions", accessor: "actions",
+      cell: (row) => (
+        <div className="sl-actions">
+          <button className="sl-btn-edit" title="Moderate" onClick={() => handleModerate(row.id)}>{IC.moderate}</button>
+          <button className="sl-btn-delete" title="Delete" onClick={() => handleDelete(row.id)}>{IC.trash}</button>
+        </div>
+      )
+    }
+  ];
 
   return (
     <>
       <div className="dashboard-page">
-        <div className="seo-header-container">
-          <h1 className="seo-title">Reviews Management</h1>
-          <div className="adding-button">
-            <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
-              <div className="modern-searchbar-group">
-                <span className="modern-searchbar-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </span>
-                <input
-                  type="text"
-                  className="modern-searchbar-input"
-                  placeholder="Search"
-                  onChange={handleSearchChange}
-                  defaultValue={filterValue}
-                />
-              </div>
-            </form>
+        <div className="sl-page-header">
+          <div className="sl-header-left">
+            <div className="sl-header-icon">{IC.reviews}</div>
+            <div>
+              <h1 className="sl-page-title">Reviews</h1>
+              <p className="sl-page-sub">{totalReviews} review{totalReviews !== 1 ? 's' : ''} total</p>
+            </div>
+          </div>
+          <div className="sl-header-right">
+            <div className="sl-search-wrap">
+              <span className="sl-search-icon">{IC.search}</span>
+              <input type="text" className="sl-search-input" placeholder="Search reviews..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
           </div>
         </div>
 
-        {/* Table Section */}
-        <div className="seo-table-container reviews-table">
+        <div className="sl-table-wrap">
           {loading ? (
-            <div style={{ position: 'relative', minHeight: '400px', zIndex: '1' }}>
-              <Loader />
+            <div style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>
+          ) : error ? (
+            <div className="sl-error">{error}</div>
+          ) : filteredData.length === 0 ? (
+            <div className="sl-empty">
+              <div className="sl-empty-icon">{IC.reviews}</div>
+              <p>{search ? "No reviews match your search" : "No reviews yet"}</p>
             </div>
           ) : (
             <>
-              {filteredData.length === 0 ? (
-                <div className="seo-empty-state">
-                  {filterValue ? "No results found for your search" : "No reviews found"}
+              <Table columns={columns} data={currentItemsWithSN} striped hoverable />
+              {totalReviews > itemsPerPage && (
+                <div className="sl-pagination">
+                  <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                 </div>
-              ) : (
-                <>
-                  <Table
-                    columns={columns}
-                    data={currentItemsWithSN}
-                    className="w-full"
-                    striped={true}
-                    hoverable={true}
-                  />
-                  {totalReviews > itemsPerPage && (
-                    <div className="seo-pagination-container">
-                      <Pagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={setCurrentPage}
-                      />
-                    </div>
-                  )}
-                </>
               )}
             </>
           )}
         </div>
       </div>
 
-      {/* Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={handleModalClose}
-        title="Moderate Review"
-        closeOnOverlayClick={false}
-      >
+      <Modal isOpen={isModalOpen} onClose={handleModalClose} title="Moderate Review" closeOnOverlayClick={false}>
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <Input
-              label="Status"
-              type="select"
-              name="status"
-              value={formData.status}
-              onChange={handleInputChange}
-              required
-              options={[
-                { value: "pending", label: "Pending" },
-                { value: "approved", label: "Approved" },
-                { value: "rejected", label: "Rejected" }
-              ]}
-            />
-            <div className="input-field">
-              <label className="input-field-label">
-                <input
-                  type="checkbox"
-                  name="is_featured"
-                  checked={formData.is_featured}
-                  onChange={handleInputChange}
-                />
-                Featured Review
+            <Input label="Status" type="select" name="status" value={formData.status} onChange={handleInputChange} required options={[{ value: "pending", label: "Pending" }, { value: "approved", label: "Approved" }, { value: "rejected", label: "Rejected" }]} />
+            <div className="sl-form-field">
+              <label className="sl-form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input type="checkbox" name="is_featured" checked={formData.is_featured} onChange={handleInputChange} style={{ width: '16px', height: '16px', accentColor: '#CE1E36' }} />
+                Mark as Featured Review
               </label>
             </div>
-            <Input
-              label="Admin Notes"
-              type="textarea"
-              name="admin_notes"
-              value={formData.admin_notes}
-              onChange={handleInputChange}
-            />
+            <Input label="Admin Notes" type="textarea" name="admin_notes" value={formData.admin_notes} onChange={handleInputChange} />
           </div>
           <div className="modal-footer">
-            <Button
-              variant="secondary"
-              size="medium"
-              onClick={handleModalClose}
-              disabled={loading}
-              type="button"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              size="medium"
-              disabled={loading}
-            >
-              {loading ? "Saving..." : "Save"}
-            </Button>
+            <Button variant="secondary" size="medium" onClick={handleModalClose} disabled={loading} type="button">Cancel</Button>
+            <Button type="submit" variant="primary" size="medium" disabled={loading}>{loading ? "Saving..." : "Save"}</Button>
           </div>
         </form>
       </Modal>
     </>
   );
-} 
-
+}

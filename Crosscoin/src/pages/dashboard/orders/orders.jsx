@@ -978,54 +978,30 @@ const Orders = () => {
                 )}
 
                 <div className="orders-header-container">
-                    {/* Top Row: Title + Total Orders + FShip Sync */}
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: '20px',
-                        gap: '20px',
-                        flexWrap: 'wrap'
-                    }}>
-                        <h1 className="seo-title" style={{ margin: 0 }}>Manage Orders</h1>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <span className="total-orders" style={{
-                                color: '#007bff',
-                                fontWeight: 'bold',
-                                fontSize: '16px',
-                                padding: '8px 16px',
-                                background: '#f0f8ff',
-                                borderRadius: '8px',
-                                border: '2px solid #007bff'
-                            }}>
-                                Total Orders: <strong>{totalOrders}</strong>
-                            </span>
-                            <button 
-                                className="sync-button"
+                    {/* Page Header */}
+                    <div className="sl-page-header" style={{ marginBottom: '20px' }}>
+                        <div className="sl-header-left">
+                            <div className="sl-header-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                            </div>
+                            <div>
+                                <h1 className="sl-page-title">Orders</h1>
+                                <p className="sl-page-sub">{totalOrders} order{totalOrders !== 1 ? 's' : ''} total</p>
+                            </div>
+                        </div>
+                        <div className="sl-header-right">
+                            <div className="sl-search-wrap">
+                                <span className="sl-search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+                                <input type="text" className="sl-search-input" placeholder="Search orders, customers, AWB..." value={filterValue} onChange={handleSearchChange} />
+                            </div>
+                            <button
+                                className="sl-add-btn"
                                 onClick={syncOrders}
-                                title="Comprehensive FShip sync - Syncs new orders and updates statuses"
                                 disabled={loading || syncingAll || syncingOrders.size > 0}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    padding: '10px 20px',
-                                    background: 'linear-gradient(135deg, #00bcd4 0%, #0097a7 100%)',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    fontSize: '14px',
-                                    fontWeight: '600',
-                                    cursor: loading || syncingAll || syncingOrders.size > 0 ? 'not-allowed' : 'pointer',
-                                    opacity: loading || syncingAll || syncingOrders.size > 0 ? 0.6 : 1,
-                                    transition: 'all 0.3s ease',
-                                    boxShadow: '0 2px 8px rgba(0, 188, 212, 0.3)'
-                                }}
+                                style={{ background: loading || syncingAll ? '#6c757d' : undefined }}
                             >
-                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                                {syncingAll ? 'Syncing All...' : loading ? 'Loading...' : 'FShip Sync'}
+                                <span className="sl-add-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg></span>
+                                {syncingAll ? 'Syncing...' : 'FShip Sync'}
                             </button>
                         </div>
                     </div>
