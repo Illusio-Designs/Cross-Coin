@@ -4,7 +4,7 @@
   width: 100%;
   overflow-x: auto;
   background: #fff;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #ebebf0;
 }
 .tbl-container-loading {
@@ -115,7 +115,7 @@
 }
 
 @media (max-width: 768px) {
-  .tbl-container { border-radius: 8px; }
+  .tbl-container { border-radius: 6px; }
   .tbl { font-size: 12px; }
   .tbl-header-cell, .tbl-cell { padding: 8px 10px; }
   .tbl-sort-icons { display: none; }

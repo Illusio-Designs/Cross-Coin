@@ -27,7 +27,7 @@
   width: 44px;
   height: 44px;
   background: #f0eeff;
-  border-radius: 8px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -88,7 +88,7 @@
   height: 38px;
   padding: 0 12px 0 34px;
   border: 1px solid #ebebf0;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 13px;
   color: #1a1a1a;
   background: #fff;
@@ -112,7 +112,7 @@
   background: #CE1E36;
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -159,7 +159,7 @@
 /* ---- Table Wrapper ---- */
 .sl-table-wrap {
   background: #fff;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #ebebf0;
   overflow: hidden;
 }
@@ -177,7 +177,7 @@
   width: 32px;
   height: 32px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -278,7 +278,7 @@
   display: inline-flex;
   align-items: center;
   padding: 3px 10px;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
   background: #f0eeff;
@@ -413,7 +413,7 @@
   width: 100%;
   padding: 8px;
   border: 1px solid #ebebf0;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 13px;
   font-family: 'DM Sans', sans-serif;
   cursor: pointer;
@@ -421,7 +421,7 @@
 
 .sl-img-preview-wrap {
   margin-top: 10px;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   max-width: 200px;
 }
@@ -436,7 +436,7 @@
   width: 100%;
   padding: 8px;
   border: 1px solid #ebebf0;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 13px;
   font-family: 'DM Sans', sans-serif;
   min-height: 100px;
@@ -527,7 +527,7 @@
   height: 36px;
   padding: 0 10px;
   border: 1px solid #ebebf0;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 13px;
   color: #1a1a1a;
   background: #fff;
@@ -544,7 +544,7 @@
   height: 36px;
   padding: 0 14px;
   border: 1px solid #ebebf0;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 13px;
   color: #888;
   background: #f9f9f9;
@@ -567,7 +567,7 @@
 .brand-card-new {
   background: #fff;
   border: 1px solid #ebebf0;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   transition: box-shadow 0.2s;
 }
@@ -593,7 +593,7 @@
 .brand-color-dot {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 6px;
   flex-shrink: 0;
   border: 1px solid rgba(0,0,0,0.08);
 }
@@ -687,7 +687,7 @@
   align-items: center;
   gap: 8px;
   border: 1px solid #ebebf0;
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 4px 8px;
   background: #fff;
 }
@@ -717,7 +717,7 @@
   height: 38px;
   padding: 0 12px;
   border: 1px solid #ebebf0;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 13px;
   color: #1a1a1a;
   background: #fff;
@@ -745,7 +745,7 @@
   height: 32px;
   padding: 0 12px;
   border: 1px solid #ebebf0;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
   color: #666;
@@ -768,7 +768,7 @@
 
 .bset-cat-count {
   background: rgba(255,255,255,0.25);
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 0 6px;
   font-size: 11px;
   min-width: 18px;
@@ -789,7 +789,7 @@
 .bset-setting-card {
   background: #fff;
   border: 1px solid #ebebf0;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
 }
 
@@ -844,7 +844,7 @@
   width: 100%;
   padding: 8px;
   border: 1px solid #ebebf0;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 13px;
   font-family: 'DM Sans', sans-serif;
   resize: vertical;
@@ -880,7 +880,7 @@
   background: #ffeef0;
   color: #CE1E36;
   border: 1px solid #ffd6db;
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 10px 14px;
   font-size: 13px;
   margin-bottom: 12px;
@@ -897,7 +897,7 @@
 .sl-stat-card {
   background: #fff;
   border: 1px solid #ebebf0;
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 14px 16px;
   display: flex;
   align-items: center;
@@ -907,7 +907,7 @@
 .sl-stat-icon {
   width: 40px;
   height: 40px;
-  border-radius: 8px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
