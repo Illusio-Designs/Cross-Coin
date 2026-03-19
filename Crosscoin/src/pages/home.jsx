@@ -237,14 +237,8 @@ const Home = () => {
                 ))}
               </div>
             ) : (
-              <>
-                {showLatestArrows && (
-                  <button className="slider-arrow slider-arrow-left" aria-label="Previous latest product" onClick={() => scrollLatestSlider('left')}>
-                    <IoIosArrowBack />
-                  </button>
-                )}
-                <div className="products-slider" ref={latestSliderRef}>
-                  {latestProducts.slice(0, 15).map((product) => {
+              <div className="products-slider latest-products-scroll" ref={latestSliderRef}>
+                {latestProducts.slice(0, 15).map((product) => {
                 // Use centralized image selection
                 const imageData = product.images?.[0] || product.image || null;
                 
@@ -292,13 +286,7 @@ const Home = () => {
                   />
                 );
               })}
-                </div>
-                {showLatestArrows && (
-                  <button className="slider-arrow slider-arrow-right" aria-label="Next latest product" onClick={() => scrollLatestSlider('right')}>
-                    <IoIosArrowForward />
-                  </button>
-                )}
-              </>
+              </div>
             )}
           </div>
         </div>
