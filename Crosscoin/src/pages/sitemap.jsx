@@ -1,8 +1,10 @@
 import React from 'react';
 import Link from 'next/link';
 import SeoWrapper from '../console/SeoWrapper';
+import { useCart } from '../context/CartContext';
 
 const Sitemap = () => {
+  const { setIsDrawerOpen } = useCart();
   return (
     <SeoWrapper pageName="sitemap">
       <div className="sitemap-page">
@@ -145,9 +147,9 @@ const Sitemap = () => {
               </div>
 
               <div className="cat-col">
-                <Link href="/UnifiedCheckout" className="cat-heading">Checkout</Link>
+                <button className="cat-heading sitemap-btn-link" onClick={() => setIsDrawerOpen(true)}>Checkout</button>
                 <ul className="cat-links">
-                  <li><Link href="/UnifiedCheckout">Checkout</Link></li>
+                  <li><button className="sitemap-btn-link" onClick={() => setIsDrawerOpen(true)}>Checkout</button></li>
                   <li><Link href="/policy?name=terms-and-conditions">Payment Methods</Link></li>
                   <li><Link href="/policy?name=shipping-policy">Shipping Info</Link></li>
                   <li><Link href="/OrderTracking">Delivery Tracking</Link></li>
