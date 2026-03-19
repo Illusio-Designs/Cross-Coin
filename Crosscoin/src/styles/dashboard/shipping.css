@@ -19,7 +19,7 @@
 
 .method-card {
   background: #ffffff;
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   cursor: pointer;
@@ -69,7 +69,7 @@
 /* Shipping Address Form */
 .shipping-form {
   background: #ffffff;
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 2rem;
@@ -115,7 +115,7 @@
 /* Shipping Tracking */
 .tracking-container {
   background: #ffffff;
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }

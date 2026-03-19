@@ -5,7 +5,7 @@
 /* Card wrapper */
 .dc-chart-card {
   background: #fff;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #ebebf0;
   padding: 18px 20px 14px;
   display: flex;
@@ -313,7 +313,7 @@
   gap: 10px;
   padding: 10px 12px;
   background: #fafafa;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #f0f0f5;
   cursor: pointer;
   transition: opacity 0.18s, background 0.18s;
