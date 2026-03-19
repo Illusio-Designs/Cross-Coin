@@ -278,4 +278,10 @@ img {
     width: 40px;
     height: 40px;
   }
+
+  /* Lift back-to-top above the pdt-sticky bar when it's visible */
+  .pdt-sticky.visible ~ * .back-to-top,
+  body:has(.pdt-sticky.visible) .back-to-top {
+    bottom: 82px;
+  }
 }
