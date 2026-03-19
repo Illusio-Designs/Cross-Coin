@@ -314,8 +314,21 @@ const Orders = () => {
         {
             header: "FShip Sync",
             cell: (row) => row.fship_order_id || row.fship_waybill
-                ? <span className="status-badge status-synced">Synced<br /><small>AWB: {row.fship_waybill || 'Pending'}</small></span>
-                : <span className="status-badge status-unsynced">Not Synced</span>
+                ? (
+                    <span className="sync-tag sync-tag--synced">
+                        <span className="sync-tag-dot" />
+                        <span className="sync-tag-text">
+                            Synced
+                            {row.fship_waybill && <small className="sync-tag-awb">AWB: {row.fship_waybill}</small>}
+                        </span>
+                    </span>
+                )
+                : (
+                    <span className="sync-tag sync-tag--unsynced">
+                        <span className="sync-tag-dot" />
+                        Not Synced
+                    </span>
+                )
         },
         {
             header: "Label",

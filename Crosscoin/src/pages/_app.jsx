@@ -92,6 +92,7 @@ import "../styles/dashboard/slider.css";
 import "../styles/dashboard/pages.css";
 import "../styles/dashboard/brands.css";
 import "../styles/dashboard/brandSettings.css";
+import "../styles/dashboard/brandTags.css";
 // Additional page CSS
 import "../styles/pages/Collections.css";
 import "../styles/pages/About.css";

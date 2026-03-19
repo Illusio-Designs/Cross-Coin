@@ -326,7 +326,7 @@
    BADGES
    =================================== */
 .status-badge {
-  display: inline-block; padding: 3px 10px; border-radius: 20px;
+  display: inline-block; padding: 3px 10px; border-radius: 6px;
   font-size: 11px; font-weight: 600; text-transform: capitalize; white-space: nowrap;
 }
 .status-pending                                    { background: #ede9fe; color: #7c3aed; }
@@ -339,14 +339,14 @@
 .status-warning                                    { background: #fef3c7; color: #d97706; }
 
 .payment-badge {
-  display: inline-block; padding: 3px 10px; border-radius: 20px;
+  display: inline-block; padding: 3px 10px; border-radius: 6px;
   font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
 }
 .payment-cod                              { background: #fef3c7; color: #d97706; }
 .payment-prepaid, .payment-online, .payment-card { background: #d1fae5; color: #059669; }
 
 .stock-badge {
-  display: inline-block; padding: 3px 10px; border-radius: 20px;
+  display: inline-block; padding: 3px 10px; border-radius: 6px;
   font-size: 11px; font-weight: 600; white-space: nowrap;
 }
 .stock-critical { background: #fee2e2; color: #dc2626; }
