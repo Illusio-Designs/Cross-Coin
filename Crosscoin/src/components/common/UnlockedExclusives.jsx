@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import SafeImage from './SafeImage';
 import { getPublicProductReviews } from '../../services/publicApi';
+import { useCart } from '../../context/CartContext';
 
 const UnlockedExclusives = ({ products = [], loading = false }) => {
+  const { addToCart, buyNow, setIsDrawerOpen } = useCart();
   const [currentProduct, setCurrentProduct] = useState(0);
   const [qty, setQty] = useState(1);
   const [showDetail, setShowDetail] = useState(false);
@@ -226,7 +228,9 @@ const UnlockedExclusives = ({ products = [], loading = false }) => {
                     </div>
                     <div className="btn-row">
                       <button className="btn-explore" onClick={() => setShowDetail(true)}>Explore</button>
-                      <button className="btn-cart">
+                      <button className="btn-cart" onClick={() => {
+                        addToCart(product, null, null, 1, firstVariation?.id || null, product.images?.map(i => i.image_url || i) || []);
+                      }}>
                         <svg viewBox="0 0 24 24">
                           <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
                           <line x1="3" y1="6" x2="21" y2="6" />
@@ -302,8 +306,13 @@ const UnlockedExclusives = ({ products = [], loading = false }) => {
                     </div>
 
                     <div className="action-row">
-                      <button className="btn-add-cart">Add to Cart</button>
-                      <button className="btn-buy-now">Buy It Now</button>
+                      <button className="btn-add-cart" onClick={() => {
+                        addToCart(product, null, null, qty, firstVariation?.id || null, product.images?.map(i => i.image_url || i) || []);
+                      }}>Add to Cart</button>
+                      <button className="btn-buy-now" onClick={async () => {
+                        await buyNow(product, null, null, qty, firstVariation?.id || null, product.images?.map(i => i.image_url || i) || []);
+                        setIsDrawerOpen(true);
+                      }}>Buy It Now</button>
                     </div>
 
                     <button className="back-btn" onClick={() => setShowDetail(false)}>← Back to overview</button>
