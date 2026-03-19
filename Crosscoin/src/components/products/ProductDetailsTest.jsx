@@ -264,7 +264,7 @@ const ProductDetailsTest = () => {
               </div>
               <div className="pdt-color-list">
                 {productData.colors.map((color, idx) => {
-                  const swatch = colorMap[color.name?.toLowerCase()] || null;
+                  const hex = colorMap[color.name?.toLowerCase()] || '#ccc';
                   return (
                     <button
                       key={idx}
@@ -274,13 +274,11 @@ const ProductDetailsTest = () => {
                       type="button"
                     >
                       <div className="pdt-color-card-swatch-wrap">
-                        {color.image ? (
-                          <img src={color.image} alt={color.name} className="pdt-color-card-img" />
-                        ) : swatch ? (
-                          <span className="pdt-color-card-circle" style={{ background: swatch }} />
-                        ) : (
-                          <span className="pdt-color-card-circle pdt-color-card-circle--empty" />
-                        )}
+                        <span
+                          className="pdt-color-card-circle"
+                          style={{ backgroundColor: hex }}
+                          title={color.name}
+                        />
                         {selectedColor === idx && (
                           <span className="pdt-color-card-check" aria-hidden="true">✓</span>
                         )}
