@@ -167,6 +167,7 @@
   box-sizing: border-box;
   padding: 15px;
   background: #ffffff;
+  border-radius: 6px;
 }
 
 @media (max-width: 900px) {
