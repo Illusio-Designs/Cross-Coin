@@ -1,6 +1,6 @@
 .home-page {
   background-color: #ffffff;
-  padding: 0 0 60px;
+  padding: 0;
 }
 
 .trust-badges {
@@ -232,12 +232,6 @@
   min-width: 0;
 }
 
-.category-products .slider-arrow {
-  position: static;
-  transform: none;
-  flex-shrink: 0;
-}
-
 .slider-arrow {
   width: 40px;
   height: 40px;
@@ -282,6 +276,27 @@
 
 .products-slider::-webkit-scrollbar {
   display: none;
+}
+
+/* Latest products — show scrollbar on mobile for discoverability */
+.latest-products-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #e0e0e0 transparent;
+  padding-bottom: 8px;
+}
+.latest-products-scroll::-webkit-scrollbar {
+  display: block;
+  height: 4px;
+}
+.latest-products-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.latest-products-scroll::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 4px;
+}
+.latest-products-scroll::-webkit-scrollbar-thumb:hover {
+  background: #CE1E36;
 }
 
 @media (max-width: 768px) {
