@@ -333,6 +333,59 @@ const ProductDetailsTest = () => {
           </div>
         </div>
 
+        {/* Fit & Feel — below gallery, inside wrapper */}
+        {productData.features?.length > 0 && (
+          <div className="pdt-fit-row">
+            {productData.features.map((f, idx) => {
+              const icon = (() => {
+                const t = f.title?.toLowerCase() || '';
+                if (t.includes('fresh') || t.includes('microbial') || t.includes('feather') || t.includes('soft'))
+                  return (
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 2 C12 2 13.2 7.5 17 9 C13.2 10.5 12 16 12 16 C12 16 10.8 10.5 7 9 C10.8 7.5 12 2 12 2Z" fill="#CE1E36"/>
+                      <path d="M5.5 2.5 C5.5 2.5 6.1 5 7.5 5.8 C6.1 6.6 5.5 9 5.5 9 C5.5 9 4.9 6.6 3.5 5.8 C4.9 5 5.5 2.5 5.5 2.5Z" fill="#CE1E36" opacity="0.75"/>
+                      <path d="M19 14 C19 14 19.5 16 20.8 16.7 C19.5 17.4 19 19.5 19 19.5 C19 19.5 18.5 17.4 17.2 16.7 C18.5 16 19 14 19 14Z" fill="#CE1E36" opacity="0.55"/>
+                    </svg>
+                  );
+                if (t.includes('stretch') || t.includes('body') || t.includes('flex'))
+                  return (
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <rect x="7" y="7" width="10" height="10" rx="0.5" stroke="#180D3E" strokeWidth="1.4" fill="none"/>
+                      <path d="M7 7 L3 3M17 7 L21 3M7 17 L3 21M17 17 L21 21" stroke="#CE1E36" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                  );
+                if (t.includes('moisture') || t.includes('wick') || t.includes('sweat'))
+                  return (
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 3 C12 3 5 12 5 16 a7 7 0 0 0 14 0 C19 12 12 3 12 3Z" stroke="#CE1E36" strokeWidth="1.4" fill="none"/>
+                      <path d="M9.5 18 C9.5 18 10.5 20.5 12 20.5" stroke="#CE1E36" strokeWidth="1.3" strokeLinecap="round"/>
+                    </svg>
+                  );
+                if (t.includes('light') || t.includes('weight'))
+                  return (
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 2 C12 2 13.2 7.5 17 9 C13.2 10.5 12 16 12 16 C12 16 10.8 10.5 7 9 C10.8 7.5 12 2 12 2Z" fill="#CE1E36"/>
+                    </svg>
+                  );
+                return (
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 2 C12 2 13.2 7.5 17 9 C13.2 10.5 12 16 12 16 C12 16 10.8 10.5 7 9 C10.8 7.5 12 2 12 2Z" fill="#CE1E36"/>
+                  </svg>
+                );
+              })();
+              return (
+                <div key={idx} className="pdt-fit-item">
+                  {icon}
+                  <div className="pdt-fit-text">
+                    <strong>{f.title}</strong>
+                    <span>{f.subtitle}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* Lightbox */}
         {showLightbox && (
           <div
@@ -572,63 +625,6 @@ const ProductDetailsTest = () => {
 
       {/* ── Details Section ── */}
       <div className="pdt-details">
-
-        {/* Fit & Feel */}
-        {productData.features?.length > 0 && (
-          <div className="pdt-fit-row">
-            {productData.features.map((f, idx) => {
-              // Pick icon per feature title — matching screenshot icons exactly
-              const icon = (() => {
-                const t = f.title?.toLowerCase() || '';
-                if (t.includes('fresh') || t.includes('microbial') || t.includes('feather') || t.includes('soft'))
-                  return (
-                    // 4-pointed sparkle star (StayFresh) — matches screenshot
-                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M12 2 C12 2 13.2 7.5 17 9 C13.2 10.5 12 16 12 16 C12 16 10.8 10.5 7 9 C10.8 7.5 12 2 12 2Z" fill="#CE1E36"/>
-                      <path d="M5.5 2.5 C5.5 2.5 6.1 5 7.5 5.8 C6.1 6.6 5.5 9 5.5 9 C5.5 9 4.9 6.6 3.5 5.8 C4.9 5 5.5 2.5 5.5 2.5Z" fill="#CE1E36" opacity="0.75"/>
-                      <path d="M19 14 C19 14 19.5 16 20.8 16.7 C19.5 17.4 19 19.5 19 19.5 C19 19.5 18.5 17.4 17.2 16.7 C18.5 16 19 14 19 14Z" fill="#CE1E36" opacity="0.55"/>
-                    </svg>
-                  );
-                if (t.includes('stretch') || t.includes('body') || t.includes('flex'))
-                  return (
-                    // Square with 4 corner arrows pointing outward — matches screenshot
-                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <rect x="7" y="7" width="10" height="10" rx="0.5" stroke="#180D3E" strokeWidth="1.4" fill="none"/>
-                      <path d="M7 7 L3 3M17 7 L21 3M7 17 L3 21M17 17 L21 21" stroke="#CE1E36" strokeWidth="1.5" strokeLinecap="round"/>
-                    </svg>
-                  );
-                if (t.includes('moisture') || t.includes('wick') || t.includes('sweat'))
-                  return (
-                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M12 3 C12 3 5 12 5 16 a7 7 0 0 0 14 0 C19 12 12 3 12 3Z" stroke="#CE1E36" strokeWidth="1.4" fill="none"/>
-                      <path d="M9.5 18 C9.5 18 10.5 20.5 12 20.5" stroke="#CE1E36" strokeWidth="1.3" strokeLinecap="round"/>
-                    </svg>
-                  );
-                if (t.includes('light') || t.includes('weight'))
-                  return (
-                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M12 2 C12 2 13.2 7.5 17 9 C13.2 10.5 12 16 12 16 C12 16 10.8 10.5 7 9 C10.8 7.5 12 2 12 2Z" fill="#CE1E36"/>
-                    </svg>
-                  );
-                // default — sparkle
-                return (
-                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M12 2 C12 2 13.2 7.5 17 9 C13.2 10.5 12 16 12 16 C12 16 10.8 10.5 7 9 C10.8 7.5 12 2 12 2Z" fill="#CE1E36"/>
-                  </svg>
-                );
-              })();
-              return (
-                <div key={idx} className="pdt-fit-item">
-                  {icon}
-                  <div className="pdt-fit-text">
-                    <strong>{f.title}</strong>
-                    <span>{f.subtitle}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
 
         {/* Product Description */}
         <h2 className="pdt-section-title">Product Description</h2>
