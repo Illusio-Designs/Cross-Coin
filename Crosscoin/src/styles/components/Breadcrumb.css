@@ -6,8 +6,8 @@
 
 .breadcrumb__container {
   max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 clamp(12px, 5vw, 8%);
+  margin: 0;
+  padding: 0 clamp(12px, 5vw, 40px);
 }
 
 .breadcrumb__list {

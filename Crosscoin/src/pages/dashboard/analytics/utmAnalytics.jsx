@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Pagination } from '@/components/ui';
+import { Pagination } from '../../../components/ui';
 
 const UTMAnalytics = () => {
   const [utmData, setUtmData] = useState([]);

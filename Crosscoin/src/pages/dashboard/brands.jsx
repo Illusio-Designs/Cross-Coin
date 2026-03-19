@@ -1,418 +1,189 @@
 import { useState, useEffect } from 'react';
-import { showSuccess, showError } from '@/utils/toastNotification';
-import { FiPlus, FiEdit2, FiTrash2, FiX, FiSave, FiToggleLeft, FiToggleRight, FiSearch, FiRefreshCw } from 'react-icons/fi';
-import { brandService } from '@/services';
-import { Modal, Button, Input } from '@/components/ui';
-import Loader from '@/components/Loader';
+import { showSuccess, showError } from '../../utils/toastNotification';
+import { brandService } from '../../services';
+import { Modal, Button, Input } from '../../components/ui';
+import Loader from '../../components/common/Loader';
+
+const IC = {
+  add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  edit: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+  trash: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>,
+  toggle: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="5" width="22" height="14" rx="7" ry="7"/><circle cx="16" cy="12" r="3" fill="currentColor"/></svg>,
+  toggleOff: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="5" width="22" height="14" rx="7" ry="7"/><circle cx="8" cy="12" r="3" fill="currentColor"/></svg>,
+  brand: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
+};
+
+const EMPTY_FORM = { name: '', slug: '', display_name: '', domain: '', logo_url: '', primary_color: '#4CAF50', secondary_color: '#2196F3', contact_email: '', contact_phone: '', status: 'active' };
 
 export default function BrandManager() {
-    const [brands, setBrands] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [showAddForm, setShowAddForm] = useState(false);
-    const [editingBrand, setEditingBrand] = useState(null);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [formData, setFormData] = useState({
-        name: '',
-        slug: '',
-        display_name: '',
-        domain: '',
-        logo_url: '',
-        primary_color: '#4CAF50',
-        secondary_color: '#2196F3',
-        contact_email: '',
-        contact_phone: '',
-        status: 'active'
-    });
+  const [brands, setBrands] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editingBrand, setEditingBrand] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
-    useEffect(() => {
-        fetchBrands();
-    }, []);
+  useEffect(() => { fetchBrands(); }, []);
 
-    const fetchBrands = async () => {
-        setLoading(true);
-        try {
-            const response = await brandService.getAllBrands(true);
-            
-            if (response.success) {
-                setBrands(response.data);
-            }
-        } catch (error) {
-            showError('loadingFailed');
-        } finally {
-            setLoading(false);
-        }
-    };
+  const fetchBrands = async () => {
+    setLoading(true);
+    try {
+      const response = await brandService.getAllBrands(true);
+      if (response.success) setBrands(response.data);
+    } catch { showError('loadingFailed'); }
+    finally { setLoading(false); }
+  };
 
-    const handleInputChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value
-        }));
-    };
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+  };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        
-        if (!formData.name.trim()) {
-            showError('fieldRequired');
-            return;
-        }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.name.trim()) { showError('fieldRequired'); return; }
+    try {
+      if (editingBrand) { await brandService.updateBrand(editingBrand.id, formData); showSuccess('brandUpdated'); }
+      else { await brandService.createBrand(formData); showSuccess('brandCreated'); }
+      resetForm();
+      fetchBrands();
+    } catch (error) { showError('saveFailed', error.message); }
+  };
 
-        try {
-            if (editingBrand) {
-                // Update existing brand
-                await brandService.updateBrand(editingBrand.id, formData);
-                showSuccess('brandUpdated');
-            } else {
-                // Create new brand
-                await brandService.createBrand(formData);
-                showSuccess('brandCreated');
-            }
-            
-            resetForm();
-            fetchBrands();
-        } catch (error) {
-            showError('saveFailed', error.message);
-        }
-    };
+  const handleEdit = (brand) => {
+    setEditingBrand(brand);
+    setFormData({ name: brand.name, slug: brand.slug, display_name: brand.display_name || brand.name, domain: brand.domain || '', logo_url: brand.logo_url || '', primary_color: brand.primary_color || '#4CAF50', secondary_color: brand.secondary_color || '#2196F3', contact_email: brand.contact_email || '', contact_phone: brand.contact_phone || '', status: brand.status || 'active' });
+    setShowForm(true);
+  };
 
-    const handleEdit = (brand) => {
-        setEditingBrand(brand);
-        setFormData({
-            name: brand.name,
-            slug: brand.slug,
-            display_name: brand.display_name || brand.name,
-            domain: brand.domain || '',
-            logo_url: brand.logo_url || '',
-            primary_color: brand.primary_color || '#4CAF50',
-            secondary_color: brand.secondary_color || '#2196F3',
-            contact_email: brand.contact_email || '',
-            contact_phone: brand.contact_phone || '',
-            status: brand.status || 'active'
-        });
-        setShowAddForm(true);
-    };
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this brand? This cannot be undone.')) return;
+    try { await brandService.deleteBrand(id); showSuccess('brandDeleted'); fetchBrands(); }
+    catch { showError('deleteFailed'); }
+  };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this brand? This action cannot be undone.')) {
-            return;
-        }
+  const handleToggleStatus = async (id) => {
+    try { await brandService.toggleBrandStatus(id); showSuccess('brandStatusUpdated'); fetchBrands(); }
+    catch { showError('updateFailed'); }
+  };
 
-        try {
-            await brandService.deleteBrand(id);
-            showSuccess('brandDeleted');
-            fetchBrands();
-        } catch (error) {
-            showError('deleteFailed');
-        }
-    };
+  const resetForm = () => { setFormData(EMPTY_FORM); setEditingBrand(null); setShowForm(false); };
 
-    const handleToggleStatus = async (id) => {
-        try {
-            await brandService.toggleBrandStatus(id);
-            showSuccess('brandStatusUpdated');
-            fetchBrands();
-        } catch (error) {
-            showError('updateFailed');
-        }
-    };
+  const filteredBrands = brands.filter(b =>
+    b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    b.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (b.domain && b.domain.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
-    const resetForm = () => {
-        setFormData({
-            name: '',
-            slug: '',
-            display_name: '',
-            domain: '',
-            logo_url: '',
-            primary_color: '#4CAF50',
-            secondary_color: '#2196F3',
-            contact_email: '',
-            contact_phone: '',
-            status: 'active'
-        });
-        setEditingBrand(null);
-        setShowAddForm(false);
-    };
-
-    const filteredBrands = brands.filter(brand =>
-        brand.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        brand.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (brand.domain && brand.domain.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-
-    if (loading) {
-        return (
-            <div className="dashboard-page">
-                <div style={{ position: 'relative', minHeight: '400px' }}>
-                    <Loader />
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="dashboard-page">
-            <div className="seo-header-container">
-                <h1 className="seo-title">Brand Management</h1>
-                <Button
-                    onClick={() => setShowAddForm(true)}
-                    variant="primary"
-                >
-                    Add New Brand
-                </Button>
-            </div>
-
-            {showAddForm && (
-                <Modal
-                    isOpen={showAddForm}
-                    onClose={resetForm}
-                    title={editingBrand ? 'Edit Brand' : 'Add New Brand'}
-                >
-                    <form onSubmit={handleSubmit}>
-                        <div className="form-grid">
-                            <div className="form-group">
-                                <label>Brand Name *</label>
-                                <Input
-                                    type="text"
-                                    name="name"
-                                    value={formData.name}
-                                    onChange={handleInputChange}
-                                    placeholder="e.g., CrossCoin"
-                                    required
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label>Display Name *</label>
-                                <Input
-                                    type="text"
-                                    name="display_name"
-                                    value={formData.display_name}
-                                    onChange={handleInputChange}
-                                    placeholder="e.g., CrossCoin Store"
-                                    required
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label>Slug</label>
-                                <Input
-                                    type="text"
-                                    name="slug"
-                                    value={formData.slug}
-                                    onChange={handleInputChange}
-                                    placeholder="e.g., crosscoin (auto-generated if empty)"
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label>Domain</label>
-                                <Input
-                                    type="text"
-                                    name="domain"
-                                    value={formData.domain}
-                                    onChange={handleInputChange}
-                                    placeholder="e.g., crosscoin.com"
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label>Logo URL</label>
-                                <Input
-                                    type="text"
-                                    name="logo_url"
-                                    value={formData.logo_url}
-                                    onChange={handleInputChange}
-                                    placeholder="https://example.com/logo.png"
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label>Primary Color</label>
-                                <div className="color-input-group">
-                                    <input
-                                        type="color"
-                                        name="primary_color"
-                                        value={formData.primary_color}
-                                        onChange={handleInputChange}
-                                    />
-                                    <Input
-                                        type="text"
-                                        value={formData.primary_color}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, primary_color: e.target.value }))}
-                                        placeholder="#4CAF50"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="form-group">
-                                <label>Secondary Color</label>
-                                <div className="color-input-group">
-                                    <input
-                                        type="color"
-                                        name="secondary_color"
-                                        value={formData.secondary_color}
-                                        onChange={handleInputChange}
-                                    />
-                                    <Input
-                                        type="text"
-                                        value={formData.secondary_color}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, secondary_color: e.target.value }))}
-                                        placeholder="#2196F3"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="form-group">
-                                <label>Contact Email</label>
-                                <Input
-                                    type="email"
-                                    name="contact_email"
-                                    value={formData.contact_email}
-                                    onChange={handleInputChange}
-                                    placeholder="contact@example.com"
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label>Contact Phone</label>
-                                <Input
-                                    type="tel"
-                                    name="contact_phone"
-                                    value={formData.contact_phone}
-                                    onChange={handleInputChange}
-                                    placeholder="+1234567890"
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label>Status</label>
-                                <select
-                                    name="status"
-                                    value={formData.status}
-                                    onChange={handleInputChange}
-                                    className="form-select"
-                                >
-                                    <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="form-actions" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                            <Button type="button" variant="secondary" onClick={resetForm}>
-                                Cancel
-                            </Button>
-                            <Button type="submit" variant="primary">
-                                {editingBrand ? 'Update Brand' : 'Create Brand'}
-                            </Button>
-                        </div>
-                    </form>
-                </Modal>
-            )}
-
-            <div className="search-bar">
-                <FiSearch />
-                <input
-                    type="text"
-                    placeholder="Search brands..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
-            </div>
-
-            <div className="brands-grid">
-                {filteredBrands.length === 0 ? (
-                    <div className="empty-state">
-                        <p>No brands found</p>
-                        <button className="btn-primary" onClick={() => setShowAddForm(true)}>
-                            <FiPlus /> Add First Brand
-                        </button>
-                    </div>
-                ) : (
-                    filteredBrands.map(brand => (
-                        <div key={brand.id} className="brand-card">
-                            <div className="brand-card-header">
-                                <div className="brand-info">
-                                    <div
-                                        className="brand-color"
-                                        style={{ backgroundColor: brand.primary_color }}
-                                    />
-                                    <div>
-                                        <h4>{brand.display_name || brand.name}</h4>
-                                        <span className="brand-slug">{brand.slug}</span>
-                                    </div>
-                                </div>
-                                <div className="brand-actions">
-                                    <button
-                                        className={`btn-icon ${brand.status === 'active' ? 'active' : 'inactive'}`}
-                                        onClick={() => handleToggleStatus(brand.id)}
-                                        title={brand.status === 'active' ? 'Active' : 'Inactive'}
-                                    >
-                                        {brand.status === 'active' ? <FiToggleRight /> : <FiToggleLeft />}
-                                    </button>
-                                    <button
-                                        className="btn-icon"
-                                        onClick={() => handleEdit(brand)}
-                                        title="Edit"
-                                    >
-                                        <FiEdit2 />
-                                    </button>
-                                    <button
-                                        className="btn-icon btn-danger"
-                                        onClick={() => handleDelete(brand.id)}
-                                        title="Delete"
-                                    >
-                                        <FiTrash2 />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="brand-card-body">
-                                {brand.domain && (
-                                    <div className="brand-detail">
-                                        <strong>Domain:</strong> {brand.domain}
-                                    </div>
-                                )}
-                                {brand.logo_url && (
-                                    <div className="brand-detail">
-                                        <strong>Logo:</strong> <img src={brand.logo_url} alt={brand.name} style={{maxHeight: '30px'}} />
-                                    </div>
-                                )}
-                                {brand.contact_email && (
-                                    <div className="brand-detail">
-                                        <strong>Email:</strong> {brand.contact_email}
-                                    </div>
-                                )}
-                                {brand.contact_phone && (
-                                    <div className="brand-detail">
-                                        <strong>Phone:</strong> {brand.contact_phone}
-                                    </div>
-                                )}
-                                {brand.primary_color && brand.secondary_color && (
-                                    <div className="brand-detail">
-                                        <strong>Colors:</strong> 
-                                        <span style={{display: 'inline-flex', gap: '5px', marginLeft: '5px'}}>
-                                            <span style={{width: '20px', height: '20px', backgroundColor: brand.primary_color, border: '1px solid #ccc'}}></span>
-                                            <span style={{width: '20px', height: '20px', backgroundColor: brand.secondary_color, border: '1px solid #ccc'}}></span>
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="brand-card-footer">
-                                <span className={`status-badge ${brand.status === 'active' ? 'active' : 'inactive'}`}>
-                                    {brand.status === 'active' ? 'Active' : 'Inactive'}
-                                </span>
-                                <small>Updated: {new Date(brand.updated_at).toLocaleDateString()}</small>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
+  return (
+    <div className="dashboard-page">
+      {/* Page Header */}
+      <div className="sl-page-header">
+        <div className="sl-header-left">
+          <div className="sl-header-icon">{IC.brand}</div>
+          <div>
+            <h1 className="sl-page-title">Brands</h1>
+            <p className="sl-page-sub">{brands.length} brand{brands.length !== 1 ? 's' : ''} total</p>
+          </div>
         </div>
-    );
+        <div className="sl-header-right">
+          <div className="sl-search-wrap">
+            <span className="sl-search-icon">{IC.search}</span>
+            <input type="text" className="sl-search-input" placeholder="Search brands..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+          </div>
+          <button className="sl-add-btn" onClick={() => setShowForm(true)}>
+            <span className="sl-add-btn-icon">{IC.add}</span>Add Brand
+          </button>
+        </div>
+      </div>
+
+      {/* Add/Edit Modal */}
+      <Modal isOpen={showForm} onClose={resetForm} title={editingBrand ? 'Edit Brand' : 'Add New Brand'}>
+        <form onSubmit={handleSubmit} className="seo-form">
+          <div className="modal-body">
+            <div className="brand-form-grid">
+              <Input label="Brand Name" type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g., CrossCoin" required />
+              <Input label="Display Name" type="text" name="display_name" value={formData.display_name} onChange={handleInputChange} placeholder="e.g., CrossCoin Store" required />
+              <Input label="Slug" type="text" name="slug" value={formData.slug} onChange={handleInputChange} placeholder="e.g., crosscoin" />
+              <Input label="Domain" type="text" name="domain" value={formData.domain} onChange={handleInputChange} placeholder="e.g., crosscoin.com" />
+              <Input label="Logo URL" type="text" name="logo_url" value={formData.logo_url} onChange={handleInputChange} placeholder="https://example.com/logo.png" />
+              <Input label="Contact Email" type="email" name="contact_email" value={formData.contact_email} onChange={handleInputChange} placeholder="contact@example.com" />
+              <Input label="Contact Phone" type="tel" name="contact_phone" value={formData.contact_phone} onChange={handleInputChange} placeholder="+1234567890" />
+              <Input label="Status" type="select" name="status" value={formData.status} onChange={handleInputChange} options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]} />
+              <div className="brand-color-row">
+                <div className="brand-color-field">
+                  <label className="sl-form-label">Primary Color</label>
+                  <div className="brand-color-input">
+                    <input type="color" name="primary_color" value={formData.primary_color} onChange={handleInputChange} className="brand-color-picker" />
+                    <input type="text" value={formData.primary_color} onChange={e => setFormData(prev => ({ ...prev, primary_color: e.target.value }))} className="brand-color-text" placeholder="#4CAF50" />
+                  </div>
+                </div>
+                <div className="brand-color-field">
+                  <label className="sl-form-label">Secondary Color</label>
+                  <div className="brand-color-input">
+                    <input type="color" name="secondary_color" value={formData.secondary_color} onChange={handleInputChange} className="brand-color-picker" />
+                    <input type="text" value={formData.secondary_color} onChange={e => setFormData(prev => ({ ...prev, secondary_color: e.target.value }))} className="brand-color-text" placeholder="#2196F3" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="modal-footer">
+            <Button type="button" variant="secondary" onClick={resetForm}>Cancel</Button>
+            <Button type="submit" variant="primary">{editingBrand ? 'Update Brand' : 'Create Brand'}</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Brands Grid */}
+      {loading ? (
+        <div className="sl-loader-wrap"><Loader /></div>
+      ) : filteredBrands.length === 0 ? (
+        <div className="sl-empty">
+          <div className="sl-empty-icon">{IC.brand}</div>
+          <p>{searchQuery ? "No brands match your search" : "No brands yet"}</p>
+        </div>
+      ) : (
+        <div className="brand-cards-grid">
+          {filteredBrands.map(brand => (
+            <div key={brand.id} className="brand-card-new">
+              <div className="brand-card-top">
+                <div className="brand-card-identity">
+                  <div className="brand-color-dot" style={{ backgroundColor: brand.primary_color }} />
+                  <div>
+                    <h4 className="brand-card-name">{brand.display_name || brand.name}</h4>
+                    <span className="brand-card-slug">{brand.slug}</span>
+                  </div>
+                </div>
+                <div className="sl-actions">
+                  <button className={`sl-btn-toggle ${brand.status === 'active' ? 'active' : ''}`} title={brand.status === 'active' ? 'Active' : 'Inactive'} onClick={() => handleToggleStatus(brand.id)}>
+                    {brand.status === 'active' ? IC.toggle : IC.toggleOff}
+                  </button>
+                  <button className="sl-btn-edit" title="Edit" onClick={() => handleEdit(brand)}>{IC.edit}</button>
+                  <button className="sl-btn-delete" title="Delete" onClick={() => handleDelete(brand.id)}>{IC.trash}</button>
+                </div>
+              </div>
+              <div className="brand-card-body-new">
+                {brand.domain && <div className="brand-detail-row"><span className="brand-detail-key">Domain</span><span className="brand-detail-val">{brand.domain}</span></div>}
+                {brand.contact_email && <div className="brand-detail-row"><span className="brand-detail-key">Email</span><span className="brand-detail-val">{brand.contact_email}</span></div>}
+                {brand.contact_phone && <div className="brand-detail-row"><span className="brand-detail-key">Phone</span><span className="brand-detail-val">{brand.contact_phone}</span></div>}
+                <div className="brand-detail-row">
+                  <span className="brand-detail-key">Colors</span>
+                  <span className="brand-color-swatches">
+                    <span className="brand-swatch" style={{ backgroundColor: brand.primary_color }} title={brand.primary_color} />
+                    <span className="brand-swatch" style={{ backgroundColor: brand.secondary_color }} title={brand.secondary_color} />
+                  </span>
+                </div>
+              </div>
+              <div className="brand-card-footer-new">
+                <span className={`sl-status-badge sl-status-${brand.status}`}>{brand.status}</span>
+                <small className="brand-updated">Updated {new Date(brand.updated_at).toLocaleDateString()}</small>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
-
-

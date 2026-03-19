@@ -1,13 +1,23 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { getPublicProductBySlug, getPublicCoupons } from '../../services/publicApi';
-import Loader from '../Loader';
-import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
-import { useWishlist } from '../../context/WishlistContext';
-import { FiHeart } from 'react-icons/fi';
+import { getPublicProductBySlug, getPublicCoupons, getPublicProductReviews } from '../../services/publicApi';
+import Loader from '../common/Loader';
 
-// Sample product data — defined outside component to avoid hoisting issues
-const sampleProduct = {
+const ProductDetailsTest = ({ product }) => {
+  const router = useRouter();
+  const slug = router.query?.slug ? decodeURIComponent(router.query.slug) : null;
+
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [selectedColor, setSelectedColor] = useState(0);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [pincode, setPincode] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [productData, setProductData] = useState(null);
+
+  // Sample product data for testing
+  const sampleProduct = {
     brand: 'Jockey',
     title: 'Tactel Microfiber Elastane Stretch Solid Trunk with Moisture Move Properties - Black',
     styleNo: 'IC28',
@@ -21,10 +31,10 @@ const sampleProduct = {
       'https://www.jockey.in/cdn/shop/products/IC28_BLACK_0105_S123_JKY_6.webp?v=1700008414&width=560',
     ],
     colors: [
-      { name: 'Black', image: 'https://www.jockey.in/cdn/shop/products/IC28_BLACK_0105_S123_JKY_1.webp?v=1700008414&width=108', mainImage: 'https://www.jockey.in/cdn/shop/products/IC28_BLACK_0105_S123_JKY_1.webp?v=1700008414&width=560' },
-      { name: 'Blue Shadow', image: 'https://www.jockey.in/cdn/shop/files/IC28_BUSHD_0105_S123_JKY_1_e181c59d-dc4b-4a15-8d85-b738f6ee1c58.webp?v=1725619823&width=108', mainImage: 'https://www.jockey.in/cdn/shop/files/IC28_BUSHD_0105_S123_JKY_1_e181c59d-dc4b-4a15-8d85-b738f6ee1c58.webp?v=1725619823&width=560' },
-      { name: 'Brown', image: 'https://www.jockey.in/cdn/shop/files/IC28_BROWN_0105_S123_JKY_1.webp?v=1725619828&width=108', mainImage: 'https://www.jockey.in/cdn/shop/files/IC28_BROWN_0105_S123_JKY_1.webp?v=1725619828&width=560' },
-      { name: 'Ebony', image: 'https://www.jockey.in/cdn/shop/products/IC28_EBONY_0105_S123_JKY_1.webp?v=1700015373&width=108', mainImage: 'https://www.jockey.in/cdn/shop/products/IC28_EBONY_0105_S123_JKY_1.webp?v=1700015373&width=560' },
+      { name: 'Black', image: 'https://www.jockey.in/cdn/shop/products/IC28_BLACK_0105_S123_JKY_1.webp?v=1700008414&width=108' },
+      { name: 'Blue Shadow', image: 'https://www.jockey.in/cdn/shop/files/IC28_BUSHD_0105_S123_JKY_1_e181c59d-dc4b-4a15-8d85-b738f6ee1c58.webp?v=1725619823&width=108' },
+      { name: 'Brown', image: 'https://www.jockey.in/cdn/shop/files/IC28_BROWN_0105_S123_JKY_1.webp?v=1725619828&width=108' },
+      { name: 'Ebony', image: 'https://www.jockey.in/cdn/shop/products/IC28_EBONY_0105_S123_JKY_1.webp?v=1700015373&width=108' },
     ],
     features: [
       { icon: 'feather', title: 'Feather Soft', subtitle: 'Comfort' },
@@ -37,34 +47,11 @@ const sampleProduct = {
       { image: 'https://www.jockey.in/cdn/shop/files/IC28_04_09Feb2024.webp?v=1707810913&width=400', title: 'Ultrasoft', subtitle: 'Waistband', desc: 'For All Day Comfort' },
       { image: 'https://www.jockey.in/cdn/shop/files/IC28_02_09Feb2024.webp?v=1707810913&width=400', title: 'Free From', subtitle: 'Ride-Ups', desc: 'Prevents Sagging & Roll-Ups' },
     ],
-};
-
-const ProductDetailsTest = () => {
-  const router = useRouter();
-  const slug = router.query?.slug ? decodeURIComponent(router.query.slug) : null;
-  const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
-
-  const [selectedImage, setSelectedImage] = useState(0);
-  const [quantity, setQuantity] = useState(1);
-  const [selectedColor, setSelectedColor] = useState(0);
-  const [showStickyBar, setShowStickyBar] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [pincode, setPincode] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [productData, setProductData] = useState(null);
-  const reviewSliderRef = useRef(null);
-  const featureStripRef = useRef(null);
+  };
 
   // Fetch product data on mount
   useEffect(() => {
-    // No slug — use sample product directly
-    if (!slug) {
-      setProductData(sampleProduct);
-      setLoading(false);
-      return;
-    }
-
-    if (!router.isReady) return;
+    if (!router.isReady || !slug) return;
 
     const fetchData = async () => {
       try {
@@ -189,96 +176,36 @@ const ProductDetailsTest = () => {
       <div className="product-wrapper">
         {/* Gallery Section */}
         <div className="gallery-section">
-          <div className="gallery-main-col">
-            <div className="main-image-wrap">
-              <img
-                src={typeof selectedImage === 'string' ? selectedImage : productData.images[selectedImage]}
-                alt={productData.title}
-              />
-            </div>
-            {/* Horizontal thumb strip */}
-            <div className="thumb-col">
-              {productData.images.map((img, idx) => (
-                <div
-                  key={idx}
-                  className={`thumb ${selectedImage === idx ? 'active' : ''}`}
-                  onClick={() => setSelectedImage(idx)}
-                >
-                  <img src={img} alt={`Thumbnail ${idx + 1}`} />
-                </div>
-              ))}
-            </div>
-            {/* Feature strip below thumbs */}
-            <div className="feature-strip-wrap">
-              <button className="feat-arrow" onClick={() => featureStripRef.current?.scrollBy({ left: -160, behavior: 'smooth' })}>
-                <IoIosArrowBack />
-              </button>
-              <div className="feature-strip" ref={featureStripRef}>
-                {productData.features.map((f, idx) => (
-                  <div key={idx} className="feature-item">
-                    <div className="feature-circle">
-                      <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" />
-                      </svg>
-                    </div>
-                    <div className="feature-text">
-                      <strong>{f.title}</strong>
-                      <span>{f.subtitle}</span>
-                    </div>
-                  </div>
-                ))}
+          <div className="thumb-col">
+            {productData.images.map((img, idx) => (
+              <div
+                key={idx}
+                className={`thumb ${selectedImage === idx ? 'active' : ''}`}
+                onClick={() => setSelectedImage(idx)}
+              >
+                <img src={img} alt={`Thumbnail ${idx + 1}`} />
               </div>
-              <button className="feat-arrow" onClick={() => featureStripRef.current?.scrollBy({ left: 160, behavior: 'smooth' })}>
-                <IoIosArrowForward />
-              </button>
-            </div>
+            ))}
+          </div>
+          <div className="main-image-wrap">
+            <img src={productData.images[selectedImage]} alt={productData.title} />
           </div>
         </div>
 
         {/* Product Info Section */}
         <div className="product-info">
-          {/* Wishlist icon */}
-          <div className="product-actions-top">
-            <div className="brand-name">{productData.brand}</div>
-            <button
-              className={`icon-btn wishlist-icon-btn ${productData.id && isInWishlist(productData.id) ? 'active' : ''}`}
-              aria-label="Add to wishlist"
-              onClick={() => {
-                if (!productData.id) return;
-                if (isInWishlist(productData.id)) {
-                  removeFromWishlist(productData.id);
-                } else {
-                  addToWishlist({ ...productData, variationImages: [] });
-                }
-              }}
-            >
-              <FiHeart />
-            </button>
-          </div>
+          <div className="brand-tag">{productData.brand}</div>
           <h1 className="product-title">{productData.title}</h1>
-
-          {/* SKU + Rating row */}
-          <div className="meta-row">
-            <span className="sku-text">SKU: {productData.styleNo}</span>
-            {productData.avgRating > 0 && (
-              <span className="pd-rating-pill">
-                <span className="rating-pill__star">★</span>
-                <span className="rating-pill__score">{parseFloat(productData.avgRating).toFixed(1)}/5</span>
-                {productData.reviewCount > 0 && (
-                  <span className="rating-pill__count">{productData.reviewCount}</span>
-                )}
-              </span>
-            )}
-          </div>
+          <div className="style-no">Style: #{productData.styleNo}</div>
 
           <div className="price-block">
-            <div className="price-row">
-              <div className="price-main">₹{productData.price.toFixed(2)}</div>
-              {productData.comparePrice > 0 && (
-                <div className="price-original">₹{productData.comparePrice.toFixed(2)}</div>
-              )}
-              <div className="price-note">MRP (Incl. Of All Taxes)</div>
-            </div>
+            <div className="price-main">₹{productData.price.toFixed(2)}</div>
+            {productData.comparePrice > 0 && (
+              <div className="price-original" style={{textDecoration: 'line-through', color: '#999'}}>
+                ₹{productData.comparePrice.toFixed(2)}
+              </div>
+            )}
+            <div className="price-note">MRP (Incl. Of All Taxes)</div>
           </div>
 
           <hr className="divider" />
@@ -292,14 +219,7 @@ const ProductDetailsTest = () => {
               <div
                 key={idx}
                 className={`color-item ${selectedColor === idx ? 'active' : ''}`}
-                onClick={() => {
-                  setSelectedColor(idx);
-                  if (color.mainImage) {
-                    setSelectedImage(color.mainImage);
-                  } else if (color.image) {
-                    setSelectedImage(color.image.replace('width=108', 'width=560'));
-                  }
-                }}
+                onClick={() => setSelectedColor(idx)}
               >
                 <div className="color-img">
                   <img src={color.image} alt={color.name} />
@@ -309,11 +229,6 @@ const ProductDetailsTest = () => {
             ))}
           </div>
 
-          {/* Free Size button */}
-          <div className="size-row">
-            <button className="btn-freesize">FREE SIZE</button>
-          </div>
-
           {/* Quantity + Add to Bag */}
           <div className="qty-row">
             <div className="qty-ctrl">
@@ -321,14 +236,7 @@ const ProductDetailsTest = () => {
               <div className="qty-val">{quantity}</div>
               <button onClick={() => setQuantity(quantity + 1)}>+</button>
             </div>
-            <button className="btn-atb" onClick={handleAddToBag}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" style={{flexShrink:0}}>
-                <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M3 6H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M16 10C16 11.0609 15.5786 12.0783 14.8284 12.8284C14.0783 13.5786 13.0609 14 12 14C10.9391 14 9.92172 13.5786 9.17157 12.8284C8.42143 12.0783 8 11.0609 8 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Add to Bag
-            </button>
+            <button className="btn-atb" onClick={handleAddToBag}>Add to Bag</button>
             <button className="btn-buy">Buy Now</button>
           </div>
 
@@ -386,138 +294,170 @@ const ProductDetailsTest = () => {
         </div>
       </div>
 
-      {/* Product Detail Tabs */}
-      <div className="product-sections">
-          {/* Product Description */}
-          <div className="psec">
-            <h2 className="psec-title">Product Description</h2>
-            {productData.description ? (
-              <div className="psec-desc-text" dangerouslySetInnerHTML={{ __html: productData.description }} />
-            ) : (
-              <ul className="psec-desc-list">
-                <li>Tactel Microfiber Elastane Stretch Fabric</li>
-                <li>Moisture Move Treatment to Wick Sweat Away</li>
-                <li>Engineered to Prevent Ride Up</li>
-                <li>Ultrasoft and Durable Waistband</li>
-                <li>Label Free for All Day Comfort</li>
-              </ul>
-            )}
-            <div className="ideal-row">
-              <span className="ideal-label">Ideal For</span>
-              <div className="ideal-chip"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><strong>Everyday Wear</strong></div>
-              <div className="ideal-chip"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg><strong>Casual Wear</strong></div>
-              <div className="ideal-chip"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg><strong>Work</strong></div>
+      {/* Product Details Section */}
+      <div className="product-details">
+        {/* Product Description */}
+        <h2 className="section-title">Product Description</h2>
+        
+        {/* Description Cards */}
+        <div className="desc-cards">
+          {productData.descCards.map((card, idx) => (
+            <div key={idx} className="desc-card">
+              <img src={card.image} alt={card.title} />
+              <div className="desc-card-label">
+                <div className="desc-card-title">
+                  {card.title}
+                  <br />
+                  <span>{card.subtitle}</span>
+                </div>
+                <div className="desc-card-sub">{card.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Description Text */}
+        {productData.description ? (
+          <div 
+            className="desc-body-text"
+            dangerouslySetInnerHTML={{__html: productData.description}}
+            style={{marginBottom: '20px', marginTop: '20px'}}
+          />
+        ) : (
+          <p className="desc-body-text" style={{marginBottom: '20px', marginTop: '20px'}}>
+            Tactel Microfiber Elastane Stretch Fabric | Fabric Composition : Tactel Nylon and Elastane | 
+            Moisture Move Treatment to Wick Sweat Away From the Body | Engineered to Prevent Ride Up | 
+            Ultrasoft and Durable Waistband | Label Free for All Day Comfort
+          </p>
+        )}
+
+        {/* Ideal For */}
+        <div className="ideal-row" style={{marginBottom: '40px'}}>
+          <span className="ideal-label">Ideal For</span>
+          <div className="ideal-chip">
+            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M9 3v18M15 3v18M3 9h18M3 15h18" />
+            </svg>
+            <strong>Work</strong>
+          </div>
+          <div className="ideal-chip">
+            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
+            </svg>
+            <strong>Travel</strong>
+          </div>
+          <div className="ideal-chip">
+            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            <strong>Everyday Wear</strong>
+          </div>
+        </div>
+
+        {/* Washing Instructions */}
+        <h2 className="section-title">Washing Instructions</h2>
+        <div className="wash-box">
+          <div className="wash-item">
+            <svg width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+            </svg>
+            <span>Gentle wash<br />40°C</span>
+          </div>
+          <div className="wash-item">
+            <svg width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+            <span>Do not<br />bleach</span>
+          </div>
+          <div className="wash-item">
+            <svg width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <path d="M12 2v20M17 7l-5-5-5 5" />
+            </svg>
+            <span>Do not wring</span>
+          </div>
+          <div className="wash-item">
+            <svg width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v8" />
+            </svg>
+            <span>Tumble dry<br />low</span>
+          </div>
+          <div className="wash-item">
+            <svg width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <path d="M12 2v20M12 8h8M12 16h8" />
+            </svg>
+            <span>Do not iron</span>
+          </div>
+          <div className="wash-item">
+            <svg width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v8M8 12h8" />
+            </svg>
+            <span>Do not dry<br />clean</span>
+          </div>
+          <div className="wash-item">
+            <svg width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <path d="M3 6h18M6 6v12a2 2 0 002 2h8a2 2 0 002-2V6" />
+            </svg>
+            <span>Wash with like<br />colours</span>
+          </div>
+        </div>
+
+        {/* Manufacturing Details */}
+        <h2 className="section-title">Manufacturing Details</h2>
+        <div className="mfg-row">
+          <div className="mfg-address">
+            Page Industries Ltd., Cessna Park, Umiya Bay, T-1, 7th Flr, ORR, Bengaluru - 560103,
+            <br />
+            Karnataka. CIN: L18101KA1994PLC016554
+          </div>
+          <div className="mfg-origin">
+            <span className="origin-label">Country of Origin</span>
+            <div className="origin-badge">
+              <svg width="24" height="16" fill="none" viewBox="0 0 24 16">
+                <rect width="24" height="16" fill="#FF9933" />
+                <rect y="5.33" width="24" height="5.33" fill="#fff" />
+                <rect y="10.67" width="24" height="5.33" fill="#138808" />
+              </svg>
+              <span>India</span>
             </div>
           </div>
+        </div>
 
-          <div className="psec-divider" />
-
-          {/* Washing Instructions */}
-          <div className="psec">
-            <h2 className="psec-title">Washing Instructions</h2>
-            <div className="wash-box">
-              {[
-                { label: 'Gentle wash\n40°C' },
-                { label: 'Do not\nbleach' },
-                { label: 'Do not wring' },
-                { label: 'Low dry in\nelastic' },
-                { label: 'Low iron' },
-                { label: 'Do not dry\nclean' },
-                { label: 'Wash inside\nout with like\ncolours' },
-                { label: 'Do not iron\non label' },
-              ].map((item, idx) => (
-                <div key={idx} className="wash-item">
-                  <svg width="38" height="38" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10" />
-                  </svg>
-                  <span style={{ whiteSpace: 'pre-line' }}>{item.label}</span>
+        {/* Customer Reviews */}
+        {productData.reviews && productData.reviews.length > 0 && (
+          <div className="reviews-section" style={{marginTop: '40px'}}>
+            <h2 className="section-title">Customer Reviews</h2>
+            <div style={{display: 'grid', gap: '15px'}}>
+              {productData.reviews.slice(0, 5).map((review, idx) => (
+                <div key={idx} style={{padding: '15px', border: '1px solid #eee', borderRadius: '8px'}}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center'}}>
+                    <strong>{review.reviewerName}</strong>
+                    <span style={{color: '#FFB800'}}>{'★'.repeat(review.rating)}{'☆'.repeat(5-review.rating)}</span>
+                  </div>
+                  <p style={{margin: '0', color: '#666', fontSize: '14px'}}>{review.review}</p>
+                  <small style={{color: '#999'}}>{new Date(review.createdAt).toLocaleDateString()}</small>
                 </div>
               ))}
             </div>
           </div>
-
-          <div className="psec-divider" />
-
-          {/* Manufacturing Details */}
-          <div className="psec">
-            <h2 className="psec-title">Manufacturing Details</h2>
-            <div className="mfg-row">
-              <div className="mfg-address">
-                Page Industries Ltd., Cessna Park, Umiya Bay, T-1, 7th Flr, ORR, Bengaluru - 560103,<br />
-                Karnataka. CIN: L18101KA1994PLC016554
-              </div>
-              <div className="mfg-origin">
-                <span className="origin-label">Country of Origin</span>
-                <div className="origin-badge">
-                  <svg width="24" height="16" fill="none" viewBox="0 0 24 16">
-                    <rect width="24" height="16" fill="#FF9933"/>
-                    <rect y="5.33" width="24" height="5.33" fill="#fff"/>
-                    <rect y="10.67" width="24" height="5.33" fill="#138808"/>
-                  </svg>
-                  <span>India</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {productData.reviews?.length > 0 && (
-            <>
-              <div className="psec-divider" />
-              <div className="psec">
-                <h2 className="psec-title">Customer Reviews</h2>
-                <div className="pd-reviews-container">
-                  {productData.reviews.length > 2 && (
-                    <button className="slider-arrow slider-arrow-left" onClick={() => reviewSliderRef.current?.scrollBy({ left: -300, behavior: 'smooth' })}>
-                      <IoIosArrowBack />
-                    </button>
-                  )}
-                  <div className="pd-reviews-slider" ref={reviewSliderRef}>
-                    {productData.reviews.map((review, idx) => (
-                      <div key={idx} className="testimonial-card">
-                        <div className="reviewer-name">{review.reviewerName}</div>
-                        <div className="testimonial-rating">
-                          {Array.from({ length: review.rating }).map((_, i) => (
-                            <span key={i} className="testimonial-star">★</span>
-                          ))}
-                        </div>
-                        <p className="testimonial-text">{review.review}</p>
-                      </div>
-                    ))}
-                  </div>
-                  {productData.reviews.length > 2 && (
-                    <button className="slider-arrow slider-arrow-right" onClick={() => reviewSliderRef.current?.scrollBy({ left: 300, behavior: 'smooth' })}>
-                      <IoIosArrowForward />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
+        )}
       </div>
 
       {/* Sticky Bag Bar */}
       <div className={`sticky-bag ${showStickyBar ? 'visible' : ''}`}>
         <div className="sticky-product-info">
-          <img
-            className="sticky-img"
-            src={typeof selectedImage === 'string' ? selectedImage : productData.images[0]}
-            alt={productData.title}
-          />
+          <img className="sticky-img" src={productData.images[0]} alt={productData.title} />
           <div>
             <div className="sticky-name">{productData.title}</div>
-            <div className="sticky-color">{productData.colors[selectedColor]?.name}</div>
             <div className="sticky-price">₹{productData.price.toFixed(2)}</div>
           </div>
         </div>
         <div className="sticky-actions">
-          <button className="btn-atb" onClick={handleAddToBag}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" style={{flexShrink:0}}>
-              <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M3 6H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M16 10C16 11.0609 15.5786 12.0783 14.8284 12.8284C14.0783 13.5786 13.0609 14 12 14C10.9391 14 9.92172 13.5786 9.17157 12.8284C8.42143 12.0783 8 11.0609 8 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            Add to Bag
-          </button>
+          <button className="btn-atb" onClick={handleAddToBag}>Add to Bag</button>
           <button className="btn-buy">Buy Now</button>
         </div>
       </div>

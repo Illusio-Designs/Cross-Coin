@@ -18,9 +18,9 @@
   margin-bottom: 20px;
   padding: 16px;
   background: white;
-  border-radius: 12px;
-  border: 2px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-radius: 8px;
+  border: 1px solid #ebebf0;
+  box-shadow: none;
 }
 
 .date-input-group {
@@ -39,21 +39,25 @@
 
 .date-input-group input {
   padding: 8px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  border: 1.5px solid #ebebf0;
+  border-radius: 8px;
   font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
   min-width: 150px;
-  color: #1a202c;
+  color: #1a1a1a;
+  height: 38px;
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
 }
 
 .date-input-group input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #180D3E;
 }
 
 .apply-filter-btn {
   padding: 8px 20px;
-  background: #667eea;
+  background: #CE1E36;
   color: white;
   border: none;
   border-radius: 6px;
@@ -63,7 +67,7 @@
 }
 
 .apply-filter-btn:hover {
-  background: #5568d3;
+  background: #a8172b;
 }
 
 /* Stats Grid */
@@ -77,9 +81,9 @@
 .stat-card {
   background: white;
   padding: 18px;
-  border-radius: 12px;
-  border: 2px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-radius: 8px;
+  border: 1px solid #ebebf0;
+  box-shadow: none;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -125,9 +129,9 @@
 .utm-table-container {
   background: white;
   padding: 20px;
-  border-radius: 12px;
-  border: 2px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-radius: 8px;
+  border: 1px solid #ebebf0;
+  box-shadow: none;
 }
 
 .utm-table-container h2 {
@@ -236,16 +240,16 @@
   justify-content: center;
   padding: 60px 20px;
   background: white;
-  border-radius: 12px;
-  border: 2px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-radius: 8px;
+  border: 1px solid #ebebf0;
+  box-shadow: none;
 }
 
 .loader {
   width: 40px;
   height: 40px;
   border: 3px solid #f3f4f6;
-  border-top: 3px solid #667eea;
+  border-top: 3px solid #CE1E36;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 15px;
@@ -269,7 +273,7 @@
 
 .retry-button {
   padding: 8px 20px;
-  background: #667eea;
+  background: #CE1E36;
   color: white;
   border: none;
   border-radius: 6px;
@@ -279,7 +283,7 @@
 }
 
 .retry-button:hover {
-  background: #5568d3;
+  background: #a8172b;
 }
 
 .no-data {

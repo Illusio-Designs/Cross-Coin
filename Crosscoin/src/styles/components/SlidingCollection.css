@@ -61,7 +61,7 @@
   position: absolute;
   width: clamp(220px, 50vw, 480px);
   height: clamp(200px, 45vw, 420px);
-  border-radius: clamp(12px, 3vw, 20px);
+  border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
   transition: left 0.5s cubic-bezier(0.4, 0, 0.2, 1),

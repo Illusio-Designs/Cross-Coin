@@ -1,15 +1,11 @@
-import ProtectedRoute from "@/components/ProtectedRoute";
-import Sidebar from "@/components/Sidebar/Sidebar.jsx";
-import CardGrid from '@/components/Dashboard/Card';
-import DashboardHeader from '@/components/Dashboard/DashboardHeader';
-import DashboardFooter from '@/components/Dashboard/DashboardFooter';
+import ProtectedRoute from "../../components/common/ProtectedRoute";
+import Sidebar from "../../components/Sidebar/Sidebar.jsx";
+import CardGrid from '../../components/Dashboard/Card';
+import DashboardHeader from '../../components/Dashboard/DashboardHeader';
+import DashboardFooter from '../../components/Dashboard/DashboardFooter';
 import { useState, useEffect } from "react";
-import Loader from "@/components/Loader";
-import { handleViewChange, getViewFromPath } from "@/utils/dashboardRouting";
+import { handleViewChange, getViewFromPath } from "../../utils/dashboardRouting";
 
-// Load dashboard-specific CSS - moved to _app.jsx
-
-// Import all dashboard pages
 import Products from "./products/products";
 import Categories from "./products/categories";
 import Attributes from "./products/attributes";
@@ -27,237 +23,123 @@ import UTMAnalytics from "./analytics/utmAnalytics";
 import BrandSettingsManager from "./brandSettings";
 import BrandManager from "./brands";
 
+const SB_EXPANDED = 260;
+const SB_COLLAPSED = 72;
+
 function Dashboard() {
   const [currentView, setCurrentView] = useState('main');
   const [isCollapsed, setIsCollapsed] = useState(() => {
-    // Initialize from localStorage or default based on screen size
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('sidebarCollapsed');
-      if (saved !== null) {
-        return JSON.parse(saved);
-      }
+      if (saved !== null) return JSON.parse(saved);
       return window.innerWidth <= 900;
     }
     return false;
   });
-  const [isLoading, setIsLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Persist sidebar state to localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('sidebarCollapsed', JSON.stringify(isCollapsed));
-    }
+    localStorage.setItem('sidebarCollapsed', JSON.stringify(isCollapsed));
   }, [isCollapsed]);
 
-  // Detect mobile screen size
   useEffect(() => {
-    const checkMobile = () => {
+    const check = () => {
       const mobile = window.innerWidth <= 900;
       setIsMobile(mobile);
-      // On mobile, collapse sidebar but don't override user preference on desktop
-      if (mobile && !isCollapsed) {
-        setIsCollapsed(true);
-      }
+      if (mobile) setIsCollapsed(true);
     };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, [isCollapsed]);
-
-  // Handle URL-based routing on page load
-  useEffect(() => {
-    setCurrentView(getViewFromPath());
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Handle browser back/forward buttons
-  useEffect(() => {
-    const handlePopState = () => {
-      setCurrentView(getViewFromPath());
-    };
+  useEffect(() => { setCurrentView(getViewFromPath()); }, []);
 
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+  useEffect(() => {
+    const onPop = () => setCurrentView(getViewFromPath());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
   }, []);
 
+  // Drive header/footer/main offset via a single CSS variable
+  const sbw = isMobile ? 0 : (isCollapsed ? SB_COLLAPSED : SB_EXPANDED);
   useEffect(() => {
-    if (isLoading) {
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [isLoading]);
+    document.documentElement.style.setProperty('--sb-w', `${sbw}px`);
+  }, [sbw]);
 
-  const onViewChange = (view) => {
-    handleViewChange(view, setCurrentView);
-  };
-  
-  const handleMobileMenuToggle = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
-  
-  // Get responsive sidebar width
-  const getSidebarWidth = () => {
-    if (typeof window === 'undefined') return 260;
-    
-    const width = window.innerWidth;
-    if (width <= 900) return 0; // Hidden on mobile, no margin needed
-    return isCollapsed ? 72 : 260;
-  };
-  
-  const sidebarWidth = getSidebarWidth();
+  const onViewChange = (v) => handleViewChange(v, setCurrentView);
+  const handleMobileMenuToggle = () => setIsMobileMenuOpen(p => !p);
 
-  // Fullscreen logic
   const handleToggleFullscreen = () => {
-    const elem = document.documentElement;
+    const el = document.documentElement;
     if (!isFullscreen) {
-      if (elem.requestFullscreen) elem.requestFullscreen();
-      else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen();
-      else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
-      else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
       setIsFullscreen(true);
     } else {
       if (document.exitFullscreen) document.exitFullscreen();
       else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
       else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-      else if (document.msExitFullscreen) document.msExitFullscreen();
       setIsFullscreen(false);
     }
   };
 
   useEffect(() => {
-    function onFullscreenChange() {
-      setIsFullscreen(!!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement));
-    }
-    document.addEventListener('fullscreenchange', onFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
-    document.addEventListener('mozfullscreenchange', onFullscreenChange);
-    document.addEventListener('MSFullscreenChange', onFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', onFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
-      document.removeEventListener('mozfullscreenchange', onFullscreenChange);
-      document.removeEventListener('MSFullscreenChange', onFullscreenChange);
-    };
+    const onChange = () => setIsFullscreen(!!(
+      document.fullscreenElement || document.webkitFullscreenElement ||
+      document.mozFullScreenElement || document.msFullscreenElement
+    ));
+    const evts = ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange'];
+    evts.forEach(e => document.addEventListener(e, onChange));
+    return () => evts.forEach(e => document.removeEventListener(e, onChange));
   }, []);
 
   const renderContent = () => {
-    if (isLoading) {
-      return <Loader />;
-    }
-
     switch (currentView) {
-      case 'products':
-        return <Products />;
-      case 'categories':
-        return <Categories />;
-      case 'attributes':
-        return <Attributes />;
-      case 'orders':
-        return <Orders />;
-      case 'consumers':
-        return <Consumers />;
-      case 'shippingFees':
-        return <ShippingFees />;
-      case 'payments':
-        return <Payments />;
-      case 'coupons':
-        return <Coupons />;
-      case 'reviews':
-        return <Reviews />;
-      case 'seo':
-        return <SEO />;
-      case 'policies':
-        return <Policies />;
-      case 'brands':
-        return <BrandManager />;
-      case 'brand-settings':
-        return <BrandSettingsManager />;
-      case 'slider':
-        return <Slider />;
-      case 'media-gallery':
-        return <MediaGallery />;
-      case 'utm-analytics':
-        return <UTMAnalytics />;
-      default:
-        return <CardGrid />;
+      case 'products':       return <Products />;
+      case 'categories':     return <Categories />;
+      case 'attributes':     return <Attributes />;
+      case 'orders':         return <Orders />;
+      case 'consumers':      return <Consumers />;
+      case 'shippingFees':   return <ShippingFees />;
+      case 'payments':       return <Payments />;
+      case 'coupons':        return <Coupons />;
+      case 'reviews':        return <Reviews />;
+      case 'seo':            return <SEO />;
+      case 'policies':       return <Policies />;
+      case 'brands':         return <BrandManager />;
+      case 'brand-settings': return <BrandSettingsManager />;
+      case 'slider':         return <Slider />;
+      case 'media-gallery':  return <MediaGallery />;
+      case 'utm-analytics':  return <UTMAnalytics />;
+      default:               return <CardGrid />;
     }
   };
-  
-  // Get responsive header/footer heights
-  const getHeaderHeight = () => {
-    if (typeof window === 'undefined') return 80;
-    const width = window.innerWidth;
-    if (width <= 480) return 56;
-    if (width <= 768) return 60;
-    return 80;
-  };
-  
-  const getFooterHeight = () => {
-    if (typeof window === 'undefined') return 56;
-    const width = window.innerWidth;
-    if (width <= 480) return 36;
-    if (width <= 768) return 40;
-    return 56;
-  };
-  
-  const headerHeight = getHeaderHeight();
-  const footerHeight = getFooterHeight();
 
   return (
     <ProtectedRoute requireAdmin={true}>
-      <div className="dashboard-layout">
+      <div className="dl">
         <Sidebar
           isCollapsed={isCollapsed}
-          onToggleCollapse={() => setIsCollapsed((prev) => !prev)}
+          onToggleCollapse={() => setIsCollapsed(p => !p)}
           onViewChange={onViewChange}
           currentView={currentView}
           isMobileMenuOpen={isMobileMenuOpen}
           onMobileMenuToggle={handleMobileMenuToggle}
         />
-        <DashboardHeader 
-          isCollapsed={isCollapsed} 
-          isFullscreen={isFullscreen} 
-          onToggleFullscreen={handleToggleFullscreen} 
+        <DashboardHeader
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={handleToggleFullscreen}
           currentView={currentView}
-          sidebarWidth={sidebarWidth}
           isMobile={isMobile}
           onMobileMenuToggle={handleMobileMenuToggle}
         />
-        <DashboardFooter isCollapsed={isCollapsed} sidebarWidth={sidebarWidth} />
-        <div
-          className="dashboard-main"
-          style={{
-            marginLeft: isMobile ? 0 : sidebarWidth,
-            transition: 'margin-left 0.3s cubic-bezier(.4,0,.2,1)',
-            minHeight: '100vh',
-            display: 'flex',
-            flexDirection: 'column',
-            width: isMobile ? '100%' : `calc(100vw - ${sidebarWidth}px)`,
-            maxWidth: isMobile ? '100%' : `calc(100vw - ${sidebarWidth}px)`,
-            overflow: 'hidden',
-            boxSizing: 'border-box',
-          }}
-        >
-          <main
-            className="dashboard-content"
-            style={{
-              marginTop: headerHeight,
-              marginBottom: footerHeight,
-              minHeight: `calc(100vh - ${headerHeight + footerHeight}px)`,
-              transition: 'margin 0.3s cubic-bezier(.4,0,.2,1)',
-              position: 'relative',
-              width: '100%',
-              maxWidth: '100%',
-              padding: isMobile ? (window.innerWidth <= 480 ? '8px' : '12px') : '20px',
-              boxSizing: 'border-box',
-              overflow: 'hidden',
-            }}
-          >
+        <DashboardFooter />
+        <div className="dl-main">
+          <main className="dl-content">
             {renderContent()}
           </main>
         </div>

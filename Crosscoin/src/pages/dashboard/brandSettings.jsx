@@ -1,395 +1,200 @@
 import { useState, useEffect } from 'react';
-import { showSuccess, showError } from '@/utils/toastNotification';
-import { FiSave, FiEdit2, FiTrash2, FiX, FiLock, FiUnlock, FiPlus, FiRefreshCw } from 'react-icons/fi';
-import { brandSettingsService, brandService } from '@/services';
-import { Modal, Button, Input } from '@/components/ui';
-import Loader from '@/components/Loader';
+import { showSuccess, showError } from '../../utils/toastNotification';
+import { brandSettingsService, brandService } from '../../services';
+import { Modal, Button, Input } from '../../components/ui';
+import Loader from '../../components/common/Loader';
+
+const IC = {
+  add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  edit: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+  trash: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>,
+  save: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
+  cancel: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  lock: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+  unlock: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>,
+  settings: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M20 12h2M2 12h2M17.66 17.66l-1.41-1.41M6.34 17.66l1.41-1.41"/></svg>,
+};
+
+const CATEGORIES = { all: 'All', general: 'General', payment: 'Payment', shipping: 'Shipping', email: 'Email', sms: 'SMS', social: 'Social', analytics: 'Analytics', security: 'Security', api: 'API Keys' };
 
 export default function BrandSettingsManager() {
-    const [brands, setBrands] = useState([]);
-    const [selectedBrandId, setSelectedBrandId] = useState(null);
-    const [settings, setSettings] = useState([]);
-    const [category, setCategory] = useState('all');
-    const [editMode, setEditMode] = useState({});
-    const [loading, setLoading] = useState(false);
-    const [saving, setSaving] = useState({});
-    const [newKey, setNewKey] = useState('');
-    const [newValue, setNewValue] = useState('');
-    const [newCategory, setNewCategory] = useState('general');
-    const [newDescription, setNewDescription] = useState('');
-    const [showAddForm, setShowAddForm] = useState(false);
+  const [brands, setBrands] = useState([]);
+  const [selectedBrandId, setSelectedBrandId] = useState(null);
+  const [settings, setSettings] = useState([]);
+  const [category, setCategory] = useState('all');
+  const [editMode, setEditMode] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState({});
+  const [newKey, setNewKey] = useState('');
+  const [newValue, setNewValue] = useState('');
+  const [newCategory, setNewCategory] = useState('general');
+  const [newDescription, setNewDescription] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
 
-    const categories = {
-        all: 'All Settings',
-        general: 'General',
-        payment: 'Payment',
-        shipping: 'Shipping',
-        email: 'Email',
-        sms: 'SMS',
-        social: 'Social Media',
-        analytics: 'Analytics',
-        security: 'Security',
-        api: 'API Keys'
-    };
+  useEffect(() => { fetchBrands(); }, []);
+  useEffect(() => { if (selectedBrandId) fetchSettings(); }, [selectedBrandId]);
 
-    useEffect(() => {
-        fetchBrands();
-    }, []);
+  const fetchBrands = async () => {
+    try {
+      const response = await brandService.getAllBrands(true);
+      if (response.success && response.data.length > 0) {
+        setBrands(response.data);
+        setSelectedBrandId(response.data[0].id);
+      }
+    } catch { showError('loadingFailed'); }
+  };
 
-    useEffect(() => {
-        if (selectedBrandId) {
-            fetchSettings();
-        }
-    }, [selectedBrandId]);
+  const fetchSettings = async () => {
+    if (!selectedBrandId) return;
+    setLoading(true);
+    try {
+      const response = await brandSettingsService.getAllSettings(selectedBrandId);
+      if (response.success) setSettings(response.data || []);
+    } catch { showError('loadingFailed'); }
+    finally { setLoading(false); }
+  };
 
-    const fetchBrands = async () => {
-        try {
-            const response = await brandService.getAllBrands(true);
-            if (response.success && response.data.length > 0) {
-                setBrands(response.data);
-                setSelectedBrandId(response.data[0].id); // Select first brand by default
-            }
-        } catch (error) {
-            showError('loadingFailed');
-        }
-    };
+  const handleUpdate = async (settingId, key) => {
+    setSaving(prev => ({ ...prev, [settingId]: true }));
+    try {
+      const setting = settings.find(s => s.id === settingId);
+      await brandSettingsService.updateSetting(selectedBrandId, key, { value: setting.value, is_encrypted: setting.is_encrypted });
+      showSuccess('settingUpdated');
+      setEditMode(prev => ({ ...prev, [settingId]: false }));
+      fetchSettings();
+    } catch (error) { showError('updateFailed', error.message); }
+    finally { setSaving(prev => ({ ...prev, [settingId]: false })); }
+  };
 
-    const fetchSettings = async () => {
-        if (!selectedBrandId) return;
-        
-        setLoading(true);
-        try {
-            const response = await brandSettingsService.getAllSettings(selectedBrandId);
-            
-            if (response.success) {
-                setSettings(response.data || []);
-            }
-        } catch (error) {
-            showError('loadingFailed');
-        } finally {
-            setLoading(false);
-        }
-    };
+  const handleDelete = async (key) => {
+    if (!window.confirm(`Delete "${key}"?`)) return;
+    try { await brandSettingsService.deleteSetting(selectedBrandId, key); showSuccess('settingDeleted'); fetchSettings(); }
+    catch { showError('deleteFailed'); }
+  };
 
-    const handleUpdate = async (settingId, key) => {
-        setSaving(prev => ({ ...prev, [settingId]: true }));
-        try {
-            const setting = settings.find(s => s.id === settingId);
-            
-            await brandSettingsService.updateSetting(selectedBrandId, key, {
-                value: setting.value,
-                is_encrypted: setting.is_encrypted
-            });
-            
-            showSuccess('settingUpdated');
-            setEditMode(prev => ({ ...prev, [settingId]: false }));
-            fetchSettings();
-        } catch (error) {
-            showError('updateFailed', error.message);
-        } finally {
-            setSaving(prev => ({ ...prev, [settingId]: false }));
-        }
-    };
+  const handleAdd = async () => {
+    if (!newKey.trim() || !newValue.trim()) { showError('fieldRequired'); return; }
+    try {
+      await brandSettingsService.createSetting({ brand_id: selectedBrandId, key: newKey.trim(), value: newValue.trim(), category: newCategory, description: newDescription.trim() || null, is_encrypted: false });
+      showSuccess('settingAdded');
+      setNewKey(''); setNewValue(''); setNewCategory('general'); setNewDescription(''); setShowAddForm(false);
+      fetchSettings();
+    } catch (error) { showError('saveFailed', error.message); }
+  };
 
-    const handleDelete = async (key) => {
-        if (!window.confirm(`Are you sure you want to delete "${key}"?`)) {
-            return;
-        }
+  const handleValueChange = (settingId, value) => setSettings(prev => prev.map(s => s.id === settingId ? { ...s, value } : s));
+  const toggleEncryption = (settingId) => setSettings(prev => prev.map(s => s.id === settingId ? { ...s, is_encrypted: !s.is_encrypted } : s));
+  const toggleEditMode = (settingId) => setEditMode(prev => ({ ...prev, [settingId]: !prev[settingId] }));
 
-        try {
-            await brandSettingsService.deleteSetting(selectedBrandId, key);
-            showSuccess('settingDeleted');
-            fetchSettings();
-        } catch (error) {
-            showError('deleteFailed');
-        }
-    };
+  const filteredSettings = settings.filter(s => category === 'all' || s.category === category);
 
-    const handleAdd = async () => {
-        if (!newKey.trim() || !newValue.trim()) {
-            showError('fieldRequired');
-            return;
-        }
-
-        try {
-            await brandSettingsService.createSetting({
-                brand_id: selectedBrandId,
-                key: newKey.trim(),
-                value: newValue.trim(),
-                category: newCategory,
-                description: newDescription.trim() || null,
-                is_encrypted: false
-            });
-            
-            showSuccess('settingAdded');
-            setNewKey('');
-            setNewValue('');
-            setNewCategory('general');
-            setNewDescription('');
-            setShowAddForm(false);
-            fetchSettings();
-        } catch (error) {
-            showError('saveFailed', error.message);
-        }
-    };
-
-    const handleValueChange = (settingId, value) => {
-        setSettings(prev => prev.map(setting =>
-            setting.id === settingId ? { ...setting, value } : setting
-        ));
-    };
-
-    const toggleEncryption = (settingId) => {
-        setSettings(prev => prev.map(setting =>
-            setting.id === settingId ? { ...setting, is_encrypted: !setting.is_encrypted } : setting
-        ));
-    };
-
-    const toggleEditMode = (settingId) => {
-        setEditMode(prev => ({ ...prev, [settingId]: !prev[settingId] }));
-    };
-
-    const filteredSettings = settings.filter(setting => {
-        if (category === 'all') return true;
-        return setting.category === category;
-    });
-
-    const renderSettingValue = (setting) => {
-        if (editMode[setting.id]) {
-            return (
-                <div className="edit-container">
-                    <textarea
-                        className="setting-input"
-                        value={setting.value || ''}
-                        onChange={(e) => handleValueChange(setting.id, e.target.value)}
-                        rows={3}
-                        placeholder="Enter value..."
-                    />
-                    <div className="edit-actions">
-                        <button
-                            className="btn-icon btn-save"
-                            onClick={() => handleUpdate(setting.id, setting.key)}
-                            disabled={saving[setting.id]}
-                            title="Save"
-                        >
-                            {saving[setting.id] ? <FiRefreshCw className="spin" /> : <FiSave />}
-                        </button>
-                        <button
-                            className="btn-icon btn-cancel"
-                            onClick={() => toggleEditMode(setting.id)}
-                            title="Cancel"
-                        >
-                            <FiX />
-                        </button>
-                    </div>
-                </div>
-            );
-        }
-
-        return (
-            <div className="value-display">
-                <span className={setting.is_encrypted ? 'encrypted-value' : ''}>
-                    {setting.is_encrypted ? '••••••••••••' : setting.value}
-                </span>
-            </div>
-        );
-    };
-
-    if (loading) {
-        return (
-            <div className="dashboard-page">
-                <div style={{ position: 'relative', minHeight: '400px' }}>
-                    <Loader />
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="dashboard-page">
-            <div className="seo-header-container">
-                <h1 className="seo-title">Brand Settings</h1>
-                <div className="header-actions">
-                    <select
-                        className="brand-selector"
-                        value={selectedBrandId || ''}
-                        onChange={(e) => setSelectedBrandId(Number(e.target.value))}
-                    >
-                        {brands.map(brand => (
-                            <option key={brand.id} value={brand.id}>
-                                {brand.display_name || brand.name}
-                            </option>
-                        ))}
-                    </select>
-                    <Button
-                        onClick={() => setShowAddForm(true)}
-                        variant="primary"
-                        disabled={!selectedBrandId}
-                    >
-                        Add New Setting
-                    </Button>
-                </div>
-            </div>
-
-            <Modal
-                isOpen={showAddForm}
-                onClose={() => {
-                    setShowAddForm(false);
-                    setNewKey('');
-                    setNewValue('');
-                    setNewCategory('general');
-                    setNewDescription('');
-                }}
-                title="Add New Setting"
-            >
-                <div className="form-grid">
-                    <div className="form-group">
-                        <label>Setting Key</label>
-                        <Input
-                            type="text"
-                            value={newKey}
-                            onChange={(e) => setNewKey(e.target.value)}
-                            placeholder="e.g., RAZORPAY_KEY_ID"
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Category</label>
-                        <select
-                            value={newCategory}
-                            onChange={(e) => setNewCategory(e.target.value)}
-                            className="form-select"
-                        >
-                            {Object.entries(categories)
-                                .filter(([key]) => key !== 'all')
-                                .map(([key, label]) => (
-                                    <option key={key} value={key}>{label}</option>
-                                ))}
-                        </select>
-                    </div>
-                    <div className="form-group full-width">
-                        <label>Description</label>
-                        <Input
-                            type="text"
-                            value={newDescription}
-                            onChange={(e) => setNewDescription(e.target.value)}
-                            placeholder="Description of this setting"
-                        />
-                    </div>
-                    <div className="form-group full-width">
-                        <label>Setting Value</label>
-                        <textarea
-                            value={newValue}
-                            onChange={(e) => setNewValue(e.target.value)}
-                            placeholder="Enter value..."
-                            rows={3}
-                            className="form-textarea"
-                        />
-                    </div>
-                </div>
-                <div className="form-actions" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                    <Button
-                        onClick={() => {
-                            setShowAddForm(false);
-                            setNewKey('');
-                            setNewValue('');
-                            setNewCategory('general');
-                            setNewDescription('');
-                        }}
-                        variant="secondary"
-                    >
-                        Cancel
-                    </Button>
-                    <Button onClick={handleAdd} variant="primary">
-                        Add Setting
-                    </Button>
-                </div>
-            </Modal>
-
-            <div className="category-filter">
-                        {Object.entries(categories).map(([key, label]) => (
-                            <button
-                                key={key}
-                                className={`category-btn ${category === key ? 'active' : ''}`}
-                                onClick={() => setCategory(key)}
-                            >
-                                {label}
-                                {key !== 'all' && (
-                                    <span className="count">
-                                        {settings.filter(s => s.category === key).length}
-                                    </span>
-                                )}
-                            </button>
-                        ))}
-            </div>
-
-            <div className="settings-grid">
-                {filteredSettings.length === 0 ? (
-                    <div className="empty-state">
-                        <p>No settings found in this category</p>
-                        <button
-                            className="btn-primary"
-                            onClick={() => setShowAddForm(true)}
-                        >
-                            <FiPlus /> Add First Setting
-                        </button>
-                    </div>
-                ) : (
-                    filteredSettings.map(setting => (
-                        <div key={setting.id} className="setting-card">
-                            <div className="setting-header">
-                                <div className="setting-info">
-                                    <h4>{setting.key}</h4>
-                                    <span className={`category-badge ${setting.category}`}>
-                                        {categories[setting.category] || setting.category}
-                                    </span>
-                                </div>
-                                <div className="setting-actions">
-                                    {!editMode[setting.id] && (
-                                        <>
-                                            <button
-                                                className="btn-icon"
-                                                onClick={() => toggleEncryption(setting.id)}
-                                                title={setting.is_encrypted ? 'Encrypted' : 'Not Encrypted'}
-                                            >
-                                                {setting.is_encrypted ? <FiLock /> : <FiUnlock />}
-                                            </button>
-                                            <button
-                                                className="btn-icon"
-                                                onClick={() => toggleEditMode(setting.id)}
-                                                title="Edit"
-                                            >
-                                                <FiEdit2 />
-                                            </button>
-                                            <button
-                                                className="btn-icon btn-danger"
-                                                onClick={() => handleDelete(setting.key)}
-                                                title="Delete"
-                                            >
-                                                <FiTrash2 />
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="setting-body">
-                                {renderSettingValue(setting)}
-                            </div>
-                            {setting.description && (
-                                <div className="setting-description">
-                                    {setting.description}
-                                </div>
-                            )}
-                            <div className="setting-footer">
-                                <small>
-                                    Updated: {new Date(setting.updated_at).toLocaleString()}
-                                </small>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
+  return (
+    <div className="dashboard-page">
+      {/* Page Header */}
+      <div className="sl-page-header">
+        <div className="sl-header-left">
+          <div className="sl-header-icon">{IC.settings}</div>
+          <div>
+            <h1 className="sl-page-title">Brand Settings</h1>
+            <p className="sl-page-sub">{filteredSettings.length} setting{filteredSettings.length !== 1 ? 's' : ''}</p>
+          </div>
         </div>
-    );
+        <div className="sl-header-right">
+          <select className="bset-brand-select" value={selectedBrandId || ''} onChange={e => setSelectedBrandId(Number(e.target.value))}>
+            {brands.map(b => <option key={b.id} value={b.id}>{b.display_name || b.name}</option>)}
+          </select>
+          <button className="sl-add-btn" onClick={() => setShowAddForm(true)} disabled={!selectedBrandId}>
+            <span className="sl-add-btn-icon">{IC.add}</span>Add Setting
+          </button>
+        </div>
+      </div>
+
+      {/* Add Setting Modal */}
+      <Modal isOpen={showAddForm} onClose={() => { setShowAddForm(false); setNewKey(''); setNewValue(''); setNewCategory('general'); setNewDescription(''); }} title="Add New Setting">
+        <div className="seo-form">
+          <div className="modal-body">
+            <Input label="Setting Key" type="text" value={newKey} onChange={e => setNewKey(e.target.value)} placeholder="e.g., RAZORPAY_KEY_ID" />
+            <div className="sl-form-field">
+              <label className="sl-form-label">Category</label>
+              <select value={newCategory} onChange={e => setNewCategory(e.target.value)} className="sl-multi-select" style={{ height: 'auto', minHeight: '40px' }}>
+                {Object.entries(CATEGORIES).filter(([k]) => k !== 'all').map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select>
+            </div>
+            <Input label="Description" type="text" value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Description of this setting" />
+            <div className="sl-form-field">
+              <label className="sl-form-label">Value</label>
+              <textarea value={newValue} onChange={e => setNewValue(e.target.value)} placeholder="Enter value..." rows={3} className="bset-textarea" />
+            </div>
+          </div>
+          <div className="modal-footer">
+            <Button variant="secondary" onClick={() => { setShowAddForm(false); setNewKey(''); setNewValue(''); }}>Cancel</Button>
+            <Button variant="primary" onClick={handleAdd}>Add Setting</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Category Filter Tabs */}
+      <div className="bset-category-tabs">
+        {Object.entries(CATEGORIES).map(([key, label]) => (
+          <button key={key} className={`bset-cat-tab ${category === key ? 'active' : ''}`} onClick={() => setCategory(key)}>
+            {label}
+            {key !== 'all' && <span className="bset-cat-count">{settings.filter(s => s.category === key).length}</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* Settings Grid */}
+      {loading ? (
+        <div className="sl-loader-wrap"><Loader /></div>
+      ) : filteredSettings.length === 0 ? (
+        <div className="sl-empty">
+          <div className="sl-empty-icon">{IC.settings}</div>
+          <p>No settings in this category</p>
+        </div>
+      ) : (
+        <div className="bset-settings-grid">
+          {filteredSettings.map(setting => (
+            <div key={setting.id} className="bset-setting-card">
+              <div className="bset-setting-header">
+                <div className="bset-setting-info">
+                  <h4 className="bset-setting-key">{setting.key}</h4>
+                  <span className="sl-cat-badge">{CATEGORIES[setting.category] || setting.category}</span>
+                </div>
+                <div className="sl-actions">
+                  {!editMode[setting.id] && (
+                    <>
+                      <button className="sl-btn-edit" title={setting.is_encrypted ? 'Encrypted' : 'Not Encrypted'} onClick={() => toggleEncryption(setting.id)}>
+                        {setting.is_encrypted ? IC.lock : IC.unlock}
+                      </button>
+                      <button className="sl-btn-edit" title="Edit" onClick={() => toggleEditMode(setting.id)}>{IC.edit}</button>
+                      <button className="sl-btn-delete" title="Delete" onClick={() => handleDelete(setting.key)}>{IC.trash}</button>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="bset-setting-body">
+                {editMode[setting.id] ? (
+                  <div className="bset-edit-wrap">
+                    <textarea className="bset-textarea" value={setting.value || ''} onChange={e => handleValueChange(setting.id, e.target.value)} rows={3} placeholder="Enter value..." />
+                    <div className="sl-actions" style={{ marginTop: '8px' }}>
+                      <button className="sl-btn-edit" title="Save" onClick={() => handleUpdate(setting.id, setting.key)} disabled={saving[setting.id]}>{IC.save}</button>
+                      <button className="sl-btn-delete" title="Cancel" onClick={() => toggleEditMode(setting.id)}>{IC.cancel}</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bset-value-display">
+                    <span className={setting.is_encrypted ? 'bset-encrypted' : ''}>{setting.is_encrypted ? '••••••••••••' : setting.value}</span>
+                  </div>
+                )}
+              </div>
+              {setting.description && <div className="bset-setting-desc">{setting.description}</div>}
+              <div className="bset-setting-footer">
+                <small>Updated {new Date(setting.updated_at).toLocaleString()}</small>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
-
-

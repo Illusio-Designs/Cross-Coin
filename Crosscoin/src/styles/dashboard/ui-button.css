@@ -1,0 +1,85 @@
+/* UI Button Component */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.18s, box-shadow 0.18s, transform 0.12s;
+  white-space: nowrap;
+  user-select: none;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.btn-primary { background: #CE1E36; color: #fff; }
+.btn-primary:hover:not(:disabled) { background: #a8172b; }
+
+.btn-secondary { background: #180D3E; color: #fff; }
+.btn-secondary:hover:not(:disabled) { background: #0f0828; }
+
+.btn-outline { background: transparent; color: #CE1E36; border: 1.5px solid #CE1E36; }
+.btn-outline:hover:not(:disabled) { background: #CE1E36; color: #fff; }
+
+.btn-ghost { background: transparent; color: #1a1a1a; border: 1.5px solid #ebebf0; }
+.btn-ghost:hover:not(:disabled) { background: #f5f5f7; }
+
+.btn-danger { background: #CE1E36; color: #fff; }
+.btn-danger:hover:not(:disabled) { background: #a8172b; }
+
+.btn-success { background: #16a34a; color: #fff; }
+.btn-success:hover:not(:disabled) { background: #15803d; }
+
+.btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 6px; }
+.btn-md { padding: 9px 18px; font-size: 13px; border-radius: 8px; }
+.btn-lg { padding: 11px 24px; font-size: 14px; border-radius: 8px; }
+.btn-xl { padding: 14px 28px; font-size: 15px; border-radius: 8px; }
+
+.btn-disabled,
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.btn-loading { position: relative; color: transparent; }
+.btn-full-width { width: 100%; }
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.btn-icon svg { width: 1em; height: 1em; }
+
+.btn-loader {
+  display: none;
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: btn-spin 0.6s linear infinite;
+}
+.btn-loading .btn-loader { display: inline-block; }
+
+@keyframes btn-spin { to { transform: rotate(360deg); } }
+
+.btn:focus-visible { outline: 2px solid #CE1E36; outline-offset: 2px; }
+
+@media (max-width: 480px) {
+  .btn-md, .btn-lg { min-height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn { transition: none; }
+  .btn-loader { animation: none; }
+}

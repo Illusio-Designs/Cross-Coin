@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
-import Loader from "../../../components/Loader";
+import Loader from "../../../components/common/Loader";
 import { seoService, userService } from "../../../services";
 import { debounce } from 'lodash';
 import { useRouter } from 'next/router';
@@ -123,10 +123,7 @@ export default function SEO() {
 
   // Columns definition
   const columns = [
-    {
-      header: "S/N",
-      accessor: "serial_number"
-    },
+    { header: "Sr. No", accessor: "serial_number" },
     { header: "Page Name", accessor: "page_name" },
     { header: "Meta Title", accessor: "meta_title" },
     { header: "Meta Description", accessor: "meta_description" },
@@ -135,13 +132,9 @@ export default function SEO() {
       header: "Actions",
       accessor: "actions",
       cell: ({ page_name }) => (
-        <div className="action-buttons">
-          <button
-            className="action-btn edit"
-            title="Edit"
-            onClick={() => handleEdit(page_name)}
-          >
-            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <div className="sl-actions">
+          <button className="sl-btn-edit" title="Edit" onClick={() => handleEdit(page_name)}>
+            <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z"/>
             </svg>
           </button>
@@ -274,58 +267,51 @@ export default function SEO() {
   return (
     <>
       <div className="dashboard-page">
-        <div className="seo-header-container">
-          <h1 className="seo-title">SEO Management</h1>
-          <div className="adding-button">
-            <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
-              <div className="modern-searchbar-group">
-                <span className="modern-searchbar-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </span>
-                <input
-                  type="text"
-                  className="modern-searchbar-input"
-                  placeholder="Search"
-                  onChange={handleSearchChange}
-                  defaultValue={filterValue}
-                />
-              </div>
-            </form>
+        <div className="sl-page-header">
+          <div className="sl-header-left">
+            <div className="sl-header-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <div>
+              <h1 className="sl-page-title">SEO Management</h1>
+              <p className="sl-page-sub">Manage meta titles, descriptions and structured data</p>
+            </div>
+          </div>
+          <div className="sl-header-right">
+            <div className="sl-search-wrap">
+              <span className="sl-search-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </span>
+              <input type="text" className="sl-search-input" placeholder="Search SEO entries..."
+                onChange={handleSearchChange} defaultValue={filterValue} />
+            </div>
+            <button className="sl-add-btn" onClick={handleAddNew}>
+              <span className="sl-add-btn-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </span>
+              Add SEO Entry
+            </button>
           </div>
         </div>
         
         {/* Table Section */}
-        <div className="seo-table-container seo-table">
+        <div className="sl-table-wrap">
           {loading ? (
-            <div style={{ position: 'relative', minHeight: '400px', zIndex: '1' }}>
-              <Loader />
-            </div>
+            <div className="sl-loader-wrap"><Loader /></div>
           ) : error ? (
-            <div className="seo-error">{error}</div>
+            <div className="sl-error">{error}</div>
           ) : (
             <>
               {filteredData.length === 0 ? (
-                <div className="seo-empty-state">
-                  {filterValue ? "No results found for your search" : "No SEO entries found"}
+                <div className="sl-empty">
+                  <p>{filterValue ? "No results found for your search" : "No SEO entries found"}</p>
                 </div>
               ) : (
                 <>
-                  <Table
-                    columns={columns}
-                    data={currentItemsWithSN}
-                    className="w-full"
-                    striped={true}
-                    hoverable={true}
-                  />
+                  <Table columns={columns} data={currentItemsWithSN} className="w-full" striped={true} hoverable={true} />
                   {filteredData.length > itemsPerPage && (
-                    <div className="seo-pagination-container">
-                      <Pagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={setCurrentPage}
-                      />
+                    <div className="sl-pagination">
+                      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                     </div>
                   )}
                 </>

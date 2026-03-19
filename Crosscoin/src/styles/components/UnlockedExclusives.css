@@ -76,7 +76,7 @@
 
 .thumb {
   aspect-ratio: 1;
-  border-radius: 12px;
+  border-radius: 6px;
   overflow: hidden;
   background: #f5f5f5;
   cursor: pointer;
@@ -112,7 +112,7 @@
 
 .hero-img-wrap {
   width: 100%;
-  border-radius: 16px;
+  border-radius: 8px;
   overflow: hidden;
   background: #f5f5f5;
   position: relative;
@@ -158,7 +158,7 @@
   overflow: hidden;
   width: 100%;
   max-width: 100%;
-  border-radius: 12px;
+  border-radius: 6px;
 }
 
 .strip {
@@ -172,7 +172,7 @@
   flex-shrink: 0;
   width: 100px;
   height: 120px;
-  border-radius: 10px;
+  border-radius: 6px;
   overflow: hidden;
   background: #f5f5f5;
   border: 2px solid #e0e0e0;
@@ -207,7 +207,7 @@
 .strip-btn {
   width: 40px;
   height: 40px;
-  border-radius: 8px;
+  border-radius: 4px;
   background: #f5f5f5;
   border: 1.5px solid #e0e0e0;
   display: flex;
@@ -252,7 +252,7 @@
 /* Info Card */
 .info-card {
   background: #fff;
-  border-radius: 16px;
+  border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   border: 1px solid #f0f0f0;
@@ -274,7 +274,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 4px;
   flex-shrink: 0;
   margin-top: 2px;
   text-transform: uppercase;
@@ -333,7 +333,7 @@
   flex: 1;
   padding: 12px 16px;
   border: 1.5px solid #CE1E36;
-  border-radius: 8px;
+  border-radius: 4px;
   background: transparent;
   font-family: 'DM Sans', sans-serif;
   font-size: 12px;
@@ -353,7 +353,7 @@
 .btn-cart {
   width: 44px;
   height: 44px;
-  border-radius: 8px;
+  border-radius: 4px;
   background: #f5f5f5;
   border: 1.5px solid #e0e0e0;
   display: flex;
@@ -401,7 +401,7 @@
 .feature {
   flex: 1;
   background: #f9f9f9;
-  border-radius: 10px;
+  border-radius: 6px;
   padding: 12px;
   display: flex;
   align-items: center;
@@ -413,7 +413,7 @@
   width: 36px;
   height: 36px;
   min-width: 36px;
-  border-radius: 8px;
+  border-radius: 4px;
   background: #f0f0f0;
   display: flex;
   align-items: center;
@@ -452,7 +452,7 @@
 /* Detail Panel */
 .detail-panel {
   background: #fff;
-  border-radius: 16px;
+  border-radius: 8px;
   padding: 24px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   border: 1px solid #f0f0f0;
@@ -482,7 +482,7 @@
   display: inline-flex;
   align-items: center;
   background: #180d3e;
-  border-radius: 20px;
+  border-radius: 4px;
   padding: 4px 4px 4px 10px;
   gap: 6px;
 }
@@ -502,7 +502,7 @@
 
 .detail-rating-pill .rating-pill__count {
   background: #fff;
-  border-radius: 20px;
+  border-radius: 4px;
   padding: 2px 7px;
   font-size: 11px;
   font-weight: 700;
@@ -601,11 +601,11 @@
 }
 
 .qty-btn:first-child {
-  border-radius: 8px 0 0 8px;
+  border-radius: 4px 0 0 4px;
 }
 
 .qty-btn:last-child {
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 4px 4px 0;
 }
 
 .qty-btn:hover {
@@ -641,7 +641,7 @@
   background: #180D3E;
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   font-family: 'DM Sans', sans-serif;
   font-size: 12px;
   font-weight: 700;
@@ -660,7 +660,7 @@
   background: #CE1E36;
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   font-family: 'DM Sans', sans-serif;
   font-size: 12px;
   font-weight: 700;
@@ -826,7 +826,7 @@
   display: flex;
   flex-direction: column;
   background: #fff;
-  border-radius: 16px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -894,7 +894,7 @@
 
 .gallery-thumb {
   width: 80px; height: 80px;
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
   border: 2px solid #e0e0e0;
   cursor: pointer;

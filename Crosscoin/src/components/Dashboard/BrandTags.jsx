@@ -1,17 +1,10 @@
-
-
 /**
  * BrandTags Component
  * Displays brand tags for products/categories in dashboard tables
- * Shows multiple brands as colored badges
  */
 const BrandTags = ({ brands = [] }) => {
     if (!brands || brands.length === 0) {
-        return (
-            <span className="brand-tags-empty">
-                No brands
-            </span>
-        );
+        return <span className="sl-na">—</span>;
     }
 
     return (
@@ -20,12 +13,12 @@ const BrandTags = ({ brands = [] }) => {
                 <span
                     key={brand.id || index}
                     className="brand-tag"
-                    style={{
-                        backgroundColor: brand.primary_color || '#4CAF50',
-                        borderColor: brand.primary_color || '#4CAF50'
-                    }}
-                    title={`${brand.display_name || brand.name} (${brand.slug})`}
+                    title={brand.display_name || brand.name}
                 >
+                    <span
+                        className="brand-tag-dot"
+                        style={{ backgroundColor: brand.primary_color || '#180D3E' }}
+                    />
                     {brand.display_name || brand.name}
                 </span>
             ))}

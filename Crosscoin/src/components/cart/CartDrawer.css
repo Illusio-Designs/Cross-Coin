@@ -121,7 +121,7 @@
 
 .cart-drawer-offer-wrapper .quantity-offer-bar {
   margin: 10px 0;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 14px 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
@@ -194,7 +194,7 @@
 .cart-drawer-offer-wrapper .coupon-success {
   padding: 12px 14px;
   font-size: 13px;
-  border-radius: 10px;
+  border-radius: 8px;
   line-height: 1.4;
 }
 
@@ -414,7 +414,7 @@
     width: 100%;
     height: 65vh;
     max-height: 550px;
-    border-radius: 16px 16px 0 0;
+    border-radius: 8px 8px 0 0;
     transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
@@ -424,7 +424,7 @@
   }
 
   .cart-drawer-header {
-    border-radius: 16px 16px 0 0;
+    border-radius: 8px 8px 0 0;
     padding: 14px 16px;
   }
 
@@ -848,4 +848,5 @@
   background: #180D3E;
   color: white;
 }
+
 

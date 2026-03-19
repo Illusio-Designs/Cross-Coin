@@ -1,92 +1,219 @@
-const fs = require('fs');
+const fs = require('fs/promises');
+const fsSync = require('fs');
 const path = require('path');
-const imagekitService = require('../services/imagekitService');
-const { ProductImage } = require('../model/associations.js');
+const { Category } = require('../model/categoryModel.js');
+const { Slider } = require('../model/sliderModel.js');
+const imagekitService = require('../services/imagekitService.js');
+const { logger } = require('../config/logging.js');
 
-async function migrateImagesToImageKit() {
-  try {
-    console.log('🔄 Starting automatic image migration to ImageKit...');
+/**
+ * Migration script to upload existing category and slider images to ImageKit
+ * Run this once when deploying the ImageKit integration
+ */
 
-    // Get all product images from database that haven't been migrated yet
-    const images = await ProductImage.findAll({
-      where: {
-        image_url: {
-          [require('sequelize').Op.notLike]: 'https://%'
-        }
-      }
-    });
+const UPLOAD_DIRS = {
+    categories: path.join(__dirname, '../uploads/categories'),
+    sliders: path.join(__dirname, '../uploads/slider')
+};
 
-    if (images.length === 0) {
-      console.log('✅ All images already migrated to ImageKit');
-      return;
-    }
+const IMAGEKIT_FOLDERS = {
+    categories: '/categories',
+    sliders: '/sliders'
+};
 
-    console.log(`📦 Found ${images.length} images to migrate`);
-
-    let successCount = 0;
-    let failureCount = 0;
-    let skippedCount = 0;
-
-    for (const image of images) {
-      try {
-        // Skip if already migrated
-        if (image.image_url.startsWith('https://')) {
-          skippedCount++;
-          continue;
-        }
-
-        // Read image from local storage
-        // Handle both single and double 'uploads' in path
-        let imagePath = image.image_url;
-        if (imagePath.startsWith('uploads/uploads/')) {
-          imagePath = imagePath.replace('uploads/uploads/', 'uploads/');
-        }
+/**
+ * Migrate category images to ImageKit
+ */
+async function migrateCategoryImages() {
+    try {
+        logger.info('Starting category image migration...');
         
-        const localPath = path.join(__dirname, '../', imagePath);
-        
-        if (!fs.existsSync(localPath)) {
-          console.warn(`⚠️  File not found: ${localPath}`);
-          failureCount++;
-          continue;
-        }
-
-        const fileBuffer = fs.readFileSync(localPath);
-        const fileName = path.basename(image.image_url);
-
-        // Upload to ImageKit
-        const uploadResult = await imagekitService.uploadImage(
-          fileBuffer,
-          fileName,
-          '/products'
-        );
-
-        // Update database with ImageKit path
-        // Also fix the double 'uploads' issue in the database
-        let dbImageUrl = image.image_url;
-        if (dbImageUrl.startsWith('uploads/uploads/')) {
-          dbImageUrl = dbImageUrl.replace('uploads/uploads/', 'uploads/');
-        }
-        
-        await image.update({
-          image_url: uploadResult.filePath,
+        const categories = await Category.findAll({
+            where: {
+                image: { [require('sequelize').Op.not]: null }
+            }
         });
 
-        successCount++;
-        console.log(`✅ Migrated: ${fileName}`);
-      } catch (error) {
-        failureCount++;
-        console.error(`❌ Failed to migrate ${image.image_url}:`, error.message);
-      }
-    }
+        logger.info(`Found ${categories.length} categories with images`);
 
-    console.log(`\n📊 Migration Summary:`);
-    console.log(`✅ Success: ${successCount}`);
-    console.log(`⚠️  Failed: ${failureCount}`);
-    console.log(`⏭️  Skipped: ${skippedCount}`);
-    console.log(`\n🎉 Migration complete!`);
-  } catch (error) {
-    console.error('❌ Migration error:', error);
-  }
+        let successCount = 0;
+        let failureCount = 0;
+        let skippedCount = 0;
+
+        for (const category of categories) {
+            try {
+                // Check if image is already an ImageKit path
+                if (category.image.startsWith('/')) {
+                    logger.info(`Category ${category.id} (${category.name}) already has ImageKit path: ${category.image}`);
+                    skippedCount++;
+                    continue;
+                }
+
+                const imagePath = path.join(UPLOAD_DIRS.categories, category.image);
+                
+                // Check if file exists
+                if (!fsSync.existsSync(imagePath)) {
+                    logger.warn(`Image file not found for category ${category.id} (${category.name})`);
+                    logger.warn(`Expected path: ${imagePath}`);
+                    logger.warn(`Stored filename: ${category.image}`);
+                    failureCount++;
+                    continue;
+                }
+
+                logger.info(`Reading file for category ${category.id} (${category.name}): ${imagePath}`);
+                
+                // Read file
+                const fileBuffer = await fs.readFile(imagePath);
+                logger.info(`File read successfully, size: ${fileBuffer.length} bytes`);
+                
+                // Upload to ImageKit
+                logger.info(`Uploading to ImageKit for category ${category.id}...`);
+                const uploadResult = await imagekitService.uploadImage(
+                    fileBuffer,
+                    `category-${category.id}-${Date.now()}.webp`,
+                    IMAGEKIT_FOLDERS.categories
+                );
+
+                if (!uploadResult.success) {
+                    throw new Error('Upload failed');
+                }
+
+                logger.info(`Upload successful. ImageKit path: ${uploadResult.filePath}`);
+
+                // Update database with ImageKit path
+                await category.update({
+                    image: uploadResult.filePath
+                });
+
+                logger.info(`✓ Migrated category ${category.id}: ${category.name} to ${uploadResult.filePath}`);
+                successCount++;
+
+            } catch (error) {
+                logger.error(`✗ Failed to migrate category ${category.id} (${category.name}):`, error.message);
+                logger.error(`Stack: ${error.stack}`);
+                failureCount++;
+            }
+        }
+
+        logger.info(`Category migration completed: ${successCount} success, ${failureCount} failed, ${skippedCount} skipped`);
+        return { successCount, failureCount, skippedCount };
+
+    } catch (error) {
+        logger.error('Category migration error:', error);
+        throw error;
+    }
 }
 
-module.exports = migrateImagesToImageKit;
+/**
+ * Migrate slider images to ImageKit
+ */
+async function migrateSliderImages() {
+    try {
+        logger.info('Starting slider image migration...');
+        
+        const sliders = await Slider.findAll({
+            where: {
+                image: { [require('sequelize').Op.not]: null }
+            }
+        });
+
+        logger.info(`Found ${sliders.length} sliders with images`);
+
+        let successCount = 0;
+        let failureCount = 0;
+        let skippedCount = 0;
+
+        for (const slider of sliders) {
+            try {
+                // Check if image is already an ImageKit path
+                if (slider.image.startsWith('/')) {
+                    logger.info(`Slider ${slider.id} (${slider.title}) already has ImageKit path: ${slider.image}`);
+                    skippedCount++;
+                    continue;
+                }
+
+                const imagePath = path.join(UPLOAD_DIRS.sliders, slider.image);
+                
+                // Check if file exists
+                if (!fsSync.existsSync(imagePath)) {
+                    logger.warn(`Image file not found for slider ${slider.id} (${slider.title})`);
+                    logger.warn(`Expected path: ${imagePath}`);
+                    logger.warn(`Stored filename: ${slider.image}`);
+                    failureCount++;
+                    continue;
+                }
+
+                logger.info(`Reading file for slider ${slider.id} (${slider.title}): ${imagePath}`);
+                
+                // Read file
+                const fileBuffer = await fs.readFile(imagePath);
+                logger.info(`File read successfully, size: ${fileBuffer.length} bytes`);
+                
+                // Upload to ImageKit
+                logger.info(`Uploading to ImageKit for slider ${slider.id}...`);
+                const uploadResult = await imagekitService.uploadImage(
+                    fileBuffer,
+                    `slider-${slider.id}-${Date.now()}.webp`,
+                    IMAGEKIT_FOLDERS.sliders
+                );
+
+                if (!uploadResult.success) {
+                    throw new Error('Upload failed');
+                }
+
+                logger.info(`Upload successful. ImageKit path: ${uploadResult.filePath}`);
+
+                // Update database with ImageKit path
+                await slider.update({
+                    image: uploadResult.filePath
+                });
+
+                logger.info(`✓ Migrated slider ${slider.id}: ${slider.title} to ${uploadResult.filePath}`);
+                successCount++;
+
+            } catch (error) {
+                logger.error(`✗ Failed to migrate slider ${slider.id} (${slider.title}):`, error.message);
+                logger.error(`Stack: ${error.stack}`);
+                failureCount++;
+            }
+        }
+
+        logger.info(`Slider migration completed: ${successCount} success, ${failureCount} failed, ${skippedCount} skipped`);
+        return { successCount, failureCount, skippedCount };
+
+    } catch (error) {
+        logger.error('Slider migration error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Run all migrations
+ */
+async function runMigrations() {
+    try {
+        logger.info('='.repeat(50));
+        logger.info('Starting ImageKit Migration');
+        logger.info('='.repeat(50));
+
+        const categoryResults = await migrateCategoryImages();
+        const sliderResults = await migrateSliderImages();
+
+        logger.info('='.repeat(50));
+        logger.info('Migration Summary:');
+        logger.info(`Categories: ${categoryResults.successCount} success, ${categoryResults.failureCount} failed`);
+        logger.info(`Sliders: ${sliderResults.successCount} success, ${sliderResults.failureCount} failed`);
+        logger.info('='.repeat(50));
+
+        return {
+            categories: categoryResults,
+            sliders: sliderResults
+        };
+
+    } catch (error) {
+        logger.error('Migration failed:', error);
+        throw error;
+    }
+}
+
+module.exports = { runMigrations, migrateCategoryImages, migrateSliderImages };
