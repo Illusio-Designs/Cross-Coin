@@ -106,6 +106,12 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
           </div>
         ) : null}
 
+        {comparePrice > 0 && price < comparePrice && (
+          <div className="product-discount-badge">
+            {Math.round(((comparePrice - price) / comparePrice) * 100)}% OFF
+          </div>
+        )}
+
         <button
           className={`wishlist-btn ${isInWishlist(product?.id) ? "active" : ""}`}
           onClick={handleWishlistClick}

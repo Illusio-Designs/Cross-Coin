@@ -47,6 +47,34 @@ router.use('/order-status-history', identifyBrand, orderStatusHistoryRoutes);
 // Dashboard routes (admin, can filter by brand)
 router.use('/dashboard', optionalBrand, dashboardRoutes);
 
+// Public serviceability check (no auth required)
+router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
+    try {
+        const { pincode } = req.params;
+        if (!/^\d{6}$/.test(pincode)) {
+            return res.status(400).json({ success: false, message: 'Invalid pincode. Must be 6 digits.' });
+        }
+        const fshipService = require('../services/fshipService');
+        const sourcePincode = process.env.DEFAULT_WAREHOUSE_PINCODE || '400001';
+        const result = await fshipService.checkServiceability(sourcePincode, pincode);
+        if (result && Array.isArray(result) && result.length > 0) {
+            const firstCourier = result[0];
+            const codSupported = result.some(c => c.cod === 1 || c.cod === true || c.cod === 'yes');
+            return res.json({
+                success: true,
+                serviceable: true,
+                estimated_delivery_days: firstCourier.estimated_delivery_days || 5,
+                cod_available: codSupported,
+                couriers: result.length,
+            });
+        }
+        return res.json({ success: true, serviceable: false, message: 'Delivery not available to this pincode.' });
+    } catch (error) {
+        console.error('Serviceability check error:', error.message);
+        return res.status(500).json({ success: false, message: 'Unable to check serviceability. Please try again.' });
+    }
+});
+
 // Health Check Route
 router.get('/health', (req, res) => {
     res.status(200).json({

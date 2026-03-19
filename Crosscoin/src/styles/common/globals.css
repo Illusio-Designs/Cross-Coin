@@ -252,7 +252,7 @@ img {
   cursor: pointer;
   z-index: 9998;
   box-shadow: 0 4px 16px rgba(206, 30, 54, 0.35);
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition: background 0.2s ease, transform 0.2s ease, bottom 0.3s ease;
   animation: btt-fade-in 0.25s ease;
 }
 
@@ -271,6 +271,11 @@ img {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Lift above sticky bar (pdt-sticky ~68px tall) on all screen sizes */
+body:has(.pdt-sticky.visible) .back-to-top {
+  bottom: 80px;
+}
+
 @media (max-width: 768px) {
   .back-to-top {
     bottom: 20px;
@@ -279,8 +284,6 @@ img {
     height: 40px;
   }
 
-  /* Lift back-to-top above the pdt-sticky bar when it's visible */
-  .pdt-sticky.visible ~ * .back-to-top,
   body:has(.pdt-sticky.visible) .back-to-top {
     bottom: 82px;
   }
