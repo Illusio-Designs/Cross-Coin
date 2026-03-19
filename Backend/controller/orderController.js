@@ -410,8 +410,8 @@ module.exports.createOrder = async (req, res) => {
           model: OrderItem,
           as: 'OrderItems', // ✅ Use the alias defined in associations
           include: [
-            Product,
-            ProductVariation  // ✅ Include ProductVariation to get SKU
+            { model: Product, as: "Product" },
+            { model: ProductVariation, as: "ProductVariation" }
           ] 
         },
         { model: User, attributes: ["id", "username", "email"] },
