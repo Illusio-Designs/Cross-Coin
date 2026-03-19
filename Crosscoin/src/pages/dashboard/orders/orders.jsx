@@ -613,165 +613,202 @@ const Orders = () => {
             {/* Order Details Modal */}
             <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title={`Order Details: #${selectedOrder?.order_number}`}>
                 {selectedOrder && (
-                    <div className="order-details-modal">
-                        {/* Customer Information */}
-                        <div className="order-section">
-                            <h4>Customer Information</h4>
-                            <div className="order-section-content">
-                                <div className="order-info-grid">
-                                    <div>
-                                        <strong>Name:</strong>{' '}
-                                        {selectedOrder.User?.username || (selectedOrder.GuestUser ? `${selectedOrder.GuestUser.firstName} ${selectedOrder.GuestUser.lastName}` : selectedOrder.ShippingAddress?.full_name || 'N/A')}
-                                        {selectedOrder.GuestUser && <span className="guest-badge">(Guest)</span>}
-                                    </div>
-                                    <div><strong>Email:</strong> {selectedOrder.User?.email || selectedOrder.GuestUser?.email || 'N/A'}</div>
-                                    <div><strong>Phone:</strong> {selectedOrder.ShippingAddress?.phone || selectedOrder.GuestUser?.phone || 'N/A'}</div>
-                                </div>
-                            </div>
-                        </div>
+                    <div className="odm-body">
 
-                        {/* Shipping Address */}
-                        {selectedOrder.ShippingAddress && (
-                            <div className="order-section">
-                                <h4>Shipping Address</h4>
-                                <div className="order-section-content">
-                                    <div className="order-address-block">
-                                        <div className="order-address-name">{selectedOrder.ShippingAddress.full_name}</div>
-                                        <div>{selectedOrder.ShippingAddress.address}</div>
-                                        <div>{selectedOrder.ShippingAddress.city}, {selectedOrder.ShippingAddress.state} - {selectedOrder.ShippingAddress.pincode}</div>
-                                        <div>{selectedOrder.ShippingAddress.country || 'India'}</div>
-                                        <div><strong>Phone:</strong> {selectedOrder.ShippingAddress.phone}</div>
-                                    </div>
+                        {/* ── Row 1: Customer + Shipping ── */}
+                        <div className="odm-row-2">
+                            {/* Customer Information */}
+                            <div className="odm-card">
+                                <div className="odm-card-title">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                    Customer Information
                                 </div>
-                            </div>
-                        )}
-
-                        {/* Order Information */}
-                        <div className="order-section">
-                            <h4>Order Information</h4>
-                            <div className="order-section-content">
-                                <div className="order-info-grid">
-                                    <div><strong>Order Date:</strong> {formatDate(selectedOrder.createdAt)}</div>
-                                    <div>
-                                        <strong>Payment Type:</strong>{' '}
-                                        <span className={`order-payment-type-badge${selectedOrder.payment_type?.toLowerCase() === 'cod' ? ' cod' : ' prepaid'}`}>
-                                            {formatPaymentType(selectedOrder.payment_type)}
+                                <div className="odm-fields">
+                                    <div className="odm-field">
+                                        <span className="odm-label">Name</span>
+                                        <span className="odm-value">
+                                            {selectedOrder.User?.username || (selectedOrder.GuestUser ? `${selectedOrder.GuestUser.firstName} ${selectedOrder.GuestUser.lastName}` : selectedOrder.ShippingAddress?.full_name || 'N/A')}
+                                            {selectedOrder.GuestUser && <span className="odm-guest-tag">Guest</span>}
                                         </span>
                                     </div>
-                                    <div><strong>Payment Status:</strong> <span className={`status-badge status-${getPaymentStatusClass(selectedOrder)}`}>{getPaymentStatusDisplay(selectedOrder)}</span></div>
-                                    <div><strong>Order Status:</strong> <span className={`status-badge status-${getStatusClassName(selectedOrder.status)}`}>{getStatusDisplayText(selectedOrder.status)}</span></div>
-                                    {selectedOrder.notes && <div className="order-info-full"><strong>Order Notes:</strong> {selectedOrder.notes}</div>}
+                                    <div className="odm-field">
+                                        <span className="odm-label">Email</span>
+                                        <span className="odm-value">{selectedOrder.User?.email || selectedOrder.GuestUser?.email || 'N/A'}</span>
+                                    </div>
+                                    <div className="odm-field">
+                                        <span className="odm-label">Phone</span>
+                                        <span className="odm-value">{selectedOrder.ShippingAddress?.phone || selectedOrder.GuestUser?.phone || 'N/A'}</span>
+                                    </div>
                                 </div>
-                                {(selectedOrder.fship_order_id || selectedOrder.fship_waybill || selectedOrder.tracking_number) && (
-                                    <div className="order-fship-info">
-                                        <h5 className="order-fship-title">FShip Tracking Information</h5>
-                                        {selectedOrder.fship_order_id && <div><strong>FShip Order ID:</strong> {selectedOrder.fship_order_id}</div>}
-                                        {selectedOrder.fship_waybill && <div><strong>AWB Number:</strong> {selectedOrder.fship_waybill}</div>}
-                                        {selectedOrder.fship_route_code && <div><strong>Route Code:</strong> {selectedOrder.fship_route_code}</div>}
-                                        {selectedOrder.tracking_number && <div><strong>Tracking Number:</strong> {selectedOrder.tracking_number}</div>}
-                                        {selectedOrder.courier_name && <div><strong>Courier:</strong> {selectedOrder.courier_name}</div>}
+                            </div>
+
+                            {/* Shipping Address */}
+                            {selectedOrder.ShippingAddress && (
+                                <div className="odm-card">
+                                    <div className="odm-card-title">
+                                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                        Shipping Address
+                                    </div>
+                                    <div className="odm-fields">
+                                        <div className="odm-field">
+                                            <span className="odm-label">Name</span>
+                                            <span className="odm-value odm-bold">{selectedOrder.ShippingAddress.full_name}</span>
+                                        </div>
+                                        <div className="odm-field">
+                                            <span className="odm-label">Address</span>
+                                            <span className="odm-value">{selectedOrder.ShippingAddress.address}</span>
+                                        </div>
+                                        <div className="odm-field">
+                                            <span className="odm-label">City / State</span>
+                                            <span className="odm-value">{selectedOrder.ShippingAddress.city}, {selectedOrder.ShippingAddress.state} — {selectedOrder.ShippingAddress.pincode}</span>
+                                        </div>
+                                        <div className="odm-field">
+                                            <span className="odm-label">Country</span>
+                                            <span className="odm-value">{selectedOrder.ShippingAddress.country || 'India'}</span>
+                                        </div>
+                                        <div className="odm-field">
+                                            <span className="odm-label">Phone</span>
+                                            <span className="odm-value">{selectedOrder.ShippingAddress.phone}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* ── Row 2: Order Info ── */}
+                        <div className="odm-card">
+                            <div className="odm-card-title">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                                Order Information
+                            </div>
+                            <div className="odm-info-grid">
+                                <div className="odm-field">
+                                    <span className="odm-label">Order Date</span>
+                                    <span className="odm-value">{formatDate(selectedOrder.createdAt)}</span>
+                                </div>
+                                <div className="odm-field">
+                                    <span className="odm-label">Payment Type</span>
+                                    <span className={`odm-pay-badge${selectedOrder.payment_type?.toLowerCase() === 'cod' ? ' cod' : ' prepaid'}`}>
+                                        {formatPaymentType(selectedOrder.payment_type)}
+                                    </span>
+                                </div>
+                                <div className="odm-field">
+                                    <span className="odm-label">Payment Status</span>
+                                    <span className={`status-badge status-${getPaymentStatusClass(selectedOrder)}`}>{getPaymentStatusDisplay(selectedOrder)}</span>
+                                </div>
+                                <div className="odm-field">
+                                    <span className="odm-label">Order Status</span>
+                                    <span className={`status-badge status-${getStatusClassName(selectedOrder.status)}`}>{getStatusDisplayText(selectedOrder.status)}</span>
+                                </div>
+                                {selectedOrder.coupon_code && (
+                                    <div className="odm-field">
+                                        <span className="odm-label">Coupon</span>
+                                        <span className="odm-value odm-mono">{selectedOrder.coupon_code}</span>
+                                    </div>
+                                )}
+                                {selectedOrder.notes && (
+                                    <div className="odm-field odm-field-full">
+                                        <span className="odm-label">Order Notes</span>
+                                        <span className="odm-value">{selectedOrder.notes}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* FShip block inside order info */}
+                            {(selectedOrder.fship_order_id || selectedOrder.fship_waybill || selectedOrder.tracking_number) && (
+                                <div className="odm-fship">
+                                    <div className="odm-fship-title">
+                                        <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 4v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                                        FShip Tracking
+                                    </div>
+                                    <div className="odm-info-grid">
+                                        {selectedOrder.fship_order_id && <div className="odm-field"><span className="odm-label">FShip Order ID</span><span className="odm-value odm-mono">{selectedOrder.fship_order_id}</span></div>}
+                                        {selectedOrder.fship_waybill && <div className="odm-field"><span className="odm-label">AWB Number</span><span className="odm-value odm-mono">{selectedOrder.fship_waybill}</span></div>}
+                                        {selectedOrder.fship_route_code && <div className="odm-field"><span className="odm-label">Route Code</span><span className="odm-value odm-mono">{selectedOrder.fship_route_code}</span></div>}
+                                        {selectedOrder.tracking_number && <div className="odm-field"><span className="odm-label">Tracking No.</span><span className="odm-value odm-mono">{selectedOrder.tracking_number}</span></div>}
+                                        {selectedOrder.courier_name && <div className="odm-field"><span className="odm-label">Courier</span><span className="odm-value">{selectedOrder.courier_name}</span></div>}
                                         {selectedOrder.fship_label_url && (
-                                            <div>
-                                                <strong>Shipping Label:</strong>{' '}
-                                                <a href={selectedOrder.fship_label_url} target="_blank" rel="noopener noreferrer" className="order-label-link">
-                                                    Download Label PDF
+                                            <div className="odm-field">
+                                                <span className="odm-label">Shipping Label</span>
+                                                <a href={selectedOrder.fship_label_url} target="_blank" rel="noopener noreferrer" className="odm-label-link">
+                                                    <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                                    Download PDF
                                                 </a>
                                             </div>
                                         )}
                                     </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Products Ordered */}
-                        <div className="order-section">
-                            <h4>Products Ordered</h4>
-                            <div className="order-section-content">
-                                <div className="order-table-scroll">
-                                    <table className="items-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Image</th>
-                                                <th>Product Name</th>
-                                                <th>SKU</th>
-                                                <th>Quantity</th>
-                                                <th>Price</th>
-                                                <th>Subtotal</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {selectedOrder.OrderItems.map(item => {
-                                                let imageToDisplay = null;
-                                                if (item.ProductVariation?.VariationImages?.length > 0) {
-                                                    imageToDisplay = item.ProductVariation.VariationImages.find(img => img.is_primary) || item.ProductVariation.VariationImages[0];
-                                                } else if (item.ProductVariation?.image) {
-                                                    imageToDisplay = { image_url: item.ProductVariation.image };
-                                                } else if (item.ProductVariation?.image_url) {
-                                                    imageToDisplay = { image_url: item.ProductVariation.image_url };
-                                                } else {
-                                                    imageToDisplay = item.Product?.ProductImages?.find(img => img.is_primary) || item.Product?.ProductImages?.[0];
-                                                }
-                                                const imageUrl = getProductImageSrc(imageToDisplay);
-                                                const sku = item.ProductVariation?.sku || 'N/A';
-                                                return (
-                                                    <tr key={item.id}>
-                                                        <td>
-                                                            <div className="product-image-container">
-                                                                <SafeImage imageData={{ image_url: imageUrl }} alt={item.Product?.name || 'Product'}
-                                                                    className="product-image" width="80px" height="80px" />
-                                                            </div>
-                                                        </td>
-                                                        <td>
-                                                            <div className="product-details-cell">
-                                                                <div className="product-name">{item.Product?.name || 'N/A'}</div>
-                                                                {item.Product?.brand && <div className="product-brand">{item.Product.brand}</div>}
-                                                                {item.ProductVariation?.attributes && (
-                                                                    <div className="product-attributes">
-                                                                        {getAttributeComponents(item.ProductVariation.attributes).map(({ key, value }) => (
-                                                                            <span key={key} className="attribute-item">{key}: {value}</span>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-                                                                <div className="product-sku-display">SKU: {sku}</div>
-                                                            </div>
-                                                        </td>
-                                                        <td><div className="product-sku">{sku}</div></td>
-                                                        <td><span className="quantity-badge">{item.quantity}</span></td>
-                                                        <td className="price-cell">{formatCurrency(item.price)}</td>
-                                                        <td className="subtotal-cell">{formatCurrency(item.subtotal)}</td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
                                 </div>
-                            </div>
+                            )}
                         </div>
 
-                        {/* Order Summary */}
-                        <div className="order-section">
-                            <h4>Order Summary</h4>
-                            <div className="order-section-content">
-                                <div className="order-summary-rows">
-                                    <div className="order-summary-row">
-                                        <span>Subtotal</span>
-                                        <span>{formatCurrency(calculateOrderSubtotal(selectedOrder.OrderItems))}</span>
-                                    </div>
-                                    <div className="order-summary-row">
-                                        <span>Shipping Fee</span>
-                                        <span>{formatCurrency(selectedOrder.shipping_fee || 0)}</span>
-                                    </div>
-                                    {selectedOrder.discount_amount > 0 && (
-                                        <div className="order-summary-row discount">
-                                            <span>Discount</span>
-                                            <span>- {formatCurrency(selectedOrder.discount_amount || 0)}</span>
+                        {/* ── Products Ordered — card rows, no scroll ── */}
+                        <div className="odm-card">
+                            <div className="odm-card-title">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                                Products Ordered
+                                <span className="odm-count">{selectedOrder.OrderItems?.length}</span>
+                            </div>
+                            <div className="odm-items">
+                                {selectedOrder.OrderItems.map(item => {
+                                    let imageToDisplay = null;
+                                    if (item.ProductVariation?.VariationImages?.length > 0) {
+                                        imageToDisplay = item.ProductVariation.VariationImages.find(img => img.is_primary) || item.ProductVariation.VariationImages[0];
+                                    } else if (item.ProductVariation?.image) {
+                                        imageToDisplay = { image_url: item.ProductVariation.image };
+                                    } else if (item.ProductVariation?.image_url) {
+                                        imageToDisplay = { image_url: item.ProductVariation.image_url };
+                                    } else {
+                                        imageToDisplay = item.Product?.ProductImages?.find(img => img.is_primary) || item.Product?.ProductImages?.[0];
+                                    }
+                                    const imageUrl = getProductImageSrc(imageToDisplay);
+                                    const sku = item.ProductVariation?.sku || 'N/A';
+                                    const attrs = item.ProductVariation?.attributes ? getAttributeComponents(item.ProductVariation.attributes) : [];
+                                    return (
+                                        <div key={item.id} className="odm-item">
+                                            <div className="odm-item-img">
+                                                <SafeImage imageData={{ image_url: imageUrl }} alt={item.Product?.name || 'Product'} />
+                                            </div>
+                                            <div className="odm-item-info">
+                                                <div className="odm-item-name">{item.Product?.name || 'N/A'}</div>
+                                                {attrs.length > 0 && (
+                                                    <div className="odm-item-attrs">
+                                                        {attrs.map(({ key, value }) => (
+                                                            <span key={key} className="odm-attr-chip">{key}: {value}</span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                <div className="odm-item-sku">SKU: {sku}</div>
+                                            </div>
+                                            <div className="odm-item-meta">
+                                                <div className="odm-item-qty">×{item.quantity}</div>
+                                                <div className="odm-item-price">{formatCurrency(item.price)}</div>
+                                                <div className="odm-item-subtotal">{formatCurrency(item.subtotal)}</div>
+                                            </div>
                                         </div>
-                                    )}
-                                    <div className="order-summary-row total">
-                                        <span>Total Amount</span>
-                                        <span>{formatCurrency(getOrderTotal(selectedOrder))}</span>
-                                    </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* ── Order Summary ── */}
+                        <div className="odm-summary">
+                            <div className="odm-summary-row">
+                                <span>Subtotal</span>
+                                <span>{formatCurrency(calculateOrderSubtotal(selectedOrder.OrderItems))}</span>
+                            </div>
+                            <div className="odm-summary-row">
+                                <span>Shipping Fee</span>
+                                <span>{formatCurrency(selectedOrder.shipping_fee || 0)}</span>
+                            </div>
+                            {selectedOrder.discount_amount > 0 && (
+                                <div className="odm-summary-row odm-discount">
+                                    <span>Discount</span>
+                                    <span>− {formatCurrency(selectedOrder.discount_amount)}</span>
                                 </div>
+                            )}
+                            <div className="odm-summary-row odm-total">
+                                <span>Total Amount</span>
+                                <span>{formatCurrency(getOrderTotal(selectedOrder))}</span>
                             </div>
                         </div>
 
