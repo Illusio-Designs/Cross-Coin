@@ -6,11 +6,13 @@ import Loader from '../common/Loader';
 import InfiniteReviewsSlider from '../common/InfiniteReviewsSlider';
 import colorMap from './colorMap';
 import SizeChartModal from './SizeChartModal';
+import { useBreadcrumb } from '../common/Breadcrumb';
 
 const ProductDetailsTest = () => {
   const router = useRouter();
   const slug = router.query?.slug ? decodeURIComponent(router.query.slug) : null;
   const { addToCart, buyNow, setIsDrawerOpen } = useCart();
+  const { setCustomBreadcrumbs } = useBreadcrumb();
 
   const [showLightbox, setShowLightbox] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -120,6 +122,11 @@ const ProductDetailsTest = () => {
             variations,
             rawApi: api,
           });
+          setCustomBreadcrumbs([
+            { label: 'Home', path: '/' },
+            { label: 'Products', path: '/Products' },
+            { label: api.name || 'Product', path: router.asPath, isLast: true },
+          ]);
         } else {
           setProductData(sampleProduct);
         }
