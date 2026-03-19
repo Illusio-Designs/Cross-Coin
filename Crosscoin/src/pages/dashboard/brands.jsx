@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService } from '../../services';
-import { Modal, Button, Input } from '../../components/ui';
+import { Modal, Button } from '../../components/ui';
 import Loader from '../../components/common/Loader';
 
 const IC = {
@@ -102,29 +102,57 @@ export default function BrandManager() {
       <Modal isOpen={showForm} onClose={resetForm} title={editingBrand ? 'Edit Brand' : 'Add New Brand'}>
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <div className="brand-form-grid">
-              <Input label="Brand Name" type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g., CrossCoin" required />
-              <Input label="Display Name" type="text" name="display_name" value={formData.display_name} onChange={handleInputChange} placeholder="e.g., CrossCoin Store" required />
-              <Input label="Slug" type="text" name="slug" value={formData.slug} onChange={handleInputChange} placeholder="e.g., crosscoin" />
-              <Input label="Domain" type="text" name="domain" value={formData.domain} onChange={handleInputChange} placeholder="e.g., crosscoin.com" />
-              <Input label="Logo URL" type="text" name="logo_url" value={formData.logo_url} onChange={handleInputChange} placeholder="https://example.com/logo.png" />
-              <Input label="Contact Email" type="email" name="contact_email" value={formData.contact_email} onChange={handleInputChange} placeholder="contact@example.com" />
-              <Input label="Contact Phone" type="tel" name="contact_phone" value={formData.contact_phone} onChange={handleInputChange} placeholder="+1234567890" />
-              <Input label="Status" type="select" name="status" value={formData.status} onChange={handleInputChange} options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]} />
-              <div className="brand-color-row">
-                <div className="brand-color-field">
-                  <label className="sl-form-label">Primary Color</label>
-                  <div className="brand-color-input">
-                    <input type="color" name="primary_color" value={formData.primary_color} onChange={handleInputChange} className="brand-color-picker" />
-                    <input type="text" value={formData.primary_color} onChange={e => setFormData(prev => ({ ...prev, primary_color: e.target.value }))} className="brand-color-text" placeholder="#4CAF50" />
-                  </div>
+            <div className="dm-2col">
+              <div className="dm-field">
+                <label className="dm-label">Brand Name <span className="dm-required">*</span></label>
+                <input className="dm-input" type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g., CrossCoin" required />
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Display Name <span className="dm-required">*</span></label>
+                <input className="dm-input" type="text" name="display_name" value={formData.display_name} onChange={handleInputChange} placeholder="e.g., CrossCoin Store" required />
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Slug</label>
+                <input className="dm-input" type="text" name="slug" value={formData.slug} onChange={handleInputChange} placeholder="e.g., crosscoin" />
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Domain</label>
+                <input className="dm-input" type="text" name="domain" value={formData.domain} onChange={handleInputChange} placeholder="e.g., crosscoin.com" />
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Contact Email</label>
+                <input className="dm-input" type="email" name="contact_email" value={formData.contact_email} onChange={handleInputChange} placeholder="contact@example.com" />
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Contact Phone</label>
+                <input className="dm-input" type="tel" name="contact_phone" value={formData.contact_phone} onChange={handleInputChange} placeholder="+1234567890" />
+              </div>
+            </div>
+            <div className="dm-field">
+              <label className="dm-label">Logo URL</label>
+              <input className="dm-input" type="text" name="logo_url" value={formData.logo_url} onChange={handleInputChange} placeholder="https://example.com/logo.png" />
+            </div>
+            <div className="dm-field">
+              <label className="dm-label">Status</label>
+              <select className="dm-input dm-select" name="status" value={formData.status} onChange={handleInputChange}>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <div className="dm-section-title">Brand Colors</div>
+            <div className="dm-color-row">
+              <div className="dm-field">
+                <label className="dm-label">Primary Color</label>
+                <div className="dm-color-input-wrap">
+                  <input type="color" name="primary_color" value={formData.primary_color} onChange={handleInputChange} className="dm-color-picker" />
+                  <input type="text" value={formData.primary_color} onChange={e => setFormData(prev => ({ ...prev, primary_color: e.target.value }))} className="dm-color-text" placeholder="#4CAF50" />
                 </div>
-                <div className="brand-color-field">
-                  <label className="sl-form-label">Secondary Color</label>
-                  <div className="brand-color-input">
-                    <input type="color" name="secondary_color" value={formData.secondary_color} onChange={handleInputChange} className="brand-color-picker" />
-                    <input type="text" value={formData.secondary_color} onChange={e => setFormData(prev => ({ ...prev, secondary_color: e.target.value }))} className="brand-color-text" placeholder="#2196F3" />
-                  </div>
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Secondary Color</label>
+                <div className="dm-color-input-wrap">
+                  <input type="color" name="secondary_color" value={formData.secondary_color} onChange={handleInputChange} className="dm-color-picker" />
+                  <input type="text" value={formData.secondary_color} onChange={e => setFormData(prev => ({ ...prev, secondary_color: e.target.value }))} className="dm-color-text" placeholder="#2196F3" />
                 </div>
               </div>
             </div>

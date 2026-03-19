@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
+import { Button, Modal, Table, Pagination } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import BrandTags from "../../../components/Dashboard/BrandTags";
 import { reviewService } from "../../../services";
@@ -236,14 +236,24 @@ export default function Reviews() {
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title="Moderate Review" closeOnOverlayClick={false}>
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <Input label="Status" type="select" name="status" value={formData.status} onChange={handleInputChange} required options={[{ value: "pending", label: "Pending" }, { value: "approved", label: "Approved" }, { value: "rejected", label: "Rejected" }]} />
-            <div className="sl-form-field">
-              <label className="sl-form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input type="checkbox" name="is_featured" checked={formData.is_featured} onChange={handleInputChange} style={{ width: '16px', height: '16px', accentColor: '#CE1E36' }} />
-                Mark as Featured Review
+            <div className="dm-field">
+              <label className="dm-label">Status <span className="dm-required">*</span></label>
+              <select className="dm-input dm-select" name="status" value={formData.status} onChange={handleInputChange} required>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            <div className="dm-field">
+              <label className="dm-checkbox-row">
+                <input type="checkbox" name="is_featured" checked={formData.is_featured} onChange={handleInputChange} />
+                <span className="dm-checkbox-label">Mark as Featured Review</span>
               </label>
             </div>
-            <Input label="Admin Notes" type="textarea" name="admin_notes" value={formData.admin_notes} onChange={handleInputChange} />
+            <div className="dm-field">
+              <label className="dm-label">Admin Notes</label>
+              <textarea className="dm-input dm-textarea" name="admin_notes" value={formData.admin_notes} onChange={handleInputChange} placeholder="Internal notes about this review..." />
+            </div>
           </div>
           <div className="modal-footer">
             <Button variant="secondary" size="medium" onClick={handleModalClose} disabled={loading} type="button">Cancel</Button>

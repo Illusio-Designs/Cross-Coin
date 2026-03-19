@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
+import { Button, Modal, Table, Pagination } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { shippingFeeService } from "../../../services";
 
@@ -149,12 +149,23 @@ export default function ShippingFees() {
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title={selectedFee ? "Edit Shipping Fee" : "Add Shipping Fee"} closeOnOverlayClick={false}>
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <Input label="Order Type" type="select" name="orderType" value={selectedFee ? selectedFee.orderType : formData.orderType} onChange={handleInputChange} required options={[{ value: "cod", label: "Cash On Delivery" }, { value: "prepaid", label: "Prepaid" }]} />
-            <Input label="Fee (₹)" type="number" name="fee" value={selectedFee ? selectedFee.fee : formData.fee} onChange={handleInputChange} required />
+            <div className="dm-2col">
+              <div className="dm-field">
+                <label className="dm-label">Order Type <span className="dm-required">*</span></label>
+                <select className="dm-input dm-select" name="orderType" value={selectedFee ? selectedFee.orderType : formData.orderType} onChange={handleInputChange} required>
+                  <option value="cod">Cash On Delivery</option>
+                  <option value="prepaid">Prepaid</option>
+                </select>
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Fee (₹) <span className="dm-required">*</span></label>
+                <input className="dm-input" type="number" name="fee" value={selectedFee ? selectedFee.fee : formData.fee} onChange={handleInputChange} placeholder="0.00" required />
+              </div>
+            </div>
           </div>
           <div className="modal-footer">
             <Button variant="secondary" size="medium" onClick={handleModalClose} type="button">Cancel</Button>
-            <Button type="submit" variant="primary" size="medium" disabled={loading}>{loading ? "Saving..." : selectedFee ? "Save Changes" : "Add Fee"}</Button>
+            <Button type="submit" variant="primary" size="medium" disabled={loading}>{loading ? "Saving..." : selectedFee ? "Update Fee" : "Add Fee"}</Button>
           </div>
         </form>
       </Modal>

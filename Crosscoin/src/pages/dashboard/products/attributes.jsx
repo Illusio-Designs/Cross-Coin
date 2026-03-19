@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
+import { Button, Modal, Table, Pagination } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { attributeService } from "../../../services";
 
@@ -165,23 +165,38 @@ export default function Attributes() {
 
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title={formData.id ? "Edit Attribute" : "Add Attribute"} closeOnOverlayClick={false}>
         <form onSubmit={handleSubmit} className="seo-form">
-          {error && <div className="modal-error-banner">{error}</div>}
+          {error && <div className="dm-error-banner">{error}</div>}
           <div className="modal-body">
-            <Input label="Attribute Name" type="text" name="name" value={formData.name} onChange={handleInputChange} required placeholder="e.g., Color, Size" />
-            <Input label="Type" type="select" name="type" value={formData.type} onChange={handleInputChange} required options={[{ value: "", label: "Select type...", disabled: true }, { value: "select", label: "Select" }, { value: "text", label: "Text" }]} />
+            <div className="dm-2col">
+              <div className="dm-field">
+                <label className="dm-label">Attribute Name <span className="dm-required">*</span></label>
+                <input className="dm-input" type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g., Color, Size" required />
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Type <span className="dm-required">*</span></label>
+                <select className="dm-input dm-select" name="type" value={formData.type} onChange={handleInputChange} required>
+                  <option value="" disabled>Select type...</option>
+                  <option value="select">Select</option>
+                  <option value="text">Text</option>
+                </select>
+              </div>
+            </div>
             {formData.type === 'select' && (
-              <Input label="Values (comma-separated)" type="text" name="values" value={formData.values} onChange={handleInputChange} placeholder="e.g., Red, Blue, Green" required helpText="Separate multiple values with commas" />
+              <div className="dm-field">
+                <label className="dm-label">Values <span className="dm-required">*</span> <span className="dm-hint">(comma-separated)</span></label>
+                <input className="dm-input" type="text" name="values" value={formData.values} onChange={handleInputChange} placeholder="e.g., Red, Blue, Green" required />
+              </div>
             )}
-            <div className="sl-form-field">
-              <label className="sl-form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input type="checkbox" name="isRequired" checked={formData.isRequired} onChange={handleInputChange} style={{ width: '16px', height: '16px', accentColor: '#CE1E36' }} />
-                Mark as Required
+            <div className="dm-field">
+              <label className="dm-checkbox-row">
+                <input type="checkbox" name="isRequired" checked={formData.isRequired} onChange={handleInputChange} />
+                <span className="dm-checkbox-label">Mark as Required</span>
               </label>
             </div>
           </div>
           <div className="modal-footer">
             <Button variant="secondary" size="medium" onClick={handleModalClose} disabled={loading} type="button">Cancel</Button>
-            <Button type="submit" variant="primary" size="medium" disabled={loading}>{loading ? "Saving..." : "Save Attribute"}</Button>
+            <Button type="submit" variant="primary" size="medium" disabled={loading}>{loading ? "Saving..." : formData.id ? "Update Attribute" : "Add Attribute"}</Button>
           </div>
         </form>
       </Modal>

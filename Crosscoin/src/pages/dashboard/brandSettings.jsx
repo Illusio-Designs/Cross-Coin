@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandSettingsService, brandService } from '../../services';
-import { Modal, Button, Input } from '../../components/ui';
+import { Modal, Button } from '../../components/ui';
 import Loader from '../../components/common/Loader';
 
 const IC = {
@@ -113,17 +113,25 @@ export default function BrandSettingsManager() {
       <Modal isOpen={showAddForm} onClose={() => { setShowAddForm(false); setNewKey(''); setNewValue(''); setNewCategory('general'); setNewDescription(''); }} title="Add New Setting">
         <div className="seo-form">
           <div className="modal-body">
-            <Input label="Setting Key" type="text" value={newKey} onChange={e => setNewKey(e.target.value)} placeholder="e.g., RAZORPAY_KEY_ID" />
-            <div className="sl-form-field">
-              <label className="sl-form-label">Category</label>
-              <select value={newCategory} onChange={e => setNewCategory(e.target.value)} className="sl-multi-select" style={{ height: 'auto', minHeight: '40px' }}>
-                {Object.entries(CATEGORIES).filter(([k]) => k !== 'all').map(([k, l]) => <option key={k} value={k}>{l}</option>)}
-              </select>
+            <div className="dm-2col">
+              <div className="dm-field">
+                <label className="dm-label">Setting Key <span className="dm-required">*</span></label>
+                <input className="dm-input" type="text" value={newKey} onChange={e => setNewKey(e.target.value)} placeholder="e.g., RAZORPAY_KEY_ID" />
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Category</label>
+                <select className="dm-input dm-select" value={newCategory} onChange={e => setNewCategory(e.target.value)}>
+                  {Object.entries(CATEGORIES).filter(([k]) => k !== 'all').map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                </select>
+              </div>
             </div>
-            <Input label="Description" type="text" value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Description of this setting" />
-            <div className="sl-form-field">
-              <label className="sl-form-label">Value</label>
-              <textarea value={newValue} onChange={e => setNewValue(e.target.value)} placeholder="Enter value..." rows={3} className="bset-textarea" />
+            <div className="dm-field">
+              <label className="dm-label">Description</label>
+              <input className="dm-input" type="text" value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Description of this setting" />
+            </div>
+            <div className="dm-field">
+              <label className="dm-label">Value <span className="dm-required">*</span></label>
+              <textarea className="dm-input dm-textarea" value={newValue} onChange={e => setNewValue(e.target.value)} placeholder="Enter value..." rows={3} />
             </div>
           </div>
           <div className="modal-footer">

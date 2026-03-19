@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
+import { Button, Modal, Table, Pagination } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { couponService } from "../../../services";
 
@@ -204,25 +204,93 @@ export default function Coupons() {
 
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title={formData.id ? "Edit Coupon" : "Add Coupon"} closeOnOverlayClick={false}>
         <form onSubmit={handleSubmit} className="seo-form">
-          {error && <div className="modal-error-banner">{error}</div>}
+          {error && <div className="dm-error-banner">{error}</div>}
           <div className="modal-body">
-            <Input label="Coupon Code" type="text" name="code" value={formData.code} onChange={handleInputChange} required />
-            <Input label="Description" type="textarea" name="description" value={formData.description} onChange={handleInputChange} required />
-            <Input label="Discount Type" type="select" name="type" value={formData.type} onChange={handleInputChange} required options={[{ value: "percentage", label: "Percentage" }, { value: "fixed", label: "Fixed Amount" }, { value: "tiered", label: "Tiered Discount" }, { value: "quantity_based", label: "Quantity Based" }]} />
-            <Input label="Discount Value" type="number" name="value" value={formData.value} onChange={handleInputChange} required />
-            <Input label="Minimum Purchase Amount" type="number" name="minPurchase" value={formData.minPurchase} onChange={handleInputChange} />
-            <Input label="Maximum Discount Amount" type="number" name="maxDiscount" value={formData.maxDiscount} onChange={handleInputChange} />
-            <Input label="Usage Limit" type="number" name="usageLimit" value={formData.usageLimit} onChange={handleInputChange} />
-            <Input label="Per User Limit" type="number" name="perUserLimit" value={formData.perUserLimit} onChange={handleInputChange} />
-            <Input label="Status" type="select" name="status" value={formData.status} onChange={handleInputChange} required options={[{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }]} />
-            <Input label="Start Date" type="date" name="startDate" value={formData.startDate} onChange={handleInputChange} />
-            <Input label="End Date" type="date" name="endDate" value={formData.endDate} onChange={handleInputChange} />
-            <Input label="Payment Mode Restriction" type="select" name="paymentModeRestriction" value={formData.paymentModeRestriction} onChange={handleInputChange} options={[{ value: "all", label: "All Payment Modes" }, { value: "cod", label: "Cash on Delivery Only" }, { value: "prepaid", label: "Prepaid Only" }]} />
-            <Input label="First Order Only" type="select" name="firstOrderOnly" value={formData.firstOrderOnly} onChange={handleInputChange} options={[{ value: false, label: "No" }, { value: true, label: "Yes" }]} />
+            <div className="dm-2col">
+              <div className="dm-field">
+                <label className="dm-label">Coupon Code <span className="dm-required">*</span></label>
+                <input className="dm-input" type="text" name="code" value={formData.code} onChange={handleInputChange} placeholder="e.g., SAVE20" required />
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Status <span className="dm-required">*</span></label>
+                <select className="dm-input dm-select" name="status" value={formData.status} onChange={handleInputChange} required>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+            <div className="dm-field">
+              <label className="dm-label">Description <span className="dm-required">*</span></label>
+              <textarea className="dm-input dm-textarea" name="description" value={formData.description} onChange={handleInputChange} placeholder="Describe this coupon..." required />
+            </div>
+            <div className="dm-section-title">Discount</div>
+            <div className="dm-2col">
+              <div className="dm-field">
+                <label className="dm-label">Discount Type <span className="dm-required">*</span></label>
+                <select className="dm-input dm-select" name="type" value={formData.type} onChange={handleInputChange} required>
+                  <option value="percentage">Percentage</option>
+                  <option value="fixed">Fixed Amount</option>
+                  <option value="tiered">Tiered Discount</option>
+                  <option value="quantity_based">Quantity Based</option>
+                </select>
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Discount Value <span className="dm-required">*</span></label>
+                <input className="dm-input" type="number" name="value" value={formData.value} onChange={handleInputChange} placeholder={formData.type === 'percentage' ? '0–100' : '0.00'} required />
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Min Purchase (₹)</label>
+                <input className="dm-input" type="number" name="minPurchase" value={formData.minPurchase} onChange={handleInputChange} placeholder="0.00" />
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Max Discount (₹)</label>
+                <input className="dm-input" type="number" name="maxDiscount" value={formData.maxDiscount} onChange={handleInputChange} placeholder="0.00" />
+              </div>
+            </div>
+            <div className="dm-section-title">Usage Limits</div>
+            <div className="dm-2col">
+              <div className="dm-field">
+                <label className="dm-label">Usage Limit</label>
+                <input className="dm-input" type="number" name="usageLimit" value={formData.usageLimit} onChange={handleInputChange} placeholder="Unlimited" />
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Per User Limit</label>
+                <input className="dm-input" type="number" name="perUserLimit" value={formData.perUserLimit} onChange={handleInputChange} placeholder="Unlimited" />
+              </div>
+            </div>
+            <div className="dm-section-title">Validity</div>
+            <div className="dm-2col">
+              <div className="dm-field">
+                <label className="dm-label">Start Date</label>
+                <input className="dm-input" type="date" name="startDate" value={formData.startDate} onChange={handleInputChange} />
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">End Date</label>
+                <input className="dm-input" type="date" name="endDate" value={formData.endDate} onChange={handleInputChange} />
+              </div>
+            </div>
+            <div className="dm-section-title">Restrictions</div>
+            <div className="dm-2col">
+              <div className="dm-field">
+                <label className="dm-label">Payment Mode</label>
+                <select className="dm-input dm-select" name="paymentModeRestriction" value={formData.paymentModeRestriction} onChange={handleInputChange}>
+                  <option value="all">All Payment Modes</option>
+                  <option value="cod">Cash on Delivery Only</option>
+                  <option value="prepaid">Prepaid Only</option>
+                </select>
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">First Order Only</label>
+                <select className="dm-input dm-select" name="firstOrderOnly" value={formData.firstOrderOnly} onChange={handleInputChange}>
+                  <option value={false}>No</option>
+                  <option value={true}>Yes</option>
+                </select>
+              </div>
+            </div>
           </div>
           <div className="modal-footer">
             <Button variant="secondary" size="medium" onClick={handleModalClose} disabled={loading} type="button">Cancel</Button>
-            <Button type="submit" variant="primary" size="medium" disabled={loading}>{loading ? "Saving..." : "Save Coupon"}</Button>
+            <Button type="submit" variant="primary" size="medium" disabled={loading}>{loading ? "Saving..." : formData.id ? "Update Coupon" : "Add Coupon"}</Button>
           </div>
         </form>
       </Modal>

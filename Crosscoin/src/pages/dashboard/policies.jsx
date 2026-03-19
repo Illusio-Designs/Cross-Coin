@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Input, Modal, Table, Pagination } from "../../components/ui";
+import { Button, Modal, Table, Pagination } from "../../components/ui";
 import Loader from "../../components/common/Loader";
 import { policyService } from "../../services";
 import dynamic from "next/dynamic";
@@ -157,15 +157,20 @@ export default function Policies() {
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title={formData.id ? "Edit Policy" : "Add Policy"} closeOnOverlayClick={false}>
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <Input label="Policy Title" type="text" name="title" value={formData.title} onChange={handleInputChange} required />
-            <div className="sl-form-field">
-              <label className="sl-form-label">Content</label>
-              <ReactQuill value={formData.content} onChange={value => setFormData(prev => ({ ...prev, content: value }))} theme="snow" style={{ minHeight: 200 }} />
+            <div className="dm-field">
+              <label className="dm-label">Policy Title <span className="dm-required">*</span></label>
+              <input className="dm-input" type="text" name="title" value={formData.title} onChange={handleInputChange} placeholder="e.g., Privacy Policy" required />
+            </div>
+            <div className="dm-field">
+              <label className="dm-label">Content</label>
+              <div className="dm-quill-wrap">
+                <ReactQuill value={formData.content} onChange={value => setFormData(prev => ({ ...prev, content: value }))} theme="snow" />
+              </div>
             </div>
           </div>
           <div className="modal-footer">
             <Button variant="secondary" size="medium" onClick={handleModalClose} disabled={loading} type="button">Cancel</Button>
-            <Button type="submit" variant="primary" size="medium" disabled={loading}>{loading ? "Saving..." : "Save Policy"}</Button>
+            <Button type="submit" variant="primary" size="medium" disabled={loading}>{loading ? "Saving..." : formData.id ? "Update Policy" : "Add Policy"}</Button>
           </div>
         </form>
       </Modal>
