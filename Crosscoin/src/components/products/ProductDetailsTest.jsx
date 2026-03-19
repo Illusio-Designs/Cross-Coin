@@ -567,15 +567,6 @@ const ProductDetailsTest = () => {
             </div>
           </div>
 
-          {/* Non-returnable note */}
-          <div className="pdt-return-note">
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            This product is non-returnable. Please check size guide before ordering.
-          </div>
         </div>
       </div>
 
