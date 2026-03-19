@@ -107,7 +107,7 @@
 @keyframes tbl-spin { to { transform: rotate(360deg); } }
 
 .tbl-empty {
-  padding: 48px 24px;
+  padding: 48px;
   text-align: center;
   color: #6b7280;
   font-size: 13px;

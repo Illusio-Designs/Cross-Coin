@@ -1,5 +1,5 @@
 .policy-container {
-  padding: 50px 10%;
+  padding: 60px;
   background: #f7f8fa;
   min-height: 70vh;
   display: flex;
@@ -38,7 +38,7 @@
 
 @media (max-width: 600px) {
   .policy-container {
-    padding: 30px 2%;
+    padding: 40px;
   }
   .policy-section {
     padding: 1.2rem 0.7rem 1.2rem 0.5rem;

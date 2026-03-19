@@ -4,7 +4,7 @@
   gap: 2rem;
   justify-content: center;
   align-items: flex-start;
-  padding: 50px 10%;
+  padding: 60px;
   background: #fff;
 }
 
@@ -1022,7 +1022,7 @@
 
 @media (max-width: 1024px) {
   .cart-main{
-    padding: 50px 3%;
+    padding: 60px;
   }
 }
 

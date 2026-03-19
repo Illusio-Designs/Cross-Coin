@@ -4,7 +4,7 @@
 }
 
 .search-results-container {
-  padding: 50px 10%;
+  padding: 60px;
 }
 
 .search-results-header {
@@ -140,7 +140,7 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .search-results-container {
-    padding: 15px;
+    padding: 40px;
   }
   
   .search-results-header h1 {

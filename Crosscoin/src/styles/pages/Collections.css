@@ -1,8 +1,6 @@
 .collections-container {
-  padding: 60px 40px;
+  padding: 60px;
   background: #ffffff;
-  max-width: 1400px;
-  margin: 0 auto;
 }
 
 .collections-header {
@@ -11,7 +9,7 @@
 }
 
 .section-header-inline {
-  text-align: left;
+  text-align: center;
 }
 
 .section-header-h2 {
@@ -42,10 +40,9 @@
 
 .collections-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 32px;
   padding: 20px 0;
-  justify-items: center;
   max-width: 100%;
 }
 
@@ -138,7 +135,7 @@
 /* Mobile Responsive Styles */
 @media (max-width: 768px) {
   .collections-container {
-    padding: 40px 20px;
+    padding: 40px;
     max-width: 100%;
   }
 
@@ -180,7 +177,7 @@
 
 @media (max-width: 426px) {
   .collections-container {
-    padding: 30px 16px;
+    padding: 28px;
   }
 
   .collections-header {

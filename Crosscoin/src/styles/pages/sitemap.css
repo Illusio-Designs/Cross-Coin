@@ -26,7 +26,7 @@ a {
 
 /* ── PAGE TITLE ── */
 .page-title {
-  padding: 60px 40px;
+  padding: 60px;
   background: var(--white);
 }
 
@@ -48,9 +48,7 @@ a {
 
 /* ── MAIN LAYOUT ── */
 .sitemap-wrap {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 60px 40px;
+  padding: 60px;
 }
 
 /* ── SECTION BLOCK ── */
@@ -171,11 +169,11 @@ a {
   }
 
   .sitemap-wrap {
-    padding: 48px 32px;
+    padding: 40px;
   }
 
   .page-title {
-    padding: 48px 32px;
+    padding: 40px;
   }
 
   .page-title h1 {
@@ -190,11 +188,11 @@ a {
   }
 
   .sitemap-wrap {
-    padding: 40px 20px;
+    padding: 40px;
   }
 
   .page-title {
-    padding: 40px 20px;
+    padding: 40px;
   }
 
   .page-title h1 {
@@ -234,11 +232,11 @@ a {
   }
 
   .sitemap-wrap {
-    padding: 24px 16px;
+    padding: 28px;
   }
 
   .page-title {
-    padding: 24px 16px;
+    padding: 28px;
   }
 
   .cat-heading {

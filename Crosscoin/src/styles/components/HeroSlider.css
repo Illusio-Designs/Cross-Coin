@@ -46,7 +46,7 @@
   justify-content: flex-start;
   z-index: 2;
   background: linear-gradient(to right, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.4) 35%, transparent 65%);
-  padding-left: 5%;
+  padding-left: 40px;
 }
 
 .hero-slide__content-text {

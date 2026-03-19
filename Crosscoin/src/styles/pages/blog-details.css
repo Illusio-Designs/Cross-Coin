@@ -258,9 +258,8 @@
   display: grid;
   grid-template-columns: 1fr 280px;
   gap: 48px;
-  max-width: 1140px;
   margin: 0 auto;
-  padding: 48px 40px 64px;
+  padding: 60px;
   align-items: start;
 }
 

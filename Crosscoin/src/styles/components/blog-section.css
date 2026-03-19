@@ -1,16 +1,13 @@
 /* ── SECTION WRAPPER ── */
 .blog-section-wrapper {
-  padding: 60px 40px;
+  padding: 60px;
   background: #fff;
-  max-width: 1200px;
-  margin: 0 auto;
 }
 
 .blog-section-header {
   margin-bottom: 48px;
+  text-align: center;
 }
-
-.section-header-inline { text-align: left; }
 
 .section-header-h2 {
   font-size: 32px;
@@ -313,7 +310,7 @@
 }
 
 @media (max-width: 900px) {
-  .blog-section-wrapper { padding: 48px 20px; }
+  .blog-section-wrapper { padding: 40px; }
   .section-header-h2 { font-size: 24px; }
   .blog-grid-home {
     grid-template-columns: repeat(2, 1fr);
@@ -322,7 +319,7 @@
 }
 
 @media (max-width: 480px) {
-  .blog-section-wrapper { padding: 40px 16px; }
+  .blog-section-wrapper { padding: 28px; }
   .section-header-h2 { font-size: 20px; }
   .blog-grid-home {
     grid-template-columns: 1fr;

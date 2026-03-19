@@ -5,9 +5,15 @@
 }
 
 .breadcrumb__container {
-  max-width: 1400px;
-  margin: 0;
-  padding: 0 clamp(12px, 5vw, 40px);
+  padding: 0 60px;
+}
+
+@media (max-width: 860px) {
+  .breadcrumb__container { padding: 0 40px; }
+}
+
+@media (max-width: 500px) {
+  .breadcrumb__container { padding: 0 28px; }
 }
 
 .breadcrumb__list {
