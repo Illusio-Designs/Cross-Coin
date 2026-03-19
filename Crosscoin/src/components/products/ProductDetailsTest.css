@@ -214,6 +214,26 @@
   display: block;
 }
 
+/* Color swatch circle (when no image, use colorMap hex) */
+.pdt-color-swatch {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: block;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.12);
+}
+
+.pdt-color-item.active .pdt-color-swatch {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 2px var(--navy);
+}
+
+.pdt-color-item:hover:not(.active) .pdt-color-swatch {
+  border-color: var(--gray-mid);
+}
+
 .pdt-color-name {
   font-size: 9px;
   text-align: center;
@@ -574,34 +594,8 @@
 
 .pdt-origin-badge svg { border-radius: 2px; }
 
-/* Reviews */
-.pdt-reviews-list { display: grid; gap: 12px; }
-
-.pdt-review-card {
-  border: 1px solid var(--gray-border);
-  border-radius: 6px;
-  padding: 14px 16px;
-}
-
-.pdt-review-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.pdt-stars { display: flex; gap: 2px; }
-
-.pdt-review-text {
-  margin: 0 0 6px;
-  font-size: 13px;
-  color: var(--gray-dark);
-}
-
-.pdt-review-date {
-  font-size: 11px;
-  color: var(--gray-light);
-}
+/* Reviews — uses InfiniteReviewsSlider */
+.pdt-reviews { margin-top: 8px; }
 
 /* Sticky Bar */
 .pdt-sticky {

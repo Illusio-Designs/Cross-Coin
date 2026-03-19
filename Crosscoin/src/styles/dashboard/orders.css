@@ -2786,3 +2786,339 @@
   }
 }
 
+
+
+/* ═══════════════════════════════════════════════
+   ORDER DETAILS MODAL — odm-* namespace
+═══════════════════════════════════════════════ */
+
+.odm-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Two-column row for Customer + Shipping */
+.odm-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* Card block */
+.odm-card {
+  border: 1px solid #ebebf0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.odm-card-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  background: #f8f9fb;
+  border-bottom: 1px solid #ebebf0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #180D3E;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.odm-count {
+  margin-left: auto;
+  background: #180D3E;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 20px;
+}
+
+/* Fields inside a card */
+.odm-fields {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.odm-field {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.odm-field-full {
+  flex-direction: column;
+  gap: 3px;
+}
+
+.odm-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  min-width: 90px;
+  flex-shrink: 0;
+}
+
+.odm-value {
+  color: #1a1a1a;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.odm-bold { font-weight: 600; }
+
+.odm-mono {
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 12px;
+  background: #f3f4f6;
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #374151;
+}
+
+.odm-guest-tag {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 1px 7px;
+  border-radius: 20px;
+  vertical-align: middle;
+}
+
+/* Payment type badge inside modal */
+.odm-pay-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.odm-pay-badge.cod {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fbbf24;
+}
+
+.odm-pay-badge.prepaid {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #4ade80;
+}
+
+/* Order info 2-col grid */
+.odm-info-grid {
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 20px;
+}
+
+/* FShip block */
+.odm-fship {
+  margin: 0 14px 12px;
+  border: 1px solid #e0e7ff;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f5f7ff;
+}
+
+.odm-fship-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #3730a3;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: 1px solid #e0e7ff;
+  background: #eef2ff;
+}
+
+.odm-fship .odm-info-grid {
+  padding: 10px 12px;
+  background: transparent;
+}
+
+.odm-label-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: #180D3E;
+  padding: 3px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.odm-label-link:hover { background: #0e0826; }
+
+/* ── Product item rows ── */
+.odm-items {
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.odm-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.odm-item:last-child { border-bottom: none; }
+
+.odm-item-img {
+  width: 60px;
+  height: 72px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #ebebf0;
+  background: #f8f9fb;
+  flex-shrink: 0;
+}
+
+.odm-item-img img,
+.odm-item-img > * {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.odm-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.odm-item-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  line-height: 1.35;
+  margin-bottom: 4px;
+}
+
+.odm-item-attrs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.odm-attr-chip {
+  font-size: 10px;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #374151;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+}
+
+.odm-item-sku {
+  font-size: 11px;
+  color: #888;
+  font-family: 'Monaco', 'Menlo', monospace;
+}
+
+.odm-item-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  flex-shrink: 0;
+  min-width: 80px;
+}
+
+.odm-item-qty {
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  background: #f3f4f6;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.odm-item-price {
+  font-size: 12px;
+  color: #777;
+}
+
+.odm-item-subtotal {
+  font-size: 13px;
+  font-weight: 700;
+  color: #180D3E;
+}
+
+/* ── Order Summary ── */
+.odm-summary {
+  border: 1px solid #ebebf0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.odm-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 16px;
+  font-size: 13px;
+  color: #444;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.odm-summary-row:last-child { border-bottom: none; }
+
+.odm-discount {
+  color: #CE1E36;
+  font-weight: 600;
+}
+
+.odm-total {
+  background: #f8f9fb;
+  font-size: 14px;
+  font-weight: 700;
+  color: #180D3E;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .odm-row-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .odm-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .odm-item-img {
+    width: 48px;
+    height: 58px;
+  }
+
+  .odm-body {
+    padding: 14px;
+  }
+}

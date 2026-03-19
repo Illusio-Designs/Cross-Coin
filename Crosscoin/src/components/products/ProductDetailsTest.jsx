@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { getPublicProductBySlug, getPublicCoupons } from '../../services/publicApi';
+import { getPublicProductBySlug, getPublicCoupons, getPublicProductReviews } from '../../services/publicApi';
 import { useCart } from '../../context/CartContext';
 import Loader from '../common/Loader';
+import InfiniteReviewsSlider from '../common/InfiniteReviewsSlider';
+import colorMap from './colorMap';
 
 const ProductDetailsTest = () => {
   const router = useRouter();
@@ -19,6 +21,7 @@ const ProductDetailsTest = () => {
   const [loading, setLoading] = useState(true);
   const [productData, setProductData] = useState(null);
   const [rawProduct, setRawProduct] = useState(null);
+  const [allReviews, setAllReviews] = useState([]);
 
   const sampleProduct = {
     brand: 'Cross Coin',
@@ -125,6 +128,17 @@ const ProductDetailsTest = () => {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Fetch real reviews once product id is known
+  useEffect(() => {
+    if (!rawProduct?.id) return;
+    getPublicProductReviews(rawProduct.id, { limit: 50 })
+      .then(data => {
+        const reviews = data?.reviews || data?.data?.reviews || (Array.isArray(data) ? data : []);
+        setAllReviews(reviews);
+      })
+      .catch(() => {});
+  }, [rawProduct?.id]);
 
   const handleAddToBag = async () => {
     if (!productData) return;
@@ -249,21 +263,26 @@ const ProductDetailsTest = () => {
                 Color: <span>{productData.colors[selectedColor]?.name}</span>
               </div>
               <div className="pdt-color-list">
-                {productData.colors.map((color, idx) => (
-                  <button
-                    key={idx}
-                    className={`pdt-color-item${selectedColor === idx ? ' active' : ''}`}
-                    onClick={() => setSelectedColor(idx)}
-                    aria-label={color.name}
-                  >
-                    {color.image ? (
-                      <img src={color.image} alt={color.name} />
-                    ) : (
-                      <span className="pdt-color-dot" />
-                    )}
-                    <span className="pdt-color-name">{color.name}</span>
-                  </button>
-                ))}
+                {productData.colors.map((color, idx) => {
+                  const swatch = colorMap[color.name?.toLowerCase()] || null;
+                  return (
+                    <button
+                      key={idx}
+                      className={`pdt-color-item${selectedColor === idx ? ' active' : ''}`}
+                      onClick={() => setSelectedColor(idx)}
+                      aria-label={color.name}
+                    >
+                      {color.image ? (
+                        <img src={color.image} alt={color.name} />
+                      ) : swatch ? (
+                        <span className="pdt-color-swatch" style={{ background: swatch }} />
+                      ) : (
+                        <span className="pdt-color-dot" />
+                      )}
+                      <span className="pdt-color-name">{color.name}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -449,27 +468,10 @@ const ProductDetailsTest = () => {
         </div>
 
         {/* Reviews */}
-        {productData.reviews?.length > 0 && (
+        {allReviews.length > 0 && (
           <div className="pdt-reviews">
             <h2 className="pdt-section-title">Customer Reviews</h2>
-            <div className="pdt-reviews-list">
-              {productData.reviews.slice(0, 5).map((review, idx) => (
-                <div key={idx} className="pdt-review-card">
-                  <div className="pdt-review-header">
-                    <strong>{review.reviewerName}</strong>
-                    <div className="pdt-stars">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <svg key={i} width="14" height="14" viewBox="0 0 24 24" fill={i < review.rating ? '#FFB800' : 'none'} stroke="#FFB800" strokeWidth="1.5" aria-hidden="true">
-                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                        </svg>
-                      ))}
-                    </div>
-                  </div>
-                  <p className="pdt-review-text">{review.review}</p>
-                  <span className="pdt-review-date">{new Date(review.createdAt).toLocaleDateString()}</span>
-                </div>
-              ))}
-            </div>
+            <InfiniteReviewsSlider reviews={allReviews} />
           </div>
         )}
       </div>
