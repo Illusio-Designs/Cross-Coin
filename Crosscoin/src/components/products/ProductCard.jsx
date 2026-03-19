@@ -27,8 +27,8 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
 
   const variation = product?.variations?.[0];
   const imageData = selectProductImage(product, variation);
-  const price = variation?.price || product?.price || 0;
-  const comparePrice = variation?.comparePrice || product?.comparePrice || 0;
+  const price = parseFloat(variation?.price || product?.price || 0);
+  const comparePrice = parseFloat(variation?.comparePrice || product?.comparePrice || 0);
 
   const [reviewCount, setReviewCount] = useState(product?.reviewCount || 0);
   const [avgRating, setAvgRating] = useState(product?.avgRating || null);
