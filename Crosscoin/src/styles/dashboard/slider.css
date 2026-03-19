@@ -20,7 +20,7 @@
 .sl-header-icon {
   width: 44px; height: 44px;
   background: #f0eeff;
-  border-radius: 8px;
+  border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
   color: #180D3E; flex-shrink: 0;
 }
@@ -43,7 +43,7 @@
 
 .sl-search-input {
   height: 38px; padding: 0 12px 0 34px;
-  border: 1px solid #ebebf0; border-radius: 8px;
+  border: 1px solid #ebebf0; border-radius: 6px;
   font-size: 13px; color: #1a1a1a; background: #fff;
   outline: none; width: 220px;
   transition: border-color 0.18s;
@@ -55,7 +55,7 @@
   display: flex; align-items: center; gap: 7px;
   height: 38px; padding: 0 16px;
   background: #CE1E36; color: #fff;
-  border: none; border-radius: 8px;
+  border: none; border-radius: 6px;
   font-size: 13px; font-weight: 600; cursor: pointer;
   transition: background 0.18s;
   font-family: 'DM Sans', sans-serif; white-space: nowrap;
@@ -65,7 +65,7 @@
 .sl-add-btn-icon svg { width: 16px; height: 16px; }
 
 .sl-table-wrap {
-  background: #fff; border-radius: 8px;
+  background: #fff; border-radius: 6px;
   border: 1px solid #ebebf0; overflow: hidden;
 }
 
@@ -90,7 +90,7 @@
 .sl-cat-badge {
   display: inline-block; padding: 3px 10px;
   background: #f0eeff; color: #180D3E;
-  border-radius: 8px; font-size: 11px; font-weight: 600;
+  border-radius: 6px; font-size: 11px; font-weight: 600;
 }
 .sl-na { color: #d1d5db; font-size: 13px; }
 
@@ -111,7 +111,7 @@
 .sl-actions { display: flex; gap: 6px; align-items: center; }
 
 .sl-btn-edit, .sl-btn-delete {
-  width: 32px; height: 32px; border: none; border-radius: 8px;
+  width: 32px; height: 32px; border: none; border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; transition: background 0.18s, color 0.18s;
 }
@@ -140,7 +140,7 @@
 
 .sl-multi-select {
   width: 100%; min-height: 110px;
-  border: 1px solid #ebebf0; border-radius: 8px;
+  border: 1px solid #ebebf0; border-radius: 6px;
   padding: 6px; font-size: 13px; color: #1a1a1a;
   font-family: 'DM Sans', sans-serif; outline: none;
   transition: border-color 0.18s;
@@ -156,7 +156,7 @@
 }
 
 .sl-img-preview-wrap {
-  margin-top: 10px; border-radius: 8px; overflow: hidden;
+  margin-top: 10px; border-radius: 6px; overflow: hidden;
   border: 1px solid #ebebf0; max-width: 100%;
 }
 .sl-img-preview {

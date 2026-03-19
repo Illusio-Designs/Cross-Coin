@@ -22,7 +22,7 @@
   transition: background 0.15s, border-color 0.15s;
   font-family: 'DM Sans', sans-serif;
   font-weight: 600;
-  border-radius: 8px;
+  border-radius: 6px;
   outline: none;
   font-size: 13px;
 }

@@ -18,7 +18,7 @@
   margin-bottom: 20px;
   padding: 16px;
   background: white;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #ebebf0;
   box-shadow: none;
 }
@@ -40,7 +40,7 @@
 .date-input-group input {
   padding: 8px 12px;
   border: 1.5px solid #ebebf0;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 13px;
   font-family: 'DM Sans', sans-serif;
   min-width: 150px;
@@ -81,7 +81,7 @@
 .stat-card {
   background: white;
   padding: 18px;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #ebebf0;
   box-shadow: none;
   display: flex;
@@ -94,7 +94,7 @@
 .stat-icon {
   width: 44px;
   height: 44px;
-  border-radius: 8px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -129,7 +129,7 @@
 .utm-table-container {
   background: white;
   padding: 20px;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #ebebf0;
   box-shadow: none;
 }
@@ -240,7 +240,7 @@
   justify-content: center;
   padding: 60px 20px;
   background: white;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #ebebf0;
   box-shadow: none;
 }

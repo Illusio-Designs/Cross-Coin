@@ -1,6 +1,6 @@
 .dashboard-page {
   background: #fff;
-  border-radius: 8px;
+  border-radius: 6px;
   box-shadow: 0 2px 12px rgba(31, 41, 55, 0.06);
   padding: 2rem;
   margin: 0;
@@ -38,7 +38,7 @@
 
 .dashboard-content .product-card {
   background: #ffffff;
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 1rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -90,7 +90,7 @@
 .variation-images-upload input[type="file"] {
   padding: 0.75rem 1rem;
   border: 1px solid #180D3E;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 1rem;
   transition: all 0.2s ease;
   background-color: #ffffff;
@@ -117,7 +117,7 @@
 
 .variation-images-preview > div {
   position: relative;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   border: 1px solid #d1d5db;
 }
@@ -126,7 +126,7 @@
   width: 60px;
   height: 60px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 6px;
   display: block;
 }
 
@@ -147,7 +147,7 @@
   color: white;
   border: none;
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 500;
@@ -164,7 +164,7 @@
   color: white;
   border: none;
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 500;
@@ -192,7 +192,7 @@
 .product-images-section input[type="file"] {
   padding: 0.75rem 1rem;
   border: 1px solid #180D3E;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 1rem;
   transition: all 0.2s ease;
   background-color: #ffffff;
@@ -217,14 +217,14 @@
   margin-top: 0.75rem;
   padding: 0.75rem;
   border: 1px dashed #d1d5db;
-  border-radius: 8px;
+  border-radius: 6px;
   min-height: 100px;
   align-items: flex-start;
 }
 
 .images-preview > div {
   position: relative;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   border: 1px solid #d1d5db;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -234,7 +234,7 @@
   width: 80px;
   height: 80px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 6px;
   display: block;
 }
 
@@ -281,7 +281,7 @@
   color: white;
   border: none;
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 500;
@@ -298,7 +298,7 @@
   color: white;
   border: none;
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 500;
@@ -318,7 +318,7 @@
   margin: 1.5rem 0;
   padding: 1.5rem;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 6px;
   background-color: #f9fafb;
 }
 
