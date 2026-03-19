@@ -395,7 +395,6 @@
   display: grid !important;
   grid-template-columns: repeat(3, 1fr) !important;
   gap: 16px !important;
-  margin: 24px 0 32px 0 !important;
   width: 100% !important;
   box-sizing: border-box !important;
 }
@@ -2313,7 +2312,6 @@
   display: flex;
   flex-direction: row;
   gap: 10px;
-  margin-bottom: 16px;
   padding: 14px 16px;
   background: #fff;
   border-radius: 6px;
@@ -2547,7 +2545,6 @@
   background: #fafafa;
   border: 1px solid #ebebf0;
   border-radius: 6px;
-  margin-bottom: 16px;
   flex-wrap: wrap;
   align-items: center;
 }
