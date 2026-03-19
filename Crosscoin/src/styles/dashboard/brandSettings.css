@@ -30,7 +30,7 @@
     min-width: 200px;
     padding: 10px 16px;
     border: 2px solid #e0e0e0;
-    border-radius: 8px;
+    border-radius: 6px;
     font-size: 14px;
     font-weight: 500;
     color: #333;
@@ -76,7 +76,7 @@
 /* Add Form */
 .add-form-card {
     background: white;
-    border-radius: 8px;
+    border-radius: 6px;
     padding: 24px;
     margin-bottom: 24px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -143,7 +143,7 @@
     margin-bottom: 24px;
     padding: 16px;
     background: white;
-    border-radius: 8px;
+    border-radius: 6px;
     box-shadow: none;
     border: 1px solid #ebebf0;
 }
@@ -152,7 +152,7 @@
     padding: 8px 16px;
     border: 1px solid #ddd;
     background: white;
-    border-radius: 8px;
+    border-radius: 6px;
     font-size: 14px;
     font-weight: 500;
     color: #666;
@@ -177,7 +177,7 @@
 .category-btn .count {
     background: rgba(0, 0, 0, 0.1);
     padding: 2px 8px;
-    border-radius: 8px;
+    border-radius: 6px;
     font-size: 12px;
 }
 
@@ -194,7 +194,7 @@
 
 .setting-card {
     background: white;
-    border-radius: 8px;
+    border-radius: 6px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     transition: box-shadow 0.2s;
@@ -222,7 +222,7 @@
 .category-badge {
     display: inline-block;
     padding: 4px 10px;
-    border-radius: 8px;
+    border-radius: 6px;
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;

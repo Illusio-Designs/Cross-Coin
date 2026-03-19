@@ -6,7 +6,7 @@
   width: 100%;
   border-collapse: collapse;
   background-color: white;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
 }
 
@@ -84,7 +84,7 @@
 /* Table With Controls Styles */
 .table-with-controls {
   background-color: #F3F4F5;
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 20px;
   box-shadow: 0 1px 3px rgba(24, 13, 62, 0.1);
 }
