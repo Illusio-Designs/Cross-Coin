@@ -7,6 +7,7 @@
  */
 
 const { sequelize } = require('../config/db.js');
+const { Transaction } = require('sequelize');
 
 class TransactionWrapper {
   constructor() {
@@ -28,7 +29,7 @@ class TransactionWrapper {
 
       // Create transaction with specified isolation level
       this.transaction = await sequelize.transaction({
-        isolationLevel: sequelize.Transaction.ISOLATION_LEVELS[isolationLevel]
+        isolationLevel: Transaction.ISOLATION_LEVELS[isolationLevel]
       });
 
       this.isActive = true;
