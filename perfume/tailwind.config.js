@@ -1,34 +1,48 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
       colors: {
-        primary: '#000000',
-        secondary: '#ffffff',
-        accent: '#333333',
-        muted: '#666666',
-        border: '#e5e5e5',
+        gold: {
+          DEFAULT: '#C9A84C',
+          light: '#FFD700',
+          dark: '#8B6914',
+          pale: '#F5E6C8',
+        },
+        dark: {
+          DEFAULT: '#111111',
+          card: '#1a1a1a',
+          border: '#2a2a2a',
+          muted: '#333333',
+        },
+        cream: '#F5F0E8',
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        serif: ['Playfair Display', 'Georgia', 'serif'],
+        sans: ['Cormorant Garamond', 'serif'],
+        body: ['Jost', 'sans-serif'],
       },
       animation: {
-        'slide-in': 'slideIn 0.3s ease-out',
-        'fade-in': 'fadeIn 0.3s ease-out',
+        'marquee': 'marquee 25s linear infinite',
+        'shimmer': 'shimmer 2s linear infinite',
+        'fade-up': 'fadeUp 0.6s ease forwards',
       },
       keyframes: {
-        slideIn: {
-          '0%': { transform: 'translateX(100%)' },
-          '100%': { transform: 'translateX(0)' },
+        marquee: {
+          '0%': { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(-50%)' },
         },
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% center' },
+          '100%': { backgroundPosition: '200% center' },
+        },
+        fadeUp: {
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
     },
