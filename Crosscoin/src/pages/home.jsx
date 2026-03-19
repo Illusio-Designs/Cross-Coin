@@ -283,6 +283,9 @@ const Home = () => {
                     key={product.id}
                     product={formattedProduct}
                     onProductClick={handleProductClick}
+                    onAddToCart={(e, prod, color, size, variationId) => {
+                      addToCart(prod, color, size, 1, variationId, prod.images?.map(i => i.image_url || i) || []);
+                    }}
                   />
                 );
               })}
