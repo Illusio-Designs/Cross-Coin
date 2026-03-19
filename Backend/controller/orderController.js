@@ -12,7 +12,7 @@ const { ProductImage } = require("../model/productImageModel.js");
 const Brand = require("../model/brandModel.js");
 const FShipLabelDownload = require("../model/fshipLabelDownloadModel.js");
 const UTMTracking = require("../model/utmModel.js");
-const { Op } = require("sequelize");
+const { Op, Transaction } = require("sequelize");
 const { sequelize } = require("../config/db.js");
 const XLSX = require('xlsx');
 const axios = require('axios');
@@ -96,7 +96,7 @@ module.exports.createOrder = async (req, res) => {
   try {
     // Start transaction with READ_COMMITTED isolation level
     transaction = await sequelize.transaction({
-      isolationLevel: sequelize.Transaction.ISOLATION_LEVELS.READ_COMMITTED
+      isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED
     });
     console.log("✅ Transaction started for order creation");
 
