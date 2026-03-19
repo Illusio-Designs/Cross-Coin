@@ -226,7 +226,7 @@
   display: inline-flex;
   align-items: center;
   padding: 3px 10px;
-  border-radius: 20px;
+  border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
   text-transform: capitalize;
@@ -328,12 +328,17 @@
 .sl-brand-tag {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
+  gap: 5px;
+  padding: 3px 8px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   background: #f0eeff;
   color: #180D3E;
+  border: 1px solid #e0d8ff;
+  white-space: nowrap;
+  font-family: 'DM Sans', sans-serif;
+  line-height: 1.4;
 }
 
 /* ---- N/A placeholder ---- */
@@ -979,7 +984,7 @@
 .prod-badge {
   display: inline-block;
   padding: 3px 10px;
-  border-radius: 20px;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
   flex-shrink: 0;

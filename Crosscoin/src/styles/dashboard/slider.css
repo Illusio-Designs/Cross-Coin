@@ -102,7 +102,7 @@
 }
 
 .sl-status-badge {
-  display: inline-block; padding: 3px 10px; border-radius: 20px;
+  display: inline-block; padding: 3px 10px; border-radius: 6px;
   font-size: 11px; font-weight: 600; text-transform: capitalize;
 }
 .sl-status-active   { background: #d1fae5; color: #059669; }
