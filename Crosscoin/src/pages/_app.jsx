@@ -28,7 +28,6 @@ import "../styles/pages/Login.css";
 import "../styles/pages/Profile.css";
 import "../styles/pages/products.css";
 import "../styles/pages/ProductDetails.css";
-import "../styles/pages/UnifiedCheckout.css";
 import "../styles/pages/Wishlist.css";
 import "../styles/pages/ThankYou.css";
 import "../styles/pages/OrderTracking.css";
