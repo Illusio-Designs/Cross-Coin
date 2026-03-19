@@ -20,6 +20,7 @@ import "../styles/common/mobile-utilities.css";
 import "../styles/common/skeleton.css";
 import "../styles/common/critical.css";
 import "../styles/common/DonutChart.css";
+import "../styles/common/FomoElements.css";
 // Components
 import "../styles/components/InfiniteReviewsSlider.css";
 // Pages
@@ -64,9 +65,9 @@ import "../styles/components/blog-section.css";
 import "../components/Sidebar/Sidebar.css";
 import "../components/cart/CartDrawer.css";
 import "../components/cart/QuantityOfferBar.css";
-import "../components/products/ProductDetailsTest.css";
 import "../styles/components/SizeChartModal.css";
 import "../components/products/ProductFilterDrawer.css";
+import "../components/products/FomoBar.css";
 import "../styles/common/Dropdown.css";
 
 // UI Components CSS

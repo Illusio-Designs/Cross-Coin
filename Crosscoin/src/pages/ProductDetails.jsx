@@ -1,854 +1,247 @@
-import { useState, useEffect, useMemo, useRef } from "react";
-import { useRouter } from "next/router";
-import dynamic from "next/dynamic";
-import SafeImage from "../components/common/SafeImage";
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { getPublicProductBySlug, getPublicCoupons, getPublicProductReviews, checkPincodeServiceability } from '../services/publicApi';
 import { useCart } from '../context/CartContext';
-import { useWishlist } from '../context/WishlistContext';
-import { useAuth } from '../context/AuthContext';
-import { useBreadcrumb } from '../components/common/Breadcrumb';
-import { useRouter as useNextRouter } from "next/navigation";
-import { getPublicProductBySlug, createPublicReview, getPublicCoupons, getPublicProductReviews } from '../services/publicApi';
-import SeoWrapper from '../console/SeoWrapper';
-import { showSuccess, showError, showInfo } from '../utils/toastNotification';
 import Loader from '../components/common/Loader';
-import { fbqTrack } from '../utils/fbqTrack';
 import InfiniteReviewsSlider from '../components/common/InfiniteReviewsSlider';
-import { getProductImageSrc } from '../utils/imageUtils';
-import DOMPurify from 'dompurify';
-import { Modal } from "../components/ui";
 import colorMap from '../components/products/colorMap';
-
-// Load page-specific CSS - moved to _app.jsx
+import SizeChartModal from '../components/products/SizeChartModal';
+import { useBreadcrumb } from '../components/common/Breadcrumb';
+import SeoWrapper from '../console/SeoWrapper';
 
 export default function ProductDetails() {
   const router = useRouter();
-  const nextRouter = useNextRouter();
+  const slug = router.query?.slug ? decodeURIComponent(router.query.slug) : null;
+  const { addToCart, buyNow, setIsDrawerOpen } = useCart();
   const { setCustomBreadcrumbs } = useBreadcrumb();
-  
-  // Get slug from router query - add safety check for router.query
-  const rawSlug = router.query?.slug;
-  
-  // Decode the slug to handle URL-encoded characters like %28 and %29
-  const productSlug = rawSlug ? decodeURIComponent(rawSlug) : null;
-  
-  const { addToCart, removeFromCart, buyNow, setIsDrawerOpen } = useCart();
-  const { addToWishlist, removeFromWishlist, wishlist } = useWishlist();
-  const { isAuthenticated, user } = useAuth();
-  
-  const [selectedThumbnail, setSelectedThumbnail] = useState(0);
+
+  const [showLightbox, setShowLightbox] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [selectedColor, setSelectedColor] = useState(0);
   const [selectedVariation, setSelectedVariation] = useState(null);
-  const [selectedAttributes, setSelectedAttributes] = useState({});
   const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState("description");
-  const [product, setProduct] = useState(null);
+  const [selectedSize, setSelectedSize] = useState('');
+  const [showSizeChart, setShowSizeChart] = useState(false);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [pincode, setPincode] = useState('');
+  const [serviceability, setServiceability] = useState(null);
+  const [serviceabilityLoading, setServiceabilityLoading] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  
-  // Note: avoid heavy debug logging here (hurts mobile performance)
-  const [showAddedToCart, setShowAddedToCart] = useState(false);
-  const [reviewForm, setReviewForm] = useState({
-    rating: 5,
-    comment: '',
-    name: '',
-    email: '',
-    files: []
-  });
-  const [reviewError, setReviewError] = useState(null);
-  const [reviewSuccess, setReviewSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formTouched, setFormTouched] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [filePreview, setFilePreview] = useState([]);
-  const [coupons, setCoupons] = useState([]);
-  const [copiedCoupon, setCopiedCoupon] = useState(null);
+  const [productData, setProductData] = useState(null);
+  const [rawProduct, setRawProduct] = useState(null);
   const [allReviews, setAllReviews] = useState([]);
-  const [reviewsPage, setReviewsPage] = useState(1);
-  const [reviewsHasMore, setReviewsHasMore] = useState(true);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [isZoomOpen, setIsZoomOpen] = useState(false);
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [tooltipStyle, setTooltipStyle] = useState({});
-  const [isBuyNowLoading, setIsBuyNowLoading] = useState(false);
-  const couponRefs = useRef({});
-  // Store selected size per pack/variation
-  const [selectedSizes, setSelectedSizes] = useState({});
+  const [error, setError] = useState(null);
 
-  // Add color selection by name
-  const [selectedColor, setSelectedColor] = useState(null);
-  // Add type/model selection state
-  const [selectedType, setSelectedType] = useState(null);
-
-  // Add state for selectedSku
-  const [selectedSku, setSelectedSku] = useState('');
-
-  // Find the selected variation by SKU
-  const selectedVariationBySku = useMemo(() => {
-    if (!product?.variations || !Array.isArray(product.variations)) {
-      return null;
+  // Helper: extract image URLs from a variation + api fallback
+  const getVariationImages = (variation, api) => {
+    if (variation?.images?.length > 0) {
+      return variation.images.map(img => img.large || img.image_url || img);
     }
-    return product.variations.find(v => v && v.sku === selectedSku) || product.variations[0] || null;
-  }, [product?.variations, selectedSku]);
-
-  // Use images from selected variation if available, else fallback to product images
-  const variationImages = useMemo(() => {
-    // Safety check: ensure we have valid data
-    if (!product || !selectedVariation) {
-      return [];
+    if (api?.images?.length > 0) {
+      const filtered = api.images.filter(img => img?.product_variation_id === variation?.id);
+      if (filtered.length > 0) return filtered.map(img => img.large || img.image_url || img);
+      return api.images.map(img => img.large || img.image_url || img);
     }
-    
-    // Priority 1: Use images from the selected variation if available
-    if (selectedVariation?.images && Array.isArray(selectedVariation.images) && selectedVariation.images.length > 0) {
-      return selectedVariation.images;
-    }
-    
-    // Priority 2: Filter product images by variation ID
-    if (product?.images && Array.isArray(product.images) && product.images.length > 0 && selectedVariation?.id) {
-      const filteredImages = product.images.filter(img => img && img.product_variation_id === selectedVariation.id);
-      if (filteredImages.length > 0) {
-        return filteredImages;
-      }
-    }
-    
-    // Priority 3: Fallback to all product images
-    if (product?.images && Array.isArray(product.images) && product.images.length > 0) {
-      return product.images;
-    }
-    
-    // If no images available, return empty array
     return [];
-  }, [selectedVariation, product]);
-
-  // Debug: Log variation images data
-  useEffect(() => {
-    }, [selectedVariation, variationImages, selectedThumbnail, product]);
-
-  // Reset selectedThumbnail when variation changes
-  useEffect(() => {
-    setSelectedThumbnail(0);
-  }, [selectedVariation?.id]);
-
-  // Parse attributes with safety checks
-  const attrs = useMemo(() => {
-    if (!selectedVariationBySku || !selectedVariationBySku.attributes) {
-      return {};
-    }
-    
-    try {
-      return typeof selectedVariationBySku.attributes === 'string'
-        ? JSON.parse(selectedVariationBySku.attributes)
-        : selectedVariationBySku.attributes || {};
-    } catch (error) {
-      return {};
-    }
-  }, [selectedVariationBySku]);
-
-  const productApiCalledRef = useRef(false);
+  };
 
   useEffect(() => {
-    // Don't run if router is not ready yet
-    if (!router.isReady) return;
-    
-    // Don't run if productSlug is null or undefined
-    if (!productSlug) return;
-    
-    // Reset states when slug changes
-    if (productApiCalledRef.current && productApiCalledRef.current !== productSlug) {
-      productApiCalledRef.current = null;
-    }
-    
-    if (productApiCalledRef.current === productSlug) return; // Prevent multiple calls for same slug
-    productApiCalledRef.current = productSlug;
-    
-    // ✅ PARALLELIZED: Fetch product and coupons simultaneously
-    const fetchAllData = async () => {
+    if (!router.isReady || !slug) return;
+    const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
-        setProduct(null);
+        const productResponse = await getPublicProductBySlug(slug);
 
-        if (!productSlug) {
-          setError('No product slug provided');
-          setLoading(false);
-          return;
-        }
+        if (productResponse?.success && productResponse?.data) {
+          const api = productResponse.data;
+          const variations = api.variations || [];
+          const firstVar = variations[0] || {};
+          const images = getVariationImages(firstVar, api);
 
-        // Execute product and coupon fetches in parallel
-        const [productResponse, couponsData] = await Promise.all([
-          // 1. Fetch product
-          (async () => {
-            try {
-              return await getPublicProductBySlug(productSlug);
-            } catch (err) {
-              throw err;
-            }
-          })(),
+          setRawProduct(api);
+          setSelectedVariation(firstVar);
 
-          // 2. Fetch coupons
-          (async () => {
-            try {
-              const data = await getPublicCoupons();
-              return Array.isArray(data) ? data : data.coupons || [];
-            } catch (err) {
-              return [];
-            }
-          })()
-        ]);
+          const firstAttrs = typeof firstVar.attributes === 'string'
+            ? JSON.parse(firstVar.attributes)
+            : (firstVar.attributes || {});
+          const firstSizes = Array.isArray(firstAttrs.size)
+            ? firstAttrs.size
+            : (firstAttrs.size ? [firstAttrs.size] : []);
+          setSelectedSize(firstSizes[0] || '');
 
-        // Process product response
-        if (productResponse && productResponse.success && productResponse.data) {
-          setProduct(productResponse.data);
-          // Set default variation if available
-          if (productResponse.data.variations && productResponse.data.variations.length > 0) {
-            setSelectedVariation(productResponse.data.variations[0]);
-            setSelectedSku(productResponse.data.variations[0].sku);
-            // Initialize selected attributes with first options
-            const firstVariation = productResponse.data.variations[0];
-            if (firstVariation.attributes) {
-              const attributes = typeof firstVariation.attributes === 'string'
-                ? JSON.parse(firstVariation.attributes)
-                : firstVariation.attributes;
-              const initialAttributes = {};
-              Object.keys(attributes).forEach(key => {
-                initialAttributes[key] = attributes[key][0];
-              });
-              setSelectedAttributes(initialAttributes);
-            }
-          }
-          
-          // Update breadcrumbs with product name
-          if (productResponse.data.name) {
-            setCustomBreadcrumbs([
-              { label: "Home", path: "/" },
-              { label: "Products", path: "/Products" },
-              { label: productResponse.data.name, path: router.asPath, isLast: true }
-            ]);
-          }
+          setProductData({
+            id: api.id,
+            brand: api.brand?.name || '',
+            title: api.name || '',
+            styleNo: firstVar.sku || '',
+            price: parseFloat(firstVar.price || api.price || 0),
+            comparePrice: parseFloat(firstVar.comparePrice || 0),
+            images: images,
+            description: api.description || '',
+            reviewCount: api.review_count || 0,
+            avgRating: api.avg_rating || 0,
+            variations,
+            rawApi: api,
+          });
+
+          setCustomBreadcrumbs([
+            { label: 'Home', path: '/' },
+            { label: 'Products', path: '/Products' },
+            { label: api.name || 'Product', path: router.asPath, isLast: true },
+          ]);
         } else {
-          setError('Product not found or no data returned');
-          }
-
-        // Set coupons
-        setCoupons(couponsData);
-
-        setLoading(false);
+          setError('Product not found');
+        }
       } catch (err) {
-        setError(err.message || 'Failed to fetch product');
+        setError(err.message || 'Failed to load product');
+      } finally {
         setLoading(false);
       }
     };
-
-    // Wrap in try-catch to handle any synchronous errors
-    try {
-      fetchAllData();
-    } catch (syncError) {
-      setError('An unexpected error occurred');
-      setLoading(false);
-    }
-  }, [productSlug, router.isReady]);
+    fetchData();
+  }, [router.isReady, slug]);
 
   // Cleanup breadcrumbs on unmount
   useEffect(() => {
-    return () => {
-      setCustomBreadcrumbs(null);
-    };
+    return () => setCustomBreadcrumbs(null);
   }, [setCustomBreadcrumbs]);
 
-  // Fetch reviews with pagination
-  useEffect(() => {
-    if (!product?.id) return;
-    
-    const fetchReviews = async () => {
+  // Build color options per-variation
+  const colorOptions = (() => {
+    if (!productData?.variations) return [];
+    return productData.variations.reduce((acc, v) => {
       try {
-        setReviewsLoading(true);
-        const response = await getPublicProductReviews(product.id, { 
-          page: reviewsPage, 
-          limit: 10 // Fetch 10 reviews per page instead of 100
-        });
-        
-        if (response.success && response.reviews) {
-          if (reviewsPage === 1) {
-            // First page - replace reviews
-            setAllReviews(response.reviews);
-          } else {
-            // Subsequent pages - append reviews
-            setAllReviews(prev => [...prev, ...response.reviews]);
-          }
-          
-          // Check if there are more reviews to load
-          const hasMore = response.pagination && 
-                         response.pagination.page < response.pagination.totalPages;
-          setReviewsHasMore(hasMore);
-        } else {
-          // Fallback to product reviews if API fails
-          if (reviewsPage === 1) {
-            setAllReviews(product.reviews || []);
-            setReviewsHasMore(false);
-          }
-        }
-      } catch (err) {
-        // Fallback to product reviews on error
-        if (reviewsPage === 1) {
-          setAllReviews(product.reviews || []);
-          setReviewsHasMore(false);
-        }
-      } finally {
-        setReviewsLoading(false);
-      }
-    };
-    
-    fetchReviews();
-  }, [product?.id, reviewsPage]);
-
-  // Get all unique color names from variations
-  const colorOptions = product?.variations
-    ? Array.from(new Set(product.variations.flatMap(v => {
         const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
-        return attrs && attrs.color ? attrs.color : [];
-      })))
-    : [];
+        const colors = Array.isArray(attrs?.color) ? attrs.color : (attrs?.color ? [attrs.color] : []);
+        if (colors.length > 0) acc.push({ variation: v, colors });
+      } catch (e) { /* ignore */ }
+      return acc;
+    }, []);
+  })();
 
-  // Find the variation for the selected color
-  const selectedColorVariation = product?.variations
-    ? product.variations.find(v => {
-        const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
-        return attrs && attrs.color && attrs.color.includes(selectedColor || colorOptions[0]);
-      })
-    : null;
+  // Gallery images driven by selectedVariation
+  const galleryImages = (() => {
+    if (!selectedVariation || !productData) return productData?.images || [];
+    const api = productData.rawApi;
+    if (!api) return productData.images || [];
+    const imgs = getVariationImages(selectedVariation, api);
+    return imgs.length > 0 ? imgs : (productData.images || []);
+  })();
 
-  // Get all unique types from variations
-  const typeOptions = useMemo(() => 
-    product?.variations
-      ? Array.from(new Set(product.variations.flatMap(v => {
-          const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
-          return attrs && attrs.type ? attrs.type : [];
-        })))
-      : []
-  , [product?.variations]);
-
-  // Get all colors for the selected type
-  const colorsForSelectedType = useMemo(() => 
-    product?.variations
-      ? Array.from(new Set(product.variations
-          .filter(v => {
-            const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
-            return attrs && attrs.type && attrs.type.includes(selectedType || typeOptions[0]);
-        })
-        .flatMap(v => {
-          const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
-          return attrs && attrs.color ? attrs.color : [];
-        })
-      ))
-    : []
-  , [product?.variations, selectedType, typeOptions]);
-
-  // Find the variation for the selected type and color
-  const selectedTypeColorVariation = product?.variations
-    ? product.variations.find(v => {
-        const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
-        return attrs && attrs.type && attrs.type.includes(selectedType || typeOptions[0]) &&
-               attrs.color && attrs.color.includes(selectedColor || colorsForSelectedType[0]);
-      })
-    : null;
-
-  // Update selectedType and selectedColor on mount if not set
-  useEffect(() => {
-    if (!selectedType && typeOptions.length > 0) {
-      setSelectedType(typeOptions[0]);
+  const handleColorSelect = (idx) => {
+    setSelectedColor(idx);
+    setSelectedImage(0);
+    const opt = colorOptions?.[idx];
+    if (opt?.variation) {
+      setSelectedVariation(opt.variation);
+      const attrs = typeof opt.variation.attributes === 'string'
+        ? JSON.parse(opt.variation.attributes)
+        : (opt.variation.attributes || {});
+      const sizes = Array.isArray(attrs.size) ? attrs.size : (attrs.size ? [attrs.size] : []);
+      setSelectedSize(sizes[0] || '');
     }
-  }, [typeOptions, selectedType]);
+  };
 
   useEffect(() => {
-    if (!selectedColor && colorsForSelectedType.length > 0) {
-      setSelectedColor(colorsForSelectedType[0]);
-    }
-  }, [colorsForSelectedType, selectedColor]);
-
-  // Desktop: Show fixed action buttons at bottom when product details scroll out
-  const [showFixedButtons, setShowFixedButtons] = useState(false);
-  
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    let ticking = false;
-    
-    const handleScroll = () => {
-      if (ticking) return;
-      
-      ticking = true;
-      requestAnimationFrame(() => {
-        // Only for desktop (above 426px)
-        if (window.innerWidth <= 426) {
-          setShowFixedButtons(false);
-          ticking = false;
-          return;
-        }
-        
-        const actionButtonsRow = document.querySelector('.action-buttons-row');
-        
-        if (!actionButtonsRow) {
-          ticking = false;
-          return;
-        }
-        
-        const rect = actionButtonsRow.getBoundingClientRect();
-        // Show fixed buttons when original buttons scroll past the top of viewport
-        const isScrolledPast = rect.bottom < 0;
-        
-        setShowFixedButtons(isScrolledPast);
-        ticking = false;
-      });
-    };
-    
+    const handleScroll = () => setShowStickyBar(window.scrollY > 500);
     window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', handleScroll, { passive: true });
-    
-    // Initial check
-    handleScroll();
-    
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
-    };
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Helper functions
-  const generateCouponDescription = (coupon) => {
-    const value = parseFloat(coupon.value);
-    const minPurchase = parseFloat(coupon.minPurchase);
-    const maxDiscount = parseFloat(coupon.maxDiscount);
+  // Fetch real reviews once product id is known
+  useEffect(() => {
+    if (!rawProduct?.id) return;
+    getPublicProductReviews(rawProduct.id, { limit: 50 })
+      .then(data => {
+        const reviews = data?.reviews || data?.data?.reviews || (Array.isArray(data) ? data : []);
+        setAllReviews(reviews);
+      })
+      .catch(() => {});
+  }, [rawProduct?.id]);
 
-    if (coupon.type === 'percentage') {
-      let description = `Get ${value}% off`;
-      if (minPurchase > 0) {
-        description += ` on a minimum purchase of ₹${minPurchase}`;
-      }
-      if (maxDiscount > 0) {
-        description += `. Maximum discount: ₹${maxDiscount}`;
-      }
-      return description + '.';
-    }
-
-    if (coupon.type === 'fixed') {
-      let description = `Get a flat ₹${value} discount`;
-      if (minPurchase > 0) {
-        description += ` on a minimum purchase of ₹${minPurchase}`;
-      }
-      return description + '.';
-    }
-    
-    return 'A special discount on your order.';
-  };
-
-  const handleCopyCoupon = async (couponCode) => {
-    try {
-      await navigator.clipboard.writeText(couponCode);
-
-      // If clicking the same coupon, reset state first to force re-render
-      if (copiedCoupon === couponCode) {
-        setCopiedCoupon(null);
-        setTooltipStyle({});
-        setTimeout(() => {
-          setCopiedCoupon(couponCode);
-          setTooltipStyle({
-            top: '20px',
-            left: '50vw'
-          });
-          requestAnimationFrame(() => {
-            if (couponRefs.current[couponCode]) {
-              const rect = couponRefs.current[couponCode].getBoundingClientRect();
-              const top = rect.top - 44;
-              const left = rect.left + rect.width / 2;
-              setTooltipStyle({
-                top: `${top}px`,
-                left: `${left}px`
-              });
-            }
-          });
-        }, 0);
-      } else {
-        setCopiedCoupon(couponCode);
-        setTooltipStyle({
-          top: '20px',
-          left: '50vw'
-        });
-        requestAnimationFrame(() => {
-          if (couponRefs.current[couponCode]) {
-            const rect = couponRefs.current[couponCode].getBoundingClientRect();
-            const top = rect.top - 44;
-            const left = rect.left + rect.width / 2;
-            setTooltipStyle({
-              top: `${top}px`,
-              left: `${left}px`
-            });
-          }
-        });
-      }
-
-      setTimeout(() => {
-        setCopiedCoupon(null);
-        setTooltipStyle({});
-      }, 2000);
-    } catch (err) {
-      }
-  };
-
-  const renderStars = (rating) => {
-    const totalStars = 5;
-    const roundedRating = Math.round(rating || 0);
-    const stars = [];
-    for (let i = 0; i < totalStars; i++) {
-      stars.push(i < roundedRating ? '★' : '☆');
-    }
-    return stars.join(' ');
-  };
-
-  const handleAttributeChange = (attributeName, value) => {
-    setSelectedAttributes(prev => {
-      const newAttributes = { ...prev, [attributeName]: value };
-      // Find matching variation
-      const matchingVariation = product?.variations?.find(variation => {
-        const attrs = typeof variation.attributes === 'string'
-          ? JSON.parse(variation.attributes)
-          : variation.attributes;
-        return Object.entries(newAttributes).every(([key, val]) => 
-          attrs?.[key]?.includes(val)
-        );
-      });
-      if (matchingVariation) {
-        setSelectedVariation(matchingVariation);
-        }
-      if(attributeName === 'color') {
-        }
-      return newAttributes;
-    });
-  };
-
-  const validateForm = () => {
-    if (!reviewForm.name.trim()) return 'Please enter your name';
-    if (!reviewForm.email.trim()) return 'Please enter your email';
-    if (!reviewForm.email.includes('@')) return 'Please enter a valid email';
-    if (!reviewForm.comment.trim()) return 'Please enter your review';
-    if (reviewForm.comment.length < 10) return 'Review must be at least 10 characters';
-    return null;
-  };
-
-  const handleReviewSubmit = async (e) => {
-    e.preventDefault();
-    setFormTouched(true);
-    
-    const validationError = validateForm();
-    if (validationError) {
-      showValidationErrorToast(validationError);
-      return;
-    }
-
-    setIsSubmitting(true);
-    setReviewError(null);
-    setReviewSuccess(false);
-
-    try {
-      const formData = new FormData();
-      formData.append('productId', product.id);
-      formData.append('rating', reviewForm.rating);
-      formData.append('comment', reviewForm.comment.trim());
-      formData.append('name', reviewForm.name.trim());
-      formData.append('email', reviewForm.email.trim());
-
-      // Append files if they exist
-      if (selectedFiles.length > 0) {
-        selectedFiles.forEach(file => {
-          formData.append('files', file);
-        });
-      }
-
-      const response = await createPublicReview(formData);
-      if (response.success) {
-        setReviewSuccess(true);
-        showReviewSubmittedSuccessToast();
-        setReviewForm({
-          rating: 5,
-          comment: '',
-          name: '',
-          email: '',
-          files: []
-        });
-        setFormTouched(false);
-        // Refresh product data to get updated reviews
-        const updatedProduct = await getPublicProductBySlug(productSlug);
-        if (updatedProduct.success) {
-          setProduct(updatedProduct.data);
-          // Reset to page 1 and refresh reviews
-          setReviewsPage(1);
-          setReviewsHasMore(true);
-          try {
-            const allReviewsResponse = await getPublicProductReviews(updatedProduct.data.id, { page: 1, limit: 10 });
-            if (allReviewsResponse.success && allReviewsResponse.reviews) {
-              setAllReviews(allReviewsResponse.reviews);
-              const hasMore = allReviewsResponse.pagination && 
-                             allReviewsResponse.pagination.page < allReviewsResponse.pagination.totalPages;
-              setReviewsHasMore(hasMore);
-            }
-          } catch (err) {
-            }
-        }
-      }
-    } catch (error) {
-      showReviewSubmittedErrorToast(error.message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleInputChange = (field, value) => {
-    setReviewForm(prev => ({ ...prev, [field]: value }));
-    if (formTouched) {
-      setReviewError(null);
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    const maxFiles = 5;
-    const maxSize = 5 * 1024 * 1024; // 5MB
-
-    if (files.length > maxFiles) {
-      showValidationErrorToast(`You can only upload up to ${maxFiles} files`);
-      return;
-    }
-
-    const validFiles = files.filter(file => {
-      if (file.size > maxSize) {
-        showValidationErrorToast(`${file.name} is too large. Maximum size is 5MB`);
-        return false;
-      }
-      if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-        showValidationErrorToast(`${file.name} is not a valid image or video file`);
-        return false;
-      }
-      return true;
-    });
-
-    if (validFiles.length !== files.length) {
-      return;
-    }
-
-    setSelectedFiles(validFiles);
-    setReviewForm(prev => ({ ...prev, files: validFiles }));
-
-    // Create preview URLs
-    const previews = validFiles.map(file => ({
-      url: URL.createObjectURL(file),
-      name: file.name,
-      type: file.type
-    }));
-    setFilePreview(previews);
-    setReviewError(null);
-  };
-
-  const removeFile = (index) => {
-    const newFiles = selectedFiles.filter((_, i) => i !== index);
-    const newPreviews = filePreview.filter((_, i) => i !== index);
-    
-    setSelectedFiles(newFiles);
-    setReviewForm(prev => ({ ...prev, files: newFiles }));
-    setFilePreview(newPreviews);
-  };
-
-  // Add this decodeHtml function
-  function decodeHtml(html) {
-    if (typeof window !== 'undefined') {
-      try {
-        const txt = document.createElement('textarea');
-        txt.innerHTML = html;
-        return txt.value;
-      } catch (error) {
-        return html;
-      }
-    }
-    return html;
-  }
-
-  // Update addToCart and buyNow to use selectedSizeForPack
-  const handleAddToCart = () => {
-    // No validation required - use defaults automatically
-    const selectedColor = selectedAttributes.color || '';
-    const selectedSize = selectedSizeForPack || '';
-    // Find the image for the selected variation by product_variation_id
-    let selectedImage = [];
-    let imagesForVariation = [];
-    if (product?.images && product.images.length > 0 && selectedVariation?.id) {
-      imagesForVariation = product.images.filter(img => img && img.product_variation_id === selectedVariation.id);
-      if (imagesForVariation.length > 0) {
-        selectedImage = [imagesForVariation[0]];
-      }
-    }
-    if (selectedImage.length === 0 && selectedVariation?.images && selectedVariation.images.length > 0) {
-      selectedImage = [selectedVariation.images[0]];
-      }
-    addToCart(
+  const handleAddToBag = async () => {
+    if (!productData) return;
+    const product = rawProduct || { id: productData.id, name: productData.title, price: productData.price, images: productData.images, variations: productData.variations || [] };
+    await addToCart(
       product,
-      selectedColor,
-      selectedSize,
+      colorOptions[selectedColor]?.colors.join(', ') || null,
+      selectedSize || null,
       quantity,
-      selectedVariation?.id,
-      selectedImage
+      selectedVariation?.id || null,
+      galleryImages
     );
-    setShowAddedToCart(true);
-    showSuccess('addedToCart');
-    setTimeout(() => setShowAddedToCart(false), 2000);
-    fbqTrack('AddToCart', {
-      content_ids: [product.id],
-      content_name: product.name,
-      content_type: 'product',
-      value: product.price,
-      currency: 'INR',
-      quantity,
-    });
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2200);
   };
 
   const handleBuyNow = async () => {
-    setIsBuyNowLoading(true);
+    if (!productData) return;
+    const product = rawProduct || { id: productData.id, name: productData.title, price: productData.price, images: productData.images, variations: productData.variations || [] };
+    await buyNow(
+      product,
+      colorOptions[selectedColor]?.colors.join(', ') || null,
+      selectedSize || null,
+      quantity,
+      selectedVariation?.id || null,
+      galleryImages
+    );
+    setIsDrawerOpen(true);
+  };
 
+  const handlePincodeCheck = async () => {
+    if (!/^\d{6}$/.test(pincode)) {
+      setServiceability({ error: 'Please enter a valid 6-digit pincode.' });
+      return;
+    }
+    setServiceabilityLoading(true);
+    setServiceability(null);
     try {
-      // Use default values automatically - no validation required
-      const selectedColor = selectedAttributes.color || '';
-      const selectedSize = selectedSizeForPack || '';
-      
-      // Find the image for the selected variation by product_variation_id
-      let selectedImage = [];
-      let imagesForVariation = [];
-      if (product?.images && product.images.length > 0 && selectedVariation?.id) {
-        imagesForVariation = product.images.filter(img => img && img.product_variation_id === selectedVariation.id);
-        if (imagesForVariation.length > 0) {
-          selectedImage = [imagesForVariation[0]];
-        }
-      }
-      if (selectedImage.length === 0 && selectedVariation?.images && selectedVariation.images.length > 0) {
-        selectedImage = [selectedVariation.images[0]];
-        }
-      // Use Buy Now function instead of Add to Cart
-      await buyNow(
-        product,
-        selectedColor,
-        selectedSize,
-        quantity,
-        selectedVariation?.id,
-        selectedImage
-      );
-      showSuccess('orderPlaced');
-      // Track the event (non-blocking)
-      try {
-        fbqTrack('InitiateCheckout', {
-          content_ids: [product.id],
-          content_name: product.name,
-          content_type: 'product',
-          value: product.price,
-          currency: 'INR',
-          quantity,
-        });
-      } catch (trackingError) {
-        // Tracking error silently ignored
-      }
-
-      // Open cart drawer instead of redirecting to checkout page
-      setIsDrawerOpen(true);
-      
-    } catch (error) {
-      showError('orderFailed');
-      setIsBuyNowLoading(false);
+      const result = await checkPincodeServiceability(pincode);
+      setServiceability(result);
+    } catch {
+      setServiceability({ error: 'Unable to check. Please try again.' });
+    } finally {
+      setServiceabilityLoading(false);
     }
   };
 
-  const handleAddToWishlist = () => {
-    const productToSend = {
-      ...product,
-      variationImages: variationImages.map(img => img.image_url || img.url || img),
-      selectedVariation: selectedVariationBySku,
-      selectedSize: selectedSizeForPack,
-    };
-    addToWishlist(productToSend);
-    showSuccess('addedToWishlist');
-    fbqTrack('AddToWishlist', {
-      content_ids: [product.id],
-      content_name: product.name,
-      content_type: 'product',
-      value: product.price,
-      currency: 'INR',
-    });
-  };
+  const estimatedDelivery = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 5);
+    const day = d.getDate();
+    const month = d.toLocaleString('en-IN', { month: 'long' });
+    const suffix = day === 1 || day === 21 || day === 31 ? 'st'
+      : day === 2 || day === 22 ? 'nd'
+      : day === 3 || day === 23 ? 'rd' : 'th';
+    return { day, suffix, month };
+  })();
 
-  const handleRemoveFromWishlist = () => {
-    removeFromWishlist(product.id);
-    showSuccess('removedFromWishlist');
-    fbqTrack('RemoveFromWishlist', {
-      content_ids: [product.id],
-      content_name: product.name,
-      content_type: 'product',
-      value: product.price,
-      currency: 'INR',
-    });
-  };
+  const discount = productData?.comparePrice > 0
+    ? Math.round(((productData.comparePrice - productData.price) / productData.comparePrice) * 100)
+    : 0;
 
-  // When a pack is selected, show its size options and highlight the selected size for that pack
-  const handleSizeSelect = (sku, size) => {
-    setSelectedSizes(prev => ({ ...prev, [sku]: size }));
-  };
-
-  // Get the selected size for the current pack
-  let defaultSize = '';
-    if (Array.isArray(attrs.size) && attrs.size.length > 0) {
-        defaultSize = attrs.size[0];
-    } else if (typeof attrs.size === 'string' && attrs.size) {
-        defaultSize = attrs.size;
-    }
-  const selectedSizeForPack = selectedSizes[selectedSku] || defaultSize;
-
-  // Remove useEffect for tooltip position
-
-  // Show loading state
   if (loading) {
     return (
-      <SeoWrapper
-        pageName={productSlug || "product-details"}
-        seo={null}
-      >
-        <div className="product-details-container">
-          <div className="product-details">
-            <div style={{ textAlign: 'center', padding: '50px' }}>
-              <Loader />
-            </div>
-          </div>
+      <SeoWrapper pageName={slug || 'product-details'} seo={null}>
+        <div className="pdt-page">
+          <div className="pdt-loader"><Loader /></div>
         </div>
       </SeoWrapper>
     );
   }
 
-  // Show error state
-  if (error) {
+  if (error || !productData) {
     return (
-      <SeoWrapper
-        pageName={productSlug || "product-details"}
-        seo={null}
-      >
-        <div className="product-details-container">
-          <div className="product-details">
-            <div style={{ textAlign: 'center', padding: '50px' }}>
+      <SeoWrapper pageName={slug || 'product-details'} seo={null}>
+        <div className="pdt-page">
+          <div className="pdt-loader">
+            <div style={{ textAlign: 'center' }}>
               <h2>Product Not Found</h2>
-              <p>The product you're looking for doesn't exist or has been removed.</p>
-              <button 
-                onClick={() => window.history.back()}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  marginTop: '20px'
-                }}
-              >
-                Go Back
-              </button>
+              <p>The product you&apos;re looking for doesn&apos;t exist or has been removed.</p>
+              <button onClick={() => window.history.back()} style={{ marginTop: 16, padding: '10px 24px', background: '#180D3E', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 700 }}>Go Back</button>
             </div>
           </div>
         </div>
@@ -856,732 +249,337 @@ export default function ProductDetails() {
     );
   }
 
-  // Show error if no product found
-  if (!product) {
-    return (
-      <SeoWrapper
-        pageName={productSlug || "product-details"}
-        seo={null}
-      >
-        <div className="product-details-container">
-          <div className="product-details">
-            <div style={{ textAlign: 'center', padding: '50px' }}>
-              <h2>Product Not Found</h2>
-              <p>No product found with the given slug.</p>
-              <button 
-                onClick={() => window.history.back()}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  marginTop: '20px'
-                }}
-              >
-                Go Back
-              </button>
-            </div>
-          </div>
-        </div>
-      </SeoWrapper>
-    );
-  }
+  return (
+    <SeoWrapper pageName={slug || 'product-details'} seo={productData.rawApi?.seo || null}>
+    <div className="pdt-page">
+      {/* ── Top Section: Gallery + Info ── */}
+      <div className="pdt-wrapper">
 
-  // Safety check: Don't render if essential data is missing
-  if (!selectedVariationBySku) {
-    return (
-      <SeoWrapper
-        pageName={productSlug || "product-details"}
-        seo={null}
-      >
-        <div className="product-details-container">
-          <div className="product-details">
-            <div style={{ textAlign: 'center', padding: '50px' }}>
-              <Loader />
-            </div>
-          </div>
-        </div>
-      </SeoWrapper>
-    );
-  }
-
-  // Log product description and image URL
-  const mainImageUrl = product.images && product.images.length > 0
-    ? (product.images[0].image_url || product.images[0].url || product.images[0])
-    : '';
-  // Use home page logic for image URL (getCategoryImageSrc equivalent)
-  function getProductImageSrcForDetails(imageObj) {
-    if (!imageObj) return null; // Return null instead of fallback
-    const img = imageObj.image_url || imageObj.url || imageObj;
-    if (typeof img !== 'string') return null; // Return null instead of fallback
-    if (img.startsWith('http')) return img;
-    if (img.startsWith('/assets/')) return img;
-    
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-    if (img.startsWith('/uploads/')) {
-      return `${baseUrl}${img}`;
-    }
-    return `${baseUrl}/uploads/products/${img}`;
-  }
-
-  function forceEnvImageBase(url) {
-    if (!url) return null; // Return null instead of fallback
-    if (url.startsWith('http')) {
-      if (url.includes('localhost:5000')) {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-        const path = url.replace(/^https?:\/\/[^/]+/, '');
-        return `${baseUrl}${path}`;
-      }
-      return url;
-    }
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-    return `${baseUrl}${url}`;
-  }
-
-  const renderReviewForm = () => (
-    <div className="review-form-container">
-      {reviewSuccess ? (
-        <div className="review-success">
-          <svg className="success-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-          </svg>
-          <p>Thank you for your review! It will be published after moderation.</p>
-        </div>
-      ) : (
-        <form onSubmit={handleReviewSubmit} className="review-form">
-          <div className="form-group">
-            <label>Your Rating</label>
-            <div className="rating-input">
-              {[1, 2, 3, 4, 5].map((star) => (
+        {/* Gallery + Fit row — left column */}
+        <div className="pdt-gallery-col">
+          <div className="pdt-gallery">
+            <div className="pdt-thumbs">
+              {galleryImages.map((img, idx) => (
                 <button
-                  key={star}
-                  type="button"
-                  className={`star-button ${reviewForm.rating >= star ? 'active' : ''}`}
-                  onClick={() => handleInputChange('rating', star)}
-                  aria-label={`${star} star${star === 1 ? '' : 's'}`}
+                  key={idx}
+                  className={`pdt-thumb${selectedImage === idx ? ' active' : ''}`}
+                  onClick={() => setSelectedImage(idx)}
+                  aria-label={`View image ${idx + 1}`}
                 >
-                  ★
+                  <img src={img} alt={`View ${idx + 1}`} />
                 </button>
               ))}
             </div>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="name">Your Name</label>
-            <input
-              type="text"
-              id="name"
-              value={reviewForm.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              placeholder="Enter your name"
-              required
-              className={formTouched && !reviewForm.name.trim() ? 'error' : ''}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="email">Your Email</label>
-            <input
-              type="email"
-              id="email"
-              value={reviewForm.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              placeholder="Enter your email"
-              required
-              className={formTouched && (!reviewForm.email.trim() || !reviewForm.email.includes('@')) ? 'error' : ''}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="comment">Your Review</label>
-            <textarea
-              id="comment"
-              value={reviewForm.comment}
-              onChange={(e) => handleInputChange('comment', e.target.value)}
-              placeholder="Share your experience with this product (minimum 10 characters)"
-              required
-              rows={4}
-              className={formTouched && (!reviewForm.comment.trim() || reviewForm.comment.length < 10) ? 'error' : ''}
-              style={{padding: '10px', background: '#fafbfc', border: '1px solid #e0e0e0'}}
-            />
-            <div className="character-count">
-              {reviewForm.comment.length}/500 characters
+            <div className="pdt-main-img-wrap">
+              <button
+                className="pdt-main-img"
+                onClick={() => { setLightboxIndex(selectedImage); setShowLightbox(true); }}
+                aria-label="View full image"
+                type="button"
+              >
+                <img src={galleryImages[selectedImage] || galleryImages[0]} alt={productData.title} />
+                {productData.styleNo && (
+                  <span className="pdt-style-badge">Style: #{productData.styleNo}</span>
+                )}
+                <span className="pdt-zoom-hint" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+                  </svg>
+                </span>
+              </button>
             </div>
           </div>
+        </div>
 
-          <div className="form-group">
-            <label htmlFor="files">Upload Images/Videos (Optional)</label>
-            <input
-              type="file"
-              id="files"
-              multiple
-              accept="image/*,video/*"
-              onChange={handleFileChange}
-              style={{ padding: '10px', background: '#fafbfc', border: '1px solid #e0e0e0' }}
-            />
-            <small style={{ color: '#666', fontSize: '12px' }}>
-              You can upload up to 5 files (images or videos). Maximum size: 5MB per file.
-            </small>
+        {/* Lightbox */}
+        {showLightbox && (
+          <div className="pdt-lightbox-overlay" onClick={() => setShowLightbox(false)} role="dialog" aria-modal="true" aria-label="Image gallery">
+            <button className="pdt-lightbox-close" onClick={() => setShowLightbox(false)} aria-label="Close" type="button">✕</button>
+            <button className="pdt-lightbox-arrow pdt-lightbox-prev" onClick={e => { e.stopPropagation(); setLightboxIndex(i => (i - 1 + galleryImages.length) % galleryImages.length); }} aria-label="Previous image" type="button">‹</button>
+            <div className="pdt-lightbox-img-wrap" onClick={e => e.stopPropagation()}>
+              <img src={galleryImages[lightboxIndex]} alt={`${productData.title} ${lightboxIndex + 1}`} />
+            </div>
+            <button className="pdt-lightbox-arrow pdt-lightbox-next" onClick={e => { e.stopPropagation(); setLightboxIndex(i => (i + 1) % galleryImages.length); }} aria-label="Next image" type="button">›</button>
           </div>
+        )}
 
-          {filePreview.length > 0 && (
-            <div className="file-preview">
-              <h4>Selected Files:</h4>
-              <div className="preview-grid">
-                {filePreview.map((file, index) => (
-                  <div key={index} className="preview-item">
-                    {file.type.startsWith('image/') ? (
-                      <img src={file.url} alt={file.name} style={{ width: '100px', height: '100px', objectFit: 'cover' }} />
-                    ) : (
-                      <video 
-                        src={file.url} 
-                        style={{ width: '100px', height: '100px', objectFit: 'cover' }}
-                        controls
-                      />
-                    )}
-                    <p style={{ fontSize: '12px', margin: '5px 0' }}>{file.name}</p>
-                    <button
-                      type="button"
-                      onClick={() => removeFile(index)}
-                      style={{
-                        background: '#dc2626',
-                        color: 'white',
-                        border: 'none',
-                        padding: '2px 8px',
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                      }}
-                    >
-                      Remove
-                    </button>
-                  </div>
+        {/* Info */}
+        <div className="pdt-info">
+          {productData.brand && <div className="pdt-brand-tag">{productData.brand}</div>}
+          <h1 className="pdt-title">{productData.title}</h1>
+          {productData.styleNo && <div className="pdt-style">Style No: {productData.styleNo}</div>}
+
+          <div className="pdt-price-block">
+            <span className="pdt-price">₹{productData.price.toFixed(2)}</span>
+            {productData.comparePrice > 0 && (
+              <span className="pdt-compare">₹{productData.comparePrice.toFixed(2)}</span>
+            )}
+            {discount > 0 && <span className="pdt-discount">{discount}% OFF</span>}
+          </div>
+          <div className="pdt-price-note">MRP (Incl. of all taxes)</div>
+
+          <hr className="pdt-divider" />
+
+          {/* Color Selector */}
+          {colorOptions.length > 0 && (
+            <div className="pdt-color-section">
+              <div className="pdt-selector-label">
+                Color: <span>
+                  {colorOptions[selectedColor]?.colors.length > 1
+                    ? `Pack of ${colorOptions[selectedColor].colors.length}`
+                    : colorOptions[selectedColor]?.colors[0]}
+                </span>
+              </div>
+              <div className="pdt-color-list">
+                {colorOptions.map((opt, idx) => (
+                  <button
+                    key={opt.variation.sku || idx}
+                    className={`pdt-color-card${selectedColor === idx ? ' active' : ''}`}
+                    onClick={() => handleColorSelect(idx)}
+                    aria-label={opt.colors.length > 1 ? `Pack of ${opt.colors.length}: ${opt.colors.join(', ')}` : opt.colors[0]}
+                    type="button"
+                  >
+                    <div className="pdt-color-card-swatch-wrap">
+                      {opt.colors.length > 1 ? (
+                        <div className="pdt-color-pack-row">
+                          {opt.colors.map((c, cidx) => (
+                            <span key={c + cidx} className="pdt-color-card-circle pdt-color-pack-circle" style={{ backgroundColor: colorMap[c.toLowerCase()] || '#ccc' }} title={c} />
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="pdt-color-card-circle" style={{ backgroundColor: colorMap[opt.colors[0]?.toLowerCase()] || '#ccc' }} title={opt.colors[0]} />
+                      )}
+                      {selectedColor === idx && <span className="pdt-color-card-check" aria-hidden="true">✓</span>}
+                    </div>
+                    <span className="pdt-color-card-name">
+                      {opt.colors.length > 1 ? `Pack of ${opt.colors.length}` : opt.colors[0]}
+                    </span>
+                  </button>
                 ))}
               </div>
             </div>
           )}
 
-          {reviewError && (
-            <div className="review-error">
-              <svg className="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-              </svg>
-              {reviewError}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            className="submit-review"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <svg className="loading-spinner" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
-                </svg>
-                Submitting...
-              </>
-            ) : (
-              'Submit Review'
-            )}
-          </button>
-        </form>
-      )}
-    </div>
-  );
-
-  // Calculate star counts for 5-1 stars
-  const starCounts = [5, 4, 3, 2, 1].map(star =>
-    allReviews ? allReviews.filter(r => r.rating === star).length : 0
-  );
-  const totalReviews = allReviews ? allReviews.length : 0;
-
-  // Log color options and selected color for debugging
-  // Add this function inside the ProductDetails component
-  const renderColorSelection = () => {
-    // Always show color selection if at least one variation has a color attribute
-    const hasColor = product?.variations && product.variations.some(v => {
-      const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
-      return attrs && attrs.color && Array.isArray(attrs.color) && attrs.color.length > 0;
-    });
-    if (!hasColor) return null;
-    return (
-      <div className="select-color-section">
-        <strong>Select Color:</strong>
-        <div className="select-color-options">
-          {product.variations.map((variation) => {
-            const attrs = typeof variation.attributes === 'string' ? JSON.parse(variation.attributes) : variation.attributes;
-            const colors = Array.isArray(attrs?.color) ? attrs.color : [];
+          {/* Size Selector */}
+          {(() => {
+            const attrs = typeof selectedVariation?.attributes === 'string'
+              ? JSON.parse(selectedVariation.attributes)
+              : (selectedVariation?.attributes || {});
+            const sizes = (Array.isArray(attrs.size) ? attrs.size : (attrs.size ? [attrs.size] : [])).filter(s => !!s && typeof s === 'string');
+            const isFreeSize = sizes.length === 1 && sizes[0].toLowerCase().includes('free');
+            if (sizes.length === 0) return null;
             return (
-              <button
-                key={variation.sku}
-                className={`color-swatch-btn color-pack-btn${selectedSku === variation.sku ? ' selected' : ''}`}
-                onClick={() => {
-                  setSelectedSku(variation.sku);
-                  setSelectedVariation(variation);
-                }}
-                aria-label={`Select pack with colors: ${colors.join(', ')}`}
-                type="button"
-              >
-                <div className="color-pack-swatch-row">
-                  {colors.map((color, cidx) => (
-                    <span
-                      key={color + cidx}
-                      className="color-swatch"
-                      style={{ backgroundColor: colorMap[color.toLowerCase()] || '#ccc' }}
-                      title={color}
-                    />
-                  ))}
+              <div className="pdt-size-section">
+                {isFreeSize ? (
+                  <button className="pdt-size-free" type="button" disabled>{sizes[0].toUpperCase()}</button>
+                ) : (
+                  <>
+                    <div className="pdt-selector-label">Size: <span>{selectedSize}</span></div>
+                    <div className="pdt-size-list">
+                      {sizes.map(s => (
+                        <button key={s} className={`pdt-size-btn${selectedSize === s ? ' active' : ''}`} onClick={() => setSelectedSize(s)} type="button" aria-label={`Select size ${s}`}>{s}</button>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <div className="pdt-size-guide-row">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M3 7h18M3 12h18M3 17h18M7 3v4M12 3v4M17 3v4"/>
+                  </svg>
+                  Not sure about your size?
+                  <button className="pdt-size-chart-btn" type="button" onClick={() => setShowSizeChart(true)}>Size Chart</button>
                 </div>
-                <span className="color-pack-count">{colors.length > 1 ? `Pack of ${colors.length}` : colors[0]}</span>
-              </button>
+              </div>
             );
-          })}
-        </div>
-      </div>
-    );
-  };
+          })()}
 
-  // Update renderSizeSelection to only show if there are 2+ sizes and not if size is 'Free Size'
-  const renderSizeSelection = () => {
-    let sizes = Array.isArray(attrs.size) ? attrs.size : (typeof attrs.size === 'string' && attrs.size ? [attrs.size] : []);
-    // Remove empty/undefined/null values
-    sizes = sizes.filter(s => !!s && typeof s === 'string');
-    // Hide if only one size and it's 'Free Size' (case-insensitive)
-    if (sizes.length === 1 && sizes[0].toLowerCase().includes('free')) return null;
-    // Only show size selection if there are 2 or more sizes
-    if (sizes.length < 2) return null;
-    return (
-      <div className="select-size-section">
-        <strong>Select Size:</strong>
-        <div className="select-size-options">
-          {sizes.map((size) => (
-            <button
-              key={size}
-              className={`size-swatch-btn${selectedSizeForPack === size ? ' selected' : ''}`}
-              onClick={() => handleSizeSelect(selectedSku, size)}
-              type="button"
-              aria-label={`Select size ${size}`}
-            >
-              {size}
-            </button>
+          {/* Qty + Actions */}
+          <div className="pdt-non-returnable-line">
+            <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            Non-Returnable &nbsp;·&nbsp; Check size guide before ordering
+          </div>
+          <div className="pdt-qty-row">
+            <div className="pdt-qty-ctrl">
+              <button onClick={() => setQuantity(q => Math.max(1, q - 1))} aria-label="Decrease quantity">−</button>
+              <span className="pdt-qty-val">{quantity}</span>
+              <button onClick={() => setQuantity(q => q + 1)} aria-label="Increase quantity">+</button>
+            </div>
+            <button className="pdt-btn-atb" onClick={handleAddToBag}>Add to Bag</button>
+            <button className="pdt-btn-buy" onClick={handleBuyNow}>Buy Now</button>
+          </div>
+
+          {/* Delivery */}
+          <div className="pdt-delivery">
+            <div className="pdt-delivery-title">Delivery Details</div>
+            <div className="pdt-pin-row">
+              <input
+                className="pdt-pin-input"
+                type="text"
+                placeholder="Enter Pincode"
+                maxLength="6"
+                value={pincode}
+                onChange={e => setPincode(e.target.value.replace(/\D/g, ''))}
+                aria-label="Pincode"
+              />
+              <button className="pdt-pin-check" onClick={handlePincodeCheck} disabled={serviceabilityLoading}>
+                {serviceabilityLoading ? '...' : 'CHECK'}
+              </button>
+            </div>
+            {serviceability && (
+              <div className={`pdt-serviceability-result${serviceability.serviceable ? ' ok' : ' fail'}`}>
+                {serviceability.error ? (
+                  <span>{serviceability.error}</span>
+                ) : serviceability.serviceable ? (
+                  <>
+                    <svg width="14" height="14" fill="none" stroke="#2e7d32" strokeWidth="2.5" viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                    Delivery available to <strong>{pincode}</strong>
+                    {serviceability.cod_available && <span className="pdt-cod-tag">COD available</span>}
+                  </>
+                ) : (
+                  <>
+                    <svg width="14" height="14" fill="none" stroke="#c62828" strokeWidth="2.5" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Delivery not available to <strong>{pincode}</strong>
+                  </>
+                )}
+              </div>
+            )}
+            <div className="pdt-del-info-row">
+              <div className="pdt-del-info-card">
+                <svg width="30" height="26" viewBox="0 0 38 28" fill="none" aria-hidden="true">
+                  <rect x="1" y="8" width="22" height="14" rx="1.5" stroke="#180D3E" strokeWidth="1.5" fill="none"/>
+                  <path d="M23 13h5l4 5v4h-9V13z" stroke="#180D3E" strokeWidth="1.5" fill="none"/>
+                  <circle cx="7" cy="24" r="3" stroke="#180D3E" strokeWidth="1.5" fill="white"/>
+                  <circle cx="29" cy="24" r="3" stroke="#180D3E" strokeWidth="1.5" fill="white"/>
+                  <circle cx="13" cy="15" r="5" stroke="#CE1E36" strokeWidth="1.3" fill="white"/>
+                  <path d="M13 12.5v3l1.8 1.1" stroke="#CE1E36" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span>Estimated Delivery by <strong>{estimatedDelivery.day}<sup>{estimatedDelivery.suffix}</sup> {estimatedDelivery.month}</strong></span>
+              </div>
+              <div className="pdt-del-info-card">
+                <svg width="30" height="26" viewBox="0 0 38 28" fill="none" aria-hidden="true">
+                  <rect x="5" y="8" width="20" height="14" rx="1.5" stroke="#180D3E" strokeWidth="1.5" fill="none"/>
+                  <path d="M25 13h5l4 5v4h-9V13z" stroke="#180D3E" strokeWidth="1.5" fill="none"/>
+                  <circle cx="11" cy="24" r="3" stroke="#180D3E" strokeWidth="1.5" fill="white"/>
+                  <circle cx="31" cy="24" r="3" stroke="#180D3E" strokeWidth="1.5" fill="white"/>
+                  <path d="M1 12h6M1 16h4M1 20h5" stroke="#CE1E36" strokeWidth="1.4" strokeLinecap="round"/>
+                </svg>
+                <span>Eligible For <strong>Free Delivery</strong></span>
+              </div>
+            </div>
+          </div>
+
+        </div>{/* end pdt-info */}
+      </div>{/* end pdt-wrapper */}
+
+      {/* ── Details Section ── */}
+      <div className="pdt-details">
+
+        {/* Product Description */}
+        {productData.description && (
+          <>
+            <h2 className="pdt-section-title">Product Description</h2>
+            <div className="pdt-desc-body" dangerouslySetInnerHTML={{ __html: productData.description }} />
+          </>
+        )}
+
+        {/* Ideal For */}
+        <div className="pdt-ideal-row">
+          <span className="pdt-ideal-label">Ideal For</span>
+          <div className="pdt-ideal-chip">
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" />
+            </svg>
+            Everyday Wear
+          </div>
+          <div className="pdt-ideal-chip">
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 00-4 0v2M8 7V5a2 2 0 00-4 0v2" />
+            </svg>
+            Work
+          </div>
+          <div className="pdt-ideal-chip">
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
+            </svg>
+            Travel
+          </div>
+        </div>
+
+        {/* Washing Instructions */}
+        <h2 className="pdt-section-title">Washing Instructions</h2>
+        <div className="pdt-wash-box">
+          {[
+            { label: 'Gentle wash\n40°C', icon: <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 10 Q4 8 6 8 H30 Q32 8 32 10 L30 28 Q30 30 28 30 H8 Q6 30 6 28 Z"/><text x="18" y="22" textAnchor="middle" fontSize="9" fontWeight="700" stroke="none" fill="currentColor" fontFamily="inherit">40</text><path d="M8 16 Q11 13 14 16 Q17 19 20 16 Q23 13 26 16 Q29 19 32 16" strokeWidth="1.2"/></svg> },
+            { label: 'Do not\nbleach', icon: <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 5 L33 30 H3 Z"/><line x1="12" y1="14" x2="24" y2="26"/><line x1="24" y1="14" x2="12" y2="26"/></svg> },
+            { label: 'Do not\nwring', icon: <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 14 C4 14 8 10 12 14 C16 18 20 10 24 14 C28 18 32 14 32 14"/><path d="M4 22 C4 22 8 18 12 22 C16 26 20 18 24 22 C28 26 32 22 32 22"/><line x1="13" y1="11" x2="23" y2="25"/><line x1="23" y1="11" x2="13" y2="25"/></svg> },
+            { label: 'Flat dry in\nshade', icon: <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="4" y="10" width="28" height="16" rx="1"/><line x1="8" y1="18" x2="28" y2="18"/></svg> },
+            { label: 'Do not\niron', icon: <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 24 H28 Q34 24 34 18 Q34 14 28 14 H12 L8 10 H4 Z"/><line x1="13" y1="15" x2="23" y2="23"/><line x1="23" y1="15" x2="13" y2="23"/></svg> },
+            { label: 'Do not dry\nclean', icon: <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="18" cy="18" r="13"/><line x1="11" y1="11" x2="25" y2="25"/><line x1="25" y1="11" x2="11" y2="25"/></svg> },
+          ].map((item, idx) => (
+            <div key={idx} className="pdt-wash-item">
+              {item.icon}
+              <span>{item.label}</span>
+            </div>
           ))}
         </div>
-      </div>
-    );
-  };
 
-  // Collect all unique attribute keys from all variations
-  const allAttributeKeys = product?.variations
-    ? Array.from(new Set(product.variations.flatMap(v => {
-        const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes;
-        return attrs ? Object.keys(attrs) : [];
-      }))).sort()
-    : [];
-
-  return (
-    <SeoWrapper
-      pageName={product?.slug || productSlug || "product-details"}
-      seoData={null}
-    >
-      <div className="product-details-container">
-        <div className="product-details">
-          <div className="product-gallery">
-            <div className="product-image-container">
-              {variationImages && variationImages.length > 0 && variationImages[selectedThumbnail] ? (
-                <>
-                  <SafeImage
-                    imageData={{
-                      image_url: variationImages[selectedThumbnail]?.image_url ||
-                        variationImages[selectedThumbnail]?.url ||
-                        variationImages[selectedThumbnail]
-                    }}
-                    alt={variationImages[selectedThumbnail]?.alt_text || product?.name || "Product Image"}
-                    priority={true}
-                    quality={80}
-                    isProductCard={true}
-                    className="main-product-image"
-                    style={{
-                      objectFit: "contain",
-                      boxShadow: "0 2px 8px #eee",
-                      background: "#eee",
-                      display: "block",
-                      cursor: "pointer",
-                      width: "100%",
-                      height: "auto",
-                      maxHeight: "600px"
-                    }}
-                    onClick={() => setIsZoomOpen(true)}
-                  />
-                </>
-              ) : (
-                <div style={{ 
-                  width: 400, 
-                  height: 400, 
-                  background: '#eee', 
-                  borderRadius: 8,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#666',
-                  fontSize: '16px'
-                }}>
-                  No Image Available
-                </div>
-              )}
-              {/* Zoom button overlay */}
-              <button
-                onClick={() => setIsZoomOpen(true)}
-                style={{
-                  position: 'absolute',
-                  right: 16,
-                  bottom: 16,
-                  background: 'white',
-                  border: '1px solid #ccc',
-                  borderRadius: '50%',
-                  width: 32,
-                  height: 32,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 2px 8px #eee',
-                  cursor: 'pointer'
-                }}
-                aria-label="Zoom"
-              >
-                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-              </button>
-            </div>
-            {/* Thumbnails */}
-            <div className="thumbnail-gallery" style={{ display: 'flex', flexWrap: 'wrap' , justifyContent: 'center', gap: 16, marginTop: 16 }}>
-              {variationImages && variationImages.length > 0 && variationImages.map((image, idx) => (
-                (image && (image.image_url || image.url || image)) ? (
-                  <div key={image.id || idx} className="thumbnail-wrapper" style={{ position: 'relative', width: 80, height: 80 }}>
-                    <SafeImage
-                      imageData={{
-                        image_url: image.image_url || image.url || image
-                      }}
-                      alt={image.alt_text || `${product?.name || 'Product'} thumbnail ${idx + 1}`}
-                      width={80}
-                      height={80}
-                      priority={idx < 4}
-                      quality={70}
-                      className="thumbnail-image"
-                      style={{
-                        objectFit: "cover",
-                        border:
-                          selectedThumbnail === idx
-                            ? "2px solid #222"
-                            : "1px solid #eee",
-                        cursor: "pointer",
-                        background: "#eee",
-                        display: "block",
-                      }}
-                      onClick={() => setSelectedThumbnail(idx)}
-                    />
-                  </div>
-                ) : (
-                  <div key={image?.id || idx} style={{ width: 80, height: 80, background: '#eee', borderRadius: 4 }} />
-                )
-              ))}
-            </div>
-            {/* Zoom Modal */}
-            {isZoomOpen && (
-              <Modal isOpen={isZoomOpen} onClose={() => setIsZoomOpen(false)}>
-                <SafeImage
-                  imageData={{
-                    image_url: variationImages[selectedThumbnail]?.image_url ||
-                    variationImages[selectedThumbnail]?.url ||
-                    variationImages[selectedThumbnail]
-                  }}
-                  alt="Zoomed"
-                  width={1200}
-                  height={1200}
-                  priority={true}
-                  quality={90}
-                  style={{ width: '100%', maxWidth: 700, objectFit: 'contain', borderRadius: 8 }}
-                />
-              </Modal>
-            )}
+        {/* Manufacturing Details */}
+        <h2 className="pdt-section-title">Manufacturing Details</h2>
+        <div className="pdt-mfg-row">
+          <div className="pdt-mfg-address">
+            Obzus India Private Limited, Survey No. 1288, Vajepar, Third Floor, Royal Plaza, Opp. New Chandresh Society, Panchasar Road, Morbi - 363641, Gujarat (India)
           </div>
-          <div className="product-info">
-            {/* A. Title, price, review, wishlist */}
-            <div className="product-title-row">
-              <div>
-                <h1 className="product-title">{product.name}</h1>
-                <div className="product-price-row">
-                  <span className="current-price">₹{selectedVariationBySku?.price || 0}</span>
-                  {selectedVariationBySku?.comparePrice && (
-                    <span className="original-price">₹{selectedVariationBySku.comparePrice}</span>
-                  )}
-                  <span className="review-summary">
-                    <span className="stars">{renderStars(product.avg_rating || 0)}</span>
-                    <span className="rating-value">{parseFloat(product.avg_rating || 0).toFixed(1)}</span>
-                    <span className="review-count">({product.review_count || 0} reviews)</span>
-                  </span>
-                </div>
-                {/* Included Colors UI for Packs and Singles */}
-                {/* Removed Included Colors section as per request */}
-              </div>
-              {/* Wishlist icon */}
-              <button
-                className="wishlist-btn"
-                onClick={() => {
-                  if (wishlist.some(item => item.id === product.id)) {
-                    handleRemoveFromWishlist()
-                  } else {
-                    handleAddToWishlist()
-                  }
-                }}
-                aria-label={wishlist.some(item => item.id === product.id) ? 'Remove from wishlist' : 'Add to wishlist'}
-              >
-                <svg
-                  className="wishlist-icon"
-                  width="32" 
-                  height="32"
-                  viewBox="0 0 24 24"
-                  fill={wishlist.some(item => item.id === product.id) ? '#e60000' : 'none'}
-                  stroke="#222"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                </svg>
-              </button>
+          <div className="pdt-origin">
+            <span className="pdt-origin-label">Country of Origin</span>
+            <div className="pdt-origin-badge">
+              <svg width="24" height="16" fill="none" viewBox="0 0 24 16" aria-hidden="true">
+                <rect width="24" height="16" fill="#FF9933" />
+                <rect y="5.33" width="24" height="5.33" fill="#fff" />
+                <rect y="10.67" width="24" height="5.33" fill="#138808" />
+              </svg>
+              India
             </div>
-
-            {/* Divider */}
-            <hr style={{ border: 'none', borderTop: '1px solid #e6e6e6', margin: '1.5rem 0' }} />
-
-            {/* Quantity and Action Buttons Section - Moved here after title */}
-            <div className="quantity-section">
-              <div className="details-heading">Quantity:</div>
-              <div className="quantity-box">
-                <button className="quantity-btn" onClick={() => setQuantity(q => Math.max(1, q - 1))}>-</button>
-                <span className="quantity-value">{quantity}</span>
-                <button className="quantity-btn" onClick={() => setQuantity(q => q + 1)}>+</button>
-              </div>
-            </div>
-            {/* Action Buttons Row */}
-            <div className="action-buttons-row">
-              <button className="add-to-cart-btn" onClick={handleAddToCart}>
-                ADD TO CART
-              </button>
-              <button 
-                className="buy-now-btn" 
-                onClick={handleBuyNow}
-                disabled={isBuyNowLoading}
-                style={{
-                  opacity: isBuyNowLoading ? 0.7 : 1,
-                  cursor: isBuyNowLoading ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {isBuyNowLoading ? (
-                  <>
-                    <svg className="loading-spinner" viewBox="0 0 24 24" style={{ width: '16px', height: '16px', marginRight: '8px' }}>
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
-                    </svg>
-                    PROCESSING...
-                  </>
-                ) : (
-                  'BUY IT NOW'
-                )}
-              </button>
-            </div>
-
-            {/* D. Details section */}
-            <div className="product-details-section">
-              <h3 className="details-heading">Details</h3>
-              <div
-                  className="details-row"
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '16px 32px',
-                    alignItems: 'start',
-                  }}
-                >
-                  {allAttributeKeys.map((key) => (
-                    <div key={key} style={{ minWidth: 120 }}>
-                      <span className="details-label" style={{ textTransform: 'capitalize' }}>{key}:</span>
-                      <span className="details-value">{key === 'size' ? selectedSizeForPack : (Array.isArray(attrs[key]) ? attrs[key].join(', ') : (attrs[key] ?? '-'))}</span>
-                    </div>
-                  ))}
-                  <div>
-                    <span className="details-label">SKU:</span>
-                    <span className="details-value">{selectedSku || '-'}</span>
-                  </div>
-                </div>
-            </div>
-            {renderColorSelection()}
-            {renderSizeSelection()}
-            {/* Coupon Box Section (moved after details) */}
-            {coupons && coupons.length > 0 && (
-              <div className="product-coupons-box">
-                <h3 className="product-coupons-title">Available Coupons</h3>
-                <div className="product-coupons-scroller-row">
-                  {coupons.map((coupon) => (
-                    <div 
-                      key={coupon.id || coupon.code} 
-                      className="coupon-card-details"
-                      onClick={() => handleCopyCoupon(coupon.code)}
-                      tabIndex={0}
-                      role="button"
-                      aria-label={`Copy coupon code ${coupon.code}`}
-                      onKeyPress={e => { if (e.key === 'Enter' || e.key === ' ') handleCopyCoupon(coupon.code); }}
-                      ref={el => { couponRefs.current[coupon.code] = el; }}
-                    >
-                      <div className="coupon-code-details">{coupon.code}</div>
-                      <p className="coupon-description-details">
-                        {coupon.description || generateCouponDescription(coupon)}
-                      </p>
-                      {copiedCoupon === coupon.code && tooltipStyle.top && tooltipStyle.left && (
-                        <span className="coupon-copied-tooltip fixed" style={tooltipStyle}>Copied!</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {/* Description row added below */}
-            <div className="details-row">
-              <div>
-                <div className="details-heading">Description:</div>
-                <span className="details-value">
-                  <span
-                    dangerouslySetInnerHTML={{
-                      __html: (() => {
-                        try {
-                          return DOMPurify.sanitize(decodeHtml(product.description || "-"));
-                        } catch (error) {
-                          return product.description || "-";
-                        }
-                      })()
-                    }}
-                  />
-                </span>
-              </div>
-            </div>
+          </div>
         </div>
-          
-        </div>
-        {/* Review Slider and Review Form (no tabs) */}
-        <div className="product-reviews-section" style={{ margin: '32px 9%' }}>
-          <div className="review-header-row">
-            <h2 className="customer-reviews-heading">Customer Reviews</h2>
-              <button
-              className="write-review-btn"
-              onClick={() => setShowReviewForm(true)}
-            >
-              Write a Review
-              </button>
-            </div>
-          <div className="star-breakdown-row">
-            {[5,4,3,2,1].map((star, idx) => (
-              <div className="star-breakdown-item" key={star}>
-                <span className="star-label">{star} <span style={{color:'#f59e42'}}>★</span></span>
-                <span className="star-count">{starCounts[idx]}</span>
-              </div>
-            ))}
-            <span className="total-reviews-label">({totalReviews} reviews)</span>
-                  </div>
-          <InfiniteReviewsSlider reviews={allReviews} />
-          
-          {/* Load More Reviews Button */}
-          {reviewsHasMore && (
-            <div style={{ textAlign: 'center', marginTop: '24px' }}>
-              <button
-                onClick={() => setReviewsPage(prev => prev + 1)}
-                disabled={reviewsLoading}
-                style={{
-                  padding: '12px 32px',
-                  background: reviewsLoading ? '#ccc' : '#222',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: reviewsLoading ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  transition: 'background 0.2s'
-                }}
-              >
-                {reviewsLoading ? 'Loading...' : 'Load More Reviews'}
-              </button>
-            </div>
-          )}
-          
-          {showReviewForm && (
-            <div 
-              className="review-form-modal"
-              onClick={(e) => {
-                if (e.target === e.currentTarget) {
-                  setShowReviewForm(false);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  setShowReviewForm(false);
-                }
-              }}
-              tabIndex={-1}
-            >
-              <div className="review-form-modal-content">
-                <button
-                  className="close-modal-btn"
-                  onClick={() => setShowReviewForm(false)}
-                  aria-label="Close review form"
-                >
-                  &times;
-                </button>
-                <h3>Write a Review</h3>
-                {renderReviewForm()}
-              </div>
-            </div>
-          )}
-        </div>
-        
-        {/* Fixed Action Buttons Footer - Desktop Only */}
-        {showFixedButtons && (
-          <div className="fixed-action-footer">
-            <div className="fixed-action-container">
-              <button className="add-to-cart-btn" onClick={handleAddToCart}>
-                ADD TO CART
-              </button>
-              <button 
-                className="buy-now-btn" 
-                onClick={handleBuyNow}
-                disabled={isBuyNowLoading}
-                style={{
-                  opacity: isBuyNowLoading ? 0.7 : 1,
-                  cursor: isBuyNowLoading ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {isBuyNowLoading ? (
-                  <>
-                    <svg className="loading-spinner" viewBox="0 0 24 24" style={{ width: '16px', height: '16px', marginRight: '8px' }}>
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
-                    </svg>
-                    PROCESSING...
-                  </>
-                ) : (
-                  'BUY IT NOW'
-                )}
-              </button>
-            </div>
+
+        {/* Reviews */}
+        {allReviews.length > 0 && (
+          <div className="pdt-reviews">
+            <h2 className="pdt-section-title">Customer Reviews</h2>
+            <InfiniteReviewsSlider reviews={allReviews} />
           </div>
         )}
-        
       </div>
+
+      {/* ── Sticky Bar ── */}
+      <div className={`pdt-sticky${showStickyBar ? ' visible' : ''}`}>
+        <div className="pdt-sticky-info">
+          <img src={galleryImages[0] || productData.images?.[0]} alt={productData.title} className="pdt-sticky-img" />
+          <div>
+            <div className="pdt-sticky-name">{productData.title}</div>
+            <div className="pdt-sticky-price">₹{productData.price.toFixed(2)}</div>
+          </div>
+        </div>
+        <div className="pdt-sticky-actions">
+          <button className="pdt-btn-atb" onClick={handleAddToBag}>Add to Bag</button>
+          <button className="pdt-btn-buy" onClick={handleBuyNow}>Buy Now</button>
+        </div>
+      </div>
+
+      {/* ── Toast ── */}
+      <div className={`pdt-toast${showToast ? ' show' : ''}`} role="status" aria-live="polite">
+        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" aria-hidden="true">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+        Added to Bag
+      </div>
+
+      {/* Size Chart Modal */}
+      {showSizeChart && <SizeChartModal onClose={() => setShowSizeChart(false)} />}
+    </div>
     </SeoWrapper>
   );
-} 
-
+}
