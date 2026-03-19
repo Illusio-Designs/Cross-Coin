@@ -753,6 +753,16 @@ export const getShippingFees = async () => {
   }
 };
 
+// ============ SERVICEABILITY API ============
+export const checkPincodeServiceability = async (pincode) => {
+  try {
+    const response = await axios.get(`${API_URL}/api/serviceability/${pincode}`, addBrandHeader());
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
 // ============ SEO APIs ============
 export const getSeoByPageName = async (pageName) => {
   const url = `${API_URL}/api/seo?page_name=${encodeURIComponent(pageName)}`;
