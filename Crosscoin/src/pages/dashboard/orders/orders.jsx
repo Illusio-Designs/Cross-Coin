@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { orderService, dashboardService } from '../../../services';
 import { debounce } from 'lodash';
-import { Table, Pagination, Modal, Button } from "../../../components/ui";
+import { Table, Pagination, Modal, Button, Select } from "../../../components/ui";
 import SafeImage from "../../../components/common/SafeImage";
 import Loader from "../../../components/common/Loader";
 import BrandTags from "../../../components/Dashboard/BrandTags";
@@ -469,55 +469,94 @@ const Orders = () => {
 
                     {/* Filters + Sort Section */}
                     <div className="orders-filters-section">
-                        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pay-filter-select">
-                            <option value="all">All Order Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="processing">Processing</option>
-                            <option value="booked">Booked</option>
-                            <option value="pickup initiated">Pickup Initiated</option>
-                            <option value="manifested">Manifested</option>
-                            <option value="in transit">In Transit</option>
-                            <option value="shipped">Shipped</option>
-                            <option value="out for delivery">Out for Delivery</option>
-                            <option value="delivered">Delivered</option>
-                            <option value="undelivered">Undelivered</option>
-                            <option value="rto">RTO</option>
-                            <option value="rto delivered">RTO Delivered</option>
-                            <option value="cancelled">Cancelled</option>
-                            <option value="order cancelled">Order Cancelled</option>
-                            <option value="exception">Exception</option>
-                        </select>
-                        <select value={paymentTypeFilter} onChange={(e) => setPaymentTypeFilter(e.target.value)} className="pay-filter-select">
-                            <option value="all">All Payment Types</option>
-                            <option value="prepaid">Prepaid</option>
-                            <option value="cod">Cash on Delivery</option>
-                        </select>
-                        <select value={paymentStatusFilter} onChange={(e) => setPaymentStatusFilter(e.target.value)} className="pay-filter-select">
-                            <option value="all">All Payment Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="paid">Paid</option>
-                            <option value="failed">Failed</option>
-                            <option value="refunded">Refunded</option>
-                            <option value="refund_pending">Refund Pending</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
+                        <div className="orders-filter-wrap">
+                            <Select
+                                value={statusFilter}
+                                onChange={(v) => setStatusFilter(v || 'all')}
+                                options={[
+                                    { value: 'all', label: 'All Order Status' },
+                                    { value: 'pending', label: 'Pending' },
+                                    { value: 'processing', label: 'Processing' },
+                                    { value: 'booked', label: 'Booked' },
+                                    { value: 'pickup initiated', label: 'Pickup Initiated' },
+                                    { value: 'manifested', label: 'Manifested' },
+                                    { value: 'in transit', label: 'In Transit' },
+                                    { value: 'shipped', label: 'Shipped' },
+                                    { value: 'out for delivery', label: 'Out for Delivery' },
+                                    { value: 'delivered', label: 'Delivered' },
+                                    { value: 'undelivered', label: 'Undelivered' },
+                                    { value: 'rto', label: 'RTO' },
+                                    { value: 'rto delivered', label: 'RTO Delivered' },
+                                    { value: 'cancelled', label: 'Cancelled' },
+                                    { value: 'order cancelled', label: 'Order Cancelled' },
+                                    { value: 'exception', label: 'Exception' },
+                                ]}
+                                placeholder="All Order Status"
+                            />
+                        </div>
+                        <div className="orders-filter-wrap">
+                            <Select
+                                value={paymentTypeFilter}
+                                onChange={(v) => setPaymentTypeFilter(v || 'all')}
+                                options={[
+                                    { value: 'all', label: 'All Payment Types' },
+                                    { value: 'prepaid', label: 'Prepaid' },
+                                    { value: 'cod', label: 'Cash on Delivery' },
+                                ]}
+                                placeholder="All Payment Types"
+                            />
+                        </div>
+                        <div className="orders-filter-wrap">
+                            <Select
+                                value={paymentStatusFilter}
+                                onChange={(v) => setPaymentStatusFilter(v || 'all')}
+                                options={[
+                                    { value: 'all', label: 'All Payment Status' },
+                                    { value: 'pending', label: 'Pending' },
+                                    { value: 'paid', label: 'Paid' },
+                                    { value: 'failed', label: 'Failed' },
+                                    { value: 'refunded', label: 'Refunded' },
+                                    { value: 'refund_pending', label: 'Refund Pending' },
+                                    { value: 'cancelled', label: 'Cancelled' },
+                                ]}
+                                placeholder="All Payment Status"
+                            />
+                        </div>
                         <div className="orders-filter-divider" />
-                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="pay-filter-select">
-                            <option value="createdAt">Sort: Date</option>
-                            <option value="total">Sort: Total</option>
-                            <option value="status">Sort: Status</option>
-                            <option value="payment_status">Sort: Payment</option>
-                        </select>
-                        <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} className="pay-filter-select">
-                            <option value="desc">Newest First</option>
-                            <option value="asc">Oldest First</option>
-                        </select>
-                        <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="pay-filter-select">
-                            <option value={10}>Show: 10</option>
-                            <option value={25}>Show: 25</option>
-                            <option value={50}>Show: 50</option>
-                            <option value={100}>Show: 100</option>
-                        </select>
+                        <div className="orders-filter-wrap">
+                            <Select
+                                value={sortBy}
+                                onChange={(v) => setSortBy(v || 'createdAt')}
+                                options={[
+                                    { value: 'createdAt', label: 'Sort: Date' },
+                                    { value: 'total', label: 'Sort: Total' },
+                                    { value: 'status', label: 'Sort: Status' },
+                                    { value: 'payment_status', label: 'Sort: Payment' },
+                                ]}
+                            />
+                        </div>
+                        <div className="orders-filter-wrap">
+                            <Select
+                                value={sortOrder}
+                                onChange={(v) => setSortOrder(v || 'desc')}
+                                options={[
+                                    { value: 'desc', label: 'Newest First' },
+                                    { value: 'asc', label: 'Oldest First' },
+                                ]}
+                            />
+                        </div>
+                        <div className="orders-filter-wrap">
+                            <Select
+                                value={String(itemsPerPage)}
+                                onChange={(v) => { setItemsPerPage(Number(v || 10)); setCurrentPage(1); }}
+                                options={[
+                                    { value: '10', label: 'Show: 10' },
+                                    { value: '25', label: 'Show: 25' },
+                                    { value: '50', label: 'Show: 50' },
+                                    { value: '100', label: 'Show: 100' },
+                                ]}
+                            />
+                        </div>
                         {selectedOrders.size > 0 && (
                             <button className={`sl-add-btn${isDownloadingBulk ? ' sl-add-btn--disabled' : ''}`}
                                 onClick={handleBulkDownload} disabled={isDownloadingBulk}>

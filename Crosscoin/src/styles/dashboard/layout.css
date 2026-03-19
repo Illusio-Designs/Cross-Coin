@@ -132,7 +132,7 @@
   flex: 1;
   margin-top: var(--dh-h);
   margin-bottom: var(--df-h);
-  padding: 0;
+  padding: 20px;
   box-sizing: border-box;
   min-height: calc(100vh - var(--dh-h) - var(--df-h));
   overflow-x: hidden;
@@ -164,7 +164,7 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  padding: 20px;
+  padding: 15px;
 }
 
 @media (max-width: 900px) {
@@ -189,7 +189,7 @@
 
   .dl-content,
   .dashboard-content {
-    padding: 0;
+    padding: 12px;
     margin-top: 60px;
     margin-bottom: 40px;
   }
@@ -203,7 +203,7 @@
 
   .dl-content,
   .dashboard-content {
-    padding: 0;
+    padding: 8px;
     margin-top: 56px;
     margin-bottom: 36px;
   }
