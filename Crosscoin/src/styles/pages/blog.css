@@ -1,7 +1,7 @@
 .blog-page {
   min-height: 100vh;
   background: #fff;
-  padding: 60px 40px;
+  padding: 60px;
 }
 
 .blog-page-header {
@@ -243,7 +243,7 @@
 
 @media (max-width: 768px) {
   .blog-page {
-    padding: 40px 20px;
+    padding: 40px;
   }
 
   .blog-page-title {
@@ -280,7 +280,7 @@
 
 @media (max-width: 480px) {
   .blog-page {
-    padding: 30px 16px;
+    padding: 28px;
   }
 
   .blog-page-title {

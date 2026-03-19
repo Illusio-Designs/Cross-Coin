@@ -182,3 +182,48 @@
     max-height: 250px;
   }
 }
+
+/* Mobile bottom bar sort popup — center modal */
+@media (max-width: 500px) {
+  .mobile-bottom-bar .dropdown-wrapper.mobile-sort-dropdown {
+    position: static;
+  }
+
+  .mobile-bottom-bar .dropdown-wrapper.mobile-sort-dropdown .dropdown-menu {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80vw;
+    max-width: 320px;
+    border-radius: 12px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+    z-index: 2000;
+    max-height: 60vh;
+    animation: sortPopupIn 0.2s ease-out;
+  }
+
+  @keyframes sortPopupIn {
+    from { opacity: 0; transform: translate(-50%, -46%) scale(0.96); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+
+  /* Backdrop */
+  .mobile-bottom-bar .dropdown-wrapper.mobile-sort-dropdown.open::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 1999;
+  }
+
+  .mobile-bottom-bar .dropdown-wrapper.mobile-sort-dropdown .dropdown-item {
+    padding: 16px 20px;
+    font-size: 15px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .mobile-bottom-bar .dropdown-wrapper.mobile-sort-dropdown .dropdown-item:last-child {
+    border-bottom: none;
+  }
+}

@@ -33,7 +33,7 @@ const Dropdown = ({
   };
 
   return (
-    <div className={`dropdown-wrapper ${className}`} ref={dropdownRef}>
+    <div className={`dropdown-wrapper ${className}${isOpen ? ' open' : ''}`} ref={dropdownRef}>
       {label && <label className="dropdown-label">{label}</label>}
       
       <button

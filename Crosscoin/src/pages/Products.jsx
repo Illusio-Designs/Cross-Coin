@@ -873,7 +873,10 @@ const Products = () => {
       <SeoWrapper pageName="products">
         <div className="products-page">
           <div className="products-header">
-            <h1>Our Products</h1>
+            <div className="section-header-inline">
+              <h2 className="section-title">Our <strong>Products</strong></h2>
+              <p className="section-subtitle">Browse our full collection</p>
+            </div>
           </div>
           <div className="products-container">
             <div className="product-listing">
@@ -893,13 +896,16 @@ const Products = () => {
     <SeoWrapper pageName="products">
       <div className="products-page">
         <div className="products-header">
-          <h1>
-            {Array.isArray(selectedCategory) && selectedCategory.length > 0
-              ? `Products - ${getCategoryNameById(selectedCategory[0])}`
-              : getCategoryNameFromUrl()
-              ? `Products - ${getCategoryNameFromUrl()}`
-              : "Our Products"}
-          </h1>
+          <div className="section-header-inline">
+            <h2 className="section-title">
+              {Array.isArray(selectedCategory) && selectedCategory.length > 0
+                ? <>Products - <strong>{getCategoryNameById(selectedCategory[0])}</strong></>
+                : getCategoryNameFromUrl()
+                ? <>Products - <strong>{getCategoryNameFromUrl()}</strong></>
+                : <>Our <strong>Products</strong></>}
+            </h2>
+            <p className="section-subtitle">Browse our full collection</p>
+          </div>
           <div className="products-controls">
             {hasActiveFilters && (
               <button className="clear-filters-btn" onClick={clearAllFilters}>
@@ -907,7 +913,7 @@ const Products = () => {
               </button>
             )}
             <button
-              className={`filter-toggle${isMobile ? " mobile-fixed" : ""}`}
+              className="filter-toggle"
               onClick={() => setShowFilters(!showFilters)}
               style={{
                 padding: '10px 16px',
@@ -923,12 +929,8 @@ const Products = () => {
                 transition: 'all 0.2s',
                 color: '#fff'
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#a0182b';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#CE1E36';
-              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#a0182b'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#CE1E36'; }}
             >
               <FiFilter size={18} /> Filters
             </button>
@@ -945,6 +947,30 @@ const Products = () => {
             />
           </div>
         </div>
+
+        {/* Mobile fixed bottom bar */}
+        {isMobile && (
+          <div className="mobile-bottom-bar">
+            <button
+              className="filter-toggle mobile-fixed"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <FiFilter size={18} /> Filters
+            </button>
+            <Dropdown
+              value={sortBy}
+              onChange={setSortBy}
+              className="mobile-sort-dropdown"
+              options={[
+                { value: 'featured', label: 'Featured' },
+                { value: 'price-low', label: 'Price: Low to High' },
+                { value: 'price-high', label: 'Price: High to Low' },
+                { value: 'rating', label: 'Top Rated' }
+              ]}
+              placeholder="Sort by"
+            />
+          </div>
+        )}
 
         <div className="products-container">
           {/* Desktop Sidebar */}

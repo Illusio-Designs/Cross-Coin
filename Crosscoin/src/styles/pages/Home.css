@@ -130,7 +130,7 @@
 }
 
 .shop-by-category {
-  padding: 50px 10%;
+  padding: 60px;
   background-color: #fff;
 }
 
@@ -437,7 +437,7 @@
 }
 
 .featured-products-section {
-  padding: 50px 10%;
+  padding: 60px;
   background-color: #fff;
   display: block;
   visibility: visible;
@@ -959,7 +959,7 @@
 }
 
 .latest-products-section {
-  padding: 4rem 10%;
+  padding: 60px;
   background-color: #fff;
 }
 
@@ -1047,7 +1047,7 @@
   .shop-by-category,
   .featured-products-section,
   .latest-products-section {
-    padding: 40px 3%;
+    padding: 48px;
   }
   .summer-collections-section {
     margin: 0 3%;
@@ -1150,7 +1150,7 @@
   }
 
   .featured-products-section {
-    padding: 2rem 5%;
+    padding: 40px;
   }
   
   .featured-products-section .section-title {
@@ -1404,7 +1404,7 @@
   }
 
   .latest-products-section {
-    padding: 2rem 5%;
+    padding: 40px;
   }
   .summer-collections-section {
     padding: 0px 50px 50px;
@@ -2052,16 +2052,23 @@
 
 /* ── HOME REVIEWS SECTION ── */
 .home-reviews-section {
-  padding: 60px 10%;
+  padding: 60px;
   background: #fff;
 }
 
 .home-reviews-header {
+  text-align: center;
   margin-bottom: 32px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 860px) {
   .home-reviews-section {
-    padding: 40px 5%;
+    padding: 40px;
+  }
+}
+
+@media (max-width: 600px) {
+  .home-reviews-section {
+    padding: 28px;
   }
 }

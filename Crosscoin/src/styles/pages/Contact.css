@@ -6,9 +6,7 @@
 }
 
 .ct-container {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0;
 }
 
 .ct-label {
@@ -24,12 +22,10 @@
 /* ---- HERO ---- */
 .ct-hero {
   background: #180D3E;
-  padding: 5rem 1.5rem 4rem;
+  padding: 5rem 60px 4rem;
 }
 
 .ct-hero-inner {
-  max-width: 1100px;
-  margin: 0 auto;
 }
 
 .ct-hero-badge {
@@ -87,7 +83,7 @@
 
 /* ---- MAIN GRID ---- */
 .ct-main {
-  padding: 5rem 1.5rem;
+  padding: 5rem 60px;
   background: #f5f5f7;
 }
 
@@ -312,7 +308,7 @@ a.ct-info-value:hover { color: #CE1E36; }
 
 /* ---- FAQ ---- */
 .ct-faq-section {
-  padding: 5rem 1.5rem;
+  padding: 5rem 60px;
   background: #fff;
 }
 
@@ -390,13 +386,13 @@ a.ct-info-value:hover { color: #CE1E36; }
 /* ---- RESPONSIVE ---- */
 @media (max-width: 860px) {
   .ct-grid { grid-template-columns: 1fr; gap: 2rem; }
-  .ct-main { padding: 3.5rem 1.25rem; }
+  .ct-main { padding: 3.5rem 40px; }
 }
 
 @media (max-width: 560px) {
-  .ct-hero { padding: 3.5rem 1.25rem 3rem; }
+  .ct-hero { padding: 3.5rem 40px 3rem; }
   .ct-form-card { padding: 1.75rem 1.25rem; }
   .ct-form-row { grid-template-columns: 1fr; }
-  .ct-faq-section { padding: 3.5rem 1.25rem; }
+  .ct-faq-section { padding: 3.5rem 40px; }
   .ct-faq-title { font-size: 1.5rem; }
 }
