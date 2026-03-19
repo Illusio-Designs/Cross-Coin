@@ -5,6 +5,7 @@ import { useCart } from '../../context/CartContext';
 import Loader from '../common/Loader';
 import InfiniteReviewsSlider from '../common/InfiniteReviewsSlider';
 import colorMap from './colorMap';
+import SizeChartModal from './SizeChartModal';
 
 const ProductDetailsTest = () => {
   const router = useRouter();
@@ -18,6 +19,7 @@ const ProductDetailsTest = () => {
   const [selectedVariation, setSelectedVariation] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState('');
+  const [showSizeChart, setShowSizeChart] = useState(false);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [pincode, setPincode] = useState('');
@@ -529,7 +531,7 @@ const ProductDetailsTest = () => {
                     <path d="M3 7h18M3 12h18M3 17h18M7 3v4M12 3v4M17 3v4"/>
                   </svg>
                   Not sure about your size?
-                  <button className="pdt-size-chart-btn" type="button">Size Chart</button>
+                  <button className="pdt-size-chart-btn" type="button" onClick={() => setShowSizeChart(true)}>Size Chart</button>
                 </div>
               </div>
             );
@@ -791,6 +793,8 @@ const ProductDetailsTest = () => {
         </svg>
         Added to Bag
       </div>
+      {/* Size Chart Modal */}
+      {showSizeChart && <SizeChartModal onClose={() => setShowSizeChart(false)} />}
     </div>
   );
 };
