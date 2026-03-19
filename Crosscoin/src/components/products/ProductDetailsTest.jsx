@@ -16,6 +16,7 @@ const ProductDetailsTest = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState(0);
   const [selectedVariation, setSelectedVariation] = useState(null);
+  const [quantity, setQuantity] = useState(1);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [pincode, setPincode] = useState('');
