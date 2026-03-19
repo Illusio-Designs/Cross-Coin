@@ -30,6 +30,7 @@ export default function Reviews() {
   const [reviews, setReviews] = useState([]);
   const [totalReviews, setTotalReviews] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [statusCounts, setStatusCounts] = useState({ approved: 0, pending: 0, rejected: 0 });
   const [formData, setFormData] = useState({ status: "pending", is_featured: false, admin_notes: "" });
 
   const [statusFilter, setStatusFilter] = useState("");
@@ -51,7 +52,24 @@ export default function Reviews() {
     }
   }, [currentPage, itemsPerPage]);
 
+  // Fetch total counts per status independently (not affected by pagination)
+  const fetchStatusCounts = useCallback(async () => {
+    try {
+      const [approvedRes, pendingRes, rejectedRes] = await Promise.all([
+        reviewService.getAllReviews('approved', { page: 1, limit: 1 }),
+        reviewService.getAllReviews('pending', { page: 1, limit: 1 }),
+        reviewService.getAllReviews('rejected', { page: 1, limit: 1 }),
+      ]);
+      setStatusCounts({
+        approved: approvedRes?.pagination?.total || 0,
+        pending: pendingRes?.pagination?.total || 0,
+        rejected: rejectedRes?.pagination?.total || 0,
+      });
+    } catch {}
+  }, []);
+
   useEffect(() => { fetchReviews(); }, [fetchReviews]);
+  useEffect(() => { fetchStatusCounts(); }, [fetchStatusCounts]);
   useEffect(() => { setCurrentPage(1); }, [search]);
 
   const filteredData = reviews.filter(item => {
@@ -78,7 +96,7 @@ export default function Reviews() {
     try {
       setLoading(true);
       await reviewService.deleteReview(id);
-      await fetchReviews();
+      await Promise.all([fetchReviews(), fetchStatusCounts()]);
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
   };
@@ -97,6 +115,7 @@ export default function Reviews() {
       setLoading(true);
       await reviewService.moderateReview(formData.id, { status: formData.status, is_featured: formData.is_featured, admin_notes: formData.admin_notes });
       setReviews(prev => prev.map(r => r.id === formData.id ? { ...r, status: formData.status, is_featured: formData.is_featured, admin_notes: formData.admin_notes } : r));
+      fetchStatusCounts();
       handleModalClose();
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
@@ -121,9 +140,9 @@ export default function Reviews() {
     }
   ];
 
-  const approvedCount = reviews.filter(r => r.status === 'approved').length;
-  const pendingCount = reviews.filter(r => r.status === 'pending').length;
-  const rejectedCount = reviews.filter(r => r.status === 'rejected').length;
+  const approvedCount = statusCounts.approved;
+  const pendingCount = statusCounts.pending;
+  const rejectedCount = statusCounts.rejected;
   const avgRating = reviews.length > 0 ? (reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length).toFixed(1) : '0.0';
 
   return (

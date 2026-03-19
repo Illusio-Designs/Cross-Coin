@@ -143,6 +143,10 @@
   scrollbar-width: none;
 }
 
+.sb--collapsed .sb-nav {
+   padding: 12px 16px;
+}
+
 .sb-nav::-webkit-scrollbar {
   display: none;
 }
@@ -169,6 +173,10 @@
   text-align: left;
   transition: background 0.18s, color 0.18s;
   white-space: nowrap;
+}
+
+.sb--collapsed .sb-link{
+  width: auto;
 }
 
 .sb-link:hover {

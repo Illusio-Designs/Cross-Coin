@@ -6,7 +6,8 @@
 
 /* Use dashboard-page class for consistency */
 .dashboard-page {
-  background: transparent;
+  background: #ffffff;
+  border-radius: 6px;
 }
 
 /* Date Filter */
