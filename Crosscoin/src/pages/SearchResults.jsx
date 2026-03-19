@@ -141,8 +141,8 @@ const SearchResults = () => {
           {/* Result count */}
           {searchQuery && !loading && (
             <div className="sr-meta">
-              {totalProducts > 0
-                ? <><span className="sr-meta-count">{totalProducts}</span> results for <strong>"{searchQuery}"</strong></>
+              {products.length > 0
+                ? <><span className="sr-meta-count">{products.length}</span> results for <strong>"{searchQuery}"</strong></>
                 : <>No results for <strong>"{searchQuery}"</strong></>
               }
             </div>

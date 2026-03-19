@@ -119,6 +119,21 @@
   gap: 20px;
 }
 
+/* Constrain card image height in search grid */
+.sr-grid .product-image,
+.sr-grid .product-image__inner {
+  min-height: unset !important;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+}
+
+.sr-grid .product-image__inner img,
+.sr-grid .product-image__inner span {
+  min-height: unset !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
 /* ── Empty / loading states ── */
 .sr-state {
   display: flex;
