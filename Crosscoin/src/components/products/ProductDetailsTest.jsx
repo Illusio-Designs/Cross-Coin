@@ -296,6 +296,8 @@ const ProductDetailsTest = () => {
       {/* ── Top Section: Gallery + Info ── */}
       <div className="pdt-wrapper">
 
+        {/* Gallery + Fit row — left column */}
+        <div className="pdt-gallery-col">
         {/* Gallery */}
         <div className="pdt-gallery">
           <div className="pdt-thumbs">
@@ -385,6 +387,7 @@ const ProductDetailsTest = () => {
             })}
           </div>
         )}
+        </div>{/* end pdt-gallery-col */}
 
         {/* Lightbox */}
         {showLightbox && (
