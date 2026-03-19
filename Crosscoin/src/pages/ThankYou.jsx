@@ -4,7 +4,34 @@ import { getGuestOrder, getUserOrders } from "../services/publicApi";
 import { useAuth } from "../context/AuthContext";
 import { fbqTrack } from "../utils/fbqTrack";
 
-// Load page-specific CSS - moved to _app.jsx
+const IconCheck = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </svg>
+);
+const IconPackage = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+  </svg>
+);
+const IconShoppingBag = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>
+    <path d="M16 10a4 4 0 01-8 0"/>
+  </svg>
+);
+const IconMapPin = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+  </svg>
+);
+const IconMail = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+    <polyline points="22,6 12,13 2,6"/>
+  </svg>
+);
 
 export default function ThankYou() {
   const router = useRouter();
@@ -15,276 +42,139 @@ export default function ThankYou() {
   const [trackingResult, setTrackingResult] = useState(null);
   const [trackingLoading, setTrackingLoading] = useState(false);
 
-  // Calculate estimated delivery date (e.g., 5 days from now)
   const getDeliveryDate = () => {
     const date = new Date();
     date.setDate(date.getDate() + 5);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
-  const handleShopAgain = () => {
-    router.push('/Products');
+    return date.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   };
 
   const handleTrackOrder = () => {
     if (is_guest === 'true') {
-      // For guest users, show guest tracking form
       setShowGuestTracking(true);
     } else {
-      // For authenticated users, redirect to profile page
       router.push('/profile');
     }
   };
 
   const handleGuestTrackOrder = async () => {
-    if (!guestEmail || !order_number) {
-      alert('Please enter your email address');
-      return;
-    }
-
+    if (!guestEmail || !order_number) return;
     setTrackingLoading(true);
     try {
       const result = await getGuestOrder(guestEmail, order_number);
       setTrackingResult(result);
     } catch (error) {
-      setTrackingResult({ 
-        success: false, 
-        message: error.message || 'Failed to track order' 
-      });
+      setTrackingResult({ success: false, message: error.message || 'Failed to track order' });
     } finally {
       setTrackingLoading(false);
     }
   };
 
-  // Track Facebook Purchase Event
+  // Facebook Purchase tracking
   useEffect(() => {
     const trackPurchaseEvent = async () => {
-      // Check if we've already tracked this order
       const trackingKey = `fb_purchase_tracked_${order_number}`;
-      if (!order_number) {
-        return;
-      }
-      
-      if (sessionStorage.getItem(trackingKey)) {
-        return;
-      }
+      if (!order_number || sessionStorage.getItem(trackingKey)) return;
 
-      // Wait for fbq to be available
-      const waitForFbq = (maxAttempts = 10) => {
-        return new Promise((resolve) => {
-          let attempts = 0;
-          const checkFbq = () => {
-            if (typeof window !== 'undefined' && window.fbq) {
-              resolve(true);
-            } else if (attempts < maxAttempts) {
-              attempts++;
-              setTimeout(checkFbq, 200);
-            } else {
-              resolve(false);
-            }
-          };
-          checkFbq();
-        });
-      };
+      const waitForFbq = (maxAttempts = 10) => new Promise(resolve => {
+        let attempts = 0;
+        const check = () => {
+          if (typeof window !== 'undefined' && window.fbq) return resolve(true);
+          if (attempts++ < maxAttempts) setTimeout(check, 200);
+          else resolve(false);
+        };
+        check();
+      });
 
       try {
-        // Wait for Facebook Pixel to be ready
         const fbqReady = await waitForFbq();
-        if (!fbqReady) {
-          return;
-        }
+        if (!fbqReady) return;
 
         let orderData = null;
-
-        // Fetch order data based on user type
         if (is_guest === 'true' && guest_email) {
-          // For guest users
-          try {
-            const result = await getGuestOrder(guest_email, order_number);
-            if (result.success && result.data) {
-              orderData = result.data;
-              } else {
-              }
-          } catch (error) {
-            return;
-          }
+          const result = await getGuestOrder(guest_email, order_number);
+          if (result.success && result.data) orderData = result.data;
         } else if (isAuthenticated) {
-          // For authenticated users
-          try {
-            const result = await getUserOrders({ limit: 100 }); // Get enough orders to find the one we need
-            if (result.orders && Array.isArray(result.orders)) {
-              const order = result.orders.find(
-                (o) => String(o.order_number) === String(order_number)
-              );
-              if (order) {
-                // Transform the order data to match the expected format
-                orderData = {
-                  order: {
-                    final_amount: order.final_amount,
-                    payment_type: order.payment_type,
-                  },
-                  items: order.OrderItems && Array.isArray(order.OrderItems)
-                    ? order.OrderItems.map((item) => ({
-                        product: {
-                          id: item.Product ? item.Product.id : item.product_id,
-                        },
-                        quantity: item.quantity || 1,
-                        price: item.price,
-                      }))
-                    : [],
-                };
-                } else {
-                }
-            }
-          } catch (error) {
-            return;
+          const result = await getUserOrders({ limit: 100 });
+          if (result.orders) {
+            const order = result.orders.find(o => String(o.order_number) === String(order_number));
+            if (order) orderData = { order: { final_amount: order.final_amount }, items: (order.OrderItems || []).map(i => ({ product: { id: i.Product?.id || i.product_id }, quantity: i.quantity || 1 })) };
           }
-        } else {
-          }
+        }
 
-        // Track purchase event if we have order data
-        if (orderData && orderData.order && orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0) {
-          const purchaseData = {
-            value: parseFloat(orderData.order.final_amount) || 0,
-            currency: 'INR',
-            content_type: 'product',
-            contents: orderData.items
-              .filter((item) => item.product?.id || item.product_id) // Filter out items without product ID
-              .map((item) => ({
-                id: (item.product?.id || item.product_id)?.toString(),
-                quantity: item.quantity || 1,
-              })),
-          };
-
-          // Track even if contents is unavailable (Meta only requires value+currency for Purchase)
+        if (orderData?.order && orderData?.items?.length > 0) {
+          const purchaseData = { value: parseFloat(orderData.order.final_amount) || 0, currency: 'INR', content_type: 'product', contents: orderData.items.filter(i => i.product?.id).map(i => ({ id: String(i.product.id), quantity: i.quantity || 1 })) };
           if (purchaseData.value > 0) {
-            // Track the purchase event
             fbqTrack('Purchase', purchaseData);
-            
-            // Mark as tracked to prevent duplicate tracking
             sessionStorage.setItem(trackingKey, 'true');
-            } else {
-              // No purchase data
-            }
-        } else {
-          setTrackingState({
-            hasItems: !!(orderData && orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0)
-          });
+          }
         }
-      } catch (error) {
-        }
+      } catch (_) {}
     };
 
-    // Only track when router is ready and we have order_number
     if (router.isReady && order_number) {
-      // Add a small delay to ensure page is fully loaded
-      const timer = setTimeout(() => {
-        trackPurchaseEvent();
-      }, 500);
-      
-      return () => clearTimeout(timer);
+      const t = setTimeout(trackPurchaseEvent, 500);
+      return () => clearTimeout(t);
     }
   }, [router.isReady, order_number, is_guest, guest_email, isAuthenticated]);
 
   return (
-    <>
-      <div className="thankyou-container">
-        <div className="thankyou-icon-container">
-            <span className="thankyou-icon">✓</span>
+    <div className="ty-page">
+      <div className="ty-card">
+        {/* Success icon */}
+        <div className="ty-icon-wrap">
+          <div className="ty-icon">
+            <IconCheck />
+          </div>
         </div>
-        <h1>Thank you for your order!</h1>
+
+        <h1 className="ty-title">Order Confirmed!</h1>
         {order_number && (
-          <p className="order-confirmation">
-            Your order <strong>#{order_number}</strong> has been placed.
-          </p>
+          <p className="ty-order-num">Order <span>#{order_number}</span></p>
         )}
-        <p className="thankyou-desc">
-          {is_guest === 'true' 
-            ? `An email confirmation has been sent to ${guest_email}.`
-            : 'An email confirmation has been sent to your registered email address.'
-          }
-        </p>
-        <div className="delivery-info">
-            Estimated delivery by <strong>{getDeliveryDate()}</strong>
+
+        {/* Info strips */}
+        <div className="ty-info-strips">
+          <div className="ty-strip">
+            <span className="ty-strip-icon"><IconMail /></span>
+            <span>
+              {is_guest === 'true'
+                ? <>Confirmation sent to <strong>{guest_email}</strong></>
+                : 'Confirmation sent to your registered email'
+              }
+            </span>
+          </div>
+          <div className="ty-strip">
+            <span className="ty-strip-icon"><IconPackage /></span>
+            <span>Estimated delivery by <strong>{getDeliveryDate()}</strong></span>
+          </div>
         </div>
-        
-        {/* Guest Tracking Form */}
+
+        {/* Guest tracking form */}
         {showGuestTracking && (
-          <div className="guest-tracking-form" style={{
-            background: '#f8f9fa',
-            padding: '20px',
-            borderRadius: '8px',
-            margin: '20px 0',
-            border: '1px solid #dee2e6'
-          }}>
-            <h3 style={{ marginBottom: '15px', color: '#333' }}>Track Your Order</h3>
-            <div style={{ marginBottom: '15px' }}>
-              <input
-                type="email"
-                value={guestEmail}
-                onChange={(e) => setGuestEmail(e.target.value)}
-                placeholder="Enter your email address"
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  fontSize: '16px'
-                }}
-              />
+          <div className="ty-tracking-form">
+            <p className="ty-tracking-title">Track Your Order</p>
+            <input
+              className="ty-input"
+              type="email"
+              value={guestEmail}
+              onChange={e => setGuestEmail(e.target.value)}
+              placeholder="Enter your email address"
+            />
+            <div className="ty-tracking-actions">
+              <button className="ty-btn-primary" onClick={handleGuestTrackOrder} disabled={trackingLoading}>
+                {trackingLoading ? 'Tracking...' : 'Track Order'}
+              </button>
+              <button className="ty-btn-ghost" onClick={() => setShowGuestTracking(false)}>Cancel</button>
             </div>
-            <button 
-              onClick={handleGuestTrackOrder}
-              disabled={trackingLoading}
-              style={{
-                background: '#180D3E',
-                color: 'white',
-                border: 'none',
-                padding: '10px 20px',
-                borderRadius: '4px',
-                cursor: trackingLoading ? 'not-allowed' : 'pointer',
-                marginRight: '10px'
-              }}
-            >
-              {trackingLoading ? 'Tracking...' : 'Track Order'}
-            </button>
-            <button 
-              onClick={() => setShowGuestTracking(false)}
-              style={{
-                background: '#6c757d',
-                color: 'white',
-                border: 'none',
-                padding: '10px 20px',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Cancel
-            </button>
-            
-            {/* Tracking Result */}
+
             {trackingResult && (
-              <div style={{
-                marginTop: '15px',
-                padding: '10px',
-                borderRadius: '4px',
-                background: trackingResult.success ? '#d4edda' : '#f8d7da',
-                color: trackingResult.success ? '#155724' : '#721c24',
-                border: `1px solid ${trackingResult.success ? '#c3e6cb' : '#f5c6cb'}`
-              }}>
+              <div className={`ty-tracking-result ${trackingResult.success ? 'success' : 'error'}`}>
                 {trackingResult.success ? (
-                  <div>
-                    <p><strong>Order Status:</strong> {trackingResult.data?.status || 'Unknown'}</p>
-                    <p><strong>Order Date:</strong> {trackingResult.data?.created_at ? new Date(trackingResult.data.created_at).toLocaleDateString() : 'Unknown'}</p>
-                    {trackingResult.data?.tracking_info && (
-                      <p><strong>Tracking Info:</strong> {trackingResult.data.tracking_info}</p>
-                    )}
-                  </div>
+                  <>
+                    <p><strong>Status:</strong> {trackingResult.data?.status || 'Processing'}</p>
+                    <p><strong>Order Date:</strong> {trackingResult.data?.created_at ? new Date(trackingResult.data.created_at).toLocaleDateString('en-IN') : '—'}</p>
+                    {trackingResult.data?.tracking_info && <p><strong>Tracking:</strong> {trackingResult.data.tracking_info}</p>}
+                  </>
                 ) : (
                   <p>{trackingResult.message}</p>
                 )}
@@ -292,13 +182,19 @@ export default function ThankYou() {
             )}
           </div>
         )}
-        
-        <div className="thankyou-buttons">
-          <button className="shop-again" onClick={handleShopAgain}>Continue Shopping</button>
-          <button className="track-order" onClick={handleTrackOrder}>Track Your Order</button>
+
+        {/* CTA buttons */}
+        <div className="ty-actions">
+          <button className="ty-btn-primary" onClick={() => router.push('/Products')}>
+            <span className="ty-btn-icon"><IconShoppingBag /></span>
+            Continue Shopping
+          </button>
+          <button className="ty-btn-outline" onClick={handleTrackOrder}>
+            <span className="ty-btn-icon"><IconMapPin /></span>
+            Track Your Order
+          </button>
         </div>
       </div>
-    </>
+    </div>
   );
-} 
-
+}
