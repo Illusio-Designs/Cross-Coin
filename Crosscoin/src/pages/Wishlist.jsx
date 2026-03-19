@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
 import { getAllPublicProducts } from '../services/publicApi';
-import ProductCard from '../components/ProductCard';
+import ProductCard from '../components/products/ProductCard';
 import { showSuccess, showError } from '../utils/toastNotification';
 import SeoWrapper from '../console/SeoWrapper';
 

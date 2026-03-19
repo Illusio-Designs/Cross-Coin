@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { orderService } from '../../../services';
 import { debounce } from 'lodash';
-import { Table, Pagination } from "@/components/ui";
-import Loader from "@/components/Loader";
+import { Table, Pagination } from "../../../components/ui";
+import Loader from "../../../components/common/Loader";
 import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusUtils';
 
 const OrderStatus = () => {
@@ -100,7 +100,7 @@ const OrderStatus = () => {
     }, [filterValue, statusFilter]);
 
     const columns = [
-        { header: "S/N", accessor: "serial_number" },
+        { header: "Sr. No", accessor: "serial_number" },
         { header: "Order Number", cell: (row) => row.Order?.order_number || 'N/A' },
         { header: "Status", cell: (row) => <span className={`status-badge status-${getStatusClassName(row.status)}`}>{getStatusDisplayText(row.status)}</span> },
         { header: "Notes", cell: (row) => row.notes || 'No notes' },
@@ -110,23 +110,27 @@ const OrderStatus = () => {
 
     return (
         <div className="dashboard-page">
-            <div className="seo-header-container">
-                <h1 className="seo-title">Order Status History</h1>
-                <div className="adding-button">
-                    <form className="modern-searchbar-form" onSubmit={e => e.preventDefault()}>
-                        <div className="modern-searchbar-group">
-                            <span className="modern-searchbar-icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </span>
-                            <input type="text" className="modern-searchbar-input" placeholder="Search by order number" onChange={handleSearchChange} />
-                        </div>
-                    </form>
-                    <select 
-                        value={statusFilter} 
+            <div className="sl-page-header">
+                <div className="sl-header-left">
+                    <div className="sl-header-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                    </div>
+                    <div>
+                        <h1 className="sl-page-title">Order Status History</h1>
+                        <p className="sl-page-sub">Track all order status changes</p>
+                    </div>
+                </div>
+                <div className="sl-header-right">
+                    <div className="sl-search-wrap">
+                        <span className="sl-search-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        </span>
+                        <input type="text" className="sl-search-input" placeholder="Search by order number" onChange={handleSearchChange} />
+                    </div>
+                    <select
+                        value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="payment-filter-dropdown"
+                        className="pay-filter-select"
                     >
                         <option value="all">All Status</option>
                         <option value="pending">Pending</option>
@@ -138,14 +142,14 @@ const OrderStatus = () => {
                 </div>
             </div>
 
-            <div className="seo-table-container">
+            <div className="sl-table-wrap">
                 {loading ? (
-                    <div style={{ position: 'relative', minHeight: '400px' }}>
+                    <div className="sl-loader-wrap">
                         <Loader />
                     </div>
                 ) :
                     <>
-                        {filteredData.length === 0 ? <div className="seo-empty-state">No status history found.</div> :
+                        {filteredData.length === 0 ? <div className="sl-empty"><p>No status history found.</p></div> :
                             <>
                                 {/* Status Statistics */}
                                 <div className="payment-stats">
@@ -186,7 +190,7 @@ const OrderStatus = () => {
                                 </div>
                                 <Table columns={columns} data={currentItems} className="w-full" striped={true} hoverable={true} style={{ fontSize: '14px' }} />
                                 {filteredData.length > itemsPerPage && (
-                                    <div className="seo-pagination-container">
+                                    <div className="sl-pagination">
                                         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                                     </div>
                                 )}

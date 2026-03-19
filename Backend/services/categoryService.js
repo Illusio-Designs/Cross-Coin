@@ -268,15 +268,15 @@ class CategoryService {
    * @returns {Object} Formatted category
    */
   static _formatCategory(category) {
+    const imagekitService = require('./imagekitService');
+    
     return {
       id: category.id,
       name: category.name,
       description: category.description,
       parentId: category.parentId,
       parentName: category.parent ? category.parent.name : null,
-      image: category.image && !category.image.startsWith('/uploads/') 
-        ? `/uploads/categories/${category.image}` 
-        : category.image,
+      image: category.image ? imagekitService.getOptimizedUrl(category.image, 'medium') : null,
       slug: category.slug
     };
   }

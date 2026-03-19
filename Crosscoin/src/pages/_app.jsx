@@ -5,19 +5,23 @@ import "react-toastify/dist/ReactToastify.css";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { CartProvider, useCart } from "../context/CartContext";
 import { WishlistProvider } from "../context/WishlistContext";
-import { BreadcrumbProvider } from "../components/Breadcrumb";
+import { BreadcrumbProvider } from "../components/common/Breadcrumb";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
-import Loader from "../components/Loader";
+import Loader from "../components/common/Loader";
 import CartDrawer from "../components/cart/CartDrawer";
-import Breadcrumb from "../components/Breadcrumb";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
+import Breadcrumb from "../components/common/Breadcrumb";
+import Header from "../components/layout/Header";
+import Footer from "../components/layout/Footer";
 // Global CSS — all imports must live here (Next.js Pages Router rule)
-import "../styles/globals.css";
-import "../styles/responsive.css";
-import "../styles/mobile-utilities.css";
-import "../styles/skeleton.css";
+import "../styles/common/globals.css";
+import "../styles/common/responsive.css";
+import "../styles/common/mobile-utilities.css";
+import "../styles/common/skeleton.css";
+import "../styles/common/critical.css";
+import "../styles/common/DonutChart.css";
+// Components
+import "../styles/components/InfiniteReviewsSlider.css";
 // Pages
 import "../styles/pages/Home.css";
 import "../styles/pages/Login.css";
@@ -31,36 +35,68 @@ import "../styles/pages/OrderTracking.css";
 import "../styles/pages/SearchResults.css";
 import "../styles/pages/Policy.css";
 import "../styles/pages/Contact.css";
+import "../styles/pages/Collections.css";
+import "../styles/pages/About.css";
 import "../styles/pages/auth/adminlogin.css";
-// Components
+import '../styles/pages/blog.css';
+import '../styles/pages/blog-details.css';
+import '../styles/pages/sitemap.css';
+
+// Components - Layout
 import "../styles/components/Header.css";
-import "../styles/components/Breadcrumb.css";
-import "../styles/components/ProductCard.css";
 import "../styles/components/Footer.css";
-import "../styles/components/Testimonials.css";
-import "../styles/components/TrustBadges.css";
+import "../styles/components/Breadcrumb.css";
+
+// Components - Products
+import "../styles/components/ProductCard.css";
 import "../styles/components/HeroSlider.css";
 import "../styles/components/SlidingCollection.css";
 import "../styles/components/UnlockedExclusives.css";
+
+// Components - Common
+import "../styles/components/Testimonials.css";
+import "../styles/components/TrustBadges.css";
 import "../styles/components/CouponStrip.css";
 import "../styles/components/Toast.css";
-import "../components/ui/Dropdown.css";
-// Component-local CSS (co-located with components)
+import "../styles/components/blog-section.css";
+
+// Components - Co-located CSS (in component directories)
 import "../components/Sidebar/Sidebar.css";
 import "../components/cart/CartDrawer.css";
 import "../components/cart/QuantityOfferBar.css";
 import "../components/products/ProductDetailsTest.css";
 import "../components/products/ProductFilterDrawer.css";
+import "../styles/common/Dropdown.css";
+
+// UI Components CSS
+import "../styles/dashboard/ui-button.css";
+import "../styles/dashboard/ui-input.css";
+import "../styles/dashboard/ui-modal.css";
+import "../styles/dashboard/ui-table.css";
+import "../styles/dashboard/ui-pagination.css";
+import "../styles/dashboard/ui-badge.css";
+import "../styles/dashboard/ui-select.css";
+import "../styles/dashboard/ui-switch.css";
+
 // Additional dashboard CSS
+import "../styles/dashboard/layout.css";
+import "../styles/dashboard/tables.css";
+import "../styles/dashboard/Card.css";
 import "../styles/dashboard/payments.css";
 import "../styles/dashboard/products.css";
 import "../styles/dashboard/orders.css";
 import "../styles/dashboard/media.css";
 import "../styles/dashboard/utmAnalytics.css";
 import "../styles/dashboard/attributes.css";
+import "../styles/dashboard/slider.css";
+import "../styles/dashboard/pages.css";
+import "../styles/dashboard/brands.css";
+import "../styles/dashboard/brandSettings.css";
 // Additional page CSS
 import "../styles/pages/Collections.css";
 import "../styles/pages/About.css";
+import "../styles/pages/BlogDetails.css";
+import "../styles/components/blog-section.css";
 // Third-party
 import "react-quill/dist/quill.snow.css";
 
@@ -73,19 +109,26 @@ function AppContent({ Component, pageProps, progressRef }) {
   const { isDrawerOpen, setIsDrawerOpen, lastAddedItem, cartItems } = useCart();
   const { user } = useAuth();
   const router = useRouter();
+  const [showBackTop, setShowBackTop] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setShowBackTop(window.scrollY > 400);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
   
   // Check if current route is a dashboard route
   const isDashboard = router.pathname.startsWith('/dashboard');
-  const isAuthPage = router.pathname === '/login' || router.pathname === '/register';
+  const isAuthPage = router.pathname.startsWith('/auth');
 
   return (
     <>
-      {/* Custom vertical scroll progress bar */}
+      {/* Global reading progress bar */}
       <div className="custom-scrollbar-progress">
         <div
           className="custom-scrollbar-progress-fill"
           ref={progressRef}
-          style={{ height: 0 }}
+          style={{ width: 0 }}
         />
       </div>
       {!isDashboard && !isAuthPage && <Header />}
@@ -105,6 +148,7 @@ function AppContent({ Component, pageProps, progressRef }) {
         hideProgressBar={true}
         newestOnTop={true}
         closeOnClick={true}
+        closeButton={true}
         rtl={false}
         pauseOnFocusLoss={false}
         draggable={true}
@@ -112,6 +156,19 @@ function AppContent({ Component, pageProps, progressRef }) {
         theme="light"
         limit={3}
       />
+
+      {/* Back to top button */}
+      {showBackTop && (
+        <button
+          className="back-to-top"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Back to top"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="18 15 12 9 6 15" />
+          </svg>
+        </button>
+      )}
     </>
   );
 }
@@ -163,7 +220,7 @@ function App({ Component, pageProps }) {
         document.documentElement.scrollHeight - window.innerHeight;
       const percent = docHeight > 0 ? scrollTop / docHeight : 0;
       if (progressRef.current) {
-        progressRef.current.style.height = `${percent * 100}%`;
+        progressRef.current.style.width = `${percent * 100}%`;
       }
       ticking = false;
     }

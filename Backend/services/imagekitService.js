@@ -11,11 +11,15 @@ class ImageKitService {
 
   /**
    * Get optimized image URL with automatic size conversion
-   * @param {string} imagePath - Image path in ImageKit (e.g., /products/image.png?updatedAt=123)
+   * @param {string} imagePath - Image path in ImageKit (e.g., /products/image.png?updatedAt=123) or legacy filename
    * @param {string} size - 'thumbnail' (300), 'medium' (600), 'large' (1000)
    * @returns {string} Optimized URL with ImageKit endpoint and transformations
    */
   getOptimizedUrl(imagePath, size = 'medium') {
+    if (!imagePath) return null;
+
+    console.log('🔍 ImageKit getOptimizedUrl input:', imagePath);
+
     const sizeConfig = {
       thumbnail: { width: 300, height: 300, quality: 70 },
       medium: { width: 600, height: 600, quality: 75 },
@@ -26,13 +30,45 @@ class ImageKitService {
 
     // Get ImageKit URL endpoint from environment
     const urlEndpoint = process.env.IMAGEKIT_URL_ENDPOINT;
-    if (!urlEndpoint) {
-      console.error('IMAGEKIT_URL_ENDPOINT not configured in environment');
+    
+    if (!urlEndpoint || urlEndpoint.includes('your_id')) {
+      console.warn('⚠️ IMAGEKIT_URL_ENDPOINT not properly configured:', urlEndpoint);
+      console.warn('Please set IMAGEKIT_URL_ENDPOINT to your actual ImageKit endpoint');
+      // Return path as-is if not configured
       return imagePath;
     }
 
+    // Handle legacy local file paths (for backward compatibility during migration)
+    if (!imagePath.startsWith('/')) {
+      // Legacy filename - convert to ImageKit path format
+      // Assume it's a category image if it's just a filename
+      const imagekitPath = `/categories/${imagePath}`;
+      const fullUrl = `${urlEndpoint}${imagekitPath}`;
+      const separator = fullUrl.includes('?') ? '&' : '?';
+      const result = `${fullUrl}${separator}tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
+      console.log('✅ ImageKit URL (legacy filename):', result);
+      return result;
+    }
+
+    // Fix legacy /uploads/ paths - convert to ImageKit format
+    let cleanPath = imagePath;
+    if (cleanPath.includes('/uploads/categories/')) {
+      console.log('🔧 Fixing /uploads/categories/ path');
+      cleanPath = cleanPath.replace('/uploads/categories/', '/categories/');
+    }
+    if (cleanPath.includes('/uploads/sliders/')) {
+      console.log('🔧 Fixing /uploads/sliders/ path');
+      cleanPath = cleanPath.replace('/uploads/sliders/', '/sliders/');
+    }
+    if (cleanPath.includes('/uploads/products/')) {
+      console.log('🔧 Fixing /uploads/products/ path');
+      cleanPath = cleanPath.replace('/uploads/products/', '/products/');
+    }
+
+    console.log('🔧 Clean path:', cleanPath);
+
     // Construct full URL: endpoint + path
-    let fullUrl = `${urlEndpoint}${imagePath}`;
+    let fullUrl = `${urlEndpoint}${cleanPath}`;
 
     // Add transformation parameters
     // f-auto: Automatic format conversion (WebP for modern browsers)
@@ -41,7 +77,10 @@ class ImageKitService {
     
     // Check if URL already has query parameters
     const separator = fullUrl.includes('?') ? '&' : '?';
-    return `${fullUrl}${separator}tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
+    const optimizedUrl = `${fullUrl}${separator}tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
+    
+    console.log('✅ ImageKit URL generated:', optimizedUrl);
+    return optimizedUrl;
   }
 
   /**

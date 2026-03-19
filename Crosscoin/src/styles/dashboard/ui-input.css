@@ -1,0 +1,183 @@
+/* UI Input Component */
+
+.input-container {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+  width: 100%;
+}
+.input-container-disabled { opacity: 0.55; }
+
+.input-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  font-family: 'DM Sans', sans-serif;
+}
+.input-required { color: #CE1E36; margin-left: 2px; }
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-field {
+  width: 100%;
+  border: 1px solid #ebebf0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  color: #1a1a1a;
+  background: #fff;
+  transition: border-color 0.18s, box-shadow 0.18s;
+  outline: none;
+}
+.input-field::placeholder { color: #9ca3af; }
+.input-field:hover:not(:disabled) { border-color: #180D3E; }
+.input-field:focus {
+  border-color: #180D3E;
+  box-shadow: 0 0 0 3px rgba(24,13,62,0.08);
+}
+
+.input-sm { padding: 6px 10px; font-size: 12px; height: 32px; }
+.input-md { padding: 9px 12px; font-size: 13px; height: 40px; }
+.input-lg { padding: 11px 14px; font-size: 14px; height: 46px; }
+
+.input-filled { background: #f5f5f7; border-color: transparent; }
+.input-filled:hover:not(:disabled) { background: #ebebf0; }
+.input-filled:focus { background: #fff; border-color: #180D3E; }
+.input-outline { background: transparent; border-width: 2px; }
+
+.input-error { border-color: #CE1E36; }
+.input-error:focus { box-shadow: 0 0 0 3px rgba(206,30,54,0.1); }
+.input-disabled { background: #f5f5f7; cursor: not-allowed; opacity: 0.6; }
+
+.input-with-left-icon { padding-left: 38px; }
+.input-with-right-icon { padding-right: 38px; }
+
+.input-left-icon, .input-right-icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+.input-left-icon { left: 10px; }
+.input-right-icon { right: 10px; }
+
+textarea.input-field {
+  resize: vertical;
+  min-height: 80px;
+  height: auto;
+  padding: 10px 12px;
+  line-height: 1.5;
+}
+
+select.input-field {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 10px center;
+  background-repeat: no-repeat;
+  background-size: 1.4em 1.4em;
+  padding-right: 36px;
+  cursor: pointer;
+}
+select.input-field:disabled { cursor: not-allowed; }
+
+.input-file-container { display: flex; flex-direction: column; gap: 12px; }
+.input-file-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid #ebebf0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  transition: border-color 0.18s;
+}
+.input-file-wrapper:hover { border-color: #180D3E; }
+.input-file-input { position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.input-file-input:disabled { cursor: not-allowed; }
+.input-file-placeholder {
+  flex: 1;
+  padding: 9px 12px;
+  color: #9ca3af;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+}
+.input-file-button {
+  padding: 9px 14px;
+  background: #f5f5f7;
+  border: none;
+  border-left: 1px solid #ebebf0;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  color: #1a1a1a;
+  transition: background 0.15s;
+}
+.input-file-button:hover:not(:disabled) { background: #ebebf0; }
+.input-file-button:disabled { cursor: not-allowed; opacity: 0.6; }
+
+.input-file-preview-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.input-file-preview-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #ebebf0;
+}
+
+.input-helper-text { margin-top: 4px; font-size: 12px; color: #6b7280; line-height: 1.4; }
+.input-error-text { margin-top: 4px; font-size: 12px; color: #CE1E36; line-height: 1.4; }
+
+.input-field:focus-visible { outline: 2px solid #180D3E; outline-offset: 2px; }
+
+@media (max-width: 480px) {
+  .input-md, .input-lg { min-height: 42px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .input-field, .input-file-wrapper, .input-file-button { transition: none; }
+}
+
+/* Date Input Styling */
+input[type="date"].input-field,
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' stroke='%236b7280' stroke-width='1.5'/%3E%3Cpath d='M3 9h18' stroke='%236b7280' stroke-width='1.5'/%3E%3Cpath d='M8 2v4M16 2v4' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px 16px;
+  padding-right: 36px;
+  cursor: pointer;
+  color-scheme: light;
+}
+
+input[type="date"].input-field::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  width: 36px;
+  height: 100%;
+  cursor: pointer;
+}
+
+input[type="date"].input-field:focus,
+input[type="date"]:focus {
+  border-color: #180D3E;
+  box-shadow: 0 0 0 3px rgba(24, 13, 62, 0.08);
+  outline: none;
+}

@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { getPublicCategories } from '../services/publicApi';
 import { getCachedData, setCachedData } from '../utils/apiCache';
 import SeoWrapper from '../console/SeoWrapper';
-import Loader from '../components/Loader';
+import Loader from '../components/common/Loader';
+import SafeImage from '../components/common/SafeImage';
 
 const Collections = () => {
   const [categories, setCategories] = useState([]);
@@ -103,7 +104,12 @@ const Collections = () => {
       <SeoWrapper pageName="categories">
 
         <div className="collections-container">
-          <h1 className="section-title">Collections</h1>
+          <div className="collections-header">
+            <div className="section-header-inline">
+              <h1 className="section-header-h2">Our <strong>Collections</strong></h1>
+              <p className="section-header-sub">Explore our curated selection</p>
+            </div>
+          </div>
           <div className="loading-state">
             <Loader />
           </div>
@@ -117,7 +123,12 @@ const Collections = () => {
       <SeoWrapper pageName="categories">
 
         <div className="collections-container">
-          <h1 className="section-title">Collections</h1>
+          <div className="collections-header">
+            <div className="section-header-inline">
+              <h1 className="section-header-h2">Our <strong>Collections</strong></h1>
+              <p className="section-header-sub">Explore our curated selection</p>
+            </div>
+          </div>
           <div className="error-state">
             <p>Error: {error}</p>
             <button 
@@ -138,31 +149,18 @@ const Collections = () => {
     <SeoWrapper pageName="categories">
 
       <div className="collections-container">
-        <h1 className="section-title">Collections</h1>
+        <div className="collections-header">
+          <div className="section-header-inline">
+            <h1 className="section-header-h2">Our <strong>Collections</strong></h1>
+            <p className="section-header-sub">Explore our curated selection</p>
+          </div>
+        </div>
         <div className="collections-grid">
           {safeCategories.length > 0 ? (
             safeCategories.map((cat) => {
             // Safety check for category object
             if (!cat || !cat.name) {
               return null;
-            }
-            
-            // Simple image URL construction
-            let imageUrl = null; // No fallback image
-            
-            if (cat.image) {
-              const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-              
-              if (cat.image.startsWith('http')) {
-                // Already a full URL
-                imageUrl = cat.image;
-              } else if (cat.image.startsWith('/uploads/')) {
-                // Already has /uploads/ prefix, just add base URL
-                imageUrl = `${baseUrl}${cat.image}`;
-              } else {
-                // Just a filename, add full path
-                imageUrl = `${baseUrl}/uploads/categories/${cat.image}`;
-              }
             }
             
             return (
@@ -172,15 +170,20 @@ const Collections = () => {
                 className="category-card"
               >
                 <div className="category-card-image-wrapper">
-                  {imageUrl && (
-                    <img
-                      src={imageUrl}
+                  {cat.image && (
+                    <SafeImage
+                      imageData={cat.image}
                       alt={cat.name}
                       className="category-card-image"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                      }}
+                      width="100%"
+                      height="300"
+                      style={{ objectFit: 'cover', width: '100%', height: '100%', display: 'block' }}
                     />
+                  )}
+                  {!cat.image && (
+                    <div className="category-card-placeholder">
+                      <span>{cat.name}</span>
+                    </div>
                   )}
                 </div>
                 <div className="category-card-info">

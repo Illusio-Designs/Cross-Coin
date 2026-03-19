@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import Skeleton from '../Skeleton';
+import Skeleton from './Skeleton';
 import { getImageUrl, getOptimizedImageUrl } from '../../utils/imageHandler';
 
 /**
@@ -100,6 +100,11 @@ const SafeImage = ({
       newSrc = fallbackSrc;
     }
     
+    // For logos with /assets/ path, use directly without modification
+    if (isLogo && imageData && typeof imageData === 'string' && imageData.startsWith('/assets/')) {
+      newSrc = imageData;
+    }
+    
     // Only reset loading state if the source URL actually changed
     if (newSrc !== imageSrc) {
       setImageSrc(newSrc);
@@ -113,7 +118,8 @@ const SafeImage = ({
       setImageError(true);
       setImageLoading(false);
       if (isLogo) {
-        setImageSrc(null);
+        // For logos, keep trying to show the image, don't set to null
+        // This allows the fallback text to show
       }
       else if (!isProductCard && imageSrc !== fallbackSrc) {
         setImageSrc(fallbackSrc);

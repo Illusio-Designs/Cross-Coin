@@ -7,34 +7,71 @@ export const getImageUrl = (imageData) => {
   if (!imageData) return null;
 
   let rawUrl = null;
+  let transformations = null;
 
-  // Extract URL from various formats
+  // Extract URL and transformations from various formats
   if (typeof imageData === 'string') {
     rawUrl = imageData;
   } else if (imageData?.image_url) {
     rawUrl = imageData.image_url;
+    transformations = imageData.tr; // Get ImageKit transformations if provided
   } else if (imageData?.url) {
     rawUrl = imageData.url;
+    transformations = imageData.tr;
   }
 
   if (!rawUrl || rawUrl.trim() === '') return null;
 
-  // Handle different URL formats
-  if (rawUrl.startsWith('http')) {
-    return rawUrl;
-  }
-
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-
-  if (rawUrl.startsWith('/uploads/')) {
-    return `${baseUrl}${rawUrl}`;
-  }
-
+  // Handle /assets/ paths - return directly (public folder)
   if (rawUrl.startsWith('/assets/')) {
     return rawUrl;
   }
 
-  return `${baseUrl}/uploads/products/${rawUrl}`;
+  // Handle different URL formats
+  if (rawUrl.startsWith('http')) {
+    // Already a full URL (ImageKit or external)
+    if (transformations && !rawUrl.includes('?tr=')) {
+      return `${rawUrl}?tr=${transformations}`;
+    }
+    return rawUrl;
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+  const imageKitEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/your_imagekit_id';
+
+  let finalUrl = null;
+
+  if (rawUrl.startsWith('/')) {
+    // Check if it's an ImageKit path (/categories, /sliders, /products)
+    if (rawUrl.startsWith('/categories') || rawUrl.startsWith('/sliders') || rawUrl.startsWith('/products')) {
+      // ImageKit path - prepend ImageKit endpoint
+      finalUrl = `${imageKitEndpoint}${rawUrl}`;
+    } else {
+      // Legacy /uploads/ path - prepend API base URL
+      finalUrl = `${baseUrl}${rawUrl}`;
+    }
+  } else {
+    // Legacy: just a filename
+    // Check if it's a category image (starts with 'category-')
+    if (rawUrl.startsWith('category-')) {
+      finalUrl = `${imageKitEndpoint}/categories/${rawUrl}`;
+    }
+    // Check if it's a slider image (starts with 'slider-')
+    else if (rawUrl.startsWith('slider-')) {
+      finalUrl = `${imageKitEndpoint}/sliders/${rawUrl}`;
+    }
+    // Default: assume it's a product image
+    else {
+      finalUrl = `${imageKitEndpoint}/products/${rawUrl}`;
+    }
+  }
+
+  // Add transformations if provided
+  if (transformations && !finalUrl.includes('?tr=')) {
+    finalUrl = `${finalUrl}?tr=${transformations}`;
+  }
+
+  return finalUrl;
 };
 
 export const getOptimizedImageUrl = (imageData, size = 'medium') => {

@@ -10,6 +10,7 @@ const { categoryUpload } = require('../middleware/uploadMiddleware.js');
 const slugify = require('slugify');
 const CategoryService = require('../services/categoryService.js');
 const cacheManager = require('../services/cacheManager.js');
+const imagekitService = require('../services/imagekitService.js');
 
 // In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/categories'));
@@ -19,12 +20,11 @@ const formatCategoryResponse = (category) => {
     const categoryData = category.toJSON();
     categoryData.parentName = category.parent ? category.parent.name : null;
     
-    // Add full image path only if it doesn't already have it
-    if (categoryData.image && !categoryData.image.startsWith('/uploads/')) {
-        categoryData.image = `/uploads/categories/${categoryData.image}`;
+    // Use ImageKit optimized URL if image exists
+    if (categoryData.image) {
+        categoryData.image = imagekitService.getOptimizedUrl(categoryData.image, 'medium');
     }
     
-    console.log('Formatted category image path:', categoryData.image);
     delete categoryData.parent;
     return categoryData;
 };
@@ -83,20 +83,25 @@ const createCategory = async (req, res) => {
 
         if (req.file) {
             try {
-                const result = await imageHandler.processImage(req.file.path, {
-                    width: 800,
-                    height: 600,
-                    quality: 80,
-                    format: 'webp',
-                    filename: `category-${Date.now()}`
-                });
+                // Read file buffer
+                const fileBuffer = await fs.readFile(req.file.path);
+                
+                // Upload to ImageKit
+                const uploadResult = await imagekitService.uploadImage(
+                    fileBuffer,
+                    `category-${Date.now()}.webp`,
+                    '/categories'
+                );
 
-                if (!result.success) {
-                    throw new Error(result.error);
+                if (!uploadResult.success) {
+                    throw new Error('Failed to upload image to ImageKit');
                 }
 
-                image = result.filename; // Store only filename
-                console.log('Created category image filename:', image);
+                image = uploadResult.filePath; // Store ImageKit file path
+                console.log('Created category image path:', image);
+                
+                // Delete temporary file
+                await fs.unlink(req.file.path);
             } catch (imageError) {
                 console.error('Error processing image:', imageError);
                 return res.status(500).json({ 
@@ -188,9 +193,16 @@ const getAllCategories = async (req, res) => {
             const categoryData = category.toJSON();
             categoryData.parentName = category.parent ? category.parent.name : null;
             
-            // Add full image path only if it doesn't already have it
-            if (categoryData.image && !categoryData.image.startsWith('/uploads/')) {
-                categoryData.image = `/uploads/categories/${categoryData.image}`;
+            // Use ImageKit optimized URL if image exists
+            if (categoryData.image) {
+                // Check if it's already an ImageKit path or a legacy filename
+                if (categoryData.image.startsWith('/')) {
+                    // ImageKit path
+                    categoryData.image = imagekitService.getOptimizedUrl(categoryData.image, 'medium');
+                } else {
+                    // Legacy filename - convert to ImageKit format
+                    categoryData.image = imagekitService.getOptimizedUrl(categoryData.image, 'medium');
+                }
             }
             
             // Add brand assignments
@@ -303,20 +315,25 @@ const updateCategory = async (req, res) => {
         // Handle image update
         if (req.file) {
             try {
-                const result = await imageHandler.processImage(req.file.path, {
-                    width: 800,
-                    height: 600,
-                    quality: 80,
-                    format: 'webp',
-                    filename: `category-${Date.now()}`
-                });
+                // Read file buffer
+                const fileBuffer = await fs.readFile(req.file.path);
+                
+                // Upload to ImageKit
+                const uploadResult = await imagekitService.uploadImage(
+                    fileBuffer,
+                    `category-${Date.now()}.webp`,
+                    '/categories'
+                );
 
-                if (!result.success) {
-                    throw new Error(result.error);
+                if (!uploadResult.success) {
+                    throw new Error('Failed to upload image to ImageKit');
                 }
 
-                updateData.image = result.filename; // Store only filename
-                console.log('Updated category image filename:', updateData.image);
+                updateData.image = uploadResult.filePath; // Store ImageKit file path
+                console.log('Updated category image path:', updateData.image);
+                
+                // Delete temporary file
+                await fs.unlink(req.file.path);
             } catch (error) {
                 console.error('Error handling category image update:', error);
                 return res.status(500).json({ 
@@ -419,13 +436,13 @@ const getPublicCategoryByName = async (req, res) => {
             description: category.description,
             parentId: category.parentId,
             parentName: category.parent ? category.parent.name : null,
-            image: category.image && !category.image.startsWith('/uploads/') 
-                ? `/uploads/categories/${category.image}` 
-                : category.image,
+            image: category.image ? (
+                category.image.startsWith('/') 
+                    ? imagekitService.getOptimizedUrl(category.image, 'medium')
+                    : imagekitService.getOptimizedUrl(category.image, 'medium')
+            ) : null,
             slug: category.slug,
             products: category.products ? category.products.map(product => {
-                const imagekitService = require('../services/imagekitService');
-                
                 // Format images array to match Products API structure
                 const images = product.ProductImages && product.ProductImages.length > 0 
                     ? product.ProductImages.map(img => ({

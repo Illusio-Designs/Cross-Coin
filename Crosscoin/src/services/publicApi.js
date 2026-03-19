@@ -340,13 +340,31 @@ export const updateUserProfile = async (profileData) => {
       Authorization: `Bearer ${token}`,
       "X-Brand-Name": "crosscoin"
     };
-    let data = profileData;
     if (profileData instanceof FormData) {
       headers["Content-Type"] = "multipart/form-data";
     }
-    const response = await axios.put(`${API_URL}/api/users/me`, data, {
+    const response = await axios.put(`${API_URL}/api/users/update`, profileData, {
       headers,
     });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const updateUserPassword = async ({ currentPassword, newPassword, confirmPassword }) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.put(
+      `${API_URL}/api/users/update-password`,
+      { currentPassword, newPassword, confirmPassword },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "X-Brand-Name": "crosscoin",
+        },
+      }
+    );
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -644,7 +662,8 @@ export const getGuestOrder = async (email, orderNumber) => {
 export const trackOrderByOrderNumber = async (orderNumber) => {
   try {
     const response = await axios.get(
-      `${API_URL}/api/orders/track/${encodeURIComponent(orderNumber)}`
+      `${API_URL}/api/orders/track/${encodeURIComponent(orderNumber)}`,
+      addBrandHeader()
     );
     return response.data;
   } catch (error) {
@@ -655,7 +674,8 @@ export const trackOrderByOrderNumber = async (orderNumber) => {
 export const trackOrderByAWB = async (awbNumber) => {
   try {
     const response = await axios.get(
-      `${API_URL}/api/orders/track/awb?awb_number=${encodeURIComponent(awbNumber)}`
+      `${API_URL}/api/orders/track/awb?awb_number=${encodeURIComponent(awbNumber)}`,
+      addBrandHeader()
     );
     return response.data;
   } catch (error) {

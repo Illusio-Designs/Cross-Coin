@@ -1256,7 +1256,7 @@
 }
 .size-option-unique {
   padding: 0.5rem 1.5rem;
-  border-radius: 999px;
+  border-radius: 4px;
   border: 1.5px solid #e5e7eb;
   background: #f8fafc;
   color: #180D3E;
@@ -1315,7 +1315,7 @@
   padding: 18px 0 8px 0;
   background: #f8fafc;
   border: 1px solid #e0e0e0;
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: 0 2px 12px rgba(24,13,62,0.04);
 }
 .variation-scroller-title {
@@ -1335,7 +1335,7 @@
   min-width: 120px;
   max-width: 140px;
   background: #fff;
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: 0 2px 8px rgba(24,13,62,0.07);
   border: 2px solid transparent;
   display: flex;
@@ -1389,7 +1389,7 @@
   color: #180D3E;
   font-weight: 600;
   font-size: 1rem;
-  border-radius: 999px;
+  border-radius: 4px;
   padding: 2px 12px;
   border: 1.5px solid #e5e7eb;
 }
@@ -1671,7 +1671,7 @@
     z-index: 100;
     background: white;
     padding: 20px;
-    border-radius: 16px;
+    border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     margin: 2rem 0;
   }
@@ -1841,7 +1841,7 @@
   max-width: 340px;
   background: #fff;
   border: 1px solid #e0e0e0;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 20px 18px 16px 18px;
   scroll-snap-align: start;
   box-shadow: 0 2px 12px #eee;
@@ -1896,7 +1896,7 @@
 .product-reviews-section .review-section {
   margin-top: 36px;
   background: #fafbfc;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 24px 18px;
   box-shadow: 0 2px 8px #f0f0f0;
   max-width: 500px;
@@ -1952,7 +1952,7 @@
 .review-form-modal-content {
   position: relative;
   background: #fff;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 24px 20px 20px 20px;
   box-shadow: 0 4px 32px rgba(0,0,0,0.15);
   margin: auto;

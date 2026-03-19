@@ -1,9 +1,21 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from "../context/AuthContext";
 
-// Load page-specific CSS - moved to _app.jsx
+const EyeIcon = () => (
+  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>
+  </svg>
+);
+const EyeOffIcon = () => (
+  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+    <path d="M17.94 17.94A10.06 10.06 0 0112 20c-5.52 0-10-8-10-8a17.7 17.7 0 013.07-4.11"/>
+    <path d="M1 1l22 22"/>
+    <path d="M9.53 9.53A3 3 0 0012 15a3 3 0 002.47-5.47"/>
+    <path d="M12 4a10.06 10.06 0 015.94 1.94"/>
+  </svg>
+);
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -12,98 +24,125 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { login, user, isAuthenticated } = useAuth();
+  const { login, isAuthenticated } = useAuth();
 
-  // Redirect if already logged in
   if (isAuthenticated) {
-    router.replace('/profile');
+    router.replace("/profile");
     return null;
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      return;
-    }
+    if (!email || !password) return;
     setIsLoading(true);
     try {
       const response = await login({ email, password });
-      if (response.user.role !== 'consumer' && response.user.role !== 'customer') {
-        return;
-      }
-      if (rememberMe) {
-        localStorage.setItem('user', JSON.stringify({ email }));
-      }
-      sessionStorage.setItem('isLoggedIn', 'true');
-      router.push('/profile');
-    } catch (err) {
-      // Error is handled by toast notification in AuthContext
+      if (response.user.role !== "consumer" && response.user.role !== "customer") return;
+      if (rememberMe) localStorage.setItem("user", JSON.stringify({ email }));
+      sessionStorage.setItem("isLoggedIn", "true");
+      router.push("/profile");
+    } catch {
+      // toast handled in AuthContext
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <>
-      <div className="auth-container">
-        <div className="auth-tabs">
-          <span className="active">Login</span>
-          <Link href="/register" className="inactive">Register</Link>
+    <div className="auth-page">
+      <div className="auth-split">
+        {/* Left panel */}
+        <div className="auth-brand-panel">
+          <div className="auth-brand-inner">
+            <div className="auth-brand-logo">Cross Coin®</div>
+            <h2 className="auth-brand-headline">Premium Socks.<br />Engineered for Life.</h2>
+            <p className="auth-brand-sub">Join over 50,000 customers who trust Cross Coin® for everyday comfort and performance.</p>
+            <div className="auth-brand-features">
+              <div className="auth-brand-feat">
+                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                Free shipping on orders above ₹499
+              </div>
+              <div className="auth-brand-feat">
+                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                Easy 7-day returns
+              </div>
+              <div className="auth-brand-feat">
+                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                Exclusive member discounts
+              </div>
+            </div>
+          </div>
         </div>
-        <p className="auth-info">If you have an account, login in with your user name or email address.</p>
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <label>Email address</label>
-          <input 
-            type="email" 
-            value={email} 
-            onChange={e => setEmail(e.target.value)} 
-            required 
-            placeholder="Enter your email"
-            disabled={isLoading}
-          />
-          <label>Password</label>
-          <div className="password-wrapper">
-            <input 
-              type={showPassword ? "text" : "password"} 
-              value={password} 
-              onChange={e => setPassword(e.target.value)} 
-              required 
-              placeholder="Enter your password"
-              disabled={isLoading}
-            />
-            <span className="toggle-password" onClick={() => setShowPassword(!showPassword)}>
-              {showPassword ? (
-                <svg width="20" height="20" fill="none" stroke="#180D3E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-              ) : (
-                <svg width="20" height="20" fill="none" stroke="#180D3E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <path d="M17.94 17.94A10.06 10.06 0 0 1 12 20c-5.52 0-10-8-10-8a17.7 17.7 0 0 1 3.07-4.11"/>
-                  <path d="M1 1l22 22"/>
-                  <path d="M9.53 9.53A3 3 0 0 0 12 15a3 3 0 0 0 2.47-5.47"/>
-                  <path d="M12 4a10.06 10.06 0 0 1 5.94 1.94"/>
-                  <path d="M22 12s-4.48 8-10 8a10.06 10.06 0 0 1-5.94-1.94"/>
-                </svg>
-              )}
-            </span>
+
+        {/* Right panel */}
+        <div className="auth-form-panel">
+          <div className="auth-form-inner">
+            <div className="auth-form-header">
+              <h1 className="auth-form-title">Welcome back</h1>
+              <p className="auth-form-sub">Sign in to your account to continue</p>
+            </div>
+
+            <div className="auth-tab-row">
+              <span className="auth-tab active">Sign In</span>
+              <Link href="/register" className="auth-tab">Create Account</Link>
+            </div>
+
+            <form className="auth-form" onSubmit={handleSubmit}>
+              <div className="auth-field">
+                <label htmlFor="auth-email">Email Address</label>
+                <input
+                  id="auth-email"
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div className="auth-field">
+                <div className="auth-field-label-row">
+                  <label htmlFor="auth-password">Password</label>
+                  <Link href="/forgot-password" className="auth-forgot">Forgot password?</Link>
+                </div>
+                <div className="auth-pw-wrap">
+                  <input
+                    id="auth-password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    required
+                    disabled={isLoading}
+                  />
+                  <button type="button" className="auth-pw-eye" onClick={() => setShowPassword(v => !v)}>
+                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  </button>
+                </div>
+              </div>
+
+              <label className="auth-remember">
+                <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} disabled={isLoading} />
+                <span>Remember me for 30 days</span>
+              </label>
+
+              <button type="submit" className="auth-submit" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" className="auth-spin"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
+                    Signing in...
+                  </>
+                ) : "Sign In"}
+              </button>
+            </form>
+
+            <p className="auth-switch">
+              Don&apos;t have an account? <Link href="/register">Create one free</Link>
+            </p>
           </div>
-          <div className="auth-options">
-            <label className="remember-me">
-              <input 
-                type="checkbox" 
-                checked={rememberMe} 
-                onChange={e => setRememberMe(e.target.checked)} 
-                disabled={isLoading}
-              /> Remember me
-            </label>
-            <Link href="/forgot-password" className="forgot-password">Forgot password?</Link>
-          </div>
-          <button type="submit" className="auth-btn" disabled={isLoading}>
-            {isLoading ? 'Logging in...' : 'Log in'}
-          </button>
-        </form>
+        </div>
       </div>
-    </>
+    </div>
   );
-} 
+}
