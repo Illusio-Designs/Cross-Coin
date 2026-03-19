@@ -40,6 +40,7 @@ import "../styles/pages/auth/adminlogin.css";
 import '../styles/pages/blog.css';
 import '../styles/pages/blog-details.css';
 import '../styles/pages/sitemap.css';
+import '../styles/pages/NotFound.css';
 
 // Components - Layout
 import "../styles/components/Header.css";
@@ -64,6 +65,7 @@ import "../components/Sidebar/Sidebar.css";
 import "../components/cart/CartDrawer.css";
 import "../components/cart/QuantityOfferBar.css";
 import "../components/products/ProductDetailsTest.css";
+import "../styles/components/SizeChartModal.css";
 import "../components/products/ProductFilterDrawer.css";
 import "../styles/common/Dropdown.css";
 
