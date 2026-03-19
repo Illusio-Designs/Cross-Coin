@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
+import { Button, Modal, Table, Pagination } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import BrandTags from "../../../components/Dashboard/BrandTags";
 import BrandAssignment from "../../../components/Dashboard/BrandAssignment";
@@ -189,24 +189,50 @@ export default function Categories() {
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title={formData.id ? "Edit Category" : "Add Category"} closeOnOverlayClick={false}>
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <Input label="Category Name" type="text" name="name" value={formData.name} onChange={handleInputChange} required />
-            <Input label="Description" type="textarea" name="description" value={formData.description} onChange={handleInputChange} required />
-            <Input label="Status" type="select" name="status" value={formData.status} onChange={handleInputChange} required options={[{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }]} />
-            <Input label="Meta Keywords" type="text" name="metaKeywords" value={formData.metaKeywords} onChange={handleInputChange} />
-            <BrandAssignment selectedBrands={formData.brandIds || []} onChange={brandIds => setFormData(prev => ({ ...prev, brandIds }))} disabled={loading} />
-            <div className="sl-form-field">
-              <label className="sl-form-label">Category Image {!formData.id && <span className="sl-required">*</span>}</label>
-              <input type="file" accept="image/*" name="image" onChange={handleInputChange} className="sl-file-input" required={!formData.id} />
+            <div className="dm-field">
+              <label className="dm-label">Category Name <span className="dm-required">*</span></label>
+              <input className="dm-input" type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g., Footwear" required />
+            </div>
+            <div className="dm-field">
+              <label className="dm-label">Description <span className="dm-required">*</span></label>
+              <textarea className="dm-input dm-textarea" name="description" value={formData.description} onChange={handleInputChange} placeholder="Short description..." required />
+            </div>
+            <div className="dm-2col">
+              <div className="dm-field">
+                <label className="dm-label">Status <span className="dm-required">*</span></label>
+                <select className="dm-input dm-select" name="status" value={formData.status} onChange={handleInputChange} required>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Meta Keywords</label>
+                <input className="dm-input" type="text" name="metaKeywords" value={formData.metaKeywords} onChange={handleInputChange} placeholder="keyword1, keyword2" />
+              </div>
+            </div>
+            <div className="dm-field">
+              <BrandAssignment selectedBrands={formData.brandIds || []} onChange={brandIds => setFormData(prev => ({ ...prev, brandIds }))} disabled={loading} />
+            </div>
+            <div className="dm-field">
+              <label className="dm-label">Category Image {!formData.id && <span className="dm-required">*</span>}</label>
+              <div className="dm-file-upload">
+                <div className="dm-file-upload-icon">{IC.image}</div>
+                <div className="dm-file-upload-text">
+                  <span className="dm-file-upload-title">{formData.image instanceof File ? formData.image.name : formData.image ? "Current image" : "Choose image"}</span>
+                  <span className="dm-file-upload-sub">PNG, JPG, WEBP up to 5MB</span>
+                </div>
+                <input type="file" accept="image/*" name="image" onChange={handleInputChange} required={!formData.id} />
+              </div>
               {formData.image && (
-                <div className="sl-img-preview-wrap">
-                  <img src={typeof formData.image === 'string' ? `${process.env.NEXT_PUBLIC_API_URL}${formData.image}` : URL.createObjectURL(formData.image)} alt="Preview" className="sl-img-preview" />
+                <div className="dm-img-preview">
+                  <img src={typeof formData.image === 'string' ? `${process.env.NEXT_PUBLIC_API_URL}${formData.image}` : URL.createObjectURL(formData.image)} alt="Preview" />
                 </div>
               )}
             </div>
           </div>
           <div className="modal-footer">
             <Button variant="secondary" size="medium" onClick={handleModalClose} disabled={loading} type="button">Cancel</Button>
-            <Button type="submit" variant="primary" size="medium" disabled={loading}>{loading ? "Saving..." : "Save Category"}</Button>
+            <Button type="submit" variant="primary" size="medium" disabled={loading}>{loading ? "Saving..." : formData.id ? "Update Category" : "Add Category"}</Button>
           </div>
         </form>
       </Modal>

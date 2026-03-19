@@ -178,68 +178,94 @@
 .pdt-color-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
-.pdt-color-item {
+/* Color card button */
+.pdt-color-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   cursor: pointer;
-  background: none;
-  border: none;
-  padding: 0;
+  background: #fff;
+  border: 2px solid #e6e6e6;
+  border-radius: 10px;
+  padding: 8px 10px;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  min-width: 64px;
 }
 
-.pdt-color-item img {
-  width: 52px;
-  height: 64px;
-  object-fit: cover;
-  border-radius: 6px;
-  border: 2px solid transparent;
-  transition: border-color 0.2s;
-  display: block;
+.pdt-color-card:hover:not(.active) {
+  border-color: #180d3e;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-.pdt-color-item.active img { border-color: var(--navy); }
-.pdt-color-item:hover:not(.active) img { border-color: var(--gray-mid); }
-
-.pdt-color-dot {
-  width: 52px;
-  height: 64px;
-  border-radius: 6px;
-  background: var(--gray-bg);
-  border: 2px solid var(--gray-border);
-  display: block;
+.pdt-color-card.active {
+  border-color: #ce1e36;
+  background: #fff5f7;
+  box-shadow: 0 2px 8px rgba(206,30,54,0.18);
 }
 
-/* Color swatch circle (when no image, use colorMap hex) */
-.pdt-color-swatch {
-  width: 52px;
-  height: 52px;
+/* Swatch wrap — relative so checkmark can overlay */
+.pdt-color-card-swatch-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Circle swatch */
+.pdt-color-card-circle {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: block;
-  border: 2px solid transparent;
-  transition: border-color 0.2s;
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.12);
+  border: 1.5px solid rgba(0,0,0,0.12);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
 }
 
-.pdt-color-item.active .pdt-color-swatch {
-  border-color: var(--navy);
-  box-shadow: 0 0 0 2px var(--navy);
+.pdt-color-card-circle--empty {
+  background: var(--gray-bg, #f5f5f5);
+  border-color: var(--gray-border, #ddd);
 }
 
-.pdt-color-item:hover:not(.active) .pdt-color-swatch {
-  border-color: var(--gray-mid);
+/* Image swatch */
+.pdt-color-card-img {
+  width: 40px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1.5px solid rgba(0,0,0,0.08);
+  display: block;
 }
 
-.pdt-color-name {
-  font-size: 9px;
+/* Checkmark overlay */
+.pdt-color-card-check {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  pointer-events: none;
+}
+
+/* Color name label */
+.pdt-color-card-name {
+  font-size: 10px;
+  font-weight: 500;
   text-align: center;
-  color: var(--gray-dark);
-  max-width: 56px;
+  color: var(--gray-dark, #555);
+  max-width: 64px;
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Qty + Actions */
@@ -323,70 +349,80 @@
 /* Delivery */
 .pdt-delivery {
   border: 1px solid var(--gray-border);
-  border-radius: 6px;
+  border-radius: 10px;
   overflow: hidden;
   margin-bottom: 12px;
+}
+
+.pdt-delivery-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--dark);
+  padding: 14px 16px 10px;
 }
 
 .pdt-pin-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--gray-border);
+  gap: 10px;
+  padding: 0 16px 14px;
 }
 
 .pdt-pin-input {
   flex: 1;
-  border: none;
-  font-size: 13px;
+  border: 1.5px solid var(--gray-border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
   outline: none;
   color: var(--dark);
   font-family: inherit;
-  background: transparent;
+  background: var(--white);
+  padding: 10px 14px;
+  transition: border-color 0.2s;
 }
 
+.pdt-pin-input:focus { border-color: var(--dark); }
+
 .pdt-pin-check {
-  background: none;
+  background: #2d2d2d;
   border: none;
-  color: var(--red);
+  color: #fff;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
   font-family: inherit;
+  padding: 11px 22px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  white-space: nowrap;
 }
 
-.pdt-del-badges {
+.pdt-pin-check:hover { background: #111; }
+
+.pdt-del-info-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 0 16px 14px;
 }
 
-.pdt-del-badge {
+.pdt-del-info-card {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding: 12px 8px;
-  text-align: center;
+  gap: 10px;
+  border: 1.5px solid var(--gray-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
   color: var(--gray-dark);
-  border-right: 1px solid var(--gray-border);
-  gap: 4px;
+  background: var(--white);
 }
 
-.pdt-del-badge:last-child { border-right: none; }
-
-.pdt-del-badge strong {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--dark);
-}
-
-.pdt-del-badge span {
-  font-size: 10px;
-  color: var(--gray-mid);
-}
+.pdt-del-info-card strong { font-weight: 700; color: var(--dark); }
+.pdt-del-info-card sup { font-size: 8px; }
 
 .pdt-return-note {
   display: flex;
@@ -417,7 +453,7 @@
 /* Fit & Feel */
 .pdt-fit-row {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 8px;
 }
@@ -425,26 +461,26 @@
 .pdt-fit-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  border: 1px solid var(--gray-border);
-  border-radius: 6px;
-  padding: 10px 16px;
+  gap: 12px;
+  border: 1.5px solid var(--gray-border);
+  border-radius: 10px;
+  padding: 12px 18px;
   background: var(--white);
-  min-width: 160px;
+  min-width: 170px;
 }
 
 .pdt-fit-text { display: flex; flex-direction: column; }
 
 .pdt-fit-text strong {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--dark);
 }
 
 .pdt-fit-text span {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--gray-mid);
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 /* Desc Cards */

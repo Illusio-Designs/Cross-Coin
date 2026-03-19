@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
+import { Button, Modal, Table, Pagination } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { sliderService, categoryService, brandService } from "../../../services";
 import { useRouter } from 'next/router';
@@ -286,20 +286,41 @@ export default function Slider() {
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title={formData.id ? "Edit Slider" : "Add New Slider"} closeOnOverlayClick={false}>
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <Input label="Title" type="text" name="title" value={formData.title} onChange={handleInputChange} required />
-            <Input label="Description" type="textarea" name="description" value={formData.description} onChange={handleInputChange} required />
-            <Input label="Category" type="select" name="categoryId" value={formData.categoryId} onChange={handleInputChange}
-              options={[{ value: "", label: "Select Category" }, ...categories.map(c => ({ value: c.id, label: c.name }))]} />
-
-            <div className="sl-form-field">
-              <label className="sl-form-label">Brands <span className="sl-form-hint">(Hold Ctrl/Cmd for multiple)</span></label>
-              <select name="brand_ids" multiple value={formData.brand_ids} onChange={handleInputChange} className="sl-multi-select" required>
-                {brands.map(b => (
-                  <option key={b.id} value={b.id}>{b.display_name || b.name}</option>
-                ))}
+            <div className="dm-field">
+              <label className="dm-label">Title <span className="dm-required">*</span></label>
+              <input className="dm-input" type="text" name="title" value={formData.title} onChange={handleInputChange} placeholder="Slider title..." required />
+            </div>
+            <div className="dm-field">
+              <label className="dm-label">Description <span className="dm-required">*</span></label>
+              <textarea className="dm-input dm-textarea" name="description" value={formData.description} onChange={handleInputChange} placeholder="Short description..." required />
+            </div>
+            <div className="dm-2col">
+              <div className="dm-field">
+                <label className="dm-label">Category</label>
+                <select className="dm-input dm-select" name="categoryId" value={formData.categoryId} onChange={handleInputChange}>
+                  <option value="">Select Category</option>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Status <span className="dm-required">*</span></label>
+                <select className="dm-input dm-select" name="status" value={formData.status} onChange={handleInputChange} required>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+            <div className="dm-field">
+              <label className="dm-label">Button Text</label>
+              <input className="dm-input" type="text" name="buttonText" value={formData.buttonText} onChange={handleInputChange} placeholder="e.g., Shop Now" />
+            </div>
+            <div className="dm-field">
+              <label className="dm-label">Brands <span className="dm-hint">(Hold Ctrl/Cmd for multiple)</span></label>
+              <select name="brand_ids" multiple value={formData.brand_ids} onChange={handleInputChange} className="dm-multi-select" required>
+                {brands.map(b => <option key={b.id} value={b.id}>{b.display_name || b.name}</option>)}
               </select>
               {formData.brand_ids?.length > 0 && (
-                <div className="sl-selected-brands">
+                <div className="dm-selected-tags">
                   {formData.brand_ids.map(id => {
                     const b = brands.find(x => x.id === id);
                     return b ? <span key={id} className="sl-brand-tag">{b.display_name || b.name}</span> : null;
@@ -307,29 +328,26 @@ export default function Slider() {
                 </div>
               )}
             </div>
-
-            <Input label="Status" type="select" name="status" value={formData.status} onChange={handleInputChange} required
-              options={[{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }]} />
-            <Input label="Button Text" type="text" name="buttonText" value={formData.buttonText} onChange={handleInputChange} />
-
-            <div className="sl-form-field">
-              <label className="sl-form-label">Slider Image {!formData.id && <span className="sl-required">*</span>}</label>
-              <input type="file" accept="image/*" name="image" onChange={handleInputChange}
-                className="sl-file-input" required={!formData.id} key={formData.id || 'new'} />
+            <div className="dm-field">
+              <label className="dm-label">Slider Image {!formData.id && <span className="dm-required">*</span>}</label>
+              <div className="dm-file-upload">
+                <div className="dm-file-upload-icon">{IC.image}</div>
+                <div className="dm-file-upload-text">
+                  <span className="dm-file-upload-title">{formData.image instanceof File ? formData.image.name : formData.image ? "Current image" : "Choose image"}</span>
+                  <span className="dm-file-upload-sub">PNG, JPG, WEBP — recommended 1920×600</span>
+                </div>
+                <input type="file" accept="image/*" name="image" onChange={handleInputChange} required={!formData.id} key={formData.id || 'new'} />
+              </div>
               {formData.image && (
-                <div className="sl-img-preview-wrap">
-                  <img
-                    src={typeof formData.image === 'string' ? getImageUrl(formData.image) : URL.createObjectURL(formData.image)}
-                    alt="Preview" className="sl-img-preview"
-                  />
+                <div className="dm-img-preview">
+                  <img src={typeof formData.image === 'string' ? getImageUrl(formData.image) : URL.createObjectURL(formData.image)} alt="Preview" />
                 </div>
               )}
             </div>
           </div>
-
           <div className="modal-footer">
             <Button variant="secondary" size="medium" onClick={handleModalClose} disabled={loading} type="button">Cancel</Button>
-            <Button type="submit" variant="primary" size="medium" disabled={loading}>{loading ? "Saving..." : "Save Slider"}</Button>
+            <Button type="submit" variant="primary" size="medium" disabled={loading}>{loading ? "Saving..." : formData.id ? "Update Slider" : "Add Slider"}</Button>
           </div>
         </form>
       </Modal>

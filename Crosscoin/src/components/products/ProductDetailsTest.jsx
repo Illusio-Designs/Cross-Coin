@@ -268,18 +268,24 @@ const ProductDetailsTest = () => {
                   return (
                     <button
                       key={idx}
-                      className={`pdt-color-item${selectedColor === idx ? ' active' : ''}`}
+                      className={`pdt-color-card${selectedColor === idx ? ' active' : ''}`}
                       onClick={() => setSelectedColor(idx)}
                       aria-label={color.name}
+                      type="button"
                     >
-                      {color.image ? (
-                        <img src={color.image} alt={color.name} />
-                      ) : swatch ? (
-                        <span className="pdt-color-swatch" style={{ background: swatch }} />
-                      ) : (
-                        <span className="pdt-color-dot" />
-                      )}
-                      <span className="pdt-color-name">{color.name}</span>
+                      <div className="pdt-color-card-swatch-wrap">
+                        {color.image ? (
+                          <img src={color.image} alt={color.name} className="pdt-color-card-img" />
+                        ) : swatch ? (
+                          <span className="pdt-color-card-circle" style={{ background: swatch }} />
+                        ) : (
+                          <span className="pdt-color-card-circle pdt-color-card-circle--empty" />
+                        )}
+                        {selectedColor === idx && (
+                          <span className="pdt-color-card-check" aria-hidden="true">✓</span>
+                        )}
+                      </div>
+                      <span className="pdt-color-card-name">{color.name}</span>
                     </button>
                   );
                 })}
@@ -300,47 +306,50 @@ const ProductDetailsTest = () => {
 
           {/* Delivery */}
           <div className="pdt-delivery">
+            <div className="pdt-delivery-title">Delivery Details</div>
             <div className="pdt-pin-row">
-              <svg width="16" height="16" fill="none" stroke="#777" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
               <input
                 className="pdt-pin-input"
                 type="text"
-                placeholder="Enter Pincode for Delivery Details"
+                placeholder="Enter Pincode"
                 maxLength="6"
                 value={pincode}
                 onChange={e => setPincode(e.target.value.replace(/\D/g, ''))}
                 aria-label="Pincode"
               />
-              <button className="pdt-pin-check" onClick={handlePincodeCheck}>Check</button>
+              <button className="pdt-pin-check" onClick={handlePincodeCheck}>CHECK</button>
             </div>
-            <div className="pdt-del-badges">
-              <div className="pdt-del-badge">
-                <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="1" y="3" width="15" height="13" rx="1" />
-                  <path d="M16 8h4l3 4v5h-7V8z" />
-                  <circle cx="5.5" cy="18.5" r="2.5" />
-                  <circle cx="18.5" cy="18.5" r="2.5" />
+            <div className="pdt-del-info-row">
+              <div className="pdt-del-info-card">
+                {/* Clock overlaid on truck — matches screenshot */}
+                <svg width="30" height="26" viewBox="0 0 38 28" fill="none" aria-hidden="true">
+                  {/* truck body */}
+                  <rect x="1" y="8" width="22" height="14" rx="1.5" stroke="#555" strokeWidth="1.5" fill="none"/>
+                  {/* truck cab */}
+                  <path d="M23 13h5l4 5v4h-9V13z" stroke="#555" strokeWidth="1.5" fill="none"/>
+                  {/* wheels */}
+                  <circle cx="7" cy="24" r="3" stroke="#555" strokeWidth="1.5" fill="white"/>
+                  <circle cx="29" cy="24" r="3" stroke="#555" strokeWidth="1.5" fill="white"/>
+                  {/* clock face overlaid on truck body */}
+                  <circle cx="13" cy="15" r="5" stroke="#4a9fd4" strokeWidth="1.3" fill="white"/>
+                  <path d="M13 12.5v3l1.8 1.1" stroke="#4a9fd4" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                <strong>Fast Delivery</strong>
-                <span>Est. 3–5 Days</span>
+                <span>Estimated Delivery by <strong>22<sup>nd</sup> March</strong></span>
               </div>
-              <div className="pdt-del-badge">
-                <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="2" y="5" width="20" height="14" rx="2" />
-                  <path d="M2 10h20" />
+              <div className="pdt-del-info-card">
+                {/* Truck with speed lines — matches screenshot */}
+                <svg width="30" height="26" viewBox="0 0 38 28" fill="none" aria-hidden="true">
+                  {/* truck body */}
+                  <rect x="5" y="8" width="20" height="14" rx="1.5" stroke="#555" strokeWidth="1.5" fill="none"/>
+                  {/* truck cab */}
+                  <path d="M25 13h5l4 5v4h-9V13z" stroke="#555" strokeWidth="1.5" fill="none"/>
+                  {/* wheels */}
+                  <circle cx="11" cy="24" r="3" stroke="#555" strokeWidth="1.5" fill="white"/>
+                  <circle cx="31" cy="24" r="3" stroke="#555" strokeWidth="1.5" fill="white"/>
+                  {/* speed lines */}
+                  <path d="M1 12h6M1 16h4M1 20h5" stroke="#4a9fd4" strokeWidth="1.4" strokeLinecap="round"/>
                 </svg>
-                <strong>Pay on Delivery</strong>
-                <span>Available</span>
-              </div>
-              <div className="pdt-del-badge">
-                <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <strong>Free Delivery</strong>
-                <span>On ₹599+</span>
+                <span>Eligible For <strong>Free Delivery</strong></span>
               </div>
             </div>
           </div>
@@ -363,17 +372,57 @@ const ProductDetailsTest = () => {
         {/* Fit & Feel */}
         {productData.features?.length > 0 && (
           <div className="pdt-fit-row">
-            {productData.features.map((f, idx) => (
-              <div key={idx} className="pdt-fit-item">
-                <svg width="28" height="28" fill="none" stroke="#CE1E36" strokeWidth="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <div className="pdt-fit-text">
-                  <strong>{f.title}</strong>
-                  <span>{f.subtitle}</span>
+            {productData.features.map((f, idx) => {
+              // Pick icon per feature title — matching screenshot icons exactly
+              const icon = (() => {
+                const t = f.title?.toLowerCase() || '';
+                if (t.includes('fresh') || t.includes('microbial') || t.includes('feather') || t.includes('soft'))
+                  return (
+                    // 4-pointed sparkle star (StayFresh) — matches screenshot
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 2 C12 2 13.2 7.5 17 9 C13.2 10.5 12 16 12 16 C12 16 10.8 10.5 7 9 C10.8 7.5 12 2 12 2Z" fill="#4a9fd4"/>
+                      <path d="M5.5 2.5 C5.5 2.5 6.1 5 7.5 5.8 C6.1 6.6 5.5 9 5.5 9 C5.5 9 4.9 6.6 3.5 5.8 C4.9 5 5.5 2.5 5.5 2.5Z" fill="#4a9fd4" opacity="0.75"/>
+                      <path d="M19 14 C19 14 19.5 16 20.8 16.7 C19.5 17.4 19 19.5 19 19.5 C19 19.5 18.5 17.4 17.2 16.7 C18.5 16 19 14 19 14Z" fill="#4a9fd4" opacity="0.55"/>
+                    </svg>
+                  );
+                if (t.includes('stretch') || t.includes('body') || t.includes('flex'))
+                  return (
+                    // Square with 4 corner arrows pointing outward — matches screenshot
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <rect x="7" y="7" width="10" height="10" rx="0.5" stroke="#333" strokeWidth="1.4" fill="none"/>
+                      <path d="M7 7 L3 3M17 7 L21 3M7 17 L3 21M17 17 L21 21" stroke="#4a9fd4" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                  );
+                if (t.includes('moisture') || t.includes('wick') || t.includes('sweat'))
+                  return (
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 3 C12 3 5 12 5 16 a7 7 0 0 0 14 0 C19 12 12 3 12 3Z" stroke="#4a9fd4" strokeWidth="1.4" fill="none"/>
+                      <path d="M9.5 18 C9.5 18 10.5 20.5 12 20.5" stroke="#4a9fd4" strokeWidth="1.3" strokeLinecap="round"/>
+                    </svg>
+                  );
+                if (t.includes('light') || t.includes('weight'))
+                  return (
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 2 C12 2 13.2 7.5 17 9 C13.2 10.5 12 16 12 16 C12 16 10.8 10.5 7 9 C10.8 7.5 12 2 12 2Z" fill="#4a9fd4"/>
+                    </svg>
+                  );
+                // default — sparkle
+                return (
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 2 C12 2 13.2 7.5 17 9 C13.2 10.5 12 16 12 16 C12 16 10.8 10.5 7 9 C10.8 7.5 12 2 12 2Z" fill="#4a9fd4"/>
+                  </svg>
+                );
+              })();
+              return (
+                <div key={idx} className="pdt-fit-item">
+                  {icon}
+                  <div className="pdt-fit-text">
+                    <strong>{f.title}</strong>
+                    <span>{f.subtitle}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -452,7 +501,7 @@ const ProductDetailsTest = () => {
         <h2 className="pdt-section-title">Manufacturing Details</h2>
         <div className="pdt-mfg-row">
           <div className="pdt-mfg-address">
-            Cross Coin Pvt. Ltd., India
+            Obzus India Private Limited, Survey No. 1288, Vajepar, Third Floor, Royal Plaza, Opp. New Chandresh Society, Panchasar Road, Morbi - 363641, Gujarat (India)
           </div>
           <div className="pdt-origin">
             <span className="pdt-origin-label">Country of Origin</span>
