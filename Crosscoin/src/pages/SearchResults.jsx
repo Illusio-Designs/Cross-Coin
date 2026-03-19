@@ -101,7 +101,7 @@ const SearchResults = () => {
 
   return (
     <SeoWrapper pageName="search">
-      <div className="sr-page">
+      <div className="sr-page products-page">
         {/* Header bar */}
         <div className="sr-topbar">
           <div className="sr-topbar-inner">
@@ -169,16 +169,18 @@ const SearchResults = () => {
             </div>
           ) : (
             <>
-              <div className="sr-grid">
-                {paginated.map((product, i) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    index={i}
-                    onProductClick={handleProductClick}
-                    onAddToCart={handleAddToCart}
-                  />
-                ))}
+              <div className="product-listing">
+                <div className="products-grid">
+                  {paginated.map((product, i) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      index={i}
+                      onProductClick={handleProductClick}
+                      onAddToCart={handleAddToCart}
+                    />
+                  ))}
+                </div>
               </div>
               {totalPages > 1 && (
                 <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} />
