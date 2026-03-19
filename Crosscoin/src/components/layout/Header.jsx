@@ -48,7 +48,7 @@ const UserIcon = () => (
 import { debounce } from "lodash";
 
 const Header = () => {
-  const { cartCount } = useCart();
+  const { cartCount, setIsDrawerOpen } = useCart();
   const { wishlistCount } = useWishlist();
   const [showSearch, setShowSearch] = useState(false);
   const [activePage, setActivePage] = useState("/");
@@ -329,10 +329,10 @@ const Header = () => {
             <WishlistIcon />
             {wishlistCount > 0 && <span className="header__badge">{wishlistCount}</span>}
           </Link>
-          <Link href="/UnifiedCheckout" className="header__cart">
+          <button className="header__cart" onClick={() => setIsDrawerOpen(true)} aria-label="Open cart">
             <CartIcon />
             {cartCount > 0 && <span className="header__badge">{cartCount}</span>}
-          </Link>
+          </button>
           {isAuthenticated && user ? (
             <Link href="/profile" className="header__account">
               <UserIcon />
@@ -388,12 +388,12 @@ const Header = () => {
         </Link>
 
         {/* Cart Icon */}
-        <Link href="/UnifiedCheckout" className="header__mobile-cart">
+        <button className="header__mobile-cart" onClick={() => setIsDrawerOpen(true)} aria-label="Open cart">
           <CartIcon />
           {cartCount > 0 && (
             <span className="header__badge">{cartCount}</span>
           )}
-        </Link>
+        </button>
 
         {/* User Icon */}
         <Link
