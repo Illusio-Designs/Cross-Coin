@@ -31,7 +31,7 @@ export default function ProductDetails() {
   // Decode the slug to handle URL-encoded characters like %28 and %29
   const productSlug = rawSlug ? decodeURIComponent(rawSlug) : null;
   
-  const { addToCart, removeFromCart, buyNow } = useCart();
+  const { addToCart, removeFromCart, buyNow, setIsDrawerOpen } = useCart();
   const { addToWishlist, removeFromWishlist, wishlist } = useWishlist();
   const { isAuthenticated, user } = useAuth();
   
@@ -750,9 +750,8 @@ export default function ProductDetails() {
         // Tracking error silently ignored
       }
 
-      // Direct redirect to UnifiedCheckout
-      // Use router.replace for clean navigation
-      nextRouter.replace('/UnifiedCheckout');
+      // Open cart drawer instead of redirecting to checkout page
+      setIsDrawerOpen(true);
       
     } catch (error) {
       showError('orderFailed');

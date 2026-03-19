@@ -1215,3 +1215,13 @@
     max-height: 300px;
   }
 }
+
+/* Cart button reset — replaces <Link> with <button> for drawer trigger */
+button.header__cart,
+button.header__mobile-cart {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+}
