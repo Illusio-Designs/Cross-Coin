@@ -17,6 +17,7 @@ const ProductDetailsTest = () => {
   const [selectedColor, setSelectedColor] = useState(0);
   const [selectedVariation, setSelectedVariation] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize] = useState('');
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [pincode, setPincode] = useState('');
@@ -96,6 +97,10 @@ const ProductDetailsTest = () => {
 
           setRawProduct(api);
           setSelectedVariation(firstVar);
+          // Init selected size from first variation
+          const firstAttrs = typeof firstVar.attributes === 'string' ? JSON.parse(firstVar.attributes) : (firstVar.attributes || {});
+          const firstSizes = Array.isArray(firstAttrs.size) ? firstAttrs.size : (firstAttrs.size ? [firstAttrs.size] : []);
+          setSelectedSize(firstSizes[0] || '');
           setProductData({
             ...sampleProduct,
             id: api.id,
@@ -168,6 +173,10 @@ const ProductDetailsTest = () => {
     const opt = colorOptions?.[idx];
     if (opt?.variation) {
       setSelectedVariation(opt.variation);
+      // Reset size to first available size of new variation
+      const attrs = typeof opt.variation.attributes === 'string' ? JSON.parse(opt.variation.attributes) : (opt.variation.attributes || {});
+      const sizes = Array.isArray(attrs.size) ? attrs.size : (attrs.size ? [attrs.size] : []);
+      setSelectedSize(sizes[0] || '');
     }
   };
 
@@ -200,7 +209,7 @@ const ProductDetailsTest = () => {
     await addToCart(
       product,
       colorOptions[selectedColor]?.colors.join(', ') || null,
-      null,
+      selectedSize || null,
       quantity,
       selectedVariation?.id || null,
       galleryImages
@@ -221,7 +230,7 @@ const ProductDetailsTest = () => {
     await buyNow(
       product,
       colorOptions[selectedColor]?.colors.join(', ') || null,
-      null,
+      selectedSize || null,
       quantity,
       selectedVariation?.id || null,
       galleryImages
@@ -427,6 +436,48 @@ const ProductDetailsTest = () => {
               </div>
             </div>
           )}
+
+          {/* Size Selector */}
+          {(() => {
+            const attrs = typeof selectedVariation?.attributes === 'string'
+              ? JSON.parse(selectedVariation.attributes)
+              : (selectedVariation?.attributes || {});
+            const sizes = (Array.isArray(attrs.size) ? attrs.size : (attrs.size ? [attrs.size] : []))
+              .filter(s => !!s && typeof s === 'string');
+            const isFreeSize = sizes.length === 1 && sizes[0].toLowerCase().includes('free');
+            if (sizes.length === 0) return null;
+            return (
+              <div className="pdt-size-section">
+                {isFreeSize ? (
+                  <button className="pdt-size-free" type="button" disabled>{sizes[0].toUpperCase()}</button>
+                ) : (
+                  <>
+                    <div className="pdt-selector-label">Size: <span>{selectedSize}</span></div>
+                    <div className="pdt-size-list">
+                      {sizes.map(s => (
+                        <button
+                          key={s}
+                          className={`pdt-size-btn${selectedSize === s ? ' active' : ''}`}
+                          onClick={() => setSelectedSize(s)}
+                          type="button"
+                          aria-label={`Select size ${s}`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <div className="pdt-size-guide-row">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M3 7h18M3 12h18M3 17h18M7 3v4M12 3v4M17 3v4"/>
+                  </svg>
+                  Not sure about your size?
+                  <button className="pdt-size-chart-btn" type="button">Size Chart</button>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Qty + Actions */}
           <div className="pdt-non-returnable-line">
