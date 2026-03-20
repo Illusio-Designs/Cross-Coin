@@ -11,7 +11,13 @@
     padding: 3rem 60px;
 }
 
-.ot-search-inner {
+
+
+.ot-content {
+    padding: 2rem 60px 4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
 }
 
 .ot-title {
@@ -533,6 +539,10 @@
         padding: 2rem 40px;
     }
 
+    .ot-content {
+        padding: 1.5rem 40px 3rem;
+    }
+
     .ot-title {
         font-size: 1.5rem;
     }
@@ -570,6 +580,16 @@
     .ot-btn {
         width: 100%;
         justify-content: center;
+    }
+}
+
+@media (max-width: 500px) {
+    .ot-search-bar {
+        padding: 2rem 28px;
+    }
+
+    .ot-content {
+        padding: 1.25rem 28px 3rem;
     }
 }
 

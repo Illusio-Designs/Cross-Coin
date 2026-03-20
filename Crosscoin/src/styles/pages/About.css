@@ -5,10 +5,6 @@
   background: #fff;
 }
 
-.ab-container {
-  padding: 0 40px;
-}
-
 .ab-label {
   display: inline-block;
   font-size: 0.75rem;
@@ -437,7 +433,7 @@
   .ab-section-title { font-size: 1.5rem; }
   .ab-values-grid, .ab-why-grid { grid-template-columns: 1fr; }
   .ab-hero-stats { grid-template-columns: repeat(2, 1fr); }
-  .ab-timeline::before { left: 70px; }
+  .ab-timeline::before { left: 66px; }
   .ab-timeline-year { width: 60px; font-size: 0.875rem; }
   .ab-hero { padding: 3.5rem 40px 0; }
   .ab-mission, .ab-timeline-section, .ab-values-section, .ab-why-section, .ab-cta { padding: 3.5rem 40px; }
