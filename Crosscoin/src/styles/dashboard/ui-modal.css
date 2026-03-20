@@ -3,7 +3,9 @@
 .modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.55);
+  background: rgba(10, 6, 30, 0.6);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -11,50 +13,53 @@
   padding: 20px;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.25s ease, visibility 0.25s ease;
+  transition: opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .modal-overlay-visible { opacity: 1; visibility: visible; }
 
 .modal-box {
   background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+  border-radius: 14px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.08), 0 24px 56px rgba(24,13,62,0.18);
   display: flex;
   flex-direction: column;
-  max-width: 100%;
+  width: 100%;
   max-height: 90vh;
   overflow: hidden;
   position: relative;
-  transform: scale(0.96) translateY(-16px);
+  transform: translateY(20px) scale(0.97);
   opacity: 0;
-  transition: transform 0.25s ease, opacity 0.25s ease;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
 }
-.modal-box-visible { transform: scale(1) translateY(0); opacity: 1; }
+.modal-box-visible { transform: translateY(0) scale(1); opacity: 1; }
 .modal-box-centered { margin: auto; }
 
-.modal-sm { width: 100%; max-width: 400px; }
-.modal-md { width: 100%; max-width: 520px; }
-.modal-lg { width: 100%; max-width: 720px; }
-.modal-xl { width: 100%; max-width: 920px; }
+.modal-sm { max-width: 400px; }
+.modal-md { max-width: 540px; }
+.modal-lg { max-width: 720px; }
+.modal-xl { max-width: 920px; }
 .modal-full { width: 95vw; height: 95vh; max-width: none; max-height: none; }
 
+/* Header */
 .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px 16px;
-  border-bottom: 1px solid #ebebf0;
+  padding: 0 24px;
+  height: 60px;
   flex-shrink: 0;
-  background: #fff;
+  background: linear-gradient(135deg, #180D3E 0%, #2a1a6e 100%);
 }
+
 .modal-title {
   margin: 0;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 700;
-  color: #180D3E;
+  color: #fff;
   font-family: 'DM Sans', sans-serif;
   line-height: 1.3;
 }
+
 .modal-close-btn {
   display: flex;
   align-items: center;
@@ -62,56 +67,106 @@
   width: 32px;
   height: 32px;
   border: none;
-  background: none;
-  color: #6b7280;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.8);
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: background 0.15s, color 0.15s;
   flex-shrink: 0;
   margin-left: 12px;
 }
-.modal-close-btn:hover { background: #f5f5f7; color: #1a1a1a; }
-.modal-close-btn:focus-visible { outline: 2px solid #CE1E36; outline-offset: 2px; }
+.modal-close-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.modal-close-btn:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset: 2px; }
 
+/* form.seo-form is a direct child of modal-box —
+   flex column so body scrolls and footer pins */
+.modal-box > form,
+.modal-box > .seo-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+/* Step bar — sits between header and body, never scrolls */
+.modal-box .prod-steps {
+  padding: 14px 24px 12px;
+  border-bottom: 1px solid #f0f0f5;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+/* Body — only this scrolls */
 .modal-body {
   padding: 24px;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
   color: #1a1a1a;
   line-height: 1.6;
   background: #fff;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: #d0d0e8 transparent;
 }
+.modal-body::-webkit-scrollbar { width: 5px; }
+.modal-body::-webkit-scrollbar-track { background: transparent; }
+.modal-body::-webkit-scrollbar-thumb { background: #d0d0e8; border-radius: 10px; }
+.modal-body::-webkit-scrollbar-thumb:hover { background: #b0b0d0; }
 
+/* Footer — pinned, full width background, buttons on right */
 .modal-footer {
-  padding: 14px 24px 20px;
+  padding: 12px 24px;
   border-top: 1px solid #ebebf0;
-  background: #f9fafb;
+  background: #f7f7fb;
   flex-shrink: 0;
   display: flex;
-  gap: 10px;
-  justify-content: flex-end;
+  gap: 8px;
   align-items: center;
+  justify-content: flex-end;
+  box-sizing: border-box;
 }
+
+/* Footer buttons — normal size, not stretched */
+.modal-footer .btn {
+  flex: none;
+  border-radius: 8px;
+  height: 38px;
+  font-size: 13px;
+  padding: 0 20px;
+}
+.modal-footer .btn-secondary {
+  background: transparent;
+  color: #180D3E;
+  border: 1.5px solid #d0d0e0;
+}
+.modal-footer .btn-secondary:hover:not(:disabled) { background: #f0f0f5; border-color: #180D3E; }
+.modal-footer .btn-primary { background: #CE1E36; color: #fff; border: none; }
+.modal-footer .btn-primary:hover:not(:disabled) { background: #a8172b; }
 
 .modal-box:focus { outline: none; }
 
 @media (max-width: 768px) {
   .modal-overlay { padding: 12px; align-items: flex-end; }
-  .modal-box { width: 100%; max-height: 95vh; border-radius: 8px 8px 0 0; }
+  .modal-box { max-height: 95vh; border-radius: 14px 14px 0 0; }
+  .modal-header { padding: 0 18px; height: 54px; }
   .modal-sm, .modal-md, .modal-lg, .modal-xl { max-width: none; }
-  .modal-full { width: 100%; height: 100vh; border-radius: 0; }
-  .modal-header { padding: 16px 18px 14px; }
+  .modal-full { width: 100%; height: 100vh; }
   .modal-body { padding: 18px; }
-  .modal-footer { padding: 12px 18px 18px; flex-direction: column-reverse; gap: 8px; }
+  .modal-box .prod-steps { padding: 12px 18px 10px; }
+  .modal-footer { padding: 10px 18px; gap: 8px; }
   .modal-footer > * { width: 100%; }
 }
 @media (max-width: 480px) {
   .modal-overlay { padding: 0; }
   .modal-box { height: 100vh; border-radius: 0; }
-  .modal-title { font-size: 15px; }
-  .modal-header { padding: 14px 16px 12px; }
+  .modal-header { height: 52px; padding: 0 16px; }
+  .modal-title { font-size: 14px; }
   .modal-body { padding: 16px; }
-  .modal-footer { padding: 10px 16px 16px; }
+  .modal-footer { padding: 10px 16px; }
+  .modal-box .prod-steps { padding: 10px 16px 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .modal-overlay, .modal-box { transition: none; }

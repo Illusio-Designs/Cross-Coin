@@ -26,20 +26,25 @@
 
 .input-field {
   width: 100%;
-  border: 1px solid #ebebf0;
-  border-radius: 6px;
+  border: 1.5px solid #e8e8f0;
+  border-radius: 8px;
   font-size: 13px;
   font-family: 'DM Sans', sans-serif;
   color: #1a1a1a;
-  background: #fff;
-  transition: border-color 0.18s, box-shadow 0.18s;
+  background: #fafafe;
+  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
   outline: none;
 }
-.input-field::placeholder { color: #9ca3af; }
-.input-field:hover:not(:disabled) { border-color: #180D3E; }
+input[type="file"].input-field { border: none; background: transparent; padding: 0; }
+
+/* Native file inputs NOT using input-field class — no extra styling */
+.prd-upload-row input[type="file"] { border: none !important; background: transparent !important; box-shadow: none !important; outline: none; }
+.input-field::placeholder { color: #b0b0c0; }
+.input-field:hover:not(:disabled) { border-color: #c0b8e8; background: #fff; }
 .input-field:focus {
   border-color: #180D3E;
-  box-shadow: 0 0 0 3px rgba(24,13,62,0.08);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(24,13,62,0.07);
 }
 
 .input-sm { padding: 6px 10px; font-size: 12px; height: 32px; }
@@ -97,10 +102,10 @@ select.input-field:disabled { cursor: not-allowed; }
   position: relative;
   display: flex;
   align-items: center;
-  border: 1px solid #ebebf0;
-  border-radius: 6px;
+  border: 1.5px solid #e8e8f0;
+  border-radius: 8px;
   overflow: hidden;
-  background: #fff;
+  background: #fafafe;
   transition: border-color 0.18s;
 }
 .input-file-wrapper:hover { border-color: #180D3E; }
@@ -142,7 +147,7 @@ select.input-field:disabled { cursor: not-allowed; }
 .input-helper-text { margin-top: 4px; font-size: 12px; color: #6b7280; line-height: 1.4; }
 .input-error-text { margin-top: 4px; font-size: 12px; color: #CE1E36; line-height: 1.4; }
 
-.input-field:focus-visible { outline: 2px solid #180D3E; outline-offset: 2px; }
+.input-field:focus-visible { outline: none; }
 
 @media (max-width: 480px) {
   .input-md, .input-lg { min-height: 42px; }
