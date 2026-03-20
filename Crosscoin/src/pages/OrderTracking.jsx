@@ -242,22 +242,33 @@ export default function OrderTracking() {
                         <div className="ot-card ot-items-card">
                             <h2 className="ot-card-title">Order Items</h2>
                             {orderData.items?.map((item, i) => {
-                                const imageUrl = item.product?.image
-                                    ? (item.product.image.startsWith('http') ? item.product.image : `https://api.crosscoin.in${item.product.image}`)
+                                const rawImage = item.product?.image;
+                                const imageUrl = rawImage
+                                    ? (rawImage.startsWith('http') ? rawImage : `https://api.crosscoin.in${rawImage}`)
                                     : null;
+                                const attrsDisplay = item.variation?.attributes ? formatAttributesForDisplay(item.variation.attributes) : null;
+                                const noImgPlaceholder = (
+                                    <div className="ot-item-no-img">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                    </div>
+                                );
                                 return (
                                     <div key={i} className="ot-item">
                                         <div className="ot-item-img">
                                             {imageUrl
-                                                ? <img src={imageUrl} alt={item.product?.name} onError={(e) => { e.target.style.display = 'none'; }} />
-                                                : <div className="ot-item-no-img">No Image</div>
+                                                ? <img src={imageUrl} alt={item.product?.name}
+                                                    onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.innerHTML = '<div class="ot-item-no-img"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>'; }} />
+                                                : noImgPlaceholder
                                             }
                                         </div>
                                         <div className="ot-item-info">
                                             <div className="ot-item-name">{item.product?.name || 'Product'}</div>
                                             <div className="ot-item-tags">
-                                                {item.variation?.attributes && (
-                                                    <span className="ot-tag">{formatAttributesForDisplay(item.variation.attributes)}</span>
+                                                {item.variation?.sku && (
+                                                    <span className="ot-tag">SKU: {item.variation.sku}</span>
+                                                )}
+                                                {attrsDisplay && attrsDisplay !== 'N/A' && (
+                                                    <span className="ot-tag">{attrsDisplay}</span>
                                                 )}
                                                 <span className="ot-tag">Qty: {item.quantity}</span>
                                             </div>
