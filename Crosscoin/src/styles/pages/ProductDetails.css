@@ -580,6 +580,7 @@
 .pdt-btn-atb:hover { background: #0e0826; border-color: #0e0826; }
 
 .pdt-btn-buy {
+  flex: 1;
   height: 48px;
   background: var(--red);
   color: var(--white);
@@ -590,7 +591,6 @@
   text-transform: uppercase;
   cursor: pointer;
   border-radius: 6px;
-  padding: 0 24px;
   transition: background 0.2s;
   font-family: inherit;
 }
