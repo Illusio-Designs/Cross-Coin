@@ -3,11 +3,11 @@ import { HeroBanner } from '@/components/home/HeroBanner'
 import { CollectionGrid } from '@/components/home/CollectionGrid'
 import { SustainabilityStrip } from '@/components/home/SustainabilityStrip'
 import { BestsellerRow } from '@/components/home/BestsellerRow'
-import { MaterialSection } from '@/components/home/MaterialSection'
+import { ExclusivePair } from '@/components/home/ExclusivePair'
+import { BlogStrip } from '@/components/home/BlogStrip'
 import { ReviewBand } from '@/components/home/ReviewBand'
 import { InstagramStrip } from '@/components/home/InstagramStrip'
-import { ExclusivePair } from '@/components/home/ExclusivePair'
-import { getFeaturedCollections, getBestsellers, getMaterials } from '@/lib/api/products'
+import { getFeaturedCollections, getBestsellers } from '@/lib/api/products'
 import { SITE_NAME } from '@/lib/constants'
 
 export const metadata: Metadata = {
@@ -21,11 +21,9 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  // Fetch in parallel — gracefully fall back to undefined if API is down
-  const [collections, bestsellers, materials] = await Promise.allSettled([
+  const [collections, bestsellers] = await Promise.allSettled([
     getFeaturedCollections(),
     getBestsellers(),
-    getMaterials(),
   ])
 
   return (
@@ -39,9 +37,7 @@ export default async function HomePage() {
         products={bestsellers.status === 'fulfilled' ? bestsellers.value : undefined}
       />
       <ExclusivePair />
-      <MaterialSection
-        materials={materials.status === 'fulfilled' ? materials.value : undefined}
-      />
+      <BlogStrip />
       <ReviewBand />
       <InstagramStrip />
     </>

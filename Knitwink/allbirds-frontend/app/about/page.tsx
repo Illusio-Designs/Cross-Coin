@@ -65,7 +65,7 @@ export default function AboutPage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative flex min-h-[70vh] items-center justify-center overflow-hidden bg-off-white">
+      <section className="mx-2 mt-2 overflow-hidden rounded-2xl relative flex min-h-[70vh] items-center justify-center bg-off-white">
         <Image
           src="https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=1600&q=80"
           alt="Allbirds shoes on natural terrain"
@@ -85,8 +85,8 @@ export default function AboutPage() {
       </section>
 
       {/* Story sections */}
-      <section className="mx-auto max-w-site px-6 py-16 md:px-10 md:py-24 lg:px-16 lg:py-32">
-        <div className="flex flex-col gap-24">
+      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-6 py-16 md:px-10 md:py-24 lg:px-16 lg:py-32">
+        <div className="mx-auto max-w-site flex flex-col gap-24">
           {STORY_SECTIONS.map((section) => (
             <div key={section.heading} className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
               <div className={`relative aspect-[4/3] overflow-hidden rounded-2xl bg-gray-100 ${section.imageLeft ? 'lg:order-1' : 'lg:order-2'}`}>
@@ -104,7 +104,7 @@ export default function AboutPage() {
       </section>
 
       {/* Stats band */}
-      <section className="bg-off-white py-16 md:py-24">
+      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-off-white py-16 md:py-24">
         <div className="mx-auto max-w-site px-6 md:px-10 lg:px-16">
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             {STATS.map((stat) => (
@@ -122,27 +122,29 @@ export default function AboutPage() {
       </section>
 
       {/* Team */}
-      <section className="mx-auto max-w-site px-6 py-16 md:px-10 md:py-24 lg:px-16 lg:py-32">
-        <h2 className="mb-12 text-center font-display text-3xl font-normal text-brand-black lg:text-4xl">
-          The people behind the shoes
-        </h2>
-        <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
-          {TEAM.map((person) => (
-            <div key={person.name} className="flex flex-col gap-3">
-              <div className="relative aspect-square overflow-hidden rounded-2xl bg-gray-100">
-                <Image src={person.image} alt={person.name} fill className="object-cover" />
+      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-6 py-16 md:px-10 md:py-24 lg:px-16 lg:py-32">
+        <div className="mx-auto max-w-site">
+          <h2 className="mb-12 text-center font-display text-3xl font-normal text-brand-black lg:text-4xl">
+            The people behind the shoes
+          </h2>
+          <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+            {TEAM.map((person) => (
+              <div key={person.name} className="flex flex-col gap-3">
+                <div className="relative aspect-square overflow-hidden rounded-2xl bg-gray-100">
+                  <Image src={person.image} alt={person.name} fill className="object-cover" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-brand-black">{person.name}</p>
+                  <p className="text-xs text-gray-600">{person.title}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-brand-black">{person.name}</p>
-                <p className="text-xs text-gray-600">{person.title}</p>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
       {/* Values */}
-      <section className="bg-off-white py-16 md:py-24 lg:py-32">
+      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-off-white py-16 md:py-24 lg:py-32">
         <div className="mx-auto max-w-site px-6 md:px-10 lg:px-16">
           <h2 className="mb-12 text-center font-display text-3xl font-normal text-brand-black lg:text-4xl">
             What we stand for

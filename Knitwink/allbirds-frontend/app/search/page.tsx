@@ -39,7 +39,8 @@ export default async function SearchPage({ searchParams }: Props) {
   const suggestedCollections = collections.length > 0 ? collections.slice(0, 4) : null
 
   return (
-    <div className="mx-auto max-w-site px-6 py-16 md:px-10 lg:px-16">
+    <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-6 py-16 md:px-10 lg:px-16">
+      <div className="mx-auto max-w-site">
       {/* Search bar */}
       <div className="mx-auto max-w-2xl">
         <SearchInput initialQuery={query} />
@@ -78,6 +79,7 @@ export default async function SearchPage({ searchParams }: Props) {
         </div>
       )}
     </div>
+    </section>
   )
 }
 

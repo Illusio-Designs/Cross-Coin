@@ -1,24 +1,24 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-gray-100: #f2f0eb;
-  --color-gray-200: #e5e2da;
-  --color-gray-300: #d4d0c8;
-  --color-gray-400: #bebab0;
-  --color-gray-500: #9c9890;
-  --color-gray-600: #7a776e;
-  --color-gray-700: #5a5850;
-  --color-gray-800: #3d3b36;
-  --color-gray-900: #2a2825;
+  --color-gray-100: #f5f5f5;
+  --color-gray-200: #e5e5e5;
+  --color-gray-300: #d4d4d4;
+  --color-gray-400: #a3a3a3;
+  --color-gray-500: #737373;
+  --color-gray-600: #525252;
+  --color-gray-700: #404040;
+  --color-gray-800: #262626;
+  --color-gray-900: #171717;
 
-  --color-off-white: #f7f5f0;
-  --color-brand-black: #1a1a1a;
-  --color-sage: #7b9e87;
-  --color-sage-dark: #5c7a68;
-  --color-sage-light: #a8c4b0;
-  --color-earth: #c4956a;
-  --color-error: #c0392b;
-  --color-success: #27ae60;
+  --color-off-white: #f5f5f5;
+  --color-brand-black: #0a0a0a;
+  --color-sage: #0a0a0a;
+  --color-sage-dark: #262626;
+  --color-sage-light: #f5f5f5;
+  --color-earth: #525252;
+  --color-error: #dc2626;
+  --color-success: #16a34a;
   --color-white: #ffffff;
   --color-black: #000000;
 
@@ -42,8 +42,14 @@
 
   body {
     background-color: #ffffff;
-    color: #3d3b36;
+    color: #262626;
     overflow-x: hidden;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+
+  body::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
   }
 
   a {

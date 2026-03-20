@@ -35,7 +35,7 @@ export function SortDropdown() {
         id="sort"
         value={current}
         onChange={handleChange}
-        className="appearance-none border-0 bg-transparent text-sm text-brand-black focus:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2 cursor-pointer"
+        className="appearance-none border-0 bg-transparent text-sm text-brand-black focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-black focus-visible:ring-offset-2 cursor-pointer"
       >
         {SORT_OPTIONS.map((opt) => (
           <option key={opt.value} value={opt.value}>

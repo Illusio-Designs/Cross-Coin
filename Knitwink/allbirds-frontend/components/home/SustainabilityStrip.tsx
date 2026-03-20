@@ -1,23 +1,64 @@
-import { Leaf } from 'lucide-react'
-import Link from 'next/link'
+import { CheckCircle, Lock, Truck, Star } from 'lucide-react'
+
+const features = [
+  {
+    icon: CheckCircle,
+    title: 'Premium Quality',
+    description: 'Handcrafted with the finest natural materials, built to last',
+    badge: 'Since 2016',
+    bg: 'bg-brand-black',
+    iconBg: 'bg-gray-800',
+    text: 'text-white',
+  },
+  {
+    icon: Lock,
+    title: 'Secure Shopping',
+    description: '100% safe & encrypted checkout on every order',
+    badge: 'SSL Protected',
+    bg: 'bg-white border border-gray-200',
+    iconBg: 'bg-gray-100',
+    text: 'text-brand-black',
+  },
+  {
+    icon: Truck,
+    title: 'Fast Delivery',
+    description: 'Nationwide shipping — delivered to your doorstep',
+    badge: 'Pan India',
+    bg: 'bg-brand-black',
+    iconBg: 'bg-gray-800',
+    text: 'text-white',
+  },
+  {
+    icon: Star,
+    title: 'Authentic Products',
+    description: '100% genuine Allbirds merchandise, guaranteed',
+    badge: 'Verified',
+    bg: 'bg-white border border-gray-200',
+    iconBg: 'bg-gray-100',
+    text: 'text-brand-black',
+  },
+]
 
 export function SustainabilityStrip() {
   return (
-    <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-sage-light px-6 py-14 text-center md:py-20">
-      <Leaf className="mx-auto mb-4 text-sage-dark" size={28} aria-hidden="true" />
-      <h2 className="font-display text-3xl font-normal text-brand-black lg:text-4xl">
-        Made with natural materials
-      </h2>
-      <p className="mx-auto mt-4 max-w-lg text-base leading-relaxed text-gray-800">
-        From merino wool to eucalyptus tree fiber, every material is chosen for comfort,
-        performance, and a lower carbon footprint.
-      </p>
-      <Link
-        href="/sustainability"
-        className="mt-6 inline-block text-sm text-brand-black underline underline-offset-4 transition-colors duration-150 hover:text-sage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-sage"
-      >
-        Our sustainability story
-      </Link>
+    <section className="px-6 py-16 md:px-10 md:py-24 lg:px-16 lg:py-32">
+      <div className="mx-auto grid max-w-site grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 md:gap-6">
+        {features.map(({ icon: Icon, title, description, badge, bg, iconBg, text }) => (
+          <div
+            key={title}
+            className={`${bg} ${text} flex flex-col items-center rounded-2xl px-6 py-10 text-center`}
+          >
+            <div className={`${iconBg} mb-6 flex h-14 w-14 items-center justify-center rounded-full`}>
+              <Icon size={24} aria-hidden="true" />
+            </div>
+            <h3 className="mb-3 text-base font-medium">{title}</h3>
+            <p className="mb-6 flex-1 text-sm leading-relaxed opacity-70">{description}</p>
+            <span className="rounded-full border border-current px-3 py-1 text-xs font-medium uppercase tracking-widest opacity-50">
+              {badge}
+            </span>
+          </div>
+        ))}
+      </div>
     </section>
   )
 }

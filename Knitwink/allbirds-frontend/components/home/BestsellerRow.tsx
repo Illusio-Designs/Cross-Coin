@@ -32,14 +32,14 @@ export function BestsellerRow({ products }: BestsellerRowProps) {
         <div className="hidden gap-2 lg:flex">
           <button
             onClick={() => emblaApi?.scrollPrev()}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-800 transition-colors duration-150 hover:border-brand-black hover:text-brand-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-800 transition-colors duration-150 hover:border-brand-black hover:text-brand-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-black"
             aria-label="Previous"
           >
             <ChevronLeft size={16} />
           </button>
           <button
             onClick={() => emblaApi?.scrollNext()}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-800 transition-colors duration-150 hover:border-brand-black hover:text-brand-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-800 transition-colors duration-150 hover:border-brand-black hover:text-brand-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-black"
             aria-label="Next"
           >
             <ChevronRight size={16} />
@@ -53,9 +53,9 @@ export function BestsellerRow({ products }: BestsellerRowProps) {
             <Link
               key={product.id}
               href={`/products/${product.handle}`}
-              className="group w-[220px] shrink-0 rounded-2xl border border-gray-200 bg-off-white p-3 transition-transform duration-150 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2 md:w-[260px]"
+              className="group w-[220px] shrink-0 rounded-2xl border border-gray-200 bg-white p-3 transition-transform duration-150 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-black focus-visible:ring-offset-2 md:w-[260px]"
             >
-              <div className="relative aspect-square overflow-hidden rounded-xl bg-off-white p-4">
+              <div className="relative aspect-square overflow-hidden rounded-xl bg-gray-100 p-4">
                 <Image
                   src={product.images[0]?.url ?? ''}
                   alt={product.images[0]?.alt ?? product.name}
