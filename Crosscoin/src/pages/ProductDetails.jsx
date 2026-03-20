@@ -154,6 +154,15 @@ export default function ProductDetails() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Auto-cycle through gallery images every 3 seconds
+  useEffect(() => {
+    if (!galleryImages || galleryImages.length <= 1) return;
+    const id = setInterval(() => {
+      setSelectedImage(prev => (prev + 1) % galleryImages.length);
+    }, 3000);
+    return () => clearInterval(id);
+  }, [galleryImages?.length]);
+
   // Fetch real reviews once product id is known
   useEffect(() => {
     if (!rawProduct?.id) return;
