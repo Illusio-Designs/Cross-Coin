@@ -6,6 +6,7 @@ import { BestsellerRow } from '@/components/home/BestsellerRow'
 import { MaterialSection } from '@/components/home/MaterialSection'
 import { ReviewBand } from '@/components/home/ReviewBand'
 import { InstagramStrip } from '@/components/home/InstagramStrip'
+import { ExclusivePair } from '@/components/home/ExclusivePair'
 import { getFeaturedCollections, getBestsellers, getMaterials } from '@/lib/api/products'
 import { SITE_NAME } from '@/lib/constants'
 
@@ -37,6 +38,7 @@ export default async function HomePage() {
       <BestsellerRow
         products={bestsellers.status === 'fulfilled' ? bestsellers.value : undefined}
       />
+      <ExclusivePair />
       <MaterialSection
         materials={materials.status === 'fulfilled' ? materials.value : undefined}
       />

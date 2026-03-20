@@ -46,12 +46,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} ${dancingScript.variable} h-full antialiased`}>
-      <body suppressHydrationWarning className="flex min-h-full w-full flex-col bg-white font-sans text-brand-black">
+      <body suppressHydrationWarning className="flex min-h-full w-full flex-col bg-off-white font-sans text-brand-black">
         <AnnouncementBar />
         <Navbar />
         <MobileMenu />
         <CartDrawer />
-        <main className="flex-1 pt-[110px]">{children}</main>
+        <main className="flex-1 pt-[10px]">{children}</main>
         <Footer />
       </body>
     </html>

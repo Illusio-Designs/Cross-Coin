@@ -11,22 +11,21 @@ const UGC_IMAGES = [
 
 export function InstagramStrip() {
   return (
-    <section className="py-16 md:py-24 lg:py-32">
-      <div className="mx-auto max-w-site px-6 md:px-10 lg:px-16">
-        <p className="mb-8 text-center text-xs font-medium uppercase tracking-widest text-gray-600">
-          Follow us @allbirds
-        </p>
-        <h2 className="mb-10 text-center font-display text-3xl font-normal text-brand-black lg:text-4xl">
-          #WearAllbirds
-        </h2>
-      </div>
-      <div className="grid grid-cols-3 gap-1 md:grid-cols-6">
+    <section className="mx-2 mt-2 mb-2 overflow-hidden rounded-2xl bg-white py-10 md:py-14">
+      <p className="mb-2 text-center text-xs font-medium uppercase tracking-widest text-gray-600">
+        Follow us @allbirds
+      </p>
+      <h2 className="mb-8 text-center font-display text-3xl font-normal text-brand-black">
+        #WearAllbirds
+      </h2>
+      <div className="grid grid-cols-3 gap-2 px-4 md:grid-cols-6 md:px-6">
         {UGC_IMAGES.map((img, i) => (
-          <div key={i} className="relative aspect-square overflow-hidden bg-gray-100">
+          <div key={i} className="relative aspect-square overflow-hidden rounded-xl bg-gray-100">
             <Image
               src={img.url}
               alt={img.alt}
               fill
+              sizes="(max-width: 768px) 33vw, 16vw"
               className="object-cover transition-transform duration-300 hover:scale-105"
             />
           </div>
