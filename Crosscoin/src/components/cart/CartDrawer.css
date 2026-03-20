@@ -86,68 +86,20 @@
 .cd-back-btn:hover,
 .cd-close-btn:hover { background: #f5f5f7; color: #180D3E; }
 
-/* ─── Step Indicator ─────────────────────────────────────────────────────── */
+/* ─── Single-view sections ───────────────────────────────────────────────── */
 
-.cd-steps {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 12px 20px;
-  border-bottom: 1.5px solid #ebebf0;
-  flex-shrink: 0;
-  position: relative;
-}
-.cd-steps::before {
-  content: '';
-  position: absolute;
-  top: 22px;
-  left: 40px;
-  right: 40px;
-  height: 1.5px;
-  background: #ebebf0;
-  z-index: 0;
-}
-.cd-step-dot {
+.cd-single-view {
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  position: relative;
-  z-index: 1;
+  gap: 0;
 }
-.cd-step-circle {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 2px solid #ebebf0;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: #aaa;
-  transition: all 0.2s;
+
+.cd-sv-section {
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1.5px solid #ebebf0;
 }
-.cd-step-circle svg { width: 13px; height: 13px; }
-.cd-step-dot.active .cd-step-circle {
-  border-color: #CE1E36;
-  background: #CE1E36;
-  color: #fff;
-}
-.cd-step-dot.done .cd-step-circle {
-  border-color: #1a7a4a;
-  background: #1a7a4a;
-  color: #fff;
-}
-.cd-step-label {
-  font-size: 10px;
-  color: #aaa;
-  white-space: nowrap;
-  font-weight: 500;
-}
-.cd-step-dot.active .cd-step-label { color: #CE1E36; font-weight: 700; }
-.cd-step-dot.done .cd-step-label { color: #1a7a4a; }
 
 /* ─── Body ───────────────────────────────────────────────────────────────── */
 
@@ -159,9 +111,7 @@
 }
 .cd-body::-webkit-scrollbar { display: none; }
 
-.cd-step-content {
-  padding: 16px 20px;
-}
+/* .cd-step-content replaced by .cd-single-view */
 
 /* ─── Offer Bar ──────────────────────────────────────────────────────────── */
 
@@ -711,9 +661,7 @@
 
 @media (max-width: 480px) {
   .cd-drawer { width: 100vw; }
-  .cd-steps { padding: 10px 12px; }
-  .cd-step-label { font-size: 9px; }
-  .cd-step-content { padding: 14px 14px; }
+  .cd-single-view { padding: 14px 14px; }
   .cd-footer { padding: 12px 14px; }
   .cd-header { padding: 14px 14px; }
 }
