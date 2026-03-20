@@ -1090,8 +1090,8 @@
 .dm-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 16px;
+  gap: 5px;
+  margin-bottom: 18px;
 }
 
 .dm-field:last-child {
@@ -1100,10 +1100,11 @@
 
 /* ---- dm-label ---- */
 .dm-label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 700;
   color: #180D3E;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
 }
 
 .dm-label .dm-required {
@@ -1116,49 +1117,59 @@
   color: #999;
   font-size: 11px;
   margin-left: 4px;
+  text-transform: none;
 }
 
 /* ---- dm-input: base input/select/textarea ---- */
 .dm-input {
-  height: 38px;
-  padding: 0 12px;
-  border: 1px solid #e0e0ea;
-  border-radius: 6px;
+  height: 40px;
+  padding: 0 13px;
+  border: 1.5px solid #e8e8f0;
+  border-radius: 8px;
   font-size: 13px;
   font-family: 'DM Sans', sans-serif;
   color: #1a1a1a;
-  background: #fff;
+  background: #fafafe;
   outline: none;
   width: 100%;
   box-sizing: border-box;
-  transition: border-color 0.18s;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+}
+
+.dm-input::placeholder { color: #b0b0c0; }
+
+.dm-input:hover:not(:disabled) {
+  border-color: #c0b8e8;
+  background: #fff;
 }
 
 .dm-input:focus {
   border-color: #180D3E;
-  box-shadow: 0 0 0 3px rgba(24, 13, 62, 0.06);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(24, 13, 62, 0.07);
 }
 
 .dm-input:disabled {
-  background: #f5f5f8;
+  background: #f2f2f6;
   color: #aaa;
   cursor: not-allowed;
+  border-color: #e8e8f0;
 }
 
 .dm-textarea {
   height: auto;
-  min-height: 90px;
-  padding: 10px 12px;
+  min-height: 88px;
+  padding: 10px 13px;
   resize: vertical;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .dm-select {
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 10px center;
-  padding-right: 32px;
+  background-position: right 12px center;
+  padding-right: 34px;
   cursor: pointer;
 }
 
@@ -1188,8 +1199,8 @@
 /* ---- dm-file-upload ---- */
 .dm-file-upload {
   position: relative;
-  border: 1.5px dashed #d0d0e0;
-  border-radius: 6px;
+  border: 1.5px dashed #c8c8e0;
+  border-radius: 8px;
   padding: 14px 16px;
   background: #fafafe;
   cursor: pointer;
@@ -1201,7 +1212,7 @@
 
 .dm-file-upload:hover {
   border-color: #180D3E;
-  background: #f5f3ff;
+  background: #f4f2ff;
 }
 
 .dm-file-upload input[type="file"] {
@@ -1216,8 +1227,8 @@
 .dm-file-upload-icon {
   width: 36px;
   height: 36px;
-  background: #f0eeff;
-  border-radius: 6px;
+  background: #ede9ff;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1250,10 +1261,10 @@
 /* ---- dm-img-preview ---- */
 .dm-img-preview {
   margin-top: 10px;
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
   max-width: 180px;
-  border: 1px solid #ebebf0;
+  border: 1.5px solid #e8e8f0;
 }
 
 .dm-img-preview img {
@@ -1420,4 +1431,236 @@
   .modal-footer {
     padding: 12px 16px;
   }
+}
+
+/* ---- Product modal step indicator ---- */
+.prod-steps {
+  display: flex;
+  align-items: center;
+}
+
+.prod-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  position: relative;
+}
+
+.prod-step:last-child { flex: 0; }
+
+.prod-step-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #d0d0e0;
+  background: #fff;
+  color: #aaa;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.prod-step--active .prod-step-circle {
+  border-color: #180D3E;
+  background: #180D3E;
+  color: #fff;
+}
+
+.prod-step--done .prod-step-circle {
+  border-color: #22c55e;
+  background: #22c55e;
+  color: #fff;
+}
+
+.prod-step-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #aaa;
+  white-space: nowrap;
+  font-family: 'DM Sans', sans-serif;
+  transition: color 0.2s;
+}
+
+.prod-step--active .prod-step-label { color: #180D3E; }
+.prod-step--done .prod-step-label { color: #22c55e; }
+
+.prod-step-line {
+  flex: 1;
+  height: 2px;
+  background: #e8e8f0;
+  margin: 0 8px;
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+
+.prod-step-line--done { background: #22c55e; }
+
+/* ============================================================
+   Products modal — clean up unstyled raw inputs/selects/labels
+   ============================================================ */
+
+/* Raw label inside modal-body (not dm-label) */
+.modal-body .product-images-section > label,
+.modal-body .variation-images-upload > label,
+.modal-body .dimensions-section h6 {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #180D3E;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* product-images-section and variation-images-upload layout */
+.modal-body .product-images-section,
+.modal-body .variation-images-upload {
+  margin-bottom: 18px;
+}
+.modal-body .prd-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  border: 1.5px solid #e8e8f0;
+  border-radius: 8px;
+  background: #fafafe;
+  padding: 6px 10px;
+  transition: border-color 0.18s;
+}
+.modal-body .prd-upload-row:focus-within { border-color: #180D3E; background: #fff; }
+
+/* Native file input fills remaining space, no extra border */
+.modal-body .prd-upload-row input[type="file"] {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none;
+}
+
+/* "Select Existing" button */
+.modal-body .prd-select-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  height: 30px;
+  background: transparent;
+  color: #180D3E;
+  border: 1.5px solid #d0d0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.modal-body .prd-select-btn:hover { background: #f0eeff; border-color: #180D3E; }
+
+/* Image preview grid */
+.modal-body .prd-img-grid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.modal-body .prd-img-thumb {
+  position: relative;
+}
+.modal-body .prd-img-thumb img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1.5px solid #e8e8f0;
+  display: block;
+}
+.modal-body .prd-img-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.modal-body .prd-img-empty {
+  color: #aaa;
+  font-size: 13px;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+/* weight + dimensions section */
+.modal-body .weight-dimensions-section { margin-bottom: 18px; }
+.modal-body .weight-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.modal-body .dimensions-section h6 { margin: 0 0 10px; }
+.modal-body .dimensions-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Variation item card */
+.modal-body .variation-item {
+  border: 1.5px solid #e8e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: #fafafe;
+}
+.modal-body .variation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.modal-body .variation-header h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #180D3E;
+  font-family: 'DM Sans', sans-serif;
+}
+.modal-body .variations-header h3 {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #180D3E;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* SEO step heading */
+.modal-body > h3 {
+  margin: 0 0 18px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #180D3E;
+  font-family: 'DM Sans', sans-serif;
 }

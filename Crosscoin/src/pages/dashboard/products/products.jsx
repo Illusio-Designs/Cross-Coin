@@ -936,8 +936,8 @@ const ProductsPage = () => {
               onChange={handleInputChange}
               required
             />
-            <div className="input-field">
-              <label>Description</label>
+            <div className="dm-field">
+              <label className="dm-label">Description</label>
               <ReactQuill
                 theme="snow"
                 value={formData.description}
@@ -945,8 +945,8 @@ const ProductsPage = () => {
                 style={{ minHeight: 150, marginBottom: 16 }}
               />
             </div>
-            <div className="input-field">
-              <label>Category</label>
+            <div className="dm-field">
+              <label className="dm-label">Category</label>
               <select
                 value={formData.categoryId}
                 onChange={(e) => {
@@ -954,7 +954,7 @@ const ProductsPage = () => {
                   }}
                 name="categoryId"
                 required
-                className="select-input"
+                className="dm-input dm-select"
               >
                 <option value="">Select a category</option>
                 {categories.map(cat => (
@@ -1000,8 +1000,8 @@ const ProductsPage = () => {
             
             {/* Product Images Upload */}
             <div className="product-images-section">
-              <label>Product Images</label>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <label className="dm-label">Product Images</label>
+              <div className="prd-upload-row">
                 <input
                   type="file"
                   name="images"
@@ -1009,86 +1009,27 @@ const ProductsPage = () => {
                   accept="image/*"
                   onChange={(e) => {
                     const files = Array.from(e.target.files);
-                    setFormData(prev => ({
-                      ...prev,
-                      images: [...(prev.images || []), ...files]
-                    }));
+                    setFormData(prev => ({ ...prev, images: [...(prev.images || []), ...files] }));
                   }}
-                  style={{ flex: 1 }}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowExistingImageSelector(true)}
-                  style={{
-                    padding: '8px 12px',
-                    background: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
-                >
+                <button type="button" className="prd-select-btn" onClick={() => setShowExistingImageSelector(true)}>
                   Select Existing
                 </button>
               </div>
-              <div className="images-preview" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 8 }}>
+              <div className="prd-img-grid">
                 {formData.images && formData.images.map((img, imgIdx) => {
                   const imageUrl = img instanceof File ? URL.createObjectURL(img) : (img.url || img.image_url);
                   return (
-                    <div key={imgIdx} style={{ position: 'relative' }}>
-                      <img
-                        src={imageUrl}
-                        alt={`Product Image ${imgIdx + 1}`}
-                        style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
-                        onError={(e) => {
-                          e.target.style.backgroundColor = '#f5f5f5';
-                          e.target.style.display = 'flex';
-                          e.target.style.alignItems = 'center';
-                          e.target.style.justifyContent = 'center';
-                          e.target.alt = 'Failed to load';
-                        }}
-                        onLoad={() => {
-                          }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const imageToRemove = formData.images[imgIdx];
-                          
-                          setFormData(prev => {
-                            const newState = {
-                              ...prev,
-                              images: prev.images.filter((_, index) => index !== imgIdx)
-                            };
-                            
-                            // If this is an existing image (has id), track it for deletion
-                            if (imageToRemove.existing && imageToRemove.id) {
-                              newState.imagesToDelete = [...prev.imagesToDelete, imageToRemove.id];
-                            }
-                            
-                            return newState;
-                          });
-                        }}
-                        style={{
-                          position: 'absolute',
-                          top: '-8px',
-                          right: '-8px',
-                          background: '#ef4444',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '50%',
-                          width: '20px',
-                          height: '20px',
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        ×
-                      </button>
+                    <div key={imgIdx} className="prd-img-thumb">
+                      <img src={imageUrl} alt={`Product Image ${imgIdx + 1}`} />
+                      <button type="button" className="prd-img-remove" onClick={() => {
+                        const imageToRemove = formData.images[imgIdx];
+                        setFormData(prev => {
+                          const newState = { ...prev, images: prev.images.filter((_, i) => i !== imgIdx) };
+                          if (imageToRemove.existing && imageToRemove.id) newState.imagesToDelete = [...prev.imagesToDelete, imageToRemove.id];
+                          return newState;
+                        });
+                      }}>×</button>
                     </div>
                   );
                 })}
@@ -1225,97 +1166,40 @@ const ProductsPage = () => {
                   />
                   {/* Variation Images Upload */}
                   <div className="variation-images-upload">
-                    <label>Variation Images</label>
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                    <label className="dm-label">Variation Images</label>
+                    <div className="prd-upload-row">
                       <input
                         type="file"
                         name={`variationImage.${index}`}
                         multiple
                         accept="image/*"
                         onChange={handleInputChange}
-                        style={{ flex: 1 }}
                       />
-                      <button
-                        type="button"
-                        onClick={() => openVariationImageSelector(index)}
-                        style={{
-                          padding: '8px 12px',
-                          border: '1px solid #ddd',
-                          background: '#f8f9fa',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
+                      <button type="button" className="prd-select-btn" onClick={() => openVariationImageSelector(index)}>
                         Select Existing
                       </button>
                     </div>
-                    <div className="variation-images-preview" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 8 }}>
-                      {(formData.variationImages && formData.variationImages[index] && formData.variationImages[index].length > 0) ? 
+                    <div className="prd-img-grid">
+                      {(formData.variationImages?.[index]?.length > 0) ?
                         formData.variationImages[index].map((img, imgIdx) => {
                           const imageUrl = img instanceof File ? URL.createObjectURL(img) : (img.url || img.image_url);
                           return (
-                            <div key={imgIdx} style={{ position: 'relative' }}>
-                              <img
-                                src={imageUrl}
-                                alt={`Variation ${index + 1} Image ${imgIdx + 1}`}
-                                style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
-                                onError={(e) => {
-                                  e.target.style.backgroundColor = '#f5f5f5';
-                                  e.target.style.display = 'flex';
-                                  e.target.style.alignItems = 'center';
-                                  e.target.style.justifyContent = 'center';
-                                  e.target.alt = 'Failed to load';
-                                }}
-                                onLoad={() => {
-                                  }}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const imageToRemove = formData.variationImages[index][imgIdx];
-                                  
-                                  setFormData(prev => {
-                                    const newVariationImages = [...(prev.variationImages || [])];
-                                    if (newVariationImages[index]) {
-                                      newVariationImages[index] = newVariationImages[index].filter((_, i) => i !== imgIdx);
-                                    }
-                                    
-                                    // If this is an existing variation image (has id), track it for deletion
-                                    const newState = { ...prev, variationImages: newVariationImages };
-                                    if (imageToRemove && imageToRemove.existing && imageToRemove.id) {
-                                      newState.variationImagesToDelete = [...(prev.variationImagesToDelete || []), imageToRemove.id];
-                                    }
-                                    
-                                    return newState;
-                                  });
-                                }}
-                                style={{
-                                  position: 'absolute',
-                                  top: '-5px',
-                                  right: '-5px',
-                                  background: 'red',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '50%',
-                                  width: '20px',
-                                  height: '20px',
-                                  cursor: 'pointer',
-                                  fontSize: '12px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center'
-                                }}
-                              >
-                                ×
-                              </button>
+                            <div key={imgIdx} className="prd-img-thumb">
+                              <img src={imageUrl} alt={`Variation ${index + 1} Image ${imgIdx + 1}`} />
+                              <button type="button" className="prd-img-remove" onClick={() => {
+                                const imageToRemove = formData.variationImages[index][imgIdx];
+                                setFormData(prev => {
+                                  const newVariationImages = [...(prev.variationImages || [])];
+                                  if (newVariationImages[index]) newVariationImages[index] = newVariationImages[index].filter((_, i) => i !== imgIdx);
+                                  const newState = { ...prev, variationImages: newVariationImages };
+                                  if (imageToRemove?.existing && imageToRemove.id) newState.variationImagesToDelete = [...(prev.variationImagesToDelete || []), imageToRemove.id];
+                                  return newState;
+                                });
+                              }}>×</button>
                             </div>
                           );
                         }) : (
-                          <div style={{ color: '#999', fontStyle: 'italic', padding: '20px 0' }}>
-                            No images for this variation yet
-                          </div>
+                          <p className="prd-img-empty">No images for this variation yet</p>
                         )
                       }
                     </div>
@@ -1486,8 +1370,28 @@ const ProductsPage = () => {
         onClose={handleModalClose}
         title={formData.id ? "Edit Product" : "Add New Product"}
         closeOnOverlayClick={false}
+        size="lg"
       >
         <form onSubmit={handleSubmit} className="seo-form">
+          {/* Step indicator — sticky, outside scrollable body */}
+          <div className="prod-steps">
+            {['Basic Info', 'Variations', 'SEO'].map((label, i) => {
+              const step = i + 1;
+              const isActive = currentStep === step;
+              const isDone = currentStep > step;
+              return (
+                <div key={step} className={`prod-step ${isActive ? 'prod-step--active' : ''} ${isDone ? 'prod-step--done' : ''}`}>
+                  <div className="prod-step-circle">
+                    {isDone ? (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    ) : step}
+                  </div>
+                  <span className="prod-step-label">{label}</span>
+                  {i < 2 && <div className={`prod-step-line ${isDone ? 'prod-step-line--done' : ''}`} />}
+                </div>
+              );
+            })}
+          </div>
           <div className="modal-body">
             {renderModalStep()}
           </div>
