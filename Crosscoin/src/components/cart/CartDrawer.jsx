@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/router';
@@ -98,6 +98,10 @@ const CartDrawer = ({ isOpen, onClose }) => {
   // Offer bar
   const [offerData, setOfferData] = useState(null);
 
+  // Scroll hint
+  const bodyRef = useRef(null);
+  const [showScrollHint, setShowScrollHint] = useState(false);
+
   // ── Visibility ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (isOpen) {
@@ -146,8 +150,29 @@ const CartDrawer = ({ isOpen, onClose }) => {
     }).catch(() => {}).finally(() => setAddressLoading(false));
   }, [isOpen, isAuthenticated]);
 
-  // ── Offer bar ───────────────────────────────────────────────────────────
+  // ── Body class for back-to-top hiding ──────────────────────────────────
   useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('cd-drawer-open-body');
+    } else {
+      document.body.classList.remove('cd-drawer-open-body');
+    }
+    return () => document.body.classList.remove('cd-drawer-open-body');
+  }, [isOpen]);
+
+  // ── Scroll hint ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const check = () => {
+      setShowScrollHint(el.scrollTop < el.scrollHeight - el.clientHeight - 40);
+    };
+    check();
+    el.addEventListener('scroll', check, { passive: true });
+    return () => el.removeEventListener('scroll', check);
+  }, [isOpen, activeItems.length]);
+
+  // ── Offer bar ───────────────────────────────────────────────────────────  useEffect(() => {
     if (cartItems.length === 0) { setOfferData(null); return; }
     getPublicCoupons().then(res => {
       const coupons = (res?.coupons || []).filter(c => !c.firstOrderOnly);
@@ -241,16 +266,20 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const handleSaveAddress = async (e) => {
     e.preventDefault();
     setAddressSaving(true);
+    // For guests, merge name/phone from guestInfo into the address
+    const formData = isAuthenticated
+      ? addressForm
+      : { ...addressForm, fullName: `${guestInfo.firstName} ${guestInfo.lastName}`.trim() || addressForm.fullName, phoneNumber: guestInfo.phone || addressForm.phoneNumber };
     try {
       if (isAuthenticated) {
         let saved;
-        if (editingAddressId) saved = await updateShippingAddress(editingAddressId, addressForm);
-        else saved = await createShippingAddress(addressForm);
+        if (editingAddressId) saved = await updateShippingAddress(editingAddressId, formData);
+        else saved = await createShippingAddress(formData);
         const fresh = await getUserShippingAddresses();
         setAddresses(fresh || []);
-        setSelectedAddress(saved || addressForm);
+        setSelectedAddress(saved || formData);
       } else {
-        const saved = { id: Date.now(), full_name: addressForm.fullName, phone_number: addressForm.phoneNumber, address: addressForm.address, city: addressForm.city, state: addressForm.state, postal_code: addressForm.postalCode, country: addressForm.country };
+        const saved = { id: Date.now(), full_name: formData.fullName, phone_number: formData.phoneNumber, address: formData.address, city: formData.city, state: formData.state, postal_code: formData.postalCode, country: formData.country };
         setSelectedAddress(saved);
       }
       setShowAddressForm(false);
@@ -358,7 +387,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
         </div>
 
         {/* Scrollable body — everything in one view */}
-        <div className="cd-body">
+        <div className="cd-body" ref={bodyRef}>
           {orderSuccess ? (
             /* ── Success ── */
             <div className="cd-success">
@@ -520,8 +549,12 @@ const CartDrawer = ({ isOpen, onClose }) => {
                     {showAddressForm && (
                       <form className="cd-address-form" onSubmit={handleSaveAddress}>
                         <div className="cd-form-grid">
-                          <div className="cd-form-group"><label className="cd-label">Full Name *</label><input className="cd-input" name="fullName" value={addressForm.fullName} onChange={handleAddrChange} required placeholder="Full name" /></div>
-                          <div className="cd-form-group"><label className="cd-label">Phone *</label><input className="cd-input" name="phoneNumber" value={addressForm.phoneNumber} onChange={handleAddrChange} required placeholder="Phone number" /></div>
+                          {isAuthenticated && (
+                            <>
+                              <div className="cd-form-group"><label className="cd-label">Full Name *</label><input className="cd-input" name="fullName" value={addressForm.fullName} onChange={handleAddrChange} required placeholder="Full name" /></div>
+                              <div className="cd-form-group"><label className="cd-label">Phone *</label><input className="cd-input" name="phoneNumber" value={addressForm.phoneNumber} onChange={handleAddrChange} required placeholder="Phone number" /></div>
+                            </>
+                          )}
                           <div className="cd-form-group cd-form-full"><label className="cd-label">Address *</label><input className="cd-input" name="address" value={addressForm.address} onChange={handleAddrChange} required placeholder="Street address, flat, area" /></div>
                           <div className="cd-form-group"><label className="cd-label">City *</label><input className="cd-input" name="city" value={addressForm.city} onChange={handleAddrChange} required placeholder="City" /></div>
                           <div className="cd-form-group"><label className="cd-label">State *</label><input className="cd-input" name="state" value={addressForm.state} onChange={handleAddrChange} required placeholder="State" /></div>
@@ -574,6 +607,15 @@ const CartDrawer = ({ isOpen, onClose }) => {
             </div>
           )}
         </div>
+
+        {/* Scroll hint */}
+        {showScrollHint && !orderSuccess && activeItems.length > 0 && (
+          <div className="cd-scroll-hint" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
+        )}
 
         {/* ── Single CTA footer ── */}
         {!orderSuccess && activeItems.length > 0 && (

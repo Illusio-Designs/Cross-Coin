@@ -68,9 +68,9 @@ export default async function CollectionPage({ params, searchParams }: Props) {
   const filtered = applyFiltersAndSort(products, filter, status, sort)
 
   return (
-    <div className="mx-auto max-w-site px-6 md:px-10 lg:px-16">
+    <>
       {/* Header */}
-      <div className="pt-16 pb-8 text-center">
+      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-off-white px-6 py-16 text-center md:px-10 lg:px-16">
         <h1 className="font-display text-4xl font-normal text-brand-black">{collectionName}</h1>
         {collectionDescription && (
           <p className="mx-auto mt-3 max-w-lg text-base leading-relaxed text-gray-600">
@@ -78,15 +78,15 @@ export default async function CollectionPage({ params, searchParams }: Props) {
           </p>
         )}
         <p className="mt-2 text-xs text-gray-400">{filtered.length} products</p>
-      </div>
+      </section>
 
-      {/* Controls */}
-      <CollectionControls />
-
-      {/* Grid */}
-      <div className="py-8">
-        <ProductGrid products={filtered} />
-      </div>
-    </div>
+      {/* Controls + Grid */}
+      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-6 py-8 md:px-10 lg:px-16">
+        <CollectionControls />
+        <div className="mt-6">
+          <ProductGrid products={filtered} />
+        </div>
+      </section>
+    </>
   )
 }

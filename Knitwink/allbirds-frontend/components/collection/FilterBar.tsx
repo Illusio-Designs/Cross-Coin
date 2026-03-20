@@ -36,7 +36,7 @@ export function FilterBar() {
           onClick={() => handleFilter(f.value)}
           aria-pressed={active === f.value}
           className={cn(
-            'rounded-full border px-4 py-1.5 text-xs font-medium uppercase tracking-widest transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2',
+            'rounded-full border px-4 py-1.5 text-xs font-medium uppercase tracking-widest transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-black focus-visible:ring-offset-2',
             active === f.value
               ? 'border-brand-black bg-brand-black text-white'
               : 'border-gray-200 text-gray-800 hover:border-brand-black'

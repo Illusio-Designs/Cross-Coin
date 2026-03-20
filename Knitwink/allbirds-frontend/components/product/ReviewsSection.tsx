@@ -44,7 +44,7 @@ export function ReviewsSection({ reviews, averageRating = 4.8, totalReviews }: R
   const count = totalReviews ?? items.length
 
   return (
-    <section className="border-t border-gray-200 pt-12 mt-12">
+    <div className="mx-auto max-w-site px-5 py-12 lg:px-8">
       {/* Summary */}
       <div className="mb-10 flex items-center gap-4">
         <span className="font-display text-4xl font-normal text-brand-black">{averageRating.toFixed(1)}</span>
@@ -61,7 +61,7 @@ export function ReviewsSection({ reviews, averageRating = 4.8, totalReviews }: R
             <div className="mb-2 flex items-center justify-between gap-4">
               <Stars rating={review.rating} />
               {review.verified && (
-                <span className="text-xs font-medium uppercase tracking-widest text-sage">
+                <span className="text-xs font-medium uppercase tracking-widest text-gray-400">
                   Verified
                 </span>
               )}
@@ -77,6 +77,6 @@ export function ReviewsSection({ reviews, averageRating = 4.8, totalReviews }: R
           </div>
         ))}
       </div>
-    </section>
+    </div>
   )
 }

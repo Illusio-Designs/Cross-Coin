@@ -36,8 +36,9 @@ export function LoginPageClient() {
   }
 
   return (
-    <div className="flex min-h-[80vh] items-center justify-center px-6 py-16">
-      <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-10">
+    <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white">
+      <div className="flex min-h-[80vh] items-center justify-center px-6 py-16">
+        <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-10">
         <h1 className="mb-8 font-display text-3xl font-normal text-brand-black">Welcome back</h1>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5" noValidate>
@@ -85,6 +86,7 @@ export function LoginPageClient() {
           </p>
         </div>
       </div>
-    </div>
+      </div>
+    </section>
   )
 }

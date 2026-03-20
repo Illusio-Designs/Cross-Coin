@@ -53,9 +53,9 @@ const STATS = [
 
 export default function SustainabilityPage() {
   return (
-    <div className="bg-white">
+    <>
       {/* Hero */}
-      <section className="relative flex min-h-[60vh] items-center justify-center overflow-hidden bg-sage-light">
+      <section className="mx-2 mt-2 overflow-hidden rounded-2xl relative flex min-h-[60vh] items-center justify-center bg-sage-light">
         <Image
           src="https://images.unsplash.com/photo-1448375240586-882707db888b?w=1600&q=80"
           alt="Natural landscape"
@@ -72,48 +72,50 @@ export default function SustainabilityPage() {
       </section>
 
       {/* Carbon stat band */}
-      <section className="bg-sage-light py-16 text-center">
+      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-sage-light py-16 text-center">
         <p className="text-xs font-medium uppercase tracking-widest text-gray-600">Average carbon footprint per pair</p>
         <p className="mt-2 font-display text-7xl font-normal text-brand-black lg:text-8xl">9.9kg</p>
         <p className="mt-2 text-sm text-gray-600">CO₂e — vs. industry average of 12.5kg</p>
       </section>
 
       {/* Materials */}
-      <section className="mx-auto max-w-site px-6 py-24 md:px-10 lg:px-16">
-        <h2 className="mb-16 text-center font-display text-4xl font-normal text-brand-black">
-          Natural materials, better choices
-        </h2>
-        <div className="grid grid-cols-1 gap-16">
-          {MATERIALS.map((mat, i) => {
-            const Icon = mat.icon
-            const isEven = i % 2 === 0
-            return (
-              <div
-                key={mat.name}
-                className={`grid grid-cols-1 items-center gap-10 lg:grid-cols-2 ${isEven ? '' : 'lg:[&>*:first-child]:order-2'}`}
-              >
-                <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
-                  <Image src={mat.image} alt={mat.name} fill className="object-cover" />
-                </div>
-                <div className="flex flex-col gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sage-light">
-                    <Icon size={20} className="text-sage" />
+      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-6 py-24 md:px-10 lg:px-16">
+        <div className="mx-auto max-w-site">
+          <h2 className="mb-16 text-center font-display text-4xl font-normal text-brand-black">
+            Natural materials, better choices
+          </h2>
+          <div className="grid grid-cols-1 gap-16">
+            {MATERIALS.map((mat, i) => {
+              const Icon = mat.icon
+              const isEven = i % 2 === 0
+              return (
+                <div
+                  key={mat.name}
+                  className={`grid grid-cols-1 items-center gap-10 lg:grid-cols-2 ${isEven ? '' : 'lg:[&>*:first-child]:order-2'}`}
+                >
+                  <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
+                    <Image src={mat.image} alt={mat.name} fill className="object-cover" />
                   </div>
-                  <h3 className="font-display text-3xl font-normal text-brand-black">{mat.name}</h3>
-                  <p className="text-base leading-relaxed text-gray-600">{mat.description}</p>
-                  <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium uppercase tracking-widest text-gray-800">
-                    <Leaf size={12} className="text-sage" />
-                    {mat.carbon}
-                  </span>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sage-light">
+                      <Icon size={20} className="text-sage" />
+                    </div>
+                    <h3 className="font-display text-3xl font-normal text-brand-black">{mat.name}</h3>
+                    <p className="text-base leading-relaxed text-gray-600">{mat.description}</p>
+                    <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium uppercase tracking-widest text-gray-800">
+                      <Leaf size={12} className="text-sage" />
+                      {mat.carbon}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </section>
 
       {/* Stats band */}
-      <section className="bg-off-white py-20">
+      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-off-white py-20">
         <div className="mx-auto grid max-w-site grid-cols-2 gap-8 px-6 md:grid-cols-4 md:px-10 lg:px-16">
           {STATS.map((s) => (
             <div key={s.label} className="text-center">
@@ -125,19 +127,21 @@ export default function SustainabilityPage() {
       </section>
 
       {/* Certifications */}
-      <section className="mx-auto max-w-site px-6 py-24 text-center md:px-10 lg:px-16">
-        <h2 className="mb-4 font-display text-4xl font-normal text-brand-black">Certified better</h2>
-        <p className="mx-auto mb-12 max-w-lg text-base leading-relaxed text-gray-600">
-          Our commitments are verified by independent third parties so you can trust every claim we make.
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-8">
-          {['B Corp Certified', 'Carbon Neutral', 'ZQ Merino', 'Bluesign®', 'TENCEL™'].map((cert) => (
-            <div key={cert} className="rounded-full border border-gray-200 px-6 py-3 text-sm font-medium text-gray-800">
-              {cert}
-            </div>
-          ))}
+      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-6 py-24 text-center md:px-10 lg:px-16">
+        <div className="mx-auto max-w-site">
+          <h2 className="mb-4 font-display text-4xl font-normal text-brand-black">Certified better</h2>
+          <p className="mx-auto mb-12 max-w-lg text-base leading-relaxed text-gray-600">
+            Our commitments are verified by independent third parties so you can trust every claim we make.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-8">
+            {['B Corp Certified', 'Carbon Neutral', 'ZQ Merino', 'Bluesign®', 'TENCEL™'].map((cert) => (
+              <div key={cert} className="rounded-full border border-gray-200 px-6 py-3 text-sm font-medium text-gray-800">
+                {cert}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
-    </div>
+    </>
   )
 }

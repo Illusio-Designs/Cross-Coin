@@ -6,6 +6,8 @@ import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { MobileMenu } from '@/components/layout/MobileMenu'
 import { CartDrawer } from '@/components/cart/CartDrawer'
+import { BackToTop } from '@/components/ui/BackToTop'
+import { Breadcrumb } from '@/components/layout/Breadcrumb'
 import { SITE_NAME } from '@/lib/constants'
 
 const inter = Inter({
@@ -51,8 +53,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Navbar />
         <MobileMenu />
         <CartDrawer />
-        <main className="flex-1 pt-[10px]">{children}</main>
+        <main className="flex-1 pt-[10px]">
+          <Breadcrumb />
+          {children}
+        </main>
         <Footer />
+        <BackToTop />
       </body>
     </html>
   )

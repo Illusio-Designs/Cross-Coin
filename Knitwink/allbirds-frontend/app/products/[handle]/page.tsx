@@ -84,20 +84,29 @@ export default async function ProductPage({ params }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-site px-5 py-10 lg:px-8">
-      {/* Two-column PDP layout */}
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-16">
-        {/* Left — gallery */}
-        <ProductGallery images={product.images} productName={product.name} />
+    <>
+      {/* Main PDP — gallery + info */}
+      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-5 py-10 lg:px-8">
+        <div className="mx-auto max-w-site grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-16">
+          <ProductGallery images={product.images} productName={product.name} />
+          <ProductInfo product={product} />
+        </div>
+      </section>
 
-        {/* Right — info */}
-        <ProductInfo product={product} />
-      </div>
+      {/* Feature breakdown */}
+      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-off-white">
+        <FeatureBreakdown features={product.features} />
+      </section>
 
-      {/* Below fold */}
-      <FeatureBreakdown features={product.features} />
-      <ReviewsSection />
-      <CrossSell currentHandle={product.handle} />
-    </div>
+      {/* Reviews */}
+      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white">
+        <ReviewsSection />
+      </section>
+
+      {/* Cross-sell */}
+      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-off-white">
+        <CrossSell currentHandle={product.handle} />
+      </section>
+    </>
   )
 }

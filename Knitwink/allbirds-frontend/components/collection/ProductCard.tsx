@@ -24,12 +24,12 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <Link
       href={`/products/${product.handle}`}
-      className="group flex flex-col rounded-2xl border border-gray-200 bg-off-white p-3 transition-transform duration-150 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2"
+      className="group flex flex-col rounded-2xl border border-gray-200 bg-white p-3 transition-transform duration-150 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-black focus-visible:ring-offset-2"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Image area — fixed aspect, consistent padding so every shoe sits the same */}
-      <div className="relative aspect-square overflow-hidden rounded-xl bg-off-white p-4">
+      {/* Image area */}
+      <div className="relative aspect-square overflow-hidden rounded-xl bg-gray-100 p-4">
         <AnimatePresence initial={false}>
           <motion.div
             key={hovered ? 'hover' : 'primary'}
@@ -52,7 +52,7 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Badge top-left */}
         {product.badge && (
           <div className="absolute left-3 top-3">
-            <span className="rounded-full bg-gray-100 px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-brand-black">
+            <span className="rounded-full bg-brand-black px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-white">
               {product.badge === 'New' ? 'New Color' : product.badge}
             </span>
           </div>
