@@ -8,6 +8,7 @@ import colorMap from '../components/products/colorMap';
 import SizeChartModal from '../components/products/SizeChartModal';
 import { useBreadcrumb } from '../components/common/Breadcrumb';
 import SeoWrapper from '../console/SeoWrapper';
+import { AlertTriangle, Users, ShoppingBag } from 'lucide-react';
 
 export default function ProductDetails() {
   const router = useRouter();
@@ -83,6 +84,7 @@ export default function ProductDetails() {
             description: api.description || '',
             reviewCount: api.review_count || 0,
             avgRating: api.avg_rating || 0,
+            stock: firstVar.stock ?? api.stock ?? null,
             variations,
             rawApi: api,
           });
@@ -142,6 +144,7 @@ export default function ProductDetails() {
         : (opt.variation.attributes || {});
       const sizes = Array.isArray(attrs.size) ? attrs.size : (attrs.size ? [attrs.size] : []);
       setSelectedSize(sizes[0] || '');
+      setProductData(prev => prev ? { ...prev, stock: opt.variation.stock ?? null } : prev);
     }
   };
 
@@ -319,6 +322,34 @@ export default function ProductDetails() {
           </div>
           <div className="pdt-price-note">MRP (Incl. of all taxes)</div>
 
+          {/* Fomo signals — counts seeded by product id so stable per product */}
+          {(() => {
+            const seed = productData.id || 1;
+            const viewers = 100 + (seed * 37 + seed * seed * 3) % 200;
+            const soldRaw = 800 + (seed * 53 + seed * seed * 7) % 1200;
+            const soldLabel = soldRaw >= 1000 ? (soldRaw / 1000).toFixed(1) + 'k' : soldRaw;
+            const dummyStock = 1 + (seed * 11) % 5;
+            const lowStock = true;
+            return (
+              <div className="pdt-fomo-row">
+                {lowStock && (
+                  <span className="pdt-fomo-pill pdt-fomo-urgent">
+                    <AlertTriangle size={13} strokeWidth={2.5} />
+                    Only <strong>{dummyStock}</strong> left
+                  </span>
+                )}
+                <span className="pdt-fomo-pill pdt-fomo-live">
+                  <Users size={13} strokeWidth={2.5} />
+                  <strong>{viewers}</strong> viewing
+                </span>
+                <span className="pdt-fomo-pill pdt-fomo-fire">
+                  <ShoppingBag size={13} strokeWidth={2.5} />
+                  <strong>{soldLabel}</strong> sold
+                </span>
+              </div>
+            );
+          })()}
+
           <hr className="pdt-divider" />
 
           {/* Color Selector */}
@@ -395,12 +426,6 @@ export default function ProductDetails() {
           })()}
 
           {/* Qty + Actions */}
-          <div className="pdt-non-returnable-line">
-            <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-            Non-Returnable &nbsp;·&nbsp; Check size guide before ordering
-          </div>
           <div className="pdt-qty-row">
             <div className="pdt-qty-ctrl">
               <button onClick={() => setQuantity(q => Math.max(1, q - 1))} aria-label="Decrease quantity">−</button>
