@@ -144,7 +144,7 @@ export default function ProductDetails() {
         : (opt.variation.attributes || {});
       const sizes = Array.isArray(attrs.size) ? attrs.size : (attrs.size ? [attrs.size] : []);
       setSelectedSize(sizes[0] || '');
-      setProductData(prev => prev ? { ...prev, stock: opt.variation.stock ?? null } : prev);
+      setProductData(prev => prev ? { ...prev, stock: opt.variation.stock ?? null, styleNo: opt.variation.sku || '' } : prev);
     }
   };
 
