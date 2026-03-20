@@ -145,6 +145,7 @@ body{
 * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
 
 html, body {
+  overflow-x: hidden;
   overflow-y: scroll;
 }
 
