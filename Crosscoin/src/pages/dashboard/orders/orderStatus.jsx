@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { orderService } from '../../../services';
 import { debounce } from 'lodash';
-import { Table, Pagination } from "../../../components/ui";
+import { Table, Pagination, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusUtils';
 
@@ -127,18 +127,19 @@ const OrderStatus = () => {
                         </span>
                         <input type="text" className="sl-search-input" placeholder="Search by order number" onChange={handleSearchChange} />
                     </div>
-                    <select
+                    <Select
+                        options={[
+                            { value: 'all', label: 'All Status' },
+                            { value: 'pending', label: 'Pending' },
+                            { value: 'processing', label: 'Processing' },
+                            { value: 'shipped', label: 'Shipped' },
+                            { value: 'delivered', label: 'Delivered' },
+                            { value: 'cancelled', label: 'Cancelled' },
+                        ]}
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="pay-filter-select"
-                    >
-                        <option value="all">All Status</option>
-                        <option value="pending">Pending</option>
-                        <option value="processing">Processing</option>
-                        <option value="shipped">Shipped</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
+                        onChange={setStatusFilter}
+                        placeholder="All Status"
+                    />
                 </div>
             </div>
 

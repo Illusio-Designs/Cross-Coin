@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Table, Pagination } from "../../../components/ui";
+import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { paymentService } from "../../../services";
-import { toast } from "react-hot-toast";
+import { showSuccess, showError } from "../../../utils/toastNotification";
 
 const IC = {
   search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
@@ -51,7 +51,7 @@ export default function Payments() {
         setPayments([]);
       }
     } catch (err) {
-      toast.error('Failed to load payments');
+      showError('loadingFailed');
       setPayments([]);
     } finally {
       setLoading(false);
@@ -79,9 +79,9 @@ export default function Payments() {
     if (!window.confirm(`Refund payment ${payment.transaction_id || payment.id}?`)) return;
     try {
       await paymentService.updatePaymentStatus(payment.id, { status: 'refunded' });
-      toast.success('Payment refunded');
+      showSuccess('updateSuccess');
       fetchPayments();
-    } catch { toast.error('Failed to refund'); }
+    } catch { showError('saveFailed'); }
   };
 
   const columns = [
@@ -171,25 +171,35 @@ export default function Payments() {
         <div className="pay-filters">
           <div className="pay-filter-group">
             <span className="pay-filter-label">{IC.filter} Status</span>
-            <select className="pay-filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="">All Status</option>
-              <option value="successful">Successful</option>
-              <option value="pending">Pending</option>
-              <option value="failed">Failed</option>
-              <option value="refunded">Refunded</option>
-            </select>
+            <Select
+              options={[
+                { value: '', label: 'All Status' },
+                { value: 'successful', label: 'Successful' },
+                { value: 'pending', label: 'Pending' },
+                { value: 'failed', label: 'Failed' },
+                { value: 'refunded', label: 'Refunded' },
+              ]}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              placeholder="All Status"
+            />
           </div>
           <div className="pay-filter-group">
             <span className="pay-filter-label">Method</span>
-            <select className="pay-filter-select" value={methodFilter} onChange={e => setMethodFilter(e.target.value)}>
-              <option value="">All Methods</option>
-              <option value="cod">COD</option>
-              <option value="upi">UPI</option>
-              <option value="razorpay">Razorpay</option>
-              <option value="credit_card">Credit Card</option>
-              <option value="debit_card">Debit Card</option>
-              <option value="wallet">Wallet</option>
-            </select>
+            <Select
+              options={[
+                { value: '', label: 'All Methods' },
+                { value: 'cod', label: 'COD' },
+                { value: 'upi', label: 'UPI' },
+                { value: 'razorpay', label: 'Razorpay' },
+                { value: 'credit_card', label: 'Credit Card' },
+                { value: 'debit_card', label: 'Debit Card' },
+                { value: 'wallet', label: 'Wallet' },
+              ]}
+              value={methodFilter}
+              onChange={setMethodFilter}
+              placeholder="All Methods"
+            />
           </div>
           {(statusFilter || methodFilter) && (
             <button className="pay-clear-btn" onClick={() => { setStatusFilter(''); setMethodFilter(''); }}>Clear Filters</button>
@@ -235,7 +245,7 @@ export default function Payments() {
             <div className="modal-footer">
               <Button variant="secondary" onClick={() => setIsViewModalOpen(false)}>Close</Button>
               {selectedPayment.status === "successful" && (
-                <Button variant="danger" onClick={async () => { try { await paymentService.updatePaymentStatus(selectedPayment.id, { status: 'refunded' }); toast.success('Refunded'); setIsViewModalOpen(false); fetchPayments(); } catch { toast.error('Failed to refund'); } }}>Refund Payment</Button>
+                <Button variant="danger" onClick={async () => { try { await paymentService.updatePaymentStatus(selectedPayment.id, { status: 'refunded' }); showSuccess('updateSuccess'); setIsViewModalOpen(false); fetchPayments(); } catch { showError('saveFailed'); } }}>Refund Payment</Button>
               )}
             </div>
           </div>

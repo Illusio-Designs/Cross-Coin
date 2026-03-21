@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Table, Pagination } from "../../../components/ui";
+import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { couponService } from "../../../services";
 
@@ -140,11 +140,12 @@ export default function Coupons() {
             <button className="sl-add-btn" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>
               <span className="sl-add-btn-icon">{IC.add}</span>Add Coupon
             </button>
-            <select className="pay-filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+            <Select
+              options={[{ value: '', label: 'All Status' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              placeholder="All Status"
+            />
           </div>
         </div>
 
@@ -213,10 +214,11 @@ export default function Coupons() {
               </div>
               <div className="dm-field">
                 <label className="dm-label">Status <span className="dm-required">*</span></label>
-                <select className="dm-input dm-select" name="status" value={formData.status} onChange={handleInputChange} required>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
+                <Select
+                  options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]}
+                  value={formData.status}
+                  onChange={v => setFormData(prev => ({ ...prev, status: v }))}
+                />
               </div>
             </div>
             <div className="dm-field">
@@ -227,12 +229,16 @@ export default function Coupons() {
             <div className="dm-2col">
               <div className="dm-field">
                 <label className="dm-label">Discount Type <span className="dm-required">*</span></label>
-                <select className="dm-input dm-select" name="type" value={formData.type} onChange={handleInputChange} required>
-                  <option value="percentage">Percentage</option>
-                  <option value="fixed">Fixed Amount</option>
-                  <option value="tiered">Tiered Discount</option>
-                  <option value="quantity_based">Quantity Based</option>
-                </select>
+                <Select
+                  options={[
+                    { value: 'percentage', label: 'Percentage' },
+                    { value: 'fixed', label: 'Fixed Amount' },
+                    { value: 'tiered', label: 'Tiered Discount' },
+                    { value: 'quantity_based', label: 'Quantity Based' },
+                  ]}
+                  value={formData.type}
+                  onChange={v => setFormData(prev => ({ ...prev, type: v }))}
+                />
               </div>
               <div className="dm-field">
                 <label className="dm-label">Discount Value <span className="dm-required">*</span></label>
@@ -273,18 +279,23 @@ export default function Coupons() {
             <div className="dm-2col">
               <div className="dm-field">
                 <label className="dm-label">Payment Mode</label>
-                <select className="dm-input dm-select" name="paymentModeRestriction" value={formData.paymentModeRestriction} onChange={handleInputChange}>
-                  <option value="all">All Payment Modes</option>
-                  <option value="cod">Cash on Delivery Only</option>
-                  <option value="prepaid">Prepaid Only</option>
-                </select>
+                <Select
+                  options={[
+                    { value: 'all', label: 'All Payment Modes' },
+                    { value: 'cod', label: 'Cash on Delivery Only' },
+                    { value: 'prepaid', label: 'Prepaid Only' },
+                  ]}
+                  value={formData.paymentModeRestriction}
+                  onChange={v => setFormData(prev => ({ ...prev, paymentModeRestriction: v }))}
+                />
               </div>
               <div className="dm-field">
                 <label className="dm-label">First Order Only</label>
-                <select className="dm-input dm-select" name="firstOrderOnly" value={formData.firstOrderOnly} onChange={handleInputChange}>
-                  <option value={false}>No</option>
-                  <option value={true}>Yes</option>
-                </select>
+                <Select
+                  options={[{ value: false, label: 'No' }, { value: true, label: 'Yes' }]}
+                  value={formData.firstOrderOnly}
+                  onChange={v => setFormData(prev => ({ ...prev, firstOrderOnly: v }))}
+                />
               </div>
             </div>
           </div>
