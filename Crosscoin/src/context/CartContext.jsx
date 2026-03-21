@@ -175,6 +175,7 @@ function CartProvider({ children }) {
                     ...item, 
                     quantity: item.quantity + quantity,
                     price: variationPrice, // Update price to variation price
+                    comparePrice: selectedVariation?.comparePrice || product.comparePrice || 0, // Update comparePrice
                     variation: variationId && product.variations ? 
                       product.variations.find(v => v.id === variationId) : item.variation
                   }
@@ -197,6 +198,7 @@ function CartProvider({ children }) {
             image: variationImages && variationImages.length > 0 ? variationImages[0] : product.images[0],
             images: variationImages && variationImages.length > 0 ? variationImages : product.images,
             price: variationPrice, // Use variation price if available
+            comparePrice: selectedVariation?.comparePrice || product.comparePrice || 0, // Add comparePrice
             color: selectedColor,
             size: selectedSize,
             quantity: quantity,

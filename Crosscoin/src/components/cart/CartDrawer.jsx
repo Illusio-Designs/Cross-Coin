@@ -32,6 +32,9 @@ function pickImage(item) {
 function getPrice(item) {
   return parseFloat(item.variation?.price || item.price || 0);
 }
+function getMrp(item) {
+  return parseFloat(item.variation?.comparePrice || item.comparePrice || 0);
+}
 function getAttr(item, key) {
   if (item.variation?.attributes) {
     const a = typeof item.variation.attributes === 'string'
@@ -164,10 +167,45 @@ const CartDrawer = ({ isOpen, onClose }) => {
   useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
+    
     const check = () => {
-      setShowScrollHint(el.scrollTop < el.scrollHeight - el.clientHeight - 40);
+      const scrollTop = el.scrollTop;
+      const scrollHeight = el.scrollHeight;
+      const clientHeight = el.clientHeight;
+      const hasScroll = scrollTop < scrollHeight - clientHeight - 40;
+      
+      // Debug logging
+      console.log('Scroll check:', {
+        scrollTop,
+        scrollHeight,
+        clientHeight,
+        hasScroll,
+        diff: scrollHeight - clientHeight
+      });
+      
+      setShowScrollHint(hasScroll);
     };
+    
+    // Immediate check for direct drawer opening
     check();
+    
+    // Additional delayed checks when drawer opens (for Add to Bag case)
+    if (isOpen) {
+      const timeouts = [
+        setTimeout(check, 150),
+        setTimeout(check, 300),
+        setTimeout(check, 500)
+      ];
+      
+      const cleanup = () => timeouts.forEach(clearTimeout);
+      
+      el.addEventListener('scroll', check, { passive: true });
+      return () => {
+        cleanup();
+        el.removeEventListener('scroll', check);
+      };
+    }
+    
     el.addEventListener('scroll', check, { passive: true });
     return () => el.removeEventListener('scroll', check);
   }, [isOpen, buyNowItem, cartItems.length]);
@@ -433,6 +471,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 {activeItems.map(item => {
                   const img = pickImage(item);
                   const price = getPrice(item);
+                  const mrp = getMrp(item);
                   const size = getAttr(item, 'size');
                   const color = getAttr(item, 'color');
                   return (
@@ -448,7 +487,10 @@ const CartDrawer = ({ isOpen, onClose }) => {
                         {size && <p className="cd-item-meta">Size: {size}</p>}
                         {color && <p className="cd-item-meta">{color}</p>}
                         <div className="cd-item-row">
-                          <span className="cd-item-price">₹{price.toFixed(2)}</span>
+                          <div className="cd-item-prices">
+                            <span className="cd-item-price">₹{price.toFixed(2)}</span>
+                            {mrp > 0 && mrp > price && <span className="cd-item-original-price">₹{mrp.toFixed(2)}</span>}
+                          </div>
                           {!buyNowItem && (
                             <div className="cd-qty">
                               <button className="cd-qty-btn" onClick={() => updateQuantity(item.id, -1)} disabled={item.quantity <= 1}>−</button>
@@ -609,8 +651,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
           )}
         </div>
 
-        {/* Scroll hint */}
-        {showScrollHint && !orderSuccess && activeItems.length > 0 && (
+        {/* Scroll hint - temporarily always show for testing */}
+        {(showScrollHint || activeItems.length > 0) && !orderSuccess && activeItems.length > 0 && (
           <div className="cd-scroll-hint" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="6 9 12 15 18 9" />
