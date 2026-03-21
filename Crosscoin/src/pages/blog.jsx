@@ -1,109 +1,80 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import SeoWrapper from '../console/SeoWrapper';
+import { getPublicBlogs, getPublicBlogTags } from '../services/publicApi';
 
 const BlogPage = () => {
   const router = useRouter();
+  const [posts, setPosts] = useState([]);
+  const [tags, setTags] = useState([]);
   const [activeCategory, setActiveCategory] = useState('all');
+  const [activeTag, setActiveTag] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const LIMIT = 12;
 
-  const blogs = [
-    {
-      id: 1,
-      cat: 'lifestyle',
-      catLabel: 'Lifestyle',
-      title: 'Essentials Outfit Ideas for Men to Up Their Style Game',
-      excerpt: 'Discover timeless outfit combinations that work for every occasion and season.',
-      date: '28 Nov, 2025',
-      readTime: '5 min read',
-      author: 'Arjun M.',
-      img: 'https://www.jockey.in/cdn/shop/articles/M9Blog_How-to-Pick-the-Best-Winter-Sweatshirts-for-Women-Based-on-Your-Lifestyle_Reviewed_4081424e-c8c8-4bcd-90e5-0fabbc269f43.jpg?v=1773211517&width=640',
-    },
-    {
-      id: 2,
-      cat: 'fashion',
-      catLabel: 'Fashion',
-      title: 'Redefine Your Style with Trunks from Jockey',
-      excerpt: 'Explore the perfect blend of comfort and style with our latest trunk collection.',
-      date: '23 Nov, 2025',
-      readTime: '4 min read',
-      author: 'Meera S.',
-      img: 'https://www.jockey.in/cdn/shop/articles/Winter-Jackets-For-Women_1db4088d-3e23-4561-8377-89d8e9e0e3a3.jpg?v=1773214308&width=640',
-    },
-    {
-      id: 3,
-      cat: 'lifestyle',
-      catLabel: 'Lifestyle',
-      title: 'Redefine Luxury with these man\'s briefs',
-      excerpt: 'Experience premium comfort with our luxury brief collection designed for modern men.',
-      date: '29 Jun, 2025',
-      readTime: '6 min read',
-      author: 'Priya K.',
-      img: 'https://www.jockey.in/cdn/shop/articles/M9Blog_Travel-Friendly-Winter-Sweatshirts-for-Men-You-Can-Carry-Anywhere_Jan-2026_f321a56c-6e83-4f84-9cd8-68accae9f17a.jpg?v=1773212658&width=640',
-    },
-    {
-      id: 4,
-      cat: 'fashion',
-      catLabel: 'Fashion',
-      title: 'Wear your cap with confidence',
-      excerpt: 'Style tips and tricks to wear caps that complement your personal aesthetic.',
-      date: '19 Mar, 2025',
-      readTime: '3 min read',
-      author: 'Vikram T.',
-      img: 'https://www.jockey.in/cdn/shop/articles/M9Blog_How-to-Pick-the-Best-Winter-Sweatshirts-for-Women-Based-on-Your-Lifestyle_Reviewed_4081424e-c8c8-4bcd-90e5-0fabbc269f43.jpg?v=1773211517&width=640',
-    },
-    {
-      id: 5,
-      cat: 'lifestyle',
-      catLabel: 'Lifestyle',
-      title: 'Winter Essentials: Building Your Perfect Wardrobe',
-      excerpt: 'A complete guide to creating a versatile winter wardrobe with essential pieces.',
-      date: '15 Mar, 2025',
-      readTime: '7 min read',
-      author: 'Sophia L.',
-      img: 'https://www.jockey.in/cdn/shop/articles/Winter-Jackets-For-Women_1db4088d-3e23-4561-8377-89d8e9e0e3a3.jpg?v=1773214308&width=640',
-    },
-    {
-      id: 6,
-      cat: 'fashion',
-      catLabel: 'Fashion',
-      title: 'Sustainable Fashion: Making Conscious Choices',
-      excerpt: 'Learn how to build a sustainable wardrobe without compromising on style.',
-      date: '10 Mar, 2025',
-      readTime: '5 min read',
-      author: 'Emma R.',
-      img: 'https://www.jockey.in/cdn/shop/articles/M9Blog_Travel-Friendly-Winter-Sweatshirts-for-Men-You-Can-Carry-Anywhere_Jan-2026_f321a56c-6e83-4f84-9cd8-68accae9f17a.jpg?v=1773212658&width=640',
-    },
-    {
-      id: 7,
-      cat: 'lifestyle',
-      catLabel: 'Lifestyle',
-      title: 'Travel in Style: Packing Tips for Every Journey',
-      excerpt: 'Master the art of packing with our comprehensive travel wardrobe guide.',
-      date: '05 Mar, 2025',
-      readTime: '6 min read',
-      author: 'James K.',
-      img: 'https://www.jockey.in/cdn/shop/articles/M9Blog_How-to-Pick-the-Best-Winter-Sweatshirts-for-Women-Based-on-Your-Lifestyle_Reviewed_4081424e-c8c8-4bcd-90e5-0fabbc269f43.jpg?v=1773211517&width=640',
-    },
-    {
-      id: 8,
-      cat: 'fashion',
-      catLabel: 'Fashion',
-      title: 'Color Theory: Choosing Colors That Suit You',
-      excerpt: 'Discover which colors complement your skin tone and personal style best.',
-      date: '28 Feb, 2025',
-      readTime: '4 min read',
-      author: 'Nina P.',
-      img: 'https://www.jockey.in/cdn/shop/articles/Winter-Jackets-For-Women_1db4088d-3e23-4561-8377-89d8e9e0e3a3.jpg?v=1773214308&width=640',
-    },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [postsRes, tagsRes] = await Promise.all([
+          getPublicBlogs({ page: 1, limit: LIMIT }),
+          getPublicBlogTags(),
+        ]);
+        const list = postsRes?.posts || postsRes?.data || [];
+        setPosts(list);
+        setHasMore(list.length === LIMIT);
+        setTags(tagsRes?.tags || tagsRes || []);
+      } catch {
+        setPosts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
-  const filteredBlogs = activeCategory === 'all' 
-    ? blogs 
-    : blogs.filter(blog => blog.cat === activeCategory);
-
-  const handleBlogClick = (blogId) => {
-    router.push(`/blog-details?id=${blogId}`);
+  const applyFilter = async (category, tag, nextPage = 1) => {
+    setLoading(true);
+    try {
+      const params = { page: nextPage, limit: LIMIT };
+      if (category && category !== 'all') params.category = category;
+      if (tag) params.tag = tag;
+      const res = await getPublicBlogs(params);
+      const list = res?.posts || res?.data || [];
+      if (nextPage === 1) setPosts(list);
+      else setPosts(prev => [...prev, ...list]);
+      setHasMore(list.length === LIMIT);
+      setPage(nextPage);
+    } catch {
+      if (nextPage === 1) setPosts([]);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleCategoryChange = (cat) => {
+    setActiveCategory(cat);
+    setActiveTag('');
+    applyFilter(cat, '', 1);
+  };
+
+  const handleTagChange = (tag) => {
+    const next = activeTag === tag ? '' : tag;
+    setActiveTag(next);
+    applyFilter(activeCategory, next, 1);
+  };
+
+  const handleLoadMore = () => applyFilter(activeCategory, activeTag, page + 1);
+
+  const formatDate = (d) => {
+    if (!d) return '';
+    return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  // Unique categories from posts
+  const categories = ['all', ...Array.from(new Set(posts.map(p => p.BlogCategory?.slug).filter(Boolean)))];
 
   return (
     <SeoWrapper pageName="blog">
@@ -115,97 +86,106 @@ const BlogPage = () => {
             <p className="section-header-sub">Stories, Tips & Style</p>
           </div>
         </div>
+
         {/* Category Filter */}
         <div className="blog-category-filter">
-          <button 
-            className={`filter-btn ${activeCategory === 'all' ? 'active' : ''}`}
-            onClick={() => setActiveCategory('all')}
-          >
-            All Articles
-          </button>
-          <button 
-            className={`filter-btn ${activeCategory === 'lifestyle' ? 'active' : ''}`}
-            onClick={() => setActiveCategory('lifestyle')}
-          >
-            Lifestyle
-          </button>
-          <button 
-            className={`filter-btn ${activeCategory === 'fashion' ? 'active' : ''}`}
-            onClick={() => setActiveCategory('fashion')}
-          >
-            Fashion
-          </button>
-        </div>
-
-        {/* Blog Grid */}
-        <div className="blog-page-grid">
-          {filteredBlogs.map((blog) => (
-            <div
-              key={blog.id}
-              className="blog-card-home"
-              onClick={() => handleBlogClick(blog.id)}
+          {categories.map(cat => (
+            <button
+              key={cat}
+              className={`filter-btn ${activeCategory === cat ? 'active' : ''}`}
+              onClick={() => handleCategoryChange(cat)}
             >
-              {/* Image */}
-              <div className="bc-img-wrap">
-                <img src={blog.img} alt={blog.title} loading="lazy" />
-                <div className="bc-badge">
-                  <span className="bc-badge-dot" />
-                  {blog.catLabel}
-                </div>
-              </div>
-
-              {/* Body */}
-              <div className="bc-body">
-                <h3 className="bc-title">{blog.title}</h3>
-                <p className="bc-desc">{blog.excerpt}</p>
-
-                {/* Meta */}
-                <div className="bc-meta">
-                  <div className="bc-meta-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                    </svg>
-                    {blog.readTime}
-                  </div>
-                  <div className="bc-meta-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                    </svg>
-                    {blog.date}
-                  </div>
-                  <div className="bc-meta-item bc-meta-diff">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                    </svg>
-                    {blog.author}
-                  </div>
-                </div>
-
-                {/* Tags */}
-                <div className="bc-tags">
-                  <span className="bc-tag">{blog.catLabel}</span>
-                  <span className="bc-tag">Fashion</span>
-                  <span className="bc-tag">+2</span>
-                </div>
-
-                {/* CTA */}
-                <button className="bc-btn">
-                  <div className="bc-btn-inner">
-                    <div className="bc-btn-icon">
-                      <svg viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    </div>
-                    Read Article
-                  </div>
-                </button>
-              </div>
-            </div>
+              {cat === 'all' ? 'All Articles' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+            </button>
           ))}
         </div>
 
-        {/* No Results */}
-        {filteredBlogs.length === 0 && (
-          <div className="blog-no-results">
-            <p>No articles found in this category.</p>
+        {/* Tag Filter */}
+        {tags.length > 0 && (
+          <div className="blog-category-filter" style={{ marginTop: 8 }}>
+            {tags.map(t => (
+              <button
+                key={t.id}
+                className={`filter-btn ${activeTag === t.slug ? 'active' : ''}`}
+                style={{ fontSize: 12 }}
+                onClick={() => handleTagChange(t.slug)}
+              >
+                #{t.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Blog Grid */}
+        {loading && posts.length === 0 ? (
+          <div className="blog-no-results"><p>Loading articles...</p></div>
+        ) : (
+          <div className="blog-page-grid">
+            {posts.map((post) => (
+              <div
+                key={post.id}
+                className="blog-card-home"
+                onClick={() => router.push(`/blog-details?slug=${post.slug}`)}
+              >
+                <div className="bc-img-wrap">
+                  {post.hero_image
+                    ? <img src={post.hero_image} alt={post.title} loading="lazy" />
+                    : <div style={{ background: '#f3f4f6', width: '100%', height: '100%', minHeight: 180 }} />
+                  }
+                  <div className="bc-badge">
+                    <span className="bc-badge-dot" />
+                    {post.BlogCategory?.name || 'Blog'}
+                  </div>
+                </div>
+                <div className="bc-body">
+                  <h3 className="bc-title">{post.title}</h3>
+                  {post.sections?.[0]?.content && (
+                    <p className="bc-desc">{post.sections[0].content.slice(0, 120)}{post.sections[0].content.length > 120 ? '...' : ''}</p>
+                  )}
+                  <div className="bc-meta">
+                    <div className="bc-meta-item">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                      </svg>
+                      {formatDate(post.published_at)}
+                    </div>
+                    {post.author_name && (
+                      <div className="bc-meta-item bc-meta-diff">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                        </svg>
+                        {post.author_name}
+                      </div>
+                    )}
+                  </div>
+                  <div className="bc-tags">
+                    {(post.BlogTags || []).slice(0, 3).map(t => (
+                      <span key={t.id} className="bc-tag">{t.name}</span>
+                    ))}
+                  </div>
+                  <button className="bc-btn">
+                    <div className="bc-btn-inner">
+                      <div className="bc-btn-icon">
+                        <svg viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                      </div>
+                      Read Article
+                    </div>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {posts.length === 0 && !loading && (
+          <div className="blog-no-results"><p>No articles found.</p></div>
+        )}
+
+        {hasMore && (
+          <div style={{ textAlign: 'center', marginTop: 32 }}>
+            <button className="view-all-btn-home" onClick={handleLoadMore} disabled={loading}>
+              {loading ? 'Loading...' : 'Load More'}
+            </button>
           </div>
         )}
       </div>

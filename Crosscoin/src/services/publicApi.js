@@ -1373,3 +1373,42 @@ export const offerAPIService = {
     }
   }
 };
+
+// ============ BLOG APIs (Public) ============
+export const getPublicBlogs = async (params = {}) => {
+  try {
+    const queryParams = new URLSearchParams();
+    if (params.category) queryParams.append("category", params.category);
+    if (params.tag) queryParams.append("tag", params.tag);
+    if (params.page) queryParams.append("page", params.page);
+    if (params.limit) queryParams.append("limit", params.limit);
+    const response = await axios.get(
+      `${API_URL}/api/blogs/public?${queryParams.toString()}`,
+      addBrandHeader()
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const getPublicBlogBySlug = async (slug) => {
+  try {
+    const response = await axios.get(
+      `${API_URL}/api/blogs/public/${slug}`,
+      addBrandHeader()
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const getPublicBlogTags = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/api/blogs/tags`, addBrandHeader());
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
