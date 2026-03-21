@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { getPublicProductBySlug, getPublicCoupons, getPublicProductReviews, checkPincodeServiceability } from '../services/publicApi';
 import { useCart } from '../context/CartContext';
@@ -106,7 +106,22 @@ export default function ProductDetails() {
     fetchData();
   }, [router.isReady, slug]);
 
-  // Cleanup breadcrumbs on unmount
+  const fitRowRef = useRef(null);
+
+  // Drag-to-scroll for feature boxes row
+  useEffect(() => {
+    const el = fitRowRef.current;
+    if (!el) return;
+    let isDown = false, startX, scrollLeft;
+    const onDown = e => { isDown = true; startX = e.pageX - el.offsetLeft; scrollLeft = el.scrollLeft; };
+    const onUp = () => { isDown = false; };
+    const onMove = e => { if (!isDown) return; e.preventDefault(); const x = e.pageX - el.offsetLeft; el.scrollLeft = scrollLeft - (x - startX); };
+    el.addEventListener('mousedown', onDown);
+    el.addEventListener('mouseleave', onUp);
+    el.addEventListener('mouseup', onUp);
+    el.addEventListener('mousemove', onMove);
+    return () => { el.removeEventListener('mousedown', onDown); el.removeEventListener('mouseleave', onUp); el.removeEventListener('mouseup', onUp); el.removeEventListener('mousemove', onMove); };
+  }, []);
   useEffect(() => {
     return () => setCustomBreadcrumbs(null);
   }, [setCustomBreadcrumbs]);
@@ -303,9 +318,47 @@ export default function ProductDetails() {
                   </svg>
                 </span>
               </button>
+
+              {/* Feature boxes — directly below main image */}
+              <div className="pdt-fit-row" ref={fitRowRef}>
+            <div className="pdt-fit-item">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 2 C12 2 13.2 7.5 17 9 C13.2 10.5 12 16 12 16 C12 16 10.8 10.5 7 9 C10.8 7.5 12 2 12 2Z" fill="#CE1E36"/>
+                <path d="M5.5 2.5 C5.5 2.5 6.1 5 7.5 5.8 C6.1 6.6 5.5 9 5.5 9 C5.5 9 4.9 6.6 3.5 5.8 C4.9 5 5.5 2.5 5.5 2.5Z" fill="#CE1E36" opacity="0.75"/>
+                <path d="M19 14 C19 14 19.5 16 20.8 16.7 C19.5 17.4 19 19.5 19 19.5 C19 19.5 18.5 17.4 17.2 16.7 C18.5 16 19 14 19 14Z" fill="#CE1E36" opacity="0.55"/>
+              </svg>
+              <div className="pdt-fit-text">
+                <strong>StayFresh</strong>
+                <span>Anti-Microbial Properties</span>
+              </div>
             </div>
-          </div>
-        </div>
+            <div className="pdt-fit-item">
+              {/* Sock icon */}
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M9 3 L9 13 C9 13 9 17.5 13 19.5 C17 21.5 20 18.5 20 15.5 C20 12.5 17 11.5 16 10.5 L16 3" stroke="#CE1E36" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M9 3 L16 3" stroke="#CE1E36" strokeWidth="1.4" strokeLinecap="round"/>
+                <path d="M9 7 L16 7" stroke="#CE1E36" strokeWidth="1.2" strokeLinecap="round" opacity="0.45"/>
+              </svg>
+              <div className="pdt-fit-text">
+                <strong>Elastane Welt</strong>
+                <span>For No-Sag Grip</span>
+              </div>
+            </div>
+            <div className="pdt-fit-item">
+              {/* Stretch/expand icon */}
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="7" y="7" width="10" height="10" rx="0.5" stroke="#180D3E" strokeWidth="1.4" fill="none"/>
+                <path d="M7 7 L3 3M17 7 L21 3M7 17 L3 21M17 17 L21 21" stroke="#CE1E36" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              <div className="pdt-fit-text">
+                <strong>Full Body Stretch</strong>
+                <span>For Snug Fit</span>
+              </div>
+            </div>
+            </div>{/* end pdt-fit-row */}
+            </div>{/* end pdt-main-img-wrap */}
+          </div>{/* end pdt-gallery */}
+        </div>{/* end pdt-gallery-col */}
 
         {/* Lightbox */}
         {showLightbox && (
