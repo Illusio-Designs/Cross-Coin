@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { Modal, Button, Table, Pagination } from "../../components/ui";
+import dynamic from "next/dynamic";
+import { Modal, Button, Table, Pagination, Input, Select, Switch } from "../../components/ui";
 import Loader from "../../components/common/Loader";
 import { blogService, brandService, productService } from "../../services";
 import { showSuccess, showError } from "../../utils/toastNotification";
+
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const IC = {
@@ -12,18 +15,32 @@ const IC = {
   trash:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>,
   image:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>,
   blog:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
-  tag:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
-  upload: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>,
 };
-
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const TABS = ['Posts', 'Categories'];
-const STATUS_OPTIONS = ['draft', 'published', 'archived'];
+
+const STATUS_OPTS = [
+  { value: 'draft', label: 'Draft' },
+  { value: 'published', label: 'Published' },
+  { value: 'archived', label: 'Archived' },
+];
+
+const QUILL_MODULES = {
+  toolbar: [
+    [{ header: [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    ['blockquote', 'code-block'],
+    ['link'],
+    ['clean'],
+  ],
+};
 
 const EMPTY_POST = {
   id: null, title: '', author_name: '', status: 'draft',
-  blog_category_id: '', brand_ids: [], tags: [], sections: '[]',
+  blog_category_id: '', brand_ids: [], tags: [],
+  sections: [{ heading: '', content: '' }],
   seo: { meta_title: '', meta_description: '', meta_keywords: '', og_title: '', og_description: '', og_image: '', canonical_url: '' },
   featured_products: [],
 };
@@ -40,35 +57,41 @@ function StatusBadge({ status }) {
   );
 }
 
-// ─── Section editor ───────────────────────────────────────────────────────────
+// ─── Sections editor with ReactQuill ─────────────────────────────────────────
 function SectionsEditor({ value, onChange }) {
-  let parsed = [];
-  try { parsed = JSON.parse(value || '[]'); } catch { parsed = []; }
-
-  const update = (sections) => onChange(JSON.stringify(sections));
-
-  const addSection = () => update([...parsed, { heading: '', content: '' }]);
-  const removeSection = (i) => update(parsed.filter((_, idx) => idx !== i));
-  const updateSection = (i, field, val) => {
-    const next = parsed.map((s, idx) => idx === i ? { ...s, [field]: val } : s);
-    update(next);
-  };
+  const addSection = () => onChange([...value, { heading: '', content: '' }]);
+  const removeSection = (i) => onChange(value.filter((_, idx) => idx !== i));
+  const updateSection = (i, field, val) =>
+    onChange(value.map((s, idx) => idx === i ? { ...s, [field]: val } : s));
 
   return (
     <div className="dm-sections-editor">
-      {parsed.map((sec, i) => (
-        <div key={i} className="dm-section-item" style={{ border: '1px solid #e5e7eb', borderRadius: 6, padding: 12, marginBottom: 8 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontWeight: 600, fontSize: 13 }}>Section {i + 1}</span>
-            <button type="button" onClick={() => removeSection(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}>{IC.trash}</button>
+      {value.map((sec, i) => (
+        <div key={i} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 14, marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <span style={{ fontWeight: 600, fontSize: 13, color: '#374151' }}>Section {i + 1}</span>
+            <button type="button" onClick={() => removeSection(i)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex' }}>
+              {IC.trash}
+            </button>
           </div>
-          <div className="dm-field">
-            <label className="dm-label">Heading</label>
-            <input className="dm-input" value={sec.heading || ''} onChange={e => updateSection(i, 'heading', e.target.value)} placeholder="Section heading" />
-          </div>
-          <div className="dm-field">
+          <Input
+            label="Heading"
+            value={sec.heading || ''}
+            onChange={e => updateSection(i, 'heading', e.target.value)}
+            placeholder="Section heading"
+          />
+          <div className="dm-field" style={{ marginTop: 10 }}>
             <label className="dm-label">Content</label>
-            <textarea className="dm-input" rows={3} value={sec.content || ''} onChange={e => updateSection(i, 'content', e.target.value)} placeholder="Section content" style={{ resize: 'vertical' }} />
+            <div className="dm-quill-wrap">
+              <ReactQuill
+                theme="snow"
+                value={sec.content || ''}
+                onChange={val => updateSection(i, 'content', val)}
+                modules={QUILL_MODULES}
+                placeholder="Write section content..."
+              />
+            </div>
           </div>
         </div>
       ))}
@@ -79,7 +102,6 @@ function SectionsEditor({ value, onChange }) {
   );
 }
 
-
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function Blogs() {
   const [tab, setTab] = useState('Posts');
@@ -87,13 +109,11 @@ export default function Blogs() {
   const [posts, setPosts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
-  const [tags, setTags] = useState([]);
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
-  // Modal state
   const [postModal, setPostModal] = useState(false);
   const [catModal, setCatModal] = useState(false);
   const [heroModal, setHeroModal] = useState(false);
@@ -108,21 +128,16 @@ export default function Blogs() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [postsRes, catsRes, tagsRes, brandsRes] = await Promise.all([
+      const [postsRes, catsRes, brandsRes] = await Promise.all([
         blogService.getAllPosts(),
         blogService.getAllCategories(),
-        blogService.getAllTags(),
         brandService.getAllBrands(),
       ]);
       setPosts(postsRes?.data || []);
       setCategories(catsRes?.data || []);
-      setTags(tagsRes?.data || []);
       setBrands(brandsRes?.data || []);
-    } catch (e) {
-      showError('loadingFailed');
-    } finally {
-      setLoading(false);
-    }
+    } catch { showError('loadingFailed'); }
+    finally { setLoading(false); }
   }, []);
 
   const fetchProducts = useCallback(async () => {
@@ -135,6 +150,12 @@ export default function Blogs() {
   useEffect(() => { fetchAll(); fetchProducts(); }, [fetchAll, fetchProducts]);
   useEffect(() => { setCurrentPage(1); }, [search, tab]);
 
+  // ── Derived option arrays ──────────────────────────────────────────────────
+  const brandOpts = brands.map(b => ({ value: b.id, label: b.display_name || b.name }));
+  const categoryOpts = [{ value: '', label: '— None —' }, ...categories.map(c => ({ value: String(c.id), label: c.name }))];
+  const productOpts = [{ value: '', label: '— Select product —' }, ...products.map(p => ({ value: String(p.id), label: p.name }))];
+  const catStatusOpts = [{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }];
+
   // ── Post form helpers ──────────────────────────────────────────────────────
   const openNewPost = () => { setPostForm(EMPTY_POST); setTagInput(''); setPostModal(true); };
 
@@ -143,15 +164,18 @@ export default function Blogs() {
     try {
       const res = await blogService.getPostById(id);
       const p = res?.data || res;
+      const rawSections = typeof p.sections === 'string'
+        ? (() => { try { return JSON.parse(p.sections); } catch { return []; } })()
+        : (p.sections || []);
       setPostForm({
         id: p.id,
         title: p.title || '',
         author_name: p.author_name || '',
         status: p.status || 'draft',
-        blog_category_id: p.blog_category_id || '',
-        brand_ids: (p.Brands || p.brands || []).map(b => b.id),
-        tags: (p.BlogTags || p.tags || []).map(t => t.name),
-        sections: typeof p.sections === 'string' ? p.sections : JSON.stringify(p.sections || []),
+        blog_category_id: p.blog_category_id ? String(p.blog_category_id) : '',
+        brand_ids: (p.Brands || []).map(b => b.id),
+        tags: (p.Tags || []).map(t => t.name),
+        sections: rawSections.length ? rawSections : [{ heading: '', content: '' }],
         seo: {
           meta_title: p.BlogSEO?.meta_title || '',
           meta_description: p.BlogSEO?.meta_description || '',
@@ -161,9 +185,9 @@ export default function Blogs() {
           og_image: p.BlogSEO?.og_image || '',
           canonical_url: p.BlogSEO?.canonical_url || '',
         },
-        featured_products: (p.FeaturedProducts || p.featured_products || []).map(fp => ({
-          product_id: fp.product_id || fp.id,
-          lifestyle_tag: fp.BlogFeaturedProduct?.lifestyle_tag || fp.lifestyle_tag || '',
+        featured_products: (p.FeaturedProducts || []).map(fp => ({
+          product_id: String(fp.id),
+          lifestyle_tag: fp.BlogFeaturedProduct?.lifestyle_tag || '',
         })),
       });
       setTagInput('');
@@ -175,13 +199,6 @@ export default function Blogs() {
   const handlePostField = (field, value) => setPostForm(prev => ({ ...prev, [field]: value }));
   const handleSeoField = (field, value) => setPostForm(prev => ({ ...prev, seo: { ...prev.seo, [field]: value } }));
 
-  const toggleBrand = (id) => {
-    setPostForm(prev => ({
-      ...prev,
-      brand_ids: prev.brand_ids.includes(id) ? prev.brand_ids.filter(b => b !== id) : [...prev.brand_ids, id],
-    }));
-  };
-
   const addTag = () => {
     const t = tagInput.trim();
     if (t && !postForm.tags.includes(t)) setPostForm(prev => ({ ...prev, tags: [...prev.tags, t] }));
@@ -189,21 +206,21 @@ export default function Blogs() {
   };
   const removeTag = (t) => setPostForm(prev => ({ ...prev, tags: prev.tags.filter(x => x !== t) }));
 
-  const addFeaturedProduct = () => setPostForm(prev => ({ ...prev, featured_products: [...prev.featured_products, { product_id: '', lifestyle_tag: '' }] }));
-  const removeFeaturedProduct = (i) => setPostForm(prev => ({ ...prev, featured_products: prev.featured_products.filter((_, idx) => idx !== i) }));
-  const updateFeaturedProduct = (i, field, val) => setPostForm(prev => ({
-    ...prev,
-    featured_products: prev.featured_products.map((fp, idx) => idx === i ? { ...fp, [field]: val } : fp),
-  }));
-
+  const addFeaturedProduct = () =>
+    setPostForm(prev => ({ ...prev, featured_products: [...prev.featured_products, { product_id: '', lifestyle_tag: '' }] }));
+  const removeFeaturedProduct = (i) =>
+    setPostForm(prev => ({ ...prev, featured_products: prev.featured_products.filter((_, idx) => idx !== i) }));
+  const updateFeaturedProduct = (i, field, val) =>
+    setPostForm(prev => ({
+      ...prev,
+      featured_products: prev.featured_products.map((fp, idx) => idx === i ? { ...fp, [field]: val } : fp),
+    }));
 
   // ── Submit post ────────────────────────────────────────────────────────────
   const handlePostSubmit = async (e) => {
     e.preventDefault();
     if (!postForm.title.trim()) { showError('fieldRequired'); return; }
     if (!postForm.brand_ids.length) { showError('fieldRequired'); return; }
-    let sections;
-    try { sections = JSON.parse(postForm.sections || '[]'); } catch { showError('invalidData'); return; }
     const payload = {
       title: postForm.title,
       author_name: postForm.author_name || null,
@@ -211,9 +228,11 @@ export default function Blogs() {
       blog_category_id: postForm.blog_category_id || null,
       brand_ids: postForm.brand_ids,
       tags: postForm.tags,
-      sections,
+      sections: postForm.sections,
       seo: postForm.seo,
-      featured_products: postForm.featured_products.filter(fp => fp.product_id),
+      featured_products: postForm.featured_products
+        .filter(fp => fp.product_id)
+        .map(fp => ({ product_id: Number(fp.product_id), lifestyle_tag: fp.lifestyle_tag })),
     };
     setLoading(true);
     try {
@@ -221,7 +240,7 @@ export default function Blogs() {
       else { await blogService.createPost(payload); showSuccess('createSuccess'); }
       setPostModal(false);
       fetchAll();
-    } catch (e) { showError('saveFailed', e?.message); }
+    } catch (err) { showError('saveFailed', err?.message); }
     finally { setLoading(false); }
   };
 
@@ -255,11 +274,16 @@ export default function Blogs() {
     if (!catForm.name.trim()) { showError('fieldRequired'); return; }
     setLoading(true);
     try {
-      if (catForm.id) { await blogService.updateCategory(catForm.id, { name: catForm.name, description: catForm.description, status: catForm.status }); showSuccess('updateSuccess'); }
-      else { await blogService.createCategory({ name: catForm.name, description: catForm.description, status: catForm.status }); showSuccess('createSuccess'); }
+      if (catForm.id) {
+        await blogService.updateCategory(catForm.id, { name: catForm.name, description: catForm.description, status: catForm.status });
+        showSuccess('updateSuccess');
+      } else {
+        await blogService.createCategory({ name: catForm.name, description: catForm.description, status: catForm.status });
+        showSuccess('createSuccess');
+      }
       setCatModal(false);
       fetchAll();
-    } catch (e) { showError('saveFailed', e?.message); }
+    } catch (err) { showError('saveFailed', err?.message); }
     finally { setLoading(false); }
   };
 
@@ -271,19 +295,17 @@ export default function Blogs() {
     finally { setLoading(false); }
   };
 
-  // ── Filtered / paginated data ──────────────────────────────────────────────
+  // ── Filtered / paginated ───────────────────────────────────────────────────
   const filteredPosts = posts.filter(p => {
     if (!search) return true;
     const s = search.toLowerCase();
     return p.title?.toLowerCase().includes(s) || p.author_name?.toLowerCase().includes(s);
   });
   const filteredCats = categories.filter(c => !search || c.name?.toLowerCase().includes(search.toLowerCase()));
-
   const activeList = tab === 'Posts' ? filteredPosts : filteredCats;
   const totalPages = Math.ceil(activeList.length / ITEMS_PER_PAGE);
   const start = (currentPage - 1) * ITEMS_PER_PAGE;
   const pageItems = activeList.slice(start, start + ITEMS_PER_PAGE).map((item, i) => ({ ...item, serial_number: start + i + 1 }));
-
 
   // ── Table columns ──────────────────────────────────────────────────────────
   const postColumns = [
@@ -325,7 +347,6 @@ export default function Blogs() {
   return (
     <>
       <div className="dashboard-page">
-        {/* Header */}
         <div className="sl-page-header">
           <div className="sl-header-left">
             <div className="sl-header-icon">{IC.blog}</div>
@@ -345,7 +366,6 @@ export default function Blogs() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
           {TABS.map(t => (
             <button key={t} onClick={() => setTab(t)} style={{ padding: '6px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: tab === t ? '#6366f1' : '#f3f4f6', color: tab === t ? '#fff' : '#374151' }}>
@@ -354,7 +374,6 @@ export default function Blogs() {
           ))}
         </div>
 
-        {/* Table */}
         <div className="sl-table-wrap">
           {loading ? (
             <div className="sl-loader-wrap"><Loader /></div>
@@ -382,50 +401,64 @@ export default function Blogs() {
         <form onSubmit={handlePostSubmit} className="seo-form">
           <div className="modal-body">
 
-            {/* Basic fields */}
+            {/* Row 1: Title + Author */}
             <div className="dm-2col">
-              <div className="dm-field">
-                <label className="dm-label">Title <span className="dm-required">*</span></label>
-                <input className="dm-input" value={postForm.title} onChange={e => handlePostField('title', e.target.value)} placeholder="Post title" required />
-              </div>
-              <div className="dm-field">
-                <label className="dm-label">Author Name</label>
-                <input className="dm-input" value={postForm.author_name} onChange={e => handlePostField('author_name', e.target.value)} placeholder="e.g., Jane Doe" />
-              </div>
-              <div className="dm-field">
-                <label className="dm-label">Status</label>
-                <select className="dm-input dm-select" value={postForm.status} onChange={e => handlePostField('status', e.target.value)}>
-                  {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-                </select>
-              </div>
-              <div className="dm-field">
-                <label className="dm-label">Category</label>
-                <select className="dm-input dm-select" value={postForm.blog_category_id} onChange={e => handlePostField('blog_category_id', e.target.value)}>
-                  <option value="">— None —</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
+              <Input
+                label="Title"
+                required
+                value={postForm.title}
+                onChange={e => handlePostField('title', e.target.value)}
+                placeholder="Post title"
+              />
+              <Input
+                label="Author Name"
+                value={postForm.author_name}
+                onChange={e => handlePostField('author_name', e.target.value)}
+                placeholder="e.g., Jane Doe"
+              />
             </div>
 
-            {/* Brands */}
-            <div className="dm-field">
-              <label className="dm-label">Brands <span className="dm-required">*</span></label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-                {brands.map(b => (
-                  <label key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 13 }}>
-                    <input type="checkbox" checked={postForm.brand_ids.includes(b.id)} onChange={() => toggleBrand(b.id)} />
-                    {b.display_name || b.name}
-                  </label>
-                ))}
-              </div>
+            {/* Row 2: Status + Category */}
+            <div className="dm-2col">
+              <Select
+                label="Status"
+                options={STATUS_OPTS}
+                value={postForm.status}
+                onChange={v => handlePostField('status', v)}
+              />
+              <Select
+                label="Category"
+                options={categoryOpts}
+                value={postForm.blog_category_id}
+                onChange={v => handlePostField('blog_category_id', v)}
+                searchable
+                clearable
+              />
             </div>
+
+            {/* Brands — multi-select */}
+            <Select
+              label="Brands"
+              required
+              options={brandOpts}
+              value={postForm.brand_ids}
+              onChange={v => handlePostField('brand_ids', v)}
+              multiple
+              searchable
+              helperText="Select one or more brands"
+            />
 
             {/* Tags */}
-            <div className="dm-field">
+            <div className="dm-field" style={{ marginTop: 4 }}>
               <label className="dm-label">Tags</label>
               <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                <input className="dm-input" style={{ flex: 1 }} value={tagInput} onChange={e => setTagInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }} placeholder="Type tag and press Enter" />
-                <button type="button" className="sl-add-btn" style={{ padding: '0 12px' }} onClick={addTag}>{IC.add}</button>
+                <Input
+                  value={tagInput}
+                  onChange={e => setTagInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
+                  placeholder="Type tag and press Enter"
+                />
+                <Button type="button" variant="secondary" onClick={addTag}>{IC.add}</Button>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {postForm.tags.map(t => (
@@ -437,23 +470,37 @@ export default function Blogs() {
               </div>
             </div>
 
-            {/* Sections */}
-            <div className="dm-field">
+            {/* Sections with Quill editor */}
+            <div className="dm-field" style={{ marginTop: 8 }}>
               <label className="dm-label">Sections</label>
               <SectionsEditor value={postForm.sections} onChange={v => handlePostField('sections', v)} />
             </div>
 
             {/* Featured Products */}
-            <div className="dm-field">
+            <div className="dm-field" style={{ marginTop: 8 }}>
               <label className="dm-label">Featured Products</label>
               {postForm.featured_products.map((fp, i) => (
-                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
-                  <select className="dm-input dm-select" style={{ flex: 2 }} value={fp.product_id} onChange={e => updateFeaturedProduct(i, 'product_id', Number(e.target.value))}>
-                    <option value="">— Select product —</option>
-                    {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                  <input className="dm-input" style={{ flex: 1 }} value={fp.lifestyle_tag} onChange={e => updateFeaturedProduct(i, 'lifestyle_tag', e.target.value)} placeholder="Lifestyle tag" />
-                  <button type="button" onClick={() => removeFeaturedProduct(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}>{IC.trash}</button>
+                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'flex-end' }}>
+                  <div style={{ flex: 2 }}>
+                    <Select
+                      options={productOpts}
+                      value={fp.product_id}
+                      onChange={v => updateFeaturedProduct(i, 'product_id', v)}
+                      searchable
+                      placeholder="Select product"
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <Input
+                      value={fp.lifestyle_tag}
+                      onChange={e => updateFeaturedProduct(i, 'lifestyle_tag', e.target.value)}
+                      placeholder="Lifestyle tag"
+                    />
+                  </div>
+                  <button type="button" onClick={() => removeFeaturedProduct(i)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', marginBottom: 2 }}>
+                    {IC.trash}
+                  </button>
                 </div>
               ))}
               <button type="button" className="sl-add-btn" style={{ marginTop: 4 }} onClick={addFeaturedProduct}>
@@ -462,13 +509,21 @@ export default function Blogs() {
             </div>
 
             {/* SEO */}
-            <div className="dm-section-title" style={{ marginTop: 16, marginBottom: 8, fontWeight: 700, fontSize: 13, color: '#6366f1' }}>SEO Settings</div>
+            <div style={{ marginTop: 16, marginBottom: 8, fontWeight: 700, fontSize: 13, color: '#6366f1' }}>SEO Settings</div>
             <div className="dm-2col">
-              {[['meta_title','Meta Title'],['meta_description','Meta Description'],['meta_keywords','Meta Keywords'],['og_title','OG Title'],['og_description','OG Description'],['og_image','OG Image URL'],['canonical_url','Canonical URL']].map(([field, label]) => (
-                <div key={field} className="dm-field">
-                  <label className="dm-label">{label}</label>
-                  <input className="dm-input" value={postForm.seo[field]} onChange={e => handleSeoField(field, e.target.value)} placeholder={label} />
-                </div>
+              {[
+                ['meta_title', 'Meta Title'], ['meta_description', 'Meta Description'],
+                ['meta_keywords', 'Meta Keywords'], ['og_title', 'OG Title'],
+                ['og_description', 'OG Description'], ['og_image', 'OG Image URL'],
+                ['canonical_url', 'Canonical URL'],
+              ].map(([field, label]) => (
+                <Input
+                  key={field}
+                  label={label}
+                  value={postForm.seo[field]}
+                  onChange={e => handleSeoField(field, e.target.value)}
+                  placeholder={label}
+                />
               ))}
             </div>
 
@@ -484,21 +539,27 @@ export default function Blogs() {
       <Modal isOpen={catModal} onClose={() => setCatModal(false)} title={catForm.id ? 'Edit Category' : 'New Category'} closeOnOverlayClick={false}>
         <form onSubmit={handleCatSubmit} className="seo-form">
           <div className="modal-body">
-            <div className="dm-field">
-              <label className="dm-label">Name <span className="dm-required">*</span></label>
-              <input className="dm-input" value={catForm.name} onChange={e => setCatForm(p => ({ ...p, name: e.target.value }))} placeholder="Category name" required />
-            </div>
-            <div className="dm-field">
-              <label className="dm-label">Description</label>
-              <textarea className="dm-input" rows={3} value={catForm.description} onChange={e => setCatForm(p => ({ ...p, description: e.target.value }))} placeholder="Optional description" style={{ resize: 'vertical' }} />
-            </div>
-            <div className="dm-field">
-              <label className="dm-label">Status</label>
-              <select className="dm-input dm-select" value={catForm.status} onChange={e => setCatForm(p => ({ ...p, status: e.target.value }))}>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
+            <Input
+              label="Name"
+              required
+              value={catForm.name}
+              onChange={e => setCatForm(p => ({ ...p, name: e.target.value }))}
+              placeholder="Category name"
+            />
+            <Input
+              label="Description"
+              multiline
+              rows={3}
+              value={catForm.description}
+              onChange={e => setCatForm(p => ({ ...p, description: e.target.value }))}
+              placeholder="Optional description"
+            />
+            <Select
+              label="Status"
+              options={catStatusOpts}
+              value={catForm.status}
+              onChange={v => setCatForm(p => ({ ...p, status: v }))}
+            />
           </div>
           <div className="modal-footer">
             <Button variant="secondary" type="button" onClick={() => setCatModal(false)} disabled={loading}>Cancel</Button>
@@ -510,11 +571,15 @@ export default function Blogs() {
       {/* ── Hero Image Modal ───────────────────────────────────────────────── */}
       <Modal isOpen={heroModal} onClose={() => setHeroModal(false)} title="Upload Hero Image">
         <div className="modal-body">
-          <div className="dm-field">
-            <label className="dm-label">Select Image (JPEG, PNG, WebP)</label>
-            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleHeroFileChange} className="dm-input" />
-          </div>
-          {heroPreview && <img src={heroPreview} alt="Preview" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 6, marginTop: 8 }} />}
+          <Input
+            label="Select Image (JPEG, PNG, WebP)"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleHeroFileChange}
+          />
+          {heroPreview && (
+            <img src={heroPreview} alt="Preview" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 6, marginTop: 8 }} />
+          )}
         </div>
         <div className="modal-footer">
           <Button variant="secondary" type="button" onClick={() => setHeroModal(false)}>Cancel</Button>
