@@ -29,17 +29,20 @@ const SB_COLLAPSED = 72;
 
 function Dashboard() {
   const [currentView, setCurrentView] = useState('main');
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sidebarCollapsed');
-      if (saved !== null) return JSON.parse(saved);
-      return window.innerWidth <= 900;
-    }
-    return false;
-  });
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    // Restore sidebar state from localStorage on client
+    const saved = localStorage.getItem('sidebarCollapsed');
+    if (saved !== null) {
+      setIsCollapsed(JSON.parse(saved));
+    } else {
+      setIsCollapsed(window.innerWidth <= 900);
+    }
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('sidebarCollapsed', JSON.stringify(isCollapsed));

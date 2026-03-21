@@ -32,7 +32,7 @@ const SliderBrand = sequelize.define('SliderBrand', {
         defaultValue: 'active'
     }
 }, {
-    timestamps: true,
+    timestamps: false,
     tableName: 'slider_brands',
     indexes: [
         {
