@@ -22,6 +22,7 @@ import Policies from "./policies";
 import UTMAnalytics from "./analytics/utmAnalytics";
 import BrandSettingsManager from "./brandSettings";
 import BrandManager from "./brands";
+import Blogs from "./blogs";
 
 const SB_EXPANDED = 260;
 const SB_COLLAPSED = 72;
@@ -110,6 +111,7 @@ function Dashboard() {
       case 'reviews':        return <Reviews />;
       case 'seo':            return <SEO />;
       case 'policies':       return <Policies />;
+      case 'blogs':          return <Blogs />;
       case 'brands':         return <BrandManager />;
       case 'brand-settings': return <BrandSettingsManager />;
       case 'slider':         return <Slider />;
