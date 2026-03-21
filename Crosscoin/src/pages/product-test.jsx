@@ -49,7 +49,7 @@ function CartItemRow({ item, onRemove, onQtyChange }) {
 
 export default function ProductTestPage() {
   const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000);
-  const { cartItems, cartTotal, removeFromCart, updateQuantity } = useCart();
+  const { cartItems, cartTotal, removeFromCart, updateQuantity, clearCart } = useCart();
   const { user } = useAuth();
 
   const [checkoutSuccess, setCheckoutSuccess] = useState(null);
@@ -58,6 +58,7 @@ export default function ProductTestPage() {
   const handleSuccess = (data) => {
     setCheckoutSuccess(data);
     setCheckoutError(null);
+    clearCart(); // clear cart after successful order
   };
 
   const handleError = (err) => {
@@ -116,7 +117,7 @@ export default function ProductTestPage() {
 
               {checkoutSuccess && (
                 <div style={{ marginTop: 12, padding: 12, background: '#f0fff4', border: '1px solid #9ae6b4', borderRadius: 8, color: '#276749', fontSize: 14 }}>
-                  ✅ Payment successful! Order ID: {checkoutSuccess.razorpay_order_id}
+                  ✅ Order placed! Order #{checkoutSuccess.order_number || checkoutSuccess.razorpay_order_id}
                 </div>
               )}
               {checkoutError && (

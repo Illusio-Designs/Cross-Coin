@@ -182,7 +182,7 @@ const MagicCheckoutIntegration = ({
           ondismiss: () => setIsProcessing(false),
         },
         handler: async (response) => {
-          // Step 3: Verify payment signature on success
+          // Step 3: Verify signature + create DB order
           try {
             const verifyRes = await fetch(`${API_URL}/api/payments/magic-checkout/verify-payment`, {
               method: "POST",
@@ -195,15 +195,22 @@ const MagicCheckoutIntegration = ({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
+                customer_id: user?.id || null,
+                // Pass cart items so backend can create order items in DB
+                cart_items: cartItems.map((item) => ({
+                  product_id: item.productId || item.id,
+                  variation_id: item.variationId || item.variation?.id || null,
+                  quantity: item.quantity || 1,
+                })),
               }),
             });
 
             const verifyData = await verifyRes.json();
 
             if (verifyData.success) {
-              if (onSuccess) onSuccess(response);
+              if (onSuccess) onSuccess({ ...response, order_number: verifyData.order_number, db_order_id: verifyData.order_id });
             } else {
-              throw new Error("Payment signature verification failed");
+              throw new Error(verifyData.message || "Payment verification failed");
             }
           } catch (err) {
             if (onError) onError(err);
