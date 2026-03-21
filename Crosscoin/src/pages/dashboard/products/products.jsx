@@ -72,22 +72,7 @@ const ProductsPage = () => {
   });
   const [attributes, setAttributes] = useState([]);
 
-  // Test function to debug image URLs
-  window.testImageUrl = (imagePath) => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-    let result;
-    if (!imagePath.startsWith('http')) {
-      if (imagePath.startsWith('/uploads/')) {
-        result = `${baseUrl}${imagePath}`;
-      } else {
-        result = `${baseUrl}/uploads/products/${imagePath}`;
-      }
-    } else {
-      result = imagePath;
-    }
-    
-    return result;
-  };
+
 
   // Debounced search function
   const debouncedSearch = useCallback((searchTerm) => {
@@ -353,7 +338,7 @@ const ProductsPage = () => {
           ogTitle: product.seo?.ogTitle || product.name,
           ogDescription: product.seo?.ogDescription || product.description,
           ogImage: product.seo?.ogImage || (product.images?.[0] ? `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}${product.images[0].image_url}` : null),
-          canonicalUrl: product.seo?.canonicalUrl || `${window.location.origin}/products/${product.slug}`,
+          canonicalUrl: product.seo?.canonicalUrl || `${process.env.NEXT_PUBLIC_SITE_URL || 'https://crosscoin.in'}/products/${product.slug}`,
           structuredData: product.seo?.structuredData || JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Product",
@@ -408,7 +393,7 @@ const ProductsPage = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
+    if (typeof window !== 'undefined' && window.confirm("Are you sure you want to delete this product?")) {
       try {
         setLoading(true);
         await productService.deleteProduct(id);
@@ -749,7 +734,7 @@ const ProductsPage = () => {
             ogTitle: formData.seo.metaTitle || formData.name,
             ogDescription: formData.seo.metaDescription || formData.description,
             ogImage: firstImageUrl,
-            canonicalUrl: formData.seo.canonicalUrl || `${window.location.origin}/products/${formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-')}`,
+            canonicalUrl: formData.seo.canonicalUrl || `${process.env.NEXT_PUBLIC_SITE_URL || 'https://crosscoin.in'}/products/${formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-')}`,
             structuredData: JSON.stringify({
                 "@context": "https://schema.org",
                 "@type": "Product",
