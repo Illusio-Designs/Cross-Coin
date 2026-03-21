@@ -571,13 +571,41 @@
     box-shadow: 0 8px 32px rgba(0,0,0,0.15);
 }
 
+.pf-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #CE1E36;
+}
+
 .pf-modal-title {
     font-size: 1rem;
     font-weight: 700;
     color: #180D3E;
-    margin-bottom: 1.25rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 2px solid #CE1E36;
+    margin: 0;
+}
+
+.pf-modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #666;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: color 0.15s, background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+}
+.pf-modal-close:hover {
+    color: #CE1E36;
+    background: #f5f5f5;
 }
 
 .pf-modal-btns {

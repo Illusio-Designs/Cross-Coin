@@ -363,9 +363,12 @@ export default function Profile() {
 
         {/* Address Modal */}
         {showAddressModal && (
-          <div className="pf-modal-overlay" onClick={() => setShowAddressModal(false)}>
+          <div className="pf-modal-overlay">
             <div className="pf-modal" onClick={e => e.stopPropagation()}>
-              <div className="pf-modal-title">{editingId ? "Edit Address" : "Add New Address"}</div>
+              <div className="pf-modal-header">
+                <div className="pf-modal-title">{editingId ? "Edit Address" : "Add New Address"}</div>
+                <button type="button" className="pf-modal-close" onClick={() => setShowAddressModal(false)}>×</button>
+              </div>
               <form onSubmit={handleAddressSubmit} className="pf-form">
                 {[
                   { name: "phoneNumber", label: "Phone Number", placeholder: "Enter phone number" },
