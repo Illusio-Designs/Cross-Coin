@@ -3,6 +3,8 @@ import { useRouter } from 'next/router';
 import SeoWrapper from '../console/SeoWrapper';
 import { getPublicBlogs, getPublicBlogTags } from '../services/publicApi';
 
+const stripHtml = (html) => html ? html.replace(/<[^>]*>/g, '') : '';
+
 const BlogPage = () => {
   const router = useRouter();
   const [posts, setPosts] = useState([]);
@@ -121,7 +123,15 @@ const BlogPage = () => {
           <div className="blog-no-results"><p>Loading articles...</p></div>
         ) : (
           <div className="blog-page-grid">
-            {posts.map((post) => (
+            {posts.map((post) => {
+              let sections = post.sections || [];
+              if (typeof sections === 'string') {
+                try { sections = JSON.parse(sections); } catch { sections = []; }
+              }
+              const preview = sections[0]?.content ? stripHtml(sections[0].content) : '';
+              const postTags = post.Tags || post.BlogTags || [];
+
+              return (
               <div
                 key={post.id}
                 className="blog-card-home"
@@ -139,8 +149,8 @@ const BlogPage = () => {
                 </div>
                 <div className="bc-body">
                   <h3 className="bc-title">{post.title}</h3>
-                  {post.sections?.[0]?.content && (
-                    <p className="bc-desc">{post.sections[0].content.slice(0, 120)}{post.sections[0].content.length > 120 ? '...' : ''}</p>
+                  {preview && (
+                    <p className="bc-desc">{preview.slice(0, 120)}{preview.length > 120 ? '...' : ''}</p>
                   )}
                   <div className="bc-meta">
                     <div className="bc-meta-item">
@@ -159,7 +169,7 @@ const BlogPage = () => {
                     )}
                   </div>
                   <div className="bc-tags">
-                    {(post.BlogTags || []).slice(0, 3).map(t => (
+                    {postTags.slice(0, 3).map(t => (
                       <span key={t.id} className="bc-tag">{t.name}</span>
                     ))}
                   </div>
@@ -173,7 +183,8 @@ const BlogPage = () => {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
