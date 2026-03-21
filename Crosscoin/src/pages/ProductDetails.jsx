@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { getPublicProductBySlug, getPublicCoupons, getPublicProductReviews, checkPincodeServiceability } from '../services/publicApi';
 import { useCart } from '../context/CartContext';
@@ -106,7 +106,30 @@ export default function ProductDetails() {
     fetchData();
   }, [router.isReady, slug]);
 
-  // Cleanup breadcrumbs on unmount
+  const fitRowRef = useRef(null);
+
+  // Auto-slide for feature boxes row
+  useEffect(() => {
+    let rafId;
+    let direction = 1;
+
+    const tick = () => {
+      const el = fitRowRef.current;
+      if (el) {
+        const max = el.scrollWidth - el.clientWidth;
+        if (max > 0) {
+          el.scrollLeft += direction * 0.5;
+          if (el.scrollLeft >= max - 0.5) direction = -1;
+          if (el.scrollLeft <= 0.5) direction = 1;
+        }
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+
+    const t = setTimeout(() => { rafId = requestAnimationFrame(tick); }, 1000);
+
+    return () => { clearTimeout(t); cancelAnimationFrame(rafId); };
+  }, []);
   useEffect(() => {
     return () => setCustomBreadcrumbs(null);
   }, [setCustomBreadcrumbs]);
@@ -267,10 +290,10 @@ export default function ProductDetails() {
   return (
     <SeoWrapper pageName={slug || 'product-details'} seo={productData.rawApi?.seo || null}>
     <div className="pdt-page">
-      {/* ── Top Section: Gallery + Info ── */}
+      {/* â”€â”€ Top Section: Gallery + Info â”€â”€ */}
       <div className="pdt-wrapper">
 
-        {/* Gallery + Fit row — left column */}
+        {/* Gallery + Fit row â€” left column */}
         <div className="pdt-gallery-col">
           <div className="pdt-gallery">
             <div className="pdt-thumbs">
@@ -303,19 +326,57 @@ export default function ProductDetails() {
                   </svg>
                 </span>
               </button>
+
+              {/* Feature boxes â€” directly below main image */}
+              <div className="pdt-fit-row" ref={fitRowRef}>
+            <div className="pdt-fit-item">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 2 C12 2 13.2 7.5 17 9 C13.2 10.5 12 16 12 16 C12 16 10.8 10.5 7 9 C10.8 7.5 12 2 12 2Z" fill="#CE1E36"/>
+                <path d="M5.5 2.5 C5.5 2.5 6.1 5 7.5 5.8 C6.1 6.6 5.5 9 5.5 9 C5.5 9 4.9 6.6 3.5 5.8 C4.9 5 5.5 2.5 5.5 2.5Z" fill="#CE1E36" opacity="0.75"/>
+                <path d="M19 14 C19 14 19.5 16 20.8 16.7 C19.5 17.4 19 19.5 19 19.5 C19 19.5 18.5 17.4 17.2 16.7 C18.5 16 19 14 19 14Z" fill="#CE1E36" opacity="0.55"/>
+              </svg>
+              <div className="pdt-fit-text">
+                <strong>StayFresh</strong>
+                <span>Anti-Microbial Properties</span>
+              </div>
             </div>
-          </div>
-        </div>
+            <div className="pdt-fit-item">
+              {/* Sock icon */}
+              <svg width="35" height="35" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M9 3 L9 13 C9 13 9 17.5 13 19.5 C17 21.5 20 18.5 20 15.5 C20 12.5 17 11.5 16 10.5 L16 3" stroke="#CE1E36" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M9 3 L16 3" stroke="#CE1E36" strokeWidth="1.4" strokeLinecap="round"/>
+                <path d="M9 7 L16 7" stroke="#CE1E36" strokeWidth="1.2" strokeLinecap="round" opacity="0.45"/>
+              </svg>
+              <div className="pdt-fit-text">
+                <strong>Elastane Welt</strong>
+                <span>For No-Sag Grip</span>
+              </div>
+            </div>
+            <div className="pdt-fit-item">
+              {/* Stretch/expand icon */}
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="7" y="7" width="10" height="10" rx="0.5" stroke="#180D3E" strokeWidth="1.4" fill="none"/>
+                <path d="M7 7 L3 3M17 7 L21 3M7 17 L3 21M17 17 L21 21" stroke="#CE1E36" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              <div className="pdt-fit-text">
+                <strong>Full Body Stretch</strong>
+                <span>For Snug Fit</span>
+              </div>
+            </div>
+            </div>{/* end pdt-fit-row */}
+            </div>{/* end pdt-main-img-wrap */}
+          </div>{/* end pdt-gallery */}
+        </div>{/* end pdt-gallery-col */}
 
         {/* Lightbox */}
         {showLightbox && (
           <div className="pdt-lightbox-overlay" onClick={() => setShowLightbox(false)} role="dialog" aria-modal="true" aria-label="Image gallery">
-            <button className="pdt-lightbox-close" onClick={() => setShowLightbox(false)} aria-label="Close" type="button">✕</button>
-            <button className="pdt-lightbox-arrow pdt-lightbox-prev" onClick={e => { e.stopPropagation(); setLightboxIndex(i => (i - 1 + galleryImages.length) % galleryImages.length); }} aria-label="Previous image" type="button">‹</button>
+            <button className="pdt-lightbox-close" onClick={() => setShowLightbox(false)} aria-label="Close" type="button">âœ•</button>
+            <button className="pdt-lightbox-arrow pdt-lightbox-prev" onClick={e => { e.stopPropagation(); setLightboxIndex(i => (i - 1 + galleryImages.length) % galleryImages.length); }} aria-label="Previous image" type="button">â€¹</button>
             <div className="pdt-lightbox-img-wrap" onClick={e => e.stopPropagation()}>
               <img src={galleryImages[lightboxIndex]} alt={`${productData.title} ${lightboxIndex + 1}`} />
             </div>
-            <button className="pdt-lightbox-arrow pdt-lightbox-next" onClick={e => { e.stopPropagation(); setLightboxIndex(i => (i + 1) % galleryImages.length); }} aria-label="Next image" type="button">›</button>
+            <button className="pdt-lightbox-arrow pdt-lightbox-next" onClick={e => { e.stopPropagation(); setLightboxIndex(i => (i + 1) % galleryImages.length); }} aria-label="Next image" type="button">â€º</button>
           </div>
         )}
 
@@ -326,15 +387,15 @@ export default function ProductDetails() {
           {productData.styleNo && <div className="pdt-style">Style No: {productData.styleNo}</div>}
 
           <div className="pdt-price-block">
-            <span className="pdt-price">₹{productData.price.toFixed(2)}</span>
+            <span className="pdt-price">â‚¹{productData.price.toFixed(2)}</span>
             {productData.comparePrice > 0 && (
-              <span className="pdt-compare">₹{productData.comparePrice.toFixed(2)}</span>
+              <span className="pdt-compare">â‚¹{productData.comparePrice.toFixed(2)}</span>
             )}
             {discount > 0 && <span className="pdt-discount">{discount}% OFF</span>}
           </div>
           <div className="pdt-price-note">MRP (Incl. of all taxes)</div>
 
-          {/* Fomo signals — counts seeded by product id so stable per product */}
+          {/* Fomo signals â€” counts seeded by product id so stable per product */}
           {(() => {
             const seed = productData.id || 1;
             const viewers = 100 + (seed * 37 + seed * seed * 3) % 200;
@@ -393,7 +454,7 @@ export default function ProductDetails() {
                       ) : (
                         <span className="pdt-color-card-circle" style={{ backgroundColor: colorMap[opt.colors[0]?.toLowerCase()] || '#ccc' }} title={opt.colors[0]} />
                       )}
-                      {selectedColor === idx && <span className="pdt-color-card-check" aria-hidden="true">✓</span>}
+                      {selectedColor === idx && <span className="pdt-color-card-check" aria-hidden="true">âœ“</span>}
                     </div>
                     <span className="pdt-color-card-name">
                       {opt.colors.length > 1 ? `Pack of ${opt.colors.length}` : opt.colors[0]}
@@ -440,7 +501,7 @@ export default function ProductDetails() {
           {/* Qty + Actions */}
           <div className="pdt-qty-row">
             <div className="pdt-qty-ctrl">
-              <button onClick={() => setQuantity(q => Math.max(1, q - 1))} aria-label="Decrease quantity">−</button>
+              <button onClick={() => setQuantity(q => Math.max(1, q - 1))} aria-label="Decrease quantity">âˆ’</button>
               <span className="pdt-qty-val">{quantity}</span>
               <button onClick={() => setQuantity(q => q + 1)} aria-label="Increase quantity">+</button>
             </div>
@@ -511,7 +572,7 @@ export default function ProductDetails() {
         </div>{/* end pdt-info */}
       </div>{/* end pdt-wrapper */}
 
-      {/* ── Details Section ── */}
+      {/* â”€â”€ Details Section â”€â”€ */}
       <div className="pdt-details">
 
         {/* Product Description */}
@@ -549,7 +610,7 @@ export default function ProductDetails() {
         <h2 className="pdt-section-title">Washing Instructions</h2>
         <div className="pdt-wash-box">
           {[
-            { label: 'Gentle wash\n40°C', icon: <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 10 Q4 8 6 8 H30 Q32 8 32 10 L30 28 Q30 30 28 30 H8 Q6 30 6 28 Z"/><text x="18" y="22" textAnchor="middle" fontSize="9" fontWeight="700" stroke="none" fill="currentColor" fontFamily="inherit">40</text><path d="M8 16 Q11 13 14 16 Q17 19 20 16 Q23 13 26 16 Q29 19 32 16" strokeWidth="1.2"/></svg> },
+            { label: 'Gentle wash\n40Â°C', icon: <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 10 Q4 8 6 8 H30 Q32 8 32 10 L30 28 Q30 30 28 30 H8 Q6 30 6 28 Z"/><text x="18" y="22" textAnchor="middle" fontSize="9" fontWeight="700" stroke="none" fill="currentColor" fontFamily="inherit">40</text><path d="M8 16 Q11 13 14 16 Q17 19 20 16 Q23 13 26 16 Q29 19 32 16" strokeWidth="1.2"/></svg> },
             { label: 'Do not\nbleach', icon: <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 5 L33 30 H3 Z"/><line x1="12" y1="14" x2="24" y2="26"/><line x1="24" y1="14" x2="12" y2="26"/></svg> },
             { label: 'Do not\nwring', icon: <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 14 C4 14 8 10 12 14 C16 18 20 10 24 14 C28 18 32 14 32 14"/><path d="M4 22 C4 22 8 18 12 22 C16 26 20 18 24 22 C28 26 32 22 32 22"/><line x1="13" y1="11" x2="23" y2="25"/><line x1="23" y1="11" x2="13" y2="25"/></svg> },
             { label: 'Flat dry in\nshade', icon: <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="4" y="10" width="28" height="16" rx="1"/><line x1="8" y1="18" x2="28" y2="18"/></svg> },
@@ -591,13 +652,13 @@ export default function ProductDetails() {
         )}
       </div>
 
-      {/* ── Sticky Bar ── */}
+      {/* â”€â”€ Sticky Bar â”€â”€ */}
       <div className={`pdt-sticky${showStickyBar ? ' visible' : ''}`}>
         <div className="pdt-sticky-info">
           <img src={galleryImages[0] || productData.images?.[0]} alt={productData.title} className="pdt-sticky-img" />
           <div>
             <div className="pdt-sticky-name">{productData.title}</div>
-            <div className="pdt-sticky-price">₹{productData.price.toFixed(2)}</div>
+            <div className="pdt-sticky-price">â‚¹{productData.price.toFixed(2)}</div>
           </div>
         </div>
         <div className="pdt-sticky-actions">
@@ -606,7 +667,7 @@ export default function ProductDetails() {
         </div>
       </div>
 
-      {/* ── Toast ── */}
+      {/* â”€â”€ Toast â”€â”€ */}
       <div className={`pdt-toast${showToast ? ' show' : ''}`} role="status" aria-live="polite">
         <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" aria-hidden="true">
           <polyline points="20 6 9 17 4 12" />
