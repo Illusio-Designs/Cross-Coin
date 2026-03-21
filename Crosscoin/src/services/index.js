@@ -90,7 +90,12 @@ adminApi.interceptors.response.use(
       const userMessage = handleTimeoutError(error);
       return Promise.reject(new Error(userMessage));
     }
-    if (error.response?.status === 401) localStorage.removeItem("token");
+    if (error.response?.status === 401) {
+      localStorage.removeItem("token");
+      if (typeof window !== "undefined" && !window.location.pathname.includes("/auth/")) {
+        window.location.href = "/auth/adminlogin";
+      }
+    }
     return Promise.reject(error);
   }
 );

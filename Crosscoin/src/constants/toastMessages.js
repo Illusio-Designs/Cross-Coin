@@ -135,6 +135,10 @@ export const TOAST_TEXT = {
   paymentRefunded: '✓ Payment refunded successfully',
   exported: '✓ Data exported successfully',
   brandStatusUpdated: '✓ Brand status updated',
+  createSuccess: '✓ Created successfully',
+  updateSuccess: '✓ Updated successfully',
+  deleteSuccess: '✓ Deleted successfully',
+  invalidData: '✗ Invalid data. Please check your input.',
 
   // Error messages
   addToCartFailed: '✗ Failed to add to bag. Please try again.',
