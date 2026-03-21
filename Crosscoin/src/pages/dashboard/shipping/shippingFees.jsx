@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Table, Pagination } from "../../../components/ui";
+import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { shippingFeeService } from "../../../services";
 
@@ -152,10 +152,14 @@ export default function ShippingFees() {
             <div className="dm-2col">
               <div className="dm-field">
                 <label className="dm-label">Order Type <span className="dm-required">*</span></label>
-                <select className="dm-input dm-select" name="orderType" value={selectedFee ? selectedFee.orderType : formData.orderType} onChange={handleInputChange} required>
-                  <option value="cod">Cash On Delivery</option>
-                  <option value="prepaid">Prepaid</option>
-                </select>
+                <Select
+                  options={[{ value: 'cod', label: 'Cash On Delivery' }, { value: 'prepaid', label: 'Prepaid' }]}
+                  value={selectedFee ? selectedFee.orderType : formData.orderType}
+                  onChange={v => {
+                    if (selectedFee) setSelectedFee(prev => ({ ...prev, orderType: v }));
+                    else setFormData(prev => ({ ...prev, orderType: v }));
+                  }}
+                />
               </div>
               <div className="dm-field">
                 <label className="dm-label">Fee (₹) <span className="dm-required">*</span></label>

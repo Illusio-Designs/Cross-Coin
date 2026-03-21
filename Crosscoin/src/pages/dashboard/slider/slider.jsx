@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Table, Pagination } from "../../../components/ui";
+import { Button, Modal, Table, Pagination, Input, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { sliderService, categoryService, brandService } from "../../../services";
 import { useRouter } from 'next/router';
 import { useAuth } from '../../../context/AuthContext';
-import { toast } from 'react-hot-toast';
+import { showSuccess, showError } from "../../../utils/toastNotification";
 
 const IC = {
   add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
@@ -69,7 +69,7 @@ export default function Slider() {
       setSliders(Array.isArray(res) ? res : (res.sliders || []));
     } catch (err) {
       setError(err.message || "Failed to fetch sliders");
-      toast.error(err.message || "Failed to fetch sliders");
+      showError('loadingFailed', err.message);
     } finally {
       setLoading(false);
     }
@@ -104,7 +104,7 @@ export default function Slider() {
         image: data.image || null, buttonText: data.buttonText || "",
         brand_id: data.brand_id || "", brand_ids: brandIds });
       setIsModalOpen(true);
-    } catch (err) { toast.error(err.message || "Failed to load slider"); }
+    } catch (err) { showError('loadingFailed', err.message); }
     finally { setLoading(false); }
   };
 
@@ -114,8 +114,8 @@ export default function Slider() {
       setLoading(true);
       await sliderService.deleteSlider(id);
       await fetchSliders();
-      toast.success("Slider deleted");
-    } catch (err) { toast.error(err.message || "Failed to delete"); }
+      showSuccess('deleteSuccess');
+    } catch (err) { showError('deleteFailed', err.message); }
     finally { setLoading(false); }
   };
 
@@ -130,8 +130,6 @@ export default function Slider() {
     const { name, value, type } = e.target;
     if (type === 'file') {
       setFormData(p => ({ ...p, [name]: e.target.files?.[0] || null }));
-    } else if (name === 'brand_ids') {
-      setFormData(p => ({ ...p, brand_ids: Array.from(e.target.selectedOptions, o => parseInt(o.value)) }));
     } else {
       setFormData(p => ({ ...p, [name]: value }));
     }
@@ -154,16 +152,16 @@ export default function Slider() {
       if (formData.id) {
         await sliderService.updateSlider(formData.id, fd);
         if (formData.brand_ids?.length > 0) await sliderService.assignSliderToBrands(formData.id, formData.brand_ids);
-        toast.success("Slider updated");
+        showSuccess('updateSuccess');
       } else {
         const res = await sliderService.createSlider(fd);
         const sliderId = res.data?.id || res.id;
         if (sliderId && formData.brand_ids?.length > 0) await sliderService.assignSliderToBrands(sliderId, formData.brand_ids);
-        toast.success("Slider created");
+        showSuccess('createSuccess');
       }
       handleModalClose();
       fetchSliders();
-    } catch (err) { toast.error(err.message || "Failed to save slider"); }
+    } catch (err) { showError('saveFailed', err.message); }
     finally { setLoading(false); }
   };
 
@@ -286,48 +284,56 @@ export default function Slider() {
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title={formData.id ? "Edit Slider" : "Add New Slider"} closeOnOverlayClick={false}>
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <div className="dm-field">
-              <label className="dm-label">Title <span className="dm-required">*</span></label>
-              <input className="dm-input" type="text" name="title" value={formData.title} onChange={handleInputChange} placeholder="Slider title..." required />
-            </div>
-            <div className="dm-field">
-              <label className="dm-label">Description <span className="dm-required">*</span></label>
-              <textarea className="dm-input dm-textarea" name="description" value={formData.description} onChange={handleInputChange} placeholder="Short description..." required />
-            </div>
+            <Input
+              label="Title"
+              required
+              name="title"
+              value={formData.title}
+              onChange={handleInputChange}
+              placeholder="Slider title..."
+            />
+            <Input
+              label="Description"
+              required
+              multiline
+              rows={3}
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              placeholder="Short description..."
+            />
             <div className="dm-2col">
-              <div className="dm-field">
-                <label className="dm-label">Category</label>
-                <select className="dm-input dm-select" name="categoryId" value={formData.categoryId} onChange={handleInputChange}>
-                  <option value="">Select Category</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <div className="dm-field">
-                <label className="dm-label">Status <span className="dm-required">*</span></label>
-                <select className="dm-input dm-select" name="status" value={formData.status} onChange={handleInputChange} required>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
+              <Select
+                label="Category"
+                options={[{ value: '', label: 'Select Category' }, ...categories.map(c => ({ value: String(c.id), label: c.name }))]}
+                value={formData.categoryId ? String(formData.categoryId) : ''}
+                onChange={v => setFormData(p => ({ ...p, categoryId: v }))}
+                searchable
+              />
+              <Select
+                label="Status"
+                required
+                options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]}
+                value={formData.status}
+                onChange={v => setFormData(p => ({ ...p, status: v }))}
+              />
             </div>
-            <div className="dm-field">
-              <label className="dm-label">Button Text</label>
-              <input className="dm-input" type="text" name="buttonText" value={formData.buttonText} onChange={handleInputChange} placeholder="e.g., Shop Now" />
-            </div>
-            <div className="dm-field">
-              <label className="dm-label">Brands <span className="dm-hint">(Hold Ctrl/Cmd for multiple)</span></label>
-              <select name="brand_ids" multiple value={formData.brand_ids} onChange={handleInputChange} className="dm-multi-select" required>
-                {brands.map(b => <option key={b.id} value={b.id}>{b.display_name || b.name}</option>)}
-              </select>
-              {formData.brand_ids?.length > 0 && (
-                <div className="dm-selected-tags">
-                  {formData.brand_ids.map(id => {
-                    const b = brands.find(x => x.id === id);
-                    return b ? <span key={id} className="sl-brand-tag">{b.display_name || b.name}</span> : null;
-                  })}
-                </div>
-              )}
-            </div>
+            <Input
+              label="Button Text"
+              name="buttonText"
+              value={formData.buttonText}
+              onChange={handleInputChange}
+              placeholder="e.g., Shop Now"
+            />
+            <Select
+              label="Brands"
+              required
+              options={brands.map(b => ({ value: b.id, label: b.display_name || b.name }))}
+              value={formData.brand_ids}
+              onChange={v => setFormData(p => ({ ...p, brand_ids: v }))}
+              multiple
+              searchable
+            />
             <div className="dm-field">
               <label className="dm-label">Slider Image {!formData.id && <span className="dm-required">*</span>}</label>
               <div className="dm-file-upload">

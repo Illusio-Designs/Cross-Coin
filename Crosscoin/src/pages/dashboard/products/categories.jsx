@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Table, Pagination } from "../../../components/ui";
+import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import BrandTags from "../../../components/Dashboard/BrandTags";
 import BrandAssignment from "../../../components/Dashboard/BrandAssignment";
@@ -135,11 +135,12 @@ export default function Categories() {
             <button className="sl-add-btn" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>
               <span className="sl-add-btn-icon">{IC.add}</span>Add Category
             </button>
-            <select className="pay-filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+            <Select
+              options={[{ value: '', label: 'All Status' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              placeholder="All Status"
+            />
           </div>
         </div>
 
@@ -200,10 +201,12 @@ export default function Categories() {
             <div className="dm-2col">
               <div className="dm-field">
                 <label className="dm-label">Status <span className="dm-required">*</span></label>
-                <select className="dm-input dm-select" name="status" value={formData.status} onChange={handleInputChange} required>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
+                <Select
+                  options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]}
+                  value={formData.status}
+                  onChange={v => setFormData(prev => ({ ...prev, status: v }))}
+                  required
+                />
               </div>
               <div className="dm-field">
                 <label className="dm-label">Meta Keywords</label>

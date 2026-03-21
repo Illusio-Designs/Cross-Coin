@@ -595,6 +595,7 @@ module.exports.getAllProducts = async (req, res) => {
     
     // ✅ Only filter by brand if X-Brand-Name header is present (public frontend)
     // Admin requests without header will see ALL products from ALL brands
+    let brandFilter = null;
     if (req.brand && req.brand.id) {
       // Public frontend - filter by specific brand
       brandFilter = req.brand.id;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Button, Modal, Table, Pagination } from "../../../components/ui";
+import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { attributeService } from "../../../services";
 
@@ -174,11 +174,16 @@ export default function Attributes() {
               </div>
               <div className="dm-field">
                 <label className="dm-label">Type <span className="dm-required">*</span></label>
-                <select className="dm-input dm-select" name="type" value={formData.type} onChange={handleInputChange} required>
-                  <option value="" disabled>Select type...</option>
-                  <option value="select">Select</option>
-                  <option value="text">Text</option>
-                </select>
+                <Select
+                  options={[{ value: 'select', label: 'Select' }, { value: 'text', label: 'Text' }]}
+                  value={formData.type}
+                  onChange={v => setFormData(prev => {
+                    const next = { ...prev, type: v };
+                    if (v === 'text') next.values = '';
+                    return next;
+                  })}
+                  placeholder="Select type..."
+                />
               </div>
             </div>
             {formData.type === 'select' && (

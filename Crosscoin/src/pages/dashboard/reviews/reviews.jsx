@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Table, Pagination } from "../../../components/ui";
+import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import BrandTags from "../../../components/Dashboard/BrandTags";
 import { reviewService } from "../../../services";
@@ -161,12 +161,17 @@ export default function Reviews() {
               <span className="sl-search-icon">{IC.search}</span>
               <input type="text" className="sl-search-input" placeholder="Search reviews..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
-            <select className="pay-filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
+            <Select
+              options={[
+                { value: '', label: 'All Status' },
+                { value: 'pending', label: 'Pending' },
+                { value: 'approved', label: 'Approved' },
+                { value: 'rejected', label: 'Rejected' },
+              ]}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              placeholder="All Status"
+            />
           </div>
         </div>
 
@@ -238,11 +243,15 @@ export default function Reviews() {
           <div className="modal-body">
             <div className="dm-field">
               <label className="dm-label">Status <span className="dm-required">*</span></label>
-              <select className="dm-input dm-select" name="status" value={formData.status} onChange={handleInputChange} required>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </select>
+              <Select
+                options={[
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'approved', label: 'Approved' },
+                  { value: 'rejected', label: 'Rejected' },
+                ]}
+                value={formData.status}
+                onChange={v => setFormData(prev => ({ ...prev, status: v }))}
+              />
             </div>
             <div className="dm-field">
               <label className="dm-checkbox-row">
