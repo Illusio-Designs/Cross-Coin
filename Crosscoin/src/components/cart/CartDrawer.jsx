@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/router';
@@ -21,6 +21,11 @@ import {
   showValidationErrorToast,
 } from '../../utils/toast';
 import { fbqTrack } from '../../utils/fbqTrack';
+
+// ── Magic Checkout config ─────────────────────────────────────────────────────
+const MAGIC_CHECKOUT_ENABLED = process.env.NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED === 'true';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -355,7 +360,168 @@ const CartDrawer = ({ isOpen, onClose }) => {
     document.body.appendChild(s);
   });
 
-  // ── Place order ─────────────────────────────────────────────────────────
+  // ── Magic Checkout SDK loader ────────────────────────────────────────────
+  const loadMagicCheckoutSDK = useCallback(() => new Promise((resolve, reject) => {
+    if (window.Razorpay) { resolve(true); return; }
+    if (document.getElementById('rzp-magic-sdk')) {
+      const poll = setInterval(() => {
+        if (window.Razorpay) { clearInterval(poll); resolve(true); }
+      }, 100);
+      setTimeout(() => { clearInterval(poll); reject(new Error('SDK timeout')); }, 10000);
+      return;
+    }
+    const s = document.createElement('script');
+    s.id = 'rzp-magic-sdk';
+    s.src = 'https://checkout.razorpay.com/v1/magic-checkout.js';
+    s.async = true;
+    s.onload = () => resolve(true);
+    s.onerror = () => reject(new Error('Failed to load Magic Checkout SDK'));
+    document.body.appendChild(s);
+  }), []);
+
+  // ── Magic Checkout handler ───────────────────────────────────────────────
+  const handleMagicCheckout = useCallback(async () => {
+    if (!RAZORPAY_KEY) {
+      showOrderPlacedErrorToast('Razorpay key not configured.');
+      return;
+    }
+    if (activeItems.length === 0) return;
+
+    setIsProcessing(true);
+    try {
+      await loadMagicCheckoutSDK();
+
+      // Build line_items (prices in paise) — MANDATORY for Magic Checkout UI
+      const lineItems = activeItems.map(item => {
+        const price = Math.round(parseFloat(item.variation?.price || item.price || 0) * 100);
+        return {
+          type: 'e-commerce',
+          sku: `SKU_${item.productId || item.id}`,
+          variant_id: item.variationId ? `VAR_${item.variationId}` : undefined,
+          price,
+          offer_price: price,
+          tax_amount: 0,
+          quantity: item.quantity || 1,
+          name: item.name || 'Product',
+          description: item.description || '',
+        };
+      });
+
+      const lineItemsTotal = lineItems.reduce((s, i) => s + i.offer_price * i.quantity, 0);
+      const finalAmountRupees = Math.max(0, activeTotal - discountAmount);
+
+      // Step 1 — create Razorpay order on server
+      const orderRes = await fetch(`${API_URL}/api/payments/magic-checkout/create-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Brand-Name': 'crosscoin',
+          ...(isAuthenticated ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {}),
+        },
+        body: JSON.stringify({
+          amount: finalAmountRupees,
+          currency: 'INR',
+          customer_id: user?.id || null,
+          line_items: lineItems,
+          line_items_total: lineItemsTotal,
+          notes: {
+            coupon_code: appliedCoupon?.code || null,
+            discount_amount: discountAmount,
+          },
+        }),
+      });
+
+      if (!orderRes.ok) {
+        const err = await orderRes.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to create order');
+      }
+
+      const { order_id, amount } = await orderRes.json();
+
+      // Step 2 — open Magic Checkout modal
+      const options = {
+        key: RAZORPAY_KEY,
+        order_id,
+        amount,
+        currency: 'INR',
+        name: 'Cross Coin',
+        one_click_checkout: true,   // triggers Magic Checkout UI
+        show_coupons: true,
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || '',
+          contact: user?.phone || '',
+        },
+        ...(appliedCoupon ? {
+          one_click_checkout_options: {
+            pre_discounts: [{ label: appliedCoupon.code, value: `₹${discountAmount}` }],
+          },
+        } : {}),
+        theme: { color: '#180D3E' },
+        modal: { ondismiss: () => setIsProcessing(false) },
+        handler: async (response) => {
+          try {
+            const verifyRes = await fetch(`${API_URL}/api/payments/magic-checkout/verify-payment`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Brand-Name': 'crosscoin',
+                ...(isAuthenticated ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {}),
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                customer_id: user?.id || null,
+                cart_items: activeItems.map(i => ({
+                  product_id: i.productId || i.id,
+                  variation_id: i.variationId || i.variation?.id || null,
+                  quantity: i.quantity || 1,
+                })),
+              }),
+            });
+
+            const verifyData = await verifyRes.json();
+
+            if (verifyData.success) {
+              try {
+                fbqTrack('Purchase', {
+                  value: Number(finalAmountRupees.toFixed(2)),
+                  currency: 'INR',
+                  content_type: 'product',
+                  contents: activeItems.map(i => ({ id: String(i.productId || i.id), quantity: i.quantity })),
+                });
+              } catch (_) {}
+
+              clearCart();
+              clearBuyNow();
+              sessionStorage.removeItem('appliedCoupon');
+              showOrderPlacedSuccessToast(verifyData.order_number);
+              setOrderSuccess({ orderNumber: verifyData.order_number });
+            } else {
+              throw new Error(verifyData.message || 'Payment verification failed');
+            }
+          } catch (err) {
+            showOrderPlacedErrorToast(err.message || 'Order creation failed after payment.');
+          } finally {
+            setIsProcessing(false);
+          }
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', (r) => {
+        showOrderPlacedErrorToast('Payment failed: ' + (r.error?.description || 'Please try again'));
+        setIsProcessing(false);
+      });
+      rzp.open();
+    } catch (err) {
+      showOrderPlacedErrorToast(err.message || 'Failed to open Magic Checkout.');
+      setIsProcessing(false);
+    }
+  }, [activeItems, activeTotal, discountAmount, appliedCoupon, user, isAuthenticated, loadMagicCheckoutSDK, clearCart, clearBuyNow]);
+
+  // ── Place order (old flow — kept for reference / COD fallback) ───────────
   const handlePlaceOrder = async () => {
     if (!selectedAddress || !selectedFee) {
       showValidationErrorToast('Please select a delivery address and method.');
@@ -541,8 +707,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 {couponError && <p className="cd-coupon-error">{couponError}</p>}
               </div>
 
-              {/* ── 3. Contact (guest only) ── */}
-              {!isAuthenticated && (
+              {/* ── 3. Contact (guest only) — hidden when Magic Checkout is active (it handles contact collection) ── */}
+              {!MAGIC_CHECKOUT_ENABLED && !isAuthenticated && (
                 <div className="cd-sv-section">
                   <div className="cd-section-title">Contact Info</div>
                   <div className="cd-form-grid">
@@ -566,8 +732,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 </div>
               )}
 
-              {/* ── 4. Delivery Address ── */}
-              <div className="cd-sv-section">
+              {/* ── 4. Delivery Address — hidden when Magic Checkout is active (it handles address collection) ── */}
+              {!MAGIC_CHECKOUT_ENABLED && <div className="cd-sv-section">
                 <div className="cd-section-title">Delivery Address</div>
                 {addressLoading ? <p className="cd-loading">Loading addresses...</p> : (
                   <>
@@ -680,10 +846,10 @@ const CartDrawer = ({ isOpen, onClose }) => {
                     )}
                   </>
                 )}
-              </div>
+              </div>}
 
-              {/* ── 5. Delivery Method ── */}
-              {shippingFees.length > 0 && (
+              {/* ── 5. Delivery Method — hidden when Magic Checkout is active ── */}
+              {!MAGIC_CHECKOUT_ENABLED && shippingFees.length > 0 && (
                 <div className="cd-sv-section">
                   <div className="cd-section-title">Delivery Method</div>
                   <div className="cd-delivery-list">
@@ -728,13 +894,12 @@ const CartDrawer = ({ isOpen, onClose }) => {
         {/* ── Single CTA footer ── */}
         {!orderSuccess && activeItems.length > 0 && (
           <div className="cd-footer">
-            <button className="cd-btn-primary cd-btn-full" onClick={handlePlaceOrder} disabled={isProcessing}>
-              {isProcessing
-                ? 'Processing...'
-                : selectedFee?.orderType === 'prepaid'
-                  ? `Pay ₹${finalTotal.toFixed(2)}`
-                  : `Place Order — ₹${finalTotal.toFixed(2)}`
-              }
+            <button
+              className="cd-btn-primary cd-btn-full"
+              onClick={MAGIC_CHECKOUT_ENABLED ? handleMagicCheckout : handlePlaceOrder}
+              disabled={isProcessing}
+            >
+              {isProcessing ? 'Processing...' : 'Place Order'}
             </button>
           </div>
         )}
