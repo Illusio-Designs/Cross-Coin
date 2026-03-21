@@ -16,6 +16,8 @@ const addressQualityService = require('../services/addressQualityService.js');
 const fshipService = require('../services/fshipService.js');
 const razorpayService = require('../services/razorpayService');
 const { toSmallestUnit } = require('../utils/amountConverter');
+const settingsHelper = require('../services/settingsHelper');
+const { setImmediate } = require('timers');
 
 // Generate unique order number (same pattern as orderController)
 const generateOrderNumber = () => {
@@ -365,6 +367,17 @@ module.exports.verifyPayment = async (req, res) => {
         const paymentMethod = rzpPayment?.method || 'razorpay';
         const isCOD = paymentMethod === 'cod';
 
+        // Map Razorpay method to internal payment_type
+        const paymentTypeMap = {
+            upi: 'upi',
+            card: 'prepaid',
+            netbanking: 'prepaid',
+            wallet: 'prepaid',
+            emi: 'prepaid',
+            cod: 'cod',
+        };
+        const paymentType = isCOD ? 'cod' : (paymentTypeMap[paymentMethod] || 'upi');
+
         // ── Step 3: Validate & price cart items ───────────────────────────
         if (!cart_items.length) {
             await transaction.rollback();
@@ -448,10 +461,7 @@ module.exports.verifyPayment = async (req, res) => {
                 discount_amount: 0,
                 shipping_fee: shippingFee,
                 final_amount: finalAmount,
-                payment_type: isCOD ? 'cod' : 'razorpay',
-                status: 'processing',
-                payment_status: 'paid',
-                shipping_address_id: shippingAddressId,
+                payment_type: paymentType,
                 brand_id: 1,
             }, { transaction });
 
@@ -493,10 +503,7 @@ module.exports.verifyPayment = async (req, res) => {
                 discount_amount: 0,
                 shipping_fee: shippingFee,
                 final_amount: finalAmount,
-                payment_type: isCOD ? 'cod' : 'razorpay',
-                status: 'processing',
-                payment_status: 'paid',
-                shipping_address_id: guestAddr.id,
+                payment_type: paymentType,
                 brand_id: 1,
             }, { transaction });
         }
@@ -540,6 +547,96 @@ module.exports.verifyPayment = async (req, res) => {
         await transaction.commit();
 
         console.log(`✅ Magic Checkout order created: ${orderNumber} (DB id: ${dbOrder.id})`);
+
+        // ── Step 9: FShip sync (background, non-blocking) ─────────────────
+        setImmediate(async () => {
+            try {
+                // Resolve shipping address for fship
+                const addr = await ShippingAddress.findByPk(dbOrder.shipping_address_id);
+                if (!addr) {
+                    console.error(`FShip sync skipped: no shipping address for order ${orderNumber}`);
+                    return;
+                }
+
+                // Resolve customer name/email/phone
+                let customerName = addr.full_name || 'Guest';
+                let customerEmail = '';
+                let customerPhone = addr.phone || '';
+
+                if (userId) {
+                    const u = await User.findByPk(userId);
+                    if (u) { customerName = u.username || u.name || customerName; customerEmail = u.email || ''; }
+                } else if (guestUserId) {
+                    const g = await GuestUser.findByPk(guestUserId);
+                    if (g) { customerName = `${g.firstName} ${g.lastName}`.trim() || customerName; customerEmail = g.email || ''; customerPhone = g.phone || customerPhone; }
+                }
+
+                const warehouseId = parseInt(await settingsHelper.getSetting(1, 'FSHIP_DEFAULT_WAREHOUSE_ID', '12191'));
+                const totalQty = validatedItems.reduce((s, i) => s + i.quantity, 0);
+
+                const fshipOrderData = {
+                    customer_Name: customerName,
+                    customer_Mobile: customerPhone,
+                    customer_Emailid: customerEmail,
+                    customer_Address: addr.address || 'N/A',
+                    landMark: '',
+                    customer_Address_Type: 'Home',
+                    customer_PinCode: String(addr.pincode || ''),
+                    customer_City: addr.city || 'Mumbai',
+                    orderId: orderNumber,
+                    invoice_Number: orderNumber,
+                    payment_Mode: isCOD ? 1 : 2, // 1=COD, 2=PREPAID
+                    express_Type: 'surface',
+                    is_Ndd: 0,
+                    order_Amount: totalAmount,
+                    tax_Amount: 0,
+                    extra_Charges: 0,
+                    total_Amount: finalAmount,
+                    shipment_Weight: totalQty * 0.07,
+                    shipment_Length: 14,
+                    shipment_Width: 3,
+                    shipment_Height: 10 * totalQty,
+                    pick_Address_ID: warehouseId,
+                    return_Address_ID: warehouseId,
+                    products: validatedItems.map(item => ({
+                        productName: item.product.name,
+                        sku: item.variation?.sku || `PROD-${item.product.id}`,
+                        quantity: item.quantity,
+                        unitPrice: item.price,
+                        productCategory: 'Socks',
+                        hsnCode: '6115',
+                        taxRate: 0,
+                        productDiscount: 0,
+                    })),
+                };
+
+                console.log(`🔄 Magic Checkout: syncing order ${orderNumber} to FShip`);
+                const fshipResponse = await fshipService.createOrUpdateForwardOrder(fshipOrderData);
+
+                if (fshipResponse.success) {
+                    await dbOrder.update({
+                        fship_order_id: fshipResponse.orderId,
+                        fship_waybill: fshipResponse.waybill,
+                        fship_route_code: fshipResponse.routeCode || '',
+                        fship_label_url: fshipResponse.labelUrl || null,
+                        tracking_number: fshipResponse.waybill,
+                        status: 'processing',
+                    });
+                    console.log(`✅ FShip order created for ${orderNumber}: waybill ${fshipResponse.waybill}`);
+
+                    try {
+                        await fshipService.registerPickup([fshipResponse.waybill]);
+                        console.log(`📦 FShip pickup registered: ${fshipResponse.waybill}`);
+                    } catch (pickupErr) {
+                        console.error(`❌ FShip pickup registration failed: ${pickupErr.message}`);
+                    }
+                } else {
+                    console.error(`❌ FShip sync failed for ${orderNumber}:`, fshipResponse);
+                }
+            } catch (fshipErr) {
+                console.error(`❌ FShip background sync error for ${orderNumber}:`, fshipErr.message);
+            }
+        });
 
         res.json({
             success: true,
