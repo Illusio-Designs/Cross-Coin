@@ -22,10 +22,10 @@ const BlogPage = () => {
           getPublicBlogs({ page: 1, limit: LIMIT }),
           getPublicBlogTags(),
         ]);
-        const list = postsRes?.posts || postsRes?.data || [];
+        const list = postsRes?.data || [];
         setPosts(list);
         setHasMore(list.length === LIMIT);
-        setTags(tagsRes?.tags || tagsRes || []);
+        setTags(tagsRes?.data || []);
       } catch {
         setPosts([]);
       } finally {
@@ -42,7 +42,7 @@ const BlogPage = () => {
       if (category && category !== 'all') params.category = category;
       if (tag) params.tag = tag;
       const res = await getPublicBlogs(params);
-      const list = res?.posts || res?.data || [];
+      const list = res?.data || [];
       if (nextPage === 1) setPosts(list);
       else setPosts(prev => [...prev, ...list]);
       setHasMore(list.length === LIMIT);

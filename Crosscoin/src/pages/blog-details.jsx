@@ -20,7 +20,7 @@ const BlogDetails = () => {
       setNotFound(false);
       try {
         const res = await getPublicBlogBySlug(slug);
-        setPost(res?.post || res);
+        setPost(res?.data || null);
       } catch (e) {
         if (e?.status === 404 || e?.statusCode === 404) setNotFound(true);
         else setNotFound(true);
