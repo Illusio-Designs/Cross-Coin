@@ -30,6 +30,13 @@ const Brand = require("./brandModel.js");
 const { ProductBrand } = require("./productBrandModel.js");
 const { CategoryBrand } = require("./categoryBrandModel.js");
 const SliderBrand = require("./sliderBrandModel.js");
+const { BlogCategory } = require("./blogCategoryModel.js");
+const { BlogPost } = require("./blogPostModel.js");
+const { BlogTag } = require("./blogTagModel.js");
+const { BlogPostTag } = require("./blogPostTagModel.js");
+const { BlogBrand } = require("./blogBrandModel.js");
+const { BlogFeaturedProduct } = require("./blogFeaturedProductModel.js");
+const { BlogSEO } = require("./blogSeoModel.js");
 
 // Export all models
 module.exports = {
@@ -64,6 +71,13 @@ module.exports = {
   ProductBrand,
   CategoryBrand,
   SliderBrand,
+  BlogCategory,
+  BlogPost,
+  BlogTag,
+  BlogPostTag,
+  BlogBrand,
+  BlogFeaturedProduct,
+  BlogSEO,
 };
 
 // User Associations
@@ -454,3 +468,19 @@ Coupon.belongsTo(Brand, {
   as: "Brand",
   onDelete: "CASCADE",
 });
+
+// Blog Associations
+BlogPost.belongsTo(BlogCategory, { foreignKey: 'blog_category_id', as: 'BlogCategory', onDelete: 'SET NULL' });
+BlogCategory.hasMany(BlogPost, { foreignKey: 'blog_category_id', as: 'BlogPosts' });
+
+BlogPost.belongsToMany(Brand, { through: BlogBrand, foreignKey: 'blog_post_id', otherKey: 'brand_id', as: 'Brands' });
+Brand.belongsToMany(BlogPost, { through: BlogBrand, foreignKey: 'brand_id', otherKey: 'blog_post_id', as: 'BlogPosts' });
+
+BlogPost.belongsToMany(BlogTag, { through: BlogPostTag, foreignKey: 'blog_post_id', otherKey: 'blog_tag_id', as: 'Tags' });
+BlogTag.belongsToMany(BlogPost, { through: BlogPostTag, foreignKey: 'blog_tag_id', otherKey: 'blog_post_id', as: 'BlogPosts' });
+
+BlogPost.belongsToMany(Product, { through: BlogFeaturedProduct, foreignKey: 'blog_post_id', otherKey: 'product_id', as: 'FeaturedProducts' });
+Product.belongsToMany(BlogPost, { through: BlogFeaturedProduct, foreignKey: 'product_id', otherKey: 'blog_post_id', as: 'BlogPosts' });
+
+BlogPost.hasOne(BlogSEO, { foreignKey: 'blog_post_id', as: 'BlogSEO', onDelete: 'CASCADE' });
+BlogSEO.belongsTo(BlogPost, { foreignKey: 'blog_post_id', as: 'BlogPost' });
