@@ -830,7 +830,7 @@
 }
 
 .pdt-fit-text strong {
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   color: #1a1a1a;
   line-height: 1.3;
@@ -838,7 +838,7 @@
 }
 
 .pdt-fit-text span {
-  font-size: 11px;
+  font-size: 13px;
   color: #888;
   margin-top: 1px;
   line-height: 1.3;
@@ -1131,7 +1131,7 @@
 
 @media (max-width: 768px) {
   .pdt-fit-row {
-    max-width: -webkit-fill-available;
+    max-width: 600px;
   }
 }
 
