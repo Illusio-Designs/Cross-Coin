@@ -5,6 +5,7 @@ const {
 const slugify = require('slugify');
 const { sequelize } = require('../config/db.js');
 const { Op } = require('sequelize');
+const fs = require('fs/promises');
 const imagekitService = require('../services/imagekitService.js');
 
 // Full include array for blog posts
@@ -570,18 +571,29 @@ const uploadHeroImage = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Only image/jpeg, image/png, and image/webp are accepted' });
     }
 
-    // Delete old image from ImageKit if exists (best-effort)
-    if (post.hero_image && typeof imagekitService.deleteImage === 'function') {
-      try {
-        await imagekitService.deleteImage(post.hero_image);
-      } catch (err) {
-        console.warn('Could not delete old hero image:', err.message);
-      }
+    // Read file from disk (same pattern as categoryController)
+    const fileBuffer = await fs.readFile(req.file.path);
+
+    // Upload to ImageKit
+    const result = await imagekitService.uploadImage(
+      fileBuffer,
+      `blog-hero-${Date.now()}.webp`,
+      '/blogs'
+    );
+
+    if (!result.success) {
+      throw new Error('Failed to upload image to ImageKit');
     }
 
-    // Upload new image
-    const result = await imagekitService.uploadImage(req.file.buffer, req.file.originalname, '/blogs');
-    await post.update({ hero_image: result.url || result.filePath });
+    // Delete temp file from disk
+    await fs.unlink(req.file.path).catch(() => {});
+
+    // Delete old image from ImageKit if exists (best-effort)
+    if (post.hero_image && typeof imagekitService.deleteImage === 'function') {
+      try { await imagekitService.deleteImage(post.hero_image); } catch {}
+    }
+
+    await post.update({ hero_image: result.filePath });
 
     const updatedPost = await BlogPost.findByPk(id, { include: fullPostInclude() });
     return res.status(200).json({ success: true, data: updatedPost });

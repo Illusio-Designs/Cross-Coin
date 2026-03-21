@@ -11,7 +11,8 @@ const UPLOAD_DIRS = {
     users: path.join(__dirname, '../uploads/users'),
     seo: path.join(__dirname, '../uploads/seo'),
     slider: path.join(__dirname, '../uploads/slider'),
-    reviews: path.join(__dirname, '../uploads/reviews')
+    reviews: path.join(__dirname, '../uploads/reviews'),
+    blogs: path.join(__dirname, '../uploads/blogs'),
 };
 
 // Create directories if they don't exist
