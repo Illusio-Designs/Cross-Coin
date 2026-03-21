@@ -221,8 +221,11 @@ export default function ProductDetails() {
   };
 
   const estimatedDelivery = (() => {
+    const days = (serviceability?.serviceable && serviceability?.estimated_delivery_days)
+      ? serviceability.estimated_delivery_days
+      : 5;
     const d = new Date();
-    d.setDate(d.getDate() + 5);
+    d.setDate(d.getDate() + days);
     const day = d.getDate();
     const month = d.toLocaleString('en-IN', { month: 'long' });
     const suffix = day === 1 || day === 21 || day === 31 ? 'st'

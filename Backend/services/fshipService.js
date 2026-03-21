@@ -649,8 +649,16 @@ class FShipService {
             };
 
             const response = await this.axiosInstance.post('/api/pincodeserviceability', payload);
-            console.log('Serviceability checked successfully');
-            return response.data;
+            console.log('Serviceability response:', JSON.stringify(response.data, null, 2));
+            // Normalize: FShip may return { data: [...] }, { response: [...] }, or a bare array
+            const raw = response.data;
+            if (Array.isArray(raw)) return raw;
+            if (raw && Array.isArray(raw.data)) return raw.data;
+            if (raw && Array.isArray(raw.response)) return raw.response;
+            if (raw && Array.isArray(raw.couriers)) return raw.couriers;
+            // If it's a single object (one courier), wrap it
+            if (raw && typeof raw === 'object' && !Array.isArray(raw)) return [raw];
+            return raw;
         } catch (error) {
             this.handleApiError(error, 'Check Serviceability');
         }

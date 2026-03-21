@@ -57,16 +57,25 @@ router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
         const fshipService = require('../services/fshipService');
         const sourcePincode = process.env.DEFAULT_WAREHOUSE_PINCODE || '400001';
         const result = await fshipService.checkServiceability(sourcePincode, pincode);
+        console.log('Serviceability raw result:', JSON.stringify(result, null, 2));
         if (result && Array.isArray(result) && result.length > 0) {
             const firstCourier = result[0];
-            const codSupported = result.some(c => c.cod === 1 || c.cod === true || c.cod === 'yes');
+            const codSupported = result.some(c =>
+                c.cod === 1 || c.cod === true || c.cod === 'yes' ||
+                c.COD === 1 || c.COD === true || c.COD === 'yes' ||
+                c.is_cod === true || c.is_cod === 1
+            );
             return res.json({
                 success: true,
                 serviceable: true,
-                estimated_delivery_days: firstCourier.estimated_delivery_days || 5,
+                estimated_delivery_days: firstCourier.estimated_delivery_days || firstCourier.edd || 5,
                 cod_available: codSupported,
-                couriers: result.length,
+                couriers_available: result.length,
             });
+        }
+        // Non-array truthy response — log it so we can debug further
+        if (result && !Array.isArray(result)) {
+            console.warn('Unexpected serviceability response shape:', JSON.stringify(result));
         }
         return res.json({ success: true, serviceable: false, message: 'Delivery not available to this pincode.' });
     } catch (error) {
