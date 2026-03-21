@@ -26,6 +26,7 @@ const fetchFeaturedProductsData = async (productIds) => {
   if (!productIds.length) return {};
   const products = await Product.findAll({
     where: { id: { [Op.in]: productIds } },
+    attributes: ['id', 'name', 'slug', 'badge', 'avg_rating', 'review_count'],
     include: [
       {
         model: ProductVariation,
@@ -40,17 +41,24 @@ const fetchFeaturedProductsData = async (productIds) => {
   const map = {};
   for (const p of products) {
     const pd = p.toJSON();
+    const variations = (pd.ProductVariations || []).map(v => ({
+      id: v.id,
+      price: v.price,
+      comparePrice: v.comparePrice,
+      stock: v.stock,
+      sku: v.sku,
+      attributes: v.attributes,
+      images: (v.VariationImages || []).map(fmtImg),
+    }));
+    const firstVar = variations[0] || null;
     map[pd.id] = {
       images: (pd.ProductImages || []).map(fmtImg),
-      variations: (pd.ProductVariations || []).map(v => ({
-        id: v.id,
-        price: v.price,
-        comparePrice: v.comparePrice,
-        stock: v.stock,
-        sku: v.sku,
-        attributes: v.attributes,
-        images: (v.VariationImages || []).map(fmtImg),
-      })),
+      variations,
+      // Expose top-level price/comparePrice so ProductCard renders correctly
+      price: firstVar ? firstVar.price : null,
+      comparePrice: firstVar ? firstVar.comparePrice : null,
+      avg_rating: pd.avg_rating || null,
+      review_count: pd.review_count || 0,
     };
   }
   return map;
@@ -74,6 +82,10 @@ const formatPostImage = async (post) => {
       badge: fp.badge || 'none',
       images: productData[fp.id]?.images || [],
       variations: productData[fp.id]?.variations || [],
+      price: productData[fp.id]?.price || null,
+      comparePrice: productData[fp.id]?.comparePrice || null,
+      avg_rating: productData[fp.id]?.avg_rating || null,
+      review_count: productData[fp.id]?.review_count || 0,
       BlogFeaturedProduct: fp.BlogFeaturedProduct,
     }));
   }

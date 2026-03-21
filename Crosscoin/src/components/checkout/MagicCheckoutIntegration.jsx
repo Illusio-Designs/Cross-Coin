@@ -2,24 +2,35 @@ import { useState, useEffect, useCallback } from "react";
 import PropTypes from "prop-types";
 
 /**
- * Magic Checkout SDK Integration Component
- * Handles Razorpay Magic Checkout SDK loading, initialization, and payment processing
+ * Razorpay Magic Checkout Integration
+ *
+ * How Magic Checkout works (per official Razorpay docs):
+ * 1. Load magic-checkout.js SDK (NOT checkout.js)
+ * 2. Create a Razorpay order on your server with line_items + line_items_total (in paise)
+ *    - line_items_total is MANDATORY to trigger Magic Checkout UI instead of Standard Checkout
+ * 3. Open the modal with one_click_checkout: true (NOT magic: true)
+ * 4. Razorpay handles address collection, OTP login, saved addresses, COD/prepaid selection
+ * 5. Razorpay calls YOUR server's promotions/shipping APIs directly (configured in dashboard)
+ *    - You do NOT call those APIs from the frontend
+ * 6. On payment success, verify signature on your server
+ *
+ * Dashboard setup required:
+ * - Magic Checkout > Setup & Settings > Checkout Settings
+ *   → URL for get promotions: https://api.crosscoin.in/api/payments/magic-checkout/promotions
+ *   → URL for apply promotions: https://api.crosscoin.in/api/payments/magic-checkout/apply-promotion
+ * - Magic Checkout > Shipping Setup
+ *   → Shipping Service type: API
+ *   → URL for shipping info: https://api.crosscoin.in/api/payments/magic-checkout/shipping-info
  */
 const MagicCheckoutIntegration = ({
   cartItems = [],
   user = null,
+  appliedCoupon = null,
   onSuccess,
   onError,
-  shippingAddress,
-  shippingFee,
-  appliedCoupon,
 }) => {
-  const [sdkLoaded, setSDKLoaded] = useState(false);
-  const [sdkLoading, setSDKLoading] = useState(false);
-  const [magicCheckoutInstance, setMagicCheckoutInstance] = useState(null);
-  const [promotions, setPromotions] = useState([]);
-  const [selectedPromotion, setSelectedPromotion] = useState(appliedCoupon);
-  const [shippingInfo, setShippingInfo] = useState([]);
+  const [sdkLoaded, setSdkLoaded] = useState(false);
+  const [sdkLoading, setSdkLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
 
@@ -27,625 +38,251 @@ const MagicCheckoutIntegration = ({
   const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
   const MAGIC_CHECKOUT_ENABLED = process.env.NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED === "true";
 
-  /**
-   * Load Magic Checkout SDK from CDN
-   */
-  const loadMagicCheckoutSDK = useCallback(() => {
+  // ── Load the Magic Checkout SDK (magic-checkout.js, not checkout.js) ──────
+  const loadSDK = useCallback(() => {
     return new Promise((resolve, reject) => {
-      // Check if SDK is already loaded (standard Razorpay SDK)
-      if (window.Razorpay) {
-        setSDKLoaded(true);
-        resolve(true);
-        return;
-      }
+      if (window.Razorpay) { setSdkLoaded(true); resolve(true); return; }
 
-      // Check if script tag already exists
-      if (document.getElementById("razorpay-magic-checkout-script")) {
-        // Wait for it to load
-        const checkInterval = setInterval(() => {
-          if (window.Razorpay) {
-            clearInterval(checkInterval);
-            setSDKLoaded(true);
-            resolve(true);
-          }
+      const existing = document.getElementById("rzp-magic-sdk");
+      if (existing) {
+        const poll = setInterval(() => {
+          if (window.Razorpay) { clearInterval(poll); setSdkLoaded(true); resolve(true); }
         }, 100);
-        
-        setTimeout(() => {
-          clearInterval(checkInterval);
-          if (!window.Razorpay) {
-            reject(new Error("SDK load timeout"));
-          }
-        }, 10000);
+        setTimeout(() => { clearInterval(poll); reject(new Error("SDK timeout")); }, 10000);
         return;
       }
 
-      setSDKLoading(true);
-      const script = document.createElement("script");
-      script.id = "razorpay-magic-checkout-script";
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.async = true;
-
-      script.onload = () => {
-        setSDKLoaded(true);
-        setSDKLoading(false);
-        resolve(true);
-      };
-
-      script.onerror = (error) => {
-        setSDKLoading(false);
-        setError("Failed to load Razorpay SDK");
-        reject(new Error("Failed to load Razorpay SDK"));
-      };
-
-      document.body.appendChild(script);
+      setSdkLoading(true);
+      const s = document.createElement("script");
+      s.id = "rzp-magic-sdk";
+      // Official Magic Checkout SDK — different from standard checkout.js
+      s.src = "https://checkout.razorpay.com/v1/magic-checkout.js";
+      s.async = true;
+      s.onload = () => { setSdkLoaded(true); setSdkLoading(false); resolve(true); };
+      s.onerror = () => { setSdkLoading(false); reject(new Error("Failed to load SDK")); };
+      document.body.appendChild(s);
     });
   }, []);
 
-  /**
-   * Initialize Magic Checkout SDK with order_id
-   */
-  const initializeMagicCheckout = useCallback(async (orderId) => {
-    if (!sdkLoaded || !window.Razorpay) {
-      return null;
+  useEffect(() => {
+    if (MAGIC_CHECKOUT_ENABLED) {
+      loadSDK().catch(() => setError("Failed to load Razorpay Magic Checkout SDK"));
     }
+  }, [MAGIC_CHECKOUT_ENABLED, loadSDK]);
 
-    if (!orderId) {
-      return null;
-    }
-
-    if (!RAZORPAY_KEY) {
-      setError("Razorpay Key is not configured. Please set NEXT_PUBLIC_RAZORPAY_KEY_ID in environment variables.");
-      return null;
-    }
-
-    try {
-      const razorpayOptions = {
-        key: RAZORPAY_KEY,
-        order_id: orderId,
-        magic: true,
-        handler: handlePaymentSuccess,
-        modal: {
-          ondismiss: handlePaymentDismiss,
-        },
-        prefill: {
-          name: shippingAddress?.full_name || shippingAddress?.fullName || user?.name || '',
-          email: user?.email || '',
-          contact: shippingAddress?.phone_number || shippingAddress?.phoneNumber || user?.phone || ''
-        },
-        theme: {
-          color: '#180D3E'
-        },
-        config: {
-          display: {
-            language: 'en'
-          }
-        }
-      };
-      
-      const instance = new window.Razorpay(razorpayOptions);
-      setMagicCheckoutInstance(instance);
-      return instance;
-    } catch (err) {
-      setError(`Failed to initialize Magic Checkout: ${err.message}`);
-      return null;
-    }
-  }, [sdkLoaded, RAZORPAY_KEY, shippingAddress, user]);
-
-  /**
-   * Calculate total amount in rupees
-   */
-  const calculateTotalAmount = () => {
-    const cartTotal = cartItems.reduce((sum, item) => {
-      return sum + parseFloat(item.price || 0) * (item.quantity || 1);
+  // ── Calculate totals ──────────────────────────────────────────────────────
+  const getCartTotal = useCallback(() => {
+    return cartItems.reduce((sum, item) => {
+      const price = item.variation?.price || item.price || 0;
+      return sum + parseFloat(price) * (item.quantity || 1);
     }, 0);
+  }, [cartItems]);
 
-    const shippingFeeAmount = parseFloat(shippingFee?.fee || 0);
-    const discountAmount = selectedPromotion?.discount || 0;
-    const finalAmount = cartTotal + shippingFeeAmount - discountAmount;
-
-    return Math.round(finalAmount * 100) / 100;
-  };
-
-  /**
-   * Fetch available promotions
-   */
-  const fetchPromotions = useCallback(async (orderId) => {
-    try {
-      const cartTotal = cartItems.reduce((sum, item) => {
-        return sum + parseFloat(item.price || 0) * (item.quantity || 1);
-      }, 0);
-
-      const response = await fetch(
-        `${API_URL}/api/payments/magic-checkout/promotions?` +
-          new URLSearchParams({
-            order_id: orderId,
-            customer_id: user?.id || "",
-            cart_total: cartTotal,
-          }),
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Brand-Name": "crosscoin",
-            ...(user ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch promotions");
-      }
-
-      const data = await response.json();
-      setPromotions(data.promotions || []);
-      return data.promotions || [];
-    } catch (err) {
-      setPromotions([]);
-      return [];
-    }
-  }, [cartItems, user, API_URL]);
-
-  /**
-   * Apply promotion code
-   */
-  const applyPromotion = useCallback(async (promotionCode) => {
-    try {
-      setIsProcessing(true);
-
-      const cartTotal = cartItems.reduce((sum, item) => {
-        return sum + parseFloat(item.price || 0) * (item.quantity || 1);
-      }, 0);
-
-      const response = await fetch(
-        `${API_URL}/api/payments/magic-checkout/apply-promotion`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Brand-Name": "crosscoin",
-            ...(user ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
-          },
-          body: JSON.stringify({
-            promotion_code: promotionCode,
-            customer_id: user?.id || "",
-            cart_total: cartTotal,
-            cart_items: cartItems.map((item) => ({
-              product_id: item.productId || item.id,
-              quantity: item.quantity,
-              price: parseFloat(item.price || 0),
-            })),
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to apply promotion");
-      }
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setSelectedPromotion({
-          code: data.promotion.code,
-          description: data.promotion.description,
-          discount: data.discount_amount / 100,
-        });
-        return data;
-      } else {
-        throw new Error(data.message || "Failed to apply promotion");
-      }
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [cartItems, user, API_URL]);
-
-  /**
-   * Fetch shipping info for addresses
-   */
-  const fetchShippingInfo = useCallback(async (addresses) => {
-    try {
-      const cartTotal = cartItems.reduce((sum, item) => {
-        return sum + parseFloat(item.price || 0) * (item.quantity || 1);
-      }, 0);
-
-      const requestBody = {
-        addresses: addresses.map((addr) => ({
-          id: addr.id,
-          line1: addr.address || addr.line1,
-          line2: addr.line2 || "",
-          city: addr.city,
-          state: addr.state,
-          pincode: addr.postal_code || addr.postalCode || addr.pincode,
-          phone: addr.phone_number || addr.phoneNumber || addr.phone,
-        })),
-        cart_total: cartTotal,
-        payment_method: shippingFee?.orderType === "cod" ? "cod" : "prepaid",
+  // ── Build line_items for Razorpay order (amounts in paise) ───────────────
+  const buildLineItems = useCallback(() => {
+    return cartItems.map((item) => {
+      const price = parseFloat(item.variation?.price || item.price || 0);
+      const priceInPaise = Math.round(price * 100);
+      return {
+        type: "e-commerce",
+        sku: `SKU_${item.productId || item.id}`,
+        variant_id: item.variationId ? `VAR_${item.variationId}` : undefined,
+        price: priceInPaise,
+        offer_price: priceInPaise,
+        tax_amount: 0,
+        quantity: item.quantity || 1,
+        name: item.name || "Product",
+        description: item.description || "",
+        // image_url: item.image?.image_url || item.image || undefined,
       };
-      
-      const response = await fetch(
-        `${API_URL}/api/payments/magic-checkout/shipping-info`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Brand-Name": "crosscoin",
-            ...(user ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
-          },
-          body: JSON.stringify(requestBody),
-        }
-      );
+    });
+  }, [cartItems]);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to fetch shipping info");
-      }
-
-      const data = await response.json();
-      setShippingInfo(data.shipping_info || []);
-      return data.shipping_info || [];
-    } catch (err) {
-      setShippingInfo([]);
-      return [];
-    }
-  }, [cartItems, shippingFee, API_URL, user]);
-
-  /**
-   * Handle payment success callback
-   */
-  const handlePaymentSuccess = async (response) => {
-    try {
-      if (onSuccess) {
-        await onSuccess({
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_order_id: response.razorpay_order_id,
-          razorpay_signature: response.razorpay_signature,
-          magic_checkout_order_id: response.magic_checkout_order_id,
-          magic_checkout_payment_id: response.magic_checkout_payment_id,
-        });
-      }
-    } catch (err) {
-      if (onError) {
-        onError(err);
-      }
-    }
-  };
-
-  /**
-   * Handle payment dismissal
-   */
-  const handlePaymentDismiss = () => {
-    setIsProcessing(false);
-  };
-
-  /**
-   * Create Razorpay order and process payment through Magic Checkout
-   */
+  // ── Main: create order then open Magic Checkout modal ────────────────────
   const processPayment = useCallback(async () => {
+    if (!RAZORPAY_KEY) {
+      setError("Razorpay key not configured (NEXT_PUBLIC_RAZORPAY_KEY_ID)");
+      return;
+    }
+    if (cartItems.length === 0) {
+      setError("Cart is empty");
+      return;
+    }
+
     try {
       setIsProcessing(true);
       setError(null);
 
-      // Validate shipping address serviceability
-      if (shippingAddress) {
-        try {
-          const serviceabilityCheck = await fetchShippingInfo([shippingAddress]);
-          
-          if (serviceabilityCheck && serviceabilityCheck.length > 0) {
-            const addressInfo = serviceabilityCheck[0];
-            
-            if (!addressInfo.serviceable) {
-              setError(`Delivery not available: ${addressInfo.reason || 'Pincode not serviceable'}`);
-              setIsProcessing(false);
-              return false;
-            }
-          }
-        } catch (serviceError) {
-          // Continue anyway - don't block checkout
-        }
-      }
+      const cartTotalRupees = getCartTotal();
+      const discountRupees = parseFloat(appliedCoupon?.discount || 0);
+      const finalAmountRupees = Math.max(0, cartTotalRupees - discountRupees);
+      const lineItems = buildLineItems();
 
-      // Calculate total amount
-      const totalAmount = calculateTotalAmount();
-
-      // Create Razorpay order
-      const orderResponse = await fetch(
-        `${API_URL}/api/payments/magic-checkout/create-order`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Brand-Name": "crosscoin",
-            ...(user ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
-          },
-          body: JSON.stringify({
-            amount: totalAmount,
-            currency: "INR",
-            customer_id: user?.id || null,
-            cart_items: cartItems.map((item) => ({
-              product_id: item.productId || item.id,
-              variation_id: item.variationId || item.variation?.id || null,
-              quantity: item.quantity,
-              price: parseFloat(item.price || 0),
-              name: item.name || item.title || 'Product',
-              description: item.description || '',
-            })),
-            shipping_address: {
-              full_name: shippingAddress?.full_name || shippingAddress?.fullName,
-              address: shippingAddress?.address,
-              city: shippingAddress?.city,
-              state: shippingAddress?.state,
-              postal_code: shippingAddress?.postal_code || shippingAddress?.postalCode,
-              phone_number: shippingAddress?.phone_number || shippingAddress?.phoneNumber,
-            },
-            notes: {
-              shipping_fee: shippingFee?.fee || 0,
-              coupon_code: appliedCoupon?.code || null,
-              discount_amount: appliedCoupon?.discount || 0,
-            },
-          }),
-        }
+      // line_items_total = sum of (offer_price * quantity) in paise
+      // This is MANDATORY — without it Razorpay falls back to Standard Checkout
+      const lineItemsTotal = lineItems.reduce(
+        (sum, item) => sum + item.offer_price * item.quantity,
+        0
       );
 
-      if (!orderResponse.ok) {
-        const errorData = await orderResponse.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to create order");
+      // Step 1: Create Razorpay order on our server
+      const orderRes = await fetch(`${API_URL}/api/payments/magic-checkout/create-order`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Brand-Name": "crosscoin",
+          ...(user ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
+        },
+        body: JSON.stringify({
+          amount: finalAmountRupees,          // in rupees — backend converts to paise
+          currency: "INR",
+          customer_id: user?.id || null,
+          line_items: lineItems,              // passed through to Razorpay
+          line_items_total: lineItemsTotal,   // in paise — MANDATORY for Magic Checkout
+          notes: {
+            coupon_code: appliedCoupon?.code || null,
+            discount_amount: discountRupees,
+          },
+        }),
+      });
+
+      if (!orderRes.ok) {
+        const err = await orderRes.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to create order");
       }
 
-      const orderData = await orderResponse.json();
+      const { order_id, amount } = await orderRes.json();
 
-      // Initialize Magic Checkout with order_id
-      const instance = await initializeMagicCheckout(orderData.order_id);
-      
-      if (!instance) {
-        throw new Error("Failed to initialize Magic Checkout");
-      }
+      // Step 2: Open Magic Checkout modal
+      // one_click_checkout: true is MANDATORY (not magic: true)
+      const options = {
+        key: RAZORPAY_KEY,
+        order_id,
+        amount,                       // in paise, returned by server
+        currency: "INR",
+        name: "Cross Coin",
+        one_click_checkout: true,     // ← triggers Magic Checkout UI
+        show_coupons: true,           // Razorpay fetches coupons from your promotions API
+        prefill: {
+          name: user?.name || "",
+          email: user?.email || "",
+          contact: user?.phone || "",
+        },
+        // Pre-applied discount display (does NOT affect payment amount)
+        ...(appliedCoupon ? {
+          one_click_checkout_options: {
+            pre_discounts: [{
+              label: appliedCoupon.code,
+              value: `₹${discountRupees}`,
+            }],
+          },
+        } : {}),
+        theme: { color: "#180D3E" },
+        modal: {
+          ondismiss: () => setIsProcessing(false),
+        },
+        handler: async (response) => {
+          // Step 3: Verify payment signature on success
+          try {
+            const verifyRes = await fetch(`${API_URL}/api/payments/magic-checkout/verify-payment`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Brand-Name": "crosscoin",
+                ...(user ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
 
-      // Fetch promotions for the order (optional, non-blocking)
-      try {
-        await fetchPromotions(orderData.order_id);
-      } catch (promoError) {
-        // Silently ignore promotion fetch error
-      }
+            const verifyData = await verifyRes.json();
 
-      // Fetch shipping info (non-blocking)
-      if (shippingAddress) {
-        try {
-          await fetchShippingInfo([shippingAddress]);
-        } catch (shippingError) {
-          // Silently ignore shipping info fetch error
+            if (verifyData.success) {
+              if (onSuccess) onSuccess(response);
+            } else {
+              throw new Error("Payment signature verification failed");
+            }
+          } catch (err) {
+            if (onError) onError(err);
+          } finally {
+            setIsProcessing(false);
+          }
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+
+      // Optional: analytics tracking
+      rzp.on("mx-analytics", (data) => {
+        if (data?.event) {
+          console.log("[Magic Checkout Analytics]", data.event, data);
         }
-      }
+      });
 
-      // Open Magic Checkout payment modal
-      instance.open();
-      return true;
+      rzp.on("payment.failed", (response) => {
+        setIsProcessing(false);
+        if (onError) onError(new Error(response.error?.description || "Payment failed"));
+      });
+
+      rzp.open();
     } catch (err) {
       setError(err.message || "Failed to process payment");
       setIsProcessing(false);
-      if (onError) {
-        onError(err);
-      }
-      return false;
+      if (onError) onError(err);
     }
   }, [
-    cartItems,
-    user,
-    shippingAddress,
-    shippingFee,
-    appliedCoupon,
-    API_URL,
-    initializeMagicCheckout,
-    fetchPromotions,
-    fetchShippingInfo,
-    onError,
+    cartItems, user, appliedCoupon,
+    API_URL, RAZORPAY_KEY, MAGIC_CHECKOUT_ENABLED,
+    getCartTotal, buildLineItems, onSuccess, onError,
   ]);
 
-  /**
-   * Load SDK on mount if enabled
-   */
-  useEffect(() => {
-    if (MAGIC_CHECKOUT_ENABLED) {
-      loadMagicCheckoutSDK().catch((err) => {
-        // SDK load failed
-      });
-    }
-  }, [MAGIC_CHECKOUT_ENABLED, loadMagicCheckoutSDK]);
-
-  /**
-   * Expose processPayment function to parent component and globally
-   */
-  useEffect(() => {
-    // Make processPayment available globally for cart drawer
-    if (typeof window !== 'undefined') {
-      window.openMagicCheckout = processPayment;
-    }
-    
-    return () => {
-      // Cleanup on unmount
-      if (typeof window !== 'undefined') {
-        delete window.openMagicCheckout;
-      }
-    };
-  }, [processPayment]);
-
-  // Don't render anything if Magic Checkout is not enabled
+  // ── Not enabled ───────────────────────────────────────────────────────────
   if (!MAGIC_CHECKOUT_ENABLED) {
     return (
-      <div className="magic-checkout-container" style={{ 
-        padding: '20px', 
-        backgroundColor: '#fff3cd', 
-        border: '1px solid #ffc107',
-        borderRadius: '8px',
-        marginBottom: '20px'
+      <div style={{
+        padding: 16, background: "#fff3cd", border: "1px solid #ffc107",
+        borderRadius: 8, fontSize: 14, color: "#856404",
       }}>
-        <p style={{ margin: 0, color: '#856404', fontWeight: '500' }}>
-          ⚠️ Magic Checkout is not enabled. 
-          <br />
-          <small>Set NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED=true in .env.local to enable.</small>
-        </p>
+        ⚠️ Magic Checkout disabled.
+        <br />
+        <small>Set <code>NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED=true</code> in .env.local</small>
       </div>
     );
   }
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="magic-checkout-container">
-      {sdkLoading && (
-        <div className="magic-checkout-loading" style={{ 
-          padding: '20px', 
-          textAlign: 'center',
-          backgroundColor: '#f8f9fa',
-          borderRadius: '8px'
-        }}>
-          <p style={{ margin: 0, color: '#666' }}>Loading Magic Checkout...</p>
-        </div>
-      )}
-
+    <div>
       {error && (
-        <div className="magic-checkout-error" style={{ 
-          padding: '15px', 
-          backgroundColor: '#fee', 
-          border: '1px solid #fcc',
-          borderRadius: '8px',
-          marginBottom: '20px'
+        <div style={{
+          padding: 12, background: "#fff5f5", border: "1px solid #feb2b2",
+          borderRadius: 8, marginBottom: 12, fontSize: 14, color: "#c53030",
         }}>
-          <p style={{ margin: 0, color: '#c00' }}>{error}</p>
+          {error}
         </div>
       )}
 
-      {sdkLoaded && !error && (
-        <div className="magic-checkout-ready">
-          <button
-            onClick={processPayment}
-            disabled={isProcessing || !shippingAddress}
-            style={{
-              width: '100%',
-              padding: '15px',
-              backgroundColor: isProcessing || !shippingAddress ? '#ccc' : '#5469d4',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: isProcessing || !shippingAddress ? 'not-allowed' : 'pointer',
-              transition: 'background-color 0.3s ease',
-            }}
-            onMouseEnter={(e) => {
-              if (!isProcessing && shippingAddress) {
-                e.target.style.backgroundColor = '#4355c9';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isProcessing && shippingAddress) {
-                e.target.style.backgroundColor = '#5469d4';
-              }
-            }}
-          >
-            {isProcessing ? "Processing..." : "Pay with Magic Checkout"}
-          </button>
+      <button
+        onClick={processPayment}
+        disabled={isProcessing || sdkLoading || !sdkLoaded || cartItems.length === 0}
+        style={{
+          width: "100%", padding: "14px 0",
+          background: isProcessing || sdkLoading || !sdkLoaded ? "#a0aec0" : "#180D3E",
+          color: "#fff", border: "none", borderRadius: 8,
+          fontSize: 16, fontWeight: 600,
+          cursor: isProcessing || sdkLoading || !sdkLoaded ? "not-allowed" : "pointer",
+          transition: "background 0.2s",
+        }}
+      >
+        {sdkLoading ? "Loading..." : isProcessing ? "Processing..." : "⚡ Pay with Magic Checkout"}
+      </button>
 
-          {!shippingAddress && (
-            <p style={{ 
-              marginTop: '10px', 
-              fontSize: '14px', 
-              color: '#666',
-              textAlign: 'center'
-            }}>
-              Please add a shipping address to continue
-            </p>
-          )}
-
-          {/* Promotions Section */}
-          {promotions.length > 0 && (
-            <div className="magic-checkout-promotions" style={{ marginTop: '20px' }}>
-              <h4 style={{ marginBottom: '10px', fontSize: '16px' }}>Available Promotions</h4>
-              <div className="promotions-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {promotions.map((promo) => (
-                  <div
-                    key={promo.code}
-                    className={`promotion-card ${
-                      selectedPromotion?.code === promo.code ? "selected" : ""
-                    }`}
-                    onClick={() => applyPromotion(promo.code)}
-                    style={{
-                      padding: '12px',
-                      border: selectedPromotion?.code === promo.code ? '2px solid #5469d4' : '1px solid #ddd',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      backgroundColor: selectedPromotion?.code === promo.code ? '#f0f4ff' : 'white',
-                    }}
-                  >
-                    <div className="promotion-code" style={{ fontWeight: '600', marginBottom: '4px' }}>
-                      {promo.code}
-                    </div>
-                    <div className="promotion-description" style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
-                      {promo.description}
-                    </div>
-                    <div className="promotion-value" style={{ fontSize: '14px', color: '#5469d4', fontWeight: '500' }}>
-                      {promo.type === "percentage"
-                        ? `${promo.value}% off`
-                        : `₹${promo.value} off`}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Shipping Info Section */}
-          {shippingInfo.length > 0 && (
-            <div className="magic-checkout-shipping-info" style={{ marginTop: '20px' }}>
-              <h4 style={{ marginBottom: '10px', fontSize: '16px' }}>Shipping Information</h4>
-              {shippingInfo.map((info) => (
-                <div key={info.address_id} className="shipping-info-card" style={{
-                  padding: '12px',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  backgroundColor: info.serviceable ? '#f0fff4' : '#fff5f5',
-                }}>
-                  <div className="shipping-serviceability" style={{ marginBottom: '8px' }}>
-                    {info.serviceable ? (
-                      <span className="serviceable" style={{ color: '#22c55e', fontWeight: '500' }}>
-                        ✓ Delivery Available
-                      </span>
-                    ) : (
-                      <span className="not-serviceable" style={{ color: '#ef4444', fontWeight: '500' }}>
-                        ✗ Not Serviceable
-                      </span>
-                    )}
-                  </div>
-                  {info.serviceable && (
-                    <>
-                      <div className="shipping-cod" style={{ fontSize: '14px', marginBottom: '4px' }}>
-                        COD: {info.cod_available ? "Available" : "Not Available"}
-                      </div>
-                      <div className="shipping-fees" style={{ fontSize: '14px', marginBottom: '4px' }}>
-                        Shipping Fee: ₹{(info.shipping_fee / 100).toFixed(2)}
-                      </div>
-                      {info.cod_available && info.cod_fee > 0 && (
-                        <div className="cod-fee" style={{ fontSize: '14px', marginBottom: '4px' }}>
-                          COD Fee: ₹{(info.cod_fee / 100).toFixed(2)}
-                        </div>
-                      )}
-                      <div className="address-quality" style={{ fontSize: '14px', color: '#666' }}>
-                        Address Quality: {info.address_quality_score}/100
-                      </div>
-                    </>
-                  )}
-                  {!info.serviceable && info.reason && (
-                    <div className="shipping-reason" style={{ fontSize: '14px', color: '#666', marginTop: '4px' }}>
-                      Reason: {info.reason}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <p style={{ margin: "8px 0 0", fontSize: 12, color: "#888", textAlign: "center" }}>
+        Powered by Razorpay Magic Checkout — saved addresses, UPI, cards & COD
+      </p>
     </div>
   );
 };
@@ -653,11 +290,9 @@ const MagicCheckoutIntegration = ({
 MagicCheckoutIntegration.propTypes = {
   cartItems: PropTypes.array,
   user: PropTypes.object,
+  appliedCoupon: PropTypes.object,
   onSuccess: PropTypes.func.isRequired,
   onError: PropTypes.func.isRequired,
-  shippingAddress: PropTypes.object,
-  shippingFee: PropTypes.object,
-  appliedCoupon: PropTypes.object,
 };
 
 export default MagicCheckoutIntegration;
