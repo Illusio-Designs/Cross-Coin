@@ -1,6 +1,7 @@
 const {
   BlogPost, BlogCategory, BlogTag, BlogPostTag, BlogBrand,
-  BlogFeaturedProduct, BlogSEO, Brand, Product
+  BlogFeaturedProduct, BlogSEO, Brand, Product,
+  ProductVariation, ProductImage
 } = require('../model/associations.js');
 const slugify = require('slugify');
 const { sequelize } = require('../config/db.js');
@@ -8,12 +9,75 @@ const { Op } = require('sequelize');
 const fs = require('fs/promises');
 const imagekitService = require('../services/imagekitService.js');
 
-// Format a blog post's hero_image to a full optimized ImageKit URL
-const formatPostImage = (post) => {
+// Format a single ProductImage row → card-ready object
+const fmtImg = (img) => ({
+  id: img.id,
+  image_url: imagekitService.getOptimizedUrl(img.image_url, 'medium'),
+  thumbnail: imagekitService.getOptimizedUrl(img.image_url, 'thumbnail'),
+  medium: imagekitService.getOptimizedUrl(img.image_url, 'medium'),
+  large: imagekitService.getOptimizedUrl(img.image_url, 'large'),
+  is_primary: img.is_primary,
+  display_order: img.display_order,
+  product_variation_id: img.product_variation_id ?? null,
+});
+
+// Fetch full product data (variations + images) for a list of product IDs
+const fetchFeaturedProductsData = async (productIds) => {
+  if (!productIds.length) return {};
+  const products = await Product.findAll({
+    where: { id: { [Op.in]: productIds } },
+    include: [
+      {
+        model: ProductVariation,
+        as: 'ProductVariations',
+        attributes: ['id', 'price', 'comparePrice', 'stock', 'sku', 'attributes'],
+        include: [{ model: ProductImage, as: 'VariationImages', attributes: ['id', 'image_url', 'is_primary', 'display_order'] }]
+      },
+      { model: ProductImage, as: 'ProductImages', attributes: ['id', 'image_url', 'is_primary', 'display_order', 'product_variation_id'] }
+    ]
+  });
+
+  const map = {};
+  for (const p of products) {
+    const pd = p.toJSON();
+    map[pd.id] = {
+      images: (pd.ProductImages || []).map(fmtImg),
+      variations: (pd.ProductVariations || []).map(v => ({
+        id: v.id,
+        price: v.price,
+        comparePrice: v.comparePrice,
+        stock: v.stock,
+        sku: v.sku,
+        attributes: v.attributes,
+        images: (v.VariationImages || []).map(fmtImg),
+      })),
+    };
+  }
+  return map;
+};
+
+// Format a blog post — hero_image to full ImageKit URL, FeaturedProducts enriched
+const formatPostImage = async (post) => {
   const data = post.toJSON ? post.toJSON() : { ...post };
+
   if (data.hero_image) {
     data.hero_image = imagekitService.getOptimizedUrl(data.hero_image, 'large');
   }
+
+  if (Array.isArray(data.FeaturedProducts) && data.FeaturedProducts.length > 0) {
+    const ids = data.FeaturedProducts.map(fp => fp.id);
+    const productData = await fetchFeaturedProductsData(ids);
+    data.FeaturedProducts = data.FeaturedProducts.map(fp => ({
+      id: fp.id,
+      name: fp.name,
+      slug: fp.slug,
+      badge: fp.badge || 'none',
+      images: productData[fp.id]?.images || [],
+      variations: productData[fp.id]?.variations || [],
+      BlogFeaturedProduct: fp.BlogFeaturedProduct,
+    }));
+  }
+
   return data;
 };
 
@@ -25,7 +89,7 @@ const fullPostInclude = () => [
   {
     model: Product, as: 'FeaturedProducts',
     through: { attributes: ['lifestyle_tag'] },
-    attributes: ['id', 'name', 'slug']
+    attributes: ['id', 'name', 'slug', 'badge']
   },
   { model: BlogSEO, as: 'BlogSEO' }
 ];
@@ -214,7 +278,7 @@ const createPost = async (req, res) => {
     await t.commit();
 
     const fullPost = await BlogPost.findByPk(post.id, { include: fullPostInclude() });
-    return res.status(201).json({ success: true, data: formatPostImage(fullPost) });
+    return res.status(201).json({ success: true, data: await formatPostImage(fullPost) });
   } catch (error) {
     await t.rollback();
     console.error('createPost error:', error);
@@ -251,7 +315,7 @@ const getAllPostsAdmin = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: rows.map(formatPostImage),
+      data: await Promise.all(rows.map(formatPostImage)),
       pagination: {
         total: count,
         page: parseInt(page),
@@ -272,7 +336,7 @@ const getPostByIdAdmin = async (req, res) => {
     if (!post) {
       return res.status(404).json({ success: false, message: 'Blog post not found' });
     }
-    return res.status(200).json({ success: true, data: formatPostImage(post) });
+    return res.status(200).json({ success: true, data: await formatPostImage(post) });
   } catch (error) {
     console.error('getPostByIdAdmin error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
@@ -403,7 +467,7 @@ const updatePost = async (req, res) => {
     await t.commit();
 
     const fullPost = await BlogPost.findByPk(id, { include: fullPostInclude() });
-    return res.status(200).json({ success: true, data: formatPostImage(fullPost) });
+    return res.status(200).json({ success: true, data: await formatPostImage(fullPost) });
   } catch (error) {
     await t.rollback();
     console.error('updatePost error:', error);
@@ -484,7 +548,7 @@ const getPublicPosts = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: rows.map(formatPostImage),
+      data: await Promise.all(rows.map(formatPostImage)),
       pagination: {
         total: count,
         page: parseInt(page),
@@ -529,7 +593,7 @@ const getPublicPostBySlug = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Blog post not found' });
     }
 
-    return res.status(200).json({ success: true, data: formatPostImage(post) });
+    return res.status(200).json({ success: true, data: await formatPostImage(post) });
   } catch (error) {
     console.error('getPublicPostBySlug error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
@@ -605,7 +669,7 @@ const uploadHeroImage = async (req, res) => {
     await post.update({ hero_image: result.filePath });
 
     const updatedPost = await BlogPost.findByPk(id, { include: fullPostInclude() });
-    return res.status(200).json({ success: true, data: formatPostImage(updatedPost) });
+    return res.status(200).json({ success: true, data: await formatPostImage(updatedPost) });
   } catch (error) {
     console.error('uploadHeroImage error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });

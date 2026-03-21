@@ -5,7 +5,6 @@ import { Table, Pagination, Modal, Button, Select } from "../../../components/ui
 import SafeImage from "../../../components/common/SafeImage";
 import Loader from "../../../components/common/Loader";
 import BrandTags from "../../../components/Dashboard/BrandTags";
-import { toast } from 'react-hot-toast';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import { getProductImageSrc } from '../../../utils/imageUtils';
 import { getAttributeComponents } from '../../../utils/productAttributeFormatter';
@@ -109,7 +108,7 @@ const Orders = () => {
     }, []);
 
     const syncOrders = async () => {
-        if (syncingAll || syncingOrders.size > 0) { toast.error('Sync already in progress. Please wait...'); return; }
+        if (syncingAll || syncingOrders.size > 0) { showError('syncInProgress'); return; }
         setSyncingAll(true);
         try {
             const result = await orderService.syncOrdersWithFShip();
@@ -122,10 +121,10 @@ const Orders = () => {
             if (results.tracking_updates > 0) message += `${results.tracking_updates} tracking updates. `;
             if (results.skipped_final_state > 0) message += `${results.skipped_final_state} orders skipped. `;
             if (results.failed > 0) message += `${results.failed} orders failed. `;
-            toast.success(message);
+            showSuccess('orderSynced', message);
             fetchOrders(); fetchAllOrdersForStats();
         } catch (error) {
-            toast.error(error.message || error.error || 'Failed to sync orders with FShip');
+            showError('syncFailed', error.message || error.error || 'Failed to sync orders with FShip');
         } finally { setSyncingAll(false); }
     };
 
@@ -138,22 +137,22 @@ const Orders = () => {
                     if (result.update_result.status_changed) message += ` Status: ${result.update_result.old_status} → ${result.update_result.new_status}`;
                     if (result.update_result.tracking_updated) message += ` Tracking updated.`;
                 }
-                toast.success(message);
+                showSuccess('orderSynced', message);
                 fetchOrders(); fetchAllOrdersForStats();
-            } else { toast.error(result.message || 'Failed to update order'); }
-        } catch (error) { toast.error(error.message || error.error || 'Failed to update order from FShip'); }
+            } else { showError('syncFailed', result.message || 'Failed to update order'); }
+        } catch (error) { showError('syncFailed', error.message || error.error || 'Failed to update order from FShip'); }
     };
 
     const syncSingleOrder = async (orderId, orderNumber) => {
-        if (syncingOrders.has(orderId) || syncingAll) { toast.error('Order sync already in progress...'); return; }
+        if (syncingOrders.has(orderId) || syncingAll) { showError('syncInProgress'); return; }
         try {
             setSyncingOrders(prev => new Set(prev).add(orderId));
             const result = await orderService.syncSingleOrderWithFShip(orderId);
             if (result.success) {
-                toast.success(`Order ${orderNumber} synced! AWB: ${result.data?.fship_response?.waybill || result.data?.order?.fship_waybill || 'Generated'}`);
+                showSuccess('orderSynced', `Order ${orderNumber} synced! AWB: ${result.data?.fship_response?.waybill || result.data?.order?.fship_waybill || 'Generated'}`);
                 fetchOrders(); fetchAllOrdersForStats();
-            } else { toast.error(result.message || 'Failed to sync order with FShip'); }
-        } catch (error) { toast.error(error.message || error.error || 'Failed to sync order with FShip');
+            } else { showError('syncFailed', result.message || 'Failed to sync order with FShip'); }
+        } catch (error) { showError('syncFailed', error.message || error.error || 'Failed to sync order with FShip');
         } finally {
             setSyncingOrders(prev => { const s = new Set(prev); s.delete(orderId); return s; });
         }
@@ -164,9 +163,9 @@ const Orders = () => {
         if (!reason) return;
         try {
             const result = await orderService.adminCancelOrder(orderId, reason);
-            if (result.success) { toast.success(`Order ${orderNumber} cancelled successfully`); fetchOrders(); fetchAllOrdersForStats(); }
-            else { toast.error(result.message || 'Failed to cancel order'); }
-        } catch (error) { toast.error(error.message || error.error || 'Failed to cancel order'); }
+            if (result.success) { showSuccess('orderCancelled', `Order ${orderNumber} cancelled successfully`); fetchOrders(); fetchAllOrdersForStats(); }
+            else { showError('saveFailed', result.message || 'Failed to cancel order'); }
+        } catch (error) { showError('saveFailed', error.message || error.error || 'Failed to cancel order'); }
     };
 
     const handleAwbUpdate = (orderId, currentAwb, currentCourier) => {
@@ -174,23 +173,23 @@ const Orders = () => {
     };
 
     const submitAwbUpdate = async () => {
-        if (!awbNumber.trim()) { toast.error('Please enter AWB number'); return; }
+        if (!awbNumber.trim()) { showError('fieldRequired', 'Please enter AWB number'); return; }
         try {
             await orderService.updateAwbNumber(awbOrderId, { awbNumber: awbNumber.trim(), courierName: courierName.trim() || 'Manual Entry' });
-            toast.success('AWB number updated successfully!');
+            showSuccess('awbUpdated', 'AWB number updated successfully!');
             setIsAwbModalOpen(false); setAwbNumber(''); setCourierName(''); setAwbOrderId(null);
             fetchOrders(currentPage);
-        } catch (error) { toast.error(error.message || 'Failed to update AWB number'); }
+        } catch (error) { showError('updateFailed', error.message || 'Failed to update AWB number'); }
     };
 
     const handleExportDeliveredOrders = async () => {
-        if (!exportStartDate || !exportEndDate) { toast.error('Please select both start and end dates'); return; }
-        if (new Date(exportStartDate) > new Date(exportEndDate)) { toast.error('Start date must be before end date'); return; }
+        if (!exportStartDate || !exportEndDate) { showError('selectDates'); return; }
+        if (new Date(exportStartDate) > new Date(exportEndDate)) { showError('dateError'); return; }
         setIsExporting(true);
         try {
             await orderService.exportDeliveredOrders(exportStartDate, exportEndDate);
-            toast.success('Delivered orders exported successfully!');
-        } catch (error) { toast.error(error.message || 'Failed to export delivered orders');
+            showSuccess('exported', 'Delivered orders exported successfully!');
+        } catch (error) { showError('exportFailed', error.message || 'Failed to export delivered orders');
         } finally { setIsExporting(false); }
     };
 
@@ -206,7 +205,7 @@ const Orders = () => {
             window.open(labelUrl, '_blank');
             await orderService.markLabelDownloaded(orderId);
             fetchOrders(currentPage); fetchLabelStats();
-            toast.success('Label opened successfully!');
+            showSuccess('exported', 'Label opened successfully!');
         } catch (error) {}
     };
 
@@ -221,13 +220,13 @@ const Orders = () => {
     };
 
     const handleBulkDownload = async () => {
-        if (selectedOrders.size === 0) { toast.error('Please select orders to download labels'); return; }
+        if (selectedOrders.size === 0) { showError('fieldRequired', 'Please select orders to download labels'); return; }
         setIsDownloadingBulk(true);
         try {
             await orderService.bulkDownloadLabels(Array.from(selectedOrders));
-            toast.success(`Downloaded ${selectedOrders.size} labels successfully!`);
+            showSuccess('exported', `Downloaded ${selectedOrders.size} labels successfully!`);
             setSelectedOrders(new Set()); fetchOrders(currentPage); fetchLabelStats();
-        } catch (error) { toast.error(error.message || 'Failed to download labels');
+        } catch (error) { showError('exportFailed', error.message || 'Failed to download labels');
         } finally { setIsDownloadingBulk(false); }
     };
 
