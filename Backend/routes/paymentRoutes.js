@@ -34,10 +34,10 @@ router.post('/razorpay-callback', razorpayCallback);
 // Guest routes (no authentication required)
 router.post('/guest/razorpay-order', createRazorpayOrder);
 
-// Magic Checkout routes (support both authenticated and guest access)
+// Magic Checkout routes — all POST, no auth (Razorpay calls promotions/shipping directly)
 router.post('/magic-checkout/create-order', createOrder);
 router.post('/magic-checkout/verify-payment', verifyPayment);
-router.get('/magic-checkout/promotions', getPromotions);
+router.post('/magic-checkout/promotions', getPromotions);
 router.post('/magic-checkout/apply-promotion', applyPromotion);
 router.post('/magic-checkout/shipping-info', getShippingInfo);
 

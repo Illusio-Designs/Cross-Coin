@@ -5,529 +5,260 @@ const { Op } = require('sequelize');
 const addressQualityService = require('../services/addressQualityService.js');
 const fshipService = require('../services/fshipService.js');
 const razorpayService = require('../services/razorpayService');
-const settingsHelper = require('../services/settingsHelper');
-const { toSmallestUnit, fromSmallestUnit } = require('../utils/amountConverter');
+const { toSmallestUnit } = require('../utils/amountConverter');
 
 /**
- * RAZORPAY DASHBOARD CONFIGURATION REQUIRED
- * ==========================================
- * 
- * To enable Magic Checkout, configure the following in your Razorpay Dashboard:
- * 
- * 1. Navigate to: Settings > Magic Checkout > API Configuration
- * 
- * 2. Set up the following webhook/API endpoint URLs:
- *    - Get Promotions API: https://api.crosscoin.in/api/payments/magic-checkout/promotions
- *    - Apply Promotion API: https://api.crosscoin.in/api/payments/magic-checkout/apply-promotion
- *    - Shipping Info API: https://api.crosscoin.in/api/payments/magic-checkout/shipping-info
- * 
- * 3. Configure webhook URLs for payment callbacks:
- *    - Payment Success Webhook: https://api.crosscoin.in/api/payments/magic-checkout/verify-payment
- *    - Order Creation Webhook: https://api.crosscoin.in/api/payments/magic-checkout/create-order
- * 
- * 4. Enable Magic Checkout features:
- *    - ✓ Saved Addresses
- *    - ✓ Saved Payment Methods
- *    - ✓ Address Quality Validation
- *    - ✓ COD Serviceability
- * 
- * 5. Set authentication method:
- *    - Use API Key authentication with your RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET
- * 
- * 6. Test in Razorpay Test Mode first:
- *    - Use test API keys (rzp_test_...)
- *    - Verify all endpoints respond correctly
- *    - Test promotion application and shipping info
- *    - Switch to live keys (rzp_live_...) only after successful testing
- * 
- * Note: Ensure all environment variables are properly configured in Backend/.env
+ * RAZORPAY MAGIC CHECKOUT — HOW IT WORKS
+ * ========================================
+ *
+ * 1. Frontend creates a Razorpay order via POST /api/payments/magic-checkout/create-order
+ *    - MUST include line_items + line_items_total (in paise) to trigger Magic Checkout UI
+ *    - Without line_items_total, Razorpay falls back to Standard Checkout
+ *
+ * 2. Frontend opens the modal with:
+ *    - one_click_checkout: true  (NOT magic: true)
+ *    - SDK: magic-checkout.js    (NOT checkout.js)
+ *
+ * 3. Razorpay's servers call YOUR APIs directly (not the frontend):
+ *    - GET Promotions: POST /api/payments/magic-checkout/promotions
+ *    - Apply Promotion: POST /api/payments/magic-checkout/apply-promotion
+ *    - Shipping Info:   POST /api/payments/magic-checkout/shipping-info
+ *    These must be publicly accessible (no auth) and configured in Razorpay Dashboard:
+ *    Magic Checkout > Setup & Settings > Checkout Settings / Shipping Setup
+ *
+ * 4. On payment success, frontend verifies signature via POST /api/payments/magic-checkout/verify-payment
  */
 
-/**
- * Get Promotions Handler
- * Fetches applicable promotions for Magic Checkout
- * 
- * Query Parameters:
- * - order_id: Razorpay order ID
- * - customer_id: Customer identifier (user ID or guest email)
- * - cart_total: Total cart amount in paise
- * 
- * Returns: List of applicable promotions with discount details
- */
+// ─────────────────────────────────────────────────────────────────────────────
+// GET PROMOTIONS
+// Called by Razorpay's servers when checkout modal opens.
+// Razorpay sends POST with: order_id (receipt), razorpay_order_id, contact, email
+// Response must match Razorpay's expected schema: { promotions: [{ code, summary, description }] }
+// ─────────────────────────────────────────────────────────────────────────────
 module.exports.getPromotions = async (req, res) => {
     try {
-        const { order_id, customer_id, cart_total } = req.query;
-
-        // Validate required parameters
-        if (!order_id || !cart_total) {
-            return res.status(400).json({ 
-                message: 'order_id and cart_total are required' 
-            });
-        }
-
-        const cartTotalAmount = parseFloat(cart_total);
+        const { contact, email } = req.body;
         const currentDate = new Date();
 
-        // 1. Query active coupons from database
-        // 2. Filter by date range (start_date, end_date)
         const activeCoupons = await Coupon.findAll({
             where: {
                 status: 'active',
-                startDate: {
-                    [Op.lte]: currentDate
-                },
-                endDate: {
-                    [Op.gte]: currentDate
-                }
+                startDate: { [Op.lte]: currentDate },
+                endDate: { [Op.gte]: currentDate },
             }
         });
 
-        const applicablePromotions = [];
+        const promotions = [];
 
         for (const coupon of activeCoupons) {
-            let isApplicable = true;
-            let reason = null;
+            // Skip if global usage limit exceeded
+            if (coupon.usageLimit !== null && coupon.usageCount >= coupon.usageLimit) continue;
 
-            // 3. Check total usage limits
-            if (coupon.usageLimit !== null && coupon.usageCount >= coupon.usageLimit) {
-                isApplicable = false;
-                reason = 'Usage limit reached';
-                continue;
-            }
+            // Razorpay schema: code, summary (short), description (long)
+            const valueLabel = coupon.type === 'percentage'
+                ? `${coupon.value}% off`
+                : `₹${coupon.value} off`;
 
-            // 4. Check per-user usage limits
-            if (customer_id && coupon.perUserLimit !== null) {
-                // Parse customer_id as integer for database query
-                const parsedCustomerId = parseInt(customer_id);
-                
-                // Only check if we have a valid numeric user ID
-                if (!isNaN(parsedCustomerId)) {
-                    const userUsageCount = await CouponUsage.count({
-                        where: {
-                            couponId: coupon.id,
-                            userId: parsedCustomerId
-                        }
-                    });
+            const minLabel = coupon.minPurchase
+                ? ` on orders above ₹${coupon.minPurchase}`
+                : '';
 
-                    if (userUsageCount >= coupon.perUserLimit) {
-                        isApplicable = false;
-                        reason = 'Per-user limit reached';
-                        continue;
-                    }
-                }
-            }
-
-            // 5. Validate minimum purchase requirements
-            if (coupon.minPurchase !== null) {
-                const minPurchaseInPaise = toSmallestUnit(parseFloat(coupon.minPurchase), 'INR');
-                if (cartTotalAmount < minPurchaseInPaise) {
-                    isApplicable = false;
-                    reason = `Minimum purchase of ₹${coupon.minPurchase} required`;
-                    continue;
-                }
-            }
-
-            // 6. Calculate discount amounts for percentage coupons
-            let discountValue = parseFloat(coupon.value);
-            let calculatedDiscount = null;
-
-            if (coupon.type === 'percentage') {
-                // Calculate percentage discount
-                calculatedDiscount = Math.round((cartTotalAmount * discountValue) / 100);
-                
-                // Apply maximum discount cap
-                if (coupon.maxDiscount !== null) {
-                    const maxDiscountInPaise = toSmallestUnit(parseFloat(coupon.maxDiscount), 'INR');
-                    calculatedDiscount = Math.min(calculatedDiscount, maxDiscountInPaise);
-                }
-            } else if (coupon.type === 'fixed') {
-                // Fixed discount in rupees, convert to paise using standardized converter
-                calculatedDiscount = toSmallestUnit(parseFloat(coupon.value), 'INR');
-            }
-
-            // 7. Return formatted promotions array
-            applicablePromotions.push({
+            promotions.push({
                 code: coupon.code,
-                description: coupon.description || `${coupon.type === 'percentage' ? coupon.value + '%' : '₹' + coupon.value} off`,
-                type: coupon.type,
-                value: discountValue,
-                min_purchase: coupon.minPurchase ? toSmallestUnit(parseFloat(coupon.minPurchase), 'INR') : null,
-                max_discount: coupon.maxDiscount ? toSmallestUnit(parseFloat(coupon.maxDiscount), 'INR') : null,
-                applicable: isApplicable,
-                estimated_discount: calculatedDiscount,
-                reason: reason
+                summary: `${valueLabel}${minLabel}`,
+                description: coupon.description || `Use code ${coupon.code} to get ${valueLabel}${minLabel}`,
             });
         }
 
-        res.json({
-            promotions: applicablePromotions
-        });
-
+        res.json({ promotions });
     } catch (error) {
         console.error('Error fetching promotions:', error);
-        res.status(500).json({ 
-            message: 'Failed to fetch promotions', 
-            error: error.message 
-        });
+        res.status(500).json({ message: 'Failed to fetch promotions', error: error.message });
     }
 };
 
-/**
- * Apply Promotion Handler
- * Validates and applies a promotion code to the order
- * 
- * Request Body:
- * - order_id: Razorpay order ID
- * - promotion_code: Promotion code to apply
- * - customer_id: Customer identifier
- * - cart_total: Total cart amount in paise
- * - cart_items: Array of cart items
- * 
- * Returns: Discount amount and final order total
- */
+// ─────────────────────────────────────────────────────────────────────────────
+// APPLY PROMOTION
+// Called by Razorpay's servers when customer applies a coupon code.
+// Razorpay sends POST with: order_id, razorpay_order_id, contact, email, code
+// Response must match Razorpay's schema:
+//   { promotions: [{ reference_id, code, type, value, value_type, description }] }
+// ─────────────────────────────────────────────────────────────────────────────
 module.exports.applyPromotion = async (req, res) => {
     try {
-        const { 
-            order_id, 
-            promotion_code, 
-            customer_id, 
-            cart_total, 
-            cart_items 
-        } = req.body;
+        const { order_id, code, contact, email } = req.body;
 
-        // Validate required parameters
-        if (!order_id || !promotion_code || !cart_total) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'order_id, promotion_code, and cart_total are required' 
-            });
+        if (!code) {
+            return res.status(400).json({ message: 'Promotion code is required' });
         }
 
-        const cartTotalAmount = parseFloat(cart_total);
         const currentDate = new Date();
 
-        // 1. Validate promotion code exists
-        const coupon = await Coupon.findOne({
-            where: {
-                code: promotion_code
-            }
-        });
+        const coupon = await Coupon.findOne({ where: { code } });
 
         if (!coupon) {
-            return res.status(404).json({
-                success: false,
-                message: 'Invalid promotion code'
-            });
+            return res.status(404).json({ message: 'Invalid promotion code' });
         }
 
-        // 2. Check promotion is active and not expired
         if (coupon.status !== 'active') {
-            return res.status(400).json({
-                success: false,
-                message: 'Promotion is not active'
-            });
+            return res.status(400).json({ message: 'Promotion is not active' });
         }
 
         if (currentDate < coupon.startDate || currentDate > coupon.endDate) {
-            return res.status(400).json({
-                success: false,
-                message: 'Promotion has expired or not yet started'
-            });
+            return res.status(400).json({ message: 'Promotion has expired or not yet started' });
         }
 
-        // 3. Verify usage limits not exceeded
         if (coupon.usageLimit !== null && coupon.usageCount >= coupon.usageLimit) {
-            return res.status(400).json({
-                success: false,
-                message: 'Promotion usage limit has been reached'
-            });
+            return res.status(400).json({ message: 'Promotion usage limit has been reached' });
         }
 
-        // Check per-user usage limits
-        if (customer_id && coupon.perUserLimit !== null) {
-            const parsedCustomerId = parseInt(customer_id);
-            
-            if (!isNaN(parsedCustomerId)) {
-                const userUsageCount = await CouponUsage.count({
-                    where: {
-                        couponId: coupon.id,
-                        userId: parsedCustomerId
-                    }
-                });
-
-                if (userUsageCount >= coupon.perUserLimit) {
-                    return res.status(400).json({
-                        success: false,
-                        message: 'You have already used this promotion the maximum number of times'
-                    });
-                }
-            }
-        }
-
-        // 4. Validate minimum purchase requirement
-        if (coupon.minPurchase !== null) {
-            const minPurchaseInPaise = toSmallestUnit(parseFloat(coupon.minPurchase), 'INR');
-            if (cartTotalAmount < minPurchaseInPaise) {
-                return res.status(400).json({
-                    success: false,
-                    message: `Minimum purchase of ₹${coupon.minPurchase} required`
-                });
-            }
-        }
-
-        // 5. Calculate discount amount based on type
-        let discountAmount = 0;
+        // Calculate discount value in paise
+        let valueInPaise = 0;
+        let valueType = 'fixed_amount';
 
         if (coupon.type === 'percentage') {
-            // Calculate percentage discount
-            const discountValue = parseFloat(coupon.value);
-            discountAmount = Math.round((cartTotalAmount * discountValue) / 100);
-            
-            // 6. Apply maximum discount cap for percentage
-            if (coupon.maxDiscount !== null) {
-                const maxDiscountInPaise = toSmallestUnit(parseFloat(coupon.maxDiscount), 'INR');
-                discountAmount = Math.min(discountAmount, maxDiscountInPaise);
-            }
-        } else if (coupon.type === 'fixed') {
-            // Fixed discount in rupees, convert to paise using standardized converter
-            discountAmount = toSmallestUnit(parseFloat(coupon.value), 'INR');
-            
-            // Ensure discount doesn't exceed cart total
-            discountAmount = Math.min(discountAmount, cartTotalAmount);
+            // For percentage, Razorpay applies the value as-is in paise regardless of value_type
+            // So we send the percentage number (e.g. 10 for 10%) — Razorpay handles the math
+            valueInPaise = parseFloat(coupon.value) * 100; // e.g. 10% → 1000 paise representation
+            valueType = 'percentage';
+        } else {
+            valueInPaise = toSmallestUnit(parseFloat(coupon.value), 'INR');
+            valueType = 'fixed_amount';
         }
 
-        // 7. Return discount amount and final total
-        const finalAmount = Math.max(0, cartTotalAmount - discountAmount);
-
+        // Razorpay expected response format for apply-promotion
         res.json({
-            success: true,
-            discount_amount: discountAmount,
-            final_amount: finalAmount,
-            promotion: {
+            promotions: [{
+                reference_id: `coupon_${coupon.id}`,
                 code: coupon.code,
-                description: coupon.description || `${coupon.type === 'percentage' ? coupon.value + '%' : '₹' + coupon.value} off`
-            }
+                type: 'coupon',
+                value: valueInPaise,
+                value_type: valueType,
+                description: coupon.description || `${coupon.type === 'percentage' ? coupon.value + '%' : '₹' + coupon.value} off`,
+            }]
         });
-
     } catch (error) {
         console.error('Error applying promotion:', error);
-        res.status(500).json({ 
-            success: false,
-            message: 'Failed to apply promotion', 
-            error: error.message 
-        });
+        res.status(500).json({ message: 'Failed to apply promotion', error: error.message });
     }
 };
 
-/**
- * Get Shipping Info Handler
- * Returns shipping serviceability and fees for customer addresses
- * 
- * Request Body:
- * - order_id: Razorpay order ID
- * - addresses: Array of customer addresses
- * - cart_total: Total cart amount in paise
- * - payment_method: Payment method (prepaid/cod)
- * 
- * Returns: Shipping info for each address including serviceability and fees
- */
+// ─────────────────────────────────────────────────────────────────────────────
+// GET SHIPPING INFO
+// Called by Razorpay's servers to check serviceability for customer addresses.
+// Razorpay sends POST with: order_id, razorpay_order_id, email, contact, addresses[]
+// Each address has: id, zipcode, state_code, country
+// Response must match Razorpay's schema:
+//   { addresses: [{ id, zipcode, country, shipping_methods: [...], cod, cod_fee }] }
+// ─────────────────────────────────────────────────────────────────────────────
 module.exports.getShippingInfo = async (req, res) => {
     try {
-        const { 
-            order_id, 
-            addresses, 
-            cart_total, 
-            payment_method 
-        } = req.body;
+        const { order_id, addresses } = req.body;
 
-        // Validate required parameters
-        if (!order_id || !addresses || !Array.isArray(addresses)) {
-            return res.status(400).json({ 
-                message: 'order_id and addresses array are required' 
+        if (!addresses || !Array.isArray(addresses)) {
+            return res.status(400).json({ message: 'addresses array is required' });
+        }
+
+        // Get shipping fees from DB
+        const shippingFees = await ShippingFee.findAll();
+        const prepaidFee = parseFloat(shippingFees.find(f => f.orderType === 'prepaid')?.fee || 0);
+        const codFeeAmount = parseFloat(shippingFees.find(f => f.orderType === 'cod')?.fee || 0);
+
+        const results = [];
+
+        for (const address of addresses) {
+            const zipcode = address.zipcode || address.pincode || '';
+            let serviceable = false;
+            let codAvailable = false;
+            let shippingFeeInPaise = toSmallestUnit(prepaidFee, 'INR');
+            let codFeeInPaise = 0;
+            let estimatedDays = 5;
+            const shippingMethods = [];
+
+            try {
+                const sourcePincode = process.env.DEFAULT_WAREHOUSE_PINCODE || '400001';
+                const serviceabilityResult = await fshipService.checkServiceability(sourcePincode, zipcode);
+
+                if (serviceabilityResult && Array.isArray(serviceabilityResult) && serviceabilityResult.length > 0) {
+                    serviceable = true;
+                    estimatedDays = serviceabilityResult[0].estimated_delivery_days || 5;
+
+                    const qualityResult = await addressQualityService.calculateAddressQuality(address).catch(() => ({ score: 100 }));
+                    const codSupported = serviceabilityResult.some(c => c.cod === 1 || c.cod === true || c.cod === 'yes');
+
+                    if (codSupported && qualityResult.score >= 70) {
+                        codAvailable = true;
+                        codFeeInPaise = toSmallestUnit(codFeeAmount, 'INR');
+                    }
+                }
+            } catch {
+                // FShip unavailable — default to serviceable with prepaid only
+                serviceable = true;
+            }
+
+            if (serviceable) {
+                shippingMethods.push({
+                    id: 'standard',
+                    name: 'Standard Delivery',
+                    description: `Delivered in ${estimatedDays}–7 business days`,
+                    // Razorpay expects shipping fee in paise
+                    price: shippingFeeInPaise,
+                    cod: codAvailable,
+                });
+            }
+
+            // Razorpay expected response format per address
+            results.push({
+                id: address.id,
+                zipcode,
+                country: address.country || 'in',
+                serviceable,
+                cod: codAvailable,
+                cod_fee: codFeeInPaise,
+                shipping_methods: shippingMethods,
             });
         }
 
-        const cartTotalAmount = parseFloat(cart_total || 0);
-        const shippingInfoResults = [];
-
-        // Get shipping fees from database
-        const shippingFees = await ShippingFee.findAll();
-        const prepaidFee = shippingFees.find(f => f.orderType === 'prepaid')?.fee || 0;
-        const codFee = shippingFees.find(f => f.orderType === 'cod')?.fee || 0;
-
-        // Process each address
-        for (const address of addresses) {
-            const addressInfo = {
-                address_id: address.id,
-                serviceable: false,
-                cod_available: false,
-                shipping_fee: 0,
-                cod_fee: 0,
-                estimated_delivery_days: 0,
-                address_quality_score: 0,
-                reason: null
-            };
-
-            // 1. Validate address completeness
-            const completeness = addressQualityService.validateAddressCompleteness(address);
-            
-            if (!completeness.isComplete) {
-                addressInfo.reason = `Incomplete address: missing ${completeness.missingFields.join(', ')}`;
-                shippingInfoResults.push(addressInfo);
-                continue;
-            }
-
-            // 2. Calculate address quality score
-            const qualityResult = await addressQualityService.calculateAddressQuality(address);
-            addressInfo.address_quality_score = qualityResult.score;
-
-            // 3. Check FShip serviceability by pincode
-            try {
-                // Assume source pincode from environment or default warehouse
-                const sourcePincode = process.env.DEFAULT_WAREHOUSE_PINCODE || '400001';
-                const serviceabilityResult = await fshipService.checkServiceability(
-                    sourcePincode,
-                    address.pincode
-                );
-
-                // Check if serviceable (FShip returns array of courier data)
-                if (serviceabilityResult && Array.isArray(serviceabilityResult) && serviceabilityResult.length > 0) {
-                    addressInfo.serviceable = true;
-                    
-                    // Get estimated delivery days from first courier
-                    const firstCourier = serviceabilityResult[0];
-                    addressInfo.estimated_delivery_days = firstCourier.estimated_delivery_days || 3;
-
-                    // 4. Determine COD availability based on quality score
-                    // COD threshold: quality score must be >= 70
-                    const COD_QUALITY_THRESHOLD = 70;
-                    
-                    // Check if courier supports COD and quality score is sufficient
-                    const codSupported = serviceabilityResult.some(courier => 
-                        courier.cod === 1 || courier.cod === true || courier.cod === 'yes'
-                    );
-
-                    if (codSupported && qualityResult.score >= COD_QUALITY_THRESHOLD) {
-                        addressInfo.cod_available = true;
-                    } else if (!codSupported) {
-                        addressInfo.reason = 'COD not available for this pincode';
-                    } else {
-                        addressInfo.reason = 'Address quality too low for COD';
-                    }
-
-                    // 5. Calculate shipping fees from shipping_fees table using standardized converter
-                    // 6. Calculate COD fees if applicable
-                    if (payment_method === 'cod' && addressInfo.cod_available) {
-                        addressInfo.shipping_fee = toSmallestUnit(parseFloat(codFee), 'INR');
-                        addressInfo.cod_fee = toSmallestUnit(parseFloat(codFee), 'INR');
-                    } else {
-                        addressInfo.shipping_fee = toSmallestUnit(parseFloat(prepaidFee), 'INR');
-                        addressInfo.cod_fee = 0;
-                    }
-                } else {
-                    addressInfo.reason = 'Pincode not serviceable';
-                }
-            } catch (fshipError) {
-                console.error('FShip serviceability check failed:', fshipError.message);
-                // If FShip fails, mark as not serviceable
-                addressInfo.reason = 'Unable to verify serviceability';
-            }
-
-            // 7. Return shipping info for each address
-            shippingInfoResults.push(addressInfo);
-        }
-
-        res.json({
-            addresses: shippingInfoResults.map(info => ({
-                zipcode: info.address_id, // Use address_id as identifier
-                serviceable: info.serviceable,
-                cod: info.cod_available,
-                cod_fee: info.cod_fee,
-                shipping_fee: info.shipping_fee,
-                estimated_delivery_days: info.estimated_delivery_days,
-                shipping_methods: info.serviceable ? [{
-                    id: "standard",
-                    name: "Standard Delivery",
-                    description: `Delivered in ${info.estimated_delivery_days || 3}-7 business days`,
-                    price: info.shipping_fee,
-                    cod: info.cod_available
-                }] : []
-            }))
-        });
-
+        res.json({ addresses: results });
     } catch (error) {
         console.error('Error fetching shipping info:', error);
-        res.status(500).json({ 
-            message: 'Failed to fetch shipping info', 
-            error: error.message 
-        });
+        res.status(500).json({ message: 'Failed to fetch shipping info', error: error.message });
     }
 };
 
-
-/**
- * Create Razorpay Order for Magic Checkout
- * Creates an order before opening Magic Checkout modal
- * 
- * Request Body:
- * - amount: Order amount in rupees
- * - currency: Currency code (default: INR)
- * - customer_id: Customer identifier
- * - cart_items: Array of cart items
- * - shipping_address: Shipping address object
- * - notes: Additional order notes
- * 
- * Returns: Razorpay order object with order_id
- */
+// ─────────────────────────────────────────────────────────────────────────────
+// CREATE ORDER
+// Called by the frontend before opening the Magic Checkout modal.
+// amount in rupees, line_items prices in paise, line_items_total in paise.
+// line_items_total is MANDATORY — without it Razorpay shows Standard Checkout.
+// ─────────────────────────────────────────────────────────────────────────────
 module.exports.createOrder = async (req, res) => {
     try {
-        const { 
-            amount, 
-            currency = 'INR', 
-            customer_id, 
-            cart_items = [],
-            shipping_address = {},
+        const {
+            amount,
+            currency = 'INR',
+            customer_id,
+            line_items = [],
+            line_items_total = null,
             notes = {}
         } = req.body;
 
-        // Validate required parameters
         if (!amount || amount <= 0) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'Valid amount is required' 
-            });
+            return res.status(400).json({ success: false, message: 'Valid amount is required' });
         }
 
-        // Format line_items for Magic Checkout (REQUIRED for Magic Checkout UI)
-        const formattedLineItems = cart_items.map(item => ({
-            type: 'e-commerce',
-            sku: item.product_id ? `SKU_${item.product_id}` : 'SKU_UNKNOWN',
-            variant_id: item.variation_id ? `VAR_${item.variation_id}` : null,
-            price: toSmallestUnit(parseFloat(item.price || 0), currency), // in paise
-            offer_price: toSmallestUnit(parseFloat(item.price || 0), currency), // in paise
-            tax_amount: 0, // Add tax if applicable
-            quantity: item.quantity || 1,
-            name: item.name || 'Product',
-            description: item.description || '',
-            // image_url: item.image_url || '' // Optional: add if available
-        }));
+        // line_items_total must be in paise and is MANDATORY for Magic Checkout UI
+        const computedLineItemsTotal = line_items_total ||
+            line_items.reduce((sum, item) => sum + ((item.offer_price || item.price || 0) * (item.quantity || 1)), 0);
 
-        // Calculate line_items_total (sum of all items)
-        const lineItemsTotal = formattedLineItems.reduce((sum, item) => {
-            return sum + (item.price * item.quantity);
-        }, 0);
-
-        // Create order using centralized Razorpay service
         const order = await razorpayService.createOrder({
-            amount,
+            amount,                                          // rupees — service converts to paise
             currency,
             receipt: `order_${Date.now()}_${customer_id || 'guest'}`,
-            line_items: formattedLineItems,
-            line_items_total: lineItemsTotal,
+            line_items: line_items.length > 0 ? line_items : null,
+            line_items_total: computedLineItemsTotal,        // paise
             notes: {
                 customer_id: customer_id || 'guest',
-                cart_items: JSON.stringify(cart_items),
-                shipping_address: JSON.stringify(shipping_address),
                 checkout_type: 'magic_checkout',
                 ...notes
             },
@@ -535,60 +266,34 @@ module.exports.createOrder = async (req, res) => {
             brandId: 1
         });
 
-        console.log('✅ Razorpay order created:', {
-            order_id: order.id,
-            amount: order.amount,
-            currency: order.currency,
-            status: order.status
-        });
+        console.log('✅ Magic Checkout order created:', order.id, '₹', amount);
 
         res.json({
             success: true,
             order_id: order.id,
-            amount: order.amount,
+            amount: order.amount,       // paise — returned to frontend for Razorpay options
             currency: order.currency,
             receipt: order.receipt,
             status: order.status
         });
-
     } catch (error) {
-        console.error('Error creating Razorpay order:', error);
-        res.status(500).json({ 
-            success: false,
-            message: 'Failed to create order', 
-            error: error.message 
-        });
+        console.error('Error creating order:', error);
+        res.status(500).json({ success: false, message: 'Failed to create order', error: error.message });
     }
 };
 
-/**
- * Verify Payment Signature
- * Verifies the payment signature from Razorpay
- * 
- * Request Body:
- * - razorpay_order_id: Order ID from Razorpay
- * - razorpay_payment_id: Payment ID from Razorpay
- * - razorpay_signature: Signature from Razorpay
- * 
- * Returns: Verification result
- */
+// ─────────────────────────────────────────────────────────────────────────────
+// VERIFY PAYMENT
+// Called by the frontend after payment success to verify the signature.
+// ─────────────────────────────────────────────────────────────────────────────
 module.exports.verifyPayment = async (req, res) => {
     try {
-        const { 
-            razorpay_order_id, 
-            razorpay_payment_id, 
-            razorpay_signature 
-        } = req.body;
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
-        // Validate required parameters
         if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'order_id, payment_id, and signature are required' 
-            });
+            return res.status(400).json({ success: false, message: 'order_id, payment_id, and signature are required' });
         }
 
-        // Verify signature using centralized Razorpay service
         const isValid = await razorpayService.verifySignature(
             razorpay_order_id,
             razorpay_payment_id,
@@ -597,25 +302,12 @@ module.exports.verifyPayment = async (req, res) => {
         );
 
         if (isValid) {
-            res.json({
-                success: true,
-                message: 'Payment verified successfully',
-                order_id: razorpay_order_id,
-                payment_id: razorpay_payment_id
-            });
+            res.json({ success: true, message: 'Payment verified', order_id: razorpay_order_id, payment_id: razorpay_payment_id });
         } else {
-            res.status(400).json({
-                success: false,
-                message: 'Invalid payment signature'
-            });
+            res.status(400).json({ success: false, message: 'Invalid payment signature' });
         }
-
     } catch (error) {
         console.error('Error verifying payment:', error);
-        res.status(500).json({ 
-            success: false,
-            message: 'Failed to verify payment', 
-            error: error.message 
-        });
+        res.status(500).json({ success: false, message: 'Failed to verify payment', error: error.message });
     }
 };

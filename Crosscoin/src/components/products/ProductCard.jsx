@@ -30,8 +30,8 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
   const price = parseFloat(variation?.price || product?.price || 0);
   const comparePrice = parseFloat(variation?.comparePrice || product?.comparePrice || 0);
 
-  const [reviewCount, setReviewCount] = useState(product?.reviewCount || 0);
-  const [avgRating, setAvgRating] = useState(product?.avgRating || null);
+  const [reviewCount, setReviewCount] = useState(product?.reviewCount ?? product?.review_count ?? 0);
+  const [avgRating, setAvgRating] = useState(product?.avgRating ?? product?.avg_rating ?? null);
 
   useEffect(() => {
     if (!product?.id) return;
@@ -39,6 +39,11 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
     if (product.reviewCount !== undefined && product.avgRating !== undefined) {
       setReviewCount(product.reviewCount);
       setAvgRating(product.avgRating);
+      return;
+    }
+    if (product.review_count !== undefined && product.avg_rating !== undefined) {
+      setReviewCount(product.review_count);
+      setAvgRating(product.avg_rating);
       return;
     }
     // Otherwise fetch from API
