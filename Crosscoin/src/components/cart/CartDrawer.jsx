@@ -170,9 +170,10 @@ const CartDrawer = ({ isOpen, onClose }) => {
     check();
     el.addEventListener('scroll', check, { passive: true });
     return () => el.removeEventListener('scroll', check);
-  }, [isOpen, activeItems.length]);
+  }, [isOpen, buyNowItem, cartItems.length]);
 
-  // ── Offer bar ───────────────────────────────────────────────────────────  useEffect(() => {
+  // ── Offer bar ───────────────────────────────────────────────────────────
+  useEffect(() => {
     if (cartItems.length === 0) { setOfferData(null); return; }
     getPublicCoupons().then(res => {
       const coupons = (res?.coupons || []).filter(c => !c.firstOrderOnly);
