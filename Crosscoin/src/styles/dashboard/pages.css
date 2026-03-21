@@ -1631,9 +1631,13 @@
 .modal-body .variation-item {
   border: 1.5px solid #e8e8f0;
   border-radius: 10px;
-  padding: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   background: #fafafe;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.modal-body .variation-item.variation-accordion--open {
+  border-color: #c5bce8;
 }
 .modal-body .variation-header {
   display: flex;
@@ -1654,6 +1658,72 @@
   font-weight: 700;
   color: #180D3E;
   font-family: 'DM Sans', sans-serif;
+}
+
+/* Accordion header */
+.variation-accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+  gap: 8px;
+}
+.variation-accordion-header:hover {
+  background: #f3f0fb;
+}
+.variation-accordion-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+.variation-accordion-num {
+  font-size: 13px;
+  font-weight: 700;
+  color: #180D3E;
+  white-space: nowrap;
+  font-family: 'DM Sans', sans-serif;
+}
+.variation-accordion-summary {
+  font-size: 12px;
+  color: #7c6fa0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: 'DM Sans', sans-serif;
+}
+.variation-accordion-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.variation-remove-btn {
+  font-size: 11px;
+  font-weight: 600;
+  color: #CE1E36;
+  background: #ffeef1;
+  border: 1px solid #f5c6cc;
+  border-radius: 5px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: background 0.15s;
+}
+.variation-remove-btn:hover {
+  background: #ffd6db;
+}
+.variation-accordion-chevron {
+  color: #7c6fa0;
+  display: flex;
+  align-items: center;
+}
+.variation-accordion-body {
+  padding: 4px 16px 16px;
+  border-top: 1px solid #e8e8f0;
 }
 
 /* SEO step heading */

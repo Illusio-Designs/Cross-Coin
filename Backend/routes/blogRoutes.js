@@ -40,7 +40,7 @@ router.get('/admin/posts/:id', getPostByIdAdmin);
 router.put('/admin/posts/:id', updatePost);
 router.delete('/admin/posts/:id', deletePost);
 
-// Hero image upload
+// Hero image upload — uses disk storage, controller reads buffer from disk
 router.post('/admin/posts/:id/hero-image', upload.single('image'), uploadHeroImage);
 
 module.exports = router;

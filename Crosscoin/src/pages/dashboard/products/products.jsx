@@ -70,7 +70,11 @@ const ProductsPage = () => {
     },
     variationImages: [], // Array of arrays, one per variation
   });
-  const [attributes, setAttributes] = useState([]);
+  const [openVariations, setOpenVariations] = useState({});
+
+  const toggleVariation = (index) => {
+    setOpenVariations(prev => ({ ...prev, [index]: !prev[index] }));
+  };
 
 
 
@@ -629,19 +633,17 @@ const ProductsPage = () => {
   };
 
   const addVariation = () => {
-    setFormData(prev => ({
-      ...prev,
-      variations: [
-        ...prev.variations,
-        {
-          price: "",
-          comparePrice: "",
-          stock: "",
-          sku: "",
-          attributes: {}
-        }
-      ]
-    }));
+    setFormData(prev => {
+      const newIndex = prev.variations.length;
+      setOpenVariations(o => ({ ...o, [newIndex]: true }));
+      return {
+        ...prev,
+        variations: [
+          ...prev.variations,
+          { price: "", comparePrice: "", stock: "", sku: "", attributes: {} }
+        ]
+      };
+    });
   };
 
   const removeVariation = (index) => {
@@ -1097,105 +1099,134 @@ const ProductsPage = () => {
               <div className="variations-header">
                 <h3>Product Variations</h3>
               </div>
-              {formData.variations.map((variation, index) => (
-                <div key={index} className="variation-item">
-                  <div className="variation-header">
-                    <h4>Variation {index + 1}</h4>
-                    {index > 0 && (
-                      <Button
-                        variant="danger"
-                        size="small"
-                        onClick={() => removeVariation(index)}
-                      >
-                        Remove
-                      </Button>
+              {formData.variations.map((variation, index) => {
+                const isOpen = openVariations[index] !== false; // default open
+                const skuLabel = variation.sku ? ` — ${variation.sku}` : '';
+                const priceLabel = variation.price ? ` · ₹${variation.price}` : '';
+                const attrEntries = Object.entries(variation.attributes || {}).filter(([, v]) => {
+                  const val = Array.isArray(v) ? v.join('') : String(v || '');
+                  return val.trim() !== '';
+                });
+                const attrLabel = attrEntries.length > 0
+                  ? ' · ' + attrEntries.map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' | ')
+                  : '';
+                return (
+                  <div key={index} className={`variation-item variation-accordion${isOpen ? ' variation-accordion--open' : ''}`}>
+                    <div className="variation-accordion-header" onClick={() => toggleVariation(index)}>
+                      <div className="variation-accordion-title">
+                        <span className="variation-accordion-num">Variation {index + 1}</span>
+                        {!isOpen && (
+                          <span className="variation-accordion-summary">
+                            {skuLabel}{priceLabel}{attrLabel}
+                          </span>
+                        )}
+                      </div>
+                      <div className="variation-accordion-actions">
+                        {index > 0 && (
+                          <button
+                            type="button"
+                            className="variation-remove-btn"
+                            onClick={(e) => { e.stopPropagation(); removeVariation(index); }}
+                          >
+                            Remove
+                          </button>
+                        )}
+                        <span className="variation-accordion-chevron">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points={isOpen ? "18 15 12 9 6 15" : "6 9 12 15 18 9"} />
+                          </svg>
+                        </span>
+                      </div>
+                    </div>
+
+                    {isOpen && (
+                      <div className="variation-accordion-body">
+                        <Input
+                          label="SKU"
+                          type="text"
+                          name={`variations.${index}.sku`}
+                          value={variation.sku}
+                          onChange={handleInputChange}
+                          placeholder="Enter SKU"
+                        />
+                        <div className="dm-2col">
+                          <Input
+                            label="Price"
+                            type="number"
+                            name={`variations.${index}.price`}
+                            value={variation.price}
+                            onChange={handleInputChange}
+                            required
+                          />
+                          <Input
+                            label="Compare Price"
+                            type="number"
+                            name={`variations.${index}.comparePrice`}
+                            value={variation.comparePrice || ''}
+                            onChange={handleInputChange}
+                            placeholder="Optional"
+                          />
+                        </div>
+                        <Input
+                          label="Stock"
+                          type="number"
+                          name={`variations.${index}.stock`}
+                          value={variation.stock}
+                          onChange={handleInputChange}
+                          required
+                        />
+                        <AttributeSelector
+                          variationIndex={index}
+                          attributes={{ ...attributes, material: ["Cotton"] }}
+                          selectedAttributes={variation.attributes || {}}
+                          onChange={handleAttributeChange}
+                        />
+                        {/* Variation Images Upload */}
+                        <div className="variation-images-upload">
+                          <label className="dm-label">Variation Images</label>
+                          <div className="prd-upload-row">
+                            <input
+                              type="file"
+                              name={`variationImage.${index}`}
+                              multiple
+                              accept="image/*"
+                              onChange={handleInputChange}
+                            />
+                            <button type="button" className="prd-select-btn" onClick={() => openVariationImageSelector(index)}>
+                              Select Existing
+                            </button>
+                          </div>
+                          <div className="prd-img-grid">
+                            {(formData.variationImages?.[index]?.length > 0) ?
+                              formData.variationImages[index].map((img, imgIdx) => {
+                                const imageUrl = img instanceof File ? URL.createObjectURL(img) : (img.url || img.image_url);
+                                return (
+                                  <div key={imgIdx} className="prd-img-thumb">
+                                    <img src={imageUrl} alt={`Variation ${index + 1} Image ${imgIdx + 1}`} />
+                                    <button type="button" className="prd-img-remove" onClick={() => {
+                                      const imageToRemove = formData.variationImages[index][imgIdx];
+                                      setFormData(prev => {
+                                        const newVariationImages = [...(prev.variationImages || [])];
+                                        if (newVariationImages[index]) newVariationImages[index] = newVariationImages[index].filter((_, i) => i !== imgIdx);
+                                        const newState = { ...prev, variationImages: newVariationImages };
+                                        if (imageToRemove?.existing && imageToRemove.id) newState.variationImagesToDelete = [...(prev.variationImagesToDelete || []), imageToRemove.id];
+                                        return newState;
+                                      });
+                                    }}>×</button>
+                                  </div>
+                                );
+                              }) : (
+                                <p className="prd-img-empty">No images for this variation yet</p>
+                              )
+                            }
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
-                  <Input
-                    label="Price"
-                    type="number"
-                    name={`variations.${index}.price`}
-                    value={variation.price}
-                    onChange={handleInputChange}
-                    required
-                  />
-                  <Input
-                    label="Compare Price"
-                    type="number"
-                    name={`variations.${index}.comparePrice`}
-                    value={variation.comparePrice || ''}
-                    onChange={handleInputChange}
-                    placeholder="Enter compare price"
-                  />
-                  <Input
-                    label="Stock"
-                    type="number"
-                    name={`variations.${index}.stock`}
-                    value={variation.stock}
-                    onChange={handleInputChange}
-                    required
-                  />
-                  <Input
-                    label="SKU"
-                    type="text"
-                    name={`variations.${index}.sku`}
-                    value={variation.sku}
-                    onChange={handleInputChange}
-                    placeholder="Enter SKU"
-                  />
-                  <AttributeSelector
-                    variationIndex={index}
-                    attributes={{ ...attributes, material: ["Cotton"] }}
-                    selectedAttributes={variation.attributes || {}}
-                    onChange={handleAttributeChange}
-                  />
-                  {/* Variation Images Upload */}
-                  <div className="variation-images-upload">
-                    <label className="dm-label">Variation Images</label>
-                    <div className="prd-upload-row">
-                      <input
-                        type="file"
-                        name={`variationImage.${index}`}
-                        multiple
-                        accept="image/*"
-                        onChange={handleInputChange}
-                      />
-                      <button type="button" className="prd-select-btn" onClick={() => openVariationImageSelector(index)}>
-                        Select Existing
-                      </button>
-                    </div>
-                    <div className="prd-img-grid">
-                      {(formData.variationImages?.[index]?.length > 0) ?
-                        formData.variationImages[index].map((img, imgIdx) => {
-                          const imageUrl = img instanceof File ? URL.createObjectURL(img) : (img.url || img.image_url);
-                          return (
-                            <div key={imgIdx} className="prd-img-thumb">
-                              <img src={imageUrl} alt={`Variation ${index + 1} Image ${imgIdx + 1}`} />
-                              <button type="button" className="prd-img-remove" onClick={() => {
-                                const imageToRemove = formData.variationImages[index][imgIdx];
-                                setFormData(prev => {
-                                  const newVariationImages = [...(prev.variationImages || [])];
-                                  if (newVariationImages[index]) newVariationImages[index] = newVariationImages[index].filter((_, i) => i !== imgIdx);
-                                  const newState = { ...prev, variationImages: newVariationImages };
-                                  if (imageToRemove?.existing && imageToRemove.id) newState.variationImagesToDelete = [...(prev.variationImagesToDelete || []), imageToRemove.id];
-                                  return newState;
-                                });
-                              }}>×</button>
-                            </div>
-                          );
-                        }) : (
-                          <p className="prd-img-empty">No images for this variation yet</p>
-                        )
-                      }
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <Button
-                variant="secondary"
-                size="small"
-                onClick={addVariation}
-              >
+                );
+              })}
+              <Button variant="secondary" size="small" onClick={addVariation}>
                 Add Variation
               </Button>
             </div>
