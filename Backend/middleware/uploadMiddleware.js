@@ -38,6 +38,8 @@ const storage = multer.diskStorage({
             uploadDir = UPLOAD_DIRS.seo;
         } else if (req.originalUrl.includes('/slider')) {
             uploadDir = UPLOAD_DIRS.slider;
+        } else if (req.originalUrl.includes('/blogs') || req.originalUrl.includes('/blog')) {
+            uploadDir = UPLOAD_DIRS.blogs;
         }
         
         cb(null, uploadDir);

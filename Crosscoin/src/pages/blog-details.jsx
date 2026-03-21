@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import SeoWrapper from '../console/SeoWrapper';
 import BlogSection from '../components/blog/BlogSection';
+import ProductCard from '../components/products/ProductCard';
 import { getPublicBlogBySlug } from '../services/publicApi';
+import { useCart } from '../context/CartContext';
+
 
 const BlogDetails = () => {
   const router = useRouter();
   const { slug } = router.query;
+  const { addToCart } = useCart();
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -15,26 +19,31 @@ const BlogDetails = () => {
 
   useEffect(() => {
     if (!slug) return;
-    const fetch = async () => {
+    const fetchPost = async () => {
       setLoading(true);
       setNotFound(false);
       try {
         const res = await getPublicBlogBySlug(slug);
         setPost(res?.data || null);
-      } catch (e) {
-        if (e?.status === 404 || e?.statusCode === 404) setNotFound(true);
-        else setNotFound(true);
+      } catch {
+        setNotFound(true);
       } finally {
         setLoading(false);
       }
     };
-    fetch();
+    fetchPost();
   }, [slug]);
 
   useEffect(() => {
-    if (!post?.sections?.length) return;
+    if (!post) return;
+    let secs = [];
+    if (Array.isArray(post.sections)) secs = post.sections;
+    else if (typeof post.sections === 'string') {
+      try { secs = JSON.parse(post.sections); } catch { secs = []; }
+    }
+    if (!secs.length) return;
     const handleScroll = () => {
-      post.sections.forEach((_, i) => {
+      secs.forEach((_, i) => {
         const el = document.getElementById(`section-${i}`);
         if (el && el.getBoundingClientRect().top < 160) setActiveSection(i);
       });
@@ -67,6 +76,15 @@ const BlogDetails = () => {
     showToast(isBookmarked ? 'Removed from saved' : '🔖 Article saved!');
   };
 
+  const handleAddToCart = useCallback((e, product, color, size, variationId) => {
+    e.stopPropagation();
+    if (addToCart) addToCart(product, variationId || product?.variations?.[0]?.id, 1);
+  }, [addToCart]);
+
+  const handleProductClick = useCallback((product) => {
+    router.push(`/products/${product.slug}`);
+  }, [router]);
+
   const formatDate = (d) => {
     if (!d) return '';
     return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -93,9 +111,18 @@ const BlogDetails = () => {
     );
   }
 
-  const sections = Array.isArray(post.sections) ? post.sections : [];
-  const tags = (post.BlogTags || []).map(t => `#${t.name}`);
-  const seo = post.BlogSEO || {};
+  // sections may come as a JSON string from the API
+  let sections = [];
+  if (Array.isArray(post.sections)) {
+    sections = post.sections;
+  } else if (typeof post.sections === 'string') {
+    try { sections = JSON.parse(post.sections); } catch { sections = []; }
+  }
+
+  // Tags key from API is "Tags" not "BlogTags"
+  const tags = (post.Tags || post.BlogTags || []).map(t => `#${t.name}`);
+  const heroUrl = post.hero_image || null;
+  const featuredProducts = post.FeaturedProducts || [];
 
   return (
     <SeoWrapper pageName="blog-details">
@@ -125,7 +152,7 @@ const BlogDetails = () => {
 
         {/* Hero */}
         <div className="article-hero">
-          {post.hero_image && <img src={post.hero_image} alt={post.title} />}
+          {heroUrl && <img src={heroUrl} alt={post.title} />}
           <div className="article-hero-overlay" />
           <div className="article-hero-content">
             {post.BlogCategory && <div className="article-cat-tag">{post.BlogCategory.name}</div>}
@@ -159,43 +186,32 @@ const BlogDetails = () => {
         <div className="article-layout">
           <article className="article-body" id="articleBody">
 
-            {/* Sections */}
+            {/* Sections — render HTML content from ReactQuill */}
             {sections.map((sec, i) => (
-              <div key={i} id={`section-${i}`}>
-                {sec.heading && <h2>{sec.heading}</h2>}
-                {sec.content && <p>{sec.content}</p>}
-                {/* Sub-sections */}
-                {Array.isArray(sec.sub_sections) && sec.sub_sections.map((sub, j) => (
-                  <div key={j} className="tip-box" style={{ marginBottom: 12 }}>
-                    {sub.type && <h3>{sub.type}</h3>}
-                    {sub.description && <p>{sub.description}</p>}
-                    {sub.quick_tip && <p><strong>Tip:</strong> {sub.quick_tip}</p>}
-                  </div>
-                ))}
-                {sec.color_tip && <div className="tip-box"><p><strong>Color tip:</strong> {sec.color_tip}</p></div>}
-                {sec.longevity_hack && <div className="tip-box"><p><strong>Hack:</strong> {sec.longevity_hack}</p></div>}
+              <div key={i} id={`section-${i}`} className="article-section">
+                {sec.heading && <h2 className="article-section-heading">{sec.heading}</h2>}
+                {sec.content && (
+                  <div
+                    className="article-section-content ql-content"
+                    dangerouslySetInnerHTML={{ __html: sec.content }}
+                  />
+                )}
               </div>
             ))}
 
-            {/* Featured Products */}
-            {(post.FeaturedProducts || []).length > 0 && (
-              <div style={{ marginTop: 32 }}>
-                <h2>Featured Products</h2>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-                  {(post.FeaturedProducts || []).map((fp) => (
-                    <div key={fp.id} className="product-spotlight" style={{ flex: '1 1 220px' }}>
-                      {fp.hero_image && (
-                        <div className="product-spotlight-img">
-                          <img src={fp.hero_image} alt={fp.name} />
-                        </div>
-                      )}
-                      <div className="product-spotlight-info">
-                        {fp.BlogFeaturedProduct?.lifestyle_tag && (
-                          <div className="ps-label">{fp.BlogFeaturedProduct.lifestyle_tag}</div>
-                        )}
-                        <div className="ps-name">{fp.name}</div>
-                      </div>
-                    </div>
+            {/* Featured Products using ProductCard */}
+            {featuredProducts.length > 0 && (
+              <div className="article-featured-products">
+                <h2 className="article-section-heading">Featured Products</h2>
+                <div className="article-products-grid">
+                  {featuredProducts.map((fp, idx) => (
+                    <ProductCard
+                      key={fp.id}
+                      product={fp}
+                      index={idx}
+                      onProductClick={handleProductClick}
+                      onAddToCart={handleAddToCart}
+                    />
                   ))}
                 </div>
               </div>
@@ -235,7 +251,6 @@ const BlogDetails = () => {
               </div>
             )}
 
-            {/* SEO canonical / og info used for meta — sidebar newsletter */}
             <div className="sidebar-nl">
               <div className="snl-label">Newsletter</div>
               <div className="snl-title">Style tips, weekly.</div>

@@ -8,6 +8,15 @@ const { Op } = require('sequelize');
 const fs = require('fs/promises');
 const imagekitService = require('../services/imagekitService.js');
 
+// Format a blog post's hero_image to a full optimized ImageKit URL
+const formatPostImage = (post) => {
+  const data = post.toJSON ? post.toJSON() : { ...post };
+  if (data.hero_image) {
+    data.hero_image = imagekitService.getOptimizedUrl(data.hero_image, 'large');
+  }
+  return data;
+};
+
 // Full include array for blog posts
 const fullPostInclude = () => [
   { model: BlogCategory, as: 'BlogCategory' },
@@ -205,7 +214,7 @@ const createPost = async (req, res) => {
     await t.commit();
 
     const fullPost = await BlogPost.findByPk(post.id, { include: fullPostInclude() });
-    return res.status(201).json({ success: true, data: fullPost });
+    return res.status(201).json({ success: true, data: formatPostImage(fullPost) });
   } catch (error) {
     await t.rollback();
     console.error('createPost error:', error);
@@ -242,7 +251,7 @@ const getAllPostsAdmin = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: rows,
+      data: rows.map(formatPostImage),
       pagination: {
         total: count,
         page: parseInt(page),
@@ -263,7 +272,7 @@ const getPostByIdAdmin = async (req, res) => {
     if (!post) {
       return res.status(404).json({ success: false, message: 'Blog post not found' });
     }
-    return res.status(200).json({ success: true, data: post });
+    return res.status(200).json({ success: true, data: formatPostImage(post) });
   } catch (error) {
     console.error('getPostByIdAdmin error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
@@ -394,7 +403,7 @@ const updatePost = async (req, res) => {
     await t.commit();
 
     const fullPost = await BlogPost.findByPk(id, { include: fullPostInclude() });
-    return res.status(200).json({ success: true, data: fullPost });
+    return res.status(200).json({ success: true, data: formatPostImage(fullPost) });
   } catch (error) {
     await t.rollback();
     console.error('updatePost error:', error);
@@ -475,7 +484,7 @@ const getPublicPosts = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: rows,
+      data: rows.map(formatPostImage),
       pagination: {
         total: count,
         page: parseInt(page),
@@ -520,7 +529,7 @@ const getPublicPostBySlug = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Blog post not found' });
     }
 
-    return res.status(200).json({ success: true, data: post });
+    return res.status(200).json({ success: true, data: formatPostImage(post) });
   } catch (error) {
     console.error('getPublicPostBySlug error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
@@ -596,7 +605,7 @@ const uploadHeroImage = async (req, res) => {
     await post.update({ hero_image: result.filePath });
 
     const updatedPost = await BlogPost.findByPk(id, { include: fullPostInclude() });
-    return res.status(200).json({ success: true, data: updatedPost });
+    return res.status(200).json({ success: true, data: formatPostImage(updatedPost) });
   } catch (error) {
     console.error('uploadHeroImage error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });

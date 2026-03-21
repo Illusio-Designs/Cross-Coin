@@ -495,6 +495,65 @@
   height: 12px;
 }
 
+/* ── ARTICLE SECTION ── */
+.article-section {
+  margin-bottom: 32px;
+}
+
+.article-section-heading {
+  font-family: var(--bd-font);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--bd-secondary);
+  margin: 36px 0 14px;
+  line-height: 1.25;
+}
+
+/* ReactQuill rendered HTML */
+.ql-content p {
+  font-size: 16px;
+  color: var(--bd-gray-dark);
+  line-height: 1.85;
+  margin-bottom: 16px;
+}
+
+.ql-content ul,
+.ql-content ol {
+  padding-left: 22px;
+  margin-bottom: 16px;
+}
+
+.ql-content li {
+  font-size: 16px;
+  color: var(--bd-gray-dark);
+  line-height: 1.85;
+  margin-bottom: 6px;
+}
+
+.ql-content strong { font-weight: 700; }
+.ql-content em { font-style: italic; }
+
+/* ── FEATURED PRODUCTS ── */
+.article-featured-products {
+  margin: 40px 0;
+  padding-top: 32px;
+  border-top: 1px solid var(--bd-gray-border);
+}
+
+.article-products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+@media (max-width: 600px) {
+  .article-products-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
 /* ── TAGS ── */
 .article-tags {
   display: flex;
