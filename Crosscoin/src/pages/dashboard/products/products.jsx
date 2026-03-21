@@ -71,6 +71,7 @@ const ProductsPage = () => {
     variationImages: [], // Array of arrays, one per variation
   });
   const [openVariations, setOpenVariations] = useState({});
+  const [attributes, setAttributes] = useState({});
 
   const toggleVariation = (index) => {
     setOpenVariations(prev => ({ ...prev, [index]: !prev[index] }));
