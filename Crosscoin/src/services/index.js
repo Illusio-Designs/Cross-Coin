@@ -6,14 +6,24 @@ import { getTimeoutForEndpoint, handleTimeoutError } from '../config/apiConfig';
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
 
-// Create axios instance with default timeout
+// Public/brand-scoped axios instance — sends X-Brand-Name header
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000, // Default 15 second timeout (reduced from 30s)
+  timeout: 15000,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
-    "X-Brand-Name": "crosscoin", // ✅ Brand identification for multi-brand system
+    "X-Brand-Name": "crosscoin",
+  },
+});
+
+// Admin axios instance — NO X-Brand-Name header (admin sees all brands)
+const adminApi = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 15000,
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
   },
 });
 
@@ -60,6 +70,31 @@ api.interceptors.response.use(
   }
 );
 
+// Shared interceptor setup for adminApi (same logic, no brand header)
+adminApi.interceptors.request.use(
+  (config) => {
+    const timeout = getTimeoutForEndpoint(config.url || '');
+    config.timeout = timeout;
+    const token = localStorage.getItem("token");
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    if (config.data instanceof FormData) config.headers["Content-Type"] = "multipart/form-data";
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+adminApi.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.code === "ECONNABORTED") {
+      const userMessage = handleTimeoutError(error);
+      return Promise.reject(new Error(userMessage));
+    }
+    if (error.response?.status === 401) localStorage.removeItem("token");
+    return Promise.reject(error);
+  }
+);
+
 // Error handler
 const handleApiError = (error) => {
   if (error.response) {
@@ -83,7 +118,7 @@ export const shippingFeeService = {
     // Deduplicate simultaneous requests
     return deduplicateRequest(cacheKey, async () => {
       try {
-        const response = await api.get("/api/shipping-fees");
+        const response = await adminApi.get("/api/shipping-fees");
         const data = response.data.shippingFees;
         
         // Cache for 30 minutes
@@ -104,7 +139,7 @@ export const shippingFeeService = {
     if (cached) return cached;
     
     try {
-      const response = await api.get(`/api/shipping-fees/${type}`);
+      const response = await adminApi.get(`/api/shipping-fees/${type}`);
       const data = response.data.shippingFee;
       
       // Cache for 30 minutes
@@ -118,7 +153,7 @@ export const shippingFeeService = {
 
   createShippingFee: async (feeData) => {
     try {
-      const response = await api.post("/api/shipping-fees", feeData);
+      const response = await adminApi.post("/api/shipping-fees", feeData);
       // Clear cache after creating
       clearCache('shipping_fees_all');
       return response.data;
@@ -129,7 +164,7 @@ export const shippingFeeService = {
 
   updateShippingFee: async (id, feeData) => {
     try {
-      const response = await api.put(`/api/shipping-fees/${id}`, feeData);
+      const response = await adminApi.put(`/api/shipping-fees/${id}`, feeData);
       // Clear cache after updating
       clearCache('shipping_fees_all');
       clearCache(`shipping_fee_${feeData.orderType}`);
@@ -141,7 +176,7 @@ export const shippingFeeService = {
 
   deleteShippingFee: async (id) => {
     try {
-      const response = await api.delete(`/api/shipping-fees/${id}`);
+      const response = await adminApi.delete(`/api/shipping-fees/${id}`);
       // Clear all shipping fee caches
       clearCache('shipping_fees_all');
       return response.data;
@@ -182,8 +217,7 @@ export const shippingAddressService = {
 
   updateShippingAddress: async (id, addressData) => {
     try {
-      const response = await api.put(
-        `/api/shipping-addresses/${id}`,
+      const response = await api.put(`/api/shipping-addresses/${id}`,
         addressData
       );
       return response.data;
@@ -206,7 +240,7 @@ export const shippingAddressService = {
 export const orderService = {
   getAllOrders: async (params = {}) => {
     try {
-      const response = await api.get("/api/orders", { params });
+      const response = await adminApi.get("/api/orders", { params });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -215,7 +249,7 @@ export const orderService = {
 
   getOrderById: async (id) => {
     try {
-      const response = await api.get(`/api/orders/${id}`);
+      const response = await adminApi.get(`/api/orders/${id}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -224,7 +258,7 @@ export const orderService = {
 
   updateOrderStatus: async (id, statusData) => {
     try {
-      const response = await api.put(`/api/orders/${id}/status`, statusData);
+      const response = await adminApi.put(`/api/orders/${id}/status`, statusData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -233,7 +267,7 @@ export const orderService = {
 
   getAllOrderStatusHistory: async (params = {}) => {
     try {
-      const response = await api.get("/api/order-status-history", { params });
+      const response = await adminApi.get("/api/order-status-history", { params });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -243,7 +277,7 @@ export const orderService = {
   // Update payment status for an order (admin)
   updateOrderPaymentStatus: async (id, paymentStatusData) => {
     try {
-      const response = await api.put(
+      const response = await adminApi.put(
         `/api/orders/${id}/payment-status`,
         paymentStatusData
       );
@@ -258,7 +292,7 @@ export const orderService = {
   // Sync orders with FShip - Comprehensive sync includes new orders and status updates
   syncOrdersWithFShip: async () => {
     try {
-      const response = await api.post(
+      const response = await adminApi.post(
         "/api/orders/fship/sync",
         {},
         { timeout: 60000 }
@@ -272,7 +306,7 @@ export const orderService = {
   // Update single order from FShip
   updateSingleOrderFromFShip: async (orderId) => {
     try {
-      const response = await api.put(
+      const response = await adminApi.put(
         `/api/orders/${orderId}/fship/update`,
         {},
         { timeout: 30000 }
@@ -286,7 +320,7 @@ export const orderService = {
   // Sync single order with FShip
   syncSingleOrderWithFShip: async (orderId) => {
     try {
-      const response = await api.put(
+      const response = await adminApi.put(
         `/api/orders/${orderId}/fship/sync`,
         {},
         { timeout: 30000 }
@@ -300,7 +334,7 @@ export const orderService = {
   // Get FShip tracking for order
   getFShipTracking: async (orderId) => {
     try {
-      const response = await api.get(`/api/orders/${orderId}/fship/tracking`);
+      const response = await adminApi.get(`/api/orders/${orderId}/fship/tracking`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -310,7 +344,7 @@ export const orderService = {
   // Get FShip shipping label for order
   getFShipLabel: async (orderId) => {
     try {
-      const response = await api.get(`/api/orders/${orderId}/fship/label`);
+      const response = await adminApi.get(`/api/orders/${orderId}/fship/label`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -320,7 +354,7 @@ export const orderService = {
   // Get FShip couriers list
   getFShipCouriers: async () => {
     try {
-      const response = await api.get("/api/orders/fship/couriers");
+      const response = await adminApi.get("/api/orders/fship/couriers");
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -330,7 +364,7 @@ export const orderService = {
   // Cancel orders in FShip
   cancelOrdersInFShip: async (orderIds) => {
     try {
-      const response = await api.post("/api/orders/fship/cancel", { orderIds });
+      const response = await adminApi.post("/api/orders/fship/cancel", { orderIds });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -340,7 +374,7 @@ export const orderService = {
   // Admin cancel order
   adminCancelOrder: async (orderId, reason) => {
     try {
-      const response = await api.put(`/api/orders/${orderId}/admin/cancel`, { reason });
+      const response = await adminApi.put(`/api/orders/${orderId}/admin/cancel`, { reason });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -350,7 +384,7 @@ export const orderService = {
   // Track order by order number (public)
   trackOrderByOrderNumber: async (orderNumber) => {
     try {
-      const response = await api.get(`/api/orders/track/${orderNumber}`);
+      const response = await adminApi.get(`/api/orders/track/${orderNumber}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -360,7 +394,7 @@ export const orderService = {
   // Track order by AWB (public)
   trackOrderByAWB: async (awbNumber) => {
     try {
-      const response = await api.get(`/api/orders/track/awb?awb_number=${awbNumber}`);
+      const response = await adminApi.get(`/api/orders/track/awb?awb_number=${awbNumber}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -370,7 +404,7 @@ export const orderService = {
   // Get guest order (public)
   getGuestOrder: async (email, orderNumber) => {
     try {
-      const response = await api.get(`/api/orders/guest/track?email=${email}&orderNumber=${orderNumber}`);
+      const response = await adminApi.get(`/api/orders/guest/track?email=${email}&orderNumber=${orderNumber}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -384,7 +418,7 @@ export const orderService = {
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
 
-      const response = await api.get('/api/orders/export/delivered', {
+      const response = await adminApi.get('/api/orders/export/delivered', {
         params,
         responseType: 'blob', // Important for file download
         timeout: 60000 // 60 seconds timeout for large exports
@@ -416,7 +450,7 @@ export const orderService = {
   // Update AWB number manually
   updateAwbNumber: async (orderId, data) => {
     try {
-      const response = await api.put(`/api/orders/${orderId}/awb`, data);
+      const response = await adminApi.put(`/api/orders/${orderId}/awb`, data);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -428,7 +462,7 @@ export const orderService = {
   // Mark label as downloaded
   markLabelDownloaded: async (orderId) => {
     try {
-      const response = await api.post(`/api/orders/labels/${orderId}/mark-downloaded`);
+      const response = await adminApi.post(`/api/orders/labels/${orderId}/mark-downloaded`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -438,7 +472,7 @@ export const orderService = {
   // Download single label
   downloadLabel: async (orderId) => {
     try {
-      const response = await api.get(`/api/orders/labels/${orderId}/download`, {
+      const response = await adminApi.get(`/api/orders/labels/${orderId}/download`, {
         responseType: 'blob',
         timeout: 30000
       });
@@ -462,7 +496,7 @@ export const orderService = {
   // Bulk download labels
   bulkDownloadLabels: async (orderIds) => {
     try {
-      const response = await api.post('/api/orders/labels/bulk-download', 
+      const response = await adminApi.post('/api/orders/labels/bulk-download', 
         { orderIds },
         {
           responseType: 'blob',
@@ -490,7 +524,7 @@ export const orderService = {
   // Get pending labels (not yet downloaded)
   getPendingLabels: async (page = 1, limit = 50) => {
     try {
-      const response = await api.get('/api/orders/labels/pending', {
+      const response = await adminApi.get('/api/orders/labels/pending', {
         params: { page, limit }
       });
       return response.data;
@@ -502,7 +536,7 @@ export const orderService = {
   // Get label download statistics
   getLabelDownloadStats: async () => {
     try {
-      const response = await api.get('/api/orders/labels/stats');
+      const response = await adminApi.get('/api/orders/labels/stats');
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -515,7 +549,7 @@ export const orderService = {
 export const paymentService = {
   getAllPayments: async () => {
     try {
-      const response = await api.get("/api/payments");
+      const response = await adminApi.get("/api/payments");
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -524,7 +558,7 @@ export const paymentService = {
 
   getPaymentById: async (id) => {
     try {
-      const response = await api.get(`/api/payments/${id}`);
+      const response = await adminApi.get(`/api/payments/${id}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -533,7 +567,7 @@ export const paymentService = {
 
   updatePaymentStatus: async (id, statusData) => {
     try {
-      const response = await api.put(`/api/payments/${id}/status`, statusData);
+      const response = await adminApi.put(`/api/payments/${id}/status`, statusData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -542,7 +576,7 @@ export const paymentService = {
 
   deletePayment: async (id) => {
     try {
-      const response = await api.delete(`/api/payments/${id}`);
+      const response = await adminApi.delete(`/api/payments/${id}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -554,7 +588,7 @@ export const paymentService = {
 export const settingsService = {
   getAllSettings: async () => {
     try {
-      const response = await api.get("/api/settings");
+      const response = await adminApi.get("/api/settings");
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -563,7 +597,7 @@ export const settingsService = {
 
   getSettingByKey: async (key) => {
     try {
-      const response = await api.get(`/api/settings/${key}`);
+      const response = await adminApi.get(`/api/settings/${key}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -572,7 +606,7 @@ export const settingsService = {
 
   upsertSetting: async (settingData) => {
     try {
-      const response = await api.post("/api/settings", settingData);
+      const response = await adminApi.post("/api/settings", settingData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -581,7 +615,7 @@ export const settingsService = {
 
   deleteSetting: async (key) => {
     try {
-      const response = await api.delete(`/api/settings/${key}`);
+      const response = await adminApi.delete(`/api/settings/${key}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -625,7 +659,7 @@ export const userService = {
     try {
       const token = localStorage.getItem("token");
 
-      const response = await api.get("/api/users/me");
+      const response = await adminApi.get("/api/users/me");
 
       // The API returns user data directly, not nested under a user property
       if (!response.data) {
@@ -643,7 +677,7 @@ export const userService = {
 
   getProfile: async () => {
     try {
-      const response = await api.get("/api/users/profile");
+      const response = await adminApi.get("/api/users/profile");
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -652,7 +686,7 @@ export const userService = {
 
   updateProfile: async (profileData) => {
     try {
-      const response = await api.put("/api/users/profile", profileData);
+      const response = await adminApi.put("/api/users/profile", profileData);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -661,7 +695,7 @@ export const userService = {
 
   updateUser: async (userData) => {
     try {
-      const response = await api.put("/api/users/me", userData);
+      const response = await adminApi.put("/api/users/me", userData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -670,7 +704,7 @@ export const userService = {
 
   changePassword: async (passwordData) => {
     try {
-      const response = await api.put("/api/users/me/password", passwordData);
+      const response = await adminApi.put("/api/users/me/password", passwordData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -679,7 +713,7 @@ export const userService = {
 
   deleteUser: async () => {
     try {
-      const response = await api.delete("/api/users/delete");
+      const response = await adminApi.delete("/api/users/delete");
       localStorage.removeItem("token");
       return response.data;
     } catch (error) {
@@ -689,7 +723,7 @@ export const userService = {
 
   getAllUsers: async () => {
     try {
-      const response = await api.get("/api/users/all");
+      const response = await adminApi.get("/api/users/all");
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -709,7 +743,7 @@ export const categoryService = {
     // Deduplicate simultaneous requests
     return deduplicateRequest(cacheKey, async () => {
       try {
-        const response = await api.get("/api/categories");
+        const response = await adminApi.get("/api/categories");
         const data = response.data;
         
         // Cache the result for 5 minutes
@@ -724,7 +758,7 @@ export const categoryService = {
 
   getCategoryById: async (id) => {
     try {
-      const response = await api.get(`/api/categories/${id}`);
+      const response = await adminApi.get(`/api/categories/${id}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -733,7 +767,7 @@ export const categoryService = {
 
   createCategory: async (formData) => {
     try {
-      const response = await api.post("/api/categories", formData);
+      const response = await adminApi.post("/api/categories", formData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -742,7 +776,7 @@ export const categoryService = {
 
   updateCategory: async (id, formData) => {
     try {
-      const response = await api.put(`/api/categories/${id}`, formData);
+      const response = await adminApi.put(`/api/categories/${id}`, formData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -751,7 +785,7 @@ export const categoryService = {
 
   deleteCategory: async (id) => {
     try {
-      const response = await api.delete(`/api/categories/${id}`);
+      const response = await adminApi.delete(`/api/categories/${id}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -762,7 +796,7 @@ export const categoryService = {
 export const sliderService = {
   createSlider: async (sliderData) => {
     try {
-      const response = await api.post("/api/sliders", sliderData);
+      const response = await adminApi.post("/api/sliders", sliderData);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -771,7 +805,7 @@ export const sliderService = {
 
   getAllSliders: async () => {
     try {
-      const response = await api.get("/api/sliders/admin/all");
+      const response = await adminApi.get("/api/sliders/admin/all");
       // Return the response data directly since it already contains the sliders array
       return response.data;
     } catch (error) {
@@ -781,7 +815,7 @@ export const sliderService = {
 
   getSliderById: async (id) => {
     try {
-      const response = await api.get(`/api/sliders/${id}`);
+      const response = await adminApi.get(`/api/sliders/${id}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -790,7 +824,7 @@ export const sliderService = {
 
   updateSlider: async (id, sliderData) => {
     try {
-      const response = await api.put(`/api/sliders/${id}`, sliderData);
+      const response = await adminApi.put(`/api/sliders/${id}`, sliderData);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -799,7 +833,7 @@ export const sliderService = {
 
   deleteSlider: async (id) => {
     try {
-      const response = await api.delete(`/api/sliders/${id}`);
+      const response = await adminApi.delete(`/api/sliders/${id}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -808,7 +842,7 @@ export const sliderService = {
 
   assignSliderToBrands: async (sliderId, brandIds) => {
     try {
-      const response = await api.post(`/api/sliders/${sliderId}/brands`, {
+      const response = await adminApi.post(`/api/sliders/${sliderId}/brands`, {
         brand_ids: brandIds
       });
       return response.data;
@@ -819,7 +853,7 @@ export const sliderService = {
 
   removeSliderFromBrand: async (sliderId, brandId) => {
     try {
-      const response = await api.delete(`/api/sliders/${sliderId}/brands/${brandId}`);
+      const response = await adminApi.delete(`/api/sliders/${sliderId}/brands/${brandId}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -831,7 +865,7 @@ export const sliderService = {
 export const productService = {
   createProduct: async (productData) => {
     try {
-      const response = await api.post("/api/products", productData, {
+      const response = await adminApi.post("/api/products", productData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -849,7 +883,7 @@ export const productService = {
       if (!search) {
         delete params.search;
       }
-      const response = await api.get("/api/products", { params });
+      const response = await adminApi.get("/api/products", { params });
       return response.data;
     } catch (error) {
       handleApiError(error);
@@ -858,7 +892,7 @@ export const productService = {
 
   getProduct: async (id) => {
     try {
-      const response = await api.get(`/api/products/${id}`);
+      const response = await adminApi.get(`/api/products/${id}`);
       // Return the data directly since the API response is already in the correct format
       return response.data;
     } catch (error) {
@@ -868,7 +902,7 @@ export const productService = {
 
   updateProduct: async (id, productData) => {
     try {
-      const response = await api.put(`/api/products/${id}`, productData, {
+      const response = await adminApi.put(`/api/products/${id}`, productData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -882,7 +916,7 @@ export const productService = {
 
   deleteProduct: async (id) => {
     try {
-      const response = await api.delete(`/api/products/${id}`);
+      const response = await adminApi.delete(`/api/products/${id}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -891,7 +925,7 @@ export const productService = {
 
   getProductsByCategory: async (categoryId) => {
     try {
-      const response = await api.get(`/api/products/category/${categoryId}`);
+      const response = await adminApi.get(`/api/products/category/${categoryId}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -900,7 +934,7 @@ export const productService = {
 
   searchProducts: async (query) => {
     try {
-      const response = await api.get(`/api/products/search?query=${query}`);
+      const response = await adminApi.get(`/api/products/search?query=${query}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -916,7 +950,7 @@ export const productService = {
       if (productId) {
         params.productId = productId;
       }
-      const response = await api.get('/api/products/existing-images', { params });
+      const response = await adminApi.get('/api/products/existing-images', { params });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -930,7 +964,7 @@ export const productService = {
         formData.append('images', files[i]);
       }
       
-      const response = await api.post('/api/products/upload-images', formData, {
+      const response = await adminApi.post('/api/products/upload-images', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -943,7 +977,7 @@ export const productService = {
 
   deleteImages: async (imagePaths) => {
     try {
-      const response = await api.delete('/api/products/delete-images', {
+      const response = await adminApi.delete('/api/products/delete-images', {
         data: { imagePaths }
       });
       return response.data;
@@ -957,7 +991,7 @@ export const productService = {
 export const couponService = {
   createCoupon: async (couponData) => {
     try {
-      const response = await api.post("/api/coupons", couponData);
+      const response = await adminApi.post("/api/coupons", couponData);
       // Clear cache after creating
       clearCache('coupons_all');
       return response.data;
@@ -976,7 +1010,7 @@ export const couponService = {
     // Deduplicate simultaneous requests
     return deduplicateRequest(cacheKey, async () => {
       try {
-        const response = await api.get("/api/coupons");
+        const response = await adminApi.get("/api/coupons");
         const data = response.data;
         
         // Cache for 30 minutes
@@ -991,7 +1025,7 @@ export const couponService = {
 
   getCouponById: async (id) => {
     try {
-      const response = await api.get(`/api/coupons/${id}`);
+      const response = await adminApi.get(`/api/coupons/${id}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -1000,7 +1034,7 @@ export const couponService = {
 
   updateCoupon: async (id, couponData) => {
     try {
-      const response = await api.put(`/api/coupons/${id}`, couponData);
+      const response = await adminApi.put(`/api/coupons/${id}`, couponData);
       // Clear cache after updating
       clearCache('coupons_all');
       return response.data;
@@ -1011,7 +1045,7 @@ export const couponService = {
 
   deleteCoupon: async (id) => {
     try {
-      const response = await api.delete(`/api/coupons/${id}`);
+      const response = await adminApi.delete(`/api/coupons/${id}`);
       // Clear cache after deleting
       clearCache('coupons_all');
       return response.data;
@@ -1026,7 +1060,7 @@ export const reviewService = {
   getAllReviews: async (status = "all", params = {}) => {
     try {
       const { page = 1, limit = 10 } = params;
-      const response = await api.get(`/api/reviews/admin/all`, {
+      const response = await adminApi.get(`/api/reviews/admin/all`, {
         params: {
           status,
           page,
@@ -1044,7 +1078,7 @@ export const reviewService = {
 
   getReviewById: async (id) => {
     try {
-      const response = await api.get(`/api/reviews/admin/${id}`);
+      const response = await adminApi.get(`/api/reviews/admin/${id}`);
       return response.data.review;
     } catch (error) {
       throw handleApiError(error);
@@ -1053,7 +1087,7 @@ export const reviewService = {
 
   updateReviewStatus: async (id, statusData) => {
     try {
-      const response = await api.put(
+      const response = await adminApi.put(
         `/api/reviews/admin/${id}/status`,
         statusData
       );
@@ -1065,7 +1099,7 @@ export const reviewService = {
 
   deleteReview: async (id) => {
     try {
-      const response = await api.delete(`/api/reviews/admin/${id}`);
+      const response = await adminApi.delete(`/api/reviews/admin/${id}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -1080,7 +1114,7 @@ export const reviewService = {
         is_featured: moderationData.is_featured,
         admin_notes: moderationData.admin_notes,
       };
-      const response = await api.put(
+      const response = await adminApi.put(
         `/api/reviews/admin/${id}/moderate`,
         formattedData
       );
@@ -1096,7 +1130,7 @@ export const reviewService = {
 
   deleteReviewImage: async (imageId) => {
     try {
-      const response = await api.delete(`/api/reviews/admin/images/${imageId}`);
+      const response = await adminApi.delete(`/api/reviews/admin/images/${imageId}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -1108,7 +1142,7 @@ export const reviewService = {
 export const seoService = {
   getAllSEOData: async () => {
     try {
-      const response = await api.get("/api/seo/all");
+      const response = await adminApi.get("/api/seo/all");
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -1117,7 +1151,7 @@ export const seoService = {
 
   getSEOData: async (pageName) => {
     try {
-      const response = await api.get(`/api/seo?page_name=${pageName}`);
+      const response = await adminApi.get(`/api/seo?page_name=${pageName}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -1143,7 +1177,7 @@ export const seoService = {
         data.append("meta_image", image);
       }
 
-      const response = await api.post("/api/seo/create", data, {
+      const response = await adminApi.post("/api/seo/create", data, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -1157,7 +1191,7 @@ export const seoService = {
   updateSEOData: async (formData) => {
     try {
 
-      const response = await api.put("/api/seo/update", formData, {
+      const response = await adminApi.put("/api/seo/update", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -1170,7 +1204,7 @@ export const seoService = {
 
   deleteSEOData: async (pageName) => {
     try {
-      const response = await api.delete(`/api/seo/${pageName}`);
+      const response = await adminApi.delete(`/api/seo/${pageName}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -1182,7 +1216,7 @@ export const seoService = {
 export const attributeService = {
   getAllAttributes: async () => {
     try {
-      const response = await api.get("/api/attributes");
+      const response = await adminApi.get("/api/attributes");
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1191,7 +1225,7 @@ export const attributeService = {
 
   getAttributeById: async (id) => {
     try {
-      const response = await api.get(`/api/attributes/${id}`);
+      const response = await adminApi.get(`/api/attributes/${id}`);
       if (!response.data) {
         throw new Error("Attribute not found");
       }
@@ -1206,7 +1240,7 @@ export const attributeService = {
 
   createAttribute: async (attributeData) => {
     try {
-      const response = await api.post("/api/attributes", attributeData);
+      const response = await adminApi.post("/api/attributes", attributeData);
       if (!response.data?.attribute) {
         throw new Error("Invalid response from server");
       }
@@ -1218,7 +1252,7 @@ export const attributeService = {
 
   updateAttribute: async (id, attributeData) => {
     try {
-      const response = await api.put(`/api/attributes/${id}`, attributeData);
+      const response = await adminApi.put(`/api/attributes/${id}`, attributeData);
       if (!response.data?.attribute) {
         throw new Error("Invalid response from server");
       }
@@ -1233,7 +1267,7 @@ export const attributeService = {
 
   deleteAttribute: async (id) => {
     try {
-      const response = await api.delete(`/api/attributes/${id}`);
+      const response = await adminApi.delete(`/api/attributes/${id}`);
       return response.data;
     } catch (error) {
       if (error.response?.status === 404) {
@@ -1245,7 +1279,7 @@ export const attributeService = {
 
   addAttributeValues: async (id, values) => {
     try {
-      const response = await api.post(`/api/attributes/${id}/values`, {
+      const response = await adminApi.post(`/api/attributes/${id}/values`, {
         values,
       });
       if (!response.data?.attribute) {
@@ -1262,7 +1296,7 @@ export const attributeService = {
 
   removeAttributeValues: async (id, valueIds) => {
     try {
-      const response = await api.delete(`/api/attributes/${id}/values`, {
+      const response = await adminApi.delete(`/api/attributes/${id}/values`, {
         data: { valueIds },
       });
       if (!response.data?.attribute) {
@@ -1281,7 +1315,7 @@ export const attributeService = {
 export const policyService = {
   createPolicy: async (data) => {
     try {
-      const response = await api.post("/api/policies", data);
+      const response = await adminApi.post("/api/policies", data);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1289,7 +1323,7 @@ export const policyService = {
   },
   getAllPolicies: async () => {
     try {
-      const response = await api.get("/api/policies");
+      const response = await adminApi.get("/api/policies");
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1297,7 +1331,7 @@ export const policyService = {
   },
   getPolicyById: async (id) => {
     try {
-      const response = await api.get(`/api/policies/${id}`);
+      const response = await adminApi.get(`/api/policies/${id}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1305,7 +1339,7 @@ export const policyService = {
   },
   updatePolicy: async (id, data) => {
     try {
-      const response = await api.put(`/api/policies/${id}`, data);
+      const response = await adminApi.put(`/api/policies/${id}`, data);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1313,7 +1347,7 @@ export const policyService = {
   },
   deletePolicy: async (id) => {
     try {
-      const response = await api.delete(`/api/policies/${id}`);
+      const response = await adminApi.delete(`/api/policies/${id}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1325,7 +1359,7 @@ export const policyService = {
 export const dashboardService = {
   getDashboardStats: async () => {
     try {
-      const response = await api.get("/api/dashboard/stats");
+      const response = await adminApi.get("/api/dashboard/stats");
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1337,7 +1371,7 @@ export const dashboardService = {
 export const brandService = {
   getAllBrands: async (includeInactive = false) => {
     try {
-      const response = await api.get("/api/admin/brands", {
+      const response = await adminApi.get("/api/admin/brands", {
         params: { includeInactive }
       });
       return response.data;
@@ -1348,7 +1382,7 @@ export const brandService = {
 
   getBrandById: async (id) => {
     try {
-      const response = await api.get(`/api/admin/brands/${id}`);
+      const response = await adminApi.get(`/api/admin/brands/${id}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1357,7 +1391,7 @@ export const brandService = {
 
   createBrand: async (brandData) => {
     try {
-      const response = await api.post("/api/admin/brands", brandData);
+      const response = await adminApi.post("/api/admin/brands", brandData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1366,7 +1400,7 @@ export const brandService = {
 
   updateBrand: async (id, brandData) => {
     try {
-      const response = await api.put(`/api/admin/brands/${id}`, brandData);
+      const response = await adminApi.put(`/api/admin/brands/${id}`, brandData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1375,7 +1409,7 @@ export const brandService = {
 
   deleteBrand: async (id) => {
     try {
-      const response = await api.delete(`/api/admin/brands/${id}`);
+      const response = await adminApi.delete(`/api/admin/brands/${id}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1384,7 +1418,7 @@ export const brandService = {
 
   toggleBrandStatus: async (id) => {
     try {
-      const response = await api.patch(`/api/admin/brands/${id}/toggle-status`);
+      const response = await adminApi.patch(`/api/admin/brands/${id}/toggle-status`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1393,7 +1427,7 @@ export const brandService = {
 
   searchBrands: async (query) => {
     try {
-      const response = await api.get("/api/admin/brands/search", {
+      const response = await adminApi.get("/api/admin/brands/search", {
         params: { q: query }
       });
       return response.data;
@@ -1409,7 +1443,7 @@ export const brandSettingsService = {
     try {
       const params = { brandId };
       if (category) params.category = category;
-      const response = await api.get("/api/admin/brand-settings", { params });
+      const response = await adminApi.get("/api/admin/brand-settings", { params });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1418,7 +1452,7 @@ export const brandSettingsService = {
 
   getSettingsByCategory: async (brandId, category) => {
     try {
-      const response = await api.get(`/api/admin/brand-settings/category/${category}`, {
+      const response = await adminApi.get(`/api/admin/brand-settings/category/${category}`, {
         params: { brandId }
       });
       return response.data;
@@ -1429,7 +1463,7 @@ export const brandSettingsService = {
 
   getSetting: async (brandId, key) => {
     try {
-      const response = await api.get(`/api/admin/brand-settings/${key}`, {
+      const response = await adminApi.get(`/api/admin/brand-settings/${key}`, {
         params: { brandId }
       });
       return response.data;
@@ -1440,7 +1474,7 @@ export const brandSettingsService = {
 
   createSetting: async (settingData) => {
     try {
-      const response = await api.post("/api/admin/brand-settings", settingData);
+      const response = await adminApi.post("/api/admin/brand-settings", settingData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1449,7 +1483,7 @@ export const brandSettingsService = {
 
   updateSetting: async (brandId, key, settingData) => {
     try {
-      const response = await api.put(`/api/admin/brand-settings/${key}`, settingData, {
+      const response = await adminApi.put(`/api/admin/brand-settings/${key}`, settingData, {
         params: { brandId }
       });
       return response.data;
@@ -1460,7 +1494,7 @@ export const brandSettingsService = {
 
   deleteSetting: async (brandId, key) => {
     try {
-      const response = await api.delete(`/api/admin/brand-settings/${key}`, {
+      const response = await adminApi.delete(`/api/admin/brand-settings/${key}`, {
         params: { brandId }
       });
       return response.data;
@@ -1470,3 +1504,104 @@ export const brandSettingsService = {
   },
 };
 
+
+// Blog Services (Admin)
+export const blogService = {
+  // Categories
+  getAllCategories: async () => {
+    try {
+      const response = await adminApi.get("/api/blogs/admin/categories");
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  createCategory: async (data) => {
+    try {
+      const response = await adminApi.post("/api/blogs/admin/categories", data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  updateCategory: async (id, data) => {
+    try {
+      const response = await adminApi.put(`/api/blogs/admin/categories/${id}`, data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  deleteCategory: async (id) => {
+    try {
+      const response = await adminApi.delete(`/api/blogs/admin/categories/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Posts
+  getAllPosts: async (params = {}) => {
+    try {
+      const response = await adminApi.get("/api/blogs/admin/posts", { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  getPostById: async (id) => {
+    try {
+      const response = await adminApi.get(`/api/blogs/admin/posts/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  createPost: async (data) => {
+    try {
+      const response = await adminApi.post("/api/blogs/admin/posts", data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  updatePost: async (id, data) => {
+    try {
+      const response = await adminApi.put(`/api/blogs/admin/posts/${id}`, data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  deletePost: async (id) => {
+    try {
+      const response = await adminApi.delete(`/api/blogs/admin/posts/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  uploadHeroImage: async (id, file) => {
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const response = await adminApi.post(`/api/blogs/admin/posts/${id}/hero-image`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Tags
+  getAllTags: async () => {
+    try {
+      const response = await adminApi.get("/api/blogs/tags");
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+};

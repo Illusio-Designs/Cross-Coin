@@ -48,8 +48,8 @@ router.use('/order-status-history', identifyBrand, orderStatusHistoryRoutes);
 // Dashboard routes (admin, can filter by brand)
 router.use('/dashboard', optionalBrand, dashboardRoutes);
 
-// Blog routes (public uses identifyBrand for brand scoping; admin sees all)
-router.use('/blogs', identifyBrand, blogRoutes);
+// Blog routes (public routes use req.brandId for scoping; admin routes ignore it)
+router.use('/blogs', optionalBrand, blogRoutes);
 
 // Public serviceability check (no auth required)
 router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
