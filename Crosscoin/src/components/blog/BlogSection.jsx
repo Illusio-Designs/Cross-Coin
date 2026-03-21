@@ -8,7 +8,7 @@ const BlogSection = () => {
 
   useEffect(() => {
     getPublicBlogs({ page: 1, limit: 4 })
-      .then(res => setBlogs(res?.posts || res?.data || []))
+      .then(res => setBlogs(res?.data || []))
       .catch(() => setBlogs([]));
   }, []);
 

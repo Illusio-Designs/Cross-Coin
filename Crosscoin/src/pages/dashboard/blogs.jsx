@@ -114,10 +114,10 @@ export default function Blogs() {
         blogService.getAllTags(),
         brandService.getAllBrands(),
       ]);
-      setPosts(postsRes?.posts || postsRes || []);
-      setCategories(catsRes?.categories || catsRes || []);
-      setTags(tagsRes?.tags || tagsRes || []);
-      setBrands(brandsRes?.data || brandsRes || []);
+      setPosts(postsRes?.data || []);
+      setCategories(catsRes?.data || []);
+      setTags(tagsRes?.data || []);
+      setBrands(brandsRes?.data || []);
     } catch (e) {
       showError('loadingFailed');
     } finally {
@@ -142,7 +142,7 @@ export default function Blogs() {
     setLoading(true);
     try {
       const res = await blogService.getPostById(id);
-      const p = res?.post || res;
+      const p = res?.data || res;
       setPostForm({
         id: p.id,
         title: p.title || '',
