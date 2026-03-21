@@ -61,6 +61,7 @@ const IconPlus = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor
 const IconTag = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>;
 const IconTruck = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
 const IconSuccess = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+const IconChevronDown = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>;
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -84,6 +85,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
+  const [showAddressDropdown, setShowAddressDropdown] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState(null);
   const [addressForm, setAddressForm] = useState(EMPTY_ADDR);
   const [addressLoading, setAddressLoading] = useState(false);
@@ -103,6 +105,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
 
   // Scroll hint
   const bodyRef = useRef(null);
+  const dropdownRef = useRef(null);
   const [showScrollHint, setShowScrollHint] = useState(false);
 
   // ── Visibility ──────────────────────────────────────────────────────────
@@ -163,7 +166,19 @@ const CartDrawer = ({ isOpen, onClose }) => {
     return () => document.body.classList.remove('cd-drawer-open-body');
   }, [isOpen]);
 
-  // ── Scroll hint ─────────────────────────────────────────────────────────
+  // ── Close dropdown on outside click ────────────────────────────────────
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowAddressDropdown(false);
+      }
+    };
+    
+    if (showAddressDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showAddressDropdown]);
   useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
@@ -556,23 +571,73 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 <div className="cd-section-title">Delivery Address</div>
                 {addressLoading ? <p className="cd-loading">Loading addresses...</p> : (
                   <>
-                    {isAuthenticated && addresses.length > 0 && (
-                      <div className="cd-address-list">
-                        {addresses.map(addr => (
-                          <div key={addr.id} className={`cd-address-card ${selectedAddress?.id === addr.id ? 'cd-address-selected' : ''}`} onClick={() => setSelectedAddress(addr)}>
-                            <div className="cd-address-radio"><div className={`cd-radio-dot ${selectedAddress?.id === addr.id ? 'active' : ''}`} /></div>
-                            <div className="cd-address-body">
-                              <p className="cd-address-name">{addr.full_name || addr.fullName} {(addr.isDefault || addr.is_default) && <span className="cd-default-tag">Default</span>}</p>
-                              <p className="cd-address-line">{addr.address}</p>
-                              <p className="cd-address-line">{addr.city}, {addr.state} {addr.postal_code}</p>
-                              <p className="cd-address-line">{addr.phone_number}</p>
-                            </div>
-                            <button className="cd-address-edit" onClick={e => { e.stopPropagation(); handleEditAddress(addr); }} aria-label="Edit"><IconEdit /></button>
+                    {isAuthenticated && addresses.length > 1 ? (
+                      /* Multiple addresses - show dropdown */
+                      <div className="cd-address-section">
+                        <div className="cd-section-subtitle">Select your delivery address</div>
+                        <div className="cd-address-dropdown-container" ref={dropdownRef}>
+                          <div 
+                            className="cd-address-dropdown-trigger" 
+                            onClick={() => setShowAddressDropdown(!showAddressDropdown)}
+                          >
+                            <span>Choose Address</span>
+                            <span className={`cd-dropdown-arrow ${showAddressDropdown ? 'open' : ''}`}>
+                              <IconChevronDown />
+                            </span>
                           </div>
-                        ))}
+                          {showAddressDropdown && (
+                            <div className="cd-address-dropdown">
+                              {addresses.map(addr => (
+                                <div 
+                                  key={addr.id} 
+                                  className={`cd-address-option ${selectedAddress?.id === addr.id ? 'selected' : ''}`}
+                                  onClick={() => {
+                                    setSelectedAddress(addr);
+                                    setShowAddressDropdown(false);
+                                  }}
+                                >
+                                  <div className="cd-address-body">
+                                    <p className="cd-address-name">{addr.full_name || addr.fullName} {(addr.isDefault || addr.is_default) && <span className="cd-default-tag">Default</span>}</p>
+                                    <p className="cd-address-line">{addr.address}</p>
+                                    <p className="cd-address-line">{addr.city}, {addr.state} {addr.postal_code}</p>
+                                    <p className="cd-address-line">{addr.phone_number}</p>
+                                  </div>
+                                  <button className="cd-address-edit" onClick={e => { e.stopPropagation(); handleEditAddress(addr); setShowAddressDropdown(false); }} aria-label="Edit"><IconEdit /></button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {selectedAddress && (
+                          <div className="cd-selected-address">
+                            <div className="cd-selected-address-label">Selected Address:</div>
+                            <div className="cd-address-card cd-address-selected">
+                              <div className="cd-address-radio"><div className="cd-radio-dot active" /></div>
+                              <div className="cd-address-body">
+                                <p className="cd-address-name">{selectedAddress.full_name || selectedAddress.fullName} {(selectedAddress.isDefault || selectedAddress.is_default) && <span className="cd-default-tag">Default</span>}</p>
+                                <p className="cd-address-line">{selectedAddress.address}</p>
+                                <p className="cd-address-line">{selectedAddress.city}, {selectedAddress.state} {selectedAddress.postal_code}</p>
+                                <p className="cd-address-line">{selectedAddress.phone_number}</p>
+                              </div>
+                              <button className="cd-address-edit" onClick={e => { e.stopPropagation(); handleEditAddress(selectedAddress); }} aria-label="Edit"><IconEdit /></button>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {!isAuthenticated && selectedAddress && !showAddressForm && (
+                    ) : isAuthenticated && addresses.length === 1 ? (
+                      /* Single address - show as card */
+                      <div className="cd-address-card cd-address-selected">
+                        <div className="cd-address-radio"><div className="cd-radio-dot active" /></div>
+                        <div className="cd-address-body">
+                          <p className="cd-address-name">{addresses[0].full_name || addresses[0].fullName} {(addresses[0].isDefault || addresses[0].is_default) && <span className="cd-default-tag">Default</span>}</p>
+                          <p className="cd-address-line">{addresses[0].address}</p>
+                          <p className="cd-address-line">{addresses[0].city}, {addresses[0].state} {addresses[0].postal_code}</p>
+                          <p className="cd-address-line">{addresses[0].phone_number}</p>
+                        </div>
+                        <button className="cd-address-edit" onClick={e => { e.stopPropagation(); handleEditAddress(addresses[0]); }} aria-label="Edit"><IconEdit /></button>
+                      </div>
+                    ) : !isAuthenticated && selectedAddress && !showAddressForm ? (
+                      /* Guest address */
                       <div className="cd-address-card cd-address-selected">
                         <div className="cd-address-radio"><div className="cd-radio-dot active" /></div>
                         <div className="cd-address-body">
@@ -583,7 +648,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                         </div>
                         <button className="cd-address-edit" onClick={() => { setAddressForm({ fullName: selectedAddress.full_name, phoneNumber: selectedAddress.phone_number, address: selectedAddress.address, city: selectedAddress.city, state: selectedAddress.state, postalCode: selectedAddress.postal_code, country: selectedAddress.country, isDefault: false }); setShowAddressForm(true); }} aria-label="Edit"><IconEdit /></button>
                       </div>
-                    )}
+                    ) : null}
                     {!showAddressForm && (
                       <button className="cd-add-address-btn" onClick={() => { setShowAddressForm(true); setEditingAddressId(null); setAddressForm(EMPTY_ADDR); }}>
                         <IconPlus /> Add {selectedAddress || (isAuthenticated && addresses.length > 0) ? 'Another' : 'New'} Address
@@ -651,8 +716,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
           )}
         </div>
 
-        {/* Scroll hint - temporarily always show for testing */}
-        {(showScrollHint || activeItems.length > 0) && !orderSuccess && activeItems.length > 0 && (
+        {/* Scroll hint */}
+        {showScrollHint && !orderSuccess && activeItems.length > 0 && (
           <div className="cd-scroll-hint" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="6 9 12 15 18 9" />
