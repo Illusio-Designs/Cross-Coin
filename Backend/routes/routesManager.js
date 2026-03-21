@@ -21,6 +21,7 @@ const reviewRoutes = require('./reviewRoutes.js');
 const cartRoutes = require('./cartRoutes.js');
 const policyRoutes = require('./policyRoutes.js');
 const dashboardRoutes = require('./dashboardRoutes.js');
+const blogRoutes = require('./blogRoutes.js');
 
 // User routes - shared across brands (optional brand)
 router.use('/users', optionalBrand, userRoutes);
@@ -46,6 +47,9 @@ router.use('/order-status-history', identifyBrand, orderStatusHistoryRoutes);
 
 // Dashboard routes (admin, can filter by brand)
 router.use('/dashboard', optionalBrand, dashboardRoutes);
+
+// Blog routes (public uses identifyBrand for brand scoping; admin sees all)
+router.use('/blogs', identifyBrand, blogRoutes);
 
 // Public serviceability check (no auth required)
 router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {

@@ -480,6 +480,10 @@ const setupDatabase = async () => {
     
     // Create performance optimization indexes
     await createPerformanceIndexes();
+
+    // Create blog tables
+    console.log("\nCreating blog tables...");
+    await createBlogTables();
     
     return true;
   } catch (error) {
@@ -1133,6 +1137,124 @@ const createPerformanceIndexes = async () => {
     console.log(`✓ Performance indexes: ${created} created, ${skipped} already exist`);
   } catch (error) {
     console.error('❌ Error creating performance indexes:', error.message);
+  }
+};
+
+// Function to create blog tables
+const createBlogTables = async () => {
+  try {
+    console.log('Creating blog_categories table...');
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS blog_categories (
+        id INT NOT NULL AUTO_INCREMENT,
+        name VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) NOT NULL,
+        description TEXT NULL,
+        status ENUM('active','inactive') NOT NULL DEFAULT 'active',
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_blog_categories_slug (slug)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+    `);
+
+    console.log('Creating blog_posts table...');
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS blog_posts (
+        id INT NOT NULL AUTO_INCREMENT,
+        title VARCHAR(500) NOT NULL,
+        slug VARCHAR(500) NOT NULL,
+        author_name VARCHAR(255) NULL,
+        hero_image VARCHAR(1000) NULL,
+        sections JSON NULL,
+        status ENUM('draft','published','archived') NOT NULL DEFAULT 'draft',
+        published_at DATETIME NULL,
+        blog_category_id INT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_blog_posts_slug (slug),
+        KEY idx_blog_posts_status (status),
+        KEY idx_blog_posts_category (blog_category_id),
+        KEY idx_blog_posts_published_at (published_at),
+        CONSTRAINT fk_blog_posts_category
+          FOREIGN KEY (blog_category_id) REFERENCES blog_categories (id)
+          ON DELETE SET NULL ON UPDATE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+    `);
+
+    console.log('Creating blog_tags table...');
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS blog_tags (
+        id INT NOT NULL AUTO_INCREMENT,
+        name VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_blog_tags_name (name),
+        UNIQUE KEY uq_blog_tags_slug (slug)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+    `);
+
+    console.log('Creating blog_post_tags table...');
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS blog_post_tags (
+        blog_post_id INT NOT NULL,
+        blog_tag_id INT NOT NULL,
+        PRIMARY KEY (blog_post_id, blog_tag_id),
+        CONSTRAINT fk_bpt_post FOREIGN KEY (blog_post_id) REFERENCES blog_posts (id) ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT fk_bpt_tag  FOREIGN KEY (blog_tag_id)  REFERENCES blog_tags  (id) ON DELETE CASCADE ON UPDATE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+    `);
+
+    console.log('Creating blog_brands table...');
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS blog_brands (
+        blog_post_id INT NOT NULL,
+        brand_id     INT NOT NULL,
+        PRIMARY KEY (blog_post_id, brand_id),
+        CONSTRAINT fk_bb_post  FOREIGN KEY (blog_post_id) REFERENCES blog_posts (id) ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT fk_bb_brand FOREIGN KEY (brand_id)     REFERENCES brands     (id) ON DELETE CASCADE ON UPDATE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+    `);
+
+    console.log('Creating blog_featured_products table...');
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS blog_featured_products (
+        blog_post_id  INT NOT NULL,
+        product_id    INT NOT NULL,
+        lifestyle_tag VARCHAR(255) NULL,
+        PRIMARY KEY (blog_post_id, product_id),
+        CONSTRAINT fk_bfp_post    FOREIGN KEY (blog_post_id) REFERENCES blog_posts (id) ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT fk_bfp_product FOREIGN KEY (product_id)   REFERENCES products   (id) ON DELETE CASCADE ON UPDATE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+    `);
+
+    console.log('Creating blog_seo table...');
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS blog_seo (
+        id              INT NOT NULL AUTO_INCREMENT,
+        blog_post_id    INT NOT NULL,
+        meta_title      VARCHAR(255) NULL,
+        meta_description TEXT NULL,
+        meta_keywords   VARCHAR(500) NULL,
+        og_title        VARCHAR(255) NULL,
+        og_description  TEXT NULL,
+        og_image        VARCHAR(1000) NULL,
+        canonical_url   VARCHAR(1000) NULL,
+        structured_data JSON NULL,
+        created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_blog_seo_post (blog_post_id),
+        CONSTRAINT fk_bs_post FOREIGN KEY (blog_post_id) REFERENCES blog_posts (id) ON DELETE CASCADE ON UPDATE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+    `);
+
+    console.log('✓ Blog tables created successfully');
+  } catch (error) {
+    console.log('⚠️ Blog tables creation skipped (tables may already exist):', error.message);
   }
 };
 
