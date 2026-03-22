@@ -19,14 +19,31 @@ const slugify = require("slugify");
 const { sequelize } = require("../config/db.js");
 const { Op } = require("sequelize");
 const fs = require("fs/promises");
+const fsSync = require("fs");
 const BadgeService = require("../services/badgeService.js");
 const ProductService = require("../services/productService.js");
 const cacheManager = require("../services/cacheManager.js");
+const imagekitService = require("../services/imagekitService.js");
 
 // In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(
   path.join(__dirname, "../uploads/products")
 );
+
+// Helper: upload a multer file to ImageKit and return the filePath
+const uploadFileToImageKit = async (file) => {
+  try {
+    const buffer = fsSync.readFileSync(file.path);
+    const result = await imagekitService.uploadImage(buffer, file.filename, '/products');
+    // Clean up local temp file
+    fsSync.unlink(file.path, () => {});
+    return result.filePath; // e.g. /products/filename.jpg
+  } catch (err) {
+    console.error('ImageKit upload failed for', file.filename, err.message);
+    // Fallback to local path so product save doesn't break
+    return `/uploads/products/${file.filename}`;
+  }
+};
 
 // Helper function to format product response
 const formatProductResponse = (product) => {
@@ -462,7 +479,7 @@ module.exports.createProduct = async (req, res) => {
                   {
                     product_id: product.id,
                     product_variation_id: variationRecord.id,
-                    image_url: `/uploads/products/${image.filename}`,
+                    image_url: await uploadFileToImageKit(image),
                     alt_text: name,
                     display_order: 0,
                     is_primary: false,
@@ -526,7 +543,7 @@ module.exports.createProduct = async (req, res) => {
             {
               product_id: product.id,
               product_variation_id: null,
-              image_url: `/uploads/products/${image.filename}`,
+              image_url: await uploadFileToImageKit(image),
               alt_text: name,
               display_order: index,
               is_primary: index === 0,
@@ -1011,7 +1028,7 @@ module.exports.updateProduct = async (req, res) => {
               variations[variationIdx] &&
               (variations[variationIdx].id === variation.id || variations[variationIdx].sku === variation.sku)
             ) {
-              const imageUrl = `/uploads/products/${image.filename}`;
+              const imageUrl = await uploadFileToImageKit(image);
               
               // Only add if this image URL doesn't already exist for this variation
               if (!existingVariationImageUrls.has(imageUrl)) {
@@ -1111,7 +1128,7 @@ module.exports.updateProduct = async (req, res) => {
         const existingImageUrls = new Set(existingImages.map(img => img.image_url));
         
         for (const image of productLevelImages) {
-          const imageUrl = `/uploads/products/${image.filename}`;
+          const imageUrl = await uploadFileToImageKit(image);
           
           // Only add if this image URL doesn't already exist
           if (!existingImageUrls.has(imageUrl)) {
@@ -1896,24 +1913,34 @@ module.exports.uploadImages = async (req, res) => {
       });
     }
 
+    const imagekitService = require('../services/imagekitService');
+    const fs = require('fs');
     const uploadedImages = [];
     const failedImages = [];
 
     for (const file of req.files) {
       try {
-        // The file is already saved by multer, just record the info
-        const imagePath = `/uploads/products/${file.filename}`;
+        // Read the locally saved file buffer
+        const fileBuffer = fs.readFileSync(file.path);
+
+        // Upload to ImageKit
+        const ikResult = await imagekitService.uploadImage(fileBuffer, file.filename, '/products');
+
+        // Delete local temp file after upload
+        fs.unlink(file.path, () => {});
+
         uploadedImages.push({
           originalName: file.originalname,
           filename: file.filename,
-          path: imagePath,
+          path: ikResult.filePath,   // ImageKit path e.g. /products/filename.jpg
+          url: ikResult.url,
           size: file.size,
           mimetype: file.mimetype
         });
-        
-        console.log(`Uploaded image: ${file.filename}`);
+
+        console.log(`Uploaded to ImageKit: ${ikResult.filePath}`);
       } catch (error) {
-        console.error(`Failed to process uploaded file ${file.originalname}:`, error);
+        console.error(`Failed to upload ${file.originalname} to ImageKit:`, error);
         failedImages.push({
           originalName: file.originalname,
           error: error.message
