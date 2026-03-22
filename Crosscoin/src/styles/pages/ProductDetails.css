@@ -898,6 +898,11 @@
   color: var(--gray-dark);
   line-height: 1.8;
   margin: 16px 0 28px;
+  font-family: Poppins, sans-serif;
+}
+
+.pdt-desc-body * {
+  font-family: Poppins, sans-serif !important;
 }
 
 .pdt-ideal-row {

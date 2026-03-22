@@ -520,6 +520,24 @@ module.exports.createOrder = async (req, res) => {
     });
     console.log("createOrder: Response sent successfully");
 
+    // Fire Facebook Purchase event (non-blocking)
+    setImmediate(async () => {
+      try {
+        await sendFacebookEvent("Purchase", {
+          brand_id: createdOrder.brand_id || 1,
+          order_number: createdOrder.order_number,
+          total_amount: parseFloat(createdOrder.final_amount),
+          final_amount: parseFloat(createdOrder.final_amount),
+          currency: "INR",
+          ip_address: req.ip || null,
+          user_agent: req.headers["user-agent"] || null,
+          items: validatedItems.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+        });
+      } catch (fbErr) {
+        console.error("createOrder: Facebook Purchase event error:", fbErr.message);
+      }
+    });
+
     // Invalidate dashboard cache for the user (non-blocking)
     try {
       await invalidateDashboardCache(userId);
@@ -900,24 +918,26 @@ module.exports.createGuestOrder = async (req, res) => {
     await transaction.commit();
     console.log("createGuestOrder: Transaction committed successfully");
 
-    // Send Facebook event for guest checkout
-    try {
-      await sendFacebookEvent("InitiateCheckout", {
-        total_amount: finalAmount,
-        currency: "INR",
-        items: validatedItems.map((item) => ({
-          product_id: item.product.id,
-          quantity: item.quantity,
-        })),
-        ip_address: req.ip || "127.0.0.1",
-        user_agent: req.headers["user-agent"] || "guest-checkout",
-      });
-    } catch (fbError) {
-      console.error(
-        "createGuestOrder: Facebook event error (non-critical):",
-        fbError
-      );
-    }
+    // Send Facebook Purchase event for guest checkout (non-blocking)
+    setImmediate(async () => {
+      try {
+        await sendFacebookEvent("Purchase", {
+          brand_id: req.brand ? req.brand.id : 1,
+          order_number: order.order_number,
+          total_amount: finalAmount,
+          final_amount: finalAmount,
+          currency: "INR",
+          items: validatedItems.map((item) => ({
+            product_id: item.product.id,
+            quantity: item.quantity,
+          })),
+          ip_address: req.ip || null,
+          user_agent: req.headers["user-agent"] || null,
+        });
+      } catch (fbError) {
+        console.error("createGuestOrder: Facebook Purchase event error:", fbError.message);
+      }
+    });
 
     // Create FShip order automatically for guest orders
     setImmediate(async () => {

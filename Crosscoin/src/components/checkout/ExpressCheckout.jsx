@@ -246,7 +246,7 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
             id: String(item.productId || item.id),
             quantity: item.quantity || 1,
           })),
-        });
+        }, { eventID: orderNumber ? `Purchase_${orderNumber}` : undefined });
 
         if (purchaseTracked && orderNumber) {
           sessionStorage.setItem(`fb_purchase_tracked_${orderNumber}`, "true");

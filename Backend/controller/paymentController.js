@@ -9,6 +9,9 @@ const razorpayService = require('../services/razorpayService');
 const crypto = require('crypto');
 const settingsHelper = require('../services/settingsHelper');
 const { toSmallestUnit, fromSmallestUnit } = require('../utils/amountConverter');
+const { sendFacebookEvent } = require('../integration/facebookPixel.js');
+const { OrderItem } = require('../model/orderItemModel.js');
+const { setImmediate } = require('timers');
 
 // Process a payment
 module.exports.processPayment = async (req, res) => {
@@ -601,6 +604,25 @@ module.exports.updateOrderPayment = async (req, res) => {
       success: true, 
       message: 'Order payment updated successfully',
       order: order 
+    });
+
+    // Fire Purchase event to Facebook Conversions API (non-blocking)
+    setImmediate(async () => {
+      try {
+        const items = await OrderItem.findAll({ where: { order_id: order.id } });
+        await sendFacebookEvent('Purchase', {
+          brand_id: order.brand_id || 1,
+          order_number: order.order_number,
+          total_amount: parseFloat(order.final_amount),
+          final_amount: parseFloat(order.final_amount),
+          currency: 'INR',
+          ip_address: req.ip || null,
+          user_agent: req.headers['user-agent'] || null,
+          items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+        });
+      } catch (fbErr) {
+        console.error('Facebook Purchase event error:', fbErr.message);
+      }
     });
 
   } catch (error) {

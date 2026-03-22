@@ -18,6 +18,7 @@ const razorpayService = require('../services/razorpayService');
 const { toSmallestUnit } = require('../utils/amountConverter');
 const settingsHelper = require('../services/settingsHelper');
 const { setImmediate } = require('timers');
+const { sendFacebookEvent } = require('../integration/facebookPixel.js');
 
 // Generate unique order number (same pattern as orderController)
 const generateOrderNumber = () => {
@@ -181,55 +182,66 @@ module.exports.getShippingInfo = async (req, res) => {
             return res.status(400).json({ message: 'addresses array is required' });
         }
 
-        // Get shipping fees from DB
+        // Get shipping fees from DB once
         const shippingFees = await ShippingFee.findAll();
         const prepaidFee = parseFloat(shippingFees.find(f => f.orderType === 'prepaid')?.fee || 0);
         const codFeeAmount = parseFloat(shippingFees.find(f => f.orderType === 'cod')?.fee || 0);
+        const sourcePincode = await settingsHelper.getSetting(1, 'DEFAULT_WAREHOUSE_PINCODE', '363641');
 
         const results = [];
 
         for (const address of addresses) {
-            const zipcode = address.zipcode || address.pincode || '';
-            let serviceable = false;
-            let codAvailable = false;
-            let shippingFeeInPaise = toSmallestUnit(prepaidFee, 'INR');
-            let codFeeInPaise = 0;
+            const zipcode = (address.zipcode || address.pincode || '').toString().trim();
+
+            // Defaults — used if FShip is down or pincode is invalid
+            let serviceable = true;
+            let codAvailable = true;
             let estimatedDays = 5;
-            const shippingMethods = [];
+            let shippingFeeInPaise = toSmallestUnit(prepaidFee, 'INR');
+            let codFeeInPaise = toSmallestUnit(codFeeAmount, 'INR');
 
-            try {
-                const sourcePincode = process.env.DEFAULT_WAREHOUSE_PINCODE || '400001';
-                const serviceabilityResult = await fshipService.checkServiceability(sourcePincode, zipcode);
+            // Only call FShip if we have a valid 6-digit pincode
+            if (/^\d{6}$/.test(zipcode)) {
+                try {
+                    const serviceabilityResult = await fshipService.checkServiceability(sourcePincode, zipcode);
+                    const couriers = Array.isArray(serviceabilityResult) ? serviceabilityResult : [];
 
-                if (serviceabilityResult && Array.isArray(serviceabilityResult) && serviceabilityResult.length > 0) {
-                    serviceable = true;
-                    estimatedDays = serviceabilityResult[0].estimated_delivery_days || 5;
+                    if (couriers.length > 0) {
+                        serviceable = (couriers[0].delivery || '').toString().toLowerCase() === 'yes' || couriers[0].status === true;
+                        estimatedDays = couriers[0].estimated_delivery_days || couriers[0].edd || couriers[0].tat || 5;
 
-                    const qualityResult = await addressQualityService.calculateAddressQuality(address).catch(() => ({ score: 100 }));
-                    const codSupported = serviceabilityResult.some(c => c.cod === 1 || c.cod === true || c.cod === 'yes');
+                        // FShip returns "cod": "Yes" / "No"
+                        codAvailable = serviceable && couriers.some(c =>
+                            (c.cod || '').toString().toLowerCase() === 'yes'
+                        );
 
-                    if (codSupported && qualityResult.score >= 70) {
-                        codAvailable = true;
-                        codFeeInPaise = toSmallestUnit(codFeeAmount, 'INR');
+                        codFeeInPaise = codAvailable ? toSmallestUnit(codFeeAmount, 'INR') : 0;
+                    } else {
+                        // FShip returned empty — pincode not serviceable
+                        serviceable = false;
+                        codAvailable = false;
+                        codFeeInPaise = 0;
                     }
+                } catch (fshipErr) {
+                    // FShip API down — fail open: allow both prepaid and COD
+                    console.warn(`FShip serviceability check failed for ${zipcode}:`, fshipErr.message);
+                    serviceable = true;
+                    codAvailable = true;
+                    codFeeInPaise = toSmallestUnit(codFeeAmount, 'INR');
                 }
-            } catch {
-                // FShip unavailable — default to serviceable with prepaid only
-                serviceable = true;
             }
 
+            const shippingMethods = [];
             if (serviceable) {
                 shippingMethods.push({
                     id: 'standard',
                     name: 'Standard Delivery',
                     description: `Delivered in ${estimatedDays}–7 business days`,
-                    // Razorpay expects shipping fee in paise
                     price: shippingFeeInPaise,
                     cod: codAvailable,
                 });
             }
 
-            // Razorpay expected response format per address
             results.push({
                 id: address.id,
                 zipcode,
@@ -645,6 +657,24 @@ module.exports.verifyPayment = async (req, res) => {
             order_id: dbOrder.id,
             razorpay_order_id,
             razorpay_payment_id,
+        });
+
+        // ── Step 10: Facebook Purchase event (background, non-blocking) ───
+        setImmediate(async () => {
+            try {
+                await sendFacebookEvent('Purchase', {
+                    brand_id: 1,
+                    order_number: orderNumber,
+                    total_amount: finalAmount,
+                    final_amount: finalAmount,
+                    currency: 'INR',
+                    ip_address: req.ip || null,
+                    user_agent: req.headers['user-agent'] || null,
+                    items: cart_items.map(i => ({ product_id: i.product_id, quantity: i.quantity || 1 })),
+                });
+            } catch (fbErr) {
+                console.error('Facebook Purchase event error (magic checkout):', fbErr.message);
+            }
         });
 
     } catch (error) {

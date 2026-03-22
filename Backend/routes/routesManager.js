@@ -61,20 +61,33 @@ router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid pincode. Must be 6 digits.' });
         }
         const fshipService = require('../services/fshipService');
-        const sourcePincode = process.env.DEFAULT_WAREHOUSE_PINCODE || '400001';
+        const settingsHelper = require('../services/settingsHelper');
+        const sourcePincode = await settingsHelper.getSetting(req.brandId || 1, 'DEFAULT_WAREHOUSE_PINCODE', '363641');
         const result = await fshipService.checkServiceability(sourcePincode, pincode);
         console.log('Serviceability raw result:', JSON.stringify(result, null, 2));
         if (result && Array.isArray(result) && result.length > 0) {
             const firstCourier = result[0];
-            const codSupported = result.some(c =>
-                c.cod === 1 || c.cod === true || c.cod === 'yes' ||
-                c.COD === 1 || c.COD === true || c.COD === 'yes' ||
-                c.is_cod === true || c.is_cod === 1
+
+            // FShip returns a single object with "delivery": "Yes"/"No" and "cod": "Yes"/"No"
+            const isDeliverable = result.some(c =>
+                (c.delivery || '').toString().toLowerCase() === 'yes' || c.status === true
             );
+
+            if (!isDeliverable) {
+                return res.json({ success: true, serviceable: false, message: 'Delivery not available to this pincode.' });
+            }
+
+            const codSupported = result.some(c =>
+                (c.cod || '').toString().toLowerCase() === 'yes'
+            );
+
+            const edd = firstCourier.estimated_delivery_days || firstCourier.edd ||
+                firstCourier.tat || firstCourier.TAT || firstCourier.delivery_days || 5;
+
             return res.json({
                 success: true,
                 serviceable: true,
-                estimated_delivery_days: firstCourier.estimated_delivery_days || firstCourier.edd || 5,
+                estimated_delivery_days: typeof edd === 'string' ? parseInt(edd) || 5 : edd,
                 cod_available: codSupported,
                 couriers_available: result.length,
             });
