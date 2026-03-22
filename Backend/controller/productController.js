@@ -1743,20 +1743,6 @@ module.exports.getAllPublicProducts = async (req, res) => {
       // Apply formatting which includes price population from variations
       const formatted = formatProductResponse(tempProduct);
       
-      // Format image URLs
-      if (formatted.images) {
-        formatted.images = formatted.images.map((image) => ({
-          ...image,
-          image_url: image.image_url.startsWith("http")
-            ? image.image_url
-            : `${process.env.BACKEND_URL || "http://localhost:5000"}${
-                image.image_url.startsWith("/uploads/")
-                  ? ""
-                  : "/uploads/products/"
-              }${image.image_url}`,
-        }));
-      }
-      
       return formatted;
     });
 
