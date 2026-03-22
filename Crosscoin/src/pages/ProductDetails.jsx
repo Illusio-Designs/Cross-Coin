@@ -408,12 +408,12 @@ export default function ProductDetails() {
         {/* Lightbox */}
         {showLightbox && (
           <div className="pdt-lightbox-overlay" onClick={() => setShowLightbox(false)} role="dialog" aria-modal="true" aria-label="Image gallery">
-            <button className="pdt-lightbox-close" onClick={() => setShowLightbox(false)} aria-label="Close" type="button">âœ•</button>
-            <button className="pdt-lightbox-arrow pdt-lightbox-prev" onClick={e => { e.stopPropagation(); setLightboxIndex(i => (i - 1 + galleryImages.length) % galleryImages.length); }} aria-label="Previous image" type="button">â€¹</button>
+            <button className="pdt-lightbox-close" onClick={() => setShowLightbox(false)} aria-label="Close" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            <button className="pdt-lightbox-arrow pdt-lightbox-prev" onClick={e => { e.stopPropagation(); setLightboxIndex(i => (i - 1 + galleryImages.length) % galleryImages.length); }} aria-label="Previous image" type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
             <div className="pdt-lightbox-img-wrap" onClick={e => e.stopPropagation()}>
               <img src={galleryImages[lightboxIndex]} alt={`${productData.title} ${lightboxIndex + 1}`} />
             </div>
-            <button className="pdt-lightbox-arrow pdt-lightbox-next" onClick={e => { e.stopPropagation(); setLightboxIndex(i => (i + 1) % galleryImages.length); }} aria-label="Next image" type="button">â€º</button>
+            <button className="pdt-lightbox-arrow pdt-lightbox-next" onClick={e => { e.stopPropagation(); setLightboxIndex(i => (i + 1) % galleryImages.length); }} aria-label="Next image" type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
           </div>
         )}
 
