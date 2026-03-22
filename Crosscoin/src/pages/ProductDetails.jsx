@@ -10,6 +10,7 @@ import { useBreadcrumb } from '../components/common/Breadcrumb';
 import SeoWrapper from '../console/SeoWrapper';
 import { AlertTriangle, Users, ShoppingBag } from 'lucide-react';
 import { fbqTrack } from '../utils/fbqTrack';
+import { gtagTrack } from '../utils/gtagTrack';
 
 export default function ProductDetails() {
   const router = useRouter();
@@ -103,6 +104,11 @@ export default function ProductDetails() {
             content_type: 'product',
             value: parseFloat(firstVar.price || api.price || 0),
             currency: 'INR',
+          });
+          gtagTrack('view_item', {
+            currency: 'INR',
+            value: parseFloat(firstVar.price || api.price || 0),
+            items: [{ item_id: String(api.id), item_name: api.name || '', price: parseFloat(firstVar.price || api.price || 0) }],
           });
         } else {
           setError('Product not found');
@@ -225,6 +231,11 @@ export default function ProductDetails() {
       value: productData.price * quantity,
       currency: 'INR',
       quantity,
+    });
+    gtagTrack('add_to_cart', {
+      currency: 'INR',
+      value: productData.price * quantity,
+      items: [{ item_id: String(productData.id), item_name: productData.title, price: productData.price, quantity }],
     });
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2200);

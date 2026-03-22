@@ -10,6 +10,7 @@ import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
 import { getPublicSliders, getPublicCategories, getPublicCategoryByName, getAllPublicReviews } from '../services/publicApi';
 import { fbqTrack } from '../utils/fbqTrack';
+import { gtagTrack } from '../utils/gtagTrack';
 
 // Lazy load CouponStrip to prevent module-level side effects
 const CouponStrip = dynamic(() => import("../components/common/CouponStrip"), {
@@ -292,6 +293,11 @@ const Home = () => {
                         content_type: 'product',
                         value: parseFloat(prod.price || 0),
                         currency: 'INR',
+                      });
+                      gtagTrack('add_to_cart', {
+                        currency: 'INR',
+                        value: parseFloat(prod.price || 0),
+                        items: [{ item_id: String(prod.id), item_name: prod.name, price: parseFloat(prod.price || 0), quantity: 1 }],
                       });
                     }}
                   />
