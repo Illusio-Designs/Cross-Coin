@@ -387,9 +387,9 @@ export default function ProductDetails() {
           {productData.styleNo && <div className="pdt-style">Style No: {productData.styleNo}</div>}
 
           <div className="pdt-price-block">
-            <span className="pdt-price">â‚¹{productData.price.toFixed(2)}</span>
+            <span className="pdt-price">&#8377;{productData.price.toFixed(2)}</span>
             {productData.comparePrice > 0 && (
-              <span className="pdt-compare">â‚¹{productData.comparePrice.toFixed(2)}</span>
+              <span className="pdt-compare">&#8377;{productData.comparePrice.toFixed(2)}</span>
             )}
             {discount > 0 && <span className="pdt-discount">{discount}% OFF</span>}
           </div>
@@ -454,7 +454,7 @@ export default function ProductDetails() {
                       ) : (
                         <span className="pdt-color-card-circle" style={{ backgroundColor: colorMap[opt.colors[0]?.toLowerCase()] || '#ccc' }} title={opt.colors[0]} />
                       )}
-                      {selectedColor === idx && <span className="pdt-color-card-check" aria-hidden="true">âœ“</span>}
+                      {selectedColor === idx && <span className="pdt-color-card-check" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>}
                     </div>
                     <span className="pdt-color-card-name">
                       {opt.colors.length > 1 ? `Pack of ${opt.colors.length}` : opt.colors[0]}
@@ -658,7 +658,7 @@ export default function ProductDetails() {
           <img src={galleryImages[0] || productData.images?.[0]} alt={productData.title} className="pdt-sticky-img" />
           <div>
             <div className="pdt-sticky-name">{productData.title}</div>
-            <div className="pdt-sticky-price">â‚¹{productData.price.toFixed(2)}</div>
+            <div className="pdt-sticky-price">&#8377;{productData.price.toFixed(2)}</div>
           </div>
         </div>
         <div className="pdt-sticky-actions">
