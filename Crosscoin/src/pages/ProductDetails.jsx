@@ -527,7 +527,7 @@ export default function ProductDetails() {
           {/* Qty + Actions */}
           <div className="pdt-qty-row">
             <div className="pdt-qty-ctrl">
-              <button onClick={() => setQuantity(q => Math.max(1, q - 1))} aria-label="Decrease quantity">âˆ’</button>
+              <button onClick={() => setQuantity(q => Math.max(1, q - 1))} aria-label="Decrease quantity">-</button>
               <span className="pdt-qty-val">{quantity}</span>
               <button onClick={() => setQuantity(q => q + 1)} aria-label="Increase quantity">+</button>
             </div>
