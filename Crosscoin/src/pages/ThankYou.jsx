@@ -104,7 +104,7 @@ export default function ThankYou() {
         if (orderData?.order && orderData?.items?.length > 0) {
           const purchaseData = { value: parseFloat(orderData.order.final_amount) || 0, currency: 'INR', content_type: 'product', contents: orderData.items.filter(i => i.product?.id).map(i => ({ id: String(i.product.id), quantity: i.quantity || 1 })) };
           if (purchaseData.value > 0) {
-            fbqTrack('Purchase', purchaseData);
+            fbqTrack('Purchase', purchaseData, { eventID: `Purchase_${order_number}` });
             sessionStorage.setItem(trackingKey, 'true');
           }
         }
