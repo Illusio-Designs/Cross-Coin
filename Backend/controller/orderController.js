@@ -20,6 +20,7 @@ const axios = require('axios');
 const fshipService = require("../services/fshipService.js");
 const { setImmediate } = require("timers");
 const { sendFacebookEvent } = require("../integration/facebookPixel.js");
+const { sendGAEvent } = require("../integration/googleAnalytics.js");
 const settingsHelper = require("../services/settingsHelper");
 // Import batch fetch utilities for performance optimization
 const { batchFetchProducts, batchFetchVariations, batchFetchVariationsByProductIds } = require("../utils/batchFetch.js");
@@ -523,7 +524,7 @@ module.exports.createOrder = async (req, res) => {
     // Fire Facebook Purchase event (non-blocking)
     setImmediate(async () => {
       try {
-        await sendFacebookEvent("Purchase", {
+        const eventPayload = {
           brand_id: createdOrder.brand_id || 1,
           order_number: createdOrder.order_number,
           total_amount: parseFloat(createdOrder.final_amount),
@@ -532,9 +533,11 @@ module.exports.createOrder = async (req, res) => {
           ip_address: req.ip || null,
           user_agent: req.headers["user-agent"] || null,
           items: validatedItems.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
-        });
+        };
+        await sendFacebookEvent("Purchase", eventPayload);
+        await sendGAEvent("purchase", eventPayload);
       } catch (fbErr) {
-        console.error("createOrder: Facebook Purchase event error:", fbErr.message);
+        console.error("createOrder: analytics event error:", fbErr.message);
       }
     });
 
@@ -921,7 +924,7 @@ module.exports.createGuestOrder = async (req, res) => {
     // Send Facebook Purchase event for guest checkout (non-blocking)
     setImmediate(async () => {
       try {
-        await sendFacebookEvent("Purchase", {
+        const eventPayload = {
           brand_id: req.brand ? req.brand.id : 1,
           order_number: order.order_number,
           total_amount: finalAmount,
@@ -933,9 +936,11 @@ module.exports.createGuestOrder = async (req, res) => {
           })),
           ip_address: req.ip || null,
           user_agent: req.headers["user-agent"] || null,
-        });
+        };
+        await sendFacebookEvent("Purchase", eventPayload);
+        await sendGAEvent("purchase", eventPayload);
       } catch (fbError) {
-        console.error("createGuestOrder: Facebook Purchase event error:", fbError.message);
+        console.error("createGuestOrder: analytics event error:", fbError.message);
       }
     });
 

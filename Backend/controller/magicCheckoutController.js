@@ -19,6 +19,7 @@ const { toSmallestUnit } = require('../utils/amountConverter');
 const settingsHelper = require('../services/settingsHelper');
 const { setImmediate } = require('timers');
 const { sendFacebookEvent } = require('../integration/facebookPixel.js');
+const { sendGAEvent } = require('../integration/googleAnalytics.js');
 
 // Generate unique order number (same pattern as orderController)
 const generateOrderNumber = () => {
@@ -428,7 +429,42 @@ module.exports.verifyPayment = async (req, res) => {
         const shippingFeeRow = shippingFees.find(f => f.orderType === (isCOD ? 'cod' : 'prepaid'));
         const shippingFee = parseFloat(shippingFeeRow?.fee || 0);
 
-        const finalAmount = totalAmount + shippingFee;
+        // ── Step 4b: Coupon / discount from Razorpay order notes ──────────
+        // The frontend passes coupon_code + discount_amount in notes when creating the order.
+        // We re-validate the coupon here so the DB order reflects the correct discount.
+        const rzpNotes = rzpOrder?.notes || {};
+        const couponCodeFromNotes = rzpNotes.coupon_code || null;
+        let discountAmount = 0;
+        let couponId = null;
+
+        if (couponCodeFromNotes) {
+            try {
+                const coupon = await Coupon.findOne({ where: { code: couponCodeFromNotes, status: 'active' } });
+                if (coupon) {
+                    const now = new Date();
+                    const valid = now >= new Date(coupon.startDate) && now <= new Date(coupon.endDate);
+                    const withinLimit = coupon.usageLimit === null || coupon.usageCount < coupon.usageLimit;
+                    const meetsMin = !coupon.minPurchase || totalAmount >= parseFloat(coupon.minPurchase);
+
+                    if (valid && withinLimit && meetsMin) {
+                        if (coupon.type === 'percentage') {
+                            discountAmount = (totalAmount * parseFloat(coupon.value)) / 100;
+                            const maxDisc = parseFloat(coupon.maxDiscount || 0);
+                            if (maxDisc > 0 && discountAmount > maxDisc) discountAmount = maxDisc;
+                        } else {
+                            discountAmount = parseFloat(coupon.value);
+                        }
+                        discountAmount = Math.min(discountAmount, totalAmount); // can't discount more than subtotal
+                        couponId = coupon.id;
+                        console.log(`✅ Magic Checkout: coupon ${couponCodeFromNotes} applied — discount ₹${discountAmount}`);
+                    }
+                }
+            } catch (couponErr) {
+                console.warn('Magic Checkout: coupon validation error:', couponErr.message);
+            }
+        }
+
+        const finalAmount = Math.max(0, totalAmount - discountAmount + shippingFee);
         const orderNumber = generateOrderNumber();
 
         // ── Step 5: Create order (authenticated or guest) ─────────────────
@@ -470,7 +506,8 @@ module.exports.verifyPayment = async (req, res) => {
                 user_id: userId,
                 order_number: orderNumber,
                 total_amount: totalAmount,
-                discount_amount: 0,
+                discount_amount: discountAmount,
+                coupon_id: couponId,
                 shipping_fee: shippingFee,
                 final_amount: finalAmount,
                 payment_type: paymentType,
@@ -512,7 +549,8 @@ module.exports.verifyPayment = async (req, res) => {
                 guest_user_id: guestUserId,
                 order_number: orderNumber,
                 total_amount: totalAmount,
-                discount_amount: 0,
+                discount_amount: discountAmount,
+                coupon_id: couponId,
                 shipping_fee: shippingFee,
                 final_amount: finalAmount,
                 payment_type: paymentType,
@@ -555,6 +593,19 @@ module.exports.verifyPayment = async (req, res) => {
             razorpay_signature,
             brand_id: 1,
         }, { transaction });
+
+        // ── Step 8b: Increment coupon usage ──────────────────────────────
+        if (couponId) {
+            await Coupon.increment('usageCount', { where: { id: couponId }, transaction });
+            if (userId || guestUserId) {
+                await CouponUsage.create({
+                    coupon_id: couponId,
+                    user_id: userId || null,
+                    guest_user_id: guestUserId || null,
+                    order_id: dbOrder.id,
+                }, { transaction }).catch(() => {}); // non-fatal if table schema differs
+            }
+        }
 
         await transaction.commit();
 
@@ -659,10 +710,10 @@ module.exports.verifyPayment = async (req, res) => {
             razorpay_payment_id,
         });
 
-        // ── Step 10: Facebook Purchase event (background, non-blocking) ───
+        // ── Step 10: Analytics Purchase events (background, non-blocking) ───
         setImmediate(async () => {
             try {
-                await sendFacebookEvent('Purchase', {
+                const eventPayload = {
                     brand_id: 1,
                     order_number: orderNumber,
                     total_amount: finalAmount,
@@ -671,9 +722,11 @@ module.exports.verifyPayment = async (req, res) => {
                     ip_address: req.ip || null,
                     user_agent: req.headers['user-agent'] || null,
                     items: cart_items.map(i => ({ product_id: i.product_id, quantity: i.quantity || 1 })),
-                });
-            } catch (fbErr) {
-                console.error('Facebook Purchase event error (magic checkout):', fbErr.message);
+                };
+                await sendFacebookEvent('Purchase', eventPayload);
+                await sendGAEvent('purchase', eventPayload);
+            } catch (err) {
+                console.error('Analytics Purchase event error (magic checkout):', err.message);
             }
         });
 

@@ -22,6 +22,7 @@ import {
 import { getProductImageSrc } from "../utils/imageUtils";
 import SeoWrapper from "../console/SeoWrapper";
 import { fbqTrack } from "../utils/fbqTrack";
+import { gtagTrack } from "../utils/gtagTrack";
 import colorMap from "../components/products/colorMap";
 import { Pagination } from "../components/ui";
 import cacheManager from "../services/cacheManager";
@@ -447,6 +448,11 @@ const Products = () => {
       value: product.price,
       currency: "INR",
       quantity: 1,
+    });
+    gtagTrack('add_to_cart', {
+      currency: 'INR',
+      value: parseFloat(product.price || 0),
+      items: [{ item_id: String(product.id), item_name: product.name, price: parseFloat(product.price || 0), quantity: 1 }],
     });
   };
 

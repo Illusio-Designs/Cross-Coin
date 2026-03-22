@@ -1,51 +1,55 @@
-const express = require('express');
 const axios = require('axios');
+const settingsHelper = require('../services/settingsHelper');
 
-const GA_MEASUREMENT_ID = process.env.GA_MEASUREMENT_ID;  // Use environment variable
-const GA_API_SECRET = process.env.GA_API_SECRET;          // Use environment variable
+/**
+ * Send a server-side event to Google Analytics 4 Measurement Protocol
+ * @param {string} eventName - GA4 event name e.g. 'purchase', 'add_to_cart'
+ * @param {object} order - order object
+ * @param {object} params - additional event params
+ */
+async function sendGAEvent(eventName, order, params = {}) {
+  const brandId = order.brand_id || 1;
 
-async function sendPurchaseEvent(order) {
-    const eventData = {
-        client_id: order.user_id.toString(),
-        events: [
-            {
-                name: "purchase",
-                params: {
-                    transaction_id: order.id.toString(),
-                    value: order.total_amount,
-                    currency: "INR",
-                    items: order.items.map(item => ({
-                        item_id: item.product_id.toString(),
-                        item_name: item.product_name,
-                        quantity: item.quantity,
-                        price: item.price
-                    }))
-                }
-            }
-        ]
-    };
+  const GA_MEASUREMENT_ID = await settingsHelper.getSetting(brandId, 'GA_MEASUREMENT_ID');
+  const GA_API_SECRET = await settingsHelper.getSetting(brandId, 'GA_API_SECRET');
 
-    try {
-        await axios.post(
-            `https://www.google-analytics.com/mp/collect?measurement_id=${GA_MEASUREMENT_ID}&api_secret=${GA_API_SECRET}`,
-            eventData
-        );
-    } catch (error) {
-        console.error("Google Analytics Error:", error);
-    }
+  if (!GA_MEASUREMENT_ID || !GA_API_SECRET) {
+    console.log(`Google Analytics: Skipping ${eventName} — GA_MEASUREMENT_ID or GA_API_SECRET not configured`);
+    return;
+  }
+
+  // GA4 requires a client_id — use order_number as a stable fallback when browser client_id isn't available
+  const clientId = order.ga_client_id || order.client_id || `server_${order.order_number || Date.now()}`;
+
+  const items = (order.items || []).map(item => ({
+    item_id: String(item.product_id || item.id || ''),
+    quantity: item.quantity || 1,
+    price: parseFloat(item.price || 0),
+  }));
+
+  const eventData = {
+    client_id: clientId,
+    events: [{
+      name: eventName,
+      params: {
+        transaction_id: order.order_number || '',
+        value: parseFloat(order.total_amount || order.final_amount || 0),
+        currency: order.currency || 'INR',
+        items,
+        ...params,
+      },
+    }],
+  };
+
+  try {
+    await axios.post(
+      `https://www.google-analytics.com/mp/collect?measurement_id=${GA_MEASUREMENT_ID}&api_secret=${GA_API_SECRET}`,
+      eventData
+    );
+    console.log(`✅ Google Analytics: ${eventName} sent for order ${order.order_number}`);
+  } catch (error) {
+    console.error(`❌ Google Analytics ${eventName} error:`, error.response?.data || error.message);
+  }
 }
 
-const router = express.Router();
-
-// POST /api/google-analytics/send-event
-router.post('/send-event', async (req, res) => {
-    try {
-        await sendPurchaseEvent(req.body.order);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-module.exports = router;
-module.exports.sendPurchaseEvent = sendPurchaseEvent;
+module.exports.sendGAEvent = sendGAEvent;
