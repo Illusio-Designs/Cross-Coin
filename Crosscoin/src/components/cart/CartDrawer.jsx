@@ -117,6 +117,16 @@ const CartDrawer = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
+      // InitiateCheckout — fires when cart drawer opens with items
+      if (activeItems.length > 0) {
+        fbqTrack('InitiateCheckout', {
+          content_ids: activeItems.map(i => String(i.productId || i.id)),
+          content_type: 'product',
+          num_items: activeItems.reduce((s, i) => s + (i.quantity || 1), 0),
+          value: activeTotal,
+          currency: 'INR',
+        });
+      }
     } else {
       const t = setTimeout(() => { setIsVisible(false); setOrderSuccess(null); }, 300);
       return () => clearTimeout(t);
@@ -490,7 +500,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                   currency: 'INR',
                   content_type: 'product',
                   contents: activeItems.map(i => ({ id: String(i.productId || i.id), quantity: i.quantity })),
-                });
+                }, { eventID: `Purchase_${verifyData.order_number}` });
               } catch (_) {}
 
               clearCart();
@@ -547,7 +557,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
       if (selectedFee.orderType === 'cod') {
         const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
         if (!result?.order) throw new Error('Order creation failed.');
-        try { fbqTrack('Purchase', { value: Number(finalTotal.toFixed(2)), currency: 'INR', content_type: 'product', contents: activeItems.map(i => ({ id: String(i.productId || i.id), quantity: i.quantity })) }); } catch (_) {}
+        try { fbqTrack('Purchase', { value: Number(finalTotal.toFixed(2)), currency: 'INR', content_type: 'product', contents: activeItems.map(i => ({ id: String(i.productId || i.id), quantity: i.quantity })) }, { eventID: `Purchase_${result.order.order_number}` }); } catch (_) {}
         clearCart(); clearBuyNow(); sessionStorage.removeItem('appliedCoupon');
         showOrderPlacedSuccessToast(result.order.order_number);
         setOrderSuccess({ orderNumber: result.order.order_number });
@@ -566,7 +576,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
               const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
               if (!result?.order) throw new Error('Order creation failed.');
               await updateOrderPayment({ orderId: result.order.id, razorpayPaymentId: response.razorpay_payment_id, razorpayOrderId: response.razorpay_order_id, razorpaySignature: response.razorpay_signature });
-              try { fbqTrack('Purchase', { value: Number(finalTotal.toFixed(2)), currency: 'INR', content_type: 'product', contents: activeItems.map(i => ({ id: String(i.productId || i.id), quantity: i.quantity })) }); } catch (_) {}
+              try { fbqTrack('Purchase', { value: Number(finalTotal.toFixed(2)), currency: 'INR', content_type: 'product', contents: activeItems.map(i => ({ id: String(i.productId || i.id), quantity: i.quantity })) }, { eventID: `Purchase_${result.order.order_number}` }); } catch (_) {}
               clearCart(); clearBuyNow(); sessionStorage.removeItem('appliedCoupon');
               showOrderPlacedSuccessToast(result.order.order_number);
               setOrderSuccess({ orderNumber: result.order.order_number });
