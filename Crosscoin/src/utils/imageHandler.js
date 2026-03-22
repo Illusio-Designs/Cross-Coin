@@ -37,7 +37,7 @@ export const getImageUrl = (imageData) => {
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-  const imageKitEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/your_imagekit_id';
+  const imageKitEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/wp2oatzmf';
 
   let finalUrl = null;
 
