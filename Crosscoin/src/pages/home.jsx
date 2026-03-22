@@ -9,6 +9,7 @@ import InfiniteReviewsSlider from "../components/common/InfiniteReviewsSlider";
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
 import { getPublicSliders, getPublicCategories, getPublicCategoryByName, getAllPublicReviews } from '../services/publicApi';
+import { fbqTrack } from '../utils/fbqTrack';
 
 // Lazy load CouponStrip to prevent module-level side effects
 const CouponStrip = dynamic(() => import("../components/common/CouponStrip"), {
@@ -285,6 +286,13 @@ const Home = () => {
                     onProductClick={handleProductClick}
                     onAddToCart={(e, prod, color, size, variationId) => {
                       addToCart(prod, color, size, 1, variationId, prod.images?.map(i => i.image_url || i) || []);
+                      fbqTrack('AddToCart', {
+                        content_ids: [String(prod.id)],
+                        content_name: prod.name,
+                        content_type: 'product',
+                        value: parseFloat(prod.price || 0),
+                        currency: 'INR',
+                      });
                     }}
                   />
                 );

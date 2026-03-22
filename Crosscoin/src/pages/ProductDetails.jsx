@@ -9,6 +9,7 @@ import SizeChartModal from '../components/products/SizeChartModal';
 import { useBreadcrumb } from '../components/common/Breadcrumb';
 import SeoWrapper from '../console/SeoWrapper';
 import { AlertTriangle, Users, ShoppingBag } from 'lucide-react';
+import { fbqTrack } from '../utils/fbqTrack';
 
 export default function ProductDetails() {
   const router = useRouter();
@@ -94,6 +95,15 @@ export default function ProductDetails() {
             { label: 'Products', path: '/Products' },
             { label: api.name || 'Product', path: router.asPath, isLast: true },
           ]);
+
+          // ViewContent — fire once when product page loads
+          fbqTrack('ViewContent', {
+            content_ids: [String(api.id)],
+            content_name: api.name || '',
+            content_type: 'product',
+            value: parseFloat(firstVar.price || api.price || 0),
+            currency: 'INR',
+          });
         } else {
           setError('Product not found');
         }
@@ -208,6 +218,14 @@ export default function ProductDetails() {
       selectedVariation?.id || null,
       galleryImages
     );
+    fbqTrack('AddToCart', {
+      content_ids: [String(productData.id)],
+      content_name: productData.title,
+      content_type: 'product',
+      value: productData.price * quantity,
+      currency: 'INR',
+      quantity,
+    });
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2200);
   };
@@ -223,6 +241,14 @@ export default function ProductDetails() {
       selectedVariation?.id || null,
       galleryImages
     );
+    fbqTrack('InitiateCheckout', {
+      content_ids: [String(productData.id)],
+      content_name: productData.title,
+      content_type: 'product',
+      value: productData.price * quantity,
+      currency: 'INR',
+      num_items: quantity,
+    });
     setIsDrawerOpen(true);
   };
 
