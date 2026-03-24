@@ -38,7 +38,7 @@ export default function ShopPage() {
       <div className="border-b border-[#C9A84C]/10 bg-[#0d0d0d]">
         <div className="max-w-7xl mx-auto px-6 py-10">
           <p className="text-[#C9A84C]/60 text-xs tracking-[0.3em] uppercase font-body mb-2">Browse</p>
-          <h1 className="font-serif text-4xl text-cream">All Products</h1>
+          <h1 className="font-serif text-4xl text-cream">All Fragrances</h1>
           <div className="gold-divider w-16 mt-4" />
         </div>
       </div>
@@ -107,7 +107,7 @@ export default function ShopPage() {
                 {/* Collections */}
                 <div>
                   <p className="text-xs tracking-[0.15em] uppercase text-cream/50 font-body mb-3">Collection</p>
-                  {['Evening', 'Signature', 'Luminara', 'Noir'].map(c => (
+                  {['Noir', 'Signature', 'Luminara', 'Extrait'].map(c => (
                     <label key={c} className="flex items-center gap-2 py-1.5 cursor-pointer group">
                       <input type="checkbox" className="accent-[#C9A84C]" />
                       <span className="text-cream/60 text-xs font-body group-hover:text-[#C9A84C] transition-colors">{c}</span>

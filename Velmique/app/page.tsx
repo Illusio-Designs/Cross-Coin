@@ -1,27 +1,28 @@
 import HeroBanner from '@/components/home/HeroBanner';
 import {
-  BrandValues,
-  MarqueeStrip,
-  FeaturedCollections,
+  ServicesBar,
   BestSellers,
-  NewArrivals,
-  PromoBanner,
+  GenderSection,
+  CollectionBanner,
+  ShopTheLook,
+  DiscoveryKits,
+  WorldOfFragrances,
   Testimonials,
-  InstagramFeed,
 } from '@/components/home/HomeSections';
 
 export default function HomePage() {
   return (
     <>
       <HeroBanner />
-      <BrandValues />
-      <MarqueeStrip />
-      <FeaturedCollections />
+      <ServicesBar />
       <BestSellers />
-      <PromoBanner />
-      <NewArrivals />
+      <GenderSection gender="Men" />
+      <CollectionBanner />
+      <GenderSection gender="Women" />
+      <ShopTheLook />
+      <DiscoveryKits />
+      <WorldOfFragrances />
       <Testimonials />
-      <InstagramFeed />
     </>
   );
 }

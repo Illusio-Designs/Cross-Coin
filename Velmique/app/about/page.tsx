@@ -2,16 +2,16 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
 const milestones = [
-  { year: '2018', event: 'Velmique founded in Paris with a vision for accessible luxury.' },
-  { year: '2020', event: 'Launched the iconic Signature collection — 50 pieces, sold out in 72 hours.' },
-  { year: '2022', event: 'Expanded globally, opening flagship stores in London and Milan.' },
-  { year: '2024', event: 'Introduced the Luminara collection — our boldest, most celebrated work.' },
-  { year: '2026', event: 'Celebrating 8 years of dressing the extraordinary woman.' },
+  { year: '2018', event: 'Velmique founded in Grasse, France — the perfume capital of the world.' },
+  { year: '2020', event: 'Launched the iconic Signature collection — 12 fragrances, sold out in 48 hours.' },
+  { year: '2022', event: 'Expanded globally, opening fragrance ateliers in London and Dubai.' },
+  { year: '2024', event: 'Introduced the Luminara collection — our most celebrated work to date.' },
+  { year: '2026', event: 'Celebrating 8 years of crafting extraordinary fragrances for extraordinary people.' },
 ];
 
 const team = [
-  { name: 'Isabelle Moreau', role: 'Creative Director', img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=80' },
-  { name: 'Sophie Laurent', role: 'Head of Design', img: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80' },
+  { name: 'Isabelle Moreau', role: 'Master Perfumer', img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=80' },
+  { name: 'Sophie Laurent', role: 'Head of Olfaction', img: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80' },
   { name: 'Camille Dubois', role: 'Brand Director', img: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&q=80' },
 ];
 
@@ -20,13 +20,13 @@ export default function AboutPage() {
     <div className="pt-20 min-h-screen">
       {/* Hero */}
       <div className="relative h-[70vh] overflow-hidden">
-        <img src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=1600&q=80" alt="About Velmique" className="w-full h-full object-cover" />
+        <img src="https://images.unsplash.com/photo-1541643600914-78b084683702?w=1600&q=80" alt="About Velmique" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
         <div className="absolute inset-0 flex items-end pb-20">
           <div className="max-w-7xl mx-auto px-6 md:px-12 w-full">
             <p className="text-[#C9A84C] text-xs tracking-[0.4em] uppercase font-body mb-3">Our Story</p>
             <h1 className="font-serif text-6xl md:text-7xl text-cream leading-none max-w-2xl">
-              Dressed in<br /><span className="gold-text">Purpose</span>
+              Scented in<br /><span className="gold-text">Purpose</span>
             </h1>
           </div>
         </div>
@@ -37,21 +37,21 @@ export default function AboutPage() {
         <div>
           <p className="text-[#C9A84C]/60 text-xs tracking-[0.3em] uppercase font-body mb-4">Who We Are</p>
           <h2 className="font-serif text-4xl text-cream mb-6 leading-snug">
-            Luxury redefined for the woman who knows her worth
+            Luxury perfumery redefined for those who know their worth
           </h2>
           <div className="gold-divider w-16 mb-6" />
           <p className="text-cream/60 font-body text-sm leading-loose mb-4">
-            Velmique was born from a simple belief: extraordinary women deserve extraordinary clothing. Not just beautiful garments, but pieces crafted with intention, worn with confidence, and designed to last.
+            Velmique was born from a simple belief: extraordinary people deserve extraordinary fragrances. Not just beautiful scents, but compositions crafted with intention, built from the world's rarest ingredients, and designed to become part of who you are.
           </p>
           <p className="text-cream/60 font-body text-sm leading-loose mb-6">
-            We work with master artisans across France, Italy, and India — sourcing only the finest materials and insisting on standards that most brands have long abandoned. Every stitch tells a story of care.
+            We work with master perfumers trained in Grasse — sourcing oud from Assam, rose absolute from Bulgaria, iris from Florence — insisting on standards that most fragrance houses have long abandoned. Every drop tells a story of obsession.
           </p>
           <Link href="/shop" className="text-[#C9A84C] text-xs tracking-[0.2em] uppercase font-body flex items-center gap-2 hover:gap-3 transition-all">
-            Explore the Collection <ArrowRight size={12} />
+            Explore the Fragrances <ArrowRight size={12} />
           </Link>
         </div>
         <div className="relative">
-          <img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?w=800&q=80" alt="Craftsmanship"
+          <img src="https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=800&q=80" alt="Perfume craftsmanship"
             className="w-full aspect-[3/4] object-cover rounded-sm" />
           <div className="absolute -bottom-4 -left-4 bg-[#0d0d0d] border border-[#C9A84C]/30 p-5 max-w-[200px]">
             <p className="font-serif text-3xl gold-text">8+</p>
@@ -69,9 +69,9 @@ export default function AboutPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { title: 'Craftsmanship', icon: '◆', desc: 'Every piece is made by skilled artisans who have dedicated their lives to their craft. We pay fair wages and build long-term relationships.' },
-              { title: 'Sustainability', icon: '❋', desc: 'We use natural, responsibly sourced materials wherever possible and are committed to reducing our environmental footprint with each collection.' },
-              { title: 'Inclusivity', icon: '◉', desc: 'Luxury should not be exclusionary. We design for the woman, not a size — and we are actively expanding our range to be more inclusive.' },
+              { title: 'Rare Ingredients', icon: '◆', desc: 'We source only the finest raw materials — aged orris from Florence, wild oud from Assam, Bulgarian rose absolute — because the quality of a fragrance begins long before it reaches the bottle.' },
+              { title: 'Sustainable Sourcing', icon: '❋', desc: 'We partner with ethical suppliers who share our commitment to the environment. Natural ingredients are harvested responsibly, and we actively invest in reforestation of oud-producing regions.' },
+              { title: 'Transparency', icon: '◉', desc: 'We publish full ingredient lists and sourcing information for every fragrance. You deserve to know exactly what you are wearing — and where it came from.' },
             ].map(v => (
               <div key={v.title} className="text-center">
                 <span className="text-[#C9A84C] text-2xl block mb-4">{v.icon}</span>
@@ -110,7 +110,7 @@ export default function AboutPage() {
       <section className="bg-[#0d0d0d] py-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
-            <p className="text-[#C9A84C]/60 text-xs tracking-[0.3em] uppercase font-body mb-3">The Visionaries</p>
+            <p className="text-[#C9A84C]/60 text-xs tracking-[0.3em] uppercase font-body mb-3">The Noses Behind Velmique</p>
             <h2 className="font-serif text-4xl text-cream">Our Team</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto">
