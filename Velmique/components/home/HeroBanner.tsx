@@ -59,8 +59,8 @@ export default function HeroBanner() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
       </div>
 
-      {/* Content */}
-      <div className="relative z-10 h-full flex items-center">
+      {/* Content — offset by announcement bar + navbar height */}
+      <div className="relative z-10 h-full flex items-center" style={{ paddingTop: 'calc(var(--announcement-h, 0px) + 80px)' }}>
         <div className="max-w-7xl mx-auto px-6 md:px-12 w-full">
           <div className={`max-w-xl transition-all duration-700 ${animating ? 'opacity-0 translate-y-8' : 'opacity-100 translate-y-0'}`}>
             {/* Collection tag */}
