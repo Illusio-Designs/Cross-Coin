@@ -197,20 +197,11 @@ function AppWrapper({ Component, pageProps, progressRef }) {
 function App({ Component, pageProps }) {
   const router = useRouter();
   const progressRef = useRef();
-  const [analyticsLoaded, setAnalyticsLoaded] = useState(false);
-
   useEffect(() => {
     // Fix for turbopack error
     if (typeof window !== 'undefined' && !window.__turbopack_load_page_chunks__) {
       window.__turbopack_load_page_chunks__ = () => {};
     }
-    
-    // Defer analytics loading for better initial performance
-    const timer = setTimeout(() => {
-      setAnalyticsLoaded(true);
-    }, 2000); // Load after 2 seconds
-    
-    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -252,12 +243,8 @@ function App({ Component, pageProps }) {
       </Head>
       <UTMTracker />
       <Analytics />
-      {analyticsLoaded && (
-        <>
-          <SpeedInsights />
-          <VercelAnalytics />
-        </>
-      )}
+      <SpeedInsights />
+      <VercelAnalytics />
       <AppWrapper 
         Component={Component} 
         pageProps={pageProps}
