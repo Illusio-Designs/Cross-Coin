@@ -57,7 +57,7 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
 
   try {
     const response = await axios.post(
-      `https://graph.facebook.com/v19.0/${FB_PIXEL_ID}/events?access_token=${FB_ACCESS_TOKEN}`,
+      `https://graph.facebook.com/v22.0/${FB_PIXEL_ID}/events?access_token=${FB_ACCESS_TOKEN}`,
       { data: [eventData] }
     );
     console.log(`✅ Facebook Pixel: ${eventName} sent — events_received: ${response.data?.events_received}`);
