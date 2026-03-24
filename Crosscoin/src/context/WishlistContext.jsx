@@ -130,7 +130,7 @@ function WishlistProvider({ children }) {
         }));
         showAddToWishlistSuccessToast(product.name);
         fbqTrack('AddToWishlist', {
-          content_ids: [product.id],
+          content_ids: [String(product.id)],
           content_name: product.name,
           content_type: 'product',
           value: product.price,
@@ -196,7 +196,7 @@ function WishlistProvider({ children }) {
         showRemoveFromWishlistSuccessToast(itemToRemove?.name || 'Item');
         if (itemToRemove) {
           fbqTrack('RemoveFromWishlist', {
-            content_ids: [itemToRemove.id],
+            content_ids: [String(itemToRemove.id)],
             content_name: itemToRemove.name,
             content_type: 'product',
             value: itemToRemove.price,
@@ -210,7 +210,7 @@ function WishlistProvider({ children }) {
       showRemoveFromWishlistSuccessToast(itemToRemove?.name || 'Item');
       if (itemToRemove) {
         fbqTrack('RemoveFromWishlist', {
-          content_ids: [itemToRemove.id],
+          content_ids: [String(itemToRemove.id)],
           content_name: itemToRemove.name,
           content_type: 'product',
           value: itemToRemove.price,

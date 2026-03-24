@@ -225,7 +225,8 @@ router.get("/feed", async (req, res) => {
 
         // XML item for this variation
         xml += `<item>`;
-        xml += `<g:id>${product.id}_${variation.id}</g:id>`; // Unique ID for each variation
+        xml += `<g:id>${product.id}_${variation.id}</g:id>`;
+        xml += `<g:item_group_id>${product.id}</g:item_group_id>`;
         xml += `<g:title><![CDATA[${variationTitle}]]></g:title>`;
         xml += `<g:description><![CDATA[${description}]]></g:description>`;
         xml += `<g:link>${productLink}</g:link>`;
@@ -286,6 +287,7 @@ router.get("/feed", async (req, res) => {
 
       xml += `<item>`;
       xml += `<g:id>${product.id}_${firstVariation.id}</g:id>`;
+      xml += `<g:item_group_id>${product.id}</g:item_group_id>`;
       xml += `<g:title><![CDATA[${product.name}]]></g:title>`;
       xml += `<g:description><![CDATA[${description}]]></g:description>`;
       xml += `<g:link>${productLink}</g:link>`;
@@ -312,6 +314,7 @@ router.get("/feed", async (req, res) => {
       // Fallback: single item if no variations
       xml += `<item>`;
       xml += `<g:id>${product.id}</g:id>`;
+      xml += `<g:item_group_id>${product.id}</g:item_group_id>`;
       xml += `<g:title><![CDATA[${product.name}]]></g:title>`;
       xml += `<g:description><![CDATA[${description}]]></g:description>`;
       xml += `<g:link>${productLink}</g:link>`;
