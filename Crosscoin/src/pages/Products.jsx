@@ -442,7 +442,7 @@ const Products = () => {
     addToCart(product, color, size, 1, variationId);
     showSuccess('addedToCart');
     fbqTrack("AddToCart", {
-      content_ids: [product.id],
+      content_ids: [String(product.id)],
       content_name: product.name,
       content_type: "product",
       value: product.price,
