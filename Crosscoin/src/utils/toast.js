@@ -2,11 +2,11 @@ import { toast } from 'react-toastify';
 
 const baseConfig = {
   position: "top-right",
-  autoClose: 2500,
+  autoClose: 3000,
   hideProgressBar: true,
-  closeOnClick: true,
+  closeOnClick: false,
   pauseOnHover: false,
-  draggable: true,
+  draggable: false,
   theme: "light",
 };
 
