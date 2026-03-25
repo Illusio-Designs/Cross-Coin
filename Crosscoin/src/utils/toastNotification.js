@@ -4,13 +4,14 @@ import { TOAST_TEXT } from '../constants/toastMessages';
 // Toast configuration with custom styling
 const toastConfig = {
   position: 'top-right',
-  autoClose: 2500,  // Reduced from 3000ms to 2500ms (2.5 seconds)
+  autoClose: 1500,
   hideProgressBar: true,
   closeOnClick: true,
-  pauseOnHover: false,  // Don't pause on hover - toast closes immediately
-  draggable: true,
+  pauseOnHover: false,
+  pauseOnFocusLoss: false,
+  draggable: false,
   theme: 'light',
-  limit: 3,  // Limit to 3 toasts max
+  limit: 3,
 };
 
 // Custom toast messages for common actions (kept for backward compatibility)

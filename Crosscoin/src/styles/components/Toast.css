@@ -20,8 +20,6 @@
   font-weight: 500;
   line-height: 1.5;
   background: #ffffff !important;
-  /* Allow react-toastify to handle enter/exit animations */
-  animation-fill-mode: both !important;
 }
 
 /* Success */
