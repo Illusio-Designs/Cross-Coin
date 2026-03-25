@@ -2,10 +2,11 @@ import { toast } from 'react-toastify';
 
 const baseConfig = {
   position: "top-right",
-  autoClose: 3000,
+  autoClose: 1500,
   hideProgressBar: true,
-  closeOnClick: false,
+  closeOnClick: true,
   pauseOnHover: false,
+  pauseOnFocusLoss: false,
   draggable: false,
   theme: "light",
 };
@@ -17,7 +18,7 @@ export const showSuccessToast = (message, toastId) => {
 
 // Error toasts
 export const showErrorToast = (message, toastId) => {
-  toast.error(message, { ...baseConfig, autoClose: 3500, toastId: toastId || message });
+  toast.error(message, { ...baseConfig, toastId: toastId || message });
 };
 
 // Info toasts
