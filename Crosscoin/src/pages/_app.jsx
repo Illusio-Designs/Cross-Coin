@@ -158,6 +158,11 @@ function AppContent({ Component, pageProps, progressRef }) {
         pauseOnHover={false}
         theme="light"
         limit={3}
+        toastOptions={{
+          autoClose: 1500,
+          pauseOnHover: false,
+          pauseOnFocusLoss: false,
+        }}
       />
 
       {/* Back to top button */}

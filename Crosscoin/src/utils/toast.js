@@ -13,22 +13,34 @@ const baseConfig = {
 
 // Success toasts
 export const showSuccessToast = (message, toastId) => {
-  toast.success(message, { ...baseConfig, toastId: toastId || message });
+  const id = toastId || message;
+  toast.dismiss(id);
+  toast.success(message, { ...baseConfig, toastId: id });
+  setTimeout(() => toast.dismiss(id), 1500);
 };
 
 // Error toasts
 export const showErrorToast = (message, toastId) => {
-  toast.error(message, { ...baseConfig, toastId: toastId || message });
+  const id = toastId || message;
+  toast.dismiss(id);
+  toast.error(message, { ...baseConfig, toastId: id });
+  setTimeout(() => toast.dismiss(id), 1500);
 };
 
 // Info toasts
 export const showInfoToast = (message, toastId) => {
-  toast.info(message, { ...baseConfig, toastId: toastId || message });
+  const id = toastId || message;
+  toast.dismiss(id);
+  toast.info(message, { ...baseConfig, toastId: id });
+  setTimeout(() => toast.dismiss(id), 1500);
 };
 
 // Warning toasts
 export const showWarningToast = (message, toastId) => {
-  toast.warning(message, { ...baseConfig, toastId: toastId || message });
+  const id = toastId || message;
+  toast.dismiss(id);
+  toast.warning(message, { ...baseConfig, toastId: id });
+  setTimeout(() => toast.dismiss(id), 1500);
 };
 
 // Specific action toasts
