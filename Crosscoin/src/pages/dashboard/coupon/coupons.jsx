@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
+import { ConfirmModal } from '../../../components/common/AlertModal';
 import { couponService } from "../../../services";
 
 const IC = {
@@ -15,6 +16,7 @@ const EMPTY_FORM = { code: "", description: "", type: "percentage", value: "", m
 
 export default function Coupons() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmState, setConfirmState] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [search, setSearch] = useState("");
@@ -63,14 +65,16 @@ export default function Coupons() {
     finally { setLoading(false); }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this coupon?")) return;
-    try {
-      setLoading(true);
-      await couponService.deleteCoupon(id);
-      await fetchCoupons();
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
+  const handleDelete = (id) => {
+    setConfirmState({ message: "Delete this coupon?", onConfirm: async () => {
+      setConfirmState(null);
+      try {
+        setLoading(true);
+        await couponService.deleteCoupon(id);
+        await fetchCoupons();
+      } catch (err) { setError(err.message); }
+      finally { setLoading(false); }
+    }});
   };
 
   const handleModalClose = () => { setIsModalOpen(false); setFormData(EMPTY_FORM); setError(null); };
@@ -123,6 +127,7 @@ export default function Coupons() {
 
   return (
     <>
+      <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
         <div className="sl-page-header">
           <div className="sl-header-left">

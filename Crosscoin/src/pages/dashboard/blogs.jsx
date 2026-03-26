@@ -4,6 +4,7 @@ import { Modal, Button, Table, Pagination, Input, Select, Switch } from "../../c
 import Loader from "../../components/common/Loader";
 import { blogService, brandService, productService } from "../../services";
 import { showSuccess, showError } from "../../utils/toastNotification";
+import { ConfirmModal } from '../../components/common/AlertModal';
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
@@ -105,6 +106,7 @@ function SectionsEditor({ value, onChange }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function Blogs() {
   const [tab, setTab] = useState('Posts');
+  const [confirmState, setConfirmState] = useState(null);
   const [loading, setLoading] = useState(false);
   const [posts, setPosts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -244,12 +246,14 @@ export default function Blogs() {
     finally { setLoading(false); }
   };
 
-  const handleDeletePost = async (id) => {
-    if (!window.confirm('Delete this post?')) return;
-    setLoading(true);
-    try { await blogService.deletePost(id); showSuccess('deleteSuccess'); fetchAll(); }
-    catch { showError('deleteFailed'); }
-    finally { setLoading(false); }
+  const handleDeletePost = (id) => {
+    setConfirmState({ message: 'Delete this post?', onConfirm: async () => {
+      setConfirmState(null);
+      setLoading(true);
+      try { await blogService.deletePost(id); showSuccess('deleteSuccess'); fetchAll(); }
+      catch { showError('deleteFailed'); }
+      finally { setLoading(false); }
+    }});
   };
 
   // ── Hero image ─────────────────────────────────────────────────────────────
@@ -287,12 +291,14 @@ export default function Blogs() {
     finally { setLoading(false); }
   };
 
-  const handleDeleteCat = async (id) => {
-    if (!window.confirm('Delete this category?')) return;
-    setLoading(true);
-    try { await blogService.deleteCategory(id); showSuccess('deleteSuccess'); fetchAll(); }
-    catch { showError('deleteFailed'); }
-    finally { setLoading(false); }
+  const handleDeleteCat = (id) => {
+    setConfirmState({ message: 'Delete this category?', onConfirm: async () => {
+      setConfirmState(null);
+      setLoading(true);
+      try { await blogService.deleteCategory(id); showSuccess('deleteSuccess'); fetchAll(); }
+      catch { showError('deleteFailed'); }
+      finally { setLoading(false); }
+    }});
   };
 
   // ── Filtered / paginated ───────────────────────────────────────────────────
@@ -346,6 +352,7 @@ export default function Blogs() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
+      <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
         <div className="sl-page-header">
           <div className="sl-header-left">

@@ -3,6 +3,7 @@ import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandSettingsService, brandService } from '../../services';
 import { Modal, Button } from '../../components/ui';
 import Loader from '../../components/common/Loader';
+import { ConfirmModal } from '../../components/common/AlertModal';
 
 const IC = {
   add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
@@ -19,6 +20,7 @@ const CATEGORIES = { all: 'All', general: 'General', payment: 'Payment', shippin
 
 export default function BrandSettingsManager() {
   const [brands, setBrands] = useState([]);
+  const [confirmState, setConfirmState] = useState(null);
   const [selectedBrandId, setSelectedBrandId] = useState(null);
   const [settings, setSettings] = useState([]);
   const [category, setCategory] = useState('all');
@@ -66,10 +68,12 @@ export default function BrandSettingsManager() {
     finally { setSaving(prev => ({ ...prev, [settingId]: false })); }
   };
 
-  const handleDelete = async (key) => {
-    if (!window.confirm(`Delete "${key}"?`)) return;
-    try { await brandSettingsService.deleteSetting(selectedBrandId, key); showSuccess('settingDeleted'); fetchSettings(); }
-    catch { showError('deleteFailed'); }
+  const handleDelete = (key) => {
+    setConfirmState({ message: `Delete "${key}"?`, onConfirm: async () => {
+      setConfirmState(null);
+      try { await brandSettingsService.deleteSetting(selectedBrandId, key); showSuccess('settingDeleted'); fetchSettings(); }
+      catch { showError('deleteFailed'); }
+    }});
   };
 
   const handleAdd = async () => {
@@ -89,6 +93,8 @@ export default function BrandSettingsManager() {
   const filteredSettings = settings.filter(s => category === 'all' || s.category === category);
 
   return (
+    <>
+    <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
     <div className="dashboard-page">
       {/* Page Header */}
       <div className="sl-page-header">
@@ -204,5 +210,6 @@ export default function BrandSettingsManager() {
         </div>
       )}
     </div>
+    </>
   );
 }

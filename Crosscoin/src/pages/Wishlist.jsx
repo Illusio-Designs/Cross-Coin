@@ -7,12 +7,14 @@ import { getAllPublicProducts } from '../services/publicApi';
 import ProductCard from '../components/products/ProductCard';
 import { showSuccess, showError } from '../utils/toastNotification';
 import SeoWrapper from '../console/SeoWrapper';
+import { ConfirmModal } from '../components/common/AlertModal';
 
 const Wishlist = () => {
   const { wishlist, removeFromWishlist, clearWishlist } = useWishlist();
   const { addToCart } = useCart();
   const router = useRouter();
   const [recos, setRecos] = useState([]);
+  const [confirmState, setConfirmState] = useState(null);
   const [activeCat, setActiveCat] = useState('all');
   const [sortOrder, setSortOrder] = useState('newest');
 
@@ -62,10 +64,11 @@ const Wishlist = () => {
   };
 
   const handleClearWishlist = () => {
-    if (window.confirm('Are you sure you want to clear your wishlist?')) {
+    setConfirmState({ message: 'Are you sure you want to clear your wishlist?', onConfirm: () => {
+      setConfirmState(null);
       clearWishlist();
       showSuccess('wishlistCleared');
-    }
+    }});
   };
 
   if (wishlist.length === 0) {
@@ -101,6 +104,7 @@ const Wishlist = () => {
 
   return (
     <SeoWrapper pageName="wishlist">
+      <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <Head>
         <title>My Wishlist | CrossCoin</title>
       </Head>

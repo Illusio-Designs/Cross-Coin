@@ -6,6 +6,7 @@ import SafeImage from "../../../components/common/SafeImage";
 import Loader from "../../../components/common/Loader";
 import BrandTags from "../../../components/Dashboard/BrandTags";
 import { showSuccess, showError } from '../../../utils/toastNotification';
+import { PromptModal } from '../../../components/common/AlertModal';
 import { getProductImageSrc } from '../../../utils/imageUtils';
 import { getAttributeComponents } from '../../../utils/productAttributeFormatter';
 import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusUtils';
@@ -29,7 +30,7 @@ const Orders = () => {
     const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
     const [sortBy, setSortBy] = useState("createdAt");
     const [sortOrder, setSortOrder] = useState("desc");
-    const [notification, setNotification] = useState(null);
+    const [cancelPrompt, setCancelPrompt] = useState(null);
     const [allOrdersStats, setAllOrdersStats] = useState({
         total: 0, prepaid: 0, cod: 0, paid: 0, pending: 0,
         totalRevenue: 0, averageOrderValue: 0, deliveredOrders: 0, cancelledOrders: 0,
@@ -158,9 +159,13 @@ const Orders = () => {
         }
     };
 
-    const cancelOrder = async (orderId, orderNumber) => {
-        const reason = prompt(`Enter cancellation reason for order ${orderNumber}:`);
-        if (!reason) return;
+    const cancelOrder = (orderId, orderNumber) => {
+        setCancelPrompt({ orderId, orderNumber });
+    };
+
+    const handleCancelConfirm = async (reason) => {
+        const { orderId, orderNumber } = cancelPrompt;
+        setCancelPrompt(null);
         try {
             const result = await orderService.adminCancelOrder(orderId, reason);
             if (result.success) { showSuccess('orderCancelled', `Order ${orderNumber} cancelled successfully`); fetchOrders(); fetchAllOrdersForStats(); }
@@ -398,22 +403,19 @@ const Orders = () => {
     ];
 
     const showNotification = (message, type = 'info') => {
-        setNotification({ message, type });
-        setTimeout(() => setNotification(null), 1500);
+        if (type === 'error') showError(null, message);
+        else showSuccess(null, message);
     };
 
     return (
         <>
+            <PromptModal
+                message={cancelPrompt ? `Enter cancellation reason for order ${cancelPrompt.orderNumber}:` : null}
+                placeholder="Cancellation reason..."
+                onConfirm={handleCancelConfirm}
+                onCancel={() => setCancelPrompt(null)}
+            />
             <div className="dashboard-page">
-                {notification && (
-                    <div className={`notification notification-${notification.type}`}>
-                        <div className="notification-content">
-                            <span className="notification-message">{notification.message}</span>
-                            <button className="notification-close" onClick={() => setNotification(null)}>×</button>
-                        </div>
-                    </div>
-                )}
-
                 <div className="orders-header-container">
                     {/* Page Header */}
                     <div className="sl-page-header">

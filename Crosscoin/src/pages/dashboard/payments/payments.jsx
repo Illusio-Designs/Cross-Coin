@@ -3,6 +3,7 @@ import { Button, Modal, Table, Pagination, Select } from "../../../components/ui
 import Loader from "../../../components/common/Loader";
 import { paymentService } from "../../../services";
 import { showSuccess, showError } from "../../../utils/toastNotification";
+import { ConfirmModal } from '../../../components/common/AlertModal';
 
 const IC = {
   search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
@@ -23,6 +24,7 @@ const StatusBadge = ({ status }) => {
 
 export default function Payments() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [confirmState, setConfirmState] = useState(null);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -75,13 +77,15 @@ export default function Payments() {
   const start = (currentPage - 1) * itemsPerPage;
   const currentItems = filteredData.slice(start, start + itemsPerPage).map((item, i) => ({ ...item, serial_number: start + i + 1 }));
 
-  const handleRefund = async (payment) => {
-    if (!window.confirm(`Refund payment ${payment.transaction_id || payment.id}?`)) return;
-    try {
-      await paymentService.updatePaymentStatus(payment.id, { status: 'refunded' });
-      showSuccess('updateSuccess');
-      fetchPayments();
-    } catch { showError('saveFailed'); }
+  const handleRefund = (payment) => {
+    setConfirmState({ message: `Refund payment ${payment.transaction_id || payment.id}?`, onConfirm: async () => {
+      setConfirmState(null);
+      try {
+        await paymentService.updatePaymentStatus(payment.id, { status: 'refunded' });
+        showSuccess('updateSuccess');
+        fetchPayments();
+      } catch { showError('saveFailed'); }
+    }});
   };
 
   const columns = [
@@ -110,6 +114,7 @@ export default function Payments() {
 
   return (
     <>
+      <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
         <div className="sl-page-header">
           <div className="sl-header-left">

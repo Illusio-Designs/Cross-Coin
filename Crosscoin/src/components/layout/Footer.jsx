@@ -79,7 +79,7 @@ const Footer = () => {
         <div className="footer__col">
           <h4>Quick Links</h4>
           <ul>
-            <li><Link href="/about">About Us</Link></li>
+            <li><Link href="/About">About Us</Link></li>
             <li><Link href="/Collections">Collections</Link></li>
             <li><Link href="/Products">All Products</Link></li>
             <li><Link href="/Contact">Contact Us</Link></li>

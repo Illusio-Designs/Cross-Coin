@@ -5,6 +5,7 @@ import { sliderService, categoryService, brandService } from "../../../services"
 import { useRouter } from 'next/router';
 import { useAuth } from '../../../context/AuthContext';
 import { showSuccess, showError } from "../../../utils/toastNotification";
+import { ConfirmModal } from '../../../components/common/AlertModal';
 
 const IC = {
   add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
@@ -33,6 +34,7 @@ export default function Slider() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmState, setConfirmState] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [search, setSearch] = useState("");
@@ -108,15 +110,17 @@ export default function Slider() {
     finally { setLoading(false); }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this slider?")) return;
-    try {
-      setLoading(true);
-      await sliderService.deleteSlider(id);
-      await fetchSliders();
-      showSuccess('deleteSuccess');
-    } catch (err) { showError('deleteFailed', err.message); }
-    finally { setLoading(false); }
+  const handleDelete = (id) => {
+    setConfirmState({ message: "Delete this slider?", onConfirm: async () => {
+      setConfirmState(null);
+      try {
+        setLoading(true);
+        await sliderService.deleteSlider(id);
+        await fetchSliders();
+        showSuccess('deleteSuccess');
+      } catch (err) { showError('deleteFailed', err.message); }
+      finally { setLoading(false); }
+    }});
   };
 
   const handleModalClose = () => {
@@ -227,6 +231,7 @@ export default function Slider() {
 
   return (
     <>
+      <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
 
         {/* Page Header */}

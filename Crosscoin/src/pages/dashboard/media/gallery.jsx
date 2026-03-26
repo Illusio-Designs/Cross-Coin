@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { productService } from '../../../services';
 import Loader from '../../../components/common/Loader';
 import { Pagination } from '../../../components/ui';
+import AlertModal, { ConfirmModal } from '../../../components/common/AlertModal';
 
 const GridIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -53,9 +54,11 @@ const CheckIcon = () => (
 
 const MediaGallery = () => {
   const [images, setImages] = useState([]);
+  const [confirmState, setConfirmState] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedImages, setSelectedImages] = useState([]);
+  const [alertMsg, setAlertMsg] = useState(null);
   const [viewMode, setViewMode] = useState('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -115,63 +118,67 @@ const MediaGallery = () => {
       setUploading(true);
       const result = await productService.uploadImages(files);
       if (result.success) {
-        alert(`Successfully uploaded ${result.totalUploaded} image(s)${result.totalFailed > 0 ? `. Failed: ${result.totalFailed}.` : '.'}`);
+        setAlertMsg(`Successfully uploaded ${result.totalUploaded} image(s)${result.totalFailed > 0 ? `. Failed: ${result.totalFailed}.` : '.'}`);
         await fetchImages();
       } else {
-        alert('Failed to upload images: ' + result.message);
+        setAlertMsg('Failed to upload images: ' + result.message);
       }
     } catch (error) {
-      alert('Failed to upload images: ' + (error.message || 'Unknown error'));
+      setAlertMsg('Failed to upload images: ' + (error.message || 'Unknown error'));
     } finally {
       setUploading(false);
       event.target.value = '';
     }
   };
 
-  const deleteSelectedImages = async () => {
+  const deleteSelectedImages = () => {
     if (selectedImages.length === 0) return;
-    if (!window.confirm(`Delete ${selectedImages.length} selected image(s)? This cannot be undone.`)) return;
-    try {
-      setLoading(true);
-      const result = await productService.deleteImages(selectedImages);
-      if (result.success) {
-        let msg = `Deleted ${result.totalDeleted} image(s)`;
-        if (result.totalFailed > 0) msg += `. Failed: ${result.totalFailed}`;
-        if (result.totalProtected > 0) msg += `. Protected (in use): ${result.totalProtected}`;
-        alert(msg);
-        await fetchImages();
-        setSelectedImages([]);
-      } else {
-        alert('Failed to delete: ' + result.message);
+    setConfirmState({ message: `Delete ${selectedImages.length} selected image(s)? This cannot be undone.`, onConfirm: async () => {
+      setConfirmState(null);
+      try {
+        setLoading(true);
+        const result = await productService.deleteImages(selectedImages);
+        if (result.success) {
+          let msg = `Deleted ${result.totalDeleted} image(s)`;
+          if (result.totalFailed > 0) msg += `. Failed: ${result.totalFailed}`;
+          if (result.totalProtected > 0) msg += `. Protected (in use): ${result.totalProtected}`;
+          setAlertMsg(msg);
+          await fetchImages();
+          setSelectedImages([]);
+        } else {
+          setAlertMsg('Failed to delete: ' + result.message);
+        }
+      } catch (error) {
+        setAlertMsg('Failed to delete: ' + (error.message || 'Unknown error'));
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      alert('Failed to delete: ' + (error.message || 'Unknown error'));
-    } finally {
-      setLoading(false);
-    }
+    }});
   };
 
-  const deleteSingleImage = async (e, imagePath) => {
+  const deleteSingleImage = (e, imagePath) => {
     e.stopPropagation();
-    if (!window.confirm('Delete this image? This cannot be undone.')) return;
-    try {
-      setLoading(true);
-      const result = await productService.deleteImages([imagePath]);
-      if (result.success) {
-        if (result.totalProtected > 0) {
-          alert('Image is in use by products and cannot be deleted.');
+    setConfirmState({ message: 'Delete this image? This cannot be undone.', onConfirm: async () => {
+      setConfirmState(null);
+      try {
+        setLoading(true);
+        const result = await productService.deleteImages([imagePath]);
+        if (result.success) {
+          if (result.totalProtected > 0) {
+            setAlertMsg('Image is in use by products and cannot be deleted.');
+          } else {
+            await fetchImages();
+            setSelectedImages(prev => prev.filter(p => p !== imagePath));
+          }
         } else {
-          await fetchImages();
-          setSelectedImages(prev => prev.filter(p => p !== imagePath));
+          setAlertMsg('Failed to delete: ' + result.message);
         }
-      } else {
-        alert('Failed to delete: ' + result.message);
+      } catch (error) {
+        setAlertMsg('Failed to delete: ' + (error.message || 'Unknown error'));
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      alert('Failed to delete: ' + (error.message || 'Unknown error'));
-    } finally {
-      setLoading(false);
-    }
+    }});
   };
 
   const filteredImages = images
@@ -192,6 +199,9 @@ const MediaGallery = () => {
   const allPageSelected = paginatedImages.length > 0 && paginatedImages.every(p => selectedImages.includes(p));
 
   return (
+    <>
+    <AlertModal message={alertMsg} onClose={() => setAlertMsg(null)} />
+    <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
     <div className="dashboard-page">
       {/* Page Header */}
       <div className="sl-page-header">
@@ -387,6 +397,7 @@ const MediaGallery = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 
