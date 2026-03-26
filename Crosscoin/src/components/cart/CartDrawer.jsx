@@ -437,7 +437,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
       showOrderPlacedErrorToast(err.message || 'Failed to open Magic Checkout.');
       setIsProcessing(false);
     }
-  }, [activeItems, activeTotal, discountAmount, appliedCoupon, user, isAuthenticated, loadMagicCheckoutSDK, clearCart, clearBuyNow]);
+  }, [activeItems, activeTotal, appliedCoupon, user, isAuthenticated, loadMagicCheckoutSDK, clearCart, clearBuyNow]);
 
   // ── Place order (old flow — kept for reference / COD fallback) ───────────
   const handlePlaceOrder = async () => {
