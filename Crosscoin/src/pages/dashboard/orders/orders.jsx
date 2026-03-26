@@ -399,7 +399,7 @@ const Orders = () => {
 
     const showNotification = (message, type = 'info') => {
         setNotification({ message, type });
-        setTimeout(() => setNotification(null), 5000);
+        setTimeout(() => setNotification(null), 1500);
     };
 
     return (
