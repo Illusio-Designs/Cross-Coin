@@ -23,6 +23,7 @@ async function sendGAEvent(eventName, order, params = {}) {
 
   const items = (order.items || []).map(item => ({
     item_id: String(item.product_id || item.id || ''),
+    item_name: item.name || item.item_name || '',
     quantity: item.quantity || 1,
     price: parseFloat(item.price || 0),
   }));

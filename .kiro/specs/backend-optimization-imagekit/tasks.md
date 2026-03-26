@@ -43,7 +43,7 @@ Incremental implementation across 14 groups. Start with critical bug fixes (data
     - **Property 28: FShip sync status prevents duplicates**
     - **Validates: Requirements 27.3, 27.5**
 
-- [-] 2. Fix Coupon Usage Tracking (Req 25)
+- [x] 2. Fix Coupon Usage Tracking (Req 25)
   - [x] 2.1 Add `guest_user_id` column to `coupon_usages` table and update model
     - Run SQL: `ALTER TABLE coupon_usages ADD COLUMN guest_user_id INT NULL, ADD CONSTRAINT fk_coupon_usage_guest FOREIGN KEY (guest_user_id) REFERENCES guest_users(id)`
     - Update `Backend/model/couponUsageModel.js` to include `guestUserId` field
@@ -54,7 +54,7 @@ Incremental implementation across 14 groups. Start with critical bug fixes (data
     - For guest orders, set `guestUserId` from the created guest user record
     - _Requirements: 25.1, 25.2_
 
-  - [ ] 2.3 Decrement coupon usage on order cancellation
+  - [x] 2.3 Decrement coupon usage on order cancellation
     - In the cancellation handler (to be built in Group 6), decrement `usageCount` and destroy the `CouponUsage` record for the cancelled order
     - _Requirements: 25.4_
 
@@ -251,20 +251,20 @@ Incremental implementation across 14 groups. Start with critical bug fixes (data
     - **Property 12: Refresh token rotation — old token rejected after use**
     - **Validates: Requirements 15.2, 15.3**
 
-- [-] 10. Order Cancellation (Req 14)
-  - [-] 10.1 Implement `POST /api/orders/:id/cancel` for authenticated users
+- [x] 10. Order Cancellation (Req 14)
+  - [x] 10.1 Implement `POST /api/orders/:id/cancel` for authenticated users
     - Allow cancellation only if `order.status` is `pending` or `processing`
     - Restore stock for all order items (`ProductVariation.stock += quantity` for each item)
     - Set `order.status = 'cancelled'`; if `payment_status === 'paid'`, set `payment_status = 'refund_pending'`; otherwise set `payment_status = 'cancelled'`
     - Decrement coupon `usageCount` and destroy `CouponUsage` record if order had a coupon (wires in task 2.3)
     - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.6_
 
-  - [ ] 10.2 Implement `POST /api/orders/guest/cancel` for guest users
+  - [x] 10.2 Implement `POST /api/orders/guest/cancel` for guest users
     - Accept `email` + `order_number` in request body; find matching guest order
     - Apply same cancellation logic as 10.1
     - _Requirements: 14.5, 14.7_
 
-  - [ ] 10.3 Add cancellation routes to `Backend/routes/orderRoutes.js`
+  - [x] 10.3 Add cancellation routes to `Backend/routes/orderRoutes.js`
     - Wire `POST /api/orders/:id/cancel` (auth middleware) and `POST /api/orders/guest/cancel` (no auth)
     - _Requirements: 14.6, 14.7_
 
@@ -276,24 +276,24 @@ Incremental implementation across 14 groups. Start with critical bug fixes (data
     - **Property 11: Prepaid order cancellation sets payment_status to refund_pending**
     - **Validates: Requirements 14.3**
 
-- [ ] 11. WhatsApp Order Notifications (Req 19)
-  - [ ] 11.1 Create `Backend/services/whatsappService.js`
+- [x] 11. WhatsApp Order Notifications (Req 19)
+  - [x] 11.1 Create `Backend/services/whatsappService.js`
     - Implement `formatE164(phone)` — converts 10-digit Indian numbers to `+91XXXXXXXXXX`
     - Implement `sendTemplate(phone, templateName, components)` — POST to `https://graph.facebook.com/v18.0/{WHATSAPP_PHONE_NUMBER_ID}/messages` via axios
     - Implement `sendOrderConfirmation`, `sendOrderShipped`, `sendOrderDelivered`, `sendOrderCancelled` using the respective approved template names
     - Silently skip (log warning) if phone is null/undefined
     - _Requirements: 19.1, 19.5, 19.6, 19.7, 19.8, 19.9, 19.10_
 
-  - [ ] 11.2 Add WhatsApp env vars to `.env` and document in `.env.example`
+  - [x] 11.2 Add WhatsApp env vars to `.env` and document in `.env.example`
     - Add `WHATSAPP_API_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_BUSINESS_ACCOUNT_ID`
     - _Requirements: 19.7_
 
-  - [ ] 11.3 Send WhatsApp order confirmation in `createOrder` and `createGuestOrder`
+  - [x] 11.3 Send WhatsApp order confirmation in `createOrder` and `createGuestOrder`
     - After successful order creation, fire-and-forget: `whatsappService.sendOrderConfirmation(phone, {...}).catch(logger.warn)`
     - Phone comes from the shipping address associated with the order
     - _Requirements: 19.1_
 
-  - [ ] 11.4 Send WhatsApp notifications on order status changes
+  - [x] 11.4 Send WhatsApp notifications on order status changes
     - In `orderStatusHistoryController.js` (or wherever status is updated), add fire-and-forget calls:
       - Status → `shipped`: `whatsappService.sendOrderShipped(phone, { orderNumber, awbNumber, trackingUrl })`
       - Status → `delivered`: `whatsappService.sendOrderDelivered(phone, { orderNumber })`
@@ -312,15 +312,15 @@ Incremental implementation across 14 groups. Start with critical bug fixes (data
 - [ ] 12. Checkpoint — Ensure all tests pass, ask the user if questions arise.
 
 
-- [ ] 13. Product Filters & Mega Menu (Req 16, 18)
-  - [ ] 13.1 Add `minPrice`, `maxPrice`, `inStock`, `minRating`, `attributes` filters to public products endpoint
+- [x] 13. Product Filters & Mega Menu (Req 16, 18)
+  - [x] 13.1 Add `minPrice`, `maxPrice`, `inStock`, `minRating`, `attributes` filters to public products endpoint
     - In `productService.getProductsList`, parse and apply optional query params as additional WHERE/HAVING clauses
     - `inStock=true`: only products with at least one variation with `stock > 0`
     - `attributes`: JSON-encoded object; filter by attribute value joins
     - All filters are conjunctive (AND)
     - _Requirements: 16.1, 16.2, 16.3_
 
-  - [ ] 13.2 Create `getMegaMenu` handler in `attributeController.js`
+  - [x] 13.2 Create `getMegaMenu` handler in `attributeController.js`
     - Query all active attributes with active values scoped by `req.brandId`
     - For each value, count active in-stock products; exclude values with `product_count === 0`
     - Cache result in Redis: key `mega-menu:${brandId}`, TTL 30 min
@@ -328,12 +328,12 @@ Incremental implementation across 14 groups. Start with critical bug fixes (data
     - Return shape: `{ success: true, data: [{ id, name, values: [{ id, value, product_count }] }] }`
     - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5, 18.6, 18.7_
 
-  - [ ] 13.3 Add `GET /api/attributes/mega-menu` route (no auth)
+  - [x] 13.3 Add `GET /api/attributes/mega-menu` route (no auth)
     - Wire route in `Backend/routes/attributeRoutes.js`
     - Add `Cache-Control: public, max-age=300, stale-while-revalidate=60` header to response
     - _Requirements: 18.1, 18.8_
 
-  - [ ] 13.4 Update `Header.jsx` with mega menu dropdown
+  - [x] 13.4 Update `Header.jsx` with mega menu dropdown
     - Add `onMouseEnter`/`onMouseLeave` handler on "Products" nav item
     - Fetch `/api/attributes/mega-menu` on hover (cache in component state)
     - Render attribute groups as columns; each value as a link to `/Products?attributes={"name":["value"]}`

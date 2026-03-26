@@ -6,11 +6,15 @@ const {
     deleteAttribute,
     addAttributeValues,
     removeAttributeValues,
-    getAttributeById
+    getAttributeById,
+    getMegaMenu
 } = require('../controller/attributeController.js');
 const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
+
+// Get mega menu (must be before /:id to avoid conflict)
+router.get('/mega-menu', getMegaMenu);
 
 // Get all attributes
 router.get('/', getAllAttributes);

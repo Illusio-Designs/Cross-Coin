@@ -8,8 +8,6 @@ import {
   createShippingAddress,
   updateShippingAddress,
   getShippingFees,
-  validateCoupon,
-  getPublicCoupons,
   createOrder,
   createGuestOrder,
   createRazorpayOrder,
@@ -60,10 +58,8 @@ const EMPTY_ADDR = {
 const IconX = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
 const IconBag = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>;
 const IconTrash = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>;
-const IconCheck = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
 const IconEdit = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
 const IconPlus = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
-const IconTag = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>;
 const IconTruck = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
 const IconSuccess = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
 const IconChevronDown = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>;
@@ -76,12 +72,6 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const router = useRouter();
 
   const [isVisible, setIsVisible] = useState(false);
-
-  // Coupon
-  const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [couponLoading, setCouponLoading] = useState(false);
-  const [couponError, setCouponError] = useState('');
 
   // Guest contact
   const [guestInfo, setGuestInfo] = useState({ email: '', firstName: '', lastName: '', phone: '' });
@@ -105,9 +95,6 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
 
-  // Offer bar
-  const [offerData, setOfferData] = useState(null);
-
   // Scroll hint
   const bodyRef = useRef(null);
   const dropdownRef = useRef(null);
@@ -130,19 +117,6 @@ const CartDrawer = ({ isOpen, onClose }) => {
     } else {
       const t = setTimeout(() => { setIsVisible(false); setOrderSuccess(null); }, 300);
       return () => clearTimeout(t);
-    }
-  }, [isOpen]);
-
-  // ── Restore coupon ──────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!isOpen) return;
-    const saved = sessionStorage.getItem('appliedCoupon');
-    if (saved) {
-      try {
-        const c = JSON.parse(saved);
-        setAppliedCoupon(c);
-        if (c.paymentMode) setSelectedPaymentMode(c.paymentMode);
-      } catch (_) {}
     }
   }, [isOpen]);
 
@@ -240,75 +214,18 @@ const CartDrawer = ({ isOpen, onClose }) => {
     return () => el.removeEventListener('scroll', check);
   }, [isOpen, buyNowItem, cartItems.length]);
 
-  // ── Offer bar ───────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (cartItems.length === 0) { setOfferData(null); return; }
-    getPublicCoupons().then(res => {
-      const coupons = (res?.coupons || []).filter(c => !c.firstOrderOnly);
-      const applicable = coupons.filter(c =>
-        !c.paymentModeRestriction || c.paymentModeRestriction === 'all' || c.paymentModeRestriction === selectedPaymentMode
-      );
-      if (!applicable.length) { setOfferData(null); return; }
-      let best = null;
-      for (const c of applicable) {
-        const min = parseFloat(c.minPurchase || 0);
-        if (cartTotal >= min) {
-          let disc = 0;
-          if (c.type === 'percentage') { disc = (cartTotal * parseFloat(c.value || 0)) / 100; const mx = parseFloat(c.maxDiscount || 0); if (mx > 0 && disc > mx) disc = mx; }
-          else if (c.type === 'fixed') disc = parseFloat(c.value || 0);
-          if (disc > 0 && (!best || disc > best.discount)) best = { type: 'available', coupon: c, discount: disc };
-        } else {
-          const remaining = min - cartTotal;
-          let potDisc = 0;
-          if (c.type === 'percentage') potDisc = (min * parseFloat(c.value || 0)) / 100;
-          else if (c.type === 'fixed') potDisc = parseFloat(c.value || 0);
-          if (potDisc > 0 && (!best || potDisc > best.discount)) best = { type: 'progress', coupon: c, discount: potDisc, remaining, progress: (cartTotal / min) * 100, required: min };
-        }
-      }
-      setOfferData(best);
-    }).catch(() => {});
-  }, [cartItems, cartTotal, selectedPaymentMode]);
-
   // ── Computed totals ─────────────────────────────────────────────────────
   const activeItems = buyNowItem ? [buyNowItem] : cartItems;
   const activeTotal = buyNowItem ? buyNowTotal : cartTotal;
-  const discountAmount = appliedCoupon ? parseFloat(appliedCoupon.discount || appliedCoupon.discountAmount || 0) : 0;
   const shippingFeeAmount = parseFloat(selectedFee?.fee || 0);
-  const finalTotal = Math.max(0, activeTotal - discountAmount + shippingFeeAmount);
+  const finalTotal = Math.max(0, activeTotal + shippingFeeAmount);
   const totalQty = activeItems.reduce((s, i) => s + (i.quantity || 1), 0);
-
-  // ── Coupon ──────────────────────────────────────────────────────────────
-  const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) return;
-    setCouponLoading(true); setCouponError('');
-    try {
-      const res = await validateCoupon(couponCode.trim(), activeTotal, selectedPaymentMode);
-      const coupon = { ...res, code: couponCode.trim(), discount: res.discountAmount || res.discount || 0 };
-      setAppliedCoupon(coupon);
-      sessionStorage.setItem('appliedCoupon', JSON.stringify(coupon));
-      setCouponCode('');
-    } catch (err) {
-      setCouponError(err.message || 'Invalid coupon code');
-    } finally {
-      setCouponLoading(false);
-    }
-  };
-
-  const handleRemoveCoupon = () => {
-    setAppliedCoupon(null);
-    sessionStorage.removeItem('appliedCoupon');
-    setCouponError('');
-  };
 
   // ── Delivery fee ────────────────────────────────────────────────────────
   const handleSelectFee = (fee) => {
     setSelectedFee(fee);
     const mode = fee.orderType === 'prepaid' ? 'prepaid' : 'cod';
     setSelectedPaymentMode(mode);
-    if (fee.orderType === 'cod' && appliedCoupon) {
-      handleRemoveCoupon();
-      showValidationErrorToast('Coupons are not applicable for Cash on Delivery orders');
-    }
   };
 
   // ── Address form ────────────────────────────────────────────────────────
@@ -418,7 +335,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
       });
 
       const lineItemsTotal = lineItems.reduce((s, i) => s + i.offer_price * i.quantity, 0);
-      const finalAmountRupees = Math.max(0, activeTotal - discountAmount);
+      const finalAmountRupees = activeTotal;
 
       // Step 1 — create Razorpay order on server
       const orderRes = await fetch(`${API_URL}/api/payments/magic-checkout/create-order`, {
@@ -434,10 +351,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
           customer_id: user?.id || null,
           line_items: lineItems,
           line_items_total: lineItemsTotal,
-          notes: {
-            coupon_code: appliedCoupon?.code || null,
-            discount_amount: discountAmount,
-          },
+          notes: {},
         }),
       });
 
@@ -456,17 +370,12 @@ const CartDrawer = ({ isOpen, onClose }) => {
         currency: 'INR',
         name: 'Cross Coin',
         one_click_checkout: true,   // triggers Magic Checkout UI
-        show_coupons: true,
+        show_coupons: false,
         prefill: {
           name: user?.name || '',
           email: user?.email || '',
           contact: user?.phone || '',
         },
-        ...(appliedCoupon ? {
-          one_click_checkout_options: {
-            pre_discounts: [{ label: appliedCoupon.code, value: `₹${discountAmount}` }],
-          },
-        } : {}),
         theme: { color: '#180D3E' },
         modal: { ondismiss: () => setIsProcessing(false) },
         handler: async (response) => {
@@ -499,13 +408,12 @@ const CartDrawer = ({ isOpen, onClose }) => {
                   value: Number(finalAmountRupees.toFixed(2)),
                   currency: 'INR',
                   content_type: 'product',
-                  contents: activeItems.map(i => ({ id: String(i.productId || i.id), quantity: i.quantity })),
+                  contents: activeItems.map(i => ({ id: (i.productId || i.id) && (i.variationId || i.variation?.id) ? `${i.productId || i.id}_${i.variationId || i.variation?.id}` : String(i.productId || i.id), quantity: i.quantity })),
                 }, { eventID: `Purchase_${verifyData.order_number}` });
               } catch (_) {}
 
               clearCart();
               clearBuyNow();
-              sessionStorage.removeItem('appliedCoupon');
               showOrderPlacedSuccessToast(verifyData.order_number);
               setOrderSuccess({ orderNumber: verifyData.order_number });
             } else {
@@ -550,15 +458,15 @@ const CartDrawer = ({ isOpen, onClose }) => {
     }));
 
     const orderData = isAuthenticated
-      ? { shipping_address_id: selectedAddress.id, items: itemsPayload, payment_type: selectedFee.orderType === 'cod' ? 'cod' : 'upi', notes: '', discount_amount: discountAmount, coupon_id: appliedCoupon?.id || null }
-      : { guest_info: guestInfo, shipping_address: { fullName: selectedAddress.full_name || selectedAddress.fullName, address: selectedAddress.address, city: selectedAddress.city, state: selectedAddress.state, pincode: selectedAddress.postal_code || selectedAddress.postalCode, phone: selectedAddress.phone_number || selectedAddress.phoneNumber }, items: itemsPayload, payment_type: selectedFee.orderType === 'cod' ? 'cod' : 'upi', notes: '', discount_amount: discountAmount, coupon_id: appliedCoupon?.id || null, session_id: sessionStorage.getItem('sessionId') || 'guest-' + Date.now(), ip_address: window.location.hostname, user_agent: window.navigator.userAgent };
+      ? { shipping_address_id: selectedAddress.id, items: itemsPayload, payment_type: selectedFee.orderType === 'cod' ? 'cod' : 'upi', notes: '', discount_amount: 0, coupon_id: null }
+      : { guest_info: guestInfo, shipping_address: { fullName: selectedAddress.full_name || selectedAddress.fullName, address: selectedAddress.address, city: selectedAddress.city, state: selectedAddress.state, pincode: selectedAddress.postal_code || selectedAddress.postalCode, phone: selectedAddress.phone_number || selectedAddress.phoneNumber }, items: itemsPayload, payment_type: selectedFee.orderType === 'cod' ? 'cod' : 'upi', notes: '', discount_amount: 0, coupon_id: null, session_id: sessionStorage.getItem('sessionId') || 'guest-' + Date.now(), ip_address: window.location.hostname, user_agent: window.navigator.userAgent };
 
     try {
       if (selectedFee.orderType === 'cod') {
         const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
         if (!result?.order) throw new Error('Order creation failed.');
-        try { fbqTrack('Purchase', { value: Number(finalTotal.toFixed(2)), currency: 'INR', content_type: 'product', contents: activeItems.map(i => ({ id: String(i.productId || i.id), quantity: i.quantity })) }, { eventID: `Purchase_${result.order.order_number}` }); } catch (_) {}
-        clearCart(); clearBuyNow(); sessionStorage.removeItem('appliedCoupon');
+        try { fbqTrack('Purchase', { value: Number(finalTotal.toFixed(2)), currency: 'INR', content_type: 'product', contents: activeItems.map(i => ({ id: (i.productId || i.id) && (i.variationId || i.variation?.id) ? `${i.productId || i.id}_${i.variationId || i.variation?.id}` : String(i.productId || i.id), quantity: i.quantity })) }, { eventID: `Purchase_${result.order.order_number}` }); } catch (_) {}
+        clearCart(); clearBuyNow();
         showOrderPlacedSuccessToast(result.order.order_number);
         setOrderSuccess({ orderNumber: result.order.order_number });
       } else {
@@ -576,8 +484,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
               const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
               if (!result?.order) throw new Error('Order creation failed.');
               await updateOrderPayment({ orderId: result.order.id, razorpayPaymentId: response.razorpay_payment_id, razorpayOrderId: response.razorpay_order_id, razorpaySignature: response.razorpay_signature });
-              try { fbqTrack('Purchase', { value: Number(finalTotal.toFixed(2)), currency: 'INR', content_type: 'product', contents: activeItems.map(i => ({ id: String(i.productId || i.id), quantity: i.quantity })) }, { eventID: `Purchase_${result.order.order_number}` }); } catch (_) {}
-              clearCart(); clearBuyNow(); sessionStorage.removeItem('appliedCoupon');
+              try { fbqTrack('Purchase', { value: Number(finalTotal.toFixed(2)), currency: 'INR', content_type: 'product', contents: activeItems.map(i => ({ id: (i.productId || i.id) && (i.variationId || i.variation?.id) ? `${i.productId || i.id}_${i.variationId || i.variation?.id}` : String(i.productId || i.id), quantity: i.quantity })) }, { eventID: `Purchase_${result.order.order_number}` }); } catch (_) {}
+              clearCart(); clearBuyNow();
               showOrderPlacedSuccessToast(result.order.order_number);
               setOrderSuccess({ orderNumber: result.order.order_number });
             } catch { showOrderPlacedErrorToast('Payment successful but order creation failed. Please contact support.'); }
@@ -638,24 +546,6 @@ const CartDrawer = ({ isOpen, onClose }) => {
           ) : (
             <div className="cd-single-view">
 
-              {/* Offer bar */}
-              {offerData && (
-                <div className={`cd-offer-bar ${offerData.type === 'available' ? 'cd-offer-available' : 'cd-offer-progress'}`}>
-                  <span className="cd-offer-icon"><IconTag /></span>
-                  <div className="cd-offer-text">
-                    {offerData.type === 'available'
-                      ? <><strong>Get ₹{offerData.discount} OFF</strong> — use code <span className="cd-offer-code">{offerData.coupon.code}</span></>
-                      : <>Add <strong>₹{offerData.remaining.toFixed(0)}</strong> more to unlock <strong>₹{offerData.discount} OFF</strong></>
-                    }
-                    {offerData.type === 'progress' && (
-                      <div className="cd-offer-progress-bar">
-                        <div className="cd-offer-progress-fill" style={{ width: `${Math.min(offerData.progress, 100)}%` }} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
               {/* ── 1. Items ── */}
               <div className="cd-section-title">Items</div>
               <div className="cd-items-list">
@@ -699,25 +589,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 })}
               </div>
 
-              {/* ── 2. Coupon ── */}
-              <div className="cd-sv-section">
-                <div className="cd-section-title">Coupon</div>
-                {appliedCoupon ? (
-                  <div className="cd-coupon-applied">
-                    <span className="cd-coupon-applied-icon"><IconCheck /></span>
-                    <span className="cd-coupon-applied-text"><strong>{appliedCoupon.code}</strong> — ₹{discountAmount.toFixed(2)} off</span>
-                    <button className="cd-coupon-remove" onClick={handleRemoveCoupon}>Remove</button>
-                  </div>
-                ) : (
-                  <div className="cd-coupon-input-row">
-                    <input className="cd-coupon-input" type="text" placeholder="Enter coupon code" value={couponCode} onChange={e => setCouponCode(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()} />
-                    <button className="cd-coupon-apply-btn" onClick={handleApplyCoupon} disabled={couponLoading || !couponCode.trim()}>{couponLoading ? '...' : 'Apply'}</button>
-                  </div>
-                )}
-                {couponError && <p className="cd-coupon-error">{couponError}</p>}
-              </div>
-
-              {/* ── 3. Contact (guest only) — hidden when Magic Checkout is active (it handles contact collection) ── */}
+              {/* ── 2. Contact (guest only) — hidden when Magic Checkout is active (it handles contact collection) ── */}
               {!MAGIC_CHECKOUT_ENABLED && !isAuthenticated && (
                 <div className="cd-sv-section">
                   <div className="cd-section-title">Contact Info</div>
@@ -742,7 +614,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 </div>
               )}
 
-              {/* ── 4. Delivery Address — hidden when Magic Checkout is active (it handles address collection) ── */}
+              {/* ── 3. Delivery Address — hidden when Magic Checkout is active (it handles address collection) ── */}
               {!MAGIC_CHECKOUT_ENABLED && <div className="cd-sv-section">
                 <div className="cd-section-title">Delivery Address</div>
                 {addressLoading ? <p className="cd-loading">Loading addresses...</p> : (
@@ -858,7 +730,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 )}
               </div>}
 
-              {/* ── 5. Delivery Method — hidden when Magic Checkout is active ── */}
+              {/* ── 4. Delivery Method — hidden when Magic Checkout is active ── */}
               {!MAGIC_CHECKOUT_ENABLED && shippingFees.length > 0 && (
                 <div className="cd-sv-section">
                   <div className="cd-section-title">Delivery Method</div>
@@ -878,11 +750,10 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 </div>
               )}
 
-              {/* ── 6. Order Summary ── */}
+              {/* ── 5. Order Summary ── */}
               <div className="cd-sv-section">
                 <div className="cd-summary">
                   <div className="cd-summary-row"><span>Subtotal ({totalQty} item{totalQty !== 1 ? 's' : ''})</span><span>₹{activeTotal.toFixed(2)}</span></div>
-                  {discountAmount > 0 && <div className="cd-summary-row cd-summary-discount"><span>Discount ({appliedCoupon?.code})</span><span>−₹{discountAmount.toFixed(2)}</span></div>}
                   <div className="cd-summary-row"><span>Shipping</span><span>{shippingFeeAmount === 0 ? 'Free' : `₹${shippingFeeAmount.toFixed(2)}`}</span></div>
                   <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{finalTotal.toFixed(2)}</span></div>
                 </div>

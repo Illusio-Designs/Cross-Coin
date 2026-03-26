@@ -2,6 +2,7 @@ const { ShippingAddress } = require("../model/shippingAddressModel.js");
 const { GuestUser } = require("../model/guestUserModel.js");
 const { Op } = require("sequelize");
 const { sequelize } = require("../config/db.js");
+const { encrypt, decrypt } = require("../utils/encryption.js");
 
 // Create a new shipping address
 module.exports.createShippingAddress = async (req, res) => {
@@ -67,7 +68,7 @@ module.exports.createShippingAddress = async (req, res) => {
         state,
         pincode: postal_code,
         country,
-        phone: phone_number,
+        phone: encrypt(phone_number),
         is_default: makeDefault,
       },
       { transaction }
@@ -86,8 +87,8 @@ module.exports.createShippingAddress = async (req, res) => {
       postal_code: shippingAddress.pincode, // Transform pincode to postal_code
       pincode: shippingAddress.pincode, // Keep both for compatibility
       country: shippingAddress.country,
-      phone_number: shippingAddress.phone, // Transform phone to phone_number
-      phone: shippingAddress.phone, // Keep both for compatibility
+      phone_number: decrypt(shippingAddress.phone), // Transform phone to phone_number
+      phone: decrypt(shippingAddress.phone), // Keep both for compatibility
       is_default: shippingAddress.is_default,
       createdAt: shippingAddress.createdAt,
       updatedAt: shippingAddress.updatedAt

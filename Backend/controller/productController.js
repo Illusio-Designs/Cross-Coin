@@ -1720,7 +1720,7 @@ module.exports.getPublicProductBySlug = async (req, res) => {
 // Get all public products
 module.exports.getAllPublicProducts = async (req, res) => {
   try {
-    const { category, search, sort, page = 1, limit = 10 } = req.query;
+    const { category, search, sort, page = 1, limit = 10, minPrice, maxPrice, inStock, minRating, attributes } = req.query;
 
     // Use ProductService with caching
     const result = await ProductService.getProductsList({
@@ -1730,7 +1730,12 @@ module.exports.getAllPublicProducts = async (req, res) => {
       page,
       limit,
       useCache: true,
-      brand: req.brand
+      brand: req.brand,
+      minPrice: minPrice !== undefined ? minPrice : null,
+      maxPrice: maxPrice !== undefined ? maxPrice : null,
+      inStock: inStock !== undefined ? inStock : null,
+      minRating: minRating !== undefined ? minRating : null,
+      attributes: attributes !== undefined ? attributes : null
     });
 
     // Format products using formatProductResponse to ensure price fields are populated

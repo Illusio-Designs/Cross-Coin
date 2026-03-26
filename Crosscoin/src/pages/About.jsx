@@ -107,7 +107,7 @@ export default function About() {
             <p className="ab-hero-sub">Cross Coin® was built on a simple belief — the things closest to your skin deserve the most attention. We craft performance socks that combine technical precision with everyday wearability.</p>
             <div className="ab-hero-actions">
               <Link href="/Products" className="ab-btn-primary">Shop the Collection</Link>
-              <Link href="/contact" className="ab-btn-outline">Get in Touch</Link>
+              <Link href="/Contact" className="ab-btn-outline">Get in Touch</Link>
             </div>
           </div>
           <div className="ab-hero-stats">
@@ -219,7 +219,7 @@ export default function About() {
             <p className="ab-cta-sub">Join over 50,000 customers who have made the switch to socks that actually perform.</p>
             <div className="ab-cta-actions">
               <Link href="/Products" className="ab-btn-primary">Shop Now</Link>
-              <Link href="/contact" className="ab-btn-outline-light">Contact Us</Link>
+              <Link href="/Contact" className="ab-btn-outline-light">Contact Us</Link>
             </div>
           </div>
         </section>

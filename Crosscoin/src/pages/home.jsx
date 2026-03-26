@@ -288,7 +288,7 @@ const Home = () => {
                     onAddToCart={(e, prod, color, size, variationId) => {
                       addToCart(prod, color, size, 1, variationId, prod.images?.map(i => i.image_url || i) || []);
                       fbqTrack('AddToCart', {
-                        content_ids: [String(prod.id)],
+                        content_ids: [variationId ? `${prod.id}_${variationId}` : String(prod.id)],
                         content_name: prod.name,
                         content_type: 'product',
                         value: parseFloat(prod.price || 0),

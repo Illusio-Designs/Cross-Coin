@@ -243,7 +243,9 @@ const ExpressCheckout = ({ onSuccess, onError }) => {
           currency: "INR",
           content_type: "product",
           contents: cartItems.filter((item) => item.productId || item.id).map((item) => ({
-            id: String(item.productId || item.id),
+            id: (item.productId || item.id) && (item.variationId || item.variation?.id)
+              ? `${item.productId || item.id}_${item.variationId || item.variation?.id}`
+              : String(item.productId || item.id),
             quantity: item.quantity || 1,
           })),
         }, { eventID: orderNumber ? `Purchase_${orderNumber}` : undefined });

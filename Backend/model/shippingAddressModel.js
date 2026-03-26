@@ -48,7 +48,7 @@ const ShippingAddress = sequelize.define('ShippingAddress', {
         allowNull: false
     },
     phone: {
-        type: DataTypes.STRING(20),
+        type: DataTypes.STRING(500),
         allowNull: false
     },
     country: {

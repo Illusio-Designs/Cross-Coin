@@ -22,7 +22,6 @@ const { initializeCronJobs } = require('./config/cronJobs.js');
 const { logger, getLoggingConfig } = require('./config/logging.js');
 
 // Import routes
-const googleAnalyticsRouter = require('./integration/googleAnalytics.js');
 const facebookPixelRouter = require('./integration/facebookPixel.js');
 const facebookCatalogRouter = require('./integration/facebookCatalog.js');
 const dashboardAnalyticsRouter = require('./integration/dashboardAnalytics.js');
@@ -239,7 +238,6 @@ app.get('/', (req, res) => {
 app.use('/api', routesManager);
 
 // Use the routes
-app.use('/api/google-analytics', googleAnalyticsRouter);
 app.use('/api/facebook-pixel', facebookPixelRouter);
 app.use('/api/facebook-catalog', facebookCatalogRouter);
 // Dashboard analytics moved to /api/analytics to avoid conflict with /api/dashboard/stats
