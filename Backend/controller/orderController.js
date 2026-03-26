@@ -544,25 +544,44 @@ module.exports.createOrder = async (req, res) => {
     });
     logger.debug("createOrder: Response sent successfully");
 
-    // Fire Facebook Purchase event (non-blocking)
+    // Send WhatsApp order confirmation (fire-and-forget)
     setImmediate(async () => {
       try {
-        const eventPayload = {
-          brand_id: createdOrder.brand_id || 1,
-          order_number: createdOrder.order_number,
-          total_amount: parseFloat(createdOrder.final_amount),
-          final_amount: parseFloat(createdOrder.final_amount),
-          currency: "INR",
-          ip_address: req.ip || null,
-          user_agent: req.headers["user-agent"] || null,
-          items: validatedItems.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
-        };
-        await sendFacebookEvent("Purchase", eventPayload);
-        await sendGAEvent("purchase", eventPayload);
-      } catch (fbErr) {
-        logger.error("createOrder: analytics event error:", fbErr.message);
+        const whatsappService = require('../services/whatsappService.js');
+        const addr = await ShippingAddress.findByPk(shipping_address_id);
+        if (addr && addr.phone) {
+          await whatsappService.sendOrderConfirmation(addr.phone, {
+            orderNumber: createdOrder.order_number,
+            itemCount: validatedItems.length,
+            total: createdOrder.final_amount
+          });
+        }
+      } catch (waErr) {
+        logger.warn('WhatsApp order confirmation failed:', waErr.message);
       }
     });
+
+    // Fire Purchase analytics ONLY for COD orders — prepaid fires in updateOrderPayment after payment confirmation
+    if (payment_type === 'cod') {
+      setImmediate(async () => {
+        try {
+          const eventPayload = {
+            brand_id: createdOrder.brand_id || 1,
+            order_number: createdOrder.order_number,
+            total_amount: parseFloat(createdOrder.final_amount),
+            final_amount: parseFloat(createdOrder.final_amount),
+            currency: "INR",
+            ip_address: req.ip || null,
+            user_agent: req.headers["user-agent"] || null,
+            items: validatedItems.map(i => ({ product_id: i.product_id, quantity: i.quantity, price: i.price })),
+          };
+          await sendFacebookEvent("Purchase", eventPayload);
+          await sendGAEvent("purchase", eventPayload);
+        } catch (fbErr) {
+          logger.error("createOrder: analytics event error:", fbErr.message);
+        }
+      });
+    }
 
     // Invalidate dashboard cache for the user (non-blocking)
     try {
@@ -960,28 +979,31 @@ module.exports.createGuestOrder = async (req, res) => {
     await transaction.commit();
     logger.debug("createGuestOrder: Transaction committed successfully");
 
-    // Send Facebook Purchase event for guest checkout (non-blocking)
-    setImmediate(async () => {
-      try {
-        const eventPayload = {
-          brand_id: req.brand ? req.brand.id : 1,
-          order_number: order.order_number,
-          total_amount: finalAmount,
-          final_amount: finalAmount,
-          currency: "INR",
-          items: validatedItems.map((item) => ({
-            product_id: item.product.id,
-            quantity: item.quantity,
-          })),
-          ip_address: req.ip || null,
-          user_agent: req.headers["user-agent"] || null,
-        };
-        await sendFacebookEvent("Purchase", eventPayload);
-        await sendGAEvent("purchase", eventPayload);
-      } catch (fbError) {
-        logger.error("createGuestOrder: analytics event error:", fbError.message);
-      }
-    });
+    // Fire Purchase analytics ONLY for COD guest orders — prepaid fires in updateOrderPayment
+    if (payment_type === 'cod') {
+      setImmediate(async () => {
+        try {
+          const eventPayload = {
+            brand_id: req.brand ? req.brand.id : 1,
+            order_number: order.order_number,
+            total_amount: finalAmount,
+            final_amount: finalAmount,
+            currency: "INR",
+            items: validatedItems.map((item) => ({
+              product_id: item.product.id,
+              quantity: item.quantity,
+              price: item.price,
+            })),
+            ip_address: req.ip || null,
+            user_agent: req.headers["user-agent"] || null,
+          };
+          await sendFacebookEvent("Purchase", eventPayload);
+          await sendGAEvent("purchase", eventPayload);
+        } catch (fbError) {
+          logger.error("createGuestOrder: analytics event error:", fbError.message);
+        }
+      });
+    }
 
     // Create FShip order automatically for guest orders
     await order.update({ fship_sync_status: 'syncing', fship_sync_attempts: 1 });
@@ -1122,6 +1144,23 @@ module.exports.createGuestOrder = async (req, res) => {
         price: item.price,
         total_price: item.itemTotal,
       })),
+    });
+
+    // Send WhatsApp order confirmation for guest (fire-and-forget)
+    setImmediate(async () => {
+      try {
+        const whatsappService = require('../services/whatsappService.js');
+        const phone = guestShippingAddress.phone || guestUser.phone;
+        if (phone) {
+          await whatsappService.sendOrderConfirmation(phone, {
+            orderNumber: order.order_number,
+            itemCount: validatedItems.length,
+            total: finalAmount
+          });
+        }
+      } catch (waErr) {
+        logger.warn('WhatsApp guest order confirmation failed:', waErr.message);
+      }
     });
   } catch (error) {
     logger.error("createGuestOrder: Error caught:", error.message);
@@ -1640,6 +1679,33 @@ module.exports.handleFShipWebhook = async (req, res) => {
       message: "Webhook processed successfully",
       order_number: order.order_number,
       status: orderStatus
+    });
+
+    // Send WhatsApp status notifications (fire-and-forget)
+    setImmediate(async () => {
+      try {
+        const whatsappService = require('../services/whatsappService.js');
+        const addr = await ShippingAddress.findOne({ where: { id: order.shipping_address_id } });
+        const phone = addr?.phone || order.GuestUser?.phone;
+        if (!phone) return;
+
+        if (orderStatus === 'shipped' || orderStatus === 'in transit') {
+          await whatsappService.sendOrderShipped(phone, {
+            orderNumber: order.order_number,
+            awbNumber: waybill || order.fship_waybill,
+            trackingUrl: order.tracking_url || `https://crosscoin.in/OrderTracking?order=${order.order_number}`
+          });
+        } else if (orderStatus === 'delivered') {
+          await whatsappService.sendOrderDelivered(phone, { orderNumber: order.order_number });
+        } else if (orderStatus === 'cancelled' || orderStatus === 'order cancelled') {
+          await whatsappService.sendOrderCancelled(phone, {
+            orderNumber: order.order_number,
+            refundInfo: order.payment_status === 'refund_pending' ? 'Refund will be processed in 5-7 business days' : 'No refund applicable'
+          });
+        }
+      } catch (waErr) {
+        logger.warn('WhatsApp status notification failed:', waErr.message);
+      }
     });
     
   } catch (error) {
@@ -2246,6 +2312,84 @@ module.exports.cancelOrder = async (req, res) => {
     res
       .status(500)
       .json({ message: "Failed to cancel order", error: error.message });
+  }
+};
+
+// Cancel guest order (by email + order_number)
+module.exports.cancelGuestOrder = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { email, order_number, reason } = req.body;
+    if (!email || !order_number) {
+      await transaction.rollback();
+      return res.status(400).json({ message: 'Email and order_number are required' });
+    }
+
+    const { GuestUser } = require('../model/guestUserModel.js');
+    const guestUser = await GuestUser.findOne({ where: { email: email.toLowerCase() } });
+    if (!guestUser) {
+      await transaction.rollback();
+      return res.status(404).json({ message: 'Guest order not found' });
+    }
+
+    const order = await Order.findOne({
+      where: { order_number, guest_user_id: guestUser.id },
+      transaction
+    });
+    if (!order) {
+      await transaction.rollback();
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    if (order.status !== 'pending' && order.status !== 'processing') {
+      await transaction.rollback();
+      return res.status(400).json({ message: `Cannot cancel orders in ${order.status} status` });
+    }
+
+    order.status = 'cancelled';
+    await order.save({ transaction });
+
+    // Restore stock
+    const orderItems = await OrderItem.findAll({ where: { order_id: order.id }, transaction });
+    for (const item of orderItems) {
+      if (item.variation_id) {
+        await ProductVariation.increment('stock', { by: item.quantity, where: { id: item.variation_id }, transaction });
+      }
+    }
+
+    // Decrement coupon usage
+    if (order.coupon_id) {
+      const { Coupon, CouponUsage } = require('../model/associations.js');
+      await Coupon.decrement('usageCount', { by: 1, where: { id: order.coupon_id }, transaction });
+      await CouponUsage.destroy({ where: { orderId: order.id }, transaction });
+    }
+
+    // Update payment status
+    if (order.payment_status === 'paid') {
+      order.payment_status = 'refund_pending';
+    } else {
+      order.payment_status = 'cancelled';
+    }
+    await order.save({ transaction });
+
+    await OrderStatusHistory.create({
+      order_id: order.id,
+      status: 'cancelled',
+      notes: reason || 'Cancelled by guest customer'
+    }, { transaction });
+
+    if (order.fship_waybill) {
+      fshipService.cancelOrder(order.fship_waybill, reason || 'Guest order cancelled').catch(err =>
+        logger.warn('FShip guest cancel failed:', err.message)
+      );
+    }
+
+    await transaction.commit();
+    res.json({ message: 'Order cancelled successfully' });
+  } catch (error) {
+    await transaction.rollback();
+    logger.error('Error cancelling guest order:', error);
+    res.status(500).json({ message: 'Failed to cancel order', error: error.message });
   }
 };
 

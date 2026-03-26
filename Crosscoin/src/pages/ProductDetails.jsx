@@ -99,7 +99,7 @@ export default function ProductDetails() {
 
           // ViewContent — fire once when product page loads
           fbqTrack('ViewContent', {
-            content_ids: [String(api.id)],
+            content_ids: [firstVar ? `${api.id}_${firstVar.id}` : String(api.id)],
             content_name: api.name || '',
             content_type: 'product',
             value: parseFloat(firstVar.price || api.price || 0),
@@ -225,7 +225,7 @@ export default function ProductDetails() {
       galleryImages
     );
     fbqTrack('AddToCart', {
-      content_ids: [String(productData.id)],
+      content_ids: [selectedVariation ? `${productData.id}_${selectedVariation.id}` : String(productData.id)],
       content_name: productData.title,
       content_type: 'product',
       value: productData.price * quantity,
@@ -253,7 +253,7 @@ export default function ProductDetails() {
       galleryImages
     );
     fbqTrack('InitiateCheckout', {
-      content_ids: [String(productData.id)],
+      content_ids: [selectedVariation ? `${productData.id}_${selectedVariation.id}` : String(productData.id)],
       content_name: productData.title,
       content_type: 'product',
       value: productData.price * quantity,

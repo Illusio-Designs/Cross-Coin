@@ -60,11 +60,16 @@ const Header = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [megaMenu, setMegaMenu] = useState(null);
+  const [showMegaMenu, setShowMegaMenu] = useState(false);
+  const [showMobileMegaMenu, setShowMobileMegaMenu] = useState(false);
 
   useEffect(() => {
     setActivePage(router.pathname);
     // Close mobile menu on route change
     setIsMobileMenuOpen(false);
+    setShowMegaMenu(false);
+    setShowMobileMegaMenu(false);
   }, [router.pathname]);
 
   // Memoized API URL to prevent unnecessary re-renders
@@ -72,6 +77,24 @@ const Header = () => {
     () => process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in",
     []
   );
+
+  // Fetch mega menu data and cache in component state
+  const fetchMegaMenu = useCallback(async () => {
+    try {
+      const response = await fetch(`${apiUrl}/api/attributes/mega-menu`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Brand-Name': 'crosscoin'
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setMegaMenu(data.data);
+      }
+    } catch (error) {
+      // silently fail — mega menu is non-critical
+    }
+  }, [apiUrl]);
 
   // Debounced search function with useCallback optimization
   const debouncedSearch = useCallback(async (query) => {
@@ -211,13 +234,39 @@ const Header = () => {
         </div>
         <nav className="header__nav">
           <ul>
-            <li>
+            <li
+              onMouseEnter={() => { setShowMegaMenu(true); if (!megaMenu) fetchMegaMenu(); }}
+              onMouseLeave={() => setShowMegaMenu(false)}
+              style={{ position: 'relative' }}
+            >
               <Link
                 href="/Products"
                 className={activePage === "/Products" ? "active" : ""}
               >
                 Products
               </Link>
+              {showMegaMenu && megaMenu && megaMenu.length > 0 && (
+                <div className="mega-menu">
+                  {megaMenu.map((attr) => (
+                    <div key={attr.id} className="mega-menu__column">
+                      <h4 className="mega-menu__heading">{attr.name}</h4>
+                      <ul className="mega-menu__list">
+                        {attr.values.map((val) => (
+                          <li key={val.id}>
+                            <Link
+                              href={`/Products?attributes=${encodeURIComponent(JSON.stringify({ [attr.name]: [val.value] }))}`}
+                              onClick={() => setShowMegaMenu(false)}
+                            >
+                              {val.value}
+                              <span className="mega-menu__count">({val.product_count})</span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
             </li>
             <li>
               <Link
@@ -409,13 +458,45 @@ const Header = () => {
         <nav className="mobile-menu__nav">
           <ul>
             <li>
-              <Link
-                href="/Products"
-                className={activePage === "/Products" ? "active" : ""}
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Products
-              </Link>
+              <div className="mobile-menu__products-row">
+                <Link
+                  href="/Products"
+                  className={activePage === "/Products" ? "active" : ""}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Products
+                </Link>
+                {megaMenu && megaMenu.length > 0 && (
+                  <button
+                    className="mobile-menu__expand-btn"
+                    onClick={() => setShowMobileMegaMenu(!showMobileMegaMenu)}
+                    aria-label="Toggle product filters"
+                  >
+                    {showMobileMegaMenu ? '−' : '+'}
+                  </button>
+                )}
+              </div>
+              {showMobileMegaMenu && megaMenu && megaMenu.length > 0 && (
+                <div className="mobile-mega-menu">
+                  {megaMenu.map((attr) => (
+                    <div key={attr.id} className="mobile-mega-menu__group">
+                      <h5 className="mobile-mega-menu__heading">{attr.name}</h5>
+                      <ul className="mobile-mega-menu__list">
+                        {attr.values.map((val) => (
+                          <li key={val.id}>
+                            <Link
+                              href={`/Products?attributes=${encodeURIComponent(JSON.stringify({ [attr.name]: [val.value] }))}`}
+                              onClick={() => { setIsMobileMenuOpen(false); setShowMobileMegaMenu(false); }}
+                            >
+                              {val.value} ({val.product_count})
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
             </li>
             <li>
               <Link

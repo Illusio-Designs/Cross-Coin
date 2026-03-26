@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { getGuestOrder, getUserOrders } from "../services/publicApi";
 import { useAuth } from "../context/AuthContext";
 import { fbqTrack } from "../utils/fbqTrack";
-import { gtagTrack } from "../utils/gtagTrack";
 
 const IconCheck = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -98,20 +97,15 @@ export default function ThankYou() {
           const result = await getUserOrders({ limit: 100 });
           if (result.orders) {
             const order = result.orders.find(o => String(o.order_number) === String(order_number));
-            if (order) orderData = { order: { final_amount: order.final_amount }, items: (order.OrderItems || []).map(i => ({ product: { id: i.Product?.id || i.product_id }, quantity: i.quantity || 1 })) };
+            if (order) orderData = { order: { final_amount: order.final_amount }, items: (order.OrderItems || []).map(i => ({ product: { id: i.Product?.id || i.product_id }, variation_id: i.variation_id || i.ProductVariation?.id || null, quantity: i.quantity || 1 })) };
           }
         }
 
         if (orderData?.order && orderData?.items?.length > 0) {
-          const purchaseData = { value: parseFloat(orderData.order.final_amount) || 0, currency: 'INR', content_type: 'product', contents: orderData.items.filter(i => i.product?.id).map(i => ({ id: String(i.product.id), quantity: i.quantity || 1 })) };
+          const purchaseData = { value: parseFloat(orderData.order.final_amount) || 0, currency: 'INR', content_type: 'product', contents: orderData.items.filter(i => i.product?.id).map(i => ({ id: i.variation_id ? `${i.product.id}_${i.variation_id}` : String(i.product.id), quantity: i.quantity || 1 })) };
           if (purchaseData.value > 0) {
+            // Only fire Facebook Pixel — GA4 purchase is handled server-side to avoid duplicates
             fbqTrack('Purchase', purchaseData, { eventID: `Purchase_${order_number}` });
-            gtagTrack('purchase', {
-              transaction_id: order_number,
-              value: purchaseData.value,
-              currency: 'INR',
-              items: purchaseData.contents || [],
-            });
             sessionStorage.setItem(trackingKey, 'true');
           }
         }

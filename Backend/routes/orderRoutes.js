@@ -10,6 +10,7 @@ const {
     trackOrderByAWB,
     trackOrderByOrderNumber,
     cancelOrder,
+    cancelGuestOrder,
     adminCancelOrder,
     cancelOrdersInFShip,
     getOrderStats,
@@ -65,6 +66,7 @@ router.put('/:id/awb', isAuthenticated, authorize(['admin']), updateAwbNumber);
 // Guest checkout route (no authentication required)
 router.post('/guest', createGuestOrder);
 router.get('/guest/track', getGuestOrder);
+router.post('/guest/cancel', cancelGuestOrder);
 
 // Public order tracking by AWB (no authentication required)
 router.get('/track/awb', trackOrderByAWB);

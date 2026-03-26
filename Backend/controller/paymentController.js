@@ -606,9 +606,13 @@ module.exports.updateOrderPayment = async (req, res) => {
     });
 
     // Fire Purchase event to Facebook + Google Analytics (non-blocking)
+    // This is the SINGLE source of truth for prepaid orders — createOrder skips analytics for non-COD
     setImmediate(async () => {
       try {
-        const items = await OrderItem.findAll({ where: { order_id: order.id } });
+        const items = await OrderItem.findAll({ 
+          where: { order_id: order.id },
+          include: [{ model: require('../model/productModel.js').Product, as: 'Product', attributes: ['id', 'name'] }]
+        });
         const eventPayload = {
           brand_id: order.brand_id || 1,
           order_number: order.order_number,
@@ -617,7 +621,12 @@ module.exports.updateOrderPayment = async (req, res) => {
           currency: 'INR',
           ip_address: req.ip || null,
           user_agent: req.headers['user-agent'] || null,
-          items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+          items: items.map(i => ({ 
+            product_id: i.product_id, 
+            quantity: i.quantity,
+            price: parseFloat(i.price || 0),
+            name: i.Product?.name || '',
+          })),
         };
         await sendFacebookEvent('Purchase', eventPayload);
         await sendGAEvent('purchase', eventPayload);

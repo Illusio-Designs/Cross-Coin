@@ -25,7 +25,7 @@ const GuestUser = sequelize.define('GuestUser', {
         field: 'last_name'
     },
     phone: {
-        type: DataTypes.STRING(20),
+        type: DataTypes.STRING(500),
         allowNull: true
     },
     // Guest session identifier for tracking

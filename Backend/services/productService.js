@@ -159,10 +159,15 @@ class ProductService {
       page = 1,
       limit = 10,
       useCache = true,
-      brand = null
+      brand = null,
+      minPrice = null,
+      maxPrice = null,
+      inStock = null,
+      minRating = null,
+      attributes = null
     } = filters;
 
-    const cacheKey = `products:list:${brand?.id || 'all'}:${category || 'all'}:${search || 'none'}:${sort || 'default'}:${page}:${limit}`;
+    const cacheKey = `products:list:${brand?.id || 'all'}:${category || 'all'}:${search || 'none'}:${sort || 'default'}:${page}:${limit}:${minPrice || ''}:${maxPrice || ''}:${inStock || ''}:${minRating || ''}:${attributes || ''}`;
 
     // Check cache first
     if (useCache) {
@@ -189,6 +194,54 @@ class ProductService {
           { name: { [Op.like]: `%${search.toLowerCase()}%` } },
           { description: { [Op.like]: `%${search.toLowerCase()}%` } }
         ];
+      }
+
+      // minRating filter on main product table
+      if (minRating !== null && minRating !== undefined) {
+        filter.avg_rating = { [Op.gte]: parseFloat(minRating) };
+      }
+
+      // Price / stock / attributes filters via EXISTS subquery on product_variations
+      const variationConditions = [];
+
+      if (minPrice !== null && minPrice !== undefined) {
+        variationConditions.push(`pv.price >= ${parseFloat(minPrice)}`);
+      }
+      if (maxPrice !== null && maxPrice !== undefined) {
+        variationConditions.push(`pv.price <= ${parseFloat(maxPrice)}`);
+      }
+      if (inStock === true || inStock === 'true') {
+        variationConditions.push(`pv.stock > 0`);
+      }
+
+      // Parse attributes JSON filter: {"color":["Red","Blue"],"size":["M"]}
+      let parsedAttributes = null;
+      if (attributes) {
+        try {
+          parsedAttributes = typeof attributes === 'string' ? JSON.parse(attributes) : attributes;
+        } catch (e) {
+          // ignore malformed attributes filter
+        }
+      }
+
+      if (parsedAttributes && typeof parsedAttributes === 'object') {
+        for (const [attrName, attrValues] of Object.entries(parsedAttributes)) {
+          if (Array.isArray(attrValues) && attrValues.length > 0) {
+            // Build OR conditions for each value of this attribute
+            const valueClauses = attrValues.map(v => {
+              const escaped = v.replace(/'/g, "''");
+              return `JSON_EXTRACT(pv.attributes, '$.${attrName}') = '${escaped}'`;
+            });
+            variationConditions.push(`(${valueClauses.join(' OR ')})`);
+          }
+        }
+      }
+
+      if (variationConditions.length > 0) {
+        const subquery = `EXISTS (SELECT 1 FROM product_variations pv WHERE pv.productId = Product.id AND pv.status = 'active' AND ${variationConditions.join(' AND ')})`;
+        filter[Op.and] = filter[Op.and]
+          ? [...(Array.isArray(filter[Op.and]) ? filter[Op.and] : [filter[Op.and]]), literal(subquery)]
+          : [literal(subquery)];
       }
 
       // Build sort options

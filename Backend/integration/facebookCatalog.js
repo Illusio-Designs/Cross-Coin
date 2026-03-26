@@ -5,19 +5,21 @@ const {
   ProductImage,
   Category,
 } = require("../model/associations.js");
-const { sequelize } = require("../config/db.js");
-const createDOMPurify = require("dompurify");
-const { JSDOM } = require("jsdom");
-
-// Create DOMPurify instance for server-side HTML sanitization
-const window = new JSDOM("").window;
-const DOMPurify = createDOMPurify(window);
-
+const imagekitService = require("../services/imagekitService");
 const router = express.Router();
+
+/**
+ * Resolve a stored image_url to a full ImageKit public URL.
+ * Handles: ImageKit filePaths, legacy /uploads/ paths, and already-full URLs.
+ */
+function resolveImageUrl(imagePath) {
+  if (!imagePath) return null;
+  if (imagePath.startsWith("http")) return imagePath;
+  return imagekitService.getOptimizedUrl(imagePath, "large");
+}
 
 // Facebook Catalog Feed Endpoint
 router.get("/feed", async (req, res) => {
-  const baseUrl = process.env.BASE_URL || "https://api.crosscoin.in";
   const frontendUrl = process.env.FRONTEND_URL || "https://crosscoin.in";
 
   // Fetch all active products with their variations, images, and category
@@ -111,10 +113,10 @@ router.get("/feed", async (req, res) => {
     }
 
     // Get primary image URL - prioritize variation images, then product images
-    let imageUrl = "";
+    let imageUrl = null;
     let imagePath = "";
 
-    // First, try to get image from variations (these are often the main product images)
+    // First, try to get image from variations
     if (product.ProductVariations && product.ProductVariations.length > 0) {
       for (const variation of product.ProductVariations) {
         if (variation.VariationImages && variation.VariationImages.length > 0) {
@@ -125,31 +127,11 @@ router.get("/feed", async (req, res) => {
     }
 
     // If no variation image found, try product-level images
-    if (
-      !imagePath &&
-      product.ProductImages &&
-      product.ProductImages.length > 0
-    ) {
+    if (!imagePath && product.ProductImages && product.ProductImages.length > 0) {
       imagePath = product.ProductImages[0].image_url;
     }
 
-    // Construct the full image URL
-    if (imagePath) {
-      if (imagePath.startsWith("http")) {
-        imageUrl = imagePath;
-      } else {
-        // Handle both /uploads/products/ and direct filename formats
-        if (imagePath.startsWith("/uploads/products/")) {
-          imageUrl = `${baseUrl}${imagePath}`;
-        } else {
-          // For filenames like "variation_0_image-1752823428947-828439301.png"
-          imageUrl = `${baseUrl}/uploads/products/${imagePath}`;
-        }
-      }
-    } else {
-      // No fallback image
-      imageUrl = null;
-    }
+    imageUrl = resolveImageUrl(imagePath);
 
     // Get category name
     const categoryName = product.Category ? product.Category.name : "";
@@ -159,15 +141,6 @@ router.get("/feed", async (req, res) => {
     const productLink = `${frontendUrl}/ProductDetails?slug=${encodeURIComponent(
       product.slug
     )}`;
-
-    // Debug logging to help troubleshoot URL issues
-    if (product.slug.includes("boldline-striped-ankle-socks")) {
-      console.log("=== BACKEND URL DEBUG ===");
-      console.log("Product slug:", product.slug);
-      console.log("Encoded slug:", encodeURIComponent(product.slug));
-      console.log("Generated URL:", productLink);
-      console.log("========================");
-    }
 
     // Clean and format description - remove HTML tags for clean text
     let description = product.description || "";
@@ -198,14 +171,7 @@ router.get("/feed", async (req, res) => {
         // Get variation-specific image
         let variationImageUrl = imageUrl; // Default to product image
         if (variation.VariationImages && variation.VariationImages.length > 0) {
-          const variationImagePath = variation.VariationImages[0].image_url;
-          if (variationImagePath.startsWith("http")) {
-            variationImageUrl = variationImagePath;
-          } else if (variationImagePath.startsWith("/uploads/products/")) {
-            variationImageUrl = `${baseUrl}${variationImagePath}`;
-          } else {
-            variationImageUrl = `${baseUrl}/uploads/products/${variationImagePath}`;
-          }
+          variationImageUrl = resolveImageUrl(variation.VariationImages[0].image_url) || imageUrl;
         }
 
         // Build variation-specific attributes
@@ -275,14 +241,7 @@ router.get("/feed", async (req, res) => {
         firstVariation.VariationImages &&
         firstVariation.VariationImages.length > 0
       ) {
-        const variationImagePath = firstVariation.VariationImages[0].image_url;
-        if (variationImagePath.startsWith("http")) {
-          variationImageUrl = variationImagePath;
-        } else if (variationImagePath.startsWith("/uploads/products/")) {
-          variationImageUrl = `${baseUrl}${variationImagePath}`;
-        } else {
-          variationImageUrl = `${baseUrl}/uploads/products/${variationImagePath}`;
-        }
+        variationImageUrl = resolveImageUrl(firstVariation.VariationImages[0].image_url) || imageUrl;
       }
 
       xml += `<item>`;

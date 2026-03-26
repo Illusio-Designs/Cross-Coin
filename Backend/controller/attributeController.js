@@ -1,5 +1,6 @@
 const { Attribute, AttributeValue } = require('../model/associations.js');
 const { sequelize } = require('../config/db.js');
+const cacheManager = require('../services/cacheManager.js');
 
 // Get all attributes with their values
 module.exports.getAllAttributes = async (req, res) => {
@@ -297,3 +298,88 @@ module.exports.getAttributeById = async (req, res) => {
         res.status(500).json({ message: 'Failed to fetch attribute', error: error.message });
     }
 }; 
+
+// Get mega menu data: all active attributes with active values and product counts
+module.exports.getMegaMenu = async (req, res) => {
+    try {
+        const brandId = req.brandId || (req.brand && req.brand.id) || null;
+        const cacheKey = `mega-menu:${brandId || 'all'}`;
+
+        // Try cache first
+        const cached = await cacheManager.get(cacheKey);
+        if (cached) {
+            res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+            return res.json({ success: true, data: cached });
+        }
+
+        // Build attribute WHERE clause
+        const attrWhere = { status: 'active' };
+        if (brandId) attrWhere.brand_id = brandId;
+
+        const attributes = await Attribute.findAll({
+            include: [{
+                model: AttributeValue,
+                where: { status: 'active' },
+                required: false
+            }],
+            where: attrWhere,
+            order: [
+                ['displayOrder', 'ASC'],
+                [AttributeValue, 'displayOrder', 'ASC']
+            ]
+        });
+
+        // For each attribute value, count active products that have a variation
+        // with that attribute value in their attributes JSON
+        const result = [];
+
+        for (const attr of attributes) {
+            const values = attr.AttributeValues || [];
+            const valuesWithCount = [];
+
+            for (const val of values) {
+                const attrName = attr.name;
+                const attrValue = val.value.replace(/'/g, "''");
+
+                // Count active products with at least one variation matching this attribute value
+                const [countRows] = await sequelize.query(
+                    `SELECT COUNT(DISTINCT p.id) AS product_count
+                     FROM products p
+                     WHERE p.status = 'active'
+                       AND EXISTS (
+                           SELECT 1 FROM product_variations pv
+                           WHERE pv.productId = p.id
+                             AND pv.status = 'active'
+                             AND JSON_EXTRACT(pv.attributes, '$.${attrName}') = '${attrValue}'
+                       )`
+                );
+
+                const productCount = parseInt(countRows[0]?.product_count || 0, 10);
+                if (productCount > 0) {
+                    valuesWithCount.push({
+                        id: val.id,
+                        value: val.value,
+                        product_count: productCount
+                    });
+                }
+            }
+
+            if (valuesWithCount.length > 0) {
+                result.push({
+                    id: attr.id,
+                    name: attr.name,
+                    values: valuesWithCount
+                });
+            }
+        }
+
+        // Cache for 30 minutes
+        await cacheManager.set(cacheKey, result, 1800);
+
+        res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+        res.json({ success: true, data: result });
+    } catch (error) {
+        console.error('Error fetching mega menu:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch mega menu', error: error.message });
+    }
+};
