@@ -2,17 +2,9 @@ const { Product } = require("../../model/productModel.js");
 const { Order } = require("../../model/orderModel.js");
 const { OrderItem } = require("../../model/orderItemModel.js");
 const { sequelize } = require("../../config/db.js");
-const redis = require("redis");
+const redisService = require("../../services/redisService.js");
 const { invalidateDashboardCache } = require("../../services/dashboardService.js");
-// Import batch insert utility for efficient bulk operations
 const { batchInsert } = require("../../utils/batchInsert.js");
-
-// Create Redis client for cache invalidation
-const redisClient = redis.createClient({
-  host: process.env.REDIS_HOST || "localhost",
-  port: process.env.REDIS_PORT || 6379,
-  password: process.env.REDIS_PASSWORD || undefined,
-});
 
 /**
  * Process badge recalculation job
@@ -41,6 +33,7 @@ const processBadgeRecalculation = async (job) => {
         },
       ],
       order: [["createdAt", "DESC"]],
+      limit: 50, // Cap at 50 most recent orders — sufficient for badge calculation
     });
 
     console.log(`  ✅ Found ${orders.length} orders`);

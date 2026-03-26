@@ -48,6 +48,43 @@ if (process.env.NODE_ENV !== 'production') {
 
 const app = express();
 
+// Security headers - MUST be first middleware
+const helmet = require('helmet');
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https://ik.imagekit.io", "https://www.facebook.com"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+    }
+  },
+  hsts: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false
+}));
+
+// Rate limiting
+const rateLimit = require('express-rate-limit');
+
+const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests, please try again later' }
+});
+
+const generalRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests, please try again later' }
+});
+
+app.use('/api/users/login', authRateLimiter);
+app.use('/api/users/register', authRateLimiter);
+app.use('/api/', generalRateLimiter);
+
 // CORS middleware - MUST be before other middleware
 app.use(cors(corsOptions));
 
@@ -321,6 +358,11 @@ const startServer = async () => {
         try {
             await redisService.initialize();
             logger.info('✓ Redis connection initialized');
+
+            // Clear all cache on server start
+            const cacheManager = require('./services/cacheManager.js');
+            await cacheManager.clear();
+            logger.info('✓ Cache cleared on startup');
         } catch (error) {
             logger.warn('Redis initialization failed:', error.message);
             logger.warn('Caching will be disabled. Ensure Redis is running for optimal performance.');

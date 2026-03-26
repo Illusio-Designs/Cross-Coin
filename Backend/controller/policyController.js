@@ -1,9 +1,11 @@
 const { Policy } = require('../model/policyModel');
+const { Op } = require('sequelize');
 
 exports.createPolicy = async (req, res) => {
   try {
     const { title, content } = req.body;
-    const policy = await Policy.create({ title, content });
+    const brand_id = req.brand ? req.brand.id : null;
+    const policy = await Policy.create({ title, content, brand_id });
     res.status(201).json(policy);
   } catch (err) {
     console.error('Create policy error:', err);
@@ -13,7 +15,9 @@ exports.createPolicy = async (req, res) => {
 
 exports.getPolicies = async (req, res) => {
   try {
-    const policies = await Policy.findAll();
+    const where = {};
+    if (req.brand && req.brand.id) where.brand_id = req.brand.id;
+    const policies = await Policy.findAll({ where });
     res.json(policies);
   } catch (err) {
     console.error('Get policies error:', err);
@@ -59,32 +63,21 @@ exports.deletePolicy = async (req, res) => {
 exports.getPublicPolicyByName = async (req, res) => {
   try {
     const { name } = req.params;
-    // Normalize: replace hyphens, trim, and lowercase
     const searchTitle = name.replace(/-/g, ' ').trim().toLowerCase();
-
-    // Try exact match first
-    let policy = await Policy.findOne({
-      where: Policy.sequelize.where(
-        Policy.sequelize.fn('LOWER', Policy.sequelize.col('title')),
-        searchTitle
-      ),
-    });
-
-    // If not found, try partial match
-    if (!policy) {
-      policy = await Policy.findOne({
-        where: Policy.sequelize.where(
+    const where = {
+      [Op.and]: [
+        Policy.sequelize.where(
           Policy.sequelize.fn('LOWER', Policy.sequelize.col('title')),
-          { [Policy.sequelize.Op.like]: `%${searchTitle}%` }
-        ),
-      });
-    }
+          { [Op.like]: `%${searchTitle}%` }
+        )
+      ]
+    };
+    if (req.brand && req.brand.id) where.brand_id = req.brand.id;
 
-    if (!policy) {
-      return res.status(404).json({ error: 'Policy not found' });
-    }
+    const policy = await Policy.findOne({ where });
+    if (!policy) return res.status(404).json({ error: 'Policy not found' });
     res.json(policy);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-}; 
+};

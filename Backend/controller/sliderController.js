@@ -338,6 +338,7 @@ const getPublicSliders = async (req, res) => {
             return sliderData;
         });
 
+        res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
         res.status(200).json({ sliders: slidersResponse });
     } catch (error) {
         console.error('Get public sliders error:', error);

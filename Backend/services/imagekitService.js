@@ -126,6 +126,27 @@ class ImageKitService {
   }
 
   /**
+   * Delete image from ImageKit by file path
+   * @param {string} filePath - ImageKit file path (e.g., /profiles/image.jpg)
+   * @returns {Promise<void>}
+   */
+  async deleteImage(filePath) {
+    try {
+      // ImageKit delete requires fileId, but we can search by path first
+      const files = await this.imagekit.listFiles({ path: filePath });
+      if (files && files.length > 0) {
+        await this.imagekit.deleteFile(files[0].fileId);
+        console.log(`🗑️ Deleted ImageKit file: ${filePath}`);
+      } else {
+        console.warn(`⚠️ ImageKit file not found for deletion: ${filePath}`);
+      }
+    } catch (error) {
+      console.error('ImageKit delete error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Bulk upload images
    * @param {Array} files - Array of {buffer, fileName}
    * @param {string} folder - Folder path

@@ -92,3 +92,46 @@ const categoryUpload = multer({
 });
 
 module.exports = { upload, productUpload, categoryUpload };
+
+// Magic byte signatures for supported image types
+const MAGIC_BYTES = {
+  'image/jpeg': [0xFF, 0xD8, 0xFF],
+  'image/png':  [0x89, 0x50, 0x4E, 0x47],
+  'image/webp': [0x52, 0x49, 0x46, 0x46],
+};
+
+/**
+ * Post-upload middleware that validates magic bytes of uploaded file(s).
+ * Must be used AFTER multer middleware.
+ */
+const validateMagicBytes = (req, res, next) => {
+  const files = req.files
+    ? (Array.isArray(req.files) ? req.files : Object.values(req.files).flat())
+    : (req.file ? [req.file] : []);
+
+  if (files.length === 0) return next();
+
+  try {
+    for (const file of files) {
+      const expected = MAGIC_BYTES[file.mimetype];
+      if (!expected) continue; // No magic bytes defined for this type, skip
+
+      const fd = fs.openSync(file.path, 'r');
+      const header = Buffer.alloc(8);
+      fs.readSync(fd, header, 0, 8, 0);
+      fs.closeSync(fd);
+
+      const matches = expected.every((byte, i) => header[i] === byte);
+      if (!matches) {
+        // Remove the invalid file
+        fs.unlink(file.path, () => {});
+        return next(new Error('Invalid file type. File content does not match declared type.'));
+      }
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { upload, productUpload, categoryUpload, validateMagicBytes };

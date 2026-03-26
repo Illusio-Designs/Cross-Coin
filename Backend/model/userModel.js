@@ -36,7 +36,11 @@ const User = sequelize.define('User', {
         allowNull: true
     },
     refreshToken: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(500),
+        allowNull: true
+    },
+    refreshTokenExpiry: {
+        type: DataTypes.DATE,
         allowNull: true
     }
 }, {

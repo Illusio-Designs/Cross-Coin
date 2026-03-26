@@ -4,13 +4,16 @@ const { sequelize } = require('../config/db.js');
 // Get all attributes with their values
 module.exports.getAllAttributes = async (req, res) => {
     try {
+        const where = { status: 'active' };
+        if (req.brand && req.brand.id) where.brand_id = req.brand.id;
+
         const attributes = await Attribute.findAll({
             include: [{
                 model: AttributeValue,
                 where: { status: 'active' },
                 required: false
             }],
-            where: { status: 'active' },
+            where,
             order: [
                 ['displayOrder', 'ASC'],
                 [AttributeValue, 'displayOrder', 'ASC']
@@ -34,10 +37,11 @@ module.exports.createAttribute = async (req, res) => {
         // Create attribute
         const attribute = await Attribute.create({
             name,
-            type: 'select', // Default to select type since we're using values
+            type: 'select',
             isRequired: false,
             displayOrder: 0,
-            status: 'active'
+            status: 'active',
+            brand_id: req.brand ? req.brand.id : null
         }, { transaction });
 
         // Create attribute values if provided
@@ -271,14 +275,16 @@ module.exports.removeAttributeValues = async (req, res) => {
 module.exports.getAttributeById = async (req, res) => {
     try {
         const { id } = req.params;
+        const where = { id, status: 'active' };
+        if (req.brand && req.brand.id) where.brand_id = req.brand.id;
 
-        const attribute = await Attribute.findByPk(id, {
+        const attribute = await Attribute.findOne({
             include: [{
                 model: AttributeValue,
                 where: { status: 'active' },
                 required: false
             }],
-            where: { status: 'active' }
+            where
         });
 
         if (!attribute) {

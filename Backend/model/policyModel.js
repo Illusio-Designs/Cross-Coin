@@ -15,9 +15,16 @@ const Policy = sequelize.define('Policy', {
     type: DataTypes.TEXT,
     allowNull: false,
   },
+  brand_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: { model: 'brands', key: 'id' },
+    onDelete: 'CASCADE'
+  }
 }, {
   timestamps: true,
   tableName: 'policies',
+  indexes: [{ fields: ['brand_id'] }]
 });
 
 // Add sync method to ensure compatibility with setupDatabase.js

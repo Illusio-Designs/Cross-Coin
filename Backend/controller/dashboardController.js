@@ -7,10 +7,10 @@ const { getDashboardDataWithCache } = require("../services/dashboardService.js")
  */
 const getDashboardStats = async (req, res) => {
   try {
-    const userId = req.user?.id || 'admin'; // Get user ID from authenticated request
-    
-    // Get dashboard data with caching
-    const dashboardData = await getDashboardDataWithCache(userId);
+    const userId = req.user?.id || 'admin';
+    const brandId = req.brandId || null;
+
+    const dashboardData = await getDashboardDataWithCache(userId, brandId);
     
     res.status(200).json(dashboardData);
   } catch (error) {

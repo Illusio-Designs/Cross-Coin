@@ -47,18 +47,21 @@ const setupDatabase = async () => {
 
       // Handle different export structures
       let model;
-      if (modelModule[modelName]) {
-        // Named export: module.exports = { ModelName }
-        model = modelModule[modelName];
-      } else if (modelModule.default) {
-        // ES6 default export
-        model = modelModule.default;
-      } else if (typeof modelModule === "function") {
-        // Function export
-        model = modelModule;
-      } else if (modelModule && typeof modelModule.sync === "function") {
+      if (modelModule && typeof modelModule.sync === "function") {
         // Direct Sequelize model export: module.exports = Model
         model = modelModule;
+      } else if (modelModule[modelName] && typeof modelModule[modelName].sync === "function") {
+        // Named export matching filename: module.exports = { ModelName }
+        model = modelModule[modelName];
+      } else if (modelModule.default && typeof modelModule.default.sync === "function") {
+        // ES6 default export
+        model = modelModule.default;
+      } else {
+        // Last resort: find any exported value with a sync method
+        const found = Object.values(modelModule).find(
+          (v) => v && typeof v.sync === "function"
+        );
+        if (found) model = found;
       }
 
       if (model && typeof model.sync === "function") {

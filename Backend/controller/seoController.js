@@ -43,47 +43,25 @@ const generateSlugAndCanonical = (pageName) => {
 // Initialize default SEO data for pages
 module.exports.initializeSEOData = async () => {
     try {
+        const Brand = require('../model/brandModel.js');
+        const brands = await Brand.findAll({ where: { status: 'active' } });
+
         const defaultPages = [
-            { 
-                page_name: "home", 
-                meta_title: "Home - Nishree", 
-                meta_description: "Welcome to Nishree, your one-stop shop for all your needs."
-            },
-            { 
-                page_name: "about-us", 
-                meta_title: "About Us - Nishree", 
-                meta_description: "Learn more about Nishree and our mission."
-            },
-            { 
-                page_name: "contact", 
-                meta_title: "Contact Us - Nishree", 
-                meta_description: "Get in touch with our team for any queries or support."
-            },
-            { 
-                page_name: "products", 
-                meta_title: "Products - Nishree", 
-                meta_description: "Explore our wide range of high-quality products."
-            },
-            { 
-                page_name: "faq", 
-                meta_title: "Frequently Asked Questions - Nishree", 
-                meta_description: "Find answers to commonly asked questions about our products and services."
-            }
+            { page_name: "home",     meta_title: "Home",     meta_description: "Welcome to our store." },
+            { page_name: "about-us", meta_title: "About Us", meta_description: "Learn more about us." },
+            { page_name: "contact",  meta_title: "Contact",  meta_description: "Get in touch with us." },
+            { page_name: "products", meta_title: "Products", meta_description: "Explore our products." },
+            { page_name: "faq",      meta_title: "FAQ",      meta_description: "Frequently asked questions." }
         ];
 
-        for (const page of defaultPages) {
-            const { slug, canonicalUrl } = generateSlugAndCanonical(page.page_name);
-            const [existingPage, created] = await SeoMetadata.findOrCreate({
-                where: { page_name: page.page_name },
-                defaults: {
-                    ...page,
-                    slug,
-                    canonical_url: canonicalUrl
-                }
-            });
-
-            if (created) {
-                console.log(`Created SEO data for ${page.page_name}`);
+        for (const brand of brands) {
+            for (const page of defaultPages) {
+                const { slug, canonicalUrl } = generateSlugAndCanonical(page.page_name);
+                const [, created] = await SeoMetadata.findOrCreate({
+                    where: { page_name: page.page_name, brand_id: brand.id },
+                    defaults: { ...page, slug, canonical_url: canonicalUrl, brand_id: brand.id }
+                });
+                if (created) console.log(`Created SEO data for ${page.page_name} (brand: ${brand.name})`);
             }
         }
 
@@ -176,7 +154,7 @@ module.exports.getSEOData = async (req, res) => {
         }
         
         // First try to find existing SEO data using exact page_name
-        let seoData = await SeoMetadata.findOne({ where: { page_name } });
+        let seoData = await SeoMetadata.findOne({ where: { page_name, brand_id: req.brandId || null } });
         console.log('[SEO] SeoMetadata lookup result:', seoData);
         if (!seoData) {
             // Try to find a product by name or slug, including ProductSEO
@@ -234,7 +212,11 @@ module.exports.getSEOData = async (req, res) => {
 // Get all SEO data
 module.exports.getAllSEOData = async (req, res) => {
     try {
+        const where = {};
+        if (req.brandId) where.brand_id = req.brandId;
+
         const allSEOData = await SeoMetadata.findAll({
+            where,
             order: [['page_name', 'ASC']]
         });
 
@@ -264,7 +246,7 @@ module.exports.updateSEOData = async (req, res) => {
 
         // First try to find existing SEO data using exact page_name
         let seoData = await SeoMetadata.findOne({
-            where: { page_name }
+            where: { page_name, brand_id: req.brandId || null }
         });
 
         // If no existing data, create new
@@ -278,7 +260,8 @@ module.exports.updateSEOData = async (req, res) => {
                 meta_description: meta_description || `Learn about ${page_name} and our commitment to providing the best shopping experience.`,
                 meta_keywords: meta_keywords || `${page_name}, shopping, online store`,
                 slug,
-                canonical_url: canonicalUrl
+                canonical_url: canonicalUrl,
+                brand_id: req.brandId || null
             });
         } else {
             // Generate new slug and canonical URL for existing entry
@@ -321,7 +304,7 @@ module.exports.updateSEOData = async (req, res) => {
 
         // Fetch the updated data
         const updatedData = await SeoMetadata.findOne({
-            where: { page_name }
+            where: { page_name, brand_id: req.brandId || null }
         });
 
         res.json({ 
@@ -362,7 +345,7 @@ module.exports.createSEOData = async (req, res) => {
 
         // Check if page already exists
         const existingPage = await SeoMetadata.findOne({
-            where: { page_name: page_name.toLowerCase().trim() }
+            where: { page_name: page_name.toLowerCase().trim(), brand_id: req.brandId || null }
         });
 
         if (existingPage) {
@@ -384,7 +367,8 @@ module.exports.createSEOData = async (req, res) => {
             meta_keywords: meta_keywords || `${page_name}, shopping, online store`,
             slug,
             canonical_url: canonicalUrl,
-            meta_image: req.file ? `/uploads/seo/${req.file.filename}` : null
+            meta_image: req.file ? `/uploads/seo/${req.file.filename}` : null,
+            brand_id: req.brandId || null
         });
 
         console.log('Created SEO data:', seoData.toJSON());
@@ -417,7 +401,8 @@ module.exports.deleteSEOData = async (req, res) => {
 
         const deleted = await SeoMetadata.destroy({
             where: {
-                page_name: pageName.toLowerCase().trim()
+                page_name: pageName.toLowerCase().trim(),
+                brand_id: req.brandId || null
             }
         });
         

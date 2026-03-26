@@ -17,11 +17,21 @@ const CouponUsage = sequelize.define('CouponUsage', {
     },
     userId: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
             model: 'users',
             key: 'id'
         }
+    },
+    guestUserId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'guest_user_id',
+        references: {
+            model: 'guest_users',
+            key: 'id'
+        },
+        onDelete: 'SET NULL'
     },
     orderId: {
         type: DataTypes.INTEGER,
@@ -51,6 +61,9 @@ const CouponUsage = sequelize.define('CouponUsage', {
         },
         {
             fields: ['orderId']
+        },
+        {
+            fields: ['guest_user_id']
         }
     ]
 });

@@ -370,6 +370,7 @@ const getPublicCategories = async (req, res) => {
             brand: req.brand
         });
 
+        res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
         res.status(200).json(categories);
     } catch (error) {
         console.error('Get public categories error:', error);

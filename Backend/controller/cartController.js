@@ -1,5 +1,6 @@
 const { Cart, CartItem, Product, ProductImage, ProductVariation } = require('../model/associations.js');
 const { sequelize } = require('../config/db.js');
+const imagekitService = require('../services/imagekitService.js');
 
 // Get user's cart
 module.exports.getCart = async (req, res) => {
@@ -74,16 +75,15 @@ module.exports.getCart = async (req, res) => {
 
             // Determine attributes, image, and price
             const attributes = variation && variation.attributes ? JSON.parse(variation.attributes) : {};
-            const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
             
             let image = '/placeholder.png'; // Fallback image
             let images = []; // Array to store all images for this variation
             
             // First, try to get variation-specific images
             if (variation && variation.VariationImages && variation.VariationImages.length > 0) {
-                image = `${baseUrl}${variation.VariationImages[0].image_url}`;
+                image = imagekitService.getOptimizedUrl(variation.VariationImages[0].image_url, 'medium');
                 images = variation.VariationImages.map(img => ({
-                    image_url: `${baseUrl}${img.image_url}`,
+                    image_url: imagekitService.getOptimizedUrl(img.image_url, 'medium'),
                     alt_text: img.alt_text
                 }));
             } else if (product && product.ProductImages && product.ProductImages.length > 0) {
@@ -97,24 +97,24 @@ module.exports.getCart = async (req, res) => {
                     );
                     
                     if (matchingImages.length > 0) {
-                        image = `${baseUrl}${matchingImages[0].image_url}`;
+                        image = imagekitService.getOptimizedUrl(matchingImages[0].image_url, 'medium');
                         images = matchingImages.map(img => ({
-                            image_url: `${baseUrl}${img.image_url}`,
+                            image_url: imagekitService.getOptimizedUrl(img.image_url, 'medium'),
                             alt_text: img.alt_text
                         }));
                     } else {
                         // Fallback to first product image
-                        image = `${baseUrl}${product.ProductImages[0].image_url}`;
+                        image = imagekitService.getOptimizedUrl(product.ProductImages[0].image_url, 'medium');
                         images = product.ProductImages.map(img => ({
-                            image_url: `${baseUrl}${img.image_url}`,
+                            image_url: imagekitService.getOptimizedUrl(img.image_url, 'medium'),
                             alt_text: img.alt_text
                         }));
                     }
                 } else {
                     // No color info, use first product image
-                    image = `${baseUrl}${product.ProductImages[0].image_url}`;
+                    image = imagekitService.getOptimizedUrl(product.ProductImages[0].image_url, 'medium');
                     images = product.ProductImages.map(img => ({
-                        image_url: `${baseUrl}${img.image_url}`,
+                        image_url: imagekitService.getOptimizedUrl(img.image_url, 'medium'),
                         alt_text: img.alt_text
                     }));
                 }

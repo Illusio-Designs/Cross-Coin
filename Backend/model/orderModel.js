@@ -180,6 +180,16 @@ const Order = sequelize.define('Order', {
         type: DataTypes.DATE,
         allowNull: true,
         comment: 'Last time this order was synced with FShip'
+    },
+    fship_sync_status: {
+        type: DataTypes.ENUM('pending', 'syncing', 'synced', 'failed'),
+        defaultValue: 'pending',
+        comment: 'FShip sync state machine status'
+    },
+    fship_sync_attempts: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        comment: 'Number of FShip sync attempts made'
     }
 }, {
     tableName: 'orders',
@@ -190,7 +200,8 @@ const Order = sequelize.define('Order', {
     indexes: [
         { name: 'idx_user_id', fields: ['user_id'] },
         { name: 'idx_status', fields: ['status'] },
-        { name: 'idx_payment_status', fields: ['payment_status'] }
+        { name: 'idx_payment_status', fields: ['payment_status'] },
+        { name: 'idx_fship_sync_status', fields: ['fship_sync_status'] }
     ]
 });
 

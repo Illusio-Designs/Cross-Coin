@@ -4,7 +4,9 @@ const { sequelize } = require('../config/db.js');
 // Get all shipping fees
 module.exports.getAllShippingFees = async (req, res) => {
     try {
-        const shippingFees = await ShippingFee.findAll();
+        const where = {};
+        if (req.brand && req.brand.id) where.brand_id = req.brand.id;
+        const shippingFees = await ShippingFee.findAll({ where });
         res.json({ shippingFees });
     } catch (error) {
         console.error('Error getting shipping fees:', error);
@@ -26,7 +28,7 @@ module.exports.createShippingFee = async (req, res) => {
         
         // Check if this order type already exists to prevent duplicates for ENUM type
         const existingFee = await ShippingFee.findOne({
-            where: { orderType },
+            where: { orderType, brand_id: req.brand ? req.brand.id : null },
             transaction
         });
         
@@ -38,7 +40,8 @@ module.exports.createShippingFee = async (req, res) => {
         // Create new fee
         const shippingFee = await ShippingFee.create({
             orderType,
-            fee
+            fee,
+            brand_id: req.brand ? req.brand.id : null
         }, { transaction });
         
         await transaction.commit();
@@ -104,10 +107,10 @@ module.exports.updateShippingFee = async (req, res) => {
 module.exports.getShippingFeeByType = async (req, res) => {
     try {
         const orderType = req.params.type;
+        const where = { orderType };
+        if (req.brand && req.brand.id) where.brand_id = req.brand.id;
         
-        const shippingFee = await ShippingFee.findOne({
-            where: { orderType }
-        });
+        const shippingFee = await ShippingFee.findOne({ where });
         
         if (!shippingFee) {
             return res.status(404).json({ message: 'Shipping fee not found for this order type' });
