@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button, Modal, Table, Pagination } from "../../components/ui";
 import Loader from "../../components/common/Loader";
+import { ConfirmModal } from '../../components/common/AlertModal';
 import { policyService } from "../../services";
 import dynamic from "next/dynamic";
 
@@ -18,6 +19,7 @@ const EMPTY_FORM = { id: null, title: "", content: "" };
 
 export default function Policies() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmState, setConfirmState] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [search, setSearch] = useState("");
@@ -62,14 +64,16 @@ export default function Policies() {
     finally { setLoading(false); }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this policy?")) return;
-    try {
-      setLoading(true);
-      await policyService.deletePolicy(id);
-      await fetchPolicies();
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
+  const handleDelete = (id) => {
+    setConfirmState({ message: "Delete this policy?", onConfirm: async () => {
+      setConfirmState(null);
+      try {
+        setLoading(true);
+        await policyService.deletePolicy(id);
+        await fetchPolicies();
+      } catch (err) { setError(err.message); }
+      finally { setLoading(false); }
+    }});
   };
 
   const handleModalClose = () => { setIsModalOpen(false); setFormData(EMPTY_FORM); };
@@ -111,6 +115,7 @@ export default function Policies() {
 
   return (
     <>
+      <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
         <div className="sl-page-header">
           <div className="sl-header-left">

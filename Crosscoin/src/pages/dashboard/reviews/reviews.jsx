@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
+import { ConfirmModal } from '../../../components/common/AlertModal';
 import BrandTags from "../../../components/Dashboard/BrandTags";
 import { reviewService } from "../../../services";
 
@@ -22,6 +23,7 @@ const StarRating = ({ rating }) => (
 
 export default function Reviews() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmState, setConfirmState] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [search, setSearch] = useState("");
@@ -91,14 +93,16 @@ export default function Reviews() {
     finally { setLoading(false); }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this review?")) return;
-    try {
-      setLoading(true);
-      await reviewService.deleteReview(id);
-      await Promise.all([fetchReviews(), fetchStatusCounts()]);
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
+  const handleDelete = (id) => {
+    setConfirmState({ message: "Delete this review?", onConfirm: async () => {
+      setConfirmState(null);
+      try {
+        setLoading(true);
+        await reviewService.deleteReview(id);
+        await Promise.all([fetchReviews(), fetchStatusCounts()]);
+      } catch (err) { setError(err.message); }
+      finally { setLoading(false); }
+    }});
   };
 
   const handleModalClose = () => { setIsModalOpen(false); setFormData({ status: "pending", is_featured: false, admin_notes: "" }); };
@@ -147,6 +151,7 @@ export default function Reviews() {
 
   return (
     <>
+      <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
         <div className="sl-page-header">
           <div className="sl-header-left">

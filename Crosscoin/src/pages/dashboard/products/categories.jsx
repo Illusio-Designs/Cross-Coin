@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
+import { ConfirmModal } from '../../../components/common/AlertModal';
 import BrandTags from "../../../components/Dashboard/BrandTags";
 import BrandAssignment from "../../../components/Dashboard/BrandAssignment";
 import { categoryService } from "../../../services";
@@ -18,6 +19,7 @@ const EMPTY_FORM = { name: "", description: "", status: "active", metaKeywords: 
 
 export default function Categories() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmState, setConfirmState] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [search, setSearch] = useState("");
@@ -62,14 +64,16 @@ export default function Categories() {
     finally { setLoading(false); }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this category?")) return;
-    try {
-      setLoading(true);
-      await categoryService.deleteCategory(id);
-      await fetchCategories();
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+  const handleDelete = (id) => {
+    setConfirmState({ message: "Delete this category?", onConfirm: async () => {
+      setConfirmState(null);
+      try {
+        setLoading(true);
+        await categoryService.deleteCategory(id);
+        await fetchCategories();
+      } catch (err) { console.error(err); }
+      finally { setLoading(false); }
+    }});
   };
 
   const handleModalClose = () => { setIsModalOpen(false); setFormData(EMPTY_FORM); };
@@ -118,6 +122,7 @@ export default function Categories() {
 
   return (
     <>
+      <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
         <div className="sl-page-header">
           <div className="sl-header-left">

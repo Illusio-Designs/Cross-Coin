@@ -3,6 +3,7 @@ import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService } from '../../services';
 import { Modal, Button } from '../../components/ui';
 import Loader from '../../components/common/Loader';
+import { ConfirmModal } from '../../components/common/AlertModal';
 
 const IC = {
   add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
@@ -18,6 +19,7 @@ const EMPTY_FORM = { name: '', slug: '', display_name: '', domain: '', logo_url:
 
 export default function BrandManager() {
   const [brands, setBrands] = useState([]);
+  const [confirmState, setConfirmState] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingBrand, setEditingBrand] = useState(null);
@@ -57,10 +59,12 @@ export default function BrandManager() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this brand? This cannot be undone.')) return;
-    try { await brandService.deleteBrand(id); showSuccess('brandDeleted'); fetchBrands(); }
-    catch { showError('deleteFailed'); }
+  const handleDelete = (id) => {
+    setConfirmState({ message: 'Delete this brand? This cannot be undone.', onConfirm: async () => {
+      setConfirmState(null);
+      try { await brandService.deleteBrand(id); showSuccess('brandDeleted'); fetchBrands(); }
+      catch { showError('deleteFailed'); }
+    }});
   };
 
   const handleToggleStatus = async (id) => {
@@ -77,6 +81,8 @@ export default function BrandManager() {
   );
 
   return (
+    <>
+    <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
     <div className="dashboard-page">
       {/* Page Header */}
       <div className="sl-page-header">
@@ -213,5 +219,6 @@ export default function BrandManager() {
         </div>
       )}
     </div>
+    </>
   );
 }

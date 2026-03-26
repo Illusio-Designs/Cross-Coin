@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
+import { ConfirmModal } from '../../../components/common/AlertModal';
 import { shippingFeeService } from "../../../services";
 
 const IC = {
@@ -15,6 +16,7 @@ const EMPTY_FORM = { orderType: "cod", fee: "" };
 
 export default function ShippingFees() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmState, setConfirmState] = useState(null);
   const [selectedFee, setSelectedFee] = useState(null);
   const [shippingFees, setShippingFees] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -55,14 +57,16 @@ export default function ShippingFees() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this shipping fee?")) return;
-    try {
-      setLoading(true);
-      await shippingFeeService.deleteShippingFee(id);
-      await fetchShippingFees();
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
+  const handleDelete = (id) => {
+    setConfirmState({ message: "Delete this shipping fee?", onConfirm: async () => {
+      setConfirmState(null);
+      try {
+        setLoading(true);
+        await shippingFeeService.deleteShippingFee(id);
+        await fetchShippingFees();
+      } catch (err) { setError(err.message); }
+      finally { setLoading(false); }
+    }});
   };
 
   const handleModalClose = () => { setIsModalOpen(false); setSelectedFee(null); setFormData(EMPTY_FORM); };
@@ -103,6 +107,7 @@ export default function ShippingFees() {
 
   return (
     <>
+      <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
         <div className="sl-page-header">
           <div className="sl-header-left">

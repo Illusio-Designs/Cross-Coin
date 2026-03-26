@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
+import { ConfirmModal } from '../../../components/common/AlertModal';
 import { seoService, userService } from "../../../services";
 import { debounce } from 'lodash';
 import { useRouter } from 'next/router';
@@ -8,6 +9,7 @@ import { useRouter } from 'next/router';
 export default function SEO() {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmState, setConfirmState] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [filterValue, setFilterValue] = useState("");
@@ -166,18 +168,19 @@ export default function SEO() {
     }
   };
 
-  const handleDelete = async (pageName) => {
-    if (window.confirm("Are you sure you want to delete this SEO entry?")) {
+  const handleDelete = (pageName) => {
+    setConfirmState({ message: "Are you sure you want to delete this SEO entry?", onConfirm: async () => {
+      setConfirmState(null);
       try {
         setLoading(true);
         await seoService.deleteSEOData(pageName);
         await fetchSEOData();
       } catch (err) {
         setError(err.message || "Failed to delete SEO data");
-        } finally {
+      } finally {
         setLoading(false);
       }
-    }
+    }});
   };
 
   const handleAddNew = () => {
@@ -266,6 +269,7 @@ export default function SEO() {
 
   return (
     <>
+      <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
         <div className="sl-page-header">
           <div className="sl-header-left">

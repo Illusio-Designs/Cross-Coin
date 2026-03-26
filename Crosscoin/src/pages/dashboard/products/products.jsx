@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
+import { ConfirmModal } from '../../../components/common/AlertModal';
 import { productService } from "../../../services";
 import { categoryService } from "../../../services";
 import { attributeService } from "../../../services";
@@ -15,6 +16,7 @@ const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
 const ProductsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmState, setConfirmState] = useState(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -397,8 +399,9 @@ const ProductsPage = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (typeof window !== 'undefined' && window.confirm("Are you sure you want to delete this product?")) {
+  const handleDelete = (id) => {
+    setConfirmState({ message: "Are you sure you want to delete this product?", onConfirm: async () => {
+      setConfirmState(null);
       try {
         setLoading(true);
         await productService.deleteProduct(id);
@@ -408,7 +411,7 @@ const ProductsPage = () => {
       } finally {
         setLoading(false);
       }
-    }
+    }});
   };
 
   const handleAddNew = () => {
@@ -1317,6 +1320,7 @@ const ProductsPage = () => {
 
   return (
     <>
+    <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
     <div className="dashboard-page">
       <div className="sl-page-header">
         <div className="sl-header-left">

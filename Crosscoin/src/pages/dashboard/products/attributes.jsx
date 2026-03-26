@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
+import { ConfirmModal } from '../../../components/common/AlertModal';
 import { attributeService } from "../../../services";
 
 const IC = {
@@ -15,6 +16,7 @@ const EMPTY_FORM = { name: "", type: "", isRequired: false, values: "" };
 
 export default function Attributes() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmState, setConfirmState] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [attributes, setAttributes] = useState([]);
@@ -64,14 +66,16 @@ export default function Attributes() {
     finally { setLoading(false); }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this attribute?")) return;
-    try {
-      setLoading(true);
-      await attributeService.deleteAttribute(id);
-      await fetchAttributes();
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
+  const handleDelete = (id) => {
+    setConfirmState({ message: "Delete this attribute?", onConfirm: async () => {
+      setConfirmState(null);
+      try {
+        setLoading(true);
+        await attributeService.deleteAttribute(id);
+        await fetchAttributes();
+      } catch (err) { setError(err.message); }
+      finally { setLoading(false); }
+    }});
   };
 
   const handleModalClose = () => { setIsModalOpen(false); setFormData(EMPTY_FORM); setError(null); };
@@ -120,6 +124,7 @@ export default function Attributes() {
 
   return (
     <>
+      <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
         <div className="sl-page-header">
           <div className="sl-header-left">
