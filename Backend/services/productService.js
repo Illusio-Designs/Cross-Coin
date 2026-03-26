@@ -5,8 +5,7 @@ const {
   ProductImage,
   ProductSEO,
   Category,
-  Brand,
-  Review
+  Brand
 } = require('../model/associations.js');
 const { Op, fn, col, literal } = require('sequelize');
 const { logger } = require('../config/logging');
@@ -163,12 +162,13 @@ class ProductService {
       brand = null
     } = filters;
 
-    const cacheKey = this.CACHE_KEYS.PRODUCTS_LIST(category, search, sort, page, limit);
+    const cacheKey = `products:list:${brand?.id || 'all'}:${category || 'all'}:${search || 'none'}:${sort || 'default'}:${page}:${limit}`;
 
-    // Cache disabled - reviews must be fresh
-    if (false && useCache) {
+    // Check cache first
+    if (useCache) {
       const cached = await cacheManager.get(cacheKey);
       if (cached) {
+        logger.debug(`Product list cache HIT: ${cacheKey}`);
         return cached;
       }
     }
@@ -221,13 +221,6 @@ class ProductService {
         { model: ProductImage, as: 'ProductImages' },
         { model: ProductSEO, as: 'ProductSEO' },
         {
-          model: Review,
-          as: 'reviews',
-          attributes: ['rating'],
-          where: { status: 'approved' },
-          required: false
-        },
-        {
           model: Brand,
           as: 'Brands',
           through: { 
@@ -260,6 +253,7 @@ class ProductService {
 
       // Cache disabled - reviews must be fresh
       // await cacheManager.set(cacheKey, result, this.CACHE_TTL.PRODUCTS_LIST);
+      await cacheManager.set(cacheKey, result, 600);
 
       return result;
     } catch (error) {

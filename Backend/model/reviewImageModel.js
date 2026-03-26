@@ -18,7 +18,7 @@ const ReviewImage = sequelize.define('ReviewImage', {
         field: 'reviewId' // Explicitly set field name
     },
     fileName: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.STRING(500),
         allowNull: false,
         field: 'fileName' // Explicitly set field name
     },

@@ -17,6 +17,7 @@ const {
     changePassword,
     deleteUser,
     getAllUsers,
+    refreshToken,
     upload
 } = require('../controller/userController.js');
 const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
@@ -28,6 +29,7 @@ router.post('/register', register);
 router.post('/login', login);
 router.post('/admin/login', adminLogin);
 router.post('/logout', logout);
+router.post('/refresh-token', refreshToken);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.get('/verify-email/:token', verifyEmail);

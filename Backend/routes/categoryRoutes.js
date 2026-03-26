@@ -10,11 +10,12 @@ const {
 } = require('../controller/categoryController.js');
 const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
 const { categoryUpload } = require('../middleware/uploadMiddleware.js');
+const { etagMiddleware } = require('../middleware/etagMiddleware.js');
 
 const router = express.Router();
 
 // Public routes
-router.get('/public', getPublicCategories);
+router.get('/public', etagMiddleware, getPublicCategories);
 router.get('/public/name/:name', getPublicCategoryByName);
 
 // Admin routes

@@ -27,6 +27,12 @@ const Attribute = sequelize.define('Attribute', {
     status: {
         type: DataTypes.ENUM('active', 'inactive'),
         defaultValue: 'active'
+    },
+    brand_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: { model: 'brands', key: 'id' },
+        onDelete: 'CASCADE'
     }
 }, {
     tableName: 'attributes',
@@ -36,8 +42,9 @@ const Attribute = sequelize.define('Attribute', {
     indexes: [
         {
             unique: true,
-            fields: ['name']
-        }
+            fields: ['name', 'brand_id']
+        },
+        { fields: ['brand_id'] }
     ]
 });
 

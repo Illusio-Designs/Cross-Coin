@@ -16,6 +16,7 @@ const { Op, Transaction } = require("sequelize");
 const { sequelize } = require("../config/db.js");
 const XLSX = require('xlsx');
 const axios = require('axios');
+const { logger } = require("../config/logging.js");
 // Import FShip service for shipping integration
 const fshipService = require("../services/fshipService.js");
 const { setImmediate } = require("timers");
@@ -48,7 +49,7 @@ const calculateShippingFee = async (paymentType) => {
     const shippingFee = await ShippingFee.findOne({ where: { orderType } });
     return shippingFee ? Number(shippingFee.fee) : orderType === "cod" ? 5.99 : 0.0;
   } catch (error) {
-    console.error("Error calculating shipping fee:", error);
+    logger.error("Error calculating shipping fee:", error);
     return orderType === "cod" ? 5.99 : 0.0; // Default values if calculation fails
   }
 };
@@ -77,9 +78,9 @@ const calculateShipmentDimensions = (orderItems) => {
   const finalWidth = FIXED_WIDTH;
   const finalHeight = FIXED_HEIGHT * totalQuantity; // Stack items vertically
 
-  console.log(`📦 Calculated FIXED dimensions for ${totalQuantity} items:`);
-  console.log(`   Weight: ${finalWeight}kg (${finalWeight * 1000}g)`);
-  console.log(`   Dimensions: ${finalLength}cm × ${finalWidth}cm × ${finalHeight}cm`);
+  logger.debug(`📦 Calculated FIXED dimensions for ${totalQuantity} items:`);
+  logger.debug(`   Weight: ${finalWeight}kg (${finalWeight * 1000}g)`);
+  logger.debug(`   Dimensions: ${finalLength}cm × ${finalWidth}cm × ${finalHeight}cm`);
 
   return {
     weight: finalWeight,
@@ -91,7 +92,7 @@ const calculateShipmentDimensions = (orderItems) => {
 
 // Create a new order
 module.exports.createOrder = async (req, res) => {
-  console.log("createOrder: Starting order creation...");
+  logger.debug("createOrder: Starting order creation...");
   let transaction = null;
 
   try {
@@ -99,7 +100,7 @@ module.exports.createOrder = async (req, res) => {
     transaction = await sequelize.transaction({
       isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED
     });
-    console.log("✅ Transaction started for order creation");
+    logger.debug("✅ Transaction started for order creation");
 
     const {
       shipping_address_id,
@@ -110,7 +111,7 @@ module.exports.createOrder = async (req, res) => {
       discount_amount,
     } = req.body;
     const userId = req.user.id;
-    console.log("createOrder: Request data:", {
+    logger.debug("createOrder: Request data:", {
       shipping_address_id,
       items,
       payment_type,
@@ -118,17 +119,17 @@ module.exports.createOrder = async (req, res) => {
       coupon_id,
       discount_amount,
     });
-    console.log("createOrder: User ID:", userId);
+    logger.debug("createOrder: User ID:", userId);
 
     if (!shipping_address_id || !items || !payment_type) {
       await transaction.rollback();
-      console.log("❌ Validation failed: Missing required fields");
+      logger.debug("❌ Validation failed: Missing required fields");
       return res.status(400).json({
         message: "Shipping address, items, and payment type are required",
       });
     }
 
-    console.log("createOrder: Validating shipping address...");
+    logger.debug("createOrder: Validating shipping address...");
     // Validate shipping address belongs to user
     const shippingAddress = await ShippingAddress.findOne({
       where: { id: shipping_address_id, user_id: userId },
@@ -137,16 +138,16 @@ module.exports.createOrder = async (req, res) => {
 
     if (!shippingAddress) {
       await transaction.rollback();
-      console.log("❌ Validation failed: Shipping address not found");
+      logger.debug("❌ Validation failed: Shipping address not found");
       return res.status(404).json({ message: "Shipping address not found" });
     }
-    console.log("createOrder: Shipping address validated");
+    logger.debug("createOrder: Shipping address validated");
 
     // Calculate total amount and validate items
     let totalAmount = 0;
     const validatedItems = [];
 
-    console.log(
+    logger.debug(
       "createOrder: Starting item validation for",
       items.length,
       "items"
@@ -159,13 +160,13 @@ module.exports.createOrder = async (req, res) => {
       .map((item) => item.variation_id);
 
     // Fetch all products and variations in parallel (2 queries instead of N+1)
-    console.log("createOrder: Batch fetching", productIds.length, "products and", variationIds.length, "variations...");
+    logger.debug("createOrder: Batch fetching", productIds.length, "products and", variationIds.length, "variations...");
     const [productMap, variationMap, variationsByProductMap] = await Promise.all([
       batchFetchProducts(productIds),
       batchFetchVariations(variationIds),
       batchFetchVariationsByProductIds(productIds),
     ]);
-    console.log("✅ createOrder: Batch fetch complete - reduced N+1 queries");
+    logger.debug("✅ createOrder: Batch fetch complete - reduced N+1 queries");
 
     // Validate items using pre-fetched data
     for (const item of items) {
@@ -187,7 +188,7 @@ module.exports.createOrder = async (req, res) => {
           .status(404)
           .json({ message: `Product with ID ${product_id} not found` });
       }
-      console.log("createOrder: Product validated:", product.name);
+      logger.debug("createOrder: Product validated:", product.name);
 
       let price;
       let stockAvailable;
@@ -204,7 +205,7 @@ module.exports.createOrder = async (req, res) => {
         }
         price = variation.price;
         stockAvailable = variation.stock;
-        console.log(
+        logger.debug(
           "createOrder: Variation validated, price:",
           price,
           "stock:",
@@ -236,7 +237,7 @@ module.exports.createOrder = async (req, res) => {
       }
 
       // STOCK CHECK
-      console.log(
+      logger.debug(
         "createOrder: Stock check - available:",
         stockAvailable,
         "requested:",
@@ -248,7 +249,7 @@ module.exports.createOrder = async (req, res) => {
           message: `Product is out of stock or insufficient quantity for product ${product_id}`,
         });
       }
-      console.log("createOrder: Stock check passed");
+      logger.debug("createOrder: Stock check passed");
 
       // Apply discount if exists (simplified version)
       let discount = 0;
@@ -272,25 +273,25 @@ module.exports.createOrder = async (req, res) => {
     const appliedDiscount = discount_amount ? Number(discount_amount) : 0;
     const shippingFee = Number(await calculateShippingFee(payment_type));
     const finalAmount = subTotal - appliedDiscount + shippingFee;
-    console.log("subTotal:", subTotal);
-    console.log("appliedDiscount:", appliedDiscount);
-    console.log("shippingFee:", shippingFee);
-    console.log("finalAmount:", finalAmount);
+    logger.debug("subTotal:", subTotal);
+    logger.debug("appliedDiscount:", appliedDiscount);
+    logger.debug("shippingFee:", shippingFee);
+    logger.debug("finalAmount:", finalAmount);
     
     // Handle UTM tracking
     const UTMTracking = require("../model/utmModel.js");
     let utmTrackingId = null;
     
-    console.log('🍪 createOrder - Cookies received:', req.cookies);
-    console.log('📦 createOrder - Request body utm_session_id:', req.body.utm_session_id);
+    logger.debug('🍪 createOrder - Cookies received:', req.cookies);
+    logger.debug('📦 createOrder - Request body utm_session_id:', req.body.utm_session_id);
     
     // Try to get session_id from request body first, then cookies
     const sessionId = req.body.utm_session_id || req.cookies?.session_id;
-    console.log('🔑 createOrder - Session ID (body or cookie):', sessionId);
+    logger.debug('🔑 createOrder - Session ID (body or cookie):', sessionId);
     
     if (sessionId) {
       try {
-        console.log('🔍 createOrder - Looking for UTM record with session_id:', sessionId);
+        logger.debug('🔍 createOrder - Looking for UTM record with session_id:', sessionId);
         
         const utmRecord = await UTMTracking.findOne({
           where: { session_id: sessionId },
@@ -299,17 +300,17 @@ module.exports.createOrder = async (req, res) => {
         
         if (utmRecord) {
           utmTrackingId = utmRecord.id;
-          console.log("✅ createOrder: Associated with UTM tracking ID:", utmTrackingId);
-          console.log("📊 createOrder: UTM Campaign:", utmRecord.utm_campaign);
+          logger.debug("✅ createOrder: Associated with UTM tracking ID:", utmTrackingId);
+          logger.debug("📊 createOrder: UTM Campaign:", utmRecord.utm_campaign);
         } else {
-          console.log("❌ createOrder: No UTM record found for session_id:", sessionId);
+          logger.debug("❌ createOrder: No UTM record found for session_id:", sessionId);
         }
       } catch (utmError) {
-        console.error("❌ createOrder: Error fetching UTM data:", utmError);
+        logger.error("❌ createOrder: Error fetching UTM data:", utmError);
         // Continue with order creation even if UTM fails
       }
     } else {
-      console.log("⚠️ createOrder: No session_id provided in body or cookies");
+      logger.debug("⚠️ createOrder: No session_id provided in body or cookies");
     }
     
     // Create order
@@ -331,10 +332,10 @@ module.exports.createOrder = async (req, res) => {
       },
       { transaction }
     );
-    console.log("createOrder: Order created with ID:", order.id);
+    logger.debug("createOrder: Order created with ID:", order.id);
 
     // BATCH INSERT: Create all order items in a single bulk operation
-    console.log("createOrder: Batch inserting", validatedItems.length, "order items...");
+    logger.debug("createOrder: Batch inserting", validatedItems.length, "order items...");
     const orderItemsData = validatedItems.map(item => ({
       order_id: order.id,
       product_id: item.product_id,
@@ -346,10 +347,10 @@ module.exports.createOrder = async (req, res) => {
     }));
 
     await batchInsert(OrderItem, orderItemsData, { transaction });
-    console.log("✅ createOrder: Batch insert complete - reduced N individual inserts to 1 query");
+    logger.debug("✅ createOrder: Batch insert complete - reduced N individual inserts to 1 query");
 
     // DECREMENT STOCK for all items
-    console.log("createOrder: Decrementing stock for", validatedItems.length, "items...");
+    logger.debug("createOrder: Decrementing stock for", validatedItems.length, "items...");
     for (const item of validatedItems) {
       if (item._variation) {
         item._variation.stock -= item.quantity;
@@ -357,10 +358,10 @@ module.exports.createOrder = async (req, res) => {
       } else {
         // This shouldn't happen in this system as all products should have variations
         // Log error but don't fail the order
-        console.error(`Warning: Order item ${item.product_id} has no variation for stock management`);
+        logger.error(`Warning: Order item ${item.product_id} has no variation for stock management`);
       }
     }
-    console.log("✅ createOrder: Stock decremented for all items");
+    logger.debug("✅ createOrder: Stock decremented for all items");
 
     // Create initial status history
     await OrderStatusHistory.create(
@@ -387,24 +388,41 @@ module.exports.createOrder = async (req, res) => {
       );
     }
 
-    console.log("createOrder: Committing transaction...");
+    logger.debug("createOrder: Committing transaction...");
+
+    // Record coupon usage atomically
+    if (coupon_id && appliedDiscount > 0) {
+      const { Coupon, CouponUsage } = require('../model/associations.js');
+      const coupon = await Coupon.findByPk(coupon_id, { transaction });
+      if (coupon) {
+        await CouponUsage.create({
+          couponId: coupon_id,
+          userId: userId,
+          guestUserId: null,
+          orderId: order.id,
+          discountAmount: appliedDiscount
+        }, { transaction });
+        await coupon.increment('usageCount', { by: 1, transaction });
+      }
+    }
+
     await transaction.commit();
-    console.log("createOrder: Transaction committed successfully");
+    logger.debug("createOrder: Transaction committed successfully");
 
     // Enqueue badge recalculation for async processing (non-blocking)
-    console.log("createOrder: Enqueueing badge recalculation for products in order...");
+    logger.debug("createOrder: Enqueueing badge recalculation for products in order...");
     try {
       const BadgeService = require("../services/badgeService");
       // Enqueue job - returns immediately without blocking
       await BadgeService.enqueueBadgeRecalculation(userId);
-      console.log(`✅ Badge recalculation job enqueued for user ${userId}`);
+      logger.debug(`✅ Badge recalculation job enqueued for user ${userId}`);
     } catch (badgeError) {
-      console.error("⚠️ Warning: Error enqueueing badge recalculation:", badgeError.message);
+      logger.error("⚠️ Warning: Error enqueueing badge recalculation:", badgeError.message);
       // Don't fail the order creation if badge queue fails
     }
 
     // Fetch the created order with its items
-    console.log("createOrder: Fetching created order with details...");
+    logger.debug("createOrder: Fetching created order with details...");
     const createdOrder = await Order.findByPk(order.id, {
       include: [
         { 
@@ -423,7 +441,7 @@ module.exports.createOrder = async (req, res) => {
         },
       ],
     });
-    console.log("createOrder: Order fetched successfully");
+    logger.debug("createOrder: Order fetched successfully");
 
     // FShip integration - moved to background to avoid blocking order creation
     try {
@@ -433,7 +451,7 @@ module.exports.createOrder = async (req, res) => {
 
       // Validate address and phone
       if (!address || !address.address || !address.phone) {
-        console.error(
+        logger.error(
           `Order ${createdOrder.order_number}: Missing address or phone, cannot sync to FShip.`
         );
       } else {
@@ -448,7 +466,7 @@ module.exports.createOrder = async (req, res) => {
           productDiscount: 0
         }));
 
-        console.log('📦 Order items for FShip:', JSON.stringify(orderItems, null, 2));
+        logger.debug('📦 Order items for FShip:', JSON.stringify(orderItems, null, 2));
 
         const fshipOrderData = {
           customer_Name: String(user.username),
@@ -477,10 +495,13 @@ module.exports.createOrder = async (req, res) => {
           products: orderItems
         };
 
+        // Mark order as syncing before background FShip call
+        await createdOrder.update({ fship_sync_status: 'syncing', fship_sync_attempts: 1 });
+
         // Run FShip integration in background with error handling
         setImmediate(async () => {
           try {
-            console.log(`🔄 Creating FShip order for ${createdOrder.order_number}`);
+            logger.debug(`🔄 Creating FShip order for ${createdOrder.order_number}`);
             
             // Use createOrUpdateForwardOrder to prevent duplicates
             const fshipResponse = await fshipService.createOrUpdateForwardOrder(fshipOrderData);
@@ -492,34 +513,36 @@ module.exports.createOrder = async (req, res) => {
                 fship_route_code: fshipResponse.routeCode,
                 fship_label_url: fshipResponse.labelUrl,
                 tracking_number: fshipResponse.waybill,
-                status: "processing"
+                status: "processing",
+                fship_sync_status: 'synced'
               });
               
-              console.log("✅ FShip Order Created:", fshipResponse.orderId);
+              logger.debug("✅ FShip Order Created:", fshipResponse.orderId);
               
               // Register pickup automatically
               try {
                 await fshipService.registerPickup([fshipResponse.waybill]);
-                console.log("📦 FShip Pickup Registered:", fshipResponse.waybill);
+                logger.debug("📦 FShip Pickup Registered:", fshipResponse.waybill);
               } catch (pickupError) {
-                console.error("❌ Failed to register FShip pickup:", pickupError.message);
+                logger.error("❌ Failed to register FShip pickup:", pickupError.message);
               }
             }
           } catch (err) {
-            console.error("❌ Failed to create FShip order:", err.message);
+            logger.error("❌ Failed to create FShip order:", err.message);
+            await createdOrder.update({ fship_sync_status: 'failed' }).catch(() => {});
           }
         });
       }
     } catch (err) {
-      console.error("❌ Failed to prepare FShip order:", err.message);
+      logger.error("❌ Failed to prepare FShip order:", err.message);
     }
 
-    console.log("createOrder: Sending success response...");
+    logger.debug("createOrder: Sending success response...");
     res.status(201).json({
       message: "Order created successfully",
       order: createdOrder,
     });
-    console.log("createOrder: Response sent successfully");
+    logger.debug("createOrder: Response sent successfully");
 
     // Fire Facebook Purchase event (non-blocking)
     setImmediate(async () => {
@@ -537,7 +560,7 @@ module.exports.createOrder = async (req, res) => {
         await sendFacebookEvent("Purchase", eventPayload);
         await sendGAEvent("purchase", eventPayload);
       } catch (fbErr) {
-        console.error("createOrder: analytics event error:", fbErr.message);
+        logger.error("createOrder: analytics event error:", fbErr.message);
       }
     });
 
@@ -545,27 +568,27 @@ module.exports.createOrder = async (req, res) => {
     try {
       await invalidateDashboardCache(userId);
     } catch (cacheError) {
-      console.warn("⚠️ Warning: Error invalidating dashboard cache:", cacheError.message);
+      logger.warn("⚠️ Warning: Error invalidating dashboard cache:", cacheError.message);
       // Don't fail the order creation if cache invalidation fails
     }
 
     // Note: Full sync removed - cron job handles periodic syncing
     // Individual order is already synced above via createOrUpdateForwardOrder
   } catch (error) {
-    console.error("createOrder: Error caught:", error.message);
-    console.error("createOrder: Error stack:", error.stack);
+    logger.error("createOrder: Error caught:", error.message);
+    logger.error("createOrder: Error stack:", error.stack);
     
     // Ensure transaction is rolled back on any error
     if (transaction && !transaction.finished) {
       try {
         await transaction.rollback();
-        console.log("✅ Transaction rolled back due to error");
+        logger.debug("✅ Transaction rolled back due to error");
       } catch (rollbackError) {
-        console.error("❌ Error rolling back transaction:", rollbackError.message);
+        logger.error("❌ Error rolling back transaction:", rollbackError.message);
       }
     }
     
-    console.error("Error creating order:", error);
+    logger.error("Error creating order:", error);
     res
       .status(500)
       .json({ message: "Failed to create order", error: error.message });
@@ -574,7 +597,7 @@ module.exports.createOrder = async (req, res) => {
 
 // Create guest checkout order
 module.exports.createGuestOrder = async (req, res) => {
-  console.log("createGuestOrder: Starting guest order creation...");
+  logger.debug("createGuestOrder: Starting guest order creation...");
   const transaction = await sequelize.transaction();
 
   try {
@@ -591,7 +614,7 @@ module.exports.createGuestOrder = async (req, res) => {
       user_agent,
     } = req.body;
 
-    console.log("createGuestOrder: Request data:", {
+    logger.debug("createGuestOrder: Request data:", {
       guest_info,
       shipping_address,
       items,
@@ -651,7 +674,7 @@ module.exports.createGuestOrder = async (req, res) => {
       });
     }
 
-    console.log("createGuestOrder: Creating guest user...");
+    logger.debug("createGuestOrder: Creating guest user...");
     // Create or find guest user
     let guestUser = await GuestUser.findOne({
       where: { email: email.toLowerCase() },
@@ -687,13 +710,13 @@ module.exports.createGuestOrder = async (req, res) => {
       );
     }
 
-    console.log("createGuestOrder: Guest user created/found:", guestUser.id);
+    logger.debug("createGuestOrder: Guest user created/found:", guestUser.id);
 
     // Calculate total amount and validate items
     let totalAmount = 0;
     const validatedItems = [];
 
-    console.log(
+    logger.debug(
       "createGuestOrder: Starting item validation for",
       items.length,
       "items"
@@ -762,14 +785,14 @@ module.exports.createGuestOrder = async (req, res) => {
       });
     }
 
-    console.log(
+    logger.debug(
       "createGuestOrder: Items validated. Total amount:",
       totalAmount
     );
 
     // Calculate shipping fee
     const shippingFee = await calculateShippingFee(payment_type);
-    console.log("createGuestOrder: Shipping fee calculated:", shippingFee);
+    logger.debug("createGuestOrder: Shipping fee calculated:", shippingFee);
 
     // Apply discount if provided
     let finalDiscountAmount = 0;
@@ -778,26 +801,26 @@ module.exports.createGuestOrder = async (req, res) => {
     }
 
     const finalAmount = Number(totalAmount) + Number(shippingFee) - Number(finalDiscountAmount);
-    console.log("createGuestOrder: Final amount calculated:", finalAmount);
+    logger.debug("createGuestOrder: Final amount calculated:", finalAmount);
 
     // Generate order number
     const orderNumber = generateOrderNumber();
-    console.log("createGuestOrder: Order number generated:", orderNumber);
+    logger.debug("createGuestOrder: Order number generated:", orderNumber);
 
     // Handle UTM tracking
     const UTMTracking = require("../model/utmModel.js");
     let utmTrackingId = null;
     
-    console.log('🍪 createGuestOrder - Cookies received:', req.cookies);
-    console.log('📦 createGuestOrder - Request body utm_session_id:', req.body.utm_session_id);
+    logger.debug('🍪 createGuestOrder - Cookies received:', req.cookies);
+    logger.debug('📦 createGuestOrder - Request body utm_session_id:', req.body.utm_session_id);
     
     // Try to get session_id from request body first, then cookies
     const sessionId = req.body.utm_session_id || req.cookies?.session_id;
-    console.log('🔑 createGuestOrder - Session ID (body or cookie):', sessionId);
+    logger.debug('🔑 createGuestOrder - Session ID (body or cookie):', sessionId);
     
     if (sessionId) {
       try {
-        console.log('🔍 createGuestOrder - Looking for UTM record with session_id:', sessionId);
+        logger.debug('🔍 createGuestOrder - Looking for UTM record with session_id:', sessionId);
         
         const utmRecord = await UTMTracking.findOne({
           where: { session_id: sessionId },
@@ -806,17 +829,17 @@ module.exports.createGuestOrder = async (req, res) => {
         
         if (utmRecord) {
           utmTrackingId = utmRecord.id;
-          console.log("✅ createGuestOrder: Associated with UTM tracking ID:", utmTrackingId);
-          console.log("📊 createGuestOrder: UTM Campaign:", utmRecord.utm_campaign);
+          logger.debug("✅ createGuestOrder: Associated with UTM tracking ID:", utmTrackingId);
+          logger.debug("📊 createGuestOrder: UTM Campaign:", utmRecord.utm_campaign);
         } else {
-          console.log("❌ createGuestOrder: No UTM record found for session_id:", sessionId);
+          logger.debug("❌ createGuestOrder: No UTM record found for session_id:", sessionId);
         }
       } catch (utmError) {
-        console.error("❌ createGuestOrder: Error fetching UTM data:", utmError);
+        logger.error("❌ createGuestOrder: Error fetching UTM data:", utmError);
         // Continue with order creation even if UTM fails
       }
     } else {
-      console.log("⚠️ createGuestOrder: No session_id provided in body or cookies");
+      logger.debug("⚠️ createGuestOrder: No session_id provided in body or cookies");
     }
 
     // Create order
@@ -839,7 +862,7 @@ module.exports.createGuestOrder = async (req, res) => {
       { transaction }
     );
 
-    console.log("createGuestOrder: Order created with ID:", order.id);
+    logger.debug("createGuestOrder: Order created with ID:", order.id);
 
     // Create order items
     for (const item of validatedItems) {
@@ -858,7 +881,7 @@ module.exports.createGuestOrder = async (req, res) => {
       );
     }
 
-    console.log("createGuestOrder: Order items created");
+    logger.debug("createGuestOrder: Order items created");
 
     // Create shipping address for guest
     const guestShippingAddress = await ShippingAddress.create(
@@ -883,7 +906,7 @@ module.exports.createGuestOrder = async (req, res) => {
       { transaction }
     );
 
-    console.log(
+    logger.debug(
       "createGuestOrder: Shipping address created and linked to order"
     );
 
@@ -899,7 +922,7 @@ module.exports.createGuestOrder = async (req, res) => {
       { transaction }
     );
 
-    console.log("createGuestOrder: Order status history created");
+    logger.debug("createGuestOrder: Order status history created");
 
     // Create payment record
     await Payment.create(
@@ -915,11 +938,27 @@ module.exports.createGuestOrder = async (req, res) => {
       { transaction }
     );
 
-    console.log("createGuestOrder: Payment record created");
+    logger.debug("createGuestOrder: Payment record created");
+
+    // Record coupon usage atomically
+    if (coupon_id && finalDiscountAmount > 0) {
+      const { Coupon, CouponUsage } = require('../model/associations.js');
+      const coupon = await Coupon.findByPk(coupon_id, { transaction });
+      if (coupon) {
+        await CouponUsage.create({
+          couponId: coupon_id,
+          userId: null,
+          guestUserId: guestUser.id,
+          orderId: order.id,
+          discountAmount: finalDiscountAmount
+        }, { transaction });
+        await coupon.increment('usageCount', { by: 1, transaction });
+      }
+    }
 
     // Commit transaction
     await transaction.commit();
-    console.log("createGuestOrder: Transaction committed successfully");
+    logger.debug("createGuestOrder: Transaction committed successfully");
 
     // Send Facebook Purchase event for guest checkout (non-blocking)
     setImmediate(async () => {
@@ -940,14 +979,15 @@ module.exports.createGuestOrder = async (req, res) => {
         await sendFacebookEvent("Purchase", eventPayload);
         await sendGAEvent("purchase", eventPayload);
       } catch (fbError) {
-        console.error("createGuestOrder: analytics event error:", fbError.message);
+        logger.error("createGuestOrder: analytics event error:", fbError.message);
       }
     });
 
     // Create FShip order automatically for guest orders
+    await order.update({ fship_sync_status: 'syncing', fship_sync_attempts: 1 });
     setImmediate(async () => {
       try {
-        console.log(
+        logger.debug(
           "createGuestOrder: Creating FShip order for guest order:",
           order.order_number
         );
@@ -988,7 +1028,7 @@ module.exports.createGuestOrder = async (req, res) => {
           }))
         };
 
-        console.log(
+        logger.debug(
           "createGuestOrder: FShip payload prepared:",
           fshipOrderData
         );
@@ -1003,10 +1043,11 @@ module.exports.createGuestOrder = async (req, res) => {
             fship_route_code: fshipResponse.routeCode,
             fship_label_url: fshipResponse.labelUrl,
             tracking_number: fshipResponse.waybill,
-            status: "processing"
+            status: "processing",
+            fship_sync_status: 'synced'
           });
 
-          console.log(
+          logger.debug(
             "createGuestOrder: ✅ FShip Order Created for guest:",
             {
               order_number: order.order_number,
@@ -1018,25 +1059,26 @@ module.exports.createGuestOrder = async (req, res) => {
           // Register pickup
           try {
             await fshipService.registerPickup([fshipResponse.waybill]);
-            console.log(
+            logger.debug(
               "createGuestOrder: ✅ FShip Pickup Requested:",
               fshipResponse.waybill
             );
           } catch (pickupError) {
-            console.error(
+            logger.error(
               "createGuestOrder: ❌ Failed to request FShip pickup:",
               pickupError.message
             );
           }
         }
       } catch (fshipError) {
-        console.error(
+        logger.error(
           "createGuestOrder: ❌ Failed to create FShip order for guest:",
           {
             order_number: order.order_number,
             error: fshipError.message,
           }
         );
+        await order.update({ fship_sync_status: 'failed' }).catch(() => {});
       }
     });
 
@@ -1082,10 +1124,10 @@ module.exports.createGuestOrder = async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error("createGuestOrder: Error caught:", error.message);
-    console.error("createGuestOrder: Error stack:", error.stack);
+    logger.error("createGuestOrder: Error caught:", error.message);
+    logger.error("createGuestOrder: Error stack:", error.stack);
     await transaction.rollback();
-    console.error("Error creating guest order:", error);
+    logger.error("Error creating guest order:", error);
     res.status(500).json({
       success: false,
       message: "Failed to create guest order",
@@ -1239,7 +1281,7 @@ module.exports.getGuestOrder = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error fetching guest order:", error);
+    logger.error("Error fetching guest order:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch guest order",
@@ -1396,7 +1438,7 @@ module.exports.trackOrderByAWB = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error tracking order by AWB:", error);
+    logger.error("Error tracking order by AWB:", error);
     res.status(500).json({
       success: false,
       message: "Failed to track order",
@@ -1411,7 +1453,7 @@ module.exports.handleFShipWebhook = async (req, res) => {
   
   try {
     const webhookData = req.body;
-    console.log("🔔 FShip Webhook received:", JSON.stringify(webhookData, null, 2));
+    logger.debug("🔔 FShip Webhook received:", JSON.stringify(webhookData, null, 2));
 
     const {
       waybill,
@@ -1461,12 +1503,12 @@ module.exports.handleFShipWebhook = async (req, res) => {
     });
 
     if (!order) {
-      console.log("❌ Order not found for FShip waybill/order ID:", waybill || order_id);
+      logger.debug("❌ Order not found for FShip waybill/order ID:", waybill || order_id);
       await transaction.rollback();
       return res.status(404).json({ message: "Order not found" });
     }
 
-    console.log(`📦 Processing webhook for Order: ${order.order_number}, Current Status: ${order.status}`);
+    logger.debug(`📦 Processing webhook for Order: ${order.order_number}, Current Status: ${order.status}`);
 
     // Update order with FShip tracking information
     const updateData = {};
@@ -1489,12 +1531,12 @@ module.exports.handleFShipWebhook = async (req, res) => {
 
     // ===== AUTOMATIC RTO HANDLING =====
     if (orderStatus === 'rto' && order.status !== 'rto') {
-      console.log(`🔄 Automatic RTO processing initiated for Order: ${order.order_number}`);
+      logger.debug(`🔄 Automatic RTO processing initiated for Order: ${order.order_number}`);
       
       // Update payment status for COD orders
       if (order.payment_type === 'cod') {
         updateData.payment_status = 'failed';
-        console.log(`💳 COD payment marked as failed for RTO order`);
+        logger.debug(`💳 COD payment marked as failed for RTO order`);
       }
       
       // Handle refund for prepaid orders
@@ -1509,7 +1551,7 @@ module.exports.handleFShipWebhook = async (req, res) => {
             notes: `Auto-refund initiated for RTO. Reason: ${rto_reason || 'Return to Origin'}`
           }, { transaction });
           
-          console.log(`💰 Prepaid order marked for refund: ₹${order.final_amount}`);
+          logger.debug(`💰 Prepaid order marked for refund: ₹${order.final_amount}`);
           webhookNotes += ` - Refund initiated for prepaid order`;
         }
       }
@@ -1530,7 +1572,7 @@ module.exports.handleFShipWebhook = async (req, res) => {
             stock: stockAfter
           }, { transaction });
 
-          console.log(`📦 Stock restored: ${item.ProductVariation.sku} - ${stockBefore} → ${stockAfter} (+${item.quantity})`);
+          logger.debug(`📦 Stock restored: ${item.ProductVariation.sku} - ${stockBefore} → ${stockAfter} (+${item.quantity})`);
           
           stockRestorations.push({
             product_id: item.product_id,
@@ -1541,7 +1583,7 @@ module.exports.handleFShipWebhook = async (req, res) => {
             stock_after: stockAfter
           });
         } else {
-          console.warn(`⚠️ RTO stock restoration skipped for product ${item.Product.name} - no variation found`);
+          logger.warn(`⚠️ RTO stock restoration skipped for product ${item.Product.name} - no variation found`);
         }
 
         // Log stock restoration in database
@@ -1566,7 +1608,7 @@ module.exports.handleFShipWebhook = async (req, res) => {
         });
       }
       
-      console.log(`✅ RTO processing completed: ${stockRestorations.length} items, ${stockRestorations.reduce((sum, r) => sum + r.quantity_restored, 0)} units restored`);
+      logger.debug(`✅ RTO processing completed: ${stockRestorations.length} items, ${stockRestorations.reduce((sum, r) => sum + r.quantity_restored, 0)} units restored`);
       
       webhookNotes += ` - Stock auto-restored: ${stockRestorations.length} items`;
     }
@@ -1583,7 +1625,7 @@ module.exports.handleFShipWebhook = async (req, res) => {
         created_by: "fship_webhook",
       }, { transaction });
 
-      console.log(`✅ Order ${order.order_number} updated:`, {
+      logger.debug(`✅ Order ${order.order_number} updated:`, {
         status: orderStatus,
         tracking_number: waybill,
         courier: courier_name,
@@ -1602,7 +1644,7 @@ module.exports.handleFShipWebhook = async (req, res) => {
     
   } catch (error) {
     await transaction.rollback();
-    console.error("❌ Error processing FShip webhook:", error);
+    logger.error("❌ Error processing FShip webhook:", error);
     res.status(500).json({ 
       success: false,
       message: "Failed to process webhook", 
@@ -1621,14 +1663,16 @@ module.exports.getAllOrders = async (req, res) => {
       start_date,
       end_date,
       page = 1,
-      limit = 10,
-      search, // Add search parameter
+      limit = 20,
+      search,
       sort = "createdAt",
       order = "DESC"
     } = req.query;
 
-    console.log("=== GET ALL ORDERS DEBUG ===");
-    console.log("Query parameters:", {
+    const cappedLimit = Math.min(parseInt(limit) || 20, 100);
+
+    logger.debug("=== GET ALL ORDERS DEBUG ===");
+    logger.debug("Query parameters:", {
       status,
       payment_status,
       payment_type,
@@ -1880,7 +1924,7 @@ module.exports.getAllOrders = async (req, res) => {
 
     const totalPages = Math.ceil(orders.count / limit);
 
-    console.log("Query results:", {
+    logger.debug("Query results:", {
       totalCount: orders.count,
       returnedRows: orders.rows.length,
       limit: parseInt(limit),
@@ -1913,7 +1957,7 @@ module.exports.getAllOrders = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Error getting orders:", error);
+    logger.error("Error getting orders:", error);
     res
       .status(500)
       .json({ message: "Failed to get orders", error: error.message });
@@ -1984,7 +2028,7 @@ module.exports.getUserOrders = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error getting user orders:", error);
+    logger.error("Error getting user orders:", error);
     res
       .status(500)
       .json({ message: "Failed to get orders", error: error.message });
@@ -2058,7 +2102,7 @@ module.exports.getOrder = async (req, res) => {
 
     res.json(order);
   } catch (error) {
-    console.error("Error fetching order:", error);
+    logger.error("Error fetching order:", error);
     res
       .status(500)
       .json({ message: "Failed to fetch order", error: error.message });
@@ -2076,7 +2120,7 @@ module.exports.updateOrderStatus = async (req, res) => {
       endpoint: "POST /api/orders/fship/sync"
     });
   } catch (error) {
-    console.error("Error in updateOrderStatus:", error);
+    logger.error("Error in updateOrderStatus:", error);
     res.status(500).json({ 
       success: false,
       message: "Failed to process status update request", 
@@ -2126,6 +2170,21 @@ module.exports.cancelOrder = async (req, res) => {
     order.status = "cancelled";
     await order.save({ transaction });
 
+    // Restore stock for all order items
+    const orderItems = await OrderItem.findAll({ where: { order_id: order.id }, transaction });
+    for (const item of orderItems) {
+      if (item.variation_id) {
+        await ProductVariation.increment('stock', { by: item.quantity, where: { id: item.variation_id }, transaction });
+      }
+    }
+
+    // Decrement coupon usage if order had a coupon
+    if (order.coupon_id) {
+      const { Coupon, CouponUsage } = require('../model/associations.js');
+      await Coupon.decrement('usageCount', { by: 1, where: { id: order.coupon_id }, transaction });
+      await CouponUsage.destroy({ where: { orderId: order.id }, transaction });
+    }
+
     // Update payment status based on payment type
     if (order.payment_type === 'cod') {
       order.payment_status = 'cancelled';
@@ -2167,9 +2226,9 @@ module.exports.cancelOrder = async (req, res) => {
           order.fship_waybill,
           reason || "Order cancelled by customer"
         );
-        console.log("FShip order cancelled successfully:", cancelRes);
+        logger.debug("FShip order cancelled successfully:", cancelRes);
       } catch (err) {
-        console.error(
+        logger.error(
           "Failed to cancel FShip order:",
           err.message
         );
@@ -2183,7 +2242,7 @@ module.exports.cancelOrder = async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    console.error("Error cancelling order:", error);
+    logger.error("Error cancelling order:", error);
     res
       .status(500)
       .json({ message: "Failed to cancel order", error: error.message });
@@ -2235,7 +2294,7 @@ module.exports.getOrderStats = async (req, res) => {
       totalCancelledOrders,
     });
   } catch (error) {
-    console.error("Error fetching order statistics:", error);
+    logger.error("Error fetching order statistics:", error);
     res.status(500).json({
       message: "Failed to fetch order statistics",
       error: error.message,
@@ -2256,7 +2315,7 @@ module.exports.getFShipTrackingForOrder = async (req, res) => {
     const tracking = await fshipService.getShipmentStatus(order.fship_waybill);
     res.json({ tracking });
   } catch (error) {
-    console.error("Error fetching FShip tracking:", error);
+    logger.error("Error fetching FShip tracking:", error);
     res.status(500).json({
       message: "Failed to fetch FShip tracking",
       error: error.message,
@@ -2277,7 +2336,7 @@ module.exports.getFShipLabelForOrder = async (req, res) => {
     const labelData = await fshipService.getShippingLabel(order.fship_waybill);
     res.json({ label_data: labelData });
   } catch (error) {
-    console.error("Error fetching FShip label:", error);
+    logger.error("Error fetching FShip label:", error);
     res.status(500).json({
       message: "Failed to fetch FShip label",
       error: error.message,
@@ -2291,7 +2350,7 @@ module.exports.getFShipCouriers = async (req, res) => {
     const couriers = await fshipService.getCourierList();
     res.json({ couriers });
   } catch (error) {
-    console.error("Error fetching FShip couriers:", error);
+    logger.error("Error fetching FShip couriers:", error);
     res.status(500).json({
       message: "Failed to fetch FShip couriers",
       error: error.message,
@@ -2330,7 +2389,7 @@ module.exports.cancelOrdersInFShip = async (req, res) => {
         );
         
         results.successful++;
-        console.log(`Order ${orderId} cancelled in FShip successfully`);
+        logger.debug(`Order ${orderId} cancelled in FShip successfully`);
         
         // Update local order status
         await order.update({ status: "cancelled" });
@@ -2354,7 +2413,7 @@ module.exports.cancelOrdersInFShip = async (req, res) => {
       results,
     });
   } catch (error) {
-    console.error("Error cancelling orders in FShip:", error);
+    logger.error("Error cancelling orders in FShip:", error);
     res.status(500).json({
       message: "Failed to cancel orders in FShip",
       error: error.message,
@@ -2367,19 +2426,19 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    console.log("=== ENHANCED FSHIP SYNC PROCESS START ===");
-    console.log("Flow: Check sync status → Create if needed → Update status → Handle COD payments");
+    logger.debug("=== ENHANCED FSHIP SYNC PROCESS START ===");
+    logger.debug("Flow: Check sync status → Create if needed → Update status → Handle COD payments");
 
     // STEP 1: Test FShip connection
     try {
-      console.log("=== STEP 1: TESTING FSHIP CONNECTION ===");
+      logger.debug("=== STEP 1: TESTING FSHIP CONNECTION ===");
       const testResult = await fshipService.testConnection();
       if (!testResult.success) {
         throw new Error(testResult.message);
       }
-      console.log("✅ FSHIP CONNECTION SUCCESS");
+      logger.debug("✅ FSHIP CONNECTION SUCCESS");
     } catch (authError) {
-      console.error("❌ FSHIP CONNECTION FAILED");
+      logger.error("❌ FSHIP CONNECTION FAILED");
       await transaction.rollback();
       return res.status(400).json({
         success: false,
@@ -2390,21 +2449,19 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
     }
 
     // STEP 2: Get orders for sync (exclude cancelled and delivered)
-    console.log("=== STEP 2: FETCHING ORDERS FOR SYNC ===");
+    logger.debug("=== STEP 2: FETCHING ORDERS FOR SYNC ===");
     
     // Get limit from request (default 50 for cron, can be overridden by admin)
     const limit = parseInt(req.query?.limit) || 50;
-    console.log(`📊 Sync limit set to: ${limit} orders`);
+    logger.debug(`📊 Sync limit set to: ${limit} orders`);
     
-    // Prioritize orders that haven't been synced recently or never synced
+    // Prioritize orders that haven't been synced or have failed, within attempt limit
     const ordersToSync = await Order.findAll({
       where: {
         status: { [Op.notIn]: ['cancelled', 'delivered', 'rto delivered'] }, // Skip final states
         order_number: { [Op.notLike]: '%TEST%' }, // Exclude test orders
-        [Op.or]: [
-          { fship_last_synced_at: null }, // Never synced
-          { fship_last_synced_at: { [Op.lt]: new Date(Date.now() - 30 * 60 * 1000) } } // Not synced in last 30 minutes
-        ]
+        fship_sync_status: { [Op.in]: ['pending', 'failed'] },
+        fship_sync_attempts: { [Op.lt]: 5 }
       },
       include: [
         { 
@@ -2421,13 +2478,11 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
       ],
       limit: limit, // Add limit to prevent processing too many orders at once
       order: [
-        [sequelize.literal('ISNULL(`Order`.`fship_last_synced_at`)'), 'DESC'], // NULL values first (MariaDB compatible)
-        ['fship_last_synced_at', 'ASC'], // Then oldest synced orders
-        ['created_at', 'DESC']
+        ['created_at', 'ASC']
       ]
     });
 
-    console.log(`📦 Found ${ordersToSync.length} orders to process`);
+    logger.debug(`📦 Found ${ordersToSync.length} orders to process`);
 
     const results = {
       total: ordersToSync.length,
@@ -2442,11 +2497,19 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
     // STEP 3: Process each order with enhanced sync logic
     for (const order of ordersToSync) {
       try {
-        console.log(`\n🔄 Processing order: ${order.order_number} (Status: ${order.status})`);
+        logger.debug(`\n🔄 Processing order: ${order.order_number} (Status: ${order.status})`);
         
+        // Mark as syncing and increment attempt counter before processing
+        await order.update({
+          fship_sync_status: 'syncing',
+          fship_sync_attempts: sequelize.literal('fship_sync_attempts + 1')
+        });
+
         const syncResult = await this.enhancedSyncSingleOrder(order, transaction);
         
         if (syncResult.success) {
+          await order.update({ fship_sync_status: 'synced' });
+
           if (syncResult.action === 'synced') {
             results.synced++;
           } else if (syncResult.action === 'updated') {
@@ -2464,6 +2527,7 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
             message: syncResult.message
           });
         } else {
+          await order.update({ fship_sync_status: 'failed' });
           results.errors++;
           results.errors_list.push({
             order_number: order.order_number,
@@ -2472,7 +2536,8 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
         }
         
       } catch (error) {
-        console.error(`❌ Error processing order ${order.order_number}:`, error.message);
+        logger.error(`❌ Error processing order ${order.order_number}:`, error.message);
+        await order.update({ fship_sync_status: 'failed' }).catch(() => {});
         results.errors++;
         results.errors_list.push({
           order_number: order.order_number,
@@ -2481,14 +2546,29 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
       }
     }
 
+    // Warn about orders that have exhausted all sync attempts
+    const exhaustedOrders = await Order.findAll({
+      where: {
+        fship_sync_status: 'failed',
+        fship_sync_attempts: { [Op.gte]: 5 },
+        status: { [Op.notIn]: ['cancelled', 'delivered', 'rto delivered'] }
+      },
+      attributes: ['order_number', 'fship_sync_attempts']
+    });
+    if (exhaustedOrders.length > 0) {
+      logger.warn(`⚠️ ADMIN ALERT: ${exhaustedOrders.length} order(s) have exhausted all FShip sync attempts (>= 5):`,
+        exhaustedOrders.map(o => o.order_number).join(', ')
+      );
+    }
+
     await transaction.commit();
 
-    console.log("\n=== SYNC SUMMARY ===");
-    console.log(`📦 Total: ${results.total}`);
-    console.log(`✅ Synced: ${results.synced}`);
-    console.log(`🔄 Updated: ${results.updated}`);
-    console.log(`⏭️ Skipped: ${results.skipped}`);
-    console.log(`❌ Errors: ${results.errors}`);
+    logger.debug("\n=== SYNC SUMMARY ===");
+    logger.debug(`📦 Total: ${results.total}`);
+    logger.debug(`✅ Synced: ${results.synced}`);
+    logger.debug(`🔄 Updated: ${results.updated}`);
+    logger.debug(`⏭️ Skipped: ${results.skipped}`);
+    logger.debug(`❌ Errors: ${results.errors}`);
 
     return res.json({
       success: true,
@@ -2497,7 +2577,7 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ SYNC PROCESS FAILED:", error);
+    logger.error("❌ SYNC PROCESS FAILED:", error);
     await transaction.rollback();
     return res.status(500).json({
       success: false,
@@ -2513,19 +2593,19 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null) => {
   const shouldCommit = !transaction;
 
   try {
-    console.log(`🔍 Enhanced sync for order: ${order.order_number}`);
+    logger.debug(`🔍 Enhanced sync for order: ${order.order_number}`);
 
     // STEP 1: Check if order is already synced
     const isSynced = order.fship_order_id && order.fship_waybill;
     
     if (!isSynced) {
       // STEP 2: Order not synced - Create in FShip
-      console.log(`📝 Order ${order.order_number} not synced. Creating in FShip...`);
+      logger.debug(`📝 Order ${order.order_number} not synced. Creating in FShip...`);
       
       const createResult = await this.createOrderInFShip(order, localTransaction);
       
       if (createResult.success) {
-        console.log(`✅ Order ${order.order_number} created in FShip`);
+        logger.debug(`✅ Order ${order.order_number} created in FShip`);
         
         if (shouldCommit) await localTransaction.commit();
         
@@ -2542,12 +2622,12 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null) => {
       }
     } else {
       // STEP 3: Order already synced - Update status
-      console.log(`🔄 Order ${order.order_number} already synced. Checking for updates...`);
+      logger.debug(`🔄 Order ${order.order_number} already synced. Checking for updates...`);
       
       const updateResult = await this.updateOrderStatusFromFShip(order, localTransaction);
       
       if (updateResult.success) {
-        console.log(`✅ Order ${order.order_number} status updated`);
+        logger.debug(`✅ Order ${order.order_number} status updated`);
         
         if (shouldCommit) await localTransaction.commit();
         
@@ -2565,7 +2645,7 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null) => {
     }
 
   } catch (error) {
-    console.error(`❌ Enhanced sync failed for ${order.order_number}:`, error.message);
+    logger.error(`❌ Enhanced sync failed for ${order.order_number}:`, error.message);
     if (shouldCommit) await localTransaction.rollback();
     
     return {
@@ -2578,14 +2658,14 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null) => {
 // Create order in FShip
 module.exports.createOrderInFShip = async (order, transaction) => {
   try {
-    console.log(`🚀 Creating order ${order.order_number} in FShip...`);
+    logger.debug(`🚀 Creating order ${order.order_number} in FShip...`);
 
     // Reload order to get latest data and prevent race conditions
     await order.reload({ transaction });
     
     // Double-check if order was already synced by another process
     if (order.fship_order_id && order.fship_waybill) {
-      console.log(`⚠️ Order ${order.order_number} already has FShip data. Skipping creation.`);
+      logger.debug(`⚠️ Order ${order.order_number} already has FShip data. Skipping creation.`);
       return {
         success: true,
         fship_order_id: order.fship_order_id,
@@ -2601,22 +2681,22 @@ module.exports.createOrderInFShip = async (order, transaction) => {
     // Create order using enhanced FShip service
     const result = await fshipService.createOrUpdateForwardOrder(fshipOrderData);
     
-    console.log('=== FShip Create Order Result ===');
-    console.log('Success:', result.success);
-    console.log('Order ID:', result.orderId);
-    console.log('Waybill:', result.waybill);
-    console.log('Label URL:', result.labelUrl);
-    console.log('Full Result:', JSON.stringify(result, null, 2));
+    logger.debug('=== FShip Create Order Result ===');
+    logger.debug('Success:', result.success);
+    logger.debug('Order ID:', result.orderId);
+    logger.debug('Waybill:', result.waybill);
+    logger.debug('Label URL:', result.labelUrl);
+    logger.debug('Full Result:', JSON.stringify(result, null, 2));
     
     if (result.success) {
       // Always fetch label URL separately using waybill
       let labelUrl = result.labelUrl || null;
       
       if (result.waybill) {
-        console.log(`📄 Fetching shipping label for waybill: ${result.waybill}`);
+        logger.debug(`📄 Fetching shipping label for waybill: ${result.waybill}`);
         try {
           const labelData = await fshipService.getShippingLabel(result.waybill);
-          console.log('📦 Label API Response:', JSON.stringify(labelData, null, 2));
+          logger.debug('📦 Label API Response:', JSON.stringify(labelData, null, 2));
           
           // Try multiple possible response structures
           if (labelData) {
@@ -2634,14 +2714,14 @@ module.exports.createOrderInFShip = async (order, transaction) => {
             }
             
             if (labelUrl) {
-              console.log(`✅ Label URL found: ${labelUrl}`);
+              logger.debug(`✅ Label URL found: ${labelUrl}`);
             } else {
-              console.log('⚠️ Label URL not found in response. Full response:', JSON.stringify(labelData, null, 2));
+              logger.debug('⚠️ Label URL not found in response. Full response:', JSON.stringify(labelData, null, 2));
             }
           }
         } catch (labelError) {
-          console.error('❌ Failed to fetch label URL:', labelError.message);
-          console.error('Error details:', labelError);
+          logger.error('❌ Failed to fetch label URL:', labelError.message);
+          logger.error('Error details:', labelError);
         }
       }
       
@@ -2664,7 +2744,7 @@ module.exports.createOrderInFShip = async (order, transaction) => {
         created_by: 'fship_sync_system'
       }, { transaction });
 
-      console.log(`✅ Order ${order.order_number} created in FShip with AWB: ${result.waybill}`);
+      logger.debug(`✅ Order ${order.order_number} created in FShip with AWB: ${result.waybill}`);
       
       return {
         success: true,
@@ -2677,7 +2757,7 @@ module.exports.createOrderInFShip = async (order, transaction) => {
     }
 
   } catch (error) {
-    console.error(`❌ Failed to create order ${order.order_number} in FShip:`, error.message);
+    logger.error(`❌ Failed to create order ${order.order_number} in FShip:`, error.message);
     return {
       success: false,
       error: error.message
@@ -2688,8 +2768,8 @@ module.exports.createOrderInFShip = async (order, transaction) => {
 // Update order status from FShip
 module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
   try {
-    console.log(`🔄 Updating status for order ${order.order_number} from FShip...`);
-    console.log(`📋 Current order details - Label URL: ${order.fship_label_url || 'MISSING'}, Waybill: ${order.fship_waybill || 'MISSING'}`);
+    logger.debug(`🔄 Updating status for order ${order.order_number} from FShip...`);
+    logger.debug(`📋 Current order details - Label URL: ${order.fship_label_url || 'MISSING'}, Waybill: ${order.fship_waybill || 'MISSING'}`);
 
     const waybill = order.fship_waybill || order.tracking_number;
     
@@ -2702,7 +2782,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
 
     // Fetch label URL if not already present (check for both NULL and empty string)
     if ((!order.fship_label_url || order.fship_label_url.trim() === '') && waybill) {
-      console.log(`📄 Label URL missing. Constructing label URL for waybill: ${waybill}`);
+      logger.debug(`📄 Label URL missing. Constructing label URL for waybill: ${waybill}`);
       
       // FShip label URL format: https://manifest.fship.in/files/label_html/label_{WAYBILL}_{FSHIP_ORDER_ID}_TH.pdf
       const fshipOrderId = order.fship_order_id;
@@ -2710,7 +2790,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
       if (fshipOrderId) {
         const labelUrl = `https://manifest.fship.in/files/label_html/label_${waybill}_${fshipOrderId}_TH.pdf`;
         
-        console.log(`✅ Label URL constructed: ${labelUrl}`);
+        logger.debug(`✅ Label URL constructed: ${labelUrl}`);
         
         try {
           await order.update({ 
@@ -2718,15 +2798,15 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
             notes: order.notes ? `${order.notes}\nLabel URL constructed from waybill and FShip order ID` : 'Label URL constructed from waybill and FShip order ID'
           }, { transaction });
           await order.reload({ transaction });
-          console.log(`💾 Label URL saved to database`);
+          logger.debug(`💾 Label URL saved to database`);
         } catch (updateError) {
-          console.error('❌ Failed to save label URL:', updateError.message);
+          logger.error('❌ Failed to save label URL:', updateError.message);
         }
       } else {
-        console.log('⚠️ FShip order ID not found, cannot construct label URL');
+        logger.debug('⚠️ FShip order ID not found, cannot construct label URL');
       }
     } else {
-      console.log(`✓ Label URL already exists: ${order.fship_label_url}`);
+      logger.debug(`✓ Label URL already exists: ${order.fship_label_url}`);
     }
 
     // Get tracking history from FShip
@@ -2736,7 +2816,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
       const fshipStatus = trackingResult.summary.status;
       const newStatus = fshipService.mapFShipStatusToCrossCoin(fshipStatus);
       
-      console.log(`📊 FShip status: "${fshipStatus}" → CrossCoin status: "${newStatus}"`);
+      logger.debug(`📊 FShip status: "${fshipStatus}" → CrossCoin status: "${newStatus}"`);
       
       const statusChanged = order.status !== newStatus;
       
@@ -2751,18 +2831,18 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
         if (newStatus === 'delivered' && order.payment_type === 'cod') {
           // COD orders: mark as paid when delivered
           updateData.payment_status = 'paid';
-          console.log(`💰 Order ${order.order_number} is delivered COD. Updating payment status to paid...`);
+          logger.debug(`💰 Order ${order.order_number} is delivered COD. Updating payment status to paid...`);
         } else if (newStatus === 'cancelled' || newStatus === 'rto' || newStatus === 'rto delivered') {
           // Cancelled, RTO, or RTO Delivered orders: update payment status
           if (order.payment_type === 'cod') {
             updateData.payment_status = 'cancelled';
-            console.log(`❌ Order ${order.order_number} is ${newStatus}. Updating COD payment status to cancelled...`);
+            logger.debug(`❌ Order ${order.order_number} is ${newStatus}. Updating COD payment status to cancelled...`);
           } else if (order.payment_status === 'paid') {
             updateData.payment_status = 'refund_pending';
-            console.log(`💸 Order ${order.order_number} is ${newStatus}. Updating prepaid payment status to refund_pending...`);
+            logger.debug(`💸 Order ${order.order_number} is ${newStatus}. Updating prepaid payment status to refund_pending...`);
           } else {
             updateData.payment_status = 'cancelled';
-            console.log(`❌ Order ${order.order_number} is ${newStatus}. Updating payment status to cancelled...`);
+            logger.debug(`❌ Order ${order.order_number} is ${newStatus}. Updating payment status to cancelled...`);
           }
         }
 
@@ -2807,7 +2887,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
             }, { transaction });
           }
 
-          console.log(`✅ Payment status updated to paid for COD order ${order.order_number}`);
+          logger.debug(`✅ Payment status updated to paid for COD order ${order.order_number}`);
         }
 
         // Handle payment records for cancelled/RTO orders
@@ -2821,11 +2901,11 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
               status: 'refund_pending',
               notes: `Refund pending due to order ${newStatus}`
             }, { transaction });
-            console.log(`💸 Payment marked for refund for order ${order.order_number}`);
+            logger.debug(`💸 Payment marked for refund for order ${order.order_number}`);
           }
         }
 
-        console.log(`✅ Order ${order.order_number} status updated: ${order.status} → ${newStatus}`);
+        logger.debug(`✅ Order ${order.order_number} status updated: ${order.status} → ${newStatus}`);
         
         return {
           success: true,
@@ -2834,7 +2914,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
           message: `Status updated from ${order.status} to ${newStatus}`
         };
       } else {
-        console.log(`📋 Order ${order.order_number} status unchanged: ${order.status}`);
+        logger.debug(`📋 Order ${order.order_number} status unchanged: ${order.status}`);
         
         // Update last synced timestamp even if status unchanged
         await order.update({
@@ -2843,7 +2923,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
         
         // Even if status unchanged, ensure we have label URL
         if (!order.fship_label_url && waybill) {
-          console.log(`📄 Status unchanged but label URL missing. Already fetched above.`);
+          logger.debug(`📄 Status unchanged but label URL missing. Already fetched above.`);
         }
         
         return {
@@ -2860,7 +2940,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
     }
 
   } catch (error) {
-    console.error(`❌ Failed to update status for order ${order.order_number}:`, error.message);
+    logger.error(`❌ Failed to update status for order ${order.order_number}:`, error.message);
     return {
       success: false,
       error: error.message
@@ -2928,7 +3008,7 @@ module.exports.prepareFShipOrderData = async (order) => {
     return fshipOrderData;
 
   } catch (error) {
-    console.error('Error preparing FShip order data:', error);
+    logger.error('Error preparing FShip order data:', error);
     throw error;
   }
 };
@@ -2940,7 +3020,7 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
   try {
     const { id } = req.params;
     
-    console.log(`=== ENHANCED SINGLE ORDER SYNC: ${id} ===`);
+    logger.debug(`=== ENHANCED SINGLE ORDER SYNC: ${id} ===`);
     
     // Find the order
     const order = await Order.findByPk(id, {
@@ -2967,7 +3047,7 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
       });
     }
 
-    console.log(`Found order: ${order.order_number} - Status: ${order.status}`);
+    logger.debug(`Found order: ${order.order_number} - Status: ${order.status}`);
     
     // Skip sync for cancelled orders (but allow delivered for status updates)
     if (order.status === 'cancelled') {
@@ -2992,7 +3072,7 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
       if (!testResult.success) {
         throw new Error(testResult.message);
       }
-      console.log("✅ FShip connection successful");
+      logger.debug("✅ FShip connection successful");
     } catch (authError) {
       await transaction.rollback();
       return res.status(400).json({
@@ -3034,7 +3114,7 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
     }
 
   } catch (error) {
-    console.error("❌ SINGLE ORDER SYNC FAILED:", error);
+    logger.error("❌ SINGLE ORDER SYNC FAILED:", error);
     await transaction.rollback();
     
     return res.status(500).json({
@@ -3118,9 +3198,9 @@ module.exports.adminCancelOrder = async (req, res) => {
           order.fship_waybill,
           reason || "Order cancelled by admin"
         );
-        console.log("FShip order cancelled successfully:", cancelRes);
+        logger.debug("FShip order cancelled successfully:", cancelRes);
       } catch (err) {
-        console.error(
+        logger.error(
           "Failed to cancel FShip order:",
           err.message
         );
@@ -3144,7 +3224,7 @@ module.exports.adminCancelOrder = async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    console.error("Error cancelling order (admin):", error);
+    logger.error("Error cancelling order (admin):", error);
     res.status(500).json({
       success: false,
       message: "Failed to cancel order", 
@@ -3192,7 +3272,7 @@ module.exports.updateAwbNumber = async (req, res) => {
       created_by: "admin"
     });
 
-    console.log(`✅ AWB updated for order ${order.order_number}: ${awbNumber.trim()}`);
+    logger.debug(`✅ AWB updated for order ${order.order_number}: ${awbNumber.trim()}`);
 
     res.status(200).json({
       success: true,
@@ -3208,7 +3288,7 @@ module.exports.updateAwbNumber = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Error updating AWB number:", error);
+    logger.error("Error updating AWB number:", error);
     res.status(500).json({
       success: false,
       message: "Failed to update AWB number",
@@ -3229,7 +3309,7 @@ module.exports.trackOrderByOrderNumber = async (req, res) => {
       });
     }
 
-    console.log(`Tracking order by order number: ${order_number}`);
+    logger.debug(`Tracking order by order number: ${order_number}`);
 
     // Find order by order number
     const order = await Order.findOne({
@@ -3368,7 +3448,7 @@ module.exports.trackOrderByOrderNumber = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error tracking order by order number:", error);
+    logger.error("Error tracking order by order number:", error);
     res.status(500).json({
       success: false,
       message: "Failed to track order",
@@ -3390,7 +3470,7 @@ module.exports.markOrderAsRTO = async (req, res) => {
     const { reason, notes } = req.body;
     const adminId = req.user?.id;
 
-    console.log(`=== MARKING ORDER AS RTO: ${id} ===`);
+    logger.debug(`=== MARKING ORDER AS RTO: ${id} ===`);
 
     // Find the order with all necessary includes
     const order = await Order.findByPk(id, {
@@ -3438,7 +3518,7 @@ module.exports.markOrderAsRTO = async (req, res) => {
       });
     }
 
-    console.log(`Order ${order.order_number} current status: ${order.status}`);
+    logger.debug(`Order ${order.order_number} current status: ${order.status}`);
 
     // Prepare update data
     const updateData = {
@@ -3449,7 +3529,7 @@ module.exports.markOrderAsRTO = async (req, res) => {
     // Handle payment status based on payment type
     if (order.payment_type === 'cod') {
       updateData.payment_status = 'failed';
-      console.log(`💳 COD payment marked as failed`);
+      logger.debug(`💳 COD payment marked as failed`);
     } else if (order.payment_status === 'paid') {
       // Prepaid order - initiate refund
       updateData.payment_status = 'refunded';
@@ -3462,7 +3542,7 @@ module.exports.markOrderAsRTO = async (req, res) => {
           notes: `Manual RTO refund. Reason: ${reason || 'Return to Origin'}. ${notes || ''}`
         }, { transaction });
         
-        console.log(`💰 Prepaid order marked for refund: ₹${order.final_amount}`);
+        logger.debug(`💰 Prepaid order marked for refund: ₹${order.final_amount}`);
       }
     }
 
@@ -3494,11 +3574,11 @@ module.exports.markOrderAsRTO = async (req, res) => {
           stock: stockAfter
         }, { transaction });
 
-        console.log(`📦 Restored variation stock: ${item.ProductVariation.sku} - ${stockBefore} → ${stockAfter} (+${item.quantity})`);
+        logger.debug(`📦 Restored variation stock: ${item.ProductVariation.sku} - ${stockBefore} → ${stockAfter} (+${item.quantity})`);
       } else {
         // This system manages stock only through variations
         // Products without variations should not reach this point
-        console.error(`⚠️ Warning: RTO stock restoration attempted for product ${item.Product.name} without variation`);
+        logger.error(`⚠️ Warning: RTO stock restoration attempted for product ${item.Product.name} without variation`);
         stockBefore = 0;
         stockAfter = 0;
       }
@@ -3542,16 +3622,16 @@ module.exports.markOrderAsRTO = async (req, res) => {
           order.fship_waybill,
           `RTO - ${reason || 'Return to Origin'}`
         );
-        console.log(`✅ FShip order cancelled for RTO: ${order.fship_waybill}`);
+        logger.debug(`✅ FShip order cancelled for RTO: ${order.fship_waybill}`);
       } catch (fshipError) {
-        console.error(`❌ Failed to cancel FShip order: ${fshipError.message}`);
+        logger.error(`❌ Failed to cancel FShip order: ${fshipError.message}`);
         // Don't fail the entire operation
       }
     }
 
     await transaction.commit();
 
-    console.log(`✅ Order ${order.order_number} successfully marked as RTO`);
+    logger.debug(`✅ Order ${order.order_number} successfully marked as RTO`);
 
     res.json({
       success: true,
@@ -3574,7 +3654,7 @@ module.exports.markOrderAsRTO = async (req, res) => {
 
   } catch (error) {
     await transaction.rollback();
-    console.error("❌ Error marking order as RTO:", error);
+    logger.error("❌ Error marking order as RTO:", error);
     res.status(500).json({
       success: false,
       message: "Failed to mark order as RTO",
@@ -3596,7 +3676,7 @@ module.exports.getRTOOrders = async (req, res) => {
       order = 'DESC'
     } = req.query;
 
-    console.log("=== GET RTO ORDERS ===");
+    logger.debug("=== GET RTO ORDERS ===");
 
     // Build filter
     const filter = { status: 'rto' };
@@ -3753,7 +3833,7 @@ module.exports.getRTOOrders = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error getting RTO orders:", error);
+    logger.error("Error getting RTO orders:", error);
     res.status(500).json({
       success: false,
       message: "Failed to get RTO orders",
@@ -3765,7 +3845,7 @@ module.exports.getRTOOrders = async (req, res) => {
 // Get RTO statistics and analytics
 module.exports.getRTOStats = async (req, res) => {
   try {
-    console.log("=== GET RTO STATISTICS ===");
+    logger.debug("=== GET RTO STATISTICS ===");
 
     // Basic RTO stats
     const [basicStats] = await sequelize.query(`
@@ -3867,7 +3947,7 @@ module.exports.getRTOStats = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error getting RTO statistics:", error);
+    logger.error("Error getting RTO statistics:", error);
     res.status(500).json({
       success: false,
       message: "Failed to get RTO statistics",
@@ -3889,7 +3969,7 @@ module.exports.bulkMarkOrdersAsRTO = async (req, res) => {
       });
     }
 
-    console.log(`=== BULK RTO PROCESSING: ${orderIds.length} orders ===`);
+    logger.debug(`=== BULK RTO PROCESSING: ${orderIds.length} orders ===`);
 
     const results = {
       total: orderIds.length,
@@ -4033,7 +4113,7 @@ module.exports.bulkMarkOrdersAsRTO = async (req, res) => {
             }, { transaction });
           } else {
             // This system manages stock only through variations
-            console.error(`Warning: Bulk RTO stock restoration attempted for product without variation`);
+            logger.error(`Warning: Bulk RTO stock restoration attempted for product without variation`);
             stockBefore = 0;
             stockAfter = 0;
           }
@@ -4073,7 +4153,7 @@ module.exports.bulkMarkOrdersAsRTO = async (req, res) => {
           total_quantity_restored: stockRestorations.reduce((sum, item) => sum + item.quantity_restored, 0)
         });
 
-        console.log(`✅ Order ${order.order_number} processed successfully`);
+        logger.debug(`✅ Order ${order.order_number} processed successfully`);
 
       } catch (error) {
         await transaction.rollback();
@@ -4082,11 +4162,11 @@ module.exports.bulkMarkOrdersAsRTO = async (req, res) => {
           order_id: orderId,
           error: error.message
         });
-        console.error(`❌ Failed to process order ${orderId}:`, error.message);
+        logger.error(`❌ Failed to process order ${orderId}:`, error.message);
       }
     }
 
-    console.log(`=== BULK RTO COMPLETED: ${results.successful}/${results.total} successful ===`);
+    logger.debug(`=== BULK RTO COMPLETED: ${results.successful}/${results.total} successful ===`);
 
     res.json({
       success: true,
@@ -4095,7 +4175,7 @@ module.exports.bulkMarkOrdersAsRTO = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error in bulk RTO processing:", error);
+    logger.error("Error in bulk RTO processing:", error);
     res.status(500).json({
       success: false,
       message: "Failed to process bulk RTO",
@@ -4116,7 +4196,7 @@ module.exports.getStockRestorationHistory = async (req, res) => {
       end_date
     } = req.query;
 
-    console.log("=== GET STOCK RESTORATION HISTORY ===");
+    logger.debug("=== GET STOCK RESTORATION HISTORY ===");
 
     // Build filter conditions
     const whereConditions = [];
@@ -4196,7 +4276,7 @@ module.exports.getStockRestorationHistory = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error getting stock restoration history:", error);
+    logger.error("Error getting stock restoration history:", error);
     res.status(500).json({
       success: false,
       message: "Failed to get stock restoration history",
@@ -4208,13 +4288,13 @@ module.exports.getStockRestorationHistory = async (req, res) => {
 
 // Export delivered orders to Excel
 module.exports.exportDeliveredOrders = async (req, res) => {
-  console.log('=== Export Delivered Orders Endpoint Hit ===');
+  logger.debug('=== Export Delivered Orders Endpoint Hit ===');
   
   try {
     const { startDate, endDate } = req.query;
     
-    console.log('Start Date:', startDate);
-    console.log('End Date:', endDate);
+    logger.debug('Start Date:', startDate);
+    logger.debug('End Date:', endDate);
 
     // Build query conditions for orders with delivered status
     const whereConditions = {
@@ -4235,7 +4315,7 @@ module.exports.exportDeliveredOrders = async (req, res) => {
       statusHistoryWhere.createdAt = {
         [Op.between]: [start, end]
       };
-      console.log('Delivery date range filter applied:', start, 'to', end);
+      logger.debug('Delivery date range filter applied:', start, 'to', end);
     } else if (startDate) {
       statusHistoryWhere.createdAt = {
         [Op.gte]: new Date(startDate)
@@ -4248,11 +4328,11 @@ module.exports.exportDeliveredOrders = async (req, res) => {
       };
     }
 
-    console.log('Query conditions:', JSON.stringify(whereConditions, null, 2));
-    console.log('Status history conditions:', JSON.stringify(statusHistoryWhere, null, 2));
+    logger.debug('Query conditions:', JSON.stringify(whereConditions, null, 2));
+    logger.debug('Status history conditions:', JSON.stringify(statusHistoryWhere, null, 2));
 
     // Fetch delivered orders with all related data
-    console.log('Fetching orders from database...');
+    logger.debug('Fetching orders from database...');
     let orders;
     try {
       orders = await Order.findAll({
@@ -4306,15 +4386,15 @@ module.exports.exportDeliveredOrders = async (req, res) => {
         ],
         order: [['createdAt', 'DESC']]
       });
-      console.log('Database query successful. Found orders:', orders.length);
+      logger.debug('Database query successful. Found orders:', orders.length);
     } catch (dbError) {
-      console.error('Database query error:', dbError.message);
-      console.error('Database error stack:', dbError.stack);
+      logger.error('Database query error:', dbError.message);
+      logger.error('Database error stack:', dbError.stack);
       throw new Error(`Database query failed: ${dbError.message}`);
     }
 
     if (orders.length === 0) {
-      console.log('No orders found, returning empty response');
+      logger.debug('No orders found, returning empty response');
       return res.status(200).json({
         success: true,
         message: 'No delivered orders found for the selected date range',
@@ -4322,7 +4402,7 @@ module.exports.exportDeliveredOrders = async (req, res) => {
       });
     }
 
-    console.log('Processing orders for Excel export...');
+    logger.debug('Processing orders for Excel export...');
 
     // Prepare data for Excel
     const excelData = [];
@@ -4464,13 +4544,13 @@ module.exports.exportDeliveredOrders = async (req, res) => {
       }
     });
 
-    console.log('Excel data prepared. Total rows:', excelData.length);
+    logger.debug('Excel data prepared. Total rows:', excelData.length);
 
     // Create workbook and worksheet
-    console.log('Creating Excel workbook...');
+    logger.debug('Creating Excel workbook...');
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(excelData);
-    console.log('Worksheet created successfully');
+    logger.debug('Worksheet created successfully');
 
     // Set column widths
     const colWidths = [
@@ -4509,29 +4589,29 @@ module.exports.exportDeliveredOrders = async (req, res) => {
 
     // Add worksheet to workbook
     XLSX.utils.book_append_sheet(wb, ws, 'Delivered Orders');
-    console.log('Worksheet added to workbook');
+    logger.debug('Worksheet added to workbook');
 
     // Generate buffer
-    console.log('Generating Excel buffer...');
+    logger.debug('Generating Excel buffer...');
     const excelBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-    console.log('Excel buffer generated. Size:', excelBuffer.length, 'bytes');
+    logger.debug('Excel buffer generated. Size:', excelBuffer.length, 'bytes');
 
     // Set response headers
     const filename = `Delivered_Orders_${startDate || 'All'}_to_${endDate || 'All'}.xlsx`;
-    console.log('Setting response headers. Filename:', filename);
+    logger.debug('Setting response headers. Filename:', filename);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
     // Send the file
-    console.log('Sending Excel file...');
+    logger.debug('Sending Excel file...');
     res.send(excelBuffer);
-    console.log('Export completed successfully!');
+    logger.debug('Export completed successfully!');
 
   } catch (error) {
-    console.error('=== Error exporting delivered orders ===');
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    console.error('Error details:', error);
+    logger.error('=== Error exporting delivered orders ===');
+    logger.error('Error message:', error.message);
+    logger.error('Error stack:', error.stack);
+    logger.error('Error details:', error);
     
     res.status(500).json({
       success: false,
@@ -4590,7 +4670,7 @@ module.exports.markLabelDownloaded = async (req, res) => {
       data: order
     });
   } catch (error) {
-    console.error('Error marking label as downloaded:', error);
+    logger.error('Error marking label as downloaded:', error);
     res.status(500).json({
       success: false,
       message: 'Error marking label as downloaded',
@@ -4641,7 +4721,7 @@ module.exports.downloadLabel = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename=label-${order.order_number}.pdf`);
     res.send(Buffer.from(response.data));
   } catch (error) {
-    console.error('Error downloading label:', error);
+    logger.error('Error downloading label:', error);
     res.status(500).json({
       success: false,
       message: 'Error downloading label',
@@ -4682,8 +4762,8 @@ module.exports.bulkDownloadLabels = async (req, res) => {
     // Import pdf-lib for merging PDFs
     const { PDFDocument } = require('pdf-lib');
     
-    console.log('=== Starting PDF merge process ===');
-    console.log(`Merging ${orders.length} labels`);
+    logger.debug('=== Starting PDF merge process ===');
+    logger.debug(`Merging ${orders.length} labels`);
     
     // Create a new merged PDF document
     const mergedPdf = await PDFDocument.create();
@@ -4720,15 +4800,15 @@ module.exports.bulkDownloadLabels = async (req, res) => {
           ip_address: ipAddress
         });
       } catch (error) {
-        console.error(`Error downloading label for order ${order.id}:`, error);
+        logger.error(`Error downloading label for order ${order.id}:`, error);
       }
     }
 
     // Save the merged PDF
     const mergedPdfBytes = await mergedPdf.save();
     
-    console.log('=== PDF merge completed ===');
-    console.log(`Merged PDF size: ${mergedPdfBytes.length} bytes`);
+    logger.debug('=== PDF merge completed ===');
+    logger.debug(`Merged PDF size: ${mergedPdfBytes.length} bytes`);
     
     // Send the merged PDF as response
     res.setHeader('Content-Type', 'application/pdf');
@@ -4736,7 +4816,7 @@ module.exports.bulkDownloadLabels = async (req, res) => {
     res.send(Buffer.from(mergedPdfBytes));
 
   } catch (error) {
-    console.error('Error bulk downloading labels:', error);
+    logger.error('Error bulk downloading labels:', error);
     res.status(500).json({
       success: false,
       message: 'Error bulk downloading labels',
@@ -4788,7 +4868,7 @@ module.exports.getPendingLabels = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching pending labels:', error);
+    logger.error('Error fetching pending labels:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching pending labels',
@@ -4841,7 +4921,7 @@ module.exports.getLabelDownloadStats = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching label stats:', error);
+    logger.error('Error fetching label stats:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching label statistics',

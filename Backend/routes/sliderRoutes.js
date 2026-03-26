@@ -1,5 +1,6 @@
 const express = require('express');
 const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
+const { etagMiddleware } = require('../middleware/etagMiddleware.js');
 const {
     createSlider, 
     getAllSliders, 
@@ -15,7 +16,7 @@ const {
 const router = express.Router();
 
 // Public routes - MUST come before parameterized routes
-router.get('/public', getPublicSliders);
+router.get('/public', etagMiddleware, getPublicSliders);
 
 // Admin routes (requires authentication)
 router.get('/admin/all', isAuthenticated, authorize(['admin']), getAllSliders);

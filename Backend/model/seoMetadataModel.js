@@ -34,6 +34,12 @@ const SeoMetadata = sequelize.define('SEOMetadata', {
     meta_image: {
         type: DataTypes.STRING(255),
         allowNull: true
+    },
+    brand_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: { model: 'brands', key: 'id' },
+        onDelete: 'CASCADE'
     }
 }, {
     tableName: 'seo_metadata',
@@ -45,10 +51,13 @@ const SeoMetadata = sequelize.define('SEOMetadata', {
     indexes: [
         {
             unique: true,
-            fields: ['page_name']
+            fields: ['page_name', 'brand_id']
         },
         {
             fields: ['slug']
+        },
+        {
+            fields: ['brand_id']
         }
     ]
 });

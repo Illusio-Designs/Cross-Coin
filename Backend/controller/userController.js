@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const passport = require('passport');
 const path = require('path');
 const fs = require('fs');
@@ -7,15 +8,26 @@ const { User } = require('../model/userModel.js');
 const nodemailer = require('nodemailer');
 const ImageHandler = require('../utils/imageHandler.js');
 const { upload } = require('../middleware/uploadMiddleware.js');
+const { validatePasswordStrength } = require('../utils/passwordValidation.js');
+const imagekitService = require('../services/imagekitService.js');
 const dotenv = require('dotenv');
 dotenv.config();
 
 const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/users'));
 
+// Generate a refresh token, hash it, store in DB, return raw token
+const issueRefreshToken = async (user) => {
+    const rawToken = crypto.randomBytes(40).toString('hex');
+    const hashed = await bcrypt.hash(rawToken, 10);
+    const expiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    await user.update({ refreshToken: hashed, refreshTokenExpiry: expiry });
+    return rawToken;
+};
+
 // Helper function to add image URL to user response
 const addImageUrlToResponse = (userResponse) => {
     if (userResponse.profileImage) {
-        userResponse.profileImageUrl = `/uploads/users/${userResponse.profileImage}`;
+        userResponse.profileImageUrl = imagekitService.getOptimizedUrl(userResponse.profileImage, 'medium');
     }
     return userResponse;
 };
@@ -29,6 +41,11 @@ module.exports.register = async (req, res) => {
 
         if (!username || !email || !password) {
             return res.status(400).json({ message: 'All fields are required' });
+        }
+
+        const strengthCheck = validatePasswordStrength(password);
+        if (!strengthCheck.valid) {
+            return res.status(400).json({ message: strengthCheck.message });
         }
 
         const existingUser = await User.findOne({ where: { email } });
@@ -80,11 +97,14 @@ module.exports.login = async (req, res) => {
             { expiresIn: '1d' }
         );
 
+        // Issue refresh token (7-day expiry)
+        const refreshToken = await issueRefreshToken(user);
+
         // Remove password from response
         const userResponse = user.toJSON();
         delete userResponse.password;
 
-        res.json({ message: 'Login successful', token, user: userResponse });
+        res.json({ message: 'Login successful', token, refreshToken, user: userResponse });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ message: 'Login failed', error: error.message });
@@ -244,6 +264,11 @@ module.exports.resetPassword = async (req, res) => {
             return res.status(400).json({ message: 'Passwords do not match' });
         }
 
+        const strengthCheck = validatePasswordStrength(password);
+        if (!strengthCheck.valid) {
+            return res.status(400).json({ message: strengthCheck.message });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
         user.password = hashedPassword;
         user.resetToken = null;
@@ -302,15 +327,25 @@ module.exports.updateUser = async (req, res) => {
         // Handle profile picture upload
         if (req.file) {
             try {
-                // Process the new image using image handler
-                const filename = await imageHandler.handleProfileImage(
-                    user.profileImage,
-                    req.file.path,
-                    user.id
-                );
+                const oldProfileImage = user.profileImage;
+                const buffer = fs.readFileSync(req.file.path);
+                const filename = path.basename(req.file.path);
+                const uploadResult = await imagekitService.uploadImage(buffer, filename, '/profiles');
 
-                // Store only the filename in the database
-                user.profileImage = filename;
+                // Delete old ImageKit image if it was already on ImageKit
+                if (oldProfileImage && oldProfileImage.startsWith('/profiles/')) {
+                    await imagekitService.deleteImage(oldProfileImage).catch(err =>
+                        console.error('Failed to delete old profile image from ImageKit:', err.message)
+                    );
+                }
+
+                // Store the ImageKit file path
+                user.profileImage = uploadResult.filePath;
+
+                // Clean up local temp file
+                fs.unlink(req.file.path, err => {
+                    if (err) console.error('Failed to delete temp file:', err.message);
+                });
             } catch (imageError) {
                 console.error('Error handling profile image:', imageError);
                 return res.status(500).json({ 
@@ -354,6 +389,11 @@ module.exports.updatePassword = async (req, res) => {
             return res.status(400).json({ message: 'New passwords do not match' });
         }
         
+        const strengthCheck = validatePasswordStrength(newPassword);
+        if (!strengthCheck.valid) {
+            return res.status(400).json({ message: strengthCheck.message });
+        }
+        
         const user = await User.findByPk(req.user.id);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
@@ -386,8 +426,10 @@ module.exports.deleteUser = async (req, res) => {
         }
 
         // Delete profile image
-        if (user.profile_image) {
-            await imageHandler.deleteImage(user.profile_image);
+        if (user.profileImage && user.profileImage.startsWith('/profiles/')) {
+            await imagekitService.deleteImage(user.profileImage).catch(err =>
+                console.error('Failed to delete profile image from ImageKit:', err.message)
+            );
         }
 
         await user.destroy();
@@ -430,7 +472,8 @@ module.exports.getProfile = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        res.json(user);
+        const userResponse = addImageUrlToResponse(user.toJSON());
+        res.json(userResponse);
     } catch (error) {
         console.error('Get profile error:', error);
         res.status(500).json({ message: 'Error getting profile' });
@@ -451,11 +494,24 @@ module.exports.updateProfile = async (req, res) => {
         // Handle profile image update
         if (req.file) {
             try {
-                updateData.profile_image = await imageHandler.handleUserProfileImage(
-                    user.profile_image,
-                    req.file.path,
-                    user.id
-                );
+                const oldProfileImage = user.profileImage;
+                const buffer = fs.readFileSync(req.file.path);
+                const filename = path.basename(req.file.path);
+                const uploadResult = await imagekitService.uploadImage(buffer, filename, '/profiles');
+
+                // Delete old ImageKit image if it was already on ImageKit
+                if (oldProfileImage && oldProfileImage.startsWith('/profiles/')) {
+                    await imagekitService.deleteImage(oldProfileImage).catch(err =>
+                        console.error('Failed to delete old profile image from ImageKit:', err.message)
+                    );
+                }
+
+                updateData.profileImage = uploadResult.filePath;
+
+                // Clean up local temp file
+                fs.unlink(req.file.path, err => {
+                    if (err) console.error('Failed to delete temp file:', err.message);
+                });
             } catch (error) {
                 console.error('Error handling profile image update:', error);
                 return res.status(500).json({ 
@@ -484,30 +540,21 @@ module.exports.updateProfile = async (req, res) => {
 };
 
 // Add the missing logout function
-module.exports.logout = (req, res) => {
+module.exports.logout = async (req, res) => {
     try {
-        // Clear the token from client storage
-        res.clearCookie('token');
-        
-        // If using passport session
-        if (req.logout) {
-            req.logout((err) => {
-                if (err) {
-                    return res.status(500).json({ 
-                        message: 'Logout failed', 
-                        error: err.message 
-                    });
-                }
-            });
+        // Invalidate refresh token in DB
+        if (req.user) {
+            await req.user.update({ refreshToken: null, refreshTokenExpiry: null });
         }
 
+        res.clearCookie('token');
+        if (req.logout) {
+            req.logout((err) => { if (err) console.error('Passport logout error:', err); });
+        }
         res.json({ message: 'Logged out successfully' });
     } catch (error) {
         console.error('Logout error:', error);
-        res.status(500).json({ 
-            message: 'Logout failed', 
-            error: error.message 
-        });
+        res.status(500).json({ message: 'Logout failed', error: error.message });
     }
 };
 
@@ -547,6 +594,11 @@ module.exports.changePassword = async (req, res) => {
             return res.status(401).json({ message: 'Current password is incorrect' });
         }
 
+        const strengthCheck = validatePasswordStrength(newPassword);
+        if (!strengthCheck.valid) {
+            return res.status(400).json({ message: strengthCheck.message });
+        }
+
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashedPassword;
         await user.save();
@@ -560,3 +612,45 @@ module.exports.changePassword = async (req, res) => {
 
 // Export upload if needed
 module.exports.upload = upload;
+
+// **Refresh Token**
+module.exports.refreshToken = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+        if (!refreshToken) {
+            return res.status(401).json({ success: false, message: 'Refresh token is required' });
+        }
+
+        // Find users with a non-expired refresh token
+        const users = await User.findAll({
+            where: {
+                refreshToken: { [require('sequelize').Op.not]: null },
+                refreshTokenExpiry: { [require('sequelize').Op.gt]: new Date() }
+            }
+        });
+
+        // Find the user whose hashed token matches
+        let matchedUser = null;
+        for (const u of users) {
+            const match = await bcrypt.compare(refreshToken, u.refreshToken);
+            if (match) { matchedUser = u; break; }
+        }
+
+        if (!matchedUser) {
+            return res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
+        }
+
+        // Rotate: issue new access token + new refresh token
+        const accessToken = jwt.sign(
+            { id: matchedUser.id, email: matchedUser.email, role: matchedUser.role },
+            process.env.JWT_SECRET,
+            { expiresIn: '1d' }
+        );
+        const newRefreshToken = await issueRefreshToken(matchedUser);
+
+        res.json({ success: true, token: accessToken, refreshToken: newRefreshToken });
+    } catch (error) {
+        console.error('Refresh token error:', error);
+        res.status(500).json({ success: false, message: 'Failed to refresh token', error: error.message });
+    }
+};

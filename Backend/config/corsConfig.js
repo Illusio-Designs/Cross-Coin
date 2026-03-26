@@ -115,9 +115,12 @@ const corsOptions = {
                 console.warn('Static allowed origins:', staticAllowedOrigins);
                 console.warn('Brand domains:', brandDomains);
                 
-                // Allow the request anyway but log the warning (permissive mode)
-                // Change to callback(new Error('Not allowed by CORS')) for strict mode
-                return callback(null, true);
+                if (process.env.NODE_ENV === 'production') {
+                  return callback(new Error('Not allowed by CORS'));
+                } else {
+                  console.warn(`⚠️ CORS: Allowing unknown origin in development: ${origin}`);
+                  return callback(null, true);
+                }
             })
             .catch(error => {
                 console.error('Error checking brand domains:', error);

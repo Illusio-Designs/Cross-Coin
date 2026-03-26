@@ -278,9 +278,10 @@ module.exports.processRefund = async (req, res) => {
 // Get all payments (admin only)
 module.exports.getAllPayments = async (req, res) => {
     try {
-        const { status, payment_type, start_date, end_date, page = 1, limit = 100 } = req.query;
-        
-        // Build filter based on query parameters
+        const { status, payment_type, start_date, end_date, page = 1, limit = 20 } = req.query;
+        const cappedLimit = Math.min(parseInt(limit) || 20, 100);
+        const offset = (parseInt(page) - 1) * cappedLimit;
+
         const filter = {};
         if (status) filter.status = status;
         if (payment_type) filter.payment_type = payment_type;
@@ -291,9 +292,6 @@ module.exports.getAllPayments = async (req, res) => {
                 [Op.between]: [new Date(start_date), new Date(end_date)]
             };
         }
-
-        // Pagination
-        const offset = (page - 1) * limit;
         
         const payments = await Payment.findAndCountAll({
             where: filter,
@@ -317,11 +315,11 @@ module.exports.getAllPayments = async (req, res) => {
                 }
             ],
             order: [['createdAt', 'DESC']],
-            limit: parseInt(limit),
-            offset: parseInt(offset)
+            limit: cappedLimit,
+            offset
         });
 
-        const totalPages = Math.ceil(payments.count / limit);
+        const totalPages = Math.ceil(payments.count / cappedLimit);
 
         res.json({
             success: true,
@@ -329,7 +327,7 @@ module.exports.getAllPayments = async (req, res) => {
             pagination: {
                 total: payments.count,
                 page: parseInt(page),
-                limit: parseInt(limit),
+                limit: cappedLimit,
                 totalPages
             }
         });

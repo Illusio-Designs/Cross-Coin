@@ -31,9 +31,11 @@ const connectDB = async () => {
         await sequelize.authenticate();
         console.log('Database connection established successfully.');
         
-        // Sync the database with alterations to apply schema changes
-        await syncDatabase(true);
-        console.log('Database synchronized on connection.');
+        // Only run alter sync in development — production uses explicit migrations
+        if (process.env.NODE_ENV !== 'production') {
+            await syncDatabase(true);
+            console.log('Database synchronized on connection.');
+        }
     } catch (error) {
         console.error('Unable to connect to the database:', error);
         throw error;

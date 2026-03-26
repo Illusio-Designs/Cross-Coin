@@ -5,45 +5,45 @@ const cacheManager = require("./cacheManager.js");
 
 // Cache configuration
 const DASHBOARD_CACHE_TTL = 5 * 60; // 5 minutes in seconds
-const DASHBOARD_CACHE_KEY = (userId) => `dashboard:${userId}:stats`;
+const DASHBOARD_CACHE_KEY = (userId, brandId) => `dashboard:brand:${brandId || 'all'}:stats`;
 
 /**
  * Aggregates all dashboard data from database
  * Combines user stats, recent orders, badges, recommendations
  * Requirements: 1.4
  */
-const aggregateDashboardData = async (userId) => {
+const aggregateDashboardData = async (userId, brandId) => {
   try {
+    const brandWhere = brandId ? { brand_id: brandId } : {};
+
     // Get total products count
-    const totalProducts = await Product.count();
+    const totalProducts = await Product.count({ where: brandWhere });
 
     // Get total active products count
     const activeProducts = await Product.count({
-      where: { status: "active" },
+      where: { status: "active", ...brandWhere },
     });
 
     // Get total orders count
-    const totalOrders = await Order.count();
+    const totalOrders = await Order.count({ where: brandWhere });
 
     // Get pending orders count
     const pendingOrders = await Order.count({
       where: {
-        status: {
-          [Op.in]: ["pending", "processing"],
-        },
+        status: { [Op.in]: ["pending", "processing"] },
+        ...brandWhere,
       },
     });
 
     // Get cancelled orders count
     const cancelledOrders = await Order.count({
-      where: {
-        status: "cancelled",
-      },
+      where: { status: "cancelled", ...brandWhere },
     });
 
     // Get all orders for revenue calculation (optimized with aggregation)
     const allOrders = await Order.findAll({
       attributes: ['id', 'status', 'payment_type', 'payment_status', 'final_amount', 'total_amount', 'createdAt'],
+      where: brandWhere,
       order: [['createdAt', 'DESC']]
     });
 
@@ -595,44 +595,30 @@ const aggregateDashboardData = async (userId) => {
  * Otherwise aggregates from database and stores in cache
  * Requirements: 1.4
  */
-const getDashboardDataWithCache = async (userId) => {
-  const cacheKey = DASHBOARD_CACHE_KEY(userId);
+const getDashboardDataWithCache = async (userId, brandId) => {
+  const cacheKey = DASHBOARD_CACHE_KEY(userId, brandId);
   
   try {
-    // Check if data exists in cache
     const cachedData = await cacheManager.get(cacheKey);
 
     if (cachedData) {
       console.log(`✅ Dashboard cache HIT for user ${userId}`);
-      return {
-        ...cachedData,
-        cacheHit: true
-      };
+      return { ...cachedData, cacheHit: true };
     }
 
     console.log(`⚠️ Dashboard cache MISS for user ${userId}, aggregating from database...`);
     
-    // Aggregate data from database
-    const aggregatedData = await aggregateDashboardData(userId);
+    const aggregatedData = await aggregateDashboardData(userId, brandId);
 
-    // Store in cache with TTL
     await cacheManager.set(cacheKey, aggregatedData, DASHBOARD_CACHE_TTL);
 
     console.log(`✅ Dashboard data cached for user ${userId} with TTL ${DASHBOARD_CACHE_TTL}s`);
     
-    return {
-      ...aggregatedData,
-      cacheHit: false
-    };
+    return { ...aggregatedData, cacheHit: false };
   } catch (error) {
     console.error("Error getting dashboard data with cache:", error);
-    // Fallback to direct aggregation if cache fails
-    const aggregatedData = await aggregateDashboardData(userId);
-    return {
-      ...aggregatedData,
-      cacheHit: false,
-      cacheError: error.message
-    };
+    const aggregatedData = await aggregateDashboardData(userId, brandId);
+    return { ...aggregatedData, cacheHit: false, cacheError: error.message };
   }
 };
 

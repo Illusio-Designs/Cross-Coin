@@ -9,7 +9,8 @@ const path = require('path');
 const fs = require('fs');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/db.js');
-// import upload from '../middleware/uploadMiddleware.js'; // Assuming upload middleware is handled in routes
+const imagekitService = require('../services/imagekitService.js');
+const cacheManager = require('../services/cacheManager.js');
 
 // Helper to update product review statistics
 const updateProductReviewStats = async (productIdToUpdate, transaction) => {
@@ -157,11 +158,28 @@ module.exports.createReview = async (req, res) => {
         }, { transaction });
 
         if (files && files.length > 0) {
-            const reviewImages = files.map(file => ({
-                reviewId: newReview.id,
-                fileName: file.filename,
-                fileType: file.mimetype.startsWith('video/') ? 'video' : 'image'
-            }));
+            const reviewImages = [];
+            for (const file of files) {
+                try {
+                    const buffer = fs.readFileSync(file.path);
+                    const uploadResult = await imagekitService.uploadImage(buffer, file.filename, '/reviews');
+                    reviewImages.push({
+                        reviewId: newReview.id,
+                        fileName: uploadResult.filePath,
+                        fileType: file.mimetype.startsWith('video/') ? 'video' : 'image'
+                    });
+                    fs.unlink(file.path, err => {
+                        if (err) console.error('Failed to delete temp file:', err.message);
+                    });
+                } catch (uploadErr) {
+                    console.error('Failed to upload review image to ImageKit:', uploadErr.message);
+                    reviewImages.push({
+                        reviewId: newReview.id,
+                        fileName: file.filename,
+                        fileType: file.mimetype.startsWith('video/') ? 'video' : 'image'
+                    });
+                }
+            }
             await ReviewImage.bulkCreate(reviewImages, { transaction });
         }
 
@@ -170,6 +188,9 @@ module.exports.createReview = async (req, res) => {
         // No, don't update stats for pending reviews. Only for approved.
 
         await transaction.commit();
+
+        // Invalidate reviews cache for this product
+        await cacheManager.invalidate(`reviews:${productId}:*`).catch(() => {});
 
         const createdReview = await Review.findByPk(newReview.id, {
             include: [
@@ -241,15 +262,35 @@ module.exports.createPublicReview = async (req, res) => {
 
         // Handle review images
         if (files && files.length > 0) {
-            const reviewImages = files.map(file => ({
-                reviewId: newReview.id,
-                fileName: file.filename,
-                fileType: file.mimetype.startsWith('video/') ? 'video' : 'image'
-            }));
+            const reviewImages = [];
+            for (const file of files) {
+                try {
+                    const buffer = fs.readFileSync(file.path);
+                    const uploadResult = await imagekitService.uploadImage(buffer, file.filename, '/reviews');
+                    reviewImages.push({
+                        reviewId: newReview.id,
+                        fileName: uploadResult.filePath,
+                        fileType: file.mimetype.startsWith('video/') ? 'video' : 'image'
+                    });
+                    fs.unlink(file.path, err => {
+                        if (err) console.error('Failed to delete temp file:', err.message);
+                    });
+                } catch (uploadErr) {
+                    console.error('Failed to upload review image to ImageKit:', uploadErr.message);
+                    reviewImages.push({
+                        reviewId: newReview.id,
+                        fileName: file.filename,
+                        fileType: file.mimetype.startsWith('video/') ? 'video' : 'image'
+                    });
+                }
+            }
             await ReviewImage.bulkCreate(reviewImages, { transaction });
         }
 
         await transaction.commit();
+
+        // Invalidate reviews cache for this product
+        await cacheManager.invalidate(`reviews:${productId}:*`).catch(() => {});
 
         res.status(201).json({
             success: true,
@@ -276,6 +317,13 @@ module.exports.getPublicProductReviews = async (req, res) => {
         const pId = parseInt(productId);
         if (isNaN(pId)) {
             return res.status(400).json({ success: false, message: 'Invalid Product ID' });
+        }
+
+        // Check cache first
+        const cacheKey = `reviews:${pId}:${page}:${limit}:${sort}`;
+        const cached = await cacheManager.get(cacheKey);
+        if (cached) {
+            return res.json(cached);
         }
 
         const filter = { 
@@ -328,12 +376,16 @@ module.exports.getPublicProductReviews = async (req, res) => {
             formattedRatingStats[stat.rating] = parseInt(stat.getDataValue('count'));
         });
         
-        res.json({
+        const responseData = {
             success: true,
             reviews: reviewsData.rows.map(r => ({
                 ...r.toJSON(),
                 // If User is null (guest review), use guestName
                 reviewerName: r.User ? r.User.username : r.guestName,
+                ReviewImages: r.ReviewImages ? r.ReviewImages.map(img => ({
+                    ...img.toJSON(),
+                    url: imagekitService.getOptimizedUrl(img.fileName, 'medium')
+                })) : []
             })),
             pagination: {
                 total: reviewsData.count,
@@ -346,7 +398,11 @@ module.exports.getPublicProductReviews = async (req, res) => {
                 total: productWithStats ? productWithStats.review_count : 0,
                 average: productWithStats ? parseFloat(productWithStats.avg_rating) : 0
             }
-        });
+        };
+
+        // Cache the result for 10 minutes
+        await cacheManager.set(cacheKey, responseData, 600).catch(() => {});
+        res.json(responseData);
     } catch (error) {
         console.error('Error getting public product reviews:', error);
         res.status(500).json({ 
@@ -427,6 +483,10 @@ module.exports.getProductReviews = async (req, res) => {
             reviews: reviewsData.rows.map(r => ({
                 ...r.toJSON(),
                 reviewerName: r.User ? r.User.username : r.guestName,
+                ReviewImages: r.ReviewImages ? r.ReviewImages.map(img => ({
+                    ...img.toJSON(),
+                    url: imagekitService.getOptimizedUrl(img.fileName, 'medium')
+                })) : []
             })),
             pagination: {
                 total: reviewsData.count,
@@ -498,6 +558,9 @@ module.exports.moderateReview = async (req, res) => {
 
         await transaction.commit();
         
+        // Invalidate reviews cache for this product
+        await cacheManager.invalidate(`reviews:${reviewToModerate.productId}:*`).catch(() => {});
+
         res.json({
             message: 'Review moderated successfully',
             review: reviewToModerate
@@ -542,8 +605,15 @@ module.exports.deleteReview = async (req, res) => {
         // Delete associated images from storage and database
         if (reviewToDelete.ReviewImages && reviewToDelete.ReviewImages.length > 0) {
             const deleteFilePromises = reviewToDelete.ReviewImages.map(image => {
+                // Delete from ImageKit if it's an ImageKit path
+                if (image.fileName && (image.fileName.startsWith('/reviews/') || image.fileName.includes('ik.imagekit.io'))) {
+                    return imagekitService.deleteImage(image.fileName).catch(err =>
+                        console.error('Failed to delete review image from ImageKit:', err.message)
+                    );
+                }
+                // Otherwise delete from local storage
                 const imagePath = path.join(__dirname, '../uploads/reviews', image.fileName);
-                return fs.promises.unlink(imagePath).catch(err => console.error("Failed to delete image file:", err)); // Non-blocking if file not found
+                return fs.promises.unlink(imagePath).catch(err => console.error("Failed to delete image file:", err));
             });
             await Promise.all(deleteFilePromises);
             // DB records for ReviewImages will be cascade deleted due to Review.hasMany association with onDelete: 'CASCADE'
@@ -574,9 +644,9 @@ module.exports.deleteReview = async (req, res) => {
 // Get all reviews (Admin purpose)
 module.exports.getAllReviews = async (req, res) => {
     try {
-        // Add pagination and filtering as needed for admin panel
         const { page = 1, limit = 10, status, sort = 'createdAt_desc' } = req.query;
-        const offset = (parseInt(page) - 1) * parseInt(limit);
+        const cappedLimit = Math.min(parseInt(limit) || 20, 100);
+        const offset = (parseInt(page) - 1) * cappedLimit;
 
         let order = [['createdAt', 'DESC']];
         if (sort === 'createdAt_asc') order = [['createdAt', 'ASC']];
@@ -584,29 +654,31 @@ module.exports.getAllReviews = async (req, res) => {
         if (sort === 'rating_asc') order = [['rating', 'ASC'], ['createdAt', 'DESC']];
 
         const whereClause = {};
-        if (status && status !== 'all') {
-            whereClause.status = status;
-        }
+        if (status && status !== 'all') whereClause.status = status;
+
+        const productInclude = {
+            model: Product,
+            as: 'Product',
+            attributes: ['id', 'name'],
+            required: !!(req.brandId), // INNER JOIN only when filtering by brand
+            include: [{
+                model: Brand,
+                as: 'Brands',
+                through: { attributes: ['status'] },
+                ...(req.brandId ? { where: { id: req.brandId }, required: true } : {})
+            }]
+        };
         
         const reviews = await Review.findAndCountAll({
             where: whereClause,
             include: [
                 { model: User, as: 'User', attributes: ['id', 'username'] },
-                { 
-                    model: Product, 
-                    as: 'Product', 
-                    attributes: ['id', 'name'],
-                    include: [{
-                        model: Brand,
-                        as: 'Brands',
-                        through: { attributes: ['status'] }
-                    }]
-                },
-                { model: ReviewImage, as: 'ReviewImages'}
+                productInclude,
+                { model: ReviewImage, as: 'ReviewImages' }
             ],
-            order: order,
-            limit: parseInt(limit),
-            offset: offset,
+            order,
+            limit: cappedLimit,
+            offset,
             distinct: true
         });
         
@@ -619,8 +691,8 @@ module.exports.getAllReviews = async (req, res) => {
             pagination: {
                 total: reviews.count,
                 page: parseInt(page),
-                limit: parseInt(limit),
-                totalPages: Math.ceil(reviews.count / parseInt(limit))
+                limit: cappedLimit,
+                totalPages: Math.ceil(reviews.count / cappedLimit)
             }
         });
     } catch (error) {

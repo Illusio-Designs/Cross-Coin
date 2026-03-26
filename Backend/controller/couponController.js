@@ -741,12 +741,15 @@ module.exports.getCoupon = async (req, res) => {
 // Get all active public coupons
 module.exports.getPublicCoupons = async (req, res) => {
     try {
+        const where = {
+            status: 'active',
+            startDate: { [Op.lte]: new Date() },
+            endDate: { [Op.gte]: new Date() }
+        };
+        if (req.brand && req.brand.id) where.brand_id = req.brand.id;
+
         const coupons = await Coupon.findAll({
-            where: {
-                status: 'active',
-                startDate: { [Op.lte]: new Date() },
-                endDate: { [Op.gte]: new Date() }
-            },
+            where,
             attributes: [
                 'id', 'code', 'description', 'type', 'value', 'minPurchase', 'maxDiscount', 'endDate',
                 'paymentModeRestriction', 'firstOrderOnly', 'tieredDiscounts', 'quantityBasedDiscounts'
