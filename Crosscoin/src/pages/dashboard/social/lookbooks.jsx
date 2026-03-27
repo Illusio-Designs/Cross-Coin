@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { lookbookService } from "../../../services";
 import { showError, showSuccess } from "../../../utils/toastNotification";
+import Loader from "../../../components/common/Loader";
 
 export default function AdminLookbooks() {
   const [loading, setLoading] = useState(false);
@@ -112,9 +113,9 @@ export default function AdminLookbooks() {
         </div>
       </div>
 
-      <div className="dm-2col" style={{ alignItems: "start", gap: 16 }}>
+      <div className="dm-2col sc-form-grid">
         <form className="seo-form" onSubmit={handleCreateLookbook}>
-          <h3>Create Lookbook</h3>
+          <h3 className="sc-form-title">Create Lookbook</h3>
           <div className="dm-field"><label className="dm-label">Title</label><input className="dm-input" value={createForm.title} onChange={(e) => setCreateForm((p) => ({ ...p, title: e.target.value }))} required /></div>
           <div className="dm-field"><label className="dm-label">Description</label><textarea className="dm-input" value={createForm.description} onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))} /></div>
           <div className="dm-field"><label className="dm-label">Status</label><select className="dm-input dm-select" value={createForm.status} onChange={(e) => setCreateForm((p) => ({ ...p, status: e.target.value }))}><option value="draft">Draft</option><option value="active">Active</option></select></div>
@@ -123,7 +124,7 @@ export default function AdminLookbooks() {
         </form>
 
         <form className="seo-form" onSubmit={handleUploadImage}>
-          <h3>Upload Lookbook Image</h3>
+          <h3 className="sc-form-title">Upload Lookbook Image</h3>
           <div className="dm-field">
             <label className="dm-label">Lookbook</label>
             <select className="dm-input dm-select" value={imageForm.lookbookId} onChange={(e) => setImageForm((p) => ({ ...p, lookbookId: e.target.value }))} required>
@@ -137,8 +138,8 @@ export default function AdminLookbooks() {
         </form>
       </div>
 
-      <form className="seo-form" onSubmit={handleAddHotspot} style={{ marginTop: 16 }}>
-        <h3>Add Hotspot</h3>
+      <form className="seo-form sc-mt-16" onSubmit={handleAddHotspot}>
+        <h3 className="sc-form-title">Add Hotspot</h3>
         <div className="dm-2col">
           <div className="dm-field">
             <label className="dm-label">Image</label>
@@ -163,19 +164,34 @@ export default function AdminLookbooks() {
         <button className="sl-add-btn" type="submit">Add Hotspot</button>
       </form>
 
-      <div style={{ marginTop: 16 }}>
-        <h3>Lookbook Items ({lookbooks.length})</h3>
-        {loading ? <p>Loading...</p> : lookbooks.map((lb) => (
-          <div key={lb.id} className="sl-card" style={{ marginBottom: 12, padding: 12, border: "1px solid #e5e7eb", borderRadius: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-              <div>
-                <strong>{lb.title}</strong> <span className={`sl-status-badge sl-status-${lb.status}`}>{lb.status}</span>
-                <div style={{ fontSize: 12, color: "#6b7280" }}>{lb.description || "No description"}</div>
+      <div className="sc-mt-16">
+        <div className="sc-list-head">
+          <h3 className="sc-list-title">Lookbook Items</h3>
+          <span className="sl-status-badge sl-status-active">{lookbooks.length}</span>
+        </div>
+        {loading ? (
+          <div className="sl-loader-wrap"><Loader /></div>
+        ) : (
+          <div className="sc-card-grid">
+            {lookbooks.map((lb) => (
+              <div key={lb.id} className="sc-item-card">
+                <div className="sc-item-top">
+                  <div>
+                    <strong>{lb.title}</strong> <span className={`sl-status-badge sl-status-${lb.status}`}>{lb.status}</span>
+                    <div className="sc-item-sub">{lb.description || "No description"}</div>
+                  </div>
+                  <button className="sl-btn-delete" onClick={async () => { await lookbookService.deleteLookbook(lb.id); showSuccess("deleteSuccess"); loadData(); }}>Delete</button>
+                </div>
+                <div className="sc-item-meta">
+                  {(lb.Images || []).length} images
+                </div>
               </div>
-              <button className="sl-btn-delete" onClick={async () => { await lookbookService.deleteLookbook(lb.id); showSuccess("deleteSuccess"); loadData(); }}>Delete</button>
-            </div>
+            ))}
+            {!lookbooks.length ? (
+              <div className="sl-empty"><p>No lookbooks yet</p></div>
+            ) : null}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

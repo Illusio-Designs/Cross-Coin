@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { reelService } from "../../../services";
 import { showError, showSuccess } from "../../../utils/toastNotification";
+import Loader from "../../../components/common/Loader";
 
 export default function AdminReels() {
   const [loading, setLoading] = useState(false);
@@ -77,9 +78,9 @@ export default function AdminReels() {
         </div>
       </div>
 
-      <div className="dm-2col" style={{ alignItems: "start", gap: 16 }}>
+      <div className="dm-2col sc-form-grid">
         <form className="seo-form" onSubmit={handleCreate}>
-          <h3>Create Reel</h3>
+          <h3 className="sc-form-title">Create Reel</h3>
           <div className="dm-field"><label className="dm-label">Title</label><input className="dm-input" value={createForm.title} onChange={(e) => setCreateForm((p) => ({ ...p, title: e.target.value }))} required /></div>
           <div className="dm-field"><label className="dm-label">Status</label><select className="dm-input dm-select" value={createForm.status} onChange={(e) => setCreateForm((p) => ({ ...p, status: e.target.value }))}><option value="draft">Draft</option><option value="active">Active</option></select></div>
           <div className="dm-field"><label className="dm-label">Display Order</label><input className="dm-input" type="number" value={createForm.display_order} onChange={(e) => setCreateForm((p) => ({ ...p, display_order: Number(e.target.value || 0) }))} /></div>
@@ -89,7 +90,7 @@ export default function AdminReels() {
         </form>
 
         <form className="seo-form" onSubmit={handleAssignProducts}>
-          <h3>Assign Products To Reel</h3>
+          <h3 className="sc-form-title">Assign Products To Reel</h3>
           <div className="dm-field">
             <label className="dm-label">Reel</label>
             <select className="dm-input dm-select" value={assignForm.reelId} onChange={(e) => setAssignForm((p) => ({ ...p, reelId: e.target.value }))} required>
@@ -105,21 +106,33 @@ export default function AdminReels() {
         </form>
       </div>
 
-      <div style={{ marginTop: 16 }}>
-        <h3>Reel Items ({reels.length})</h3>
-        {loading ? <p>Loading...</p> : reels.map((reel) => (
-          <div key={reel.id} style={{ marginBottom: 12, padding: 12, border: "1px solid #e5e7eb", borderRadius: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-              <div>
-                <strong>{reel.title}</strong> <span className={`sl-status-badge sl-status-${reel.status}`}>{reel.status}</span>
-                <div style={{ fontSize: 12, color: "#6b7280" }}>
-                  Products tagged: {Array.isArray(reel.Products) ? reel.Products.length : 0}
+      <div className="sc-mt-16">
+        <div className="sc-list-head">
+          <h3 className="sc-list-title">Reel Items</h3>
+          <span className="sl-status-badge sl-status-active">{reels.length}</span>
+        </div>
+        {loading ? (
+          <div className="sl-loader-wrap"><Loader /></div>
+        ) : (
+          <div className="sc-card-grid">
+            {reels.map((reel) => (
+              <div key={reel.id} className="sc-item-card">
+                <div className="sc-item-top">
+                  <div>
+                    <strong>{reel.title}</strong> <span className={`sl-status-badge sl-status-${reel.status}`}>{reel.status}</span>
+                    <div className="sc-item-sub">
+                      Products tagged: {Array.isArray(reel.Products) ? reel.Products.length : 0}
+                    </div>
+                  </div>
+                  <button className="sl-btn-delete" onClick={async () => { await reelService.deleteReel(reel.id); showSuccess("deleteSuccess"); loadReels(); }}>Delete</button>
                 </div>
               </div>
-              <button className="sl-btn-delete" onClick={async () => { await reelService.deleteReel(reel.id); showSuccess("deleteSuccess"); loadReels(); }}>Delete</button>
-            </div>
+            ))}
+            {!reels.length ? (
+              <div className="sl-empty"><p>No reels yet</p></div>
+            ) : null}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
