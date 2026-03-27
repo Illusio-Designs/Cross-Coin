@@ -13,6 +13,7 @@ const UPLOAD_DIRS = {
     slider: path.join(__dirname, '../uploads/slider'),
     reviews: path.join(__dirname, '../uploads/reviews'),
     blogs: path.join(__dirname, '../uploads/blogs'),
+    reels: path.join(__dirname, '../uploads/reels'),
 };
 
 // Create directories if they don't exist
@@ -40,6 +41,8 @@ const storage = multer.diskStorage({
             uploadDir = UPLOAD_DIRS.slider;
         } else if (req.originalUrl.includes('/blogs') || req.originalUrl.includes('/blog')) {
             uploadDir = UPLOAD_DIRS.blogs;
+        } else if (req.originalUrl.includes('/reels')) {
+            uploadDir = UPLOAD_DIRS.reels;
         }
         
         cb(null, uploadDir);
@@ -91,7 +94,27 @@ const categoryUpload = multer({
     }
 });
 
-module.exports = { upload, productUpload, categoryUpload };
+// Reels upload (video + thumbnail image)
+const reelUpload = multer({
+    storage: storage,
+    fileFilter: (req, file, cb) => {
+        const allowedVideo = ['video/mp4', 'video/webm'];
+        const allowedImage = ['image/jpeg', 'image/png', 'image/webp'];
+        if (file.fieldname === 'video') {
+            if (allowedVideo.includes(file.mimetype)) return cb(null, true);
+            return cb(new Error('Invalid video type. Only MP4 and WebM are allowed.'), false);
+        }
+        if (file.fieldname === 'thumbnail') {
+            if (allowedImage.includes(file.mimetype)) return cb(null, true);
+            return cb(new Error('Invalid thumbnail type. Only JPG, PNG, and WebP are allowed.'), false);
+        }
+        return cb(new Error('Invalid reel upload field.'), false);
+    },
+    limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB max for video
+        files: 2
+    }
+});
 
 // Magic byte signatures for supported image types
 const MAGIC_BYTES = {
@@ -134,4 +157,4 @@ const validateMagicBytes = (req, res, next) => {
   }
 };
 
-module.exports = { upload, productUpload, categoryUpload, validateMagicBytes };
+module.exports = { upload, productUpload, categoryUpload, reelUpload, validateMagicBytes };

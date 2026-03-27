@@ -7,8 +7,7 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "db:setup": "node scripts/setupDatabase.js",
-    "build": "echo \"Building the project...\"",
-    "test": "node --test"
+    "build": "echo \"Building the project...\""
   },
   "keywords": [
     "e-commerce",
@@ -61,7 +60,6 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "fast-check": "^4.6.0",
     "nodemon": "^2.0.22"
   }
 }

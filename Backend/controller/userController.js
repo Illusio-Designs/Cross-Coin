@@ -5,11 +5,14 @@ const passport = require('passport');
 const path = require('path');
 const fs = require('fs');
 const { User } = require('../model/userModel.js');
+const { GuestUser } = require('../model/guestUserModel.js');
+const { Order } = require('../model/orderModel.js');
 const nodemailer = require('nodemailer');
 const ImageHandler = require('../utils/imageHandler.js');
 const { upload } = require('../middleware/uploadMiddleware.js');
 const { validatePasswordStrength } = require('../utils/passwordValidation.js');
 const imagekitService = require('../services/imagekitService.js');
+const loyaltyService = require('../services/loyaltyService.js');
 const dotenv = require('dotenv');
 dotenv.config();
 
@@ -60,11 +63,52 @@ module.exports.register = async (req, res) => {
             role
         });
 
+        // Guest-to-member conversion: mark guest records converted and
+        // retroactively credit delivered guest orders.
+        let pointsCredited = 0;
+        const guestUsers = await GuestUser.findAll({
+            where: { email: email.toLowerCase() }
+        });
+
+        if (guestUsers.length > 0) {
+            const guestIds = guestUsers.map((g) => g.id);
+
+            // Mark guest users as converted.
+            await GuestUser.update(
+                { status: 'converted', convertedAt: new Date() },
+                { where: { id: guestIds } }
+            );
+
+            // Credit delivered guest orders to the newly created user.
+            const deliveredGuestOrders = await Order.findAll({
+                where: {
+                    guest_user_id: guestIds,
+                    status: 'delivered'
+                }
+            });
+
+            for (const guestOrder of deliveredGuestOrders) {
+                const loyaltyTxn = await loyaltyService.creditPoints(
+                    user.id,
+                    guestOrder.id,
+                    guestOrder.final_amount,
+                    guestOrder.brand_id || 1
+                );
+                if (loyaltyTxn && loyaltyTxn.type === 'earned') {
+                    pointsCredited += Math.max(loyaltyTxn.points || 0, 0);
+                }
+            }
+        }
+
         // Remove password from response
         const userResponse = user.toJSON();
         delete userResponse.password;
 
-        res.status(201).json({ message: 'User registered successfully', user: userResponse });
+        res.status(201).json({
+            message: 'User registered successfully',
+            user: userResponse,
+            pointsCredited
+        });
     } catch (error) {
         console.error('Registration error:', error);
         res.status(500).json({ message: 'Registration failed', error: error.message });

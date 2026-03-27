@@ -29,6 +29,7 @@ const { batchFetchProducts, batchFetchVariations, batchFetchVariationsByProductI
 const { batchInsert } = require("../utils/batchInsert.js");
 // Import dashboard cache invalidation
 const { invalidateDashboardCache } = require("../services/dashboardService.js");
+const loyaltyService = require("../services/loyaltyService.js");
 
 // Generate unique order number
 const generateOrderNumber = () => {
@@ -1656,6 +1657,23 @@ module.exports.handleFShipWebhook = async (req, res) => {
     if (Object.keys(updateData).length > 0) {
       await order.update(updateData, { transaction });
 
+      // Credit loyalty points when an authenticated user's order is delivered.
+      if (orderStatus === "delivered" && order.user_id) {
+        try {
+          await loyaltyService.creditPoints(
+            order.user_id,
+            order.id,
+            order.final_amount,
+            order.brand_id || 1,
+            { transaction }
+          );
+        } catch (loyaltyErr) {
+          logger.warn(
+            `Loyalty credit skipped for order ${order.order_number}: ${loyaltyErr.message}`
+          );
+        }
+      }
+
       // Add status history entry
       await OrderStatusHistory.create({
         order_id: order.id,
@@ -2251,6 +2269,11 @@ module.exports.cancelOrder = async (req, res) => {
       await CouponUsage.destroy({ where: { orderId: order.id }, transaction });
     }
 
+    // Refund redeemed loyalty points (if any) for authenticated users.
+    if (order.user_id) {
+      await loyaltyService.refundPoints(order.user_id, order.id, order.brand_id || 1, { transaction });
+    }
+
     // Update payment status based on payment type
     if (order.payment_type === 'cod') {
       order.payment_status = 'cancelled';
@@ -2362,6 +2385,11 @@ module.exports.cancelGuestOrder = async (req, res) => {
       const { Coupon, CouponUsage } = require('../model/associations.js');
       await Coupon.decrement('usageCount', { by: 1, where: { id: order.coupon_id }, transaction });
       await CouponUsage.destroy({ where: { orderId: order.id }, transaction });
+    }
+
+    // Refund redeemed loyalty points (if any) when the guest order belongs to a user account.
+    if (order.user_id) {
+      await loyaltyService.refundPoints(order.user_id, order.id, order.brand_id || 1, { transaction });
     }
 
     // Update payment status
@@ -2992,6 +3020,23 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
 
         // Update order status and payment status
         await order.update(updateData, { transaction });
+
+        // Credit loyalty points when an authenticated user's order is delivered.
+        if (newStatus === 'delivered' && order.user_id) {
+          try {
+            await loyaltyService.creditPoints(
+              order.user_id,
+              order.id,
+              order.final_amount,
+              order.brand_id || 1,
+              { transaction }
+            );
+          } catch (loyaltyErr) {
+            logger.warn(
+              `Loyalty credit skipped for order ${order.order_number}: ${loyaltyErr.message}`
+            );
+          }
+        }
 
         // Create status history
         await OrderStatusHistory.create({

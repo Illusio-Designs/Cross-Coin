@@ -20,6 +20,7 @@ import Slider from "./slider/slider";
 import MediaGallery from "./media/gallery";
 import Policies from "./policies";
 import UTMAnalytics from "./analytics/utmAnalytics";
+import LiveAnalytics from "./analytics";
 import BrandSettingsManager from "./brandSettings";
 import BrandManager from "./brands";
 import Blogs from "./blogs";
@@ -119,6 +120,7 @@ function Dashboard() {
       case 'brand-settings': return <BrandSettingsManager />;
       case 'slider':         return <Slider />;
       case 'media-gallery':  return <MediaGallery />;
+      case 'analytics':      return <LiveAnalytics />;
       case 'utm-analytics':  return <UTMAnalytics />;
       default:               return <CardGrid />;
     }

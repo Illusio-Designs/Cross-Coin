@@ -391,22 +391,22 @@ Incremental implementation across 14 groups. Start with critical bug fixes (data
     - **Property 21: Phone stored in DB does not equal plaintext after encryption**
     - **Validates: Requirements 23.3**
 
-- [ ] 15. Checkpoint — Ensure all tests pass, ask the user if questions arise.
+- [x] 15. Checkpoint — Ensure all tests pass, ask the user if questions arise.
 
 
-- [ ] 16. Loyalty Program (Req 26, 28)
-  - [ ] 16.1 Create `loyalty_transactions` table and Sequelize model
+- [x] 16. Loyalty Program (Req 26, 28)
+  - [x] 16.1 Create `loyalty_transactions` table and Sequelize model
     - Run SQL to create table with columns: `id`, `user_id`, `order_id` (nullable), `type` ENUM('earned','redeemed','expired','adjusted','refunded'), `points`, `balance_after`, `description`, `expires_at`, `brand_id`, `created_at`
     - Create `Backend/model/loyaltyTransactionModel.js`
     - Add associations in `Backend/model/associations.js`
     - _Requirements: 26.1, 26.5_
 
-  - [ ] 16.2 Add `loyalty_points` column to `users` table and update model
+  - [x] 16.2 Add `loyalty_points` column to `users` table and update model
     - Run SQL: `ALTER TABLE users ADD COLUMN loyalty_points INT DEFAULT 0`
     - Update `Backend/model/userModel.js`
     - _Requirements: 26.5_
 
-  - [ ] 16.3 Create `Backend/services/loyaltyService.js`
+  - [x] 16.3 Create `Backend/services/loyaltyService.js`
     - Implement `creditPoints(userId, orderId, orderAmount, brandId)` — reads `LOYALTY_EARN_RATE` from brand settings, creates `loyalty_transactions` record with `type='earned'`, increments `users.loyalty_points`
     - Implement `debitPoints(userId, orderId, points, brandId)` — validates balance, creates `type='redeemed'` record, decrements `users.loyalty_points`
     - Implement `refundPoints(userId, orderId, brandId)` — finds redeemed transaction for order, creates `type='refunded'` record, restores points
@@ -415,11 +415,11 @@ Incremental implementation across 14 groups. Start with critical bug fixes (data
     - Implement `adjustPoints(userId, points, description, adminId)` for admin manual adjustments
     - _Requirements: 26.1, 26.2, 26.3, 26.4, 26.6, 26.7_
 
-  - [ ] 16.4 Credit loyalty points when order status changes to `delivered`
+  - [x] 16.4 Credit loyalty points when order status changes to `delivered`
     - In the order status update handler, call `loyaltyService.creditPoints(...)` when new status is `delivered` and `order.userId` is not null (skip guests)
     - _Requirements: 26.1_
 
-  - [ ] 16.5 Implement loyalty API endpoints and routes
+  - [x] 16.5 Implement loyalty API endpoints and routes
     - `GET /api/loyalty/balance` — returns `{ points, pendingPoints }` for authenticated user
     - `GET /api/loyalty/history` — paginated `loyalty_transactions` for authenticated user
     - `POST /api/loyalty/redeem` — validates and reserves points; returns redemption token
@@ -428,61 +428,61 @@ Incremental implementation across 14 groups. Start with critical bug fixes (data
     - Wire all routes in a new `Backend/routes/loyaltyRoutes.js`
     - _Requirements: 26.3, 26.4, 26.6, 26.7_
 
-  - [ ] 16.6 Add daily cron job for points expiry
+  - [x] 16.6 Add daily cron job for points expiry
     - In `Backend/config/cronJobs.js`, add `cron.schedule('0 2 * * *', () => loyaltyService.expirePoints())`
     - _Requirements: 26.8_
 
-  - [ ] 16.7 Implement guest-to-member conversion on registration (Req 28)
+  - [x] 16.7 Implement guest-to-member conversion on registration (Req 28)
     - In `userController.register`, after creating the new user, check for `guest_users` records with matching email
     - For each matched guest user: set `converted_at = NOW()`, find all delivered guest orders, credit loyalty points for each (check `loyalty_transactions` for existing `order_id` to prevent double-credit)
     - Return `pointsCredited` total in registration response
     - _Requirements: 28.1, 28.2, 28.3, 28.4_
 
-  - [ ] 16.8 Refund loyalty points on order cancellation
+  - [x] 16.8 Refund loyalty points on order cancellation
     - In the cancellation handler (task 10.1/10.2), call `loyaltyService.refundPoints(userId, orderId, brandId)` if the order had redeemed points
     - _Requirements: 26.3_
 
-  - [ ]* 16.9 Write property test for loyalty balance consistency (Property 26)
+  - [x]* 16.9 Write property test for loyalty balance consistency (Property 26)
     - **Property 26: users.loyalty_points equals sum of non-expired loyalty_transactions**
     - **Validates: Requirements 26.1, 26.2, 26.3**
 
-  - [ ]* 16.10 Write property test for points redemption bounded by max_redeem_percent (Property 27)
+  - [x]* 16.10 Write property test for points redemption bounded by max_redeem_percent (Property 27)
     - **Property 27: Points redemption cannot exceed max_redeem_percent of order total**
     - **Validates: Requirements 26.2**
 
-  - [ ]* 16.11 Write property test for guest-to-member conversion idempotence
+  - [x]* 16.11 Write property test for guest-to-member conversion idempotence
     - Registering twice with same email SHALL NOT double-credit points
     - **Validates: Requirements 28.3**
 
-- [ ] 17. Checkpoint — Ensure all tests pass, ask the user if questions arise.
+- [x] 17. Checkpoint — Ensure all tests pass, ask the user if questions arise.
 
 
-- [ ] 18. Lookbook Feature (Req 20)
-  - [ ] 18.1 Create `lookbooks`, `lookbook_images`, and `lookbook_hotspots` tables and models
+- [x] 18. Lookbook Feature (Req 20)
+  - [x] 18.1 Create `lookbooks`, `lookbook_images`, and `lookbook_hotspots` tables and models
     - Run SQL to create all three tables per the schema in the design doc
     - Create `Backend/model/lookbookModel.js`, `Backend/model/lookbookImageModel.js`, `Backend/model/lookbookHotspotModel.js`
     - Add associations (Lookbook hasMany LookbookImage, LookbookImage hasMany LookbookHotspot, LookbookHotspot belongsTo Product) in `associations.js`
     - _Requirements: 20.1, 20.2, 20.3_
 
-  - [ ] 18.2 Create `Backend/controller/lookbookController.js` with admin CRUD
+  - [x] 18.2 Create `Backend/controller/lookbookController.js` with admin CRUD
     - `createLookbook`, `updateLookbook`, `deleteLookbook` — standard CRUD with brand scoping
     - `uploadLookbookImage` — upload to ImageKit under `/lookbooks`, create `LookbookImage` record
     - `deleteLookbookImage` — delete from ImageKit, destroy record
     - `addHotspot`, `updateHotspot`, `deleteHotspot` — validate `position_x`/`position_y` in [0,100]; return HTTP 400 if out of range
     - _Requirements: 20.4, 20.5_
 
-  - [ ] 18.3 Create public lookbook endpoints
+  - [x] 18.3 Create public lookbook endpoints
     - `GET /api/lookbooks` — active lookbooks scoped by `req.brandId`, with images and hotspot product data (name, price, primary image, slug)
     - `GET /api/lookbooks/:slug` — single lookbook with full image + hotspot data
     - Resolve all image URLs through `imagekitService.getOptimizedUrl`
     - _Requirements: 20.6, 20.7, 20.8_
 
-  - [ ] 18.4 Add lookbook routes to `Backend/routes/`
+  - [x] 18.4 Add lookbook routes to `Backend/routes/`
     - Create `Backend/routes/lookbookRoutes.js` with admin routes (auth middleware) and public routes
     - Register in `index.js`
     - _Requirements: 20.4, 20.6_
 
-  - [ ] 18.5 Create `/Lookbook` frontend page
+  - [x] 18.5 Create `/Lookbook` frontend page
     - Grid of lookbook cover images (first image of each lookbook)
     - Clicking opens full lookbook view with images and interactive hotspots
     - Hotspots as `<button>` elements positioned with `left: {x}%`, `top: {y}%`; pulsing CSS animation
@@ -490,48 +490,48 @@ Incremental implementation across 14 groups. Start with critical bug fixes (data
     - Responsive: hotspot positions use percentage-based coordinates
     - _Requirements: 20.9, 20.10, 20.11, 20.12, 20.13_
 
-  - [ ]* 18.6 Write property test for lookbook hotspot coordinates bounded (Property 17)
+  - [x]* 18.6 Write property test for lookbook hotspot coordinates bounded (Property 17)
     - **Property 17: Hotspot position_x and position_y must be in [0, 100]**
     - **Validates: Requirements 20.2**
 
-- [ ] 19. Shoppable Reels (Req 21)
-  - [ ] 19.1 Create `reels` and `reel_products` tables and models
+- [x] 19. Shoppable Reels (Req 21)
+  - [x] 19.1 Create `reels` and `reel_products` tables and models
     - Run SQL to create both tables per the design schema
     - Create `Backend/model/reelModel.js` and `Backend/model/reelProductModel.js`
     - Add associations in `associations.js`
     - _Requirements: 21.1, 21.2_
 
-  - [ ] 19.2 Create `Backend/controller/reelController.js`
+  - [x] 19.2 Create `Backend/controller/reelController.js`
     - Admin CRUD: `createReel`, `updateReel`, `deleteReel` — upload video + thumbnail to ImageKit under `/reels`; support `video/mp4` and `video/webm`, max 50MB
     - `assignProducts`, `removeProduct` — manage `reel_products` join records
     - Public `getReels` — active reels scoped by `req.brandId`, ordered by `display_order`, with tagged product data
     - `incrementViewCount` — `POST /api/reels/:id/view`, no auth, atomic increment of `view_count`
     - _Requirements: 21.3, 21.4, 21.5, 21.6_
 
-  - [ ] 19.3 Add reel routes to `Backend/routes/reelRoutes.js` and register in `index.js`
+  - [x] 19.3 Add reel routes to `Backend/routes/reelRoutes.js` and register in `index.js`
     - _Requirements: 21.3, 21.5, 21.6_
 
-  - [ ] 19.4 Create `/Reels` frontend page
+  - [x] 19.4 Create `/Reels` frontend page
     - Vertical scroll container with `scroll-snap-type: y mandatory`
     - Each reel: `<video>` with `autoplay muted loop` triggered by IntersectionObserver when in viewport
     - Tagged products in bottom sheet panel with product cards and Add to Cart
     - Thumbnail as `poster` attribute before video loads
     - _Requirements: 21.7, 21.8, 21.9, 21.10, 21.11_
 
-  - [ ]* 19.5 Write property test for reel view count increments monotonically (Property 18)
+  - [x]* 19.5 Write property test for reel view count increments monotonically (Property 18)
     - **Property 18: view_count increases by exactly 1 per POST /api/reels/:id/view call**
     - **Validates: Requirements 21.6**
 
-- [ ] 20. Checkpoint — Ensure all tests pass, ask the user if questions arise.
+- [x] 20. Checkpoint — Ensure all tests pass, ask the user if questions arise.
 
 
-- [ ] 21. Instagram Gallery Feed (Req 22)
-  - [ ] 21.1 Create `instagram_post_products` table and model
+- [x] 21. Instagram Gallery Feed (Req 22)
+  - [x] 21.1 Create `instagram_post_products` table and model
     - Run SQL to create table with columns: `id`, `instagram_post_id` VARCHAR(100), `product_id` FK, `brand_id` FK, `created_at`
     - Create `Backend/model/instagramPostProductModel.js` and add associations
     - _Requirements: 22.1_
 
-  - [ ] 21.2 Create `Backend/services/instagramService.js`
+  - [x] 21.2 Create `Backend/services/instagramService.js`
     - `fetchFeed(brandId)` — GET `https://graph.facebook.com/v18.0/{account_id}/media` with fields `id,media_type,media_url,thumbnail_url,permalink,caption,timestamp`; read `INSTAGRAM_ACCESS_TOKEN` and `INSTAGRAM_ACCOUNT_ID` from brand settings
     - `getCachedFeed(brandId)` — return Redis cache (`instagram:feed:${brandId}`, TTL 1h) or fetch if missing
     - `refreshFeed(brandId)` — force-refresh cache
@@ -539,21 +539,21 @@ Incremental implementation across 14 groups. Start with critical bug fixes (data
     - On API failure: return last cached data; if no cache, return `{ data: [], stale: true }`
     - _Requirements: 22.2, 22.3, 22.4, 22.5, 22.6, 22.7_
 
-  - [ ] 21.3 Create `Backend/controller/instagramController.js`
+  - [x] 21.3 Create `Backend/controller/instagramController.js`
     - `getFeed` — calls `instagramService.getCachedFeed`, adds `Cache-Control: public, max-age=300` header
     - `refreshFeed` — admin only, calls `instagramService.refreshFeed`
     - `tagPost` — admin only, creates `instagram_post_products` record
     - _Requirements: 22.4, 22.5, 22.8_
 
-  - [ ] 21.4 Add Instagram routes and register in `index.js`
+  - [x] 21.4 Add Instagram routes and register in `index.js`
     - Create `Backend/routes/instagramRoutes.js`; `GET /api/instagram/feed` (public), `POST /api/instagram/refresh` (admin), `POST /api/instagram/tag` (admin)
     - _Requirements: 22.4, 22.5, 22.8_
 
-  - [ ] 21.5 Add Instagram feed cron job (every 6 hours)
+  - [x] 21.5 Add Instagram feed cron job (every 6 hours)
     - In `Backend/config/cronJobs.js`, add `cron.schedule('0 */6 * * *', () => instagramService.refreshFeed(brandId))`
     - _Requirements: 22.6_
 
-  - [ ] 21.6 Create `InstagramGallery` frontend component
+  - [x] 21.6 Create `InstagramGallery` frontend component
     - 3-column grid (desktop), 2-column (mobile) using CSS Grid
     - Each cell: image/thumbnail with hover overlay (caption excerpt + Instagram icon link)
     - Video posts (`media_type === VIDEO`): show `thumbnail_url` with play icon overlay
@@ -562,11 +562,11 @@ Incremental implementation across 14 groups. Start with critical bug fixes (data
     - Fetch from `/api/instagram/feed` only — never call Instagram API directly
     - _Requirements: 22.9, 22.10, 22.11, 22.12, 22.13_
 
-  - [ ]* 21.7 Write property test for Instagram feed served from cache on API failure (Property 19)
+  - [x]* 21.7 Write property test for Instagram feed served from cache on API failure (Property 19)
     - **Property 19: Stale cache returned when Instagram API is down**
     - **Validates: Requirements 22.7**
 
-- [ ] 22. Final Checkpoint — Ensure all tests pass, ask the user if questions arise.
+- [x] 22. Final Checkpoint — Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
 

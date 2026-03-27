@@ -22,6 +22,11 @@ const cartRoutes = require('./cartRoutes.js');
 const policyRoutes = require('./policyRoutes.js');
 const dashboardRoutes = require('./dashboardRoutes.js');
 const blogRoutes = require('./blogRoutes.js');
+const loyaltyRoutes = require('./loyaltyRoutes.js');
+const adminLoyaltyRoutes = require('./adminLoyaltyRoutes.js');
+const lookbookRoutes = require('./lookbookRoutes.js');
+const reelRoutes = require('./reelRoutes.js');
+const instagramRoutes = require('./instagramRoutes.js');
 
 // User routes - shared across brands (optional brand)
 router.use('/users', optionalBrand, userRoutes);
@@ -52,6 +57,11 @@ router.use('/dashboard', optionalBrand, dashboardRoutes);
 
 // Blog routes (public routes use req.brandId for scoping; admin routes ignore it)
 router.use('/blogs', optionalBrand, blogRoutes);
+router.use('/loyalty', optionalBrand, loyaltyRoutes);
+router.use('/admin/loyalty', optionalBrand, adminLoyaltyRoutes);
+router.use('/lookbooks', optionalBrand, lookbookRoutes);
+router.use('/reels', optionalBrand, reelRoutes);
+router.use('/instagram', optionalBrand, instagramRoutes);
 
 // Public serviceability check (no auth required)
 router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {

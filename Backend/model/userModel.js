@@ -42,6 +42,11 @@ const User = sequelize.define('User', {
     refreshTokenExpiry: {
         type: DataTypes.DATE,
         allowNull: true
+    },
+    loyalty_points: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0
     }
 }, {
     timestamps: true,

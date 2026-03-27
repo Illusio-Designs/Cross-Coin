@@ -13,6 +13,7 @@ import {
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import MagicCheckoutIntegration from '../components/checkout/MagicCheckoutIntegration';
+import InstagramGallery from '../components/common/InstagramGallery';
 
 // ── Mini cart item row ──────────────────────────────────────────────────────
 function CartItemRow({ item, onRemove, onQtyChange }) {
@@ -66,9 +67,50 @@ export default function ProductTestPage() {
     setCheckoutSuccess(null);
   };
 
+  const openWhatsApp = () => {
+    const message = encodeURIComponent('Hi CrossCoin team, I need help with my order.');
+    window.open(`https://wa.me/919712891700?text=${message}`, '_blank');
+  };
+
+  const openRewards = () => {
+    window.open('/profile', '_blank');
+  };
+
   return (
     <div style={{ maxWidth: 480, margin: '60px auto', padding: '0 16px' }}>
       <h2 style={{ marginBottom: 20 }}>FOMO Elements Preview</h2>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+        <button
+          type="button"
+          onClick={openWhatsApp}
+          style={{
+            border: 0,
+            background: '#25D366',
+            color: '#fff',
+            padding: '10px 14px',
+            borderRadius: 8,
+            cursor: 'pointer',
+            fontWeight: 600
+          }}
+        >
+          WhatsApp Support
+        </button>
+        <button
+          type="button"
+          onClick={openRewards}
+          style={{
+            border: 0,
+            background: '#111',
+            color: '#fff',
+            padding: '10px 14px',
+            borderRadius: 8,
+            cursor: 'pointer',
+            fontWeight: 600
+          }}
+        >
+          Rewards
+        </button>
+      </div>
       <FomoContainer>
         <StockCounter stock={3} />
         <ViewCounter views={142} />
@@ -128,6 +170,53 @@ export default function ProductTestPage() {
             </div>
           </>
         )}
+      </div>
+
+      <div style={{ marginTop: 40 }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: 18 }}>Instagram Gallery Test</h3>
+        <InstagramGallery />
+      </div>
+
+      <div style={{ marginTop: 40 }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: 18 }}>Lookbook Test</h3>
+        <p style={{ margin: '0 0 10px', color: '#666' }}>
+          Full page preview:
+          {' '}
+          <a href="/Lookbook" target="_blank" rel="noreferrer">/Lookbook</a>
+        </p>
+        <iframe
+          title="Lookbook Preview"
+          src="/Lookbook"
+          style={{ width: '100%', height: 680, border: '1px solid #e2e8f0', borderRadius: 10, background: '#fff' }}
+        />
+      </div>
+
+      <div style={{ marginTop: 40 }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: 18 }}>Reels Test</h3>
+        <p style={{ margin: '0 0 10px', color: '#666' }}>
+          Full page preview:
+          {' '}
+          <a href="/Reels" target="_blank" rel="noreferrer">/Reels</a>
+        </p>
+        <iframe
+          title="Reels Preview"
+          src="/Reels"
+          style={{ width: '100%', height: 680, border: '1px solid #e2e8f0', borderRadius: 10, background: '#000' }}
+        />
+      </div>
+
+      <div style={{ marginTop: 40 }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: 18 }}>Instagram Page Test</h3>
+        <p style={{ margin: '0 0 10px', color: '#666' }}>
+          Full page preview:
+          {' '}
+          <a href="/Instagram" target="_blank" rel="noreferrer">/Instagram</a>
+        </p>
+        <iframe
+          title="Instagram Page Preview"
+          src="/Instagram"
+          style={{ width: '100%', height: 680, border: '1px solid #e2e8f0', borderRadius: 10, background: '#fff' }}
+        />
       </div>
     </div>
   );

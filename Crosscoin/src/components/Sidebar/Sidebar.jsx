@@ -46,6 +46,7 @@ const MENU = [
   { label: 'Blogs',          icon: IC.blog,      view: 'blogs' },
   { label: 'Brands',         icon: IC.brands,    view: 'brands' },
   { label: 'Brand Settings', icon: IC.settings,  view: 'brand-settings' },
+  { label: 'Analytics',      icon: IC.analytics, view: 'analytics' },
   { label: 'UTM Analytics',  icon: IC.analytics, view: 'utm-analytics' },
   { label: 'Consumers',      icon: IC.consumers, view: 'consumers' },
   { label: 'Logout',         icon: IC.logout,    view: 'logout' },
