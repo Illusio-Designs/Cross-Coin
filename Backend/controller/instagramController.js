@@ -1,6 +1,6 @@
 const { Op } = require('sequelize');
 const instagramService = require('../services/instagramService');
-const { InstagramPostProduct, Product, ProductImage } = require('../model/associations');
+const { InstagramPostProduct, Product, ProductImage, ProductVariation } = require('../model/associations');
 const imagekitService = require('../services/imagekitService');
 
 const toPositiveInt = (value) => {
@@ -28,8 +28,11 @@ module.exports.getFeed = async (req, res) => {
           {
             model: Product,
             as: 'Product',
-            attributes: ['id', 'name', 'price', 'slug'],
-            include: [{ model: ProductImage, as: 'ProductImages', attributes: ['id', 'fileName'] }],
+            attributes: ['id', 'name', 'slug'],
+            include: [
+              { model: ProductImage, as: 'ProductImages', attributes: ['id', 'fileName'] },
+              { model: ProductVariation, as: 'ProductVariations', attributes: ['id', 'price'] },
+            ],
           },
         ],
       });
@@ -41,10 +44,14 @@ module.exports.getFeed = async (req, res) => {
       if (!tagsByPost.has(key)) tagsByPost.set(key, []);
       const product = row.Product;
       const firstImage = product?.ProductImages?.[0];
+      const firstVariation = product?.ProductVariations?.[0];
+      const resolvedPrice = firstVariation?.price !== undefined && firstVariation?.price !== null
+        ? firstVariation.price
+        : 0;
       tagsByPost.get(key).push({
         id: product?.id,
         name: product?.name,
-        price: product?.price,
+        price: resolvedPrice,
         slug: product?.slug,
         primary_image: firstImage
           ? imagekitService.getOptimizedUrl(firstImage.fileName, 'thumbnail')
