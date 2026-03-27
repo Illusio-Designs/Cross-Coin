@@ -95,6 +95,140 @@ const setupDatabase = async () => {
       console.error("❌ Error applying associations:", assocError.message);
     }
 
+    // Pre-sync fix: ensure FShip sync columns exist before Sequelize tries to
+    // add idx_fship_sync_status during model sync on existing orders table.
+    console.log("Ensuring orders FShip sync columns before sync...");
+    try {
+      const [ordersTable] = await sequelize.query(`
+        SELECT TABLE_NAME
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'orders'
+      `);
+
+      if (ordersTable.length) {
+        const [fshipStatusColumn] = await sequelize.query(`
+          SELECT COLUMN_NAME
+          FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'orders'
+            AND COLUMN_NAME = 'fship_sync_status'
+        `);
+
+        if (!fshipStatusColumn.length) {
+          await sequelize.query(`
+            ALTER TABLE orders
+            ADD COLUMN fship_sync_status ENUM('pending','syncing','synced','failed')
+            DEFAULT 'pending'
+          `);
+        }
+
+        const [fshipAttemptsColumn] = await sequelize.query(`
+          SELECT COLUMN_NAME
+          FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'orders'
+            AND COLUMN_NAME = 'fship_sync_attempts'
+        `);
+
+        if (!fshipAttemptsColumn.length) {
+          await sequelize.query(`
+            ALTER TABLE orders
+            ADD COLUMN fship_sync_attempts INT DEFAULT 0
+          `);
+        }
+
+        const [fshipIndex] = await sequelize.query(`
+          SELECT INDEX_NAME
+          FROM INFORMATION_SCHEMA.STATISTICS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'orders'
+            AND INDEX_NAME = 'idx_fship_sync_status'
+        `);
+
+        if (!fshipIndex.length) {
+          await sequelize.query(`
+            ALTER TABLE orders
+            ADD INDEX idx_fship_sync_status (fship_sync_status)
+          `);
+        }
+      }
+
+      console.log("✓ Orders FShip sync columns ensured pre-sync");
+    } catch (fshipPreSyncError) {
+      console.log(
+        "⚠️ Pre-sync FShip orders column fix skipped:",
+        fshipPreSyncError.message
+      );
+    }
+
+    // Pre-sync fix: ensure coupon_usages.guest_user_id exists before Sequelize
+    // attempts to create index coupon_usages_guest_user_id during model sync.
+    console.log("Ensuring coupon_usages guest_user_id before sync...");
+    try {
+      const [couponUsagesTable] = await sequelize.query(`
+        SELECT TABLE_NAME
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'coupon_usages'
+      `);
+
+      if (couponUsagesTable.length) {
+        const [guestUserIdColumn] = await sequelize.query(`
+          SELECT COLUMN_NAME
+          FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'coupon_usages'
+            AND COLUMN_NAME = 'guest_user_id'
+        `);
+
+        if (!guestUserIdColumn.length) {
+          await sequelize.query(`
+            ALTER TABLE coupon_usages
+            ADD COLUMN guest_user_id INT NULL
+          `);
+        }
+
+        const [guestUserIdIndex] = await sequelize.query(`
+          SELECT INDEX_NAME
+          FROM INFORMATION_SCHEMA.STATISTICS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'coupon_usages'
+            AND INDEX_NAME = 'coupon_usages_guest_user_id'
+        `);
+
+        if (!guestUserIdIndex.length) {
+          await sequelize.query(`
+            ALTER TABLE coupon_usages
+            ADD INDEX coupon_usages_guest_user_id (guest_user_id)
+          `);
+        }
+      } else {
+        // Legacy DBs may have coupon_usage; ensure coupon_usages exists with guest_user_id.
+        await sequelize.query(`
+          CREATE TABLE IF NOT EXISTS coupon_usages (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            couponId INT NOT NULL,
+            userId INT NULL,
+            guest_user_id INT NULL,
+            orderId INT NULL,
+            discountAmount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            usedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX coupon_usages_guest_user_id (guest_user_id)
+          )
+        `);
+      }
+
+      console.log("✓ coupon_usages.guest_user_id ensured pre-sync");
+    } catch (couponPreSyncError) {
+      console.log(
+        "⚠️ Pre-sync coupon_usages column fix skipped:",
+        couponPreSyncError.message
+      );
+    }
+
     // Sync all tables at once (this creates all tables and relationships)
     // Use force: false and alter: false to prevent constraint issues
     console.log("Syncing all tables...");
@@ -156,6 +290,31 @@ const setupDatabase = async () => {
       console.log(
         "⚠️ users.loyalty_points update skipped:",
         loyaltyPointsError.message
+      );
+    }
+
+    // Ensure users.refreshTokenExpiry exists (legacy DB safety)
+    console.log("Ensuring users.refreshTokenExpiry column...");
+    try {
+      const [refreshExpiryColumn] = await sequelize.query(`
+        SELECT COLUMN_NAME
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'users'
+          AND COLUMN_NAME = 'refreshTokenExpiry'
+      `);
+
+      if (!refreshExpiryColumn.length) {
+        await sequelize.query(`
+          ALTER TABLE users
+          ADD COLUMN refreshTokenExpiry DATETIME NULL
+        `);
+      }
+      console.log("✓ users.refreshTokenExpiry ensured");
+    } catch (refreshExpiryError) {
+      console.log(
+        "⚠️ users.refreshTokenExpiry update skipped:",
+        refreshExpiryError.message
       );
     }
 
@@ -600,24 +759,27 @@ const setupDatabase = async () => {
     console.log("Creating slider_brands table...");
     // await createSliderBrandsTable(); // Temporarily disabled - function defined later in file
 
-    // Now it's safe to create the admin user
+    // Now it's safe to create the admin user.
+    // Use raw SQL to avoid model-column mismatch issues on legacy schemas.
     if (models["User"]) {
       const bcrypt = require("bcryptjs");
       const adminEmail = "admin@admin.com";
       const adminPassword = "Admin@123";
       const adminUsername = "admin";
       const adminRole = "admin";
-      const existingAdmin = await models["User"].findOne({
-        where: { email: adminEmail },
-      });
-      if (!existingAdmin) {
+
+      const [existingAdminRows] = await sequelize.query(
+        `SELECT id FROM users WHERE email = ? LIMIT 1`,
+        { replacements: [adminEmail] }
+      );
+
+      if (!existingAdminRows.length) {
         const hashedPassword = await bcrypt.hash(adminPassword, 10);
-        await models["User"].create({
-          username: adminUsername,
-          email: adminEmail,
-          password: hashedPassword,
-          role: adminRole,
-        });
+        await sequelize.query(
+          `INSERT INTO users (username, email, password, role, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, NOW(), NOW())`,
+          { replacements: [adminUsername, adminEmail, hashedPassword, adminRole] }
+        );
         console.log("✓ Admin user created: admin@admin.com / Admin@123");
       } else {
         console.log("✓ Admin user already exists");
