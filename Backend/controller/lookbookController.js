@@ -24,7 +24,7 @@ const normalizeLookbookPayload = (payload) => {
     Hotspots: (img.Hotspots || []).map((hs) => {
       const product = hs.Product || {};
       const firstImage = (product.ProductImages || [])[0];
-      const primaryImagePath = firstImage ? firstImage.fileName : null;
+      const primaryImagePath = firstImage ? (firstImage.image_url || firstImage.fileName) : null;
       const firstVariation = (product.ProductVariations || [])[0];
       const resolvedPrice = firstVariation?.price !== undefined && firstVariation?.price !== null
         ? firstVariation.price
@@ -280,7 +280,7 @@ module.exports.getLookbooks = async (req, res) => {
                   as: 'Product',
                   attributes: ['id', 'name', 'slug'],
                   include: [
-                    { model: ProductImage, as: 'ProductImages', attributes: ['id', 'fileName'] },
+                    { model: ProductImage, as: 'ProductImages', attributes: ['id', 'image_url', 'is_primary'] },
                     { model: ProductVariation, as: 'ProductVariations', attributes: ['id', 'price'] },
                   ],
                 },
@@ -322,7 +322,7 @@ module.exports.getLookbookBySlug = async (req, res) => {
                   as: 'Product',
                   attributes: ['id', 'name', 'slug'],
                   include: [
-                    { model: ProductImage, as: 'ProductImages', attributes: ['id', 'fileName'] },
+                    { model: ProductImage, as: 'ProductImages', attributes: ['id', 'image_url', 'is_primary'] },
                     { model: ProductVariation, as: 'ProductVariations', attributes: ['id', 'price'] },
                   ],
                 },
