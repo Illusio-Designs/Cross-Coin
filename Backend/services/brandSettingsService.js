@@ -57,18 +57,27 @@ async function getAllBrandSettings(brandId, category = null) {
 /**
  * Set or update a brand setting
  */
-async function setBrandSetting(brandId, key, value, isEncrypted = false, category = 'general', description = null, updatedBy = null) {
-    const [setting, created] = await BrandSetting.upsert({
-        brand_id: brandId,
-        key,
-        value: value,
-        is_encrypted: false,
-        category,
-        description,
-        updated_by: updatedBy
-    }, {
-        returning: true
-    });
+async function setBrandSetting(
+  brandId,
+  key,
+  value,
+  isEncrypted = false,
+  category = 'general',
+  description = null,
+  updatedBy = null
+) {
+    const [setting] = await BrandSetting.upsert(
+        {
+            brand_id: brandId,
+            key,
+            value: value,
+            is_encrypted: !!isEncrypted,
+            category,
+            description,
+            updated_by: updatedBy
+        },
+        { returning: true }
+    );
     
     // Clear cache
     const cacheKey = `${brandId}:${key}`;
@@ -135,7 +144,7 @@ async function createSetting(data) {
         brand_id: data.brand_id,
         key: data.key,
         value: data.value,
-        is_encrypted: false,
+        is_encrypted: !!data.is_encrypted,
         category: data.category || 'general',
         description: data.description || null,
         updated_by: data.updated_by || null
@@ -158,7 +167,8 @@ async function updateSetting(brandId, key, data) {
     
     await setting.update({
         value: data.value,
-        is_encrypted: false,
+        is_encrypted:
+            data.is_encrypted !== undefined ? !!data.is_encrypted : setting.is_encrypted,
         updated_by: data.updated_by || null
     });
     

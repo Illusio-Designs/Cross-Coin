@@ -1,4 +1,5 @@
 const { BrandSetting } = require('../model/brandSettingModel');
+const { decrypt } = require('../utils/encryption');
 
 /**
  * Helper to get brand settings from database
@@ -35,12 +36,12 @@ class SettingsHelper {
             });
 
             if (setting) {
-                let value = setting.value;
-                
-                // Decrypt if needed (you'll need to implement decrypt function)
-                if (setting.is_encrypted && value) {
-                    // TODO: Implement decryption
-                    // value = decrypt(value);
+                const rawValue = setting.getDataValue('value');
+                let value = rawValue;
+
+                // Decrypt sensitive values when the row is flagged as encrypted.
+                if (setting.is_encrypted && rawValue) {
+                    value = decrypt(rawValue);
                 }
 
                 // Cache the result

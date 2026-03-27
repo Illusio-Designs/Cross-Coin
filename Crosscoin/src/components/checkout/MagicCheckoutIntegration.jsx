@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import PropTypes from "prop-types";
 
 /**
@@ -28,6 +28,9 @@ const MagicCheckoutIntegration = ({
   appliedCoupon = null,
   onSuccess,
   onError,
+  autoStart = false,
+  startKey = 0,
+  hideButton = false,
 }) => {
   const [sdkLoaded, setSdkLoaded] = useState(false);
   const [sdkLoading, setSdkLoading] = useState(false);
@@ -139,10 +142,12 @@ const MagicCheckoutIntegration = ({
           customer_id: user?.id || null,
           line_items: lineItems,              // passed through to Razorpay
           line_items_total: lineItemsTotal,   // in paise — MANDATORY for Magic Checkout
-          notes: {
-            coupon_code: appliedCoupon?.code || null,
-            discount_amount: discountRupees,
-          },
+        notes: appliedCoupon
+          ? {
+              coupon_code: appliedCoupon?.code || null,
+              discount_amount: discountRupees,
+            }
+          : {},
         }),
       });
 
@@ -162,7 +167,7 @@ const MagicCheckoutIntegration = ({
         currency: "INR",
         name: "Cross Coin",
         one_click_checkout: true,     // ← triggers Magic Checkout UI
-        show_coupons: true,           // Razorpay fetches coupons from your promotions API
+        show_coupons: true,           // Allow applying coupons in Magic Checkout
         prefill: {
           name: user?.name || "",
           email: user?.email || "",
@@ -246,6 +251,24 @@ const MagicCheckoutIntegration = ({
     getCartTotal, buildLineItems, onSuccess, onError,
   ]);
 
+  const hasAutoStartedRef = useRef(false);
+  useEffect(() => {
+    // When autoStart is enabled, open Magic Checkout immediately after
+    // we have an SDK instance and the caller increments startKey.
+    if (!autoStart) return;
+    if (!MAGIC_CHECKOUT_ENABLED) return;
+    if (!startKey) return;
+    if (!sdkLoaded) return;
+    if (sdkLoading) return;
+    if (isProcessing) return;
+    if (cartItems.length === 0) return;
+
+    if (hasAutoStartedRef.current === startKey) return;
+    hasAutoStartedRef.current = startKey;
+
+    processPayment();
+  }, [autoStart, startKey, sdkLoaded, sdkLoading, isProcessing, cartItems.length, processPayment]);
+
   // ── Not enabled ───────────────────────────────────────────────────────────
   if (!MAGIC_CHECKOUT_ENABLED) {
     return (
@@ -272,20 +295,22 @@ const MagicCheckoutIntegration = ({
         </div>
       )}
 
-      <button
-        onClick={processPayment}
-        disabled={isProcessing || sdkLoading || !sdkLoaded || cartItems.length === 0}
-        style={{
-          width: "100%", padding: "14px 0",
-          background: isProcessing || sdkLoading || !sdkLoaded ? "#a0aec0" : "#180D3E",
-          color: "#fff", border: "none", borderRadius: 8,
-          fontSize: 16, fontWeight: 600,
-          cursor: isProcessing || sdkLoading || !sdkLoaded ? "not-allowed" : "pointer",
-          transition: "background 0.2s",
-        }}
-      >
-        {sdkLoading ? "Loading..." : isProcessing ? "Processing..." : "⚡ Pay with Magic Checkout"}
-      </button>
+      {!hideButton && (
+        <button
+          onClick={processPayment}
+          disabled={isProcessing || sdkLoading || !sdkLoaded || cartItems.length === 0}
+          style={{
+            width: "100%", padding: "14px 0",
+            background: isProcessing || sdkLoading || !sdkLoaded ? "#a0aec0" : "#180D3E",
+            color: "#fff", border: "none", borderRadius: 8,
+            fontSize: 16, fontWeight: 600,
+            cursor: isProcessing || sdkLoading || !sdkLoaded ? "not-allowed" : "pointer",
+            transition: "background 0.2s",
+          }}
+        >
+          {sdkLoading ? "Loading..." : isProcessing ? "Processing..." : "⚡ Pay with Magic Checkout"}
+        </button>
+      )}
 
       <p style={{ margin: "8px 0 0", fontSize: 12, color: "#888", textAlign: "center" }}>
         Powered by Razorpay Magic Checkout — saved addresses, UPI, cards & COD

@@ -343,6 +343,7 @@ function CartProvider({ children }) {
     };
     
     setBuyNowItem(item);
+    return item;
   };
 
   const clearBuyNow = () => {

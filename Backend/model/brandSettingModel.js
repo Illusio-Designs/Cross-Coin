@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db.js');
+const { encrypt, decrypt, isEncrypted } = require('../utils/encryption.js');
 
 const BrandSetting = sequelize.define('BrandSetting', {
     id: {
@@ -25,7 +26,14 @@ const BrandSetting = sequelize.define('BrandSetting', {
     value: {
         type: DataTypes.TEXT,
         allowNull: true,
-        comment: 'Setting value (encrypted for sensitive data)'
+        comment: 'Setting value (encrypted for sensitive data)',
+        // Decrypt on read when this row is flagged as encrypted.
+        get() {
+            const raw = this.getDataValue('value');
+            const encryptedFlag = this.getDataValue('is_encrypted');
+            if (!encryptedFlag || !raw) return raw;
+            return decrypt(raw);
+        }
     },
     is_encrypted: {
         type: DataTypes.BOOLEAN,
@@ -63,6 +71,16 @@ const BrandSetting = sequelize.define('BrandSetting', {
     tableName: 'brand_settings',
     timestamps: true,
     underscored: true,
+    hooks: {
+        // Encrypt on write when `is_encrypted=true`.
+        beforeSave: (setting) => {
+            if (!setting.is_encrypted) return;
+            const raw = setting.getDataValue('value');
+            if (!raw || typeof raw !== 'string') return;
+            if (isEncrypted(raw)) return;
+            setting.setDataValue('value', encrypt(raw));
+        }
+    },
     indexes: [
         {
             unique: true,

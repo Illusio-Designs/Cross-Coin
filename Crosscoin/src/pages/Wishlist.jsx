@@ -198,9 +198,10 @@ const Wishlist = () => {
                   index={idx}
                   onProductClick={(product) => {
                     if (product.slug) {
-                      router.push(`/ProductDetails?slug=${product.slug}`);
+                      router.push(`/ProductDetails?slug=${encodeURIComponent(product.slug)}`);
                     } else {
-                      router.push(`/product/${product.id}`);
+                      // No slug => avoid navigating to a route that doesn't exist.
+                      router.push('/Products');
                     }
                   }}
                   onAddToCart={(e, product, color, variationId) => {
@@ -267,9 +268,10 @@ const Wishlist = () => {
                 index={idx}
                 onProductClick={(product) => {
                   if (product.slug) {
-                    router.push(`/ProductDetails?slug=${product.slug}`);
+                    router.push(`/ProductDetails?slug=${encodeURIComponent(product.slug)}`);
                   } else {
-                    router.push(`/product/${product.id}`);
+                    // No slug => avoid navigating to a route that doesn't exist.
+                    router.push('/Products');
                   }
                 }}
                 onAddToCart={(e, product, color, variationId) => {

@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db.js');
+const { encrypt, decrypt, isEncrypted } = require('../utils/encryption.js');
 
 const GuestUser = sequelize.define('GuestUser', {
     id: {
@@ -26,7 +27,22 @@ const GuestUser = sequelize.define('GuestUser', {
     },
     phone: {
         type: DataTypes.STRING(500),
-        allowNull: true
+        allowNull: true,
+        // Store encrypted at rest; expose decrypted value to the app.
+        get() {
+            const raw = this.getDataValue('phone');
+            return decrypt(raw);
+        },
+        set(value) {
+            if (value === null || value === undefined) {
+                this.setDataValue('phone', value);
+                return;
+            }
+            const str = String(value);
+            // Avoid double-encrypting values already in `iv:authTag:ciphertext` form.
+            if (isEncrypted(str)) this.setDataValue('phone', str);
+            else this.setDataValue('phone', encrypt(str));
+        }
     },
     // Guest session identifier for tracking
     sessionId: {
