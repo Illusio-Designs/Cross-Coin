@@ -1,6 +1,3 @@
-"use client";
-
-import createGlobe from "cobe";
 import { useCallback, useEffect, useRef } from "react";
 
 export function cn(...classes) {
@@ -26,50 +23,33 @@ const DARK_CONFIG = {
   opacity: 1,
 };
 
-export default function Globe({
-  className,
-  config = {},
-  markers = [],
-  phi: fixedPhi = 0,
-  theta: fixedTheta = 0.3,
-}) {
+export default function Globe({ className, config = {}, markers = [], phi: fixedPhi = 0, theta: fixedTheta = 0.3 }) {
   const canvasRef = useRef(null);
   const phiRef = useRef(fixedPhi);
-
+  const globeRef = useRef(null);
   const pointerDown = useRef(false);
   const pointerStartX = useRef(0);
   const phiOnPointerDown = useRef(fixedPhi);
 
-  useEffect(() => {
-    phiRef.current = fixedPhi;
-  }, [fixedPhi]);
+  useEffect(() => { phiRef.current = fixedPhi; }, [fixedPhi]);
 
   useEffect(() => {
-    if (!canvasRef.current) return undefined;
-
-    const globe = createGlobe(canvasRef.current, {
-      ...DARK_CONFIG,
-      ...config,
-      phi: phiRef.current,
-      theta: fixedTheta,
-      markers: markers.map((m) => ({
-        location: m.location,
-        size: m.size,
-        ...(m.color ? { color: m.color } : {}),
-      })),
-      onRender: (state) => {
-        // Static globe: no phi increment, only drag updates phiRef.
-        state.phi = phiRef.current;
-        state.theta = fixedTheta;
-        state.markers = markers.map((m) => ({
-          location: m.location,
-          size: m.size,
-          ...(m.color ? { color: m.color } : {}),
-        }));
-      },
+    if (!canvasRef.current) return;
+    import("cobe").then(({ default: createGlobe }) => {
+      globeRef.current = createGlobe(canvasRef.current, {
+        ...DARK_CONFIG,
+        ...config,
+        phi: phiRef.current,
+        theta: fixedTheta,
+        markers: markers.map((m) => ({ location: m.location, size: m.size, ...(m.color ? { color: m.color } : {}) })),
+        onRender: (state) => {
+          state.phi = phiRef.current;
+          state.theta = fixedTheta;
+          state.markers = markers.map((m) => ({ location: m.location, size: m.size, ...(m.color ? { color: m.color } : {}) }));
+        },
+      });
     });
-
-    return () => globe.destroy();
+    return () => { globeRef.current?.destroy(); };
   }, [markers, fixedTheta, config]);
 
   const handlePointerDown = useCallback((e) => {
@@ -81,13 +61,10 @@ export default function Globe({
 
   const handlePointerMove = useCallback((e) => {
     if (!pointerDown.current) return;
-    const delta = (e.clientX - pointerStartX.current) / 300;
-    phiRef.current = phiOnPointerDown.current + delta;
+    phiRef.current = phiOnPointerDown.current + (e.clientX - pointerStartX.current) / 300;
   }, []);
 
-  const handlePointerUp = useCallback(() => {
-    pointerDown.current = false;
-  }, []);
+  const handlePointerUp = useCallback(() => { pointerDown.current = false; }, []);
 
   return (
     <canvas
@@ -100,4 +77,3 @@ export default function Globe({
     />
   );
 }
-

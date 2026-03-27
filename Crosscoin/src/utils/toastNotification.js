@@ -1,8 +1,7 @@
+// Re-export from toast.js with showSuccess/showError aliases
 import { toast } from 'react-toastify';
-import { TOAST_TEXT } from '../constants/toastMessages';
 
-// Toast configuration with custom styling
-const toastConfig = {
+const config = {
   position: 'top-right',
   autoClose: 1500,
   hideProgressBar: true,
@@ -11,103 +10,16 @@ const toastConfig = {
   pauseOnFocusLoss: false,
   draggable: false,
   theme: 'light',
-  limit: 3,
 };
 
-// Custom toast messages for common actions (kept for backward compatibility)
-const messages = {
-  success: TOAST_TEXT,
-  error: TOAST_TEXT,
-  info: TOAST_TEXT,
-  warning: TOAST_TEXT,
+const show = (type, message, toastId) => {
+  const id = toastId || message;
+  toast.dismiss(id);
+  toast[type](message, { ...config, toastId: id });
+  setTimeout(() => toast.dismiss(id), 1500);
 };
 
-/**
- * Show success toast
- * @param {string} key - Message key from messages.success
- * @param {string} customMessage - Optional custom message to override
- */
-export const showSuccess = (key, customMessage) => {
-  const message = customMessage || messages.success[key] || 'Success!';
-  toast.success(message, toastConfig);
-};
-
-/**
- * Show error toast
- * @param {string} key - Message key from messages.error
- * @param {string} customMessage - Optional custom message to override
- */
-export const showError = (key, customMessage) => {
-  const message = customMessage || messages.error[key] || 'Something went wrong. Please try again.';
-  toast.error(message, toastConfig);
-};
-
-/**
- * Show info toast
- * @param {string} key - Message key from messages.info
- * @param {string} customMessage - Optional custom message to override
- */
-export const showInfo = (key, customMessage) => {
-  const message = customMessage || messages.info[key] || 'Info';
-  toast.info(message, toastConfig);
-};
-
-/**
- * Show warning toast
- * @param {string} key - Message key from messages.warning
- * @param {string} customMessage - Optional custom message to override
- */
-export const showWarning = (key, customMessage) => {
-  const message = customMessage || messages.warning[key] || 'Warning';
-  toast.warning(message, toastConfig);
-};
-
-/**
- * Show loading toast (doesn't auto-close)
- * @param {string} key - Message key from messages.info
- * @returns {string} Toast ID for later dismissal
- */
-export const showLoading = (key) => {
-  const message = messages.info[key] || 'Loading...';
-  return toast.loading(message, {
-    ...toastConfig,
-    autoClose: false,
-  });
-};
-
-/**
- * Update a toast
- * @param {string} toastId - Toast ID from showLoading
- * @param {object} options - Update options
- */
-export const updateToast = (toastId, options) => {
-  toast.update(toastId, options);
-};
-
-/**
- * Dismiss a specific toast
- * @param {string} toastId - Toast ID
- */
-export const dismissToast = (toastId) => {
-  toast.dismiss(toastId);
-};
-
-/**
- * Dismiss all toasts
- */
-export const dismissAllToasts = () => {
-  toast.dismiss();
-};
-
-export default {
-  showSuccess,
-  showError,
-  showInfo,
-  showWarning,
-  showLoading,
-  updateToast,
-  dismissToast,
-  dismissAllToasts,
-  messages,
-  toastConfig,
-};
+export const showSuccess = (key, customMessage) => show('success', customMessage || key || 'Success!');
+export const showError   = (key, customMessage) => show('error',   customMessage || key || 'Something went wrong.');
+export const showInfo    = (key, customMessage) => show('info',    customMessage || key || 'Info');
+export const showWarning = (key, customMessage) => show('warning', customMessage || key || 'Warning');
