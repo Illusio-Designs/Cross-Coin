@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { instagramService } from "../../../services";
 import { showError, showSuccess } from "../../../utils/toastNotification";
+import Loader from "../../../components/common/Loader";
 
 export default function AdminInstagramFeed() {
   const [loading, setLoading] = useState(false);
@@ -63,7 +64,7 @@ export default function AdminInstagramFeed() {
       </div>
 
       <form className="seo-form" onSubmit={handleTag}>
-        <h3>Tag Product To Instagram Post</h3>
+        <h3 className="sc-form-title">Tag Product To Instagram Post</h3>
         <div className="dm-2col">
           <div className="dm-field">
             <label className="dm-label">Instagram Post</label>
@@ -84,26 +85,32 @@ export default function AdminInstagramFeed() {
         <button className="sl-add-btn" type="submit">Tag Post</button>
       </form>
 
-      <div style={{ marginTop: 16 }}>
-        <h3>Posts ({posts.length})</h3>
-        {loading ? <p>Loading...</p> : (
-          <div className="brand-cards-grid">
+      <div className="sc-mt-16">
+        <div className="sc-list-head">
+          <h3 className="sc-list-title">Posts</h3>
+          <span className="sl-status-badge sl-status-active">{posts.length}</span>
+        </div>
+        {loading ? <div className="sl-loader-wrap"><Loader /></div> : (
+          <div className="sc-card-grid">
             {posts.map((post) => (
-              <div key={post.id} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 10 }}>
-                <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>{post.id}</div>
+              <div key={post.id} className="sc-item-card">
+                <div className="sc-item-id">{post.id}</div>
                 {post.media_url ? (
                   <img
                     src={post.media_type === "VIDEO" ? post.thumbnail_url || post.media_url : post.media_url}
                     alt={post.caption || "Instagram media"}
-                    style={{ width: "100%", height: 180, objectFit: "cover", borderRadius: 6 }}
+                    className="sc-post-image"
                   />
                 ) : null}
-                <div style={{ marginTop: 8, fontSize: 13 }}>{(post.caption || "").slice(0, 80)}</div>
-                <div style={{ marginTop: 6, fontSize: 12, color: "#6b7280" }}>
+                <div className="sc-item-caption">{(post.caption || "").slice(0, 80)}</div>
+                <div className="sc-item-sub">
                   Tagged products: {Array.isArray(post.tagged_products) ? post.tagged_products.length : 0}
                 </div>
               </div>
             ))}
+            {!posts.length ? (
+              <div className="sl-empty"><p>No posts found</p></div>
+            ) : null}
           </div>
         )}
       </div>
