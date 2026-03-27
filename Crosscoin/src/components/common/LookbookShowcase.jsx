@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { useCart } from "../context/CartContext";
+import { useCart } from "../../context/CartContext";
+import { getPublicLookbookBySlug, getPublicLookbooks } from "../../services/publicApi";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
-
-const LookbookPage = () => {
+const LookbookShowcase = ({ slug: slugProp = null, embedded = false }) => {
   const router = useRouter();
-  const { slug } = router.query;
+  const querySlug = typeof router?.query?.slug === "string" ? router.query.slug : null;
+  const [internalSlug, setInternalSlug] = useState(slugProp || null);
+  const slug = slugProp || querySlug || internalSlug;
   const { addToCart } = useCart();
 
   const [loading, setLoading] = useState(true);
@@ -18,25 +19,21 @@ const LookbookPage = () => {
   const isDetailView = useMemo(() => !!slug, [slug]);
 
   useEffect(() => {
+    setInternalSlug(slugProp || null);
+  }, [slugProp]);
+
+  useEffect(() => {
     const fetchLookbooks = async () => {
       try {
         setLoading(true);
         setError(null);
         setActiveHotspot(null);
 
-        const endpoint = isDetailView
-          ? `${API_URL}/api/lookbooks/${encodeURIComponent(slug)}`
-          : `${API_URL}/api/lookbooks`;
+        const data = isDetailView
+          ? await getPublicLookbookBySlug(slug)
+          : await getPublicLookbooks();
 
-        const res = await fetch(endpoint, {
-          headers: {
-            "Content-Type": "application/json",
-            "X-Brand-Name": "crosscoin",
-          },
-        });
-        const data = await res.json();
-
-        if (!res.ok || !data.success) {
+        if (!data?.success) {
           throw new Error(data.message || "Failed to load lookbook data");
         }
 
@@ -58,11 +55,21 @@ const LookbookPage = () => {
   }, [isDetailView, slug]);
 
   const handleOpenLookbook = (targetSlug) => {
-    router.push(`/Lookbook?slug=${targetSlug}`);
+    if (embedded || !querySlug) {
+      setInternalSlug(targetSlug);
+      return;
+    }
+    router.push({ pathname: router.pathname, query: { ...router.query, slug: targetSlug } });
   };
 
   const handleBackToGrid = () => {
-    router.push("/Lookbook");
+    if (embedded || !querySlug) {
+      setInternalSlug(null);
+      return;
+    }
+    const nextQuery = { ...router.query };
+    delete nextQuery.slug;
+    router.push({ pathname: router.pathname, query: nextQuery });
   };
 
   const handleAddToCart = async (product) => {
@@ -98,7 +105,7 @@ const LookbookPage = () => {
     return (
       <div className="lookbook-page">
         <section className="lookbook-grid-section">
-          <h1 className="lookbook-title">Lookbook</h1>
+          {!embedded ? <h1 className="lookbook-title">Lookbook</h1> : null}
           <p className="lookbook-subtitle">Explore styled drops and shop directly from hotspots.</p>
 
           <div className="lookbook-grid">
@@ -208,5 +215,4 @@ const LookbookPage = () => {
   );
 };
 
-export default LookbookPage;
-
+export default LookbookShowcase;

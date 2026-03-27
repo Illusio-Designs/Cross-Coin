@@ -147,6 +147,59 @@ export const getPublicSliders = async () => {
   }
 };
 
+// ============ LOOKBOOK / REELS / INSTAGRAM APIs ============
+export const getPublicLookbooks = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/api/lookbooks`, addBrandHeader());
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const getPublicLookbookBySlug = async (slug) => {
+  try {
+    const response = await axios.get(
+      `${API_URL}/api/lookbooks/${encodeURIComponent(slug)}`,
+      addBrandHeader()
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const getPublicReels = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/api/reels`, addBrandHeader());
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const incrementReelView = async (reelId) => {
+  try {
+    const response = await axios.post(
+      `${API_URL}/api/reels/${reelId}/view`,
+      {},
+      addBrandHeader()
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const getInstagramFeed = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/api/instagram/feed`, addBrandHeader());
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
 // ============ PRODUCT APIs ============
 export const getPublicProductBySlug = async (slug) => {
   try {
