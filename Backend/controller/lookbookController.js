@@ -2,7 +2,14 @@ const fs = require('fs');
 const path = require('path');
 const slugify = require('slugify');
 const { sequelize } = require('../config/db.js');
-const { Lookbook, LookbookImage, LookbookHotspot, Product, ProductImage } = require('../model/associations.js');
+const {
+  Lookbook,
+  LookbookImage,
+  LookbookHotspot,
+  Product,
+  ProductImage,
+  ProductVariation,
+} = require('../model/associations.js');
 const imagekitService = require('../services/imagekitService.js');
 
 const resolveBrandId = (req, explicitBrandId = null) =>
@@ -18,10 +25,15 @@ const normalizeLookbookPayload = (payload) => {
       const product = hs.Product || {};
       const firstImage = (product.ProductImages || [])[0];
       const primaryImagePath = firstImage ? firstImage.fileName : null;
+      const firstVariation = (product.ProductVariations || [])[0];
+      const resolvedPrice = firstVariation?.price !== undefined && firstVariation?.price !== null
+        ? firstVariation.price
+        : 0;
       return {
         ...hs,
         Product: {
           ...product,
+          price: resolvedPrice,
           primary_image: primaryImagePath ? imagekitService.getOptimizedUrl(primaryImagePath, 'thumbnail') : null,
         },
       };
@@ -266,8 +278,11 @@ module.exports.getLookbooks = async (req, res) => {
                 {
                   model: Product,
                   as: 'Product',
-                  attributes: ['id', 'name', 'price', 'slug'],
-                  include: [{ model: ProductImage, as: 'ProductImages', attributes: ['id', 'fileName'] }],
+                  attributes: ['id', 'name', 'slug'],
+                  include: [
+                    { model: ProductImage, as: 'ProductImages', attributes: ['id', 'fileName'] },
+                    { model: ProductVariation, as: 'ProductVariations', attributes: ['id', 'price'] },
+                  ],
                 },
               ],
             },
@@ -305,8 +320,11 @@ module.exports.getLookbookBySlug = async (req, res) => {
                 {
                   model: Product,
                   as: 'Product',
-                  attributes: ['id', 'name', 'price', 'slug'],
-                  include: [{ model: ProductImage, as: 'ProductImages', attributes: ['id', 'fileName'] }],
+                  attributes: ['id', 'name', 'slug'],
+                  include: [
+                    { model: ProductImage, as: 'ProductImages', attributes: ['id', 'fileName'] },
+                    { model: ProductVariation, as: 'ProductVariations', attributes: ['id', 'price'] },
+                  ],
                 },
               ],
             },

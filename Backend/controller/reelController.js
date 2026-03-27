@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { sequelize } = require('../config/db.js');
-const { Reel, ReelProduct, Product, ProductImage } = require('../model/associations.js');
+const { Reel, ReelProduct, Product, ProductImage, ProductVariation } = require('../model/associations.js');
 const imagekitService = require('../services/imagekitService.js');
 
 const resolveBrandId = (req, explicitBrandId = null) =>
@@ -16,8 +16,13 @@ const normalizeReel = (reel) => {
   const data = reel.toJSON ? reel.toJSON() : reel;
   const products = (data.Products || []).map((product) => {
     const firstImage = (product.ProductImages || [])[0];
+    const firstVariation = (product.ProductVariations || [])[0];
+    const resolvedPrice = firstVariation?.price !== undefined && firstVariation?.price !== null
+      ? firstVariation.price
+      : 0;
     return {
       ...product,
+      price: resolvedPrice,
       primary_image: firstImage?.fileName
         ? imagekitService.getOptimizedUrl(firstImage.fileName, 'thumbnail')
         : null,
@@ -217,9 +222,12 @@ module.exports.getReels = async (req, res) => {
         {
           model: Product,
           as: 'Products',
-          attributes: ['id', 'name', 'price', 'slug'],
+          attributes: ['id', 'name', 'slug'],
           through: { attributes: ['display_order'] },
-          include: [{ model: ProductImage, as: 'ProductImages', attributes: ['id', 'fileName'] }],
+          include: [
+            { model: ProductImage, as: 'ProductImages', attributes: ['id', 'fileName'] },
+            { model: ProductVariation, as: 'ProductVariations', attributes: ['id', 'price'] },
+          ],
         },
       ],
       order: [['display_order', 'ASC']],
