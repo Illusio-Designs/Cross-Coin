@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import { instagramService } from "../../../services";
 import { showError, showSuccess } from "../../../utils/toastNotification";
-import { Button, Modal, Table } from "../../../components/ui";
+import { Button, Modal, Table, Input, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
+
+const IC = {
+  tag: <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
+};
 
 const EMPTY_TAG = { instagram_post_id: "", product_id: "" };
 
@@ -50,6 +54,11 @@ export default function AdminInstagramFeed() {
     ) : "—" },
     { header: "Caption",  cell: r => <span style={{ fontSize: 12 }}>{(r.caption || "").slice(0, 60)}</span> },
     { header: "Tagged Products", cell: r => Array.isArray(r.tagged_products) ? r.tagged_products.length : 0 },
+    { header: "Actions", cell: r => (
+      <div className="sl-actions">
+        <button className="sl-btn-edit" title="Tag Product" onClick={() => { setTagForm(p => ({ ...p, instagram_post_id: r.id })); setTagOpen(true); }}>{IC.tag}</button>
+      </div>
+    )},
   ];
 
   return (
@@ -87,15 +96,9 @@ export default function AdminInstagramFeed() {
       <Modal isOpen={tagOpen} onClose={() => setTagOpen(false)} title="Tag Product To Instagram Post">
         <form onSubmit={handleTag}>
           <div className="modal-body">
-            <div className="dm-field"><label className="dm-label">Instagram Post</label>
-              <select className="dm-input dm-select" value={tagForm.instagram_post_id} onChange={e => setTagForm(p => ({...p, instagram_post_id: e.target.value}))} required>
-                <option value="">Select post</option>
-                {posts.map(p => <option key={p.id} value={p.id}>{p.id} — {(p.caption || "No caption").slice(0, 40)}</option>)}
-              </select>
-            </div>
-            <div className="dm-field"><label className="dm-label">Product ID</label>
-              <input className="dm-input" type="number" placeholder="Enter product ID" value={tagForm.product_id} onChange={e => setTagForm(p => ({...p, product_id: e.target.value}))} required />
-            </div>
+            <Select label="Instagram Post" value={tagForm.instagram_post_id} onChange={v => setTagForm(p => ({...p, instagram_post_id: v}))} required
+              options={[{ value: '', label: 'Select post' }, ...posts.map(p => ({ value: String(p.id), label: `${p.id} — ${(p.caption || 'No caption').slice(0, 40)}` }))]} searchable />
+            <Input label="Product ID" type="number" value={tagForm.product_id} onChange={e => setTagForm(p => ({...p, product_id: e.target.value}))} required placeholder="Enter product ID" />
           </div>
           <div className="modal-footer">
             <Button variant="secondary" onClick={() => setTagOpen(false)}>Cancel</Button>
