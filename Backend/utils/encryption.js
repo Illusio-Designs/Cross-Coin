@@ -58,7 +58,13 @@ function decrypt(ciphertext) {
 function isEncrypted(value) {
   if (!value || typeof value !== 'string') return false;
   const parts = value.split(':');
-  return parts.length === 3 && parts.every(p => /^[0-9a-f]+$/i.test(p));
+  if (parts.length !== 3) return false;
+  const [ivHex, authTagHex, encryptedHex] = parts;
+  return (
+    /^[0-9a-f]+$/i.test(ivHex) &&
+    /^[0-9a-f]+$/i.test(authTagHex) &&
+    /^[0-9a-f]*$/i.test(encryptedHex)
+  );
 }
 
 module.exports = { encrypt, decrypt, isEncrypted };

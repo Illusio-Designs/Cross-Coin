@@ -349,45 +349,45 @@ Incremental implementation across 14 groups. Start with critical bug fixes (data
     - **Property 15: Mega menu excludes attribute values with product_count === 0**
     - **Validates: Requirements 18.2**
 
-- [ ] 14. Data Encryption for PII (Req 23)
-  - [ ] 14.1 Create `Backend/utils/encryption.js`
+- [x] 14. Data Encryption for PII (Req 23)
+  - [x] 14.1 Create `Backend/utils/encryption.js`
     - Implement `encrypt(plaintext)` using AES-256-GCM with random IV; return `iv:authTag:ciphertext` (hex-encoded)
     - Implement `decrypt(ciphertext)` — parse `iv:authTag:ciphertext`, decrypt, return plaintext; return `null` and log error on failure
     - Implement `isEncrypted(value)` — returns true if value matches `hex:hex:hex` format
     - Read key from `process.env.DATA_ENCRYPTION_KEY` (64-char hex)
     - _Requirements: 23.1, 23.2, 23.9_
 
-  - [ ] 14.2 Extend `phone` columns to VARCHAR(500) in `shipping_addresses` and `guest_users`
+  - [x] 14.2 Extend `phone` columns to VARCHAR(500) in `shipping_addresses` and `guest_users`
     - Run SQL: `ALTER TABLE shipping_addresses MODIFY COLUMN phone VARCHAR(500)` and `ALTER TABLE guest_users MODIFY COLUMN phone VARCHAR(500)`
     - _Requirements: 23.3_
 
-  - [ ] 14.3 Encrypt `phone` in `ShippingAddress` on create/update; decrypt on read
+  - [x] 14.3 Encrypt `phone` in `ShippingAddress` on create/update; decrypt on read
     - In `shippingAddressController.js`, call `encrypt(phone)` before saving and `decrypt(phone)` before returning in responses
     - _Requirements: 23.3, 23.4_
 
-  - [ ] 14.4 Encrypt `phone` in `GuestUser` on create; decrypt on read
+  - [x] 14.4 Encrypt `phone` in `GuestUser` on create; decrypt on read
     - In `orderController.js` (guest order creation) and wherever guest user data is returned, apply `encrypt`/`decrypt`
     - _Requirements: 23.5, 23.6_
 
-  - [ ] 14.5 Encrypt `brand_settings` values where `is_encrypted = true` on write; decrypt on read
+  - [x] 14.5 Encrypt `brand_settings` values where `is_encrypted = true` on write; decrypt on read
     - In `brandSettingsController.js` / `brandSettingsService.js`, wrap value with `encrypt`/`decrypt` when `is_encrypted` flag is true
     - _Requirements: 23.7_
 
-  - [ ] 14.6 Add `DATA_ENCRYPTION_KEY` to `.env` and document in `.env.example`
+  - [x] 14.6 Add `DATA_ENCRYPTION_KEY` to `.env` and document in `.env.example`
     - _Requirements: 23.2_
 
-  - [ ] 14.7 Write `Backend/scripts/encryptExistingData.js` migration script
+  - [x] 14.7 Write `Backend/scripts/encryptExistingData.js` migration script
     - Find all `ShippingAddress` records where `phone` does not match `isEncrypted()` — encrypt in-place
     - Find all `GuestUser` records where `phone` is not null and not encrypted — encrypt in-place
     - Find all `BrandSetting` records where `is_encrypted = true` and value is not encrypted — encrypt in-place
     - Idempotent: skip already-encrypted values
     - _Requirements: 23.8, 23.9_
 
-  - [ ]* 14.8 Write property test for encryption round trip (Property 20)
+  - [x]* 14.8 Write property test for encryption round trip (Property 20)
     - **Property 20: decrypt(encrypt(x)) === x for any plaintext**
     - **Validates: Requirements 23.1, 23.2**
 
-  - [ ]* 14.9 Write property test for phone numbers encrypted at rest (Property 21)
+  - [x]* 14.9 Write property test for phone numbers encrypted at rest (Property 21)
     - **Property 21: Phone stored in DB does not equal plaintext after encryption**
     - **Validates: Requirements 23.3**
 
