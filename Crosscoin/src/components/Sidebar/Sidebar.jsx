@@ -26,8 +26,9 @@ const IC = {
 };
 
 const MENU = [
-  { label: 'Dashboard',     icon: IC.dashboard, view: 'main' },
-  { label: 'Slider',        icon: IC.slider,    view: 'slider' },
+  { label: 'Dashboard',    icon: IC.dashboard, view: 'main' },
+  { label: 'Orders',       icon: IC.orders,    view: 'orders' },
+  { label: 'Analytics',    icon: IC.analytics, view: 'analytics' },
   {
     label: 'Products', icon: IC.products,
     submenu: [
@@ -37,28 +38,42 @@ const MENU = [
       { label: 'Media Gallery', view: 'media-gallery' },
     ],
   },
-  { label: 'Orders',         icon: IC.orders,    view: 'orders' },
-  { label: 'Payments',       icon: IC.payments,  view: 'payments' },
-  { label: 'Coupons',        icon: IC.coupons,   view: 'coupons' },
-  { label: 'Shipping Fees',  icon: IC.shipping,  view: 'shippingFees' },
-  { label: 'Reviews',        icon: IC.reviews,   view: 'reviews' },
-  { label: 'SEO',            icon: IC.seo,       view: 'seo' },
-  { label: 'Policies',       icon: IC.policies,  view: 'policies' },
-  { label: 'Blogs',          icon: IC.blog,      view: 'blogs' },
+  {
+    label: 'Marketing', icon: IC.coupons,
+    submenu: [
+      { label: 'Coupons',       view: 'coupons' },
+      { label: 'Reviews',       view: 'reviews' },
+      { label: 'UTM Analytics', view: 'utm-analytics' },
+    ],
+  },
   {
     label: 'Social Commerce', icon: IC.social,
     submenu: [
-      { label: 'Lookbooks', view: 'lookbooks' },
-      { label: 'Reels', view: 'reels-admin' },
+      { label: 'Lookbooks',      view: 'lookbooks' },
+      { label: 'Reels',          view: 'reels-admin' },
       { label: 'Instagram Feed', view: 'instagram-admin' },
     ],
   },
-  { label: 'Brands',         icon: IC.brands,    view: 'brands' },
-  { label: 'Brand Settings', icon: IC.settings,  view: 'brand-settings' },
-  { label: 'Analytics',      icon: IC.analytics, view: 'analytics' },
-  { label: 'UTM Analytics',  icon: IC.analytics, view: 'utm-analytics' },
-  { label: 'Consumers',      icon: IC.consumers, view: 'consumers' },
-  { label: 'Logout',         icon: IC.logout,    view: 'logout' },
+  {
+    label: 'Content', icon: IC.blog,
+    submenu: [
+      { label: 'Slider',    view: 'slider' },
+      { label: 'Blogs',     view: 'blogs' },
+      { label: 'SEO',       view: 'seo' },
+      { label: 'Policies',  view: 'policies' },
+    ],
+  },
+  {
+    label: 'Settings', icon: IC.settings,
+    submenu: [
+      { label: 'Brands',         view: 'brands' },
+      { label: 'Brand Settings', view: 'brand-settings' },
+      { label: 'Shipping Fees',  view: 'shippingFees' },
+    ],
+  },
+  { label: 'Payments',   icon: IC.payments,  view: 'payments' },
+  { label: 'Consumers',  icon: IC.consumers, view: 'consumers' },
+  { label: 'Logout',     icon: IC.logout,    view: 'logout' },
 ];
 
 export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, currentView, isMobileMenuOpen, onMobileMenuToggle }) {
