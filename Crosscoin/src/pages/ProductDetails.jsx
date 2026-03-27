@@ -11,11 +11,15 @@ import SeoWrapper from '../console/SeoWrapper';
 import { AlertTriangle, Users, ShoppingBag } from 'lucide-react';
 import { fbqTrack } from '../utils/fbqTrack';
 import { gtagTrack } from '../utils/gtagTrack';
+import MagicCheckoutIntegration from '../components/checkout/MagicCheckoutIntegration';
+import { useAuth } from '../context/AuthContext';
+import { showOrderPlacedErrorToast, showOrderPlacedSuccessToast } from '../utils/toast';
 
 export default function ProductDetails() {
   const router = useRouter();
   const slug = router.query?.slug ? decodeURIComponent(router.query.slug) : null;
-  const { addToCart, buyNow, setIsDrawerOpen } = useCart();
+  const { addToCart, buyNow, clearBuyNow, setIsDrawerOpen } = useCart();
+  const { user } = useAuth();
   const { setCustomBreadcrumbs } = useBreadcrumb();
 
   const [showLightbox, setShowLightbox] = useState(false);
@@ -36,6 +40,8 @@ export default function ProductDetails() {
   const [rawProduct, setRawProduct] = useState(null);
   const [allReviews, setAllReviews] = useState([]);
   const [error, setError] = useState(null);
+  const [magicStartKey, setMagicStartKey] = useState(0);
+  const [magicCartItems, setMagicCartItems] = useState([]);
 
   // Helper: extract image URLs from a variation + api fallback
   const getVariationImages = (variation, api) => {
@@ -243,8 +249,10 @@ export default function ProductDetails() {
 
   const handleBuyNow = async () => {
     if (!productData) return;
+    // Ensure the cart drawer isn't shown; Buy Now should go straight to Magic Checkout.
+    setIsDrawerOpen(false);
     const product = rawProduct || { id: productData.id, name: productData.title, price: productData.price, images: productData.images, variations: productData.variations || [] };
-    await buyNow(
+    const item = await buyNow(
       product,
       colorOptions[selectedColor]?.colors.join(', ') || null,
       selectedSize || null,
@@ -260,7 +268,28 @@ export default function ProductDetails() {
       currency: 'INR',
       num_items: quantity,
     });
-    setIsDrawerOpen(true);
+
+    if (item) {
+      setMagicCartItems([item]);
+      setMagicStartKey(k => k + 1);
+    }
+  };
+
+  const handleMagicSuccess = (result) => {
+    const orderNumber = result?.order_number;
+    if (orderNumber) showOrderPlacedSuccessToast(orderNumber);
+    clearBuyNow();
+    setMagicCartItems([]);
+    setMagicStartKey(0);
+    if (orderNumber) router.push(`/ThankYou?order_number=${orderNumber}`);
+  };
+
+  const handleMagicError = (err) => {
+    const message = err?.message || err?.error?.description || 'Failed to place order. Please try again.';
+    showOrderPlacedErrorToast(message);
+    clearBuyNow();
+    setMagicCartItems([]);
+    setMagicStartKey(0);
   };
 
   const handlePincodeCheck = async () => {
@@ -327,6 +356,20 @@ export default function ProductDetails() {
   return (
     <SeoWrapper pageName={slug || 'product-details'} seo={productData.rawApi?.seo || null}>
     <div className="pdt-page">
+      {magicCartItems.length > 0 && (
+        <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
+          <MagicCheckoutIntegration
+            cartItems={magicCartItems}
+            user={user}
+            appliedCoupon={null}
+            onSuccess={handleMagicSuccess}
+            onError={handleMagicError}
+            autoStart={true}
+            startKey={magicStartKey}
+            hideButton
+          />
+        </div>
+      )}
       {/* â”€â”€ Top Section: Gallery + Info â”€â”€ */}
       <div className="pdt-wrapper">
 

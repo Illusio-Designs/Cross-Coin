@@ -1,9 +1,30 @@
 const crypto = require('crypto');
 const ALGORITHM = 'aes-256-gcm';
-const KEY = Buffer.from(process.env.DATA_ENCRYPTION_KEY || '0'.repeat(64), 'hex');
+const getKey = () => {
+  const keyHex = process.env.DATA_ENCRYPTION_KEY;
+  if (!keyHex) return null;
+  if (!/^[0-9a-fA-F]{64}$/.test(keyHex)) {
+    return null;
+  }
+  return Buffer.from(keyHex, 'hex'); // 32 bytes (256-bit key)
+};
+
+function getLogger() {
+  try {
+    return require('../config/logging.js').logger;
+  } catch {
+    return null;
+  }
+}
 
 function encrypt(plaintext) {
-  if (!plaintext) return plaintext;
+  if (plaintext === null || plaintext === undefined) return plaintext;
+  const KEY = getKey();
+  if (!KEY) {
+    const logger = getLogger();
+    if (logger) logger.error('DATA_ENCRYPTION_KEY missing or invalid; cannot encrypt');
+    throw new Error('DATA_ENCRYPTION_KEY missing or invalid (expected 64-char hex)');
+  }
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(ALGORITHM, KEY, iv);
   const encrypted = Buffer.concat([cipher.update(String(plaintext), 'utf8'), cipher.final()]);
@@ -12,7 +33,13 @@ function encrypt(plaintext) {
 }
 
 function decrypt(ciphertext) {
-  if (!ciphertext || !isEncrypted(ciphertext)) return ciphertext;
+  if (ciphertext === null || ciphertext === undefined || !isEncrypted(ciphertext)) return ciphertext;
+  const KEY = getKey();
+  if (!KEY) {
+    const logger = getLogger();
+    if (logger) logger.error('DATA_ENCRYPTION_KEY missing or invalid; cannot decrypt');
+    return null;
+  }
   try {
     const [ivHex, authTagHex, encryptedHex] = ciphertext.split(':');
     const iv = Buffer.from(ivHex, 'hex');
@@ -22,8 +49,8 @@ function decrypt(ciphertext) {
     decipher.setAuthTag(authTag);
     return decipher.update(encrypted) + decipher.final('utf8');
   } catch (err) {
-    const { logger } = require('../config/logging.js');
-    logger.error('Decryption failed:', err.message);
+    const logger = getLogger();
+    if (logger) logger.error('Decryption failed:', err.message);
     return null;
   }
 }

@@ -223,19 +223,23 @@ module.exports.updateShippingAddress = async (req, res) => {
     }
 
     // Update the address
-    await shippingAddress.update(
-      {
-        address: address || shippingAddress.address,
-        city: city || shippingAddress.city,
-        state: state || shippingAddress.state,
-        pincode: postal_code || shippingAddress.pincode,
-        country: country || shippingAddress.country,
-        phone: phone_number || shippingAddress.phone,
-        is_default:
-          is_default !== undefined ? is_default : shippingAddress.is_default,
-      },
-      { transaction }
-    );
+    const updatePayload = {
+      address: address || shippingAddress.address,
+      city: city || shippingAddress.city,
+      state: state || shippingAddress.state,
+      pincode: postal_code || shippingAddress.pincode,
+      country: country || shippingAddress.country,
+      is_default:
+        is_default !== undefined ? is_default : shippingAddress.is_default,
+    };
+
+    // Only update phone when explicitly provided; avoids re-encrypting an
+    // unchanged phone value on every update request.
+    if (phone_number !== undefined) {
+      updatePayload.phone = phone_number;
+    }
+
+    await shippingAddress.update(updatePayload, { transaction });
 
     await transaction.commit();
 

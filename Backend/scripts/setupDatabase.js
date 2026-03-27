@@ -101,6 +101,24 @@ const setupDatabase = async () => {
     await sequelize.sync({ force: false, alter: false, hooks: false });
     console.log("✓ All tables synced");
 
+    // Ensure encrypted PII columns have the expected width.
+    // NOTE: `alter: false` means Sequelize won't update existing column sizes.
+    console.log("Ensuring phone column sizes...");
+    try {
+      await sequelize.query(
+        "ALTER TABLE shipping_addresses MODIFY COLUMN phone VARCHAR(500)"
+      );
+      await sequelize.query(
+        "ALTER TABLE guest_users MODIFY COLUMN phone VARCHAR(500)"
+      );
+      console.log("✓ Phone column sizes ensured");
+    } catch (phoneError) {
+      console.log(
+        "⚠️ Phone column size update skipped:",
+        phoneError.message
+      );
+    }
+
     // Fix shipping_addresses table constraints for guest users
     console.log("Fixing shipping_addresses table constraints...");
     try {

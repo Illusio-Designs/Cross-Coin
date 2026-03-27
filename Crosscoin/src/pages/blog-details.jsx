@@ -82,7 +82,12 @@ const BlogDetails = () => {
   }, [addToCart]);
 
   const handleProductClick = useCallback((product) => {
-    router.push(`/products/${product.slug}`);
+    if (product?.slug) {
+      router.push(`/ProductDetails?slug=${encodeURIComponent(product.slug)}`);
+    } else {
+      // Fallback to listing page (prevents navigation to non-existent routes).
+      router.push('/Products');
+    }
   }, [router]);
 
   const formatDate = (d) => {
