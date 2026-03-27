@@ -101,6 +101,185 @@ const setupDatabase = async () => {
     await sequelize.sync({ force: false, alter: false, hooks: false });
     console.log("✓ All tables synced");
 
+    // Ensure loyalty_transactions table exists for loyalty program.
+    console.log("Ensuring loyalty_transactions table...");
+    try {
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS loyalty_transactions (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
+          order_id INT NULL,
+          type ENUM('earned','redeemed','expired','adjusted','refunded') NOT NULL,
+          points INT NOT NULL,
+          balance_after INT NOT NULL,
+          description TEXT NULL,
+          expires_at DATETIME NULL,
+          brand_id INT NOT NULL DEFAULT 1,
+          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          INDEX idx_loyalty_user_id (user_id),
+          INDEX idx_loyalty_order_id (order_id),
+          INDEX idx_loyalty_brand_id (brand_id),
+          INDEX idx_loyalty_type (type),
+          INDEX idx_loyalty_expires_at (expires_at),
+          CONSTRAINT fk_loyalty_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT fk_loyalty_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL ON UPDATE CASCADE,
+          CONSTRAINT fk_loyalty_brand FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `);
+      console.log("✓ loyalty_transactions table ensured");
+    } catch (loyaltyTableError) {
+      console.log(
+        "⚠️ loyalty_transactions table creation skipped:",
+        loyaltyTableError.message
+      );
+    }
+
+    // Ensure users.loyalty_points column exists.
+    console.log("Ensuring users.loyalty_points column...");
+    try {
+      const [loyaltyPointsColumn] = await sequelize.query(`
+        SELECT COLUMN_NAME
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'users'
+          AND COLUMN_NAME = 'loyalty_points'
+      `);
+
+      if (!loyaltyPointsColumn.length) {
+        await sequelize.query(`
+          ALTER TABLE users
+          ADD COLUMN loyalty_points INT NOT NULL DEFAULT 0
+        `);
+      }
+      console.log("✓ users.loyalty_points ensured");
+    } catch (loyaltyPointsError) {
+      console.log(
+        "⚠️ users.loyalty_points update skipped:",
+        loyaltyPointsError.message
+      );
+    }
+
+    // Ensure lookbook tables exist.
+    console.log("Ensuring lookbook tables...");
+    try {
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS lookbooks (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          title VARCHAR(255) NOT NULL,
+          slug VARCHAR(255) NOT NULL UNIQUE,
+          description TEXT NULL,
+          status ENUM('active','draft') NOT NULL DEFAULT 'draft',
+          brand_id INT NOT NULL,
+          display_order INT NOT NULL DEFAULT 0,
+          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_lookbooks_brand_id (brand_id),
+          INDEX idx_lookbooks_status (status),
+          INDEX idx_lookbooks_display_order (display_order),
+          CONSTRAINT fk_lookbooks_brand FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `);
+
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS lookbook_images (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          lookbook_id INT NOT NULL,
+          image_url VARCHAR(500) NOT NULL,
+          display_order INT NOT NULL DEFAULT 0,
+          alt_text VARCHAR(255) NULL,
+          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_lookbook_images_lookbook_id (lookbook_id),
+          INDEX idx_lookbook_images_display_order (display_order),
+          CONSTRAINT fk_lookbook_images_lookbook FOREIGN KEY (lookbook_id) REFERENCES lookbooks(id) ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `);
+
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS lookbook_hotspots (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          lookbook_image_id INT NOT NULL,
+          product_id INT NOT NULL,
+          position_x DECIMAL(5,2) NOT NULL,
+          position_y DECIMAL(5,2) NOT NULL,
+          label VARCHAR(100) NULL,
+          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_lookbook_hotspots_image_id (lookbook_image_id),
+          INDEX idx_lookbook_hotspots_product_id (product_id),
+          CONSTRAINT fk_lookbook_hotspots_image FOREIGN KEY (lookbook_image_id) REFERENCES lookbook_images(id) ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT fk_lookbook_hotspots_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `);
+      console.log("✓ Lookbook tables ensured");
+    } catch (lookbookError) {
+      console.log("⚠️ Lookbook table creation skipped:", lookbookError.message);
+    }
+
+    // Ensure reel tables exist.
+    console.log("Ensuring reel tables...");
+    try {
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS reels (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          title VARCHAR(255) NOT NULL,
+          video_url VARCHAR(500) NOT NULL,
+          thumbnail_url VARCHAR(500) NULL,
+          status ENUM('active','draft') NOT NULL DEFAULT 'draft',
+          brand_id INT NOT NULL,
+          display_order INT NOT NULL DEFAULT 0,
+          view_count INT NOT NULL DEFAULT 0,
+          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_reels_brand_id (brand_id),
+          INDEX idx_reels_status (status),
+          INDEX idx_reels_display_order (display_order),
+          CONSTRAINT fk_reels_brand FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `);
+
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS reel_products (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          reel_id INT NOT NULL,
+          product_id INT NOT NULL,
+          display_order INT NOT NULL DEFAULT 0,
+          INDEX idx_reel_products_reel_id (reel_id),
+          INDEX idx_reel_products_product_id (product_id),
+          CONSTRAINT fk_reel_products_reel FOREIGN KEY (reel_id) REFERENCES reels(id) ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT fk_reel_products_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `);
+      console.log("✓ Reel tables ensured");
+    } catch (reelError) {
+      console.log("⚠️ Reel table creation skipped:", reelError.message);
+    }
+
+    // Ensure instagram_post_products table exists.
+    console.log("Ensuring instagram_post_products table...");
+    try {
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS instagram_post_products (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          instagram_post_id VARCHAR(100) NOT NULL,
+          product_id INT NOT NULL,
+          brand_id INT NOT NULL,
+          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          INDEX idx_ipp_post_id (instagram_post_id),
+          INDEX idx_ipp_product_id (product_id),
+          INDEX idx_ipp_brand_id (brand_id),
+          CONSTRAINT fk_ipp_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT fk_ipp_brand FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `);
+      console.log("✓ instagram_post_products table ensured");
+    } catch (instagramTableError) {
+      console.log(
+        "⚠️ instagram_post_products table creation skipped:",
+        instagramTableError.message
+      );
+    }
+
     // Ensure encrypted PII columns have the expected width.
     // NOTE: `alter: false` means Sequelize won't update existing column sizes.
     console.log("Ensuring phone column sizes...");

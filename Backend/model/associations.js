@@ -37,6 +37,13 @@ const { BlogPostTag } = require("./blogPostTagModel.js");
 const { BlogBrand } = require("./blogBrandModel.js");
 const { BlogFeaturedProduct } = require("./blogFeaturedProductModel.js");
 const { BlogSEO } = require("./blogSeoModel.js");
+const { LoyaltyTransaction } = require("./loyaltyTransactionModel.js");
+const { Lookbook } = require("./lookbookModel.js");
+const { LookbookImage } = require("./lookbookImageModel.js");
+const { LookbookHotspot } = require("./lookbookHotspotModel.js");
+const { Reel } = require("./reelModel.js");
+const { ReelProduct } = require("./reelProductModel.js");
+const { InstagramPostProduct } = require("./instagramPostProductModel.js");
 
 // Export all models
 module.exports = {
@@ -78,6 +85,13 @@ module.exports = {
   BlogBrand,
   BlogFeaturedProduct,
   BlogSEO,
+  LoyaltyTransaction,
+  Lookbook,
+  LookbookImage,
+  LookbookHotspot,
+  Reel,
+  ReelProduct,
+  InstagramPostProduct,
 };
 
 // User Associations
@@ -484,3 +498,152 @@ Product.belongsToMany(BlogPost, { through: BlogFeaturedProduct, foreignKey: 'pro
 
 BlogPost.hasOne(BlogSEO, { foreignKey: 'blog_post_id', as: 'BlogSEO', onDelete: 'CASCADE' });
 BlogSEO.belongsTo(BlogPost, { foreignKey: 'blog_post_id', as: 'BlogPost' });
+
+// Loyalty Associations
+User.hasMany(LoyaltyTransaction, {
+  foreignKey: "user_id",
+  as: "LoyaltyTransactions",
+  onDelete: "CASCADE",
+});
+LoyaltyTransaction.belongsTo(User, {
+  foreignKey: "user_id",
+  as: "User",
+  onDelete: "CASCADE",
+});
+
+Order.hasMany(LoyaltyTransaction, {
+  foreignKey: "order_id",
+  as: "LoyaltyTransactions",
+  onDelete: "SET NULL",
+});
+LoyaltyTransaction.belongsTo(Order, {
+  foreignKey: "order_id",
+  as: "Order",
+  onDelete: "SET NULL",
+});
+
+Brand.hasMany(LoyaltyTransaction, {
+  foreignKey: "brand_id",
+  as: "LoyaltyTransactions",
+  onDelete: "CASCADE",
+});
+LoyaltyTransaction.belongsTo(Brand, {
+  foreignKey: "brand_id",
+  as: "Brand",
+  onDelete: "CASCADE",
+});
+
+// Lookbook Associations
+Brand.hasMany(Lookbook, {
+  foreignKey: "brand_id",
+  as: "Lookbooks",
+  onDelete: "CASCADE",
+});
+Lookbook.belongsTo(Brand, {
+  foreignKey: "brand_id",
+  as: "Brand",
+  onDelete: "CASCADE",
+});
+
+Lookbook.hasMany(LookbookImage, {
+  foreignKey: "lookbook_id",
+  as: "Images",
+  onDelete: "CASCADE",
+});
+LookbookImage.belongsTo(Lookbook, {
+  foreignKey: "lookbook_id",
+  as: "Lookbook",
+  onDelete: "CASCADE",
+});
+
+LookbookImage.hasMany(LookbookHotspot, {
+  foreignKey: "lookbook_image_id",
+  as: "Hotspots",
+  onDelete: "CASCADE",
+});
+LookbookHotspot.belongsTo(LookbookImage, {
+  foreignKey: "lookbook_image_id",
+  as: "LookbookImage",
+  onDelete: "CASCADE",
+});
+
+Product.hasMany(LookbookHotspot, {
+  foreignKey: "product_id",
+  as: "LookbookHotspots",
+  onDelete: "CASCADE",
+});
+LookbookHotspot.belongsTo(Product, {
+  foreignKey: "product_id",
+  as: "Product",
+  onDelete: "CASCADE",
+});
+
+// Reel Associations
+Brand.hasMany(Reel, {
+  foreignKey: "brand_id",
+  as: "Reels",
+  onDelete: "CASCADE",
+});
+Reel.belongsTo(Brand, {
+  foreignKey: "brand_id",
+  as: "Brand",
+  onDelete: "CASCADE",
+});
+
+Reel.belongsToMany(Product, {
+  through: ReelProduct,
+  foreignKey: "reel_id",
+  otherKey: "product_id",
+  as: "Products",
+});
+Product.belongsToMany(Reel, {
+  through: ReelProduct,
+  foreignKey: "product_id",
+  otherKey: "reel_id",
+  as: "Reels",
+});
+
+Reel.hasMany(ReelProduct, {
+  foreignKey: "reel_id",
+  as: "ReelProducts",
+  onDelete: "CASCADE",
+});
+ReelProduct.belongsTo(Reel, {
+  foreignKey: "reel_id",
+  as: "Reel",
+  onDelete: "CASCADE",
+});
+
+Product.hasMany(ReelProduct, {
+  foreignKey: "product_id",
+  as: "ReelProducts",
+  onDelete: "CASCADE",
+});
+ReelProduct.belongsTo(Product, {
+  foreignKey: "product_id",
+  as: "Product",
+  onDelete: "CASCADE",
+});
+
+// Instagram feed tagged products
+Brand.hasMany(InstagramPostProduct, {
+  foreignKey: "brand_id",
+  as: "InstagramPostProducts",
+  onDelete: "CASCADE",
+});
+InstagramPostProduct.belongsTo(Brand, {
+  foreignKey: "brand_id",
+  as: "Brand",
+  onDelete: "CASCADE",
+});
+
+Product.hasMany(InstagramPostProduct, {
+  foreignKey: "product_id",
+  as: "InstagramPostProducts",
+  onDelete: "CASCADE",
+});
+InstagramPostProduct.belongsTo(Product, {
+  foreignKey: "product_id",
+  as: "Product",
+  onDelete: "CASCADE",
+});

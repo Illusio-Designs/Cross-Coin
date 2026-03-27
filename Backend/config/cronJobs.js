@@ -1,5 +1,7 @@
 const cron = require('node-cron');
 const orderController = require('../controller/orderController');
+const loyaltyService = require('../services/loyaltyService');
+const instagramService = require('../services/instagramService');
 
 /**
  * Initialize all cron jobs
@@ -42,9 +44,38 @@ function initializeCronJobs() {
     }
   });
 
+  // Loyalty points expiry - daily at 2 AM
+  cron.schedule('0 2 * * *', async () => {
+    console.log('\n⏰ [CRON] Loyalty expiry started at:', new Date().toISOString());
+    try {
+      const result = await loyaltyService.expirePoints();
+      console.log('✅ [CRON] Loyalty expiry completed:', result);
+    } catch (error) {
+      console.error('❌ [CRON] Loyalty expiry error:', error.message);
+    }
+  });
+
+  // Instagram feed refresh - every 6 hours
+  cron.schedule('0 */6 * * *', async () => {
+    console.log('\n⏰ [CRON] Instagram feed refresh started at:', new Date().toISOString());
+    try {
+      const brandId = 1;
+      await instagramService.refreshAccessTokenIfNeeded(brandId);
+      const result = await instagramService.refreshFeed(brandId);
+      console.log('✅ [CRON] Instagram refresh completed:', {
+        stale: !!result.stale,
+        count: Array.isArray(result.data) ? result.data.length : 0,
+      });
+    } catch (error) {
+      console.error('❌ [CRON] Instagram refresh error:', error.message);
+    }
+  });
+
   console.log('✅ Cron jobs initialized successfully');
   console.log('📋 Active jobs:');
   console.log('   - FShip Order Sync: Every 2 hours (0 */2 * * *) - Max 50 orders per run');
+  console.log('   - Loyalty Expiry: Daily at 2 AM (0 2 * * *)');
+  console.log('   - Instagram Feed Refresh: Every 6 hours (0 */6 * * *)');
 }
 
 module.exports = { initializeCronJobs };

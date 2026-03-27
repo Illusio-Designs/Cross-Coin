@@ -60,6 +60,7 @@ import "../styles/components/TrustBadges.css";
 import "../styles/components/CouponStrip.css";
 import "../styles/components/Toast.css";
 import "../styles/components/blog-section.css";
+import "../styles/components/InstagramGallery.css";
 
 // Components - Co-located CSS (in component directories)
 import "../components/Sidebar/Sidebar.css";
@@ -98,6 +99,8 @@ import "../styles/dashboard/brandTags.css";
 // Additional page CSS
 import "../styles/pages/Collections.css";
 import "../styles/pages/About.css";
+import "../styles/pages/Lookbook.css";
+import "../styles/pages/Reels.css";
 import "../styles/pages/BlogDetails.css";
 import "../styles/components/blog-section.css";
 // Third-party

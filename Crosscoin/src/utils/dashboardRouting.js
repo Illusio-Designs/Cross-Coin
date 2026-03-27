@@ -17,6 +17,7 @@ export const getPageTitle = (view) => {
     'brand-settings': 'Brand Settings',
     'slider': 'Slider',
     'media-gallery': 'Media Gallery',
+    'analytics': 'Analytics',
     'utm-analytics': 'UTM Analytics'
   };
   return titles[view] || 'Dashboard';
