@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useCart } from "../../context/CartContext";
 import { useRouter } from "next/router";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
+import { getInstagramFeed } from "../../services/publicApi";
 
 const InstagramGallery = () => {
   const [loading, setLoading] = useState(true);
@@ -16,14 +15,8 @@ const InstagramGallery = () => {
     const fetchFeed = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_URL}/api/instagram/feed`, {
-          headers: {
-            "Content-Type": "application/json",
-            "X-Brand-Name": "crosscoin",
-          },
-        });
-        const data = await response.json();
-        if (!response.ok || !data.success) {
+        const data = await getInstagramFeed();
+        if (!data?.success) {
           throw new Error(data.message || "Failed to load Instagram feed");
         }
         setPosts(Array.isArray(data.data) ? data.data : []);

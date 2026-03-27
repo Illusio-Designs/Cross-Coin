@@ -24,6 +24,9 @@ import LiveAnalytics from "./analytics";
 import BrandSettingsManager from "./brandSettings";
 import BrandManager from "./brands";
 import Blogs from "./blogs";
+import AdminLookbooks from "./social/lookbooks";
+import AdminReels from "./social/reels";
+import AdminInstagramFeed from "./social/instagram";
 
 const SB_EXPANDED = 260;
 const SB_COLLAPSED = 72;
@@ -116,6 +119,9 @@ function Dashboard() {
       case 'seo':            return <SEO />;
       case 'policies':       return <Policies />;
       case 'blogs':          return <Blogs />;
+      case 'lookbooks':      return <AdminLookbooks />;
+      case 'reels-admin':    return <AdminReels />;
+      case 'instagram-admin': return <AdminInstagramFeed />;
       case 'brands':         return <BrandManager />;
       case 'brand-settings': return <BrandSettingsManager />;
       case 'slider':         return <Slider />;

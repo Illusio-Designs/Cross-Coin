@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
-import { useCart } from "../context/CartContext";
+import { useCart } from "../../context/CartContext";
+import { getPublicReels, incrementReelView } from "../../services/publicApi";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
-
-const ReelsPage = () => {
+const ReelsShowcase = () => {
   const router = useRouter();
   const { addToCart } = useCart();
   const [loading, setLoading] = useState(true);
@@ -18,14 +17,8 @@ const ReelsPage = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch(`${API_URL}/api/reels`, {
-          headers: {
-            "Content-Type": "application/json",
-            "X-Brand-Name": "crosscoin",
-          },
-        });
-        const data = await response.json();
-        if (!response.ok || !data.success) {
+        const data = await getPublicReels();
+        if (!data?.success) {
           throw new Error(data.message || "Failed to load reels");
         }
         setReels(Array.isArray(data.data) ? data.data : []);
@@ -52,10 +45,7 @@ const ReelsPage = () => {
             video.play().catch(() => {});
             if (!viewedSetRef.current.has(reel.id)) {
               viewedSetRef.current.add(reel.id);
-              fetch(`${API_URL}/api/reels/${reel.id}/view`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-Brand-Name": "crosscoin" },
-              }).catch(() => {});
+              incrementReelView(reel.id).catch(() => {});
             }
           } else {
             video.pause();
@@ -136,5 +126,4 @@ const ReelsPage = () => {
   );
 };
 
-export default ReelsPage;
-
+export default ReelsShowcase;

@@ -18,7 +18,10 @@ export const getPageTitle = (view) => {
     'slider': 'Slider',
     'media-gallery': 'Media Gallery',
     'analytics': 'Analytics',
-    'utm-analytics': 'UTM Analytics'
+    'utm-analytics': 'UTM Analytics',
+    'lookbooks': 'Lookbooks',
+    'reels-admin': 'Reels',
+    'instagram-admin': 'Instagram Feed',
   };
   return titles[view] || 'Dashboard';
 };

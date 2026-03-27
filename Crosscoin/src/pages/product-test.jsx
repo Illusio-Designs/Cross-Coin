@@ -14,6 +14,8 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import MagicCheckoutIntegration from '../components/checkout/MagicCheckoutIntegration';
 import InstagramGallery from '../components/common/InstagramGallery';
+import LookbookShowcase from '../components/common/LookbookShowcase';
+import ReelsShowcase from '../components/common/ReelsShowcase';
 
 // ── Mini cart item row ──────────────────────────────────────────────────────
 function CartItemRow({ item, onRemove, onQtyChange }) {
@@ -179,44 +181,16 @@ export default function ProductTestPage() {
 
       <div style={{ marginTop: 40 }}>
         <h3 style={{ margin: '0 0 12px', fontSize: 18 }}>Lookbook Test</h3>
-        <p style={{ margin: '0 0 10px', color: '#666' }}>
-          Full page preview:
-          {' '}
-          <a href="/Lookbook" target="_blank" rel="noreferrer">/Lookbook</a>
-        </p>
-        <iframe
-          title="Lookbook Preview"
-          src="/Lookbook"
-          style={{ width: '100%', height: 680, border: '1px solid #e2e8f0', borderRadius: 10, background: '#fff' }}
-        />
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, background: '#fff', padding: 12 }}>
+          <LookbookShowcase embedded />
+        </div>
       </div>
 
       <div style={{ marginTop: 40 }}>
         <h3 style={{ margin: '0 0 12px', fontSize: 18 }}>Reels Test</h3>
-        <p style={{ margin: '0 0 10px', color: '#666' }}>
-          Full page preview:
-          {' '}
-          <a href="/Reels" target="_blank" rel="noreferrer">/Reels</a>
-        </p>
-        <iframe
-          title="Reels Preview"
-          src="/Reels"
-          style={{ width: '100%', height: 680, border: '1px solid #e2e8f0', borderRadius: 10, background: '#000' }}
-        />
-      </div>
-
-      <div style={{ marginTop: 40 }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 18 }}>Instagram Page Test</h3>
-        <p style={{ margin: '0 0 10px', color: '#666' }}>
-          Full page preview:
-          {' '}
-          <a href="/Instagram" target="_blank" rel="noreferrer">/Instagram</a>
-        </p>
-        <iframe
-          title="Instagram Page Preview"
-          src="/Instagram"
-          style={{ width: '100%', height: 680, border: '1px solid #e2e8f0', borderRadius: 10, background: '#fff' }}
-        />
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, background: '#000', padding: 12 }}>
+          <ReelsShowcase />
+        </div>
       </div>
     </div>
   );
