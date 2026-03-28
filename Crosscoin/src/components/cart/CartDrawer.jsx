@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/router';
@@ -20,10 +20,43 @@ import {
 } from '../../utils/toast';
 import { fbqTrack } from '../../utils/fbqTrack';
 
-// ── Magic Checkout config ─────────────────────────────────────────────────────
-const MAGIC_CHECKOUT_ENABLED = process.env.NEXT_PUBLIC_MAGIC_CHECKOUT_ENABLED === 'true';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+const PREPAID_INSTANT_DISCOUNT_INR = Math.max(
+  0,
+  Number.parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '50', 10) || 0
+);
+const PREPAID_NUDGE_LINE =
+  process.env.NEXT_PUBLIC_PREPAID_NUDGE_TEXT ||
+  (PREPAID_INSTANT_DISCOUNT_INR > 0
+    ? `Get ₹${Math.round(PREPAID_INSTANT_DISCOUNT_INR)} Instant Discount on Prepaid`
+    : 'Free Surprise Gift on Prepaid Orders.');
+const OTP_VERIFY_SKIP = process.env.NEXT_PUBLIC_OTP_VERIFY_SKIP === 'true';
+
+/** Shown when API returns no fees so checkout UI and selectedFee are never empty. */
+const FALLBACK_SHIPPING_FEES = [
+  { id: 'fallback-prepaid', orderType: 'prepaid', fee: 0, isDefault: true },
+  { id: 'fallback-cod', orderType: 'cod', fee: 0 },
+];
+
+function isValidEmail(value) {
+  const s = String(value || '').trim();
+  if (!s || !s.includes('@')) return false;
+  const parts = s.split('@');
+  if (parts.length !== 2) return false;
+  const [local, domain] = parts;
+  if (!local || !domain || /\s/.test(local) || /\s/.test(domain)) return false;
+  if (!domain.includes('.') || domain.startsWith('.') || domain.endsWith('.') || domain.includes('..')) return false;
+  const tld = domain.slice(domain.lastIndexOf('.') + 1);
+  if (!tld || tld.length < 2 || !/^[a-z0-9-]+$/i.test(tld)) return false;
+  return true;
+}
+
+/** Indian mobile: exactly 10 digits, starts with 6–9 */
+function isValidIndianMobileDigits(raw) {
+  const digits = String(raw || '').replace(/\D/g, '');
+  if (digits.length !== 10) return false;
+  return /^[6-9]\d{9}$/.test(digits);
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -75,6 +108,9 @@ const CartDrawer = ({ isOpen, onClose }) => {
 
   // Guest contact
   const [guestInfo, setGuestInfo] = useState({ email: '', firstName: '', lastName: '', phone: '' });
+  const [guestEmailError, setGuestEmailError] = useState('');
+  const [guestPhoneError, setGuestPhoneError] = useState('');
+  const [addressPhoneError, setAddressPhoneError] = useState('');
 
   // Address
   const [addresses, setAddresses] = useState([]);
@@ -89,7 +125,16 @@ const CartDrawer = ({ isOpen, onClose }) => {
   // Delivery
   const [shippingFees, setShippingFees] = useState([]);
   const [selectedFee, setSelectedFee] = useState(null);
-  const [selectedPaymentMode, setSelectedPaymentMode] = useState('cod');
+
+  // COD: education popup, OTP
+  const [showCodWarningModal, setShowCodWarningModal] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpDigits, setOtpDigits] = useState(['', '', '', '']);
+  const otpRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
+  const otpCode = otpDigits.join('');
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpHint, setOtpHint] = useState('');
+  const [phoneVerifiedForCod, setPhoneVerifiedForCod] = useState(false);
 
   // Order
   const [isProcessing, setIsProcessing] = useState(false);
@@ -99,40 +144,73 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const bodyRef = useRef(null);
   const dropdownRef = useRef(null);
   const [showScrollHint, setShowScrollHint] = useState(false);
+  const scrollDrawerTo = (anchorId) => {
+    requestAnimationFrame(() => {
+      const el = typeof document !== 'undefined' ? document.getElementById(anchorId) : null;
+      const body = bodyRef.current;
+      if (el && body) {
+        const top = el.offsetTop - body.offsetTop - 8;
+        body.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+      } else if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
+  };
 
   // ── Visibility ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
-      // InitiateCheckout — fires when cart drawer opens with items
-      if (activeItems.length > 0) {
-        fbqTrack('InitiateCheckout', {
-          content_ids: activeItems.map(i => String(i.productId || i.id)),
-          content_type: 'product',
-          num_items: activeItems.reduce((s, i) => s + (i.quantity || 1), 0),
-          value: activeTotal,
-          currency: 'INR',
-        });
-      }
     } else {
       const t = setTimeout(() => { setIsVisible(false); setOrderSuccess(null); }, 300);
       return () => clearTimeout(t);
     }
   }, [isOpen]);
 
+  // ── InitiateCheckout when drawer opens (one shot per open) ──────────────
+  useEffect(() => {
+    if (!isOpen) return;
+    const activeItems = buyNowItem ? [buyNowItem] : cartItems;
+    const activeTotal = buyNowItem ? buyNowTotal : cartTotal;
+    if (activeItems.length === 0) return;
+    fbqTrack('InitiateCheckout', {
+      content_ids: activeItems.map(i => String(i.productId || i.id)),
+      content_type: 'product',
+      num_items: activeItems.reduce((s, i) => s + (i.quantity || 1), 0),
+      value: activeTotal,
+      currency: 'INR',
+    });
+    // Intentionally only when isOpen flips; cart snapshot is current at open time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
   // ── Shipping fees ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
     getShippingFees().then(data => {
-      const fees = Array.isArray(data) ? data : data?.shippingFees || data?.fees || [];
+      const raw = Array.isArray(data) ? data : data?.shippingFees || data?.fees || [];
+      const fees = raw.length > 0 ? raw : FALLBACK_SHIPPING_FEES;
       setShippingFees(fees);
-      if (!selectedFee && fees.length > 0) {
-        const def = fees.find(f => f.isDefault) || fees[0];
-        setSelectedFee(def);
-        setSelectedPaymentMode(def.orderType === 'prepaid' ? 'prepaid' : 'cod');
-      }
-    }).catch(() => {});
+      const def = fees.find(f => f.orderType === 'prepaid')
+        || fees.find(f => f.isDefault)
+        || fees[0];
+      setSelectedFee(def || null);
+    }).catch(() => {
+      setShippingFees(FALLBACK_SHIPPING_FEES);
+      setSelectedFee(FALLBACK_SHIPPING_FEES[0]);
+    });
   }, [isOpen]);
+
+  // Keep selected fee valid when list changes (e.g. reopen drawer)
+  useEffect(() => {
+    if (shippingFees.length === 0) return;
+    setSelectedFee((prev) => {
+      if (prev && shippingFees.some((f) => f.id === prev.id)) return prev;
+      return shippingFees.find((f) => f.orderType === 'prepaid')
+        || shippingFees.find((f) => f.isDefault)
+        || shippingFees[0];
+    });
+  }, [shippingFees]);
 
   // ── Load addresses ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -144,6 +222,30 @@ const CartDrawer = ({ isOpen, onClose }) => {
       if (def && !selectedAddress) setSelectedAddress(def);
     }).catch(() => {}).finally(() => setAddressLoading(false));
   }, [isOpen, isAuthenticated]);
+
+  // Live email validation (guest) — debounced while typing
+  useEffect(() => {
+    if (!isOpen || isAuthenticated) return;
+    const t = setTimeout(() => {
+      const e = guestInfo.email.trim();
+      if (!e) setGuestEmailError('');
+      else setGuestEmailError(isValidEmail(e) ? '' : 'Enter a valid email (e.g. name@example.com).');
+    }, 320);
+    return () => clearTimeout(t);
+  }, [guestInfo.email, isOpen, isAuthenticated]);
+
+  // Live phone validation (auth address form)
+  useEffect(() => {
+    if (!isAuthenticated || !showAddressForm) {
+      setAddressPhoneError('');
+      return;
+    }
+    const digits = String(addressForm.phoneNumber || '').replace(/\D/g, '');
+    if (digits.length === 0) setAddressPhoneError('');
+    else if (!isValidIndianMobileDigits(digits)) {
+      setAddressPhoneError('Enter a valid 10-digit Indian mobile (starts with 6–9).');
+    } else setAddressPhoneError('');
+  }, [addressForm.phoneNumber, isAuthenticated, showAddressForm]);
 
   // ── Body class for back-to-top hiding ──────────────────────────────────
   useEffect(() => {
@@ -177,15 +279,6 @@ const CartDrawer = ({ isOpen, onClose }) => {
       const scrollHeight = el.scrollHeight;
       const clientHeight = el.clientHeight;
       const hasScroll = scrollTop < scrollHeight - clientHeight - 40;
-      
-      // Debug logging
-      console.log('Scroll check:', {
-        scrollTop,
-        scrollHeight,
-        clientHeight,
-        hasScroll,
-        diff: scrollHeight - clientHeight
-      });
       
       setShowScrollHint(hasScroll);
     };
@@ -221,17 +314,68 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const finalTotal = Math.max(0, activeTotal + shippingFeeAmount);
   const totalQty = activeItems.reduce((s, i) => s + (i.quantity || 1), 0);
 
+  const sortedShippingFees = useMemo(() => {
+    const arr = [...shippingFees];
+    arr.sort((a, b) => {
+      if (a.orderType === 'prepaid' && b.orderType !== 'prepaid') return -1;
+      if (a.orderType !== 'prepaid' && b.orderType === 'prepaid') return 1;
+      return 0;
+    });
+    return arr;
+  }, [shippingFees]);
+
+  const prepaidInstantDiscount =
+    selectedFee?.orderType === 'prepaid' && PREPAID_INSTANT_DISCOUNT_INR > 0
+      ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, finalTotal)
+      : 0;
+  const prepaidPayable = Math.max(0, finalTotal - prepaidInstantDiscount);
+  const isCodDelivery = selectedFee?.orderType === 'cod';
+  const isPrepaidDelivery = selectedFee?.orderType === 'prepaid';
+
+  useEffect(() => {
+    setPhoneVerifiedForCod(false);
+    setOtpDigits(['', '', '', '']);
+    setOtpHint('');
+  }, [selectedFee?.id, selectedAddress?.id, guestInfo.phone]);
+
+  // Auto-send OTP as soon as the modal opens
+  useEffect(() => {
+    if (showOtpModal) {
+      handleSendCheckoutOtp();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showOtpModal]);
+
   // ── Delivery fee ────────────────────────────────────────────────────────
   const handleSelectFee = (fee) => {
     setSelectedFee(fee);
-    const mode = fee.orderType === 'prepaid' ? 'prepaid' : 'cod';
-    setSelectedPaymentMode(mode);
+  };
+
+  const getDeliveryPhone = () => {
+    const raw = isAuthenticated && selectedAddress
+      ? (selectedAddress.phone_number || selectedAddress.phoneNumber || '')
+      : (guestInfo.phone || '');
+    const digits = String(raw).replace(/\D/g, '');
+    return digits.length >= 10 ? digits.slice(-10) : digits;
+  };
+
+  const handleGuestPhoneChange = (e) => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+    setGuestInfo(p => ({ ...p, phone: digits }));
+    if (digits.length === 0) setGuestPhoneError('');
+    else if (!isValidIndianMobileDigits(digits)) {
+      setGuestPhoneError('Enter a valid 10-digit Indian mobile (starts with 6–9).');
+    } else setGuestPhoneError('');
   };
 
   // ── Address form ────────────────────────────────────────────────────────
   const handleAddrChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setAddressForm(p => ({ ...p, [name]: type === 'checkbox' ? checked : value }));
+    let next = type === 'checkbox' ? checked : value;
+    if (name === 'phoneNumber' && typeof next === 'string') {
+      next = next.replace(/\D/g, '').slice(0, 10);
+    }
+    setAddressForm(p => ({ ...p, [name]: next }));
   };
 
   const handleEditAddress = (addr) => {
@@ -251,11 +395,20 @@ const CartDrawer = ({ isOpen, onClose }) => {
 
   const handleSaveAddress = async (e) => {
     e.preventDefault();
-    setAddressSaving(true);
-    // For guests, merge name/phone from guestInfo into the address
     const formData = isAuthenticated
       ? addressForm
       : { ...addressForm, fullName: `${guestInfo.firstName} ${guestInfo.lastName}`.trim() || addressForm.fullName, phoneNumber: guestInfo.phone || addressForm.phoneNumber };
+    if (isAuthenticated) {
+      if (addressPhoneError || !isValidIndianMobileDigits(formData.phoneNumber)) {
+        showValidationErrorToast('Please enter a valid 10-digit Indian mobile number for this address.');
+        return;
+      }
+    } else if (!isValidIndianMobileDigits(guestInfo.phone)) {
+      showValidationErrorToast('Please enter a valid mobile number in Contact Info first.');
+      scrollDrawerTo('cd-section-contact');
+      return;
+    }
+    setAddressSaving(true);
     try {
       if (isAuthenticated) {
         let saved;
@@ -287,221 +440,303 @@ const CartDrawer = ({ isOpen, onClose }) => {
     document.body.appendChild(s);
   });
 
-  // ── Magic Checkout SDK loader ────────────────────────────────────────────
-  const loadMagicCheckoutSDK = useCallback(() => new Promise((resolve, reject) => {
-    if (window.Razorpay) { resolve(true); return; }
-    if (document.getElementById('rzp-magic-sdk')) {
-      const poll = setInterval(() => {
-        if (window.Razorpay) { clearInterval(poll); resolve(true); }
-      }, 100);
-      setTimeout(() => { clearInterval(poll); reject(new Error('SDK timeout')); }, 10000);
-      return;
-    }
-    const s = document.createElement('script');
-    s.id = 'rzp-magic-sdk';
-    s.src = 'https://checkout.razorpay.com/v1/magic-checkout.js';
-    s.async = true;
-    s.onload = () => resolve(true);
-    s.onerror = () => reject(new Error('Failed to load Magic Checkout SDK'));
-    document.body.appendChild(s);
-  }), []);
+  const buildItemsPayload = () => activeItems.map(item => ({
+    product_id: item.productId || item.id,
+    variation_id: item.variationId || item.variation?.id || null,
+    quantity: item.quantity,
+  }));
 
-  // ── Magic Checkout handler ───────────────────────────────────────────────
-  const handleMagicCheckout = useCallback(async () => {
-    if (!RAZORPAY_KEY) {
-      showOrderPlacedErrorToast('Razorpay key not configured.');
-      return;
+  const buildPrepaidOrderData = () => {
+    const itemsPayload = buildItemsPayload();
+    const base = {
+      items: itemsPayload,
+      payment_type: 'upi',
+      notes: '',
+      discount_amount: prepaidInstantDiscount,
+      coupon_id: null,
+    };
+    if (isAuthenticated) {
+      return { shipping_address_id: selectedAddress.id, ...base };
     }
-    if (activeItems.length === 0) return;
+    return {
+      guest_info: guestInfo,
+      shipping_address: {
+        fullName: selectedAddress.full_name || selectedAddress.fullName,
+        address: selectedAddress.address,
+        city: selectedAddress.city,
+        state: selectedAddress.state,
+        pincode: selectedAddress.postal_code || selectedAddress.postalCode,
+        phone: selectedAddress.phone_number || selectedAddress.phoneNumber,
+      },
+      ...base,
+      session_id: sessionStorage.getItem('sessionId') || `guest-${Date.now()}`,
+      ip_address: window.location.hostname,
+      user_agent: window.navigator.userAgent,
+    };
+  };
 
-    setIsProcessing(true);
+  const buildCodOrderData = () => {
+    const itemsPayload = buildItemsPayload();
+    const base = {
+      items: itemsPayload,
+      payment_type: 'cod',
+      notes: '',
+      discount_amount: 0,
+      coupon_id: null,
+    };
+    if (isAuthenticated) {
+      return { shipping_address_id: selectedAddress.id, ...base };
+    }
+    return {
+      guest_info: guestInfo,
+      shipping_address: {
+        fullName: selectedAddress.full_name || selectedAddress.fullName,
+        address: selectedAddress.address,
+        city: selectedAddress.city,
+        state: selectedAddress.state,
+        pincode: selectedAddress.postal_code || selectedAddress.postalCode,
+        phone: selectedAddress.phone_number || selectedAddress.phoneNumber,
+      },
+      ...base,
+      session_id: sessionStorage.getItem('sessionId') || `guest-${Date.now()}`,
+      ip_address: window.location.hostname,
+      user_agent: window.navigator.userAgent,
+    };
+  };
+
+  const trackPurchase = (value, orderNumber) => {
     try {
-      await loadMagicCheckoutSDK();
-
-      // Build line_items (prices in paise) — MANDATORY for Magic Checkout UI
-      const lineItems = activeItems.map(item => {
-        const price = Math.round(parseFloat(item.variation?.price || item.price || 0) * 100);
-        return {
-          type: 'e-commerce',
-          sku: `SKU_${item.productId || item.id}`,
-          variant_id: item.variationId ? `VAR_${item.variationId}` : undefined,
-          price,
-          offer_price: price,
-          tax_amount: 0,
-          quantity: item.quantity || 1,
-          name: item.name || 'Product',
-          description: item.description || '',
-        };
-      });
-
-      const lineItemsTotal = lineItems.reduce((s, i) => s + i.offer_price * i.quantity, 0);
-      const finalAmountRupees = activeTotal;
-
-      // Step 1 — create Razorpay order on server
-      const orderRes = await fetch(`${API_URL}/api/payments/magic-checkout/create-order`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Brand-Name': 'crosscoin',
-          ...(isAuthenticated ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {}),
-        },
-        body: JSON.stringify({
-          amount: finalAmountRupees,
-          currency: 'INR',
-          customer_id: user?.id || null,
-          line_items: lineItems,
-          line_items_total: lineItemsTotal,
-          notes: {},
-        }),
-      });
-
-      if (!orderRes.ok) {
-        const err = await orderRes.json().catch(() => ({}));
-        throw new Error(err.message || 'Failed to create order');
-      }
-
-      const { order_id, amount } = await orderRes.json();
-
-      // Step 2 — open Magic Checkout modal
-      const options = {
-        key: RAZORPAY_KEY,
-        order_id,
-        amount,
+      fbqTrack('Purchase', {
+        value: Number(value.toFixed(2)),
         currency: 'INR',
-        name: 'Cross Coin',
-        one_click_checkout: true,   // triggers Magic Checkout UI
-        show_coupons: false,
-        prefill: {
-          name: user?.name || '',
-          email: user?.email || '',
-          contact: user?.phone || '',
-        },
-        theme: { color: '#180D3E' },
-        modal: { ondismiss: () => setIsProcessing(false) },
-        handler: async (response) => {
-          try {
-            const verifyRes = await fetch(`${API_URL}/api/payments/magic-checkout/verify-payment`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Brand-Name': 'crosscoin',
-                ...(isAuthenticated ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {}),
-              },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                customer_id: user?.id || null,
-                cart_items: activeItems.map(i => ({
-                  product_id: i.productId || i.id,
-                  variation_id: i.variationId || i.variation?.id || null,
-                  quantity: i.quantity || 1,
-                })),
-              }),
-            });
+        content_type: 'product',
+        contents: activeItems.map(i => ({
+          id: (i.productId || i.id) && (i.variationId || i.variation?.id)
+            ? `${i.productId || i.id}_${i.variationId || i.variation?.id}`
+            : String(i.productId || i.id),
+          quantity: i.quantity,
+        })),
+      }, { eventID: `Purchase_${orderNumber}` });
+    } catch (_) {}
+  };
 
-            const verifyData = await verifyRes.json();
-
-            if (verifyData.success) {
-              try {
-                fbqTrack('Purchase', {
-                  value: Number(finalAmountRupees.toFixed(2)),
-                  currency: 'INR',
-                  content_type: 'product',
-                  contents: activeItems.map(i => ({ id: (i.productId || i.id) && (i.variationId || i.variation?.id) ? `${i.productId || i.id}_${i.variationId || i.variation?.id}` : String(i.productId || i.id), quantity: i.quantity })),
-                }, { eventID: `Purchase_${verifyData.order_number}` });
-              } catch (_) {}
-
-              clearCart();
-              clearBuyNow();
-              showOrderPlacedSuccessToast(verifyData.order_number);
-              setOrderSuccess({ orderNumber: verifyData.order_number });
-            } else {
-              throw new Error(verifyData.message || 'Payment verification failed');
-            }
-          } catch (err) {
-            showOrderPlacedErrorToast(err.message || 'Order creation failed after payment.');
-          } finally {
-            setIsProcessing(false);
-          }
-        },
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', (r) => {
-        showOrderPlacedErrorToast('Payment failed: ' + (r.error?.description || 'Please try again'));
-        setIsProcessing(false);
-      });
-      rzp.open();
-    } catch (err) {
-      showOrderPlacedErrorToast(err.message || 'Failed to open Magic Checkout.');
-      setIsProcessing(false);
-    }
-  }, [activeItems, activeTotal, user, isAuthenticated, loadMagicCheckoutSDK, clearCart, clearBuyNow]);
-
-  // ── Place order (old flow — kept for reference / COD fallback) ───────────
-  const handlePlaceOrder = async () => {
-    if (!selectedAddress || !selectedFee) {
-      showValidationErrorToast('Please select a delivery address and method.');
-      return;
-    }
-    if (!isAuthenticated && (!guestInfo.email || !guestInfo.firstName || !guestInfo.phone)) {
-      showValidationErrorToast('Please fill in all contact information.');
-      return;
-    }
+  const placeCodOrder = async () => {
     setIsProcessing(true);
-
-    const itemsPayload = activeItems.map(item => ({
-      product_id: item.productId || item.id,
-      variation_id: item.variationId || item.variation?.id || null,
-      quantity: item.quantity,
-    }));
-
-    const orderData = isAuthenticated
-      ? { shipping_address_id: selectedAddress.id, items: itemsPayload, payment_type: selectedFee.orderType === 'cod' ? 'cod' : 'upi', notes: '', discount_amount: 0, coupon_id: null }
-      : { guest_info: guestInfo, shipping_address: { fullName: selectedAddress.full_name || selectedAddress.fullName, address: selectedAddress.address, city: selectedAddress.city, state: selectedAddress.state, pincode: selectedAddress.postal_code || selectedAddress.postalCode, phone: selectedAddress.phone_number || selectedAddress.phoneNumber }, items: itemsPayload, payment_type: selectedFee.orderType === 'cod' ? 'cod' : 'upi', notes: '', discount_amount: 0, coupon_id: null, session_id: sessionStorage.getItem('sessionId') || 'guest-' + Date.now(), ip_address: window.location.hostname, user_agent: window.navigator.userAgent };
-
     try {
-      if (selectedFee.orderType === 'cod') {
-        const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
-        if (!result?.order) throw new Error('Order creation failed.');
-        try { fbqTrack('Purchase', { value: Number(finalTotal.toFixed(2)), currency: 'INR', content_type: 'product', contents: activeItems.map(i => ({ id: (i.productId || i.id) && (i.variationId || i.variation?.id) ? `${i.productId || i.id}_${i.variationId || i.variation?.id}` : String(i.productId || i.id), quantity: i.quantity })) }, { eventID: `Purchase_${result.order.order_number}` }); } catch (_) {}
-        clearCart(); clearBuyNow();
-        showOrderPlacedSuccessToast(result.order.order_number);
-        setOrderSuccess({ orderNumber: result.order.order_number });
-      } else {
-        const scriptLoaded = await loadRazorpay();
-        if (!scriptLoaded || !window.Razorpay) { showOrderPlacedErrorToast('Failed to load payment SDK.'); setIsProcessing(false); return; }
-        const rzpOrder = await createRazorpayOrder({ amount: finalTotal, currency: 'INR', receipt: `rcpt_${Date.now()}`, isGuest: !isAuthenticated });
-        const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-          amount: rzpOrder.amount, currency: rzpOrder.currency,
-          name: 'Cross Coin', description: 'Payment for Cross Coin Order', order_id: rzpOrder.id,
-          prefill: { name: isAuthenticated ? (user?.name || '') : `${guestInfo.firstName} ${guestInfo.lastName}`, email: isAuthenticated ? (user?.email || '') : guestInfo.email, contact: selectedAddress?.phone_number || selectedAddress?.phoneNumber || '' },
-          theme: { color: '#CE1E36' },
-          handler: async (response) => {
-            try {
-              const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
-              if (!result?.order) throw new Error('Order creation failed.');
-              await updateOrderPayment({ orderId: result.order.id, razorpayPaymentId: response.razorpay_payment_id, razorpayOrderId: response.razorpay_order_id, razorpaySignature: response.razorpay_signature });
-              try { fbqTrack('Purchase', { value: Number(finalTotal.toFixed(2)), currency: 'INR', content_type: 'product', contents: activeItems.map(i => ({ id: (i.productId || i.id) && (i.variationId || i.variation?.id) ? `${i.productId || i.id}_${i.variationId || i.variation?.id}` : String(i.productId || i.id), quantity: i.quantity })) }, { eventID: `Purchase_${result.order.order_number}` }); } catch (_) {}
-              clearCart(); clearBuyNow();
-              showOrderPlacedSuccessToast(result.order.order_number);
-              setOrderSuccess({ orderNumber: result.order.order_number });
-            } catch { showOrderPlacedErrorToast('Payment successful but order creation failed. Please contact support.'); }
-          },
-          modal: { ondismiss: () => { showOrderPlacedErrorToast('Payment was cancelled.'); setIsProcessing(false); } },
-        };
-        const rzp = new window.Razorpay(options);
-        rzp.on('payment.failed', (r) => { showOrderPlacedErrorToast('Payment failed: ' + (r.error.description || 'Please try again')); setIsProcessing(false); });
-        rzp.open();
-        return;
-      }
+      const orderData = buildCodOrderData();
+      const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
+      if (!result?.order) throw new Error('Order creation failed.');
+      trackPurchase(finalTotal, result.order.order_number);
+      clearCart();
+      clearBuyNow();
+      showOrderPlacedSuccessToast(result.order.order_number);
+      setOrderSuccess({ orderNumber: result.order.order_number });
     } catch (err) {
       showOrderPlacedErrorToast(err.response?.data?.message || err.message || 'Order placement failed. Please try again.');
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleSendCheckoutOtp = () => {
+    const phone = getDeliveryPhone();
+    if (phone.length < 10) {
+      showValidationErrorToast('Enter a valid 10-digit mobile number.');
+      return;
+    }
+    // Dev mode: skip actual send, just show hint
+    if (OTP_VERIFY_SKIP) {
+      setOtpHint('Dev mode: OTP skipped. Enter any 4+ digit code.');
+      return;
+    }
+
+    setOtpSending(true);
+    setOtpHint('');
+
+    const identifier = phone.length === 10 ? `91${phone}` : phone;
+
+    // Poll up to 5s for window.sendOtp to be ready (script loads async)
+    let attempts = 0;
+    const trySend = () => {
+      if (typeof window.sendOtp === 'function') {
+        window.sendOtp(
+          identifier,
+          () => {
+            setOtpHint('OTP sent. Enter the code below.');
+            setOtpSending(false);
+          },
+          (error) => {
+            const msg = typeof error === 'string' ? error : (error?.message || 'Could not send OTP.');
+            showOrderPlacedErrorToast(msg);
+            setOtpSending(false);
+          }
+        );
+      } else if (attempts < 10) {
+        attempts++;
+        setTimeout(trySend, 500);
+      } else {
+        showOrderPlacedErrorToast('OTP service not ready. Please refresh and try again.');
+        setOtpSending(false);
+      }
+    };
+    trySend();
+  };
+
+  const handleVerifyOtpAndContinue = async () => {
+    if (otpCode.length < 4) {
+      showValidationErrorToast('Enter the OTP you received.');
+      return;
+    }
+    // Dev mode: skip verification entirely
+    if (OTP_VERIFY_SKIP) {
+      setPhoneVerifiedForCod(true);
+      setShowOtpModal(false);
+      setOtpDigits(['', '', '', '']);
+      setOtpHint('');
+      await placeCodOrder();
+      return;
+    }
+    if (typeof window === 'undefined' || typeof window.verifyOtp !== 'function') {
+      showOrderPlacedErrorToast('OTP service not ready. Please refresh and try again.');
+      return;
+    }
+    setIsProcessing(true);
+    window.verifyOtp(
+      otpCode,
+      async (data) => {
+        setPhoneVerifiedForCod(true);
+        setShowOtpModal(false);
+        setOtpDigits(['', '', '', '']);
+        setOtpHint('');
+        await placeCodOrder();
+      },
+      (error) => {
+        const msg = typeof error === 'string' ? error : (error?.message || 'Verification failed.');
+        showOrderPlacedErrorToast(msg);
+        setIsProcessing(false);
+      }
+    );
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!selectedAddress) {
+      showValidationErrorToast('Please add a delivery address.');
+      scrollDrawerTo('cd-section-address');
+      return;
+    }
+    if (!selectedFee) {
+      showValidationErrorToast('Please select a delivery method.');
+      scrollDrawerTo('cd-section-delivery');
+      return;
+    }
+    if (!isAuthenticated) {
+      if (!String(guestInfo.firstName || '').trim()) {
+        showValidationErrorToast('Please enter your first name.');
+        scrollDrawerTo('cd-section-contact');
+        return;
+      }
+      if (guestEmailError || guestPhoneError || !isValidEmail(guestInfo.email) || !isValidIndianMobileDigits(guestInfo.phone)) {
+        showValidationErrorToast('Please fix the errors in Contact Info (email and phone).');
+        scrollDrawerTo('cd-section-contact');
+        return;
+      }
+    }
+    const phone = getDeliveryPhone();
+    if (!isValidIndianMobileDigits(phone)) {
+      showValidationErrorToast(
+        isAuthenticated
+          ? 'Please add a valid 10-digit mobile number on your delivery address.'
+          : 'Please check your phone number in contact info.'
+      );
+      scrollDrawerTo(isAuthenticated ? 'cd-section-address' : 'cd-section-contact');
+      return;
+    }
+
+    if (isPrepaidDelivery) {
+      if (!RAZORPAY_KEY) {
+        showOrderPlacedErrorToast('Razorpay key not configured.');
+        return;
+      }
+      setIsProcessing(true);
+      try {
+        const scriptLoaded = await loadRazorpay();
+        if (!scriptLoaded || !window.Razorpay) {
+          showOrderPlacedErrorToast('Failed to load payment SDK.');
+          setIsProcessing(false);
+          return;
+        }
+        const orderData = buildPrepaidOrderData();
+        const rzpOrder = await createRazorpayOrder({
+          amount: prepaidPayable,
+          currency: 'INR',
+          receipt: `rcpt_${Date.now()}`,
+          isGuest: !isAuthenticated,
+        });
+        const options = {
+          key: RAZORPAY_KEY,
+          amount: rzpOrder.amount,
+          currency: rzpOrder.currency,
+          name: 'Cross Coin',
+          description: 'Payment for Cross Coin Order',
+          order_id: rzpOrder.id,
+          prefill: {
+            name: isAuthenticated ? (user?.name || '') : `${guestInfo.firstName} ${guestInfo.lastName}`,
+            email: isAuthenticated ? (user?.email || '') : guestInfo.email,
+            contact: selectedAddress?.phone_number || selectedAddress?.phoneNumber || '',
+          },
+          theme: { color: '#CE1E36' },
+          handler: async (response) => {
+            try {
+              const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
+              if (!result?.order) throw new Error('Order creation failed.');
+              await updateOrderPayment({
+                orderId: result.order.id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpaySignature: response.razorpay_signature,
+              });
+              trackPurchase(prepaidPayable, result.order.order_number);
+              clearCart();
+              clearBuyNow();
+              showOrderPlacedSuccessToast(result.order.order_number);
+              setOrderSuccess({ orderNumber: result.order.order_number });
+            } catch {
+              showOrderPlacedErrorToast('Payment successful but order creation failed. Please contact support.');
+            } finally {
+              setIsProcessing(false);
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              showOrderPlacedErrorToast('Payment was cancelled.');
+              setIsProcessing(false);
+            },
+          },
+        };
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', (r) => {
+          showOrderPlacedErrorToast(`Payment failed: ${r.error?.description || 'Please try again'}`);
+          setIsProcessing(false);
+        });
+        rzp.open();
+      } catch (err) {
+        showOrderPlacedErrorToast(err.response?.data?.message || err.message || 'Order placement failed. Please try again.');
+        setIsProcessing(false);
+      }
+      return;
+    }
+
+    if (isCodDelivery) {
+      if (!phoneVerifiedForCod) {
+        setShowOtpModal(true);
+        setOtpHint('');
+        return;
+      }
+      await placeCodOrder();
+      return;
+    }
+
+    showValidationErrorToast('Please select a delivery method.');
   };
 
   if (!isVisible) return null;
@@ -590,35 +825,62 @@ const CartDrawer = ({ isOpen, onClose }) => {
               </div>
 
               {/* ── 2. Contact (guest only) — hidden when Magic Checkout is active (it handles contact collection) ── */}
-              {!MAGIC_CHECKOUT_ENABLED && !isAuthenticated && (
-                <div className="cd-sv-section">
+              {!isAuthenticated && (
+                <div className="cd-sv-section" id="cd-section-contact">
                   <div className="cd-section-title">Contact Info</div>
                   <div className="cd-form-grid">
                     <div className="cd-form-group">
                       <label className="cd-label">First Name *</label>
-                      <input className="cd-input" type="text" value={guestInfo.firstName} onChange={e => setGuestInfo(p => ({ ...p, firstName: e.target.value }))} placeholder="First name" />
+                      <input className="cd-input" type="text" value={guestInfo.firstName} onChange={e => setGuestInfo(p => ({ ...p, firstName: e.target.value }))} placeholder="First name" autoComplete="given-name" />
                     </div>
                     <div className="cd-form-group">
                       <label className="cd-label">Last Name</label>
-                      <input className="cd-input" type="text" value={guestInfo.lastName} onChange={e => setGuestInfo(p => ({ ...p, lastName: e.target.value }))} placeholder="Last name" />
+                      <input className="cd-input" type="text" value={guestInfo.lastName} onChange={e => setGuestInfo(p => ({ ...p, lastName: e.target.value }))} placeholder="Last name" autoComplete="family-name" />
                     </div>
                     <div className="cd-form-group cd-form-full">
                       <label className="cd-label">Email *</label>
-                      <input className="cd-input" type="email" value={guestInfo.email} onChange={e => setGuestInfo(p => ({ ...p, email: e.target.value }))} placeholder="your@email.com" />
+                      <input
+                        className={`cd-input ${guestEmailError ? 'cd-input-error' : ''}`}
+                        type="email"
+                        inputMode="email"
+                        value={guestInfo.email}
+                        onChange={e => setGuestInfo(p => ({ ...p, email: e.target.value }))}
+                        placeholder="name@example.com"
+                        autoComplete="email"
+                        aria-invalid={!!guestEmailError}
+                      />
+                      {guestEmailError && <p className="cd-field-error" role="alert">{guestEmailError}</p>}
                     </div>
                     <div className="cd-form-group cd-form-full">
                       <label className="cd-label">Phone *</label>
-                      <input className="cd-input" type="tel" value={guestInfo.phone} onChange={e => setGuestInfo(p => ({ ...p, phone: e.target.value }))} placeholder="10-digit mobile number" />
+                      <input
+                        className={`cd-input ${guestPhoneError ? 'cd-input-error' : ''}`}
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={10}
+                        value={guestInfo.phone}
+                        onChange={handleGuestPhoneChange}
+                        placeholder="10-digit mobile (starts with 6–9)"
+                        autoComplete="tel"
+                        aria-invalid={!!guestPhoneError}
+                      />
+                      {guestPhoneError && <p className="cd-field-error" role="alert">{guestPhoneError}</p>}
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* ── 3. Delivery Address — hidden when Magic Checkout is active (it handles address collection) ── */}
-              {!MAGIC_CHECKOUT_ENABLED && <div className="cd-sv-section">
+              {/* ── 3. Delivery Address ── */}
+              <div className="cd-sv-section" id="cd-section-address">
                 <div className="cd-section-title">Delivery Address</div>
                 {addressLoading ? <p className="cd-loading">Loading addresses...</p> : (
                   <>
+                    {isAuthenticated && addresses.length === 0 && !showAddressForm && (
+                      <p className="cd-address-empty-hint">Add a delivery address below to place your order.</p>
+                    )}
+                    {!isAuthenticated && !selectedAddress && !showAddressForm && (
+                      <p className="cd-address-empty-hint">Add your delivery address below (use the same phone as in Contact Info).</p>
+                    )}
                     {isAuthenticated && addresses.length > 1 ? (
                       /* Multiple addresses - show dropdown */
                       <div className="cd-address-section">
@@ -707,15 +969,31 @@ const CartDrawer = ({ isOpen, onClose }) => {
                         <div className="cd-form-grid">
                           {isAuthenticated && (
                             <>
-                              <div className="cd-form-group"><label className="cd-label">Full Name *</label><input className="cd-input" name="fullName" value={addressForm.fullName} onChange={handleAddrChange} required placeholder="Full name" /></div>
-                              <div className="cd-form-group"><label className="cd-label">Phone *</label><input className="cd-input" name="phoneNumber" value={addressForm.phoneNumber} onChange={handleAddrChange} required placeholder="Phone number" /></div>
+                              <div className="cd-form-group"><label className="cd-label">Full Name *</label><input className="cd-input" name="fullName" value={addressForm.fullName} onChange={handleAddrChange} required placeholder="Full name" autoComplete="name" /></div>
+                              <div className="cd-form-group">
+                                <label className="cd-label">Phone *</label>
+                                <input
+                                  className={`cd-input ${addressPhoneError ? 'cd-input-error' : ''}`}
+                                  name="phoneNumber"
+                                  type="tel"
+                                  inputMode="numeric"
+                                  maxLength={10}
+                                  value={addressForm.phoneNumber}
+                                  onChange={handleAddrChange}
+                                  required
+                                  placeholder="10-digit mobile"
+                                  autoComplete="tel-national"
+                                  aria-invalid={!!addressPhoneError}
+                                />
+                                {addressPhoneError && <p className="cd-field-error" role="alert">{addressPhoneError}</p>}
+                              </div>
                             </>
                           )}
-                          <div className="cd-form-group cd-form-full"><label className="cd-label">Address *</label><input className="cd-input" name="address" value={addressForm.address} onChange={handleAddrChange} required placeholder="Street address, flat, area" /></div>
-                          <div className="cd-form-group"><label className="cd-label">City *</label><input className="cd-input" name="city" value={addressForm.city} onChange={handleAddrChange} required placeholder="City" /></div>
-                          <div className="cd-form-group"><label className="cd-label">State *</label><input className="cd-input" name="state" value={addressForm.state} onChange={handleAddrChange} required placeholder="State" /></div>
-                          <div className="cd-form-group"><label className="cd-label">Postal Code *</label><input className="cd-input" name="postalCode" value={addressForm.postalCode} onChange={handleAddrChange} required placeholder="PIN code" /></div>
-                          <div className="cd-form-group"><label className="cd-label">Country</label><input className="cd-input" name="country" value={addressForm.country} onChange={handleAddrChange} placeholder="Country" /></div>
+                          <div className="cd-form-group cd-form-full"><label className="cd-label">Address *</label><input className="cd-input" name="address" value={addressForm.address} onChange={handleAddrChange} required placeholder="Street address, flat, area" autoComplete="street-address" /></div>
+                          <div className="cd-form-group"><label className="cd-label">City *</label><input className="cd-input" name="city" value={addressForm.city} onChange={handleAddrChange} required placeholder="City" autoComplete="address-level2" /></div>
+                          <div className="cd-form-group"><label className="cd-label">State *</label><input className="cd-input" name="state" value={addressForm.state} onChange={handleAddrChange} required placeholder="State" autoComplete="address-level1" /></div>
+                          <div className="cd-form-group"><label className="cd-label">Postal Code *</label><input className="cd-input" name="postalCode" value={addressForm.postalCode} onChange={handleAddrChange} required placeholder="PIN code" autoComplete="postal-code" /></div>
+                          <div className="cd-form-group"><label className="cd-label">Country</label><input className="cd-input" name="country" value={addressForm.country} onChange={handleAddrChange} placeholder="Country" autoComplete="country-name" /></div>
                           {isAuthenticated && (
                             <div className="cd-form-group cd-form-full"><label className="cd-checkbox-label"><input type="checkbox" name="isDefault" checked={addressForm.isDefault} onChange={handleAddrChange} /> Set as default address</label></div>
                           )}
@@ -728,22 +1006,38 @@ const CartDrawer = ({ isOpen, onClose }) => {
                     )}
                   </>
                 )}
-              </div>}
+              </div>
 
-              {/* ── 4. Delivery Method — hidden when Magic Checkout is active ── */}
-              {!MAGIC_CHECKOUT_ENABLED && shippingFees.length > 0 && (
-                <div className="cd-sv-section">
-                  <div className="cd-section-title">Delivery Method</div>
+              {/* ── 4. Delivery & payment (prepaid first, COD secondary) ── */}
+              {sortedShippingFees.length > 0 && (
+                <div className="cd-sv-section" id="cd-section-delivery">
+                  <div className="cd-section-title">How would you like to pay?</div>
+                  <p className="cd-prepaid-nudge">{PREPAID_NUDGE_LINE}</p>
                   <div className="cd-delivery-list">
-                    {shippingFees.map(fee => (
-                      <label key={fee.id} className={`cd-delivery-card ${selectedFee?.id === fee.id ? 'cd-delivery-selected' : ''}`}>
+                    {sortedShippingFees.map(fee => (
+                      <label
+                        key={fee.id}
+                        className={`cd-delivery-card ${fee.orderType === 'prepaid' ? 'cd-delivery-prepaid' : 'cd-delivery-cod'} ${selectedFee?.id === fee.id ? 'cd-delivery-selected' : ''}`}
+                      >
                         <input type="radio" name="delivery" checked={selectedFee?.id === fee.id} onChange={() => handleSelectFee(fee)} />
                         <span className="cd-delivery-icon"><IconTruck /></span>
                         <div className="cd-delivery-info">
-                          <p className="cd-delivery-name">{fee.orderType === 'cod' ? 'Cash on Delivery' : fee.orderType === 'prepaid' ? 'Prepaid Delivery' : fee.orderType}</p>
-                          <p className="cd-delivery-desc">{fee.orderType === 'cod' ? 'Pay when you receive' : 'Pay online before delivery'}</p>
+                          <p className="cd-delivery-name">
+                            {fee.orderType === 'cod'
+                              ? 'Cash on Delivery'
+                              : fee.orderType === 'prepaid'
+                                ? 'UPI / Card (Prepaid)'
+                                : fee.orderType}
+                          </p>
+                          <p className="cd-delivery-desc">
+                            {fee.orderType === 'cod'
+                              ? 'Pay when you receive · OTP when you confirm the order'
+                              : 'Recommended — fastest confirmation'}
+                          </p>
                         </div>
-                        <span className={`cd-delivery-fee ${parseFloat(fee.fee || 0) === 0 ? 'free' : ''}`}>{parseFloat(fee.fee || 0) === 0 ? 'Free' : `₹${parseFloat(fee.fee || 0).toFixed(2)}`}</span>
+                        <span className={`cd-delivery-fee ${parseFloat(fee.fee || 0) === 0 ? 'free' : ''}`}>
+                          {parseFloat(fee.fee || 0) === 0 ? 'Free' : `₹${parseFloat(fee.fee || 0).toFixed(2)}`}
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -755,7 +1049,27 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 <div className="cd-summary">
                   <div className="cd-summary-row"><span>Subtotal ({totalQty} item{totalQty !== 1 ? 's' : ''})</span><span>₹{activeTotal.toFixed(2)}</span></div>
                   <div className="cd-summary-row"><span>Shipping</span><span>{shippingFeeAmount === 0 ? 'Free' : `₹${shippingFeeAmount.toFixed(2)}`}</span></div>
-                  <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{finalTotal.toFixed(2)}</span></div>
+                  {isPrepaidDelivery && prepaidInstantDiscount > 0 && (
+                    <div className="cd-summary-row cd-summary-discount">
+                      <span>Prepaid instant discount</span>
+                      <span>-₹{prepaidInstantDiscount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {isPrepaidDelivery && (
+                    <div className="cd-summary-row cd-summary-total">
+                      <span>Pay now</span>
+                      <span>₹{prepaidPayable.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {isCodDelivery && (
+                    <div className="cd-summary-row cd-summary-total">
+                      <span>Total (pay on delivery)</span>
+                      <span>₹{finalTotal.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {!isPrepaidDelivery && !isCodDelivery && (
+                    <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{finalTotal.toFixed(2)}</span></div>
+                  )}
                 </div>
               </div>
 
@@ -777,15 +1091,135 @@ const CartDrawer = ({ isOpen, onClose }) => {
           <div className="cd-footer">
             <button
               className="cd-btn-primary cd-btn-full"
-              onClick={MAGIC_CHECKOUT_ENABLED ? handleMagicCheckout : handlePlaceOrder}
+              onClick={handlePlaceOrder}
               disabled={isProcessing}
             >
-              {isProcessing ? 'Processing...' : 'Place Order'}
+              {isProcessing
+                ? 'Processing...'
+                : isPrepaidDelivery
+                  ? `Pay ₹${prepaidPayable.toFixed(2)}`
+                  : isCodDelivery
+                    ? 'Place COD order'
+                    : 'Place order'}
             </button>
           </div>
         )}
 
       </div>
+
+      {showCodWarningModal && null}
+
+      {showOtpModal && (
+        <div className="cd-modal-overlay" role="presentation" onClick={() => !isProcessing && setShowOtpModal(false)}>
+          <div
+            className="cd-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cd-otp-modal-title"
+            onClick={e => e.stopPropagation()}
+            style={{ textAlign: 'center' }}
+          >
+            <h3 id="cd-otp-modal-title" className="cd-modal-title">Verify your number</h3>
+            <p className="cd-modal-text" style={{ color: '#666' }}>
+              Code sent to <strong>+91 {getDeliveryPhone() || 'your number'}</strong>
+            </p>
+            {otpHint && <p className="cd-modal-hint">{otpHint}</p>}
+
+            {/* 4-box OTP input */}
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', margin: '20px 0' }}>
+              {otpDigits.map((digit, i) => (
+                <input
+                  key={i}
+                  ref={otpRefs[i]}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                  maxLength={1}
+                  value={digit}
+                  autoFocus={i === 0}
+                  style={{
+                    width: 52, height: 56,
+                    textAlign: 'center',
+                    fontSize: 22, fontWeight: 700,
+                    border: '1.5px solid ' + (digit ? '#180D3E' : '#ddd'),
+                    borderRadius: 10,
+                    outline: 'none',
+                    fontFamily: 'DM Sans, sans-serif',
+                    color: '#180D3E',
+                    background: '#fff',
+                    transition: 'border-color 0.15s',
+                    caretColor: 'transparent',
+                  }}
+                  onChange={e => {
+                    // Handle browser autofill / SMS autofill pasting full code into first box
+                    const raw = e.target.value.replace(/\D/g, '');
+                    if (raw.length > 1) {
+                      const next = ['', '', '', ''];
+                      raw.slice(0, 4).split('').forEach((ch, idx) => { next[idx] = ch; });
+                      setOtpDigits(next);
+                      const focusIdx = Math.min(raw.length, 3);
+                      otpRefs[focusIdx].current?.focus();
+                      if (next.every(d => d)) setTimeout(() => document.getElementById('cd-otp-verify-btn')?.click(), 50);
+                      return;
+                    }
+                    const val = raw.slice(-1);
+                    const next = [...otpDigits];
+                    next[i] = val;
+                    setOtpDigits(next);
+                    if (val && i < 3) otpRefs[i + 1].current?.focus();
+                    if (next.every(d => d) && next.join('').length === 4) {
+                      setTimeout(() => document.getElementById('cd-otp-verify-btn')?.click(), 50);
+                    }
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Backspace' && !otpDigits[i] && i > 0) {
+                      otpRefs[i - 1].current?.focus();
+                    }
+                  }}
+                  onPaste={e => {
+                    e.preventDefault();
+                    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
+                    const next = ['', '', '', ''];
+                    pasted.split('').forEach((ch, idx) => { next[idx] = ch; });
+                    setOtpDigits(next);
+                    const focusIdx = Math.min(pasted.length, 3);
+                    otpRefs[focusIdx].current?.focus();
+                  }}
+                />
+              ))}
+            </div>
+
+            <button
+              id="cd-otp-verify-btn"
+              type="button"
+              className="cd-btn-primary cd-btn-full"
+              onClick={handleVerifyOtpAndContinue}
+              disabled={isProcessing || otpCode.length < 4}
+              style={{ borderRadius: 10, height: 48, fontSize: 15 }}
+            >
+              {isProcessing ? 'Verifying…' : 'Confirm order'}
+            </button>
+
+            <p className="cd-modal-muted" style={{ marginTop: 14 }}>
+              Didn&apos;t receive code?{' '}
+              <button
+                type="button"
+                style={{ background: 'none', border: 'none', color: '#CE1E36', fontWeight: 600, cursor: 'pointer', padding: 0, fontSize: 13, textDecoration: 'underline' }}
+                onClick={() => { setOtpDigits(['', '', '', '']); handleSendCheckoutOtp(); otpRefs[0].current?.focus(); }}
+                disabled={otpSending || isProcessing}
+              >
+                {otpSending ? 'Sending…' : 'Request again'}
+              </button>
+            </p>
+
+            {OTP_VERIFY_SKIP && (
+              <p className="cd-modal-muted" style={{ marginTop: 6, fontSize: 11 }}>
+                Dev mode: enter any 4 digits to skip real verification.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 };

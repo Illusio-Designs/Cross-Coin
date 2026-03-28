@@ -401,6 +401,16 @@
 .cd-form-group { display: flex; flex-direction: column; gap: 4px; }
 .cd-form-full { grid-column: 1 / -1; }
 .cd-label { font-size: 12px; font-weight: 600; color: #555; }
+.cd-input-error {
+  border-color: #c53030 !important;
+  background-color: #fff5f5;
+}
+.cd-field-error {
+  font-size: 12px;
+  color: #c53030;
+  margin: 4px 0 0;
+  line-height: 1.35;
+}
 .cd-input {
   height: 40px;
   border: 1.5px solid #ebebf0;
@@ -804,6 +814,101 @@
 @keyframes cd-bob {
   0%, 100% { transform: translateX(-50%) translateY(0px); }
   50% { transform: translateX(-50%) translateY(5px); }
+}
+
+/* ─── Checkout modals (COD notice, OTP) ─────────────────────────────────── */
+
+.cd-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.cd-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 22px 20px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
+}
+.cd-modal-title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #180D3E;
+}
+.cd-modal-text {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+}
+.cd-modal-muted {
+  font-size: 13px;
+  color: #666;
+}
+.cd-modal-hint {
+  font-size: 13px;
+  color: #1a7a4a;
+  margin: 8px 0 12px;
+}
+.cd-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+.cd-otp-actions {
+  margin: 8px 0 4px;
+}
+.cd-otp-input {
+  margin-top: 6px;
+  letter-spacing: 0.08em;
+}
+
+.cd-address-empty-hint {
+  font-size: 13px;
+  color: #180D3E;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: #fff8e6;
+  border: 1px solid #ffe0a3;
+  border-radius: 8px;
+  line-height: 1.45;
+}
+
+.cd-prepaid-nudge {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a7a4a;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: #e8f5e9;
+  border-radius: 8px;
+  border: 1px solid #c8e6c9;
+}
+
+.cd-delivery-card.cd-delivery-prepaid {
+  border-width: 2px;
+  border-color: #c8e6c9;
+  background: linear-gradient(135deg, #fafdfb 0%, #fff 100%);
+}
+.cd-delivery-card.cd-delivery-cod {
+  opacity: 0.96;
+}
+
+.cd-summary-discount {
+  color: #1a7a4a;
+  font-weight: 600;
+}
+.cd-summary-partial {
+  font-size: 13px;
+  color: #555;
 }
 
 /* ─── Hide back-to-top when drawer is open ───────────────────────────────── */

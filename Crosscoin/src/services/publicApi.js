@@ -787,6 +787,40 @@ export const updateOrderPayment = async ({ orderId, razorpayPaymentId, razorpayO
   }
 };
 
+/**
+ * COD checkout — request OTP to the delivery phone (Msg91 / Twilio / custom SMS on backend).
+ * Backend should implement: POST /api/checkout/phone-otp/send
+ */
+export const sendCheckoutPhoneOtp = async (phone) => {
+  try {
+    const response = await axios.post(
+      `${API_URL}/api/checkout/phone-otp/send`,
+      { phone },
+      addBrandHeader()
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+/**
+ * COD checkout — verify OTP. On success, backend may return { success: true, token?: string }.
+ * Backend should implement: POST /api/checkout/phone-otp/verify
+ */
+export const verifyCheckoutPhoneOtp = async (phone, code) => {
+  try {
+    const response = await axios.post(
+      `${API_URL}/api/checkout/phone-otp/verify`,
+      { phone, code },
+      addBrandHeader()
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
 // ============ SHIPPING FEES APIs ============
 export const getShippingFees = async () => {
   try {
