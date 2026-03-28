@@ -1,7 +1,7 @@
 const axios = require('axios');
 const { logger } = require('../config/logging.js');
 
-const GRAPH_API_URL = 'https://graph.facebook.com/v18.0';
+const GRAPH_API_URL = 'https://graph.facebook.com/v21.0';
 
 /**
  * Format a phone number to E.164 format for India (+91XXXXXXXXXX)
@@ -109,8 +109,47 @@ async function sendOrderCancelled(phone, { orderNumber, refundInfo }) {
   ]);
 }
 
+/**
+ * Send a plain text message (for testing / free-form within 24h window)
+ */
+async function sendTextMessage(phone, text) {
+  const token = process.env.WHATSAPP_API_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+
+  if (!token || !phoneNumberId) {
+    logger.warn('WhatsApp env vars not configured — skipping');
+    return;
+  }
+
+  const formattedPhone = formatE164(phone);
+  if (!formattedPhone) return;
+
+  const payload = {
+    messaging_product: 'whatsapp',
+    to: formattedPhone,
+    type: 'text',
+    text: { body: text }
+  };
+
+  const res = await axios.post(
+    `${GRAPH_API_URL}/${phoneNumberId}/messages`,
+    payload,
+    { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+  );
+  return res.data;
+}
+
+/**
+ * Test connection — sends a simple ping message
+ */
+async function testConnection(phone) {
+  return sendTextMessage(phone, '✅ WhatsApp integration is working for Cross Coin!');
+}
+
 module.exports = {
   formatE164,
+  sendTextMessage,
+  testConnection,
   sendOrderConfirmation,
   sendOrderShipped,
   sendOrderDelivered,
