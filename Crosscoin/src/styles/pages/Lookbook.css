@@ -1,188 +1,354 @@
-.lookbook-page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px 16px 56px;
-}
-
-.lookbook-title {
-  font-size: 2rem;
-  margin: 0;
-}
-
-.lookbook-subtitle {
-  margin: 10px 0 24px;
-  color: #666;
-}
-
-.lookbook-grid {
+/* ── Lookbook 3-column layout ── */
+.lb-wrap {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 20px;
-}
-
-.lookbook-card {
-  position: relative;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-  border-radius: 14px;
-  overflow: hidden;
-  background: #f5f5f5;
-}
-
-.lookbook-card-image {
+  grid-template-columns: 200px 1fr 400px;
+  height: 520px;
   width: 100%;
-  height: 380px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #ebebeb;
+  font-family: 'DM Sans', -apple-system, sans-serif;
+  background: #fff;
+}
+
+.lb-loading,
+.lb-error {
+  min-height: 300px;
+  display: grid;
+  place-items: center;
+  color: #aaa;
+  font-size: 14px;
+}
+
+/* ── Col 1: Lookbook list ── */
+.lb-list {
+  border-right: 1px solid #ebebeb;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 12px;
+  gap: 10px;
+  scrollbar-width: none;
+}
+
+.lb-list::-webkit-scrollbar {
+  display: none;
+}
+
+.lb-list-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #bbb;
+  padding: 2px 2px 6px;
+}
+
+.lb-list-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1.5px solid transparent;
+  background: #fff;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  text-align: left;
+  flex-shrink: 0;
+}
+
+.lb-list-item:hover {
+  border-color: #ddd;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.lb-list-item--active {
+  border-color: #CE1E36;
+  box-shadow: 0 2px 12px rgba(206, 30, 54, 0.12);
+}
+
+.lb-list-active-bar {
+  display: none;
+}
+
+.lb-list-thumb {
+  width: 100%;
+  height: 110px;
+  background: #f0f0f0;
+  overflow: hidden;
+}
+
+.lb-list-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s;
+}
+
+.lb-list-item:hover .lb-list-thumb img {
+  transform: scale(1.04);
+}
+
+.lb-list-thumb-empty {
+  width: 100%;
+  height: 100%;
+  background: #e8e8e8;
+}
+
+.lb-list-info {
+  padding: 8px 10px;
+}
+
+.lb-list-name {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lb-list-count {
+  display: block;
+  font-size: 10px;
+  color: #bbb;
+  margin-top: 2px;
+}
+
+/* ── Col 2: Main image ── */
+.lb-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.lb-thumbs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.lb-thumbs::-webkit-scrollbar {
+  display: none;
+}
+
+.lb-thumb {
+  width: 36px;
+  height: 44px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #e0e0e0;
+  padding: 0;
+  flex-shrink: 0;
+  transition: border-color 0.2s;
+}
+
+.lb-thumb img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.lookbook-card-placeholder {
-  height: 380px;
-  display: grid;
-  place-items: center;
-  color: #777;
+.lb-thumb--active {
+  border-color: #180D3E;
 }
 
-.lookbook-card-overlay {
-  position: absolute;
-  inset: auto 0 0 0;
-  padding: 14px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.65));
-  color: #fff;
-  text-align: left;
+.lb-thumb:hover:not(.lb-thumb--active) {
+  border-color: #aaa;
 }
 
-.lookbook-card-overlay h3 {
-  margin: 0;
+/* Image container — medium size, rounded */
+.lb-main-img-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
 }
 
-.lookbook-card-overlay p {
-  margin: 6px 0 0;
-  font-size: 0.9rem;
-  opacity: 0.9;
-}
-
-.lookbook-detail-header {
-  margin-bottom: 24px;
-}
-
-.lookbook-back-btn {
-  border: 1px solid #ddd;
-  background: #fff;
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  margin-bottom: 12px;
-}
-
-.lookbook-detail-images {
-  display: grid;
-  gap: 24px;
-}
-
-.lookbook-image-wrap {
+.lb-img-inner {
   position: relative;
-  width: 100%;
-  border-radius: 14px;
+  display: inline-block;
+  line-height: 0;
+  border-radius: 8px;
   overflow: hidden;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12);
 }
 
-.lookbook-image {
-  width: 100%;
+.lb-main-img {
   display: block;
+  height: 100%;
+  max-height: 460px;
+  width: auto;
+  max-width: 100%;
+  object-fit: cover;
 }
 
-.lookbook-hotspot-wrap {
+/* Hotspot */
+.lb-hotspot {
   position: absolute;
   transform: translate(-50%, -50%);
   z-index: 4;
-}
-
-.lookbook-hotspot-btn {
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  border: 2px solid #fff;
-  background: #111;
-  box-shadow: 0 0 0 0 rgba(17, 17, 17, 0.5);
-  animation: lookbookPulse 1.7s infinite;
   cursor: pointer;
 }
 
-@keyframes lookbookPulse {
+.lb-hotspot-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: #180D3E;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  padding: 0;
+  animation: lbPulse 2s infinite;
+  transition: all 0.2s;
+}
+
+.lb-hotspot--active .lb-hotspot-dot {
+  background: #CE1E36;
+  border-color: #fff;
+  animation: none;
+  transform: scale(1.25);
+  box-shadow: 0 0 0 5px rgba(206, 30, 54, 0.2);
+}
+
+@keyframes lbPulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(17, 17, 17, 0.4);
+    box-shadow: 0 0 0 0 rgba(24, 13, 62, 0.5);
   }
+
   70% {
-    box-shadow: 0 0 0 16px rgba(17, 17, 17, 0);
+    box-shadow: 0 0 0 12px rgba(24, 13, 62, 0);
   }
+
   100% {
-    box-shadow: 0 0 0 0 rgba(17, 17, 17, 0);
+    box-shadow: 0 0 0 0 rgba(24, 13, 62, 0);
   }
 }
 
-.lookbook-product-popup {
+.lb-hotspot-label {
   position: absolute;
   top: 28px;
   left: 50%;
   transform: translateX(-50%);
-  width: 250px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  padding: 10px;
-  z-index: 5;
-}
-
-.lookbook-popup-image {
-  width: 100%;
-  height: 140px;
-  object-fit: cover;
-  border-radius: 8px;
-}
-
-.lookbook-popup-content h4 {
-  margin: 10px 0 6px;
-  font-size: 0.95rem;
-}
-
-.lookbook-popup-content p {
-  margin: 0 0 10px;
-  color: #444;
-}
-
-.lookbook-popup-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.lookbook-popup-actions button {
-  flex: 1;
-  border: 0;
-  border-radius: 8px;
-  padding: 8px;
-  cursor: pointer;
-  background: #111;
+  background: rgba(0, 0, 0, 0.75);
   color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 11px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
-.lookbook-loading,
-.lookbook-error {
-  min-height: 40vh;
-  display: grid;
-  place-items: center;
-  color: #444;
+/* ── Col 3: Product panel ── */
+.lb-product-panel {
+  border-left: 1px solid #ebebeb;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  overflow-y: auto;
 }
 
-@media (max-width: 768px) {
-  .lookbook-card-image,
-  .lookbook-card-placeholder {
-    height: 300px;
+.lb-panel-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  padding: 20px 12px;
+}
+
+.lb-panel-hint p {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #ccc;
+  margin: 0;
+  max-width: 180px;
+}
+
+/* ProductCard — natural size, not stretched */
+.lb-product-panel .product-card {
+  width: 240px !important;
+  min-width: 240px !important;
+  max-width: 240px !important;
+  flex-shrink: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 960px) {
+  .lb-wrap {
+    grid-template-columns: 150px 1fr 250px;
+    height: 500px;
+  }
+}
+
+@media (max-width: 700px) {
+  .lb-wrap {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    height: auto;
+    border-radius: 14px;
   }
 
-  .lookbook-product-popup {
-    width: 220px;
+  .lb-list {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 10px 12px;
+    gap: 8px;
+    border-right: none;
+    border-bottom: 1px solid #ebebeb;
+  }
+
+  .lb-list-title {
+    display: none;
+  }
+
+  .lb-list-item {
+    flex-shrink: 0;
+    min-width: 110px;
+  }
+
+  .lb-center {
+    padding: 16px;
+    min-height: 280px;
+  }
+
+  .lb-img-inner {
+    max-height: 280px;
+  }
+
+  .lb-main-img {
+    max-height: 280px;
+  }
+
+  .lb-product-panel {
+    border-left: none;
+    border-top: 1px solid #ebebeb;
+    min-height: 180px;
+  }
+
+  .lb-product-panel .product-card {
+    width: 100% !important;
+    min-width: unset !important;
+    max-width: 300px !important;
   }
 }
-

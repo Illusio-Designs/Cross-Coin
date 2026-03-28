@@ -1,216 +1,183 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { useCart } from "../../context/CartContext";
-import { getPublicLookbookBySlug, getPublicLookbooks } from "../../services/publicApi";
+import { getPublicLookbooks, getPublicProductBySlug } from "../../services/publicApi";
+import ProductCard from "../products/ProductCard";
 
-const LookbookShowcase = ({ slug: slugProp = null, embedded = false }) => {
+const LookbookShowcase = () => {
   const router = useRouter();
-  const querySlug = typeof router?.query?.slug === "string" ? router.query.slug : null;
-  const [internalSlug, setInternalSlug] = useState(slugProp || null);
-  const slug = slugProp || querySlug || internalSlug;
   const { addToCart } = useCart();
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [lookbooks, setLookbooks] = useState([]);
-  const [lookbook, setLookbook] = useState(null);
-  const [activeHotspot, setActiveHotspot] = useState(null);
+  const [loading, setLoading]               = useState(true);
+  const [error, setError]                   = useState(null);
+  const [lookbooks, setLookbooks]           = useState([]);
+  const [selectedLb, setSelectedLb]         = useState(null);
+  const [activeImg, setActiveImg]           = useState(0);
+  const [activeHotspot, setActiveHotspot]   = useState(null);
+  const [fullProduct, setFullProduct]       = useState(null);
+  const [productLoading, setProductLoading] = useState(false);
 
-  const isDetailView = useMemo(() => !!slug, [slug]);
+  const loadHotspotProduct = async (hs) => {
+    if (!hs?.Product?.slug) return;
+    setActiveHotspot(hs.id);
+    setFullProduct(null);
+    setProductLoading(true);
+    try {
+      const res = await getPublicProductBySlug(hs.Product.slug);
+      if (res?.success && res?.data) setFullProduct(res.data);
+    } catch (e) {}
+    finally { setProductLoading(false); }
+  };
 
   useEffect(() => {
-    setInternalSlug(slugProp || null);
-  }, [slugProp]);
-
-  useEffect(() => {
-    const fetchLookbooks = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        setActiveHotspot(null);
-
-        const data = isDetailView
-          ? await getPublicLookbookBySlug(slug)
-          : await getPublicLookbooks();
-
-        if (!data?.success) {
-          throw new Error(data.message || "Failed to load lookbook data");
+    getPublicLookbooks()
+      .then(data => {
+        const list = Array.isArray(data?.data) ? data.data : [];
+        setLookbooks(list);
+        if (list.length > 0) {
+          setSelectedLb(list[0]);
+          const firstHs = list[0]?.Images?.[0]?.Hotspots?.[0];
+          if (firstHs) loadHotspotProduct(firstHs);
         }
+      })
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
 
-        if (isDetailView) {
-          setLookbook(data.data);
-          setLookbooks([]);
-        } else {
-          setLookbooks(Array.isArray(data.data) ? data.data : []);
-          setLookbook(null);
-        }
-      } catch (err) {
-        setError(err.message || "Failed to load lookbook data");
-      } finally {
-        setLoading(false);
-      }
+  const selectLookbook = (lb) => {
+    setSelectedLb(lb);
+    setActiveImg(0);
+    setFullProduct(null);
+    setActiveHotspot(null);
+    const firstHs = lb.Images?.[0]?.Hotspots?.[0];
+    if (firstHs) loadHotspotProduct(firstHs);
+  };
+
+  const handleHotspotClick = (hs) => {
+    if (activeHotspot === hs.id) return;
+    loadHotspotProduct(hs);
+  };
+
+  if (loading) return <div className="lb-loading">Loading lookbooks...</div>;
+  if (error)   return <div className="lb-error">{error}</div>;
+  if (!lookbooks.length) return <div className="lb-error">No lookbooks found.</div>;
+
+  const images       = selectedLb?.Images || [];
+  const currentImage = images[activeImg] || images[0];
+
+  const cardProduct = fullProduct ? (() => {
+    const api = fullProduct;
+    const variations = api.variations || [];
+    const firstVar = variations[0] || {};
+    return {
+      id: api.id,
+      name: api.name,
+      slug: api.slug,
+      price: parseFloat(firstVar.price || api.price || 0),
+      comparePrice: parseFloat(firstVar.comparePrice || 0),
+      images: api.images || [],
+      variations,
+      review_count: api.review_count || 0,
+      avg_rating: api.avg_rating || null,
+      badge: api.badge || null,
     };
-
-    fetchLookbooks();
-  }, [isDetailView, slug]);
-
-  const handleOpenLookbook = (targetSlug) => {
-    if (embedded || !querySlug) {
-      setInternalSlug(targetSlug);
-      return;
-    }
-    router.push({ pathname: router.pathname, query: { ...router.query, slug: targetSlug } });
-  };
-
-  const handleBackToGrid = () => {
-    if (embedded || !querySlug) {
-      setInternalSlug(null);
-      return;
-    }
-    const nextQuery = { ...router.query };
-    delete nextQuery.slug;
-    router.push({ pathname: router.pathname, query: nextQuery });
-  };
-
-  const handleAddToCart = async (product) => {
-    if (!product) return;
-    const productPayload = {
-      id: product.id,
-      name: product.name,
-      price: product.price || 0,
-      images: product.primary_image ? [product.primary_image] : [],
-      comparePrice: product.comparePrice || 0,
-      variations: [],
-    };
-    await addToCart(productPayload, null, null, 1, null, productPayload.images);
-  };
-
-  if (loading) {
-    return (
-      <div className="lookbook-page">
-        <div className="lookbook-loading">Loading lookbook...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="lookbook-page">
-        <div className="lookbook-error">{error}</div>
-      </div>
-    );
-  }
-
-  if (!isDetailView) {
-    return (
-      <div className="lookbook-page">
-        <section className="lookbook-grid-section">
-          {!embedded ? <h1 className="lookbook-title">Lookbook</h1> : null}
-          <p className="lookbook-subtitle">Explore styled drops and shop directly from hotspots.</p>
-
-          <div className="lookbook-grid">
-            {lookbooks.map((item) => {
-              const coverImage = item.Images && item.Images[0] ? item.Images[0].image_url : null;
-              return (
-                <button
-                  key={item.id}
-                  className="lookbook-card"
-                  onClick={() => handleOpenLookbook(item.slug)}
-                  type="button"
-                >
-                  {coverImage ? (
-                    <img src={coverImage} alt={item.title} className="lookbook-card-image" />
-                  ) : (
-                    <div className="lookbook-card-placeholder">No Image</div>
-                  )}
-                  <div className="lookbook-card-overlay">
-                    <h3>{item.title}</h3>
-                    {item.description ? <p>{item.description}</p> : null}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      </div>
-    );
-  }
-
-  if (!lookbook) {
-    return (
-      <div className="lookbook-page">
-        <div className="lookbook-error">Lookbook not found.</div>
-      </div>
-    );
-  }
+  })() : null;
 
   return (
-    <div className="lookbook-page">
-      <section className="lookbook-detail-header">
-        <button type="button" className="lookbook-back-btn" onClick={handleBackToGrid}>
-          Back to Lookbook
-        </button>
-        <h1>{lookbook.title}</h1>
-        {lookbook.description ? <p>{lookbook.description}</p> : null}
-      </section>
+    <div className="lb-wrap">
 
-      <section className="lookbook-detail-images">
-        {(lookbook.Images || []).map((image) => (
-          <div className="lookbook-image-wrap" key={image.id}>
-            <img src={image.image_url} alt={image.alt_text || lookbook.title} className="lookbook-image" />
+      {/* Col 1 — Lookbook list */}
+      <div className="lb-list">
+        <div className="lb-list-title">Lookbooks</div>
+        {lookbooks.map(lb => {
+          const cover = lb.Images?.[0]?.image_url;
+          const isActive = selectedLb?.id === lb.id;
+          return (
+            <button key={lb.id} type="button"
+              className={`lb-list-item${isActive ? ' lb-list-item--active' : ''}`}
+              onClick={() => selectLookbook(lb)}>
+              {isActive && <div className="lb-list-active-bar" />}
+              <div className="lb-list-thumb">
+                {cover ? <img src={cover} alt={lb.title} /> : <div className="lb-list-thumb-empty" />}
+              </div>
+              <div className="lb-list-info">
+                <span className="lb-list-name">{lb.title}</span>
+                <span className="lb-list-count">{(lb.Images || []).length} image{(lb.Images || []).length !== 1 ? 's' : ''}</span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
 
-            {(image.Hotspots || []).map((hotspot) => {
-              const key = `${image.id}-${hotspot.id}`;
-              const isOpen = activeHotspot === key;
-              return (
-                <div
-                  key={hotspot.id}
-                  className="lookbook-hotspot-wrap"
-                  style={{ left: `${hotspot.position_x}%`, top: `${hotspot.position_y}%` }}
-                  onMouseEnter={() => setActiveHotspot(key)}
-                  onMouseLeave={() => setActiveHotspot(null)}
-                >
-                  <button
-                    type="button"
-                    className="lookbook-hotspot-btn"
-                    onClick={() => setActiveHotspot(isOpen ? null : key)}
-                    aria-label={hotspot.label || hotspot.Product?.name || "Hotspot"}
+      {/* Col 2 — Main image with hotspots (no title/description) */}
+      <div className="lb-center">
+        {selectedLb && (
+          <>
+            {images.length > 1 && (
+              <div className="lb-thumbs">
+                {images.map((img, i) => (
+                  <button key={img.id} type="button"
+                    className={`lb-thumb${activeImg === i ? ' lb-thumb--active' : ''}`}
+                    onClick={() => { setActiveImg(i); setActiveHotspot(null); setFullProduct(null); }}>
+                    <img src={img.image_url} alt={img.alt_text || `Image ${i + 1}`} />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="lb-main-img-wrap">
+              {currentImage && (
+                <div className="lb-img-inner">
+                  <img
+                    src={currentImage.image_url}
+                    alt={currentImage.alt_text || selectedLb.title}
+                    className="lb-main-img"
                   />
-
-                  {isOpen ? (
-                    <div className="lookbook-product-popup">
-                      {hotspot.Product?.primary_image ? (
-                        <img
-                          src={hotspot.Product.primary_image}
-                          alt={hotspot.Product?.name || "Product"}
-                          className="lookbook-popup-image"
-                        />
-                      ) : null}
-                      <div className="lookbook-popup-content">
-                        <h4>{hotspot.Product?.name}</h4>
-                        <p>Rs. {Number(hotspot.Product?.price || 0).toFixed(2)}</p>
-                        <div className="lookbook-popup-actions">
-                          <button type="button" onClick={() => handleAddToCart(hotspot.Product)}>
-                            Add to Cart
-                          </button>
-                          {hotspot.Product?.slug ? (
-                            <button
-                              type="button"
-                              onClick={() => router.push(`/ProductDetails?slug=${hotspot.Product.slug}`)}
-                            >
-                              View
-                            </button>
-                          ) : null}
-                        </div>
-                      </div>
+                  {(currentImage.Hotspots || []).map(hs => (
+                    <div key={hs.id}
+                      className={`lb-hotspot${activeHotspot === hs.id ? ' lb-hotspot--active' : ''}`}
+                      style={{ left: `${hs.position_x}%`, top: `${hs.position_y}%` }}
+                      onClick={() => handleHotspotClick(hs)}>
+                      <button type="button" className="lb-hotspot-dot" aria-label={hs.label || hs.Product?.name || 'Hotspot'} />
+                      {hs.label && <span className="lb-hotspot-label">{hs.label}</span>}
                     </div>
-                  ) : null}
+                  ))}
                 </div>
-              );
-            })}
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Col 3 — Real ProductCard */}
+      <div className="lb-product-panel">
+        {productLoading ? (
+          <div className="lb-panel-hint"><p>Loading product...</p></div>
+        ) : !cardProduct ? (
+          <div className="lb-panel-hint">
+            <svg width="40" height="40" fill="none" stroke="#ddd" strokeWidth="1.5" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+            </svg>
+            <p>Tap a hotspot on the image to see the product</p>
           </div>
-        ))}
-      </section>
+        ) : (
+          <ProductCard
+            key={cardProduct.id}
+            product={cardProduct}
+            index={0}
+            onProductClick={() => cardProduct.slug && router.push(`/ProductDetails?slug=${cardProduct.slug}`)}
+            onAddToCart={(e, prod) => {
+              e.stopPropagation();
+              addToCart(
+                { id: prod.id, name: prod.name, price: prod.price, images: prod.images, variations: prod.variations || [] },
+                null, null, 1, null,
+                prod.images?.map(i => i.image_url || i) || []
+              );
+            }}
+          />
+        )}
+      </div>
+
     </div>
   );
 };
