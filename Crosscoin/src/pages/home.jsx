@@ -6,6 +6,7 @@ import Skeleton from "../components/common/Skeleton";
 import SlidingCollection from "../components/products/SlidingCollection";
 import UnlockedExclusives from "../components/common/UnlockedExclusives";
 import InfiniteReviewsSlider from "../components/common/InfiniteReviewsSlider";
+import LookbookShowcase from "../components/common/LookbookShowcase";
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
 import { getPublicSliders, getPublicCategories, getPublicCategoryByName, getAllPublicReviews } from '../services/publicApi';
@@ -307,6 +308,13 @@ const Home = () => {
             )}
           </div>
         </div>
+        <section className="home-lookbook-section">
+          <div className="home-reviews-header">
+            <h2 className="section-header-h2">Shop the <strong>Look</strong></h2>
+            <p className="section-header-sub">Tap the hotspots to shop directly from the look</p>
+          </div>
+          <LookbookShowcase />
+        </section>
         <section className="home-reviews-section">
           <div className="home-reviews-header">
             <h2 className="section-header-h2">Customer <strong>Reviews</strong></h2>

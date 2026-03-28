@@ -2102,3 +2102,17 @@
     padding: 28px;
   }
 }
+
+/* ── HOME LOOKBOOK SECTION ── */
+.home-lookbook-section {
+  padding: 60px;
+  background: #fff;
+}
+
+@media (max-width: 860px) {
+  .home-lookbook-section { padding: 40px; }
+}
+
+@media (max-width: 600px) {
+  .home-lookbook-section { padding: 28px 16px; }
+}
