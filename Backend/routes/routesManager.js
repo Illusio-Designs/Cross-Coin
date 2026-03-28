@@ -126,11 +126,10 @@ router.get('/health', (req, res) => {
 // WhatsApp test route (admin only)
 router.post('/whatsapp/test', async (req, res) => {
     try {
-        const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
         const whatsapp = require('../services/whatsappService.js');
-        const { phone } = req.body;
+        const { phone, brandId = 1 } = req.body;
         if (!phone) return res.status(400).json({ success: false, message: 'phone is required' });
-        const result = await whatsapp.testConnection(phone);
+        const result = await whatsapp.testConnection(phone, brandId);
         res.json({ success: true, message: 'WhatsApp test message sent', result });
     } catch (err) {
         res.status(500).json({ success: false, message: err.response?.data?.error?.message || err.message });
