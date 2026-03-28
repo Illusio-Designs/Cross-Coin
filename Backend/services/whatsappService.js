@@ -1,5 +1,6 @@
 const axios = require('axios');
 const { logger } = require('../config/logging.js');
+const settingsHelper = require('./settingsHelper.js');
 
 const GRAPH_API_URL = 'https://graph.facebook.com/v21.0';
 
@@ -17,14 +18,24 @@ function formatE164(phone) {
 }
 
 /**
+ * Get WhatsApp credentials from brand settings (falls back to env vars)
+ */
+async function getCredentials(brandId = 1) {
+  const [token, phoneNumberId] = await Promise.all([
+    settingsHelper.getSetting(brandId, 'WHATSAPP_API_TOKEN'),
+    settingsHelper.getSetting(brandId, 'WHATSAPP_PHONE_NUMBER_ID'),
+  ]);
+  return { token, phoneNumberId };
+}
+
+/**
  * Send a WhatsApp template message via Meta Cloud API
  */
-async function sendTemplate(phone, templateName, components = []) {
-  const token = process.env.WHATSAPP_API_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+async function sendTemplate(phone, templateName, components = [], brandId = 1) {
+  const { token, phoneNumberId } = await getCredentials(brandId);
 
   if (!token || !phoneNumberId) {
-    logger.warn('WhatsApp env vars not configured — skipping notification');
+    logger.warn('WhatsApp credentials not configured — skipping notification');
     return;
   }
 
@@ -45,79 +56,22 @@ async function sendTemplate(phone, templateName, components = []) {
     }
   };
 
-  await axios.post(
+  const res = await axios.post(
     `${GRAPH_API_URL}/${phoneNumberId}/messages`,
     payload,
     { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
   );
-}
-
-/**
- * Order confirmation message
- */
-async function sendOrderConfirmation(phone, { orderNumber, itemCount, total, estimatedDelivery }) {
-  return sendTemplate(phone, 'order_confirmation', [
-    {
-      type: 'body',
-      parameters: [
-        { type: 'text', text: String(orderNumber) },
-        { type: 'text', text: String(itemCount) },
-        { type: 'text', text: `₹${total}` },
-        { type: 'text', text: String(estimatedDelivery || '5-7 business days') }
-      ]
-    }
-  ]);
-}
-
-/**
- * Shipping notification
- */
-async function sendOrderShipped(phone, { orderNumber, awbNumber, trackingUrl }) {
-  return sendTemplate(phone, 'order_shipped', [
-    {
-      type: 'body',
-      parameters: [
-        { type: 'text', text: String(orderNumber) },
-        { type: 'text', text: String(awbNumber || 'N/A') },
-        { type: 'text', text: String(trackingUrl || 'Track via our website') }
-      ]
-    }
-  ]);
-}
-
-/**
- * Delivery confirmation
- */
-async function sendOrderDelivered(phone, { orderNumber }) {
-  return sendTemplate(phone, 'order_delivered', [
-    { type: 'body', parameters: [{ type: 'text', text: String(orderNumber) }] }
-  ]);
-}
-
-/**
- * Cancellation notification
- */
-async function sendOrderCancelled(phone, { orderNumber, refundInfo }) {
-  return sendTemplate(phone, 'order_cancelled', [
-    {
-      type: 'body',
-      parameters: [
-        { type: 'text', text: String(orderNumber) },
-        { type: 'text', text: String(refundInfo || 'No refund applicable') }
-      ]
-    }
-  ]);
+  return res.data;
 }
 
 /**
  * Send a plain text message (for testing / free-form within 24h window)
  */
-async function sendTextMessage(phone, text) {
-  const token = process.env.WHATSAPP_API_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+async function sendTextMessage(phone, text, brandId = 1) {
+  const { token, phoneNumberId } = await getCredentials(brandId);
 
   if (!token || !phoneNumberId) {
-    logger.warn('WhatsApp env vars not configured — skipping');
+    logger.warn('WhatsApp credentials not configured — skipping');
     return;
   }
 
@@ -142,8 +96,65 @@ async function sendTextMessage(phone, text) {
 /**
  * Test connection — sends a simple ping message
  */
-async function testConnection(phone) {
-  return sendTextMessage(phone, '✅ WhatsApp integration is working for Cross Coin!');
+async function testConnection(phone, brandId = 1) {
+  return sendTextMessage(phone, '✅ WhatsApp integration is working for Cross Coin!', brandId);
+}
+
+/**
+ * Order confirmation message
+ */
+async function sendOrderConfirmation(phone, { orderNumber, itemCount, total, estimatedDelivery }, brandId = 1) {
+  return sendTemplate(phone, 'order_confirmation', [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: String(orderNumber) },
+        { type: 'text', text: String(itemCount) },
+        { type: 'text', text: `₹${total}` },
+        { type: 'text', text: String(estimatedDelivery || '5-7 business days') }
+      ]
+    }
+  ], brandId);
+}
+
+/**
+ * Shipping notification
+ */
+async function sendOrderShipped(phone, { orderNumber, awbNumber, trackingUrl }, brandId = 1) {
+  return sendTemplate(phone, 'order_shipped', [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: String(orderNumber) },
+        { type: 'text', text: String(awbNumber || 'N/A') },
+        { type: 'text', text: String(trackingUrl || 'Track via our website') }
+      ]
+    }
+  ], brandId);
+}
+
+/**
+ * Delivery confirmation
+ */
+async function sendOrderDelivered(phone, { orderNumber }, brandId = 1) {
+  return sendTemplate(phone, 'order_delivered', [
+    { type: 'body', parameters: [{ type: 'text', text: String(orderNumber) }] }
+  ], brandId);
+}
+
+/**
+ * Cancellation notification
+ */
+async function sendOrderCancelled(phone, { orderNumber, refundInfo }, brandId = 1) {
+  return sendTemplate(phone, 'order_cancelled', [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: String(orderNumber) },
+        { type: 'text', text: String(refundInfo || 'No refund applicable') }
+      ]
+    }
+  ], brandId);
 }
 
 module.exports = {
