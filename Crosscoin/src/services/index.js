@@ -63,7 +63,10 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401) {
       localStorage.removeItem("token");
-      if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
+      if (typeof window !== "undefined" && 
+          !window.location.pathname.includes("/login") &&
+          !window.location.pathname.startsWith("/dashboard") &&
+          !window.location.pathname.startsWith("/auth/")) {
         window.location.href = "/login";
       }
     }
