@@ -65,7 +65,6 @@ export default function WhatsAppManager() {
   const [response, setResponse] = useState(null);
   const [testPhone, setTestPhone] = useState('');
   const [testLoading, setTestLoading] = useState(false);
-  const [seedLoading, setSeedLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [createModal, setCreateModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -74,17 +73,9 @@ export default function WhatsAppManager() {
     brandService.getAllBrands(true).then(r => { if (r.success) setBrands(r.data); }).catch(() => {});
   }, []);
 
-  // Load preset
-  useEffect(() => {
-    const t = TEMPLATES[activeKey];
-    if (!t) return;
-    setForm({ ...EMPTY_FORM, name: t.name, category: t.category, body: t.body, footer: t.footer, btn1Type: t.btn1.type, btn1Text: t.btn1.text, btn1Val: t.btn1.val, btn2Text: t.btn2 });
-    setResponse(null);
-  }, [activeKey]);
-
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  const previewBody = form.body
+  const previewBody = (TEMPLATES[activeKey]?.body || '')
     .replace(/\{\{(\d+)\}\}/g, (_, n) => SAMPLES[n - 1] || `{{${n}}}`)
     .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
     .replace(/\n/g, '<br>');
@@ -137,17 +128,6 @@ export default function WhatsAppManager() {
     setListLoading(false);
   };
 
-  const seedTemplates = async () => {
-    setSeedLoading(true);
-    try {
-      const res = await fetch(`${API}/api/whatsapp/templates/seed`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ brandId }) });
-      const data = await res.json();
-      if (data.success) { showSuccess('templateCreated'); fetchTemplates(); setTab('list'); }
-      else showError('saveFailed', data.message);
-    } catch (e) { showError('saveFailed', e.message); }
-    setSeedLoading(false);
-  };
-
   const sendTest = async (e) => {
     e.preventDefault();
     if (!testPhone.trim()) { showError('fieldRequired'); return; }
@@ -162,7 +142,9 @@ export default function WhatsAppManager() {
   };
 
   const copyJSON = () => {
-    navigator.clipboard.writeText(JSON.stringify(buildPayload(), null, 2));
+    const t = TEMPLATES[activeKey];
+    if (!t) return;
+    navigator.clipboard.writeText(JSON.stringify({ name: t.name, category: t.category, language: 'en' }, null, 2));
     setCopied(true); setTimeout(() => setCopied(false), 1500);
   };
 
@@ -186,10 +168,7 @@ export default function WhatsAppManager() {
               {brands.map(b => <option key={b.id} value={b.id}>{b.display_name || b.name}</option>)}
             </select>
           )}
-          <button className="sl-add-btn" onClick={seedTemplates} disabled={seedLoading}>
-            <span className="sl-add-btn-icon">{IC.seed}</span>{seedLoading ? 'Seeding…' : 'Seed Defaults'}
-          </button>
-          <button className="sl-add-btn" onClick={() => setCreateModal(true)}>
+          <button className="sl-add-btn" onClick={() => { setForm(EMPTY_FORM); setCreateModal(true); }}>
             <span className="sl-add-btn-icon">{IC.add}</span>New Template
           </button>
         </div>
@@ -224,91 +203,59 @@ export default function WhatsAppManager() {
             ))}
           </div>
 
-          {/* Form area */}
+          {/* Form area — preview only */}
           <div className="wa-form-col">
             <div className="bset-settings-grid" style={{ gridTemplateColumns:'1fr' }}>
 
-              {/* Identity */}
+              {/* Template info */}
               <div className="bset-setting-card">
-                <div className="bset-setting-header"><div className="bset-setting-info"><h4 className="bset-setting-key">Template Identity</h4></div></div>
-                <div className="bset-setting-body">
-                  <div className="dm-2col">
-                    <div className="dm-field">
-                      <label className="dm-label">Template Name *</label>
-                      <input className="dm-input" value={form.name} onChange={e => set('name', e.target.value)} placeholder="order_confirmation" />
-                    </div>
-                    <div className="dm-field">
-                      <label className="dm-label">Category</label>
-                      <select className="dm-input dm-select" value={form.category} onChange={e => set('category', e.target.value)}>
-                        <option value="UTILITY">UTILITY</option>
-                        <option value="MARKETING">MARKETING</option>
-                        <option value="AUTHENTICATION">AUTHENTICATION</option>
-                      </select>
-                    </div>
+                <div className="bset-setting-header">
+                  <div className="bset-setting-info">
+                    <h4 className="bset-setting-key">{TEMPLATES[activeKey]?.title}</h4>
+                    <span className="sl-cat-badge">{TEMPLATES[activeKey]?.category}</span>
                   </div>
-                </div>
-              </div>
-
-              {/* Body */}
-              <div className="bset-setting-card">
-                <div className="bset-setting-header"><div className="bset-setting-info"><h4 className="bset-setting-key">Message Body</h4></div>
                   <button className="sl-btn-edit" title="Copy JSON" onClick={copyJSON}>{copied ? IC.check : IC.copy}</button>
                 </div>
                 <div className="bset-setting-body">
                   <div className="dm-field">
-                    <label className="dm-label">Body — use {'{{1}}'}, {'{{2}}'} for variables</label>
-                    <textarea className="dm-input dm-textarea" rows={6} value={form.body} onChange={e => set('body', e.target.value)} style={{ fontFamily: 'monospace', fontSize: 12 }} />
-                  </div>
-                  <div className="dm-field" style={{ marginTop: 10 }}>
-                    <label className="dm-label">Footer (optional)</label>
-                    <input className="dm-input" value={form.footer} onChange={e => set('footer', e.target.value)} placeholder="Cross Coin — crosscoin.in" />
+                    <label className="dm-label">Template Name</label>
+                    <div className="bset-value-display" style={{ fontFamily:'monospace', fontSize:12, background:'#f9fafb', padding:'8px 12px', borderRadius:6, border:'1px solid #e5e7eb' }}>{TEMPLATES[activeKey]?.name}</div>
                   </div>
                 </div>
               </div>
 
-              {/* Buttons */}
+              {/* Body preview */}
               <div className="bset-setting-card">
-                <div className="bset-setting-header"><div className="bset-setting-info"><h4 className="bset-setting-key">Buttons (optional)</h4></div></div>
+                <div className="bset-setting-header"><div className="bset-setting-info"><h4 className="bset-setting-key">Message Body</h4></div></div>
                 <div className="bset-setting-body">
-                  <div className="dm-2col">
-                    <div className="dm-field">
-                      <label className="dm-label">Button 1 Type</label>
-                      <select className="dm-input dm-select" value={form.btn1Type} onChange={e => set('btn1Type', e.target.value)}>
-                        <option value="">None</option>
-                        <option value="URL">URL</option>
-                        <option value="PHONE_NUMBER">Phone Number</option>
-                        <option value="QUICK_REPLY">Quick Reply</option>
-                      </select>
-                    </div>
-                    <div className="dm-field">
-                      <label className="dm-label">Button 1 Text</label>
-                      <input className="dm-input" value={form.btn1Text} onChange={e => set('btn1Text', e.target.value)} placeholder="Track Order" />
-                    </div>
+                  <div style={{ background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:6, padding:'10px 12px', fontFamily:'monospace', fontSize:12, lineHeight:1.7, color:'#374151', whiteSpace:'pre-wrap' }}>
+                    {TEMPLATES[activeKey]?.body}
                   </div>
-                  <div className="dm-2col" style={{ marginTop: 10 }}>
-                    <div className="dm-field">
-                      <label className="dm-label">Button 1 URL / Phone</label>
-                      <input className="dm-input" value={form.btn1Val} onChange={e => set('btn1Val', e.target.value)} placeholder="https://crosscoin.in/track/{{1}}" />
-                    </div>
-                    <div className="dm-field">
-                      <label className="dm-label">Button 2 Text (Quick Reply)</label>
-                      <input className="dm-input" value={form.btn2Text} onChange={e => set('btn2Text', e.target.value)} placeholder="Shop More" />
-                    </div>
-                  </div>
+                  {TEMPLATES[activeKey]?.footer && (
+                    <div style={{ marginTop:8, fontSize:11, color:'#9ca3af', fontStyle:'italic' }}>{TEMPLATES[activeKey].footer}</div>
+                  )}
                 </div>
               </div>
 
-              <div style={{ display:'flex', gap:10 }}>
-                <button className="sl-add-btn" onClick={() => setCreateModal(true)}>
-                  <span className="sl-add-btn-icon">{IC.send}</span>Submit to Meta
-                </button>
+              {/* Variables guide */}
+              <div className="bset-setting-card">
+                <div className="bset-setting-header"><div className="bset-setting-info"><h4 className="bset-setting-key">Variables</h4></div></div>
+                <div className="bset-setting-body">
+                  {(() => {
+                    const vars = (TEMPLATES[activeKey]?.body || '').match(/\{\{\d+\}\}/g) || [];
+                    const unique = [...new Set(vars)].sort();
+                    if (!unique.length) return <p style={{ fontSize:12, color:'#9ca3af' }}>No variables in this template.</p>;
+                    return (
+                      <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                        {unique.map(v => (
+                          <span key={v} style={{ background:'#f0f9ff', border:'1px solid #bae6fd', color:'#0369a1', borderRadius:5, padding:'3px 10px', fontSize:12, fontFamily:'monospace' }}>{v} = {SAMPLES[parseInt(v.replace(/\D/g,'')) - 1] || '...'}</span>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
 
-              {response && (
-                <div className={`wa-response wa-response-${response.type}`}>
-                  <pre>{response.text}</pre>
-                </div>
-              )}
             </div>
           </div>
 
@@ -327,10 +274,10 @@ export default function WhatsAppManager() {
                       <div className="wa-bubble-body">
                         <div className="wa-bubble-text" dangerouslySetInnerHTML={{ __html: previewBody }} />
                       </div>
-                      {form.footer && <div className="wa-bubble-footer">{form.footer}</div>}
+                      {TEMPLATES[activeKey]?.footer && <div className="wa-bubble-footer">{TEMPLATES[activeKey].footer}</div>}
                       <div className="wa-bubble-time">Just now ✓✓</div>
-                      {form.btn1Text && <button className="wa-bubble-btn">{form.btn1Text}</button>}
-                      {form.btn2Text && <button className="wa-bubble-btn">{form.btn2Text}</button>}
+                      {TEMPLATES[activeKey]?.btn1?.text && <button className="wa-bubble-btn">{TEMPLATES[activeKey].btn1.text}</button>}
+                      {TEMPLATES[activeKey]?.btn2 && <button className="wa-bubble-btn">{TEMPLATES[activeKey].btn2}</button>}
                     </div>
                   </div>
                 </div>
