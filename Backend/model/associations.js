@@ -44,6 +44,7 @@ const { LookbookHotspot } = require("./lookbookHotspotModel.js");
 const { Reel } = require("./reelModel.js");
 const { ReelProduct } = require("./reelProductModel.js");
 const { InstagramPostProduct } = require("./instagramPostProductModel.js");
+const { WhatsappConversation, WhatsappMessage } = require("./whatsappConversationModel.js");
 
 // Export all models
 module.exports = {
@@ -92,6 +93,8 @@ module.exports = {
   Reel,
   ReelProduct,
   InstagramPostProduct,
+  WhatsappConversation,
+  WhatsappMessage,
 };
 
 // User Associations
