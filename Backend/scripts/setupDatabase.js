@@ -439,6 +439,52 @@ const setupDatabase = async () => {
       );
     }
 
+    // Ensure WhatsApp chat tables exist.
+    console.log("Ensuring WhatsApp conversation tables...");
+    try {
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS whatsapp_conversations (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          brand_id INT NOT NULL DEFAULT 1,
+          customer_phone VARCHAR(20) NOT NULL,
+          customer_name VARCHAR(100) NULL,
+          wa_contact_id VARCHAR(50) NULL,
+          last_message TEXT NULL,
+          last_message_at DATETIME NULL,
+          unread_count INT NOT NULL DEFAULT 0,
+          status ENUM('open','resolved') NOT NULL DEFAULT 'open',
+          createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_wa_conv_brand (brand_id),
+          INDEX idx_wa_conv_phone (customer_phone),
+          INDEX idx_wa_conv_status (status),
+          INDEX idx_wa_conv_last_msg (last_message_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+      `);
+
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS whatsapp_messages (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          conversation_id INT NOT NULL,
+          wa_message_id VARCHAR(100) NULL,
+          direction ENUM('inbound','outbound') NOT NULL,
+          type ENUM('text','template','image','document','audio') NOT NULL DEFAULT 'text',
+          body TEXT NULL,
+          status ENUM('sent','delivered','read','failed','received') NOT NULL DEFAULT 'sent',
+          sent_at DATETIME NULL,
+          createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_wa_msg_conv (conversation_id),
+          INDEX idx_wa_msg_wa_id (wa_message_id),
+          INDEX idx_wa_msg_direction (direction),
+          CONSTRAINT fk_wa_msg_conv FOREIGN KEY (conversation_id) REFERENCES whatsapp_conversations(id) ON DELETE CASCADE ON UPDATE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+      `);
+      console.log("✓ WhatsApp conversation tables ensured");
+    } catch (waTableError) {
+      console.log("⚠️ WhatsApp tables creation skipped:", waTableError.message);
+    }
+
     // Ensure encrypted PII columns have the expected width.
     // NOTE: `alter: false` means Sequelize won't update existing column sizes.
     console.log("Ensuring phone column sizes...");
