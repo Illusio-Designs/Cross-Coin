@@ -49,6 +49,9 @@ if (process.env.NODE_ENV !== 'production') {
 
 const app = express();
 
+// Trust reverse proxy (Nginx) — required for correct IP in rate limiting and req.ip
+app.set('trust proxy', 1);
+
 // Security headers - MUST be first middleware
 const helmet = require('helmet');
 app.use(helmet({
@@ -375,10 +378,24 @@ const startServer = async () => {
         await sequelize.authenticate();
         logger.info('✓ Database connection successful');
         
-        // Create all tables
-        logger.info('Setting up database...');
-        await setupDatabase();
-        logger.info('✓ Database setup completed');
+        // Create all tables — only runs when schema version changes
+        const SCHEMA_VERSION = 'v1.0'; // bump this string whenever you add new migrations
+        let needsSetup = false;
+        try {
+            await sequelize.query(`CREATE TABLE IF NOT EXISTS schema_version (version VARCHAR(50) PRIMARY KEY, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+            const [rows] = await sequelize.query(`SELECT version FROM schema_version LIMIT 1`);
+            needsSetup = rows.length === 0 || rows[0].version !== SCHEMA_VERSION;
+        } catch { needsSetup = true; }
+
+        if (needsSetup) {
+            logger.info('Setting up database (schema version changed)...');
+            await setupDatabase();
+            await sequelize.query(`DELETE FROM schema_version`);
+            await sequelize.query(`INSERT INTO schema_version (version) VALUES ('${SCHEMA_VERSION}')`);
+            logger.info('✓ Database setup completed');
+        } else {
+            logger.info('✓ Database schema up-to-date, skipping setup');
+        }
 
         // Run ImageKit migration for existing images
         logger.info('Checking for images to migrate to ImageKit...');

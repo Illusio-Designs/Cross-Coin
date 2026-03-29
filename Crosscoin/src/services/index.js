@@ -63,7 +63,9 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401) {
       localStorage.removeItem("token");
-      // Don't redirect here, let the component handle the redirect
+      if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
+        window.location.href = "/login";
+      }
     }
 
     return Promise.reject(error);
