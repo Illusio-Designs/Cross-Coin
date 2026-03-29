@@ -19,16 +19,28 @@ const IC = {
 };
 
 // ─── Template presets ─────────────────────────────────────────────────────────
+const TPL_ICONS = {
+  order_confirm:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+  order_shipped:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+  out_for_delivery: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12H3l9-9 9 9h-2"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6h6v6"/></svg>,
+  order_delivered:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>,
+  cart_abandon:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>,
+  cod_confirm:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
+  review_request:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+  return_initiated: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>,
+  refund_update:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>,
+};
+
 const TEMPLATES = {
-  order_confirm:    { name:'order_confirmation',       title:'Order Confirmed',    emoji:'✅', category:'UTILITY',   body:'Hi! Your *Cross Coin* order *#{{1}}* has been placed successfully. 🎉\n\n📦 Items: {{2}}\n💰 Total: ₹{{3}}\n🚚 Estimated delivery: {{4}}\n\nWe\'ll notify you once it ships. Thank you for shopping with us!', footer:'Cross Coin — crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
-  order_shipped:    { name:'order_shipped',            title:'Order Shipped',      emoji:'🚚', category:'UTILITY',   body:'Great news! Your *Cross Coin* order *#{{1}}* has been shipped. 📦\n\n🏷️ AWB Number: *{{2}}*\n🔍 Track your order: {{3}}\n\nExpect delivery in 2–5 business days. Stay home!', footer:'Cross Coin — crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
-  out_for_delivery: { name:'order_out_for_delivery',   title:'Out for Delivery',   emoji:'📦', category:'UTILITY',   body:'Your *Cross Coin* order *#{{1}}* is out for delivery today! 🚴\n\nCourier: *{{2}}*\n\nPlease keep your phone handy and ensure someone is available to receive the package.', footer:'Cross Coin — crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
-  order_delivered:  { name:'order_delivered',          title:'Order Delivered',    emoji:'🎉', category:'UTILITY',   body:'Your *Cross Coin* order *#{{1}}* has been delivered! 🎉\n\nWe hope you love your purchase. Your feedback means the world to us — drop us a review!\n\nHave an issue? Just reply to this message.', footer:'Cross Coin — crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
-  cart_abandon:     { name:'cart_abandoned',           title:'Cart Abandoned',     emoji:'🛒', category:'MARKETING', body:'Hey {{1}}! 👀\n\nYour *{{2}}* is still waiting in your *Cross Coin* cart.\n\nUse code *{{3}}* for an extra *10% OFF* — but hurry, it expires in 24 hours! ⏳\n\nComplete your order now 👇', footer:'Cross Coin — crosscoin.in', btn1:{type:'URL',text:'Complete Purchase',val:'https://crosscoin.in/cart'}, btn2:'' },
-  cod_confirm:      { name:'cod_order_confirmation',   title:'COD Confirmation',   emoji:'💵', category:'UTILITY',   body:'Hi! We received your Cash on Delivery order *#{{1}}* for *₹{{2}}* from *Cross Coin*.\n\n📍 Delivery to: {{3}}\n\nPlease keep *₹{{2}}* ready at the time of delivery. Reply CANCEL within 2 hours to cancel.', footer:'Cross Coin — crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
-  review_request:   { name:'review_request',           title:'Review Request',     emoji:'⭐', category:'MARKETING', body:'Hi {{1}}! 👋\n\nWe hope you\'re loving your *{{2}}* from *Cross Coin*.\n\nA quick review takes just 30 seconds and helps thousands of shoppers. We\'d really appreciate it! 🙏\n\n👉 {{3}}', footer:'Cross Coin — Thank You!', btn1:{type:'URL',text:'Write a Review',val:'https://crosscoin.in/review'}, btn2:'' },
-  return_initiated: { name:'order_cancelled',          title:'Return / Cancelled', emoji:'↩️', category:'UTILITY',   body:'Your *Cross Coin* order *#{{1}}* has been cancelled.\n\n💳 Refund info: {{2}}\n\nIf you have any questions, reply to this message or visit crosscoin.in.', footer:'Cross Coin — crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
-  refund_update:    { name:'refund_processed',         title:'Refund Processed',   emoji:'💰', category:'UTILITY',   body:'Good news! Your refund of *₹{{2}}* for *Cross Coin* order *#{{1}}* has been processed. ✅\n\nRefund to: *{{3}}*\nExpected credit: 5–7 working days\n\nThank you for your patience. We hope to serve you again!', footer:'Cross Coin — Happy to Help', btn1:{type:'',text:'',val:''}, btn2:'' },
+  order_confirm:    { name:'order_confirmation',       title:'Order Confirmed',    icon:'order_confirm',    category:'UTILITY',   body:'Hi! Your *Cross Coin* order *#{{1}}* has been placed successfully.\n\nItems: {{2}}\nTotal: Rs. {{3}}\nEstimated delivery: {{4}}\n\nWe will notify you once it ships. Thank you for shopping with us!', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
+  order_shipped:    { name:'order_shipped',            title:'Order Shipped',      icon:'order_shipped',    category:'UTILITY',   body:'Great news! Your *Cross Coin* order *#{{1}}* has been shipped.\n\nAWB Number: {{2}}\nTrack your order: {{3}}\n\nExpect delivery in 2-5 business days.', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
+  out_for_delivery: { name:'order_out_for_delivery',   title:'Out for Delivery',   icon:'out_for_delivery', category:'UTILITY',   body:'Your *Cross Coin* order *#{{1}}* is out for delivery today!\n\nCourier: {{2}}\n\nPlease keep your phone handy and ensure someone is available to receive the package.', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
+  order_delivered:  { name:'order_delivered',          title:'Order Delivered',    icon:'order_delivered',  category:'UTILITY',   body:'Your *Cross Coin* order *#{{1}}* has been delivered!\n\nWe hope you love your purchase. Your feedback means the world to us.\n\nHave an issue? Just reply to this message.', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
+  cart_abandon:     { name:'cart_abandoned',           title:'Cart Abandoned',     icon:'cart_abandon',     category:'MARKETING', body:'Hey {{1}}!\n\nYour {{2}} is still waiting in your Cross Coin cart.\n\nUse code {{3}} for an extra 10% OFF - but hurry, it expires in 24 hours!\n\nComplete your order now.', footer:'Cross Coin - crosscoin.in', btn1:{type:'URL',text:'Complete Purchase',val:'https://crosscoin.in/cart'}, btn2:'' },
+  cod_confirm:      { name:'cod_order_confirmation',   title:'COD Confirmation',   icon:'cod_confirm',      category:'UTILITY',   body:'Hi! We received your Cash on Delivery order #{{1}} for Rs. {{2}} from Cross Coin.\n\nDelivery to: {{3}}\n\nPlease keep Rs. {{2}} ready at the time of delivery.', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
+  review_request:   { name:'review_request',           title:'Review Request',     icon:'review_request',   category:'MARKETING', body:'Hi {{1}}!\n\nWe hope you are loving your {{2}} from Cross Coin.\n\nA quick review takes just 30 seconds and helps thousands of shoppers. We would really appreciate it!\n\n{{3}}', footer:'Cross Coin - Thank You!', btn1:{type:'URL',text:'Write a Review',val:'https://crosscoin.in/review'}, btn2:'' },
+  return_initiated: { name:'order_cancelled',          title:'Return / Cancelled', icon:'return_initiated',  category:'UTILITY',   body:'Your Cross Coin order #{{1}} has been cancelled.\n\nRefund info: {{2}}\n\nIf you have any questions, reply to this message or visit crosscoin.in.', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
+  refund_update:    { name:'refund_processed',         title:'Refund Processed',   icon:'refund_update',    category:'UTILITY',   body:'Good news! Your refund of Rs. {{2}} for Cross Coin order #{{1}} has been processed.\n\nRefund to: {{3}}\nExpected credit: 5-7 working days\n\nThank you for your patience.', footer:'Cross Coin - Happy to Help', btn1:{type:'',text:'',val:''}, btn2:'' },
 };
 
 const SIDEBAR_GROUPS = [
@@ -203,7 +215,7 @@ export default function WhatsAppManager() {
                   const t = TEMPLATES[k];
                   return (
                     <button key={k} className={`wa-sb-item${activeKey === k ? ' active' : ''}`} onClick={() => setActiveKey(k)}>
-                      <span>{t.emoji}</span>
+                      <span className="wa-sb-item-icon">{TPL_ICONS[t.icon]}</span>
                       <span className="wa-sb-item-name">{t.title}</span>
                     </button>
                   );
@@ -309,7 +321,9 @@ export default function WhatsAppManager() {
                   <div className="wa-phone-notch"><div className="wa-phone-pill" /></div>
                   <div className="wa-phone-chat">
                     <div className="wa-bubble">
-                      <div className="wa-bubble-header">{TEMPLATES[activeKey]?.emoji || '💬'}</div>
+                      <div className="wa-bubble-header">
+                        <span style={{ width:32, height:32, display:'flex', color:'#fff' }}>{TPL_ICONS[TEMPLATES[activeKey]?.icon] || IC.wa}</span>
+                      </div>
                       <div className="wa-bubble-body">
                         <div className="wa-bubble-text" dangerouslySetInnerHTML={{ __html: previewBody }} />
                       </div>
@@ -445,8 +459,9 @@ export default function WhatsAppManager() {
         .wa-sb-item { width:100%; text-align:left; background:transparent; border:1.5px solid transparent; border-radius:8px; padding:8px 10px; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:12px; color:#6b7280; transition:all 0.15s; margin-bottom:2px; font-family:inherit; }
         .wa-sb-item:hover { background:#f9fafb; color:#111827; }
         .wa-sb-item.active { background:#fff0f2; border-color:#CE1E36; color:#CE1E36; font-weight:600; }
-        .wa-sb-item-name { font-size:12px; }
-        .wa-form-col { display:flex; flex-direction:column; gap:16px; }
+        .wa-sb-item-icon { width:15px; height:15px; display:flex; flex-shrink:0; }
+        .wa-sb-item-icon svg { width:100%; height:100%; }
+        .wa-sb-item-name { font-size:12px; }        .wa-form-col { display:flex; flex-direction:column; gap:16px; }
         .wa-preview-col {}
         .wa-phone-shell { width:220px; background:#111; border-radius:26px; border:5px solid #222; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,0.12); }
         .wa-phone-notch { background:#111; height:22px; display:flex; align-items:center; justify-content:center; }
