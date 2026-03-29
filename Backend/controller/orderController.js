@@ -554,8 +554,18 @@ module.exports.createOrder = async (req, res) => {
           await whatsappService.sendOrderConfirmation(addr.phone, {
             orderNumber: createdOrder.order_number,
             itemCount: validatedItems.length,
-            total: createdOrder.final_amount
-          });
+            total: parseFloat(createdOrder.final_amount).toFixed(2),
+            estimatedDelivery: '3-5 working days'
+          }, createdOrder.brand_id || 1);
+          // Extra: COD confirmation with address summary
+          if (payment_type === 'cod') {
+            const addrSummary = `${addr.city}, ${addr.state} - ${addr.pincode}`;
+            await whatsappService.sendCodConfirmation(addr.phone, {
+              orderNumber: createdOrder.order_number,
+              amount: parseFloat(createdOrder.final_amount).toFixed(2),
+              address: addrSummary
+            }, createdOrder.brand_id || 1);
+          }
         }
       } catch (waErr) {
         logger.warn('WhatsApp order confirmation failed:', waErr.message);
@@ -1739,14 +1749,24 @@ module.exports.handleFShipWebhook = async (req, res) => {
             orderNumber: order.order_number,
             awbNumber: waybill || order.fship_waybill,
             trackingUrl: order.tracking_url || `https://crosscoin.in/OrderTracking?order=${order.order_number}`
-          });
+          }, order.brand_id || 1);
+        } else if (orderStatus === 'out for delivery') {
+          await whatsappService.sendOutForDelivery(phone, {
+            orderNumber: order.order_number,
+            courierName: courier_name || order.courier_name || 'Our courier partner'
+          }, order.brand_id || 1);
         } else if (orderStatus === 'delivered') {
-          await whatsappService.sendOrderDelivered(phone, { orderNumber: order.order_number });
+          await whatsappService.sendOrderDelivered(phone, { orderNumber: order.order_number }, order.brand_id || 1);
         } else if (orderStatus === 'cancelled' || orderStatus === 'order cancelled') {
           await whatsappService.sendOrderCancelled(phone, {
             orderNumber: order.order_number,
             refundInfo: order.payment_status === 'refund_pending' ? 'Refund will be processed in 5-7 business days' : 'No refund applicable'
-          });
+          }, order.brand_id || 1);
+        } else if (orderStatus === 'rto' || orderStatus === 'rto delivered') {
+          await whatsappService.sendOrderCancelled(phone, {
+            orderNumber: order.order_number,
+            refundInfo: 'Your order was returned. Refund will be processed in 5-7 business days if payment was made online.'
+          }, order.brand_id || 1);
         }
       } catch (waErr) {
         logger.warn('WhatsApp status notification failed:', waErr.message);
