@@ -20,8 +20,14 @@ module.exports.authenticate = async (req, res, next) => {
         req.user = user;
         next();
     } catch (error) {
-        console.error('Authentication error:', error);
-        res.status(401).json({ message: 'Token is not valid' });
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ message: 'Token expired', code: 'TOKEN_EXPIRED' });
+        }
+        // Only log unexpected errors, not normal auth failures
+        if (error.name !== 'JsonWebTokenError') {
+            console.error('Authentication error:', error);
+        }
+        res.status(401).json({ message: 'Token is not valid', code: 'INVALID_TOKEN' });
     }
 };
 
