@@ -609,10 +609,29 @@ module.exports.updateOrderPayment = async (req, res) => {
     // This is the SINGLE source of truth for prepaid orders — createOrder skips analytics for non-COD
     setImmediate(async () => {
       try {
-        const items = await OrderItem.findAll({ 
-          where: { order_id: order.id },
-          include: [{ model: require('../model/productModel.js').Product, as: 'Product', attributes: ['id', 'name'] }]
-        });
+        const [items, orderUser, guestUser, shippingAddr] = await Promise.all([
+          OrderItem.findAll({ 
+            where: { order_id: order.id },
+            include: [{ model: require('../model/productModel.js').Product, as: 'Product', attributes: ['id', 'name'] }]
+          }),
+          order.user_id ? User.findByPk(order.user_id, { attributes: ['email', 'username'] }) : null,
+          order.guest_user_id ? GuestUser.findByPk(order.guest_user_id, { attributes: ['email', 'firstName', 'lastName', 'phone'] }) : null,
+          order.shipping_address_id ? require('../model/shippingAddressModel.js').ShippingAddress.findByPk(order.shipping_address_id) : null,
+        ]);
+
+        // Resolve email/name from registered user or guest user
+        const email = orderUser?.email || guestUser?.email || null;
+        const phone = shippingAddr?.phone || guestUser?.phone || null;
+        let firstName, lastName;
+        if (orderUser) {
+          const nameParts = (orderUser.username || '').trim().split(/\s+/);
+          firstName = nameParts[0] || null;
+          lastName = nameParts.slice(1).join(' ') || null;
+        } else {
+          firstName = guestUser?.firstName || null;
+          lastName = guestUser?.lastName || null;
+        }
+
         const eventPayload = {
           brand_id: order.brand_id || 1,
           order_number: order.order_number,
@@ -621,6 +640,16 @@ module.exports.updateOrderPayment = async (req, res) => {
           currency: 'INR',
           ip_address: req.ip || null,
           user_agent: req.headers['user-agent'] || null,
+          email,
+          phone,
+          first_name: firstName,
+          last_name: lastName,
+          zip_code: shippingAddr?.pincode || null,
+          city: shippingAddr?.city || null,
+          state: shippingAddr?.state || null,
+          country: 'in',
+          fbc: req.cookies?._fbc || req.body?.fbc || null,
+          fbp: req.cookies?._fbp || null,
           items: items.map(i => ({ 
             product_id: i.product_id, 
             quantity: i.quantity,

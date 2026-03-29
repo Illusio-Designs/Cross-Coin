@@ -713,6 +713,7 @@ module.exports.verifyPayment = async (req, res) => {
         // ── Step 10: Analytics Purchase events (background, non-blocking) ───
         setImmediate(async () => {
             try {
+                const nameParts = (rzpCustomer.name || '').trim().split(/\s+/);
                 const eventPayload = {
                     brand_id: 1,
                     order_number: orderNumber,
@@ -721,6 +722,16 @@ module.exports.verifyPayment = async (req, res) => {
                     currency: 'INR',
                     ip_address: req.ip || null,
                     user_agent: req.headers['user-agent'] || null,
+                    email: rzpCustomer.email || null,
+                    phone: rzpCustomer.contact || null,
+                    first_name: nameParts[0] || null,
+                    last_name: nameParts.slice(1).join(' ') || null,
+                    zip_code: rzpAddress.zipcode || rzpAddress.pincode || null,
+                    city: rzpAddress.city || null,
+                    state: rzpAddress.state || rzpAddress.state_code || null,
+                    country: 'in',
+                    fbc: req.cookies?._fbc || req.body?.fbc || null,
+                    fbp: req.cookies?._fbp || null,
                     items: cart_items.map(i => ({ product_id: i.product_id, quantity: i.quantity || 1 })),
                 };
                 await sendFacebookEvent('Purchase', eventPayload);
