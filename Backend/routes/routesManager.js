@@ -27,6 +27,7 @@ const adminLoyaltyRoutes = require('./adminLoyaltyRoutes.js');
 const lookbookRoutes = require('./lookbookRoutes.js');
 const reelRoutes = require('./reelRoutes.js');
 const instagramRoutes = require('./instagramRoutes.js');
+const whatsappRoutes = require('./whatsappRoutes.js');
 
 // User routes - shared across brands (optional brand)
 router.use('/users', optionalBrand, userRoutes);
@@ -62,6 +63,7 @@ router.use('/admin/loyalty', optionalBrand, adminLoyaltyRoutes);
 router.use('/lookbooks', optionalBrand, lookbookRoutes);
 router.use('/reels', optionalBrand, reelRoutes);
 router.use('/instagram', optionalBrand, instagramRoutes);
+router.use('/whatsapp', whatsappRoutes);
 
 // Public serviceability check (no auth required)
 router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
