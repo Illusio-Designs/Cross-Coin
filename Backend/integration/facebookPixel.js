@@ -1,6 +1,15 @@
 const express = require("express");
 const axios = require("axios");
+const crypto = require("crypto");
 const settingsHelper = require("../services/settingsHelper");
+
+/**
+ * SHA256 hash a string (lowercase trimmed) — required by Facebook for PII fields
+ */
+function sha256(value) {
+  if (!value) return undefined;
+  return crypto.createHash("sha256").update(String(value).toLowerCase().trim()).digest("hex");
+}
 
 /**
  * Send a server-side event to Facebook Conversions API
@@ -25,19 +34,41 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
     quantity: item.quantity || 1,
   }));
 
+  // Build hashed user_data — hash all PII fields as required by Facebook
+  const userData = {
+    client_ip_address: order.ip_address || null,
+    client_user_agent: order.user_agent || null,
+    // Hashed PII
+    em: sha256(order.email),
+    ph: sha256(order.phone),
+    fn: sha256(order.first_name),
+    ln: sha256(order.last_name),
+    // Address fields — hashed
+    zp: sha256(order.zip_code),
+    ct: sha256(order.city),
+    st: sha256(order.state),
+    country: sha256(order.country || 'in'),
+    // Click ID (fbc) — not hashed
+    fbc: order.fbc || null,
+    fbp: order.fbp || null,
+    // Allow caller overrides
+    ...(extraData.user_data || {}),
+  };
+
+  // Remove null/undefined fields — Facebook rejects them
+  Object.keys(userData).forEach(k => {
+    if (userData[k] === null || userData[k] === undefined) {
+      delete userData[k];
+    }
+  });
+
   const eventData = {
     event_name: eventName,
     event_time: Math.floor(Date.now() / 1000),
     event_source_url: extraData.event_source_url || `${process.env.FRONTEND_URL || 'https://crosscoin.in'}/ThankYou`,
     action_source: 'website',
-    // event_id for deduplication with browser pixel
     event_id: order.order_number ? `${eventName}_${order.order_number}` : `${eventName}_${Date.now()}`,
-    user_data: {
-      client_ip_address: order.ip_address || null,
-      client_user_agent: order.user_agent || null,
-      // Hash email/phone if provided (Facebook requires SHA256)
-      ...(extraData.user_data || {}),
-    },
+    user_data: userData,
     custom_data: {
       value: parseFloat(order.total_amount || order.final_amount || 0),
       currency: order.currency || 'INR',
@@ -47,13 +78,6 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
       ...(extraData.custom_data || {}),
     },
   };
-
-  // Remove null user_data fields — Facebook rejects them
-  Object.keys(eventData.user_data).forEach(k => {
-    if (eventData.user_data[k] === null || eventData.user_data[k] === undefined) {
-      delete eventData.user_data[k];
-    }
-  });
 
   try {
     const response = await axios.post(

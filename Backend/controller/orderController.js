@@ -566,6 +566,12 @@ module.exports.createOrder = async (req, res) => {
     if (payment_type === 'cod') {
       setImmediate(async () => {
         try {
+          // Fetch user + address for enriched user_data
+          const [orderUser, orderAddress] = await Promise.all([
+            User.findByPk(userId, { attributes: ['email', 'username'] }),
+            ShippingAddress.findByPk(shipping_address_id),
+          ]);
+          const nameParts = (orderUser?.username || '').trim().split(/\s+/);
           const eventPayload = {
             brand_id: createdOrder.brand_id || 1,
             order_number: createdOrder.order_number,
@@ -574,6 +580,16 @@ module.exports.createOrder = async (req, res) => {
             currency: "INR",
             ip_address: req.ip || null,
             user_agent: req.headers["user-agent"] || null,
+            email: orderUser?.email || null,
+            phone: orderAddress?.phone || null,
+            first_name: nameParts[0] || null,
+            last_name: nameParts.slice(1).join(' ') || null,
+            zip_code: orderAddress?.pincode || null,
+            city: orderAddress?.city || null,
+            state: orderAddress?.state || null,
+            country: 'in',
+            fbc: req.cookies?._fbc || req.body?.fbc || null,
+            fbp: req.cookies?._fbp || null,
             items: validatedItems.map(i => ({ product_id: i.product_id, quantity: i.quantity, price: i.price })),
           };
           await sendFacebookEvent("Purchase", eventPayload);
@@ -984,19 +1000,30 @@ module.exports.createGuestOrder = async (req, res) => {
     if (payment_type === 'cod') {
       setImmediate(async () => {
         try {
+          const nameParts = (guestUser.firstName || '').trim().split(/\s+/);
           const eventPayload = {
             brand_id: req.brand ? req.brand.id : 1,
             order_number: order.order_number,
             total_amount: finalAmount,
             final_amount: finalAmount,
             currency: "INR",
+            ip_address: req.ip || null,
+            user_agent: req.headers["user-agent"] || null,
+            email: guestUser.email || null,
+            phone: shipping_address.phone || guestUser.phone || null,
+            first_name: guestUser.firstName || null,
+            last_name: guestUser.lastName || null,
+            zip_code: shipping_address.pincode || null,
+            city: shipping_address.city || null,
+            state: shipping_address.state || null,
+            country: 'in',
+            fbc: req.cookies?._fbc || req.body?.fbc || null,
+            fbp: req.cookies?._fbp || null,
             items: validatedItems.map((item) => ({
               product_id: item.product.id,
               quantity: item.quantity,
               price: item.price,
             })),
-            ip_address: req.ip || null,
-            user_agent: req.headers["user-agent"] || null,
           };
           await sendFacebookEvent("Purchase", eventPayload);
           await sendGAEvent("purchase", eventPayload);

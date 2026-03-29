@@ -1,0 +1,39 @@
+import { useState, useEffect, useRef } from 'react';
+import { showSuccess, showError } from '../../utils/toastNotification';
+import { brandService } from '../../services';
+import Loader from '../../components/common/Loader';
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
+const IC = {
+  wa:      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.533 5.858L.057 23.428a.5.5 0 00.609.61l5.699-1.461A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.907 0-3.693-.5-5.24-1.375l-.374-.217-3.884.997 1.028-3.77-.237-.389A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>,
+  send:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
+  list:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
+  plus:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  seed:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22V12M12 12C12 7 7 3 2 3c0 5 4 9 10 9zM12 12c0-5 5-9 10-9-1 5-5 9-10 9z"/></svg>,
+  test:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v11m0 0H5a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2h-4m-6 0h6"/></svg>,
+  copy:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>,
+  phone:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.01 1.18 2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>,
+  check:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  trash:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>,
+};
+
+// ─── Template presets ─────────────────────────────────────────────────────────
+const TEMPLATES = {
+  order_confirm:    { name:'crosscoin_order_confirmed',   title:'Order Confirmed',    emoji:'✅', category:'UTILITY',   body:'Hi {{1}}, your order *#{{2}}* worth *₹{{3}}* has been confirmed! 🎉\n\nYour items are being packed and will ship within 24 hours.\n\nEstimated delivery: 3–5 working days.', footer:'CrossCoin — Wear Your Style', btn1:{type:'URL',text:'Track Order',val:'https://crosscoin.in/track/{{1}}'}, btn2:'' },
+  order_shipped:    { name:'crosscoin_order_shipped',     title:'Order Shipped',      emoji:'🚚', category:'UTILITY',   body:'Great news, {{1}}! 🚚 Your order *#{{2}}* has been shipped.\n\nCourier: *{{3}}*\nTracking ID: *{{4}}*\n\nExpected delivery in 2–4 days.', footer:'CrossCoin — Wear Your Style', btn1:{type:'URL',text:'Track Shipment',val:'https://crosscoin.in/track/{{1}}'}, btn2:'' },
+  out_for_delivery: { name:'crosscoin_out_for_delivery',  title:'Out for Delivery',   emoji:'📦', category:'UTILITY',   body:'Hey {{1}}, your order *#{{2}}* is out for delivery today! 📦\n\nOur delivery partner will reach you shortly. Please keep your phone handy.', footer:'CrossCoin', btn1:{type:'PHONE_NUMBER',text:'Call Support',val:'+919712376000'}, btn2:'' },
+  order_delivered:  { name:'crosscoin_order_delivered',   title:'Order Delivered',    emoji:'🎉', category:'UTILITY',   body:'Your order *#{{2}}* has been delivered, {{1}}! 🎉\n\nWe hope you love your CrossCoin socks! If you have any issues, reply here or contact us.', footer:'CrossCoin — Wear Your Style', btn1:{type:'URL',text:'Leave a Review',val:'https://crosscoin.in/review'}, btn2:'Loved It! ❤️' },
+  cart_abandon:     { name:'crosscoin_cart_recovery',     title:'Cart Abandoned',     emoji:'🛒', category:'MARKETING', body:'Hey {{1}}, you left something behind! 🛒\n\nYour CrossCoin cart is waiting. Use code *{{2}}* for *10% OFF* your order.\n\n⏳ Offer expires in 24 hours!', footer:'CrossCoin — Wear Your Style', btn1:{type:'URL',text:'Complete Purchase',val:'https://crosscoin.in/cart'}, btn2:'Remove Items' },
+  cod_confirm:      { name:'crosscoin_cod_confirmation',  title:'COD Confirmation',   emoji:'💵', category:'UTILITY',   body:'Hi {{1}},\n\nWe received a Cash on Delivery order *#{{2}}* for *₹{{3}}* on your address.\n\nPlease confirm to proceed or cancel if this was not you.', footer:'CrossCoin', btn1:{type:'QUICK_REPLY',text:'✅ Confirm Order',val:''}, btn2:'❌ Cancel Order' },
+  review_request:   { name:'crosscoin_review_request',    title:'Review Request',     emoji:'⭐', category:'MARKETING', body:'Hi {{1}}, how are you enjoying your *{{2}}*? ⭐\n\nWe would love to hear your thoughts! A quick review helps other shoppers and motivates our team.', footer:'CrossCoin — Thank You!', btn1:{type:'URL',text:'Write a Review',val:'https://crosscoin.in/review'}, btn2:'😍 Loved it!' },
+  return_initiated: { name:'crosscoin_return_initiated',  title:'Return Initiated',   emoji:'↩️', category:'UTILITY',   body:'Hi {{1}}, your return for order *#{{2}}* has been initiated.\n\nPickup scheduled: *{{3}}*\n\nPlease keep the items packed and ready. Refund will be processed within 5-7 days post pickup.', footer:'CrossCoin', btn1:{type:'PHONE_NUMBER',text:'Contact Support',val:'+919712376000'}, btn2:'' },
+  refund_update:    { name:'crosscoin_refund_update',     title:'Refund Update',      emoji:'💰', category:'UTILITY',   body:'Good news, {{1}}! 💰 Your refund of *₹{{2}}* for order *#{{3}}* has been processed.\n\nIt will reflect in your original payment method within 5–7 working days.', footer:'CrossCoin — Happy to Help', btn1:{type:'URL',text:'View Orders',val:'https://crosscoin.in/orders'}, btn2:'' },
+};
+
+const SIDEBAR_GROUPS = [
+  { label: '📦 Order Templates', keys: ['order_confirm','order_shipped','out_for_delivery','order_delivered'] },
+  { label: '🛒 Cart & Recovery',  keys: ['cart_abandon','cod_confirm'] },
+  { label: '💬 Post-Order',       keys: ['review_request','return_initiated','refund_update'] },
+];
+
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
