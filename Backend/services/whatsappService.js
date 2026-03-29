@@ -21,11 +21,172 @@ function formatE164(phone) {
  * Get WhatsApp credentials from brand settings (falls back to env vars)
  */
 async function getCredentials(brandId = 1) {
-  const [token, phoneNumberId] = await Promise.all([
+  const [token, phoneNumberId, businessAccountId] = await Promise.all([
     settingsHelper.getSetting(brandId, 'WHATSAPP_API_TOKEN'),
     settingsHelper.getSetting(brandId, 'WHATSAPP_PHONE_NUMBER_ID'),
+    settingsHelper.getSetting(brandId, 'WHATSAPP_BUSINESS_ACCOUNT_ID'),
   ]);
-  return { token, phoneNumberId };
+  return { token, phoneNumberId, businessAccountId };
+}
+
+// ─── Template Management ──────────────────────────────────────────────────────
+
+/**
+ * List all templates for the business account
+ */
+async function listTemplates(brandId = 1) {
+  const { token, businessAccountId } = await getCredentials(brandId);
+  if (!token || !businessAccountId) throw new Error('WhatsApp credentials not configured');
+
+  const res = await axios.get(
+    `${GRAPH_API_URL}/${businessAccountId}/message_templates?limit=50`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return res.data;
+}
+
+/**
+ * Create a new message template
+ * @param {object} template
+ * @param {string} template.name         - snake_case name e.g. "order_confirmation"
+ * @param {string} template.category     - MARKETING | UTILITY | AUTHENTICATION
+ * @param {string} template.language     - e.g. "en"
+ * @param {Array}  template.components   - header/body/footer/buttons components
+ * @param {number} brandId
+ */
+async function createTemplate({ name, category = 'UTILITY', language = 'en', components }, brandId = 1) {
+  const { token, businessAccountId } = await getCredentials(brandId);
+  if (!token || !businessAccountId) throw new Error('WhatsApp credentials not configured');
+
+  const res = await axios.post(
+    `${GRAPH_API_URL}/${businessAccountId}/message_templates`,
+    { name, category, language, components },
+    { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+  );
+  return res.data;
+}
+
+/**
+ * Delete a template by name
+ */
+async function deleteTemplate(name, brandId = 1) {
+  const { token, businessAccountId } = await getCredentials(brandId);
+  if (!token || !businessAccountId) throw new Error('WhatsApp credentials not configured');
+
+  const res = await axios.delete(
+    `${GRAPH_API_URL}/${businessAccountId}/message_templates?name=${name}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return res.data;
+}
+
+/**
+ * Seed all 4 required Cross Coin templates in one call.
+ * Safe to call multiple times — Meta returns an error if name already exists,
+ * which we catch and skip gracefully.
+ */
+async function seedDefaultTemplates(brandId = 1) {
+  const templates = [
+    {
+      name: 'order_confirmation',
+      category: 'UTILITY',
+      language: 'en',
+      components: [
+        {
+          type: 'HEADER',
+          format: 'TEXT',
+          text: '🛍️ Order Confirmed!'
+        },
+        {
+          type: 'BODY',
+          text: 'Hi! Your Cross Coin order *#{{1}}* has been placed successfully.\n\n📦 Items: {{2}}\n💰 Total: {{3}}\n🚚 Estimated delivery: {{4}}\n\nWe\'ll notify you once it ships. Thank you for shopping with us!'
+        },
+        {
+          type: 'FOOTER',
+          text: 'Cross Coin — crosscoin.in'
+        }
+      ]
+    },
+    {
+      name: 'order_shipped',
+      category: 'UTILITY',
+      language: 'en',
+      components: [
+        {
+          type: 'HEADER',
+          format: 'TEXT',
+          text: '🚚 Your order is on the way!'
+        },
+        {
+          type: 'BODY',
+          text: 'Great news! Order *#{{1}}* has been shipped.\n\n📬 AWB: {{2}}\n🔍 Track here: {{3}}\n\nExpect delivery in 2–5 business days.'
+        },
+        {
+          type: 'FOOTER',
+          text: 'Cross Coin — crosscoin.in'
+        }
+      ]
+    },
+    {
+      name: 'order_delivered',
+      category: 'UTILITY',
+      language: 'en',
+      components: [
+        {
+          type: 'HEADER',
+          format: 'TEXT',
+          text: '✅ Order Delivered!'
+        },
+        {
+          type: 'BODY',
+          text: 'Your Cross Coin order *#{{1}}* has been delivered! 🎉\n\nWe hope you love your purchase. Please share your experience — your feedback means a lot to us!'
+        },
+        {
+          type: 'FOOTER',
+          text: 'Cross Coin — crosscoin.in'
+        }
+      ]
+    },
+    {
+      name: 'order_cancelled',
+      category: 'UTILITY',
+      language: 'en',
+      components: [
+        {
+          type: 'HEADER',
+          format: 'TEXT',
+          text: '❌ Order Cancelled'
+        },
+        {
+          type: 'BODY',
+          text: 'Your Cross Coin order *#{{1}}* has been cancelled.\n\n💳 Refund info: {{2}}\n\nIf you have any questions, reply to this message or visit crosscoin.in.'
+        },
+        {
+          type: 'FOOTER',
+          text: 'Cross Coin — crosscoin.in'
+        }
+      ]
+    }
+  ];
+
+  const results = [];
+  for (const tpl of templates) {
+    try {
+      const res = await createTemplate(tpl, brandId);
+      results.push({ name: tpl.name, status: 'created', id: res.id });
+      logger.info(`WhatsApp template created: ${tpl.name}`);
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || err.message;
+      // Already exists is fine
+      if (msg.includes('already exists') || msg.includes('duplicate')) {
+        results.push({ name: tpl.name, status: 'already_exists' });
+      } else {
+        results.push({ name: tpl.name, status: 'error', error: msg });
+        logger.error(`WhatsApp template error (${tpl.name}): ${msg}`);
+      }
+    }
+  }
+  return results;
 }
 
 /**
@@ -164,5 +325,9 @@ module.exports = {
   sendOrderConfirmation,
   sendOrderShipped,
   sendOrderDelivered,
-  sendOrderCancelled
+  sendOrderCancelled,
+  listTemplates,
+  createTemplate,
+  deleteTemplate,
+  seedDefaultTemplates
 };
