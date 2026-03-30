@@ -23,8 +23,8 @@ const normalizeReel = (reel) => {
     return {
       ...product,
       price: resolvedPrice,
-      primary_image: firstImage?.fileName
-        ? imagekitService.getOptimizedUrl(firstImage.fileName, 'thumbnail')
+      primary_image: firstImage?.image_url
+        ? imagekitService.getOptimizedUrl(firstImage.image_url, 'thumbnail')
         : null,
     };
   });
@@ -225,7 +225,7 @@ module.exports.getReels = async (req, res) => {
           attributes: ['id', 'name', 'slug'],
           through: { attributes: ['display_order'] },
           include: [
-            { model: ProductImage, as: 'ProductImages', attributes: ['id', 'fileName'] },
+            { model: ProductImage, as: 'ProductImages', attributes: ['id', 'image_url', 'is_primary'] },
             { model: ProductVariation, as: 'ProductVariations', attributes: ['id', 'price'] },
           ],
         },
