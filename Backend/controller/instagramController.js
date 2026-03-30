@@ -30,7 +30,7 @@ module.exports.getFeed = async (req, res) => {
             as: 'Product',
             attributes: ['id', 'name', 'slug'],
             include: [
-              { model: ProductImage, as: 'ProductImages', attributes: ['id', 'fileName'] },
+              { model: ProductImage, as: 'ProductImages', attributes: ['id', 'image_url', 'is_primary'] },
               { model: ProductVariation, as: 'ProductVariations', attributes: ['id', 'price'] },
             ],
           },
@@ -54,7 +54,7 @@ module.exports.getFeed = async (req, res) => {
         price: resolvedPrice,
         slug: product?.slug,
         primary_image: firstImage
-          ? imagekitService.getOptimizedUrl(firstImage.fileName, 'thumbnail')
+          ? imagekitService.getOptimizedUrl(firstImage.image_url, 'thumbnail')
           : null,
       });
     }
