@@ -72,7 +72,17 @@ export default function AnalyticsPage() {
       .then(r => {
         const list = r.data || r || [];
         const pid = list.find(s => s.key === "GA4_PROPERTY_ID");
-        if (pid?.value) setPropertyId(pid.value);
+        if (pid?.value) {
+          setPropertyId(pid.value);
+          // Auto-connect once property ID is loaded
+          const authToken = typeof window !== "undefined" ? localStorage.getItem("token") : "";
+          fetch(`/api/ga4-token?brandId=${brandId}`, {
+            headers: { Authorization: `Bearer ${authToken}` }
+          })
+            .then(r => r.json())
+            .then(data => { if (data.accessToken) setAccessToken(data.accessToken); })
+            .catch(() => {});
+        }
       }).catch(() => {});
   }, [mounted, brandId]);
 
