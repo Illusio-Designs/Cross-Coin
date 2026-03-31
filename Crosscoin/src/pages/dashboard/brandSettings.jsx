@@ -1,3 +1,5 @@
+// When accessed directly as a Next.js page, redirect to dashboard shell
+export { default } from './index';
 import { useState, useEffect } from 'react';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandSettingsService, brandService } from '../../services';
@@ -18,7 +20,7 @@ const IC = {
 
 const CATEGORIES = { all: 'All', general: 'General', payment: 'Payment', shipping: 'Shipping', email: 'Email', sms: 'SMS', social: 'Social', analytics: 'Analytics', security: 'Security', api: 'API Keys' };
 
-export default function BrandSettingsManager() {
+export function BrandSettingsManager() {
   const [brands, setBrands] = useState([]);
   const [confirmState, setConfirmState] = useState(null);
   const [selectedBrandId, setSelectedBrandId] = useState(null);

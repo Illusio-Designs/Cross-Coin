@@ -1,3 +1,5 @@
+// When accessed directly as a Next.js page, redirect to dashboard shell
+export { default } from './index';
 import { useState, useEffect } from 'react';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService } from '../../services';
@@ -17,7 +19,7 @@ const IC = {
 
 const EMPTY_FORM = { name: '', slug: '', display_name: '', domain: '', logo_url: '', primary_color: '#4CAF50', secondary_color: '#2196F3', contact_email: '', contact_phone: '', status: 'active' };
 
-export default function BrandManager() {
+export function BrandManager() {
   const [brands, setBrands] = useState([]);
   const [confirmState, setConfirmState] = useState(null);
   const [loading, setLoading] = useState(false);

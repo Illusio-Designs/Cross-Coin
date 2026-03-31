@@ -1,3 +1,5 @@
+// When accessed directly as a Next.js page, redirect to dashboard shell
+export { default } from './index';
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Globe from "../../components/magicui/globe";
 import useTrafficPings from "../../hooks/use-traffic-pings";
@@ -240,7 +242,7 @@ const inputStyle = {
   fontSize: 13,
 };
 
-export default function LiveAnalytics() {
+export function LiveAnalytics() {
   const [stats, setStats] = useState(null);
   const [visitors, setVisitors] = useState([]);
   const [pages, setPages] = useState([]);
