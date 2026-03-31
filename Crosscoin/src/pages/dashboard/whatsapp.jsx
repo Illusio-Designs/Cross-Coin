@@ -1,27 +1,32 @@
 // When accessed directly, render full dashboard shell
 export { default } from './index';
 
-import { useState, useEffect } from 'react';
-import { Modal, Button, Input, Select, Table } from '../../components/ui';
+import { useState, useEffect, useRef } from 'react';
+import { Modal, Button } from '../../components/ui';
 import Loader from '../../components/common/Loader';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService } from '../../services';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const IC = {
-  wa:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>,
-  send:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
-  add:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-  seed:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22V12M12 12C12 7 7 3 2 3c0 5 4 9 10 9zM12 12c0-5 5-9 10-9-1 5-5 9-10 9z"/></svg>,
-  copy:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>,
-  phone:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.01 1.18 2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>,
-  list:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
-  refresh:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>,
-  check:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
-  trash:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>,
+  wa:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>,
+  send:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
+  add:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  copy:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>,
+  check:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  refresh: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>,
+  phone:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.01 1.18 2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>,
+  msg:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>,
+  tpl:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
+  eye:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+  tag:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
+  info:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+  dash:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+  bar:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+  filter:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
 };
 
-// ─── Template presets ─────────────────────────────────────────────────────────
+// ─── Template data ────────────────────────────────────────────────────────────
 const TPL_ICONS = {
   order_confirm:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
   order_shipped:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
@@ -35,90 +40,130 @@ const TPL_ICONS = {
 };
 
 const TEMPLATES = {
-  order_confirm:    { name:'order_confirmation',       title:'Order Confirmed',    icon:'order_confirm',    category:'UTILITY',   body:'Hi! Your *Cross Coin* order *#{{1}}* has been placed successfully.\n\nItems: {{2}}\nTotal: Rs. {{3}}\nEstimated delivery: {{4}}\n\nWe will notify you once it ships. Thank you for shopping with us!', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
-  order_shipped:    { name:'order_shipped',            title:'Order Shipped',      icon:'order_shipped',    category:'UTILITY',   body:'Great news! Your *Cross Coin* order *#{{1}}* has been shipped.\n\nAWB Number: {{2}}\nTrack your order: {{3}}\n\nExpect delivery in 2-5 business days.', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
-  out_for_delivery: { name:'order_out_for_delivery',   title:'Out for Delivery',   icon:'out_for_delivery', category:'UTILITY',   body:'Your *Cross Coin* order *#{{1}}* is out for delivery today!\n\nCourier: {{2}}\n\nPlease keep your phone handy and ensure someone is available to receive the package.', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
-  order_delivered:  { name:'order_delivered',          title:'Order Delivered',    icon:'order_delivered',  category:'UTILITY',   body:'Your *Cross Coin* order *#{{1}}* has been delivered!\n\nWe hope you love your purchase. Your feedback means the world to us.\n\nHave an issue? Just reply to this message.', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
-  cart_abandon:     { name:'cart_abandoned',           title:'Cart Abandoned',     icon:'cart_abandon',     category:'MARKETING', body:'Hey {{1}}!\n\nYour {{2}} is still waiting in your Cross Coin cart.\n\nUse code {{3}} for an extra 10% OFF - but hurry, it expires in 24 hours!\n\nComplete your order now.', footer:'Cross Coin - crosscoin.in', btn1:{type:'URL',text:'Complete Purchase',val:'https://crosscoin.in/cart'}, btn2:'' },
-  cod_confirm:      { name:'cod_order_confirmation',   title:'COD Confirmation',   icon:'cod_confirm',      category:'UTILITY',   body:'Hi! We received your Cash on Delivery order #{{1}} for Rs. {{2}} from Cross Coin.\n\nDelivery to: {{3}}\n\nPlease keep Rs. {{2}} ready at the time of delivery.', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
-  review_request:   { name:'review_request',           title:'Review Request',     icon:'review_request',   category:'MARKETING', body:'Hi {{1}}!\n\nWe hope you are loving your {{2}} from Cross Coin.\n\nA quick review takes just 30 seconds and helps thousands of shoppers. We would really appreciate it!\n\n{{3}}', footer:'Cross Coin - Thank You!', btn1:{type:'URL',text:'Write a Review',val:'https://crosscoin.in/review'}, btn2:'' },
-  return_initiated: { name:'order_cancelled',          title:'Return / Cancelled', icon:'return_initiated',  category:'UTILITY',   body:'Your Cross Coin order #{{1}} has been cancelled.\n\nRefund info: {{2}}\n\nIf you have any questions, reply to this message or visit crosscoin.in.', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
-  refund_update:    { name:'refund_processed',         title:'Refund Processed',   icon:'refund_update',    category:'UTILITY',   body:'Good news! Your refund of Rs. {{2}} for Cross Coin order #{{1}} has been processed.\n\nRefund to: {{3}}\nExpected credit: 5-7 working days\n\nThank you for your patience.', footer:'Cross Coin - Happy to Help', btn1:{type:'',text:'',val:''}, btn2:'' },
+  order_confirm:    { name:'order_confirmation',     title:'Order Confirmed',    icon:'order_confirm',    category:'UTILITY',   body:'Hi! Your *Cross Coin* order *#{{1}}* has been placed successfully.\n\nItems: {{2}}\nTotal: Rs. {{3}}\nEstimated delivery: {{4}}\n\nThank you for shopping with us!', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
+  order_shipped:    { name:'order_shipped',          title:'Order Shipped',      icon:'order_shipped',    category:'UTILITY',   body:'Great news! Your *Cross Coin* order *#{{1}}* has been shipped.\n\nAWB Number: {{2}}\nTrack your order: {{3}}\n\nExpect delivery in 2-5 business days.', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
+  out_for_delivery: { name:'order_out_for_delivery', title:'Out for Delivery',   icon:'out_for_delivery', category:'UTILITY',   body:'Your *Cross Coin* order *#{{1}}* is out for delivery today!\n\nCourier: {{2}}\n\nPlease keep your phone handy.', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
+  order_delivered:  { name:'order_delivered',        title:'Order Delivered',    icon:'order_delivered',  category:'UTILITY',   body:'Your *Cross Coin* order *#{{1}}* has been delivered!\n\nWe hope you love your purchase.\n\nHave an issue? Just reply to this message.', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
+  cart_abandon:     { name:'cart_abandoned',         title:'Cart Abandoned',     icon:'cart_abandon',     category:'MARKETING', body:'Hey {{1}}!\n\nYour {{2}} is still waiting in your Cross Coin cart.\n\nUse code {{3}} for an extra 10% OFF!', footer:'Cross Coin - crosscoin.in', btn1:{type:'URL',text:'Complete Purchase',val:'https://crosscoin.in/cart'}, btn2:'' },
+  cod_confirm:      { name:'cod_order_confirmation', title:'COD Confirmation',   icon:'cod_confirm',      category:'UTILITY',   body:'Hi! We received your COD order #{{1}} for Rs. {{2}} from Cross Coin.\n\nDelivery to: {{3}}\n\nPlease keep the amount ready.', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
+  review_request:   { name:'review_request',         title:'Review Request',     icon:'review_request',   category:'MARKETING', body:'Hi {{1}}!\n\nWe hope you are loving your {{2}} from Cross Coin.\n\nA quick review takes 30 seconds!\n\n{{3}}', footer:'Cross Coin - Thank You!', btn1:{type:'URL',text:'Write a Review',val:'https://crosscoin.in/review'}, btn2:'' },
+  return_initiated: { name:'order_cancelled',        title:'Return / Cancelled', icon:'return_initiated', category:'UTILITY',   body:'Your Cross Coin order #{{1}} has been cancelled.\n\nRefund info: {{2}}\n\nQuestions? Reply to this message.', footer:'Cross Coin - crosscoin.in', btn1:{type:'',text:'',val:''}, btn2:'' },
+  refund_update:    { name:'refund_processed',       title:'Refund Processed',   icon:'refund_update',    category:'UTILITY',   body:'Good news! Your refund of Rs. {{2}} for order #{{1}} has been processed.\n\nRefund to: {{3}}\nExpected: 5-7 working days.', footer:'Cross Coin - Happy to Help', btn1:{type:'',text:'',val:''}, btn2:'' },
 };
 
 const SIDEBAR_GROUPS = [
-  { label: 'Order Templates', keys: ['order_confirm','order_shipped','out_for_delivery','order_delivered'] },
-  { label: 'Cart & Recovery',  keys: ['cart_abandon','cod_confirm'] },
-  { label: 'Post-Order',       keys: ['review_request','return_initiated','refund_update'] },
+  { label:'Order Templates', keys:['order_confirm','order_shipped','out_for_delivery','order_delivered'] },
+  { label:'Cart & Recovery',  keys:['cart_abandon','cod_confirm'] },
+  { label:'Post-Order',       keys:['review_request','return_initiated','refund_update'] },
 ];
 
-const SAMPLES = ['CC-20240601-0042','3 items','1,299','BlueDart','BD9812345678','SAVE10','Surat, Gujarat - 395006','https://crosscoin.in/track/CC-20240601-0042','CrossCoin Ankle Socks'];
+const SAMPLES = ['CC-20240601-0042','3 items','1,299','BlueDart','BD9812345678','SAVE10','Surat, Gujarat - 395006','https://crosscoin.in/track','CrossCoin Ankle Socks'];
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+const EMPTY_FORM = { name:'', category:'UTILITY', language:'en', body:'', footer:'', btn1Type:'', btn1Text:'', btn1Val:'', btn2Text:'' };
 
-const EMPTY_FORM = { name:'', category:'UTILITY', language:'en', headerType:'none', headerText:'', body:'', footer:'', btn1Type:'', btn1Text:'', btn1Val:'', btn2Text:'' };
+const STATIC_TEMPLATES = [
+  { id:'t1', name:'Order Confirmed',  cat:'utility',   status:'approved', lang:'English', vars:4, body:'Hi! Your Cross Coin order #{{1}} has been placed. Items: {{2}} | Total: Rs. {{3}} | Delivery: {{4}}' },
+  { id:'t2', name:'Order Shipped',    cat:'utility',   status:'approved', lang:'English', vars:3, body:'Your Cross Coin order #{{1}} has been shipped. AWB: {{2}} | Track: {{3}}' },
+  { id:'t3', name:'Out for Delivery', cat:'utility',   status:'approved', lang:'English', vars:2, body:'Your Cross Coin order #{{1}} is out for delivery! Courier: {{2}}' },
+  { id:'t4', name:'Order Delivered',  cat:'utility',   status:'approved', lang:'English', vars:1, body:'Your Cross Coin order #{{1}} has been delivered!' },
+  { id:'t5', name:'Cart Abandoned',   cat:'marketing', status:'pending',  lang:'English', vars:3, body:'Hey {{1}}! Your {{2}} is waiting. Use code {{3}} for 10% OFF!' },
+  { id:'t6', name:'COD Confirmation', cat:'utility',   status:'approved', lang:'English', vars:3, body:'COD order #{{1}} for Rs. {{2}}. Delivery to: {{3}}' },
+  { id:'t7', name:'Review Request',   cat:'marketing', status:'rejected', lang:'English', vars:3, body:'Hi {{1}}! Loved your {{2}}? Leave a review: {{3}}' },
+  { id:'t8', name:'Refund Processed', cat:'utility',   status:'approved', lang:'English', vars:3, body:'Refund of Rs. {{2}} for order #{{1}} processed. To: {{3}}' },
+];
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const AVATAR_COLORS = ['#7c3aed','#0284c7','#059669','#b45309','#db2777','#dc2626','#0891b2'];
+function avatarColor(str) { let h = 0; for (const c of (str||'')) h = (h*31 + c.charCodeAt(0)) & 0xffffffff; return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]; }
+function initials(name) { return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+function timeAgo(date) {
+  if (!date) return '';
+  const diff = Math.floor((Date.now() - new Date(date)) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return new Date(date).toLocaleDateString('en-IN', { day:'numeric', month:'short' });
+}
+function formatTime(date) {
+  if (!date) return '';
+  return new Date(date).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', hour12:true });
+}
+function catLabel(c) { return { MARKETING:'Marketing', UTILITY:'Utility', marketing:'Marketing', utility:'Utility', otp:'OTP/Auth' }[c] || c; }
+
+// ─── Phone Preview ────────────────────────────────────────────────────────────
+function PhonePreview({ tpl }) {
+  if (!tpl) return (
+    <div className="was-pp-empty">
+      <div style={{ width:40, height:40, color:'#d1d5db' }}>{IC.tpl}</div>
+      <p>Select a template to preview</p>
+    </div>
+  );
+  const html = (tpl.body||'')
+    .replace(/\{\{(\d+)\}\}/g, (_, n) => `<strong style="color:#075e54">${SAMPLES[n-1]||`{{${n}}}`}</strong>`)
+    .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+  return (
+    <div className="was-phone-shell">
+      <div className="was-phone-notch" />
+      <div className="was-phone-screen">
+        <div className="was-ph-sb"><span>9:41</span></div>
+        <div className="was-ph-hd">
+          <div className="was-ph-av">CC</div>
+          <div><div className="was-ph-name">CrossCoin</div><div className="was-ph-status">Business Account</div></div>
+        </div>
+        <div className="was-ph-msgs">
+          <div className="was-ph-bubble">
+            <div className="was-ph-btext" dangerouslySetInnerHTML={{ __html: html }} />
+            {tpl.footer && <div className="was-ph-bfooter">{tpl.footer}</div>}
+            <div className="was-ph-bmeta"><span>Just now</span><span style={{color:'#53bdeb'}}>✓✓</span></div>
+          </div>
+          {tpl.btn1?.text && <div className="was-ph-btn">{tpl.btn1.text}</div>}
+        </div>
+        <div className="was-ph-input"><span>Message</span></div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 export function WhatsAppManager() {
-  const [tab, setTab] = useState('create');
-  const [activeKey, setActiveKey] = useState('order_confirm');
+  const [page, setPage] = useState('dashboard');
   const [brands, setBrands] = useState([]);
   const [brandId, setBrandId] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [templateList, setTemplateList] = useState([]);
-  const [listLoading, setListLoading] = useState(false);
-  const [response, setResponse] = useState(null);
-  const [testPhone, setTestPhone] = useState('');
-  const [testLoading, setTestLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
+  // Templates
+  const [activeKey, setActiveKey] = useState('order_confirm');
+  const [tplFilter, setTplFilter] = useState('all');
+  const [tplSearch, setTplSearch] = useState('');
   const [createModal, setCreateModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [formLoading, setFormLoading] = useState(false);
+  const [formResponse, setFormResponse] = useState(null);
+  const [copied, setCopied] = useState(false);
+  // Library
+  const [templateList, setTemplateList] = useState([]);
+  const [listLoading, setListLoading] = useState(false);
+  // Inbox
+  const [conversations, setConversations] = useState([]);
+  const [activeConv, setActiveConv] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [reply, setReply] = useState('');
+  const [convLoading, setConvLoading] = useState(false);
+  const [msgLoading, setMsgLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('open');
+  const [convSearch, setConvSearch] = useState('');
+  // Test
+  const [testPhone, setTestPhone] = useState('');
+  const [testLoading, setTestLoading] = useState(false);
+
+  const messagesEndRef = useRef(null);
+  const pollRef = useRef(null);
 
   useEffect(() => {
     brandService.getAllBrands(true).then(r => { if (r.success) setBrands(r.data); }).catch(() => {});
   }, []);
 
-  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
-
-  const previewBody = (TEMPLATES[activeKey]?.body || '')
-    .replace(/\{\{(\d+)\}\}/g, (_, n) => SAMPLES[n - 1] || `{{${n}}}`)
-    .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
-    .replace(/\n/g, '<br>');
-
-  const buildPayload = () => {
-    const components = [];
-    if (form.headerType !== 'none') {
-      const h = { type: 'HEADER', format: form.headerType };
-      if (form.headerType === 'TEXT') h.text = form.headerText;
-      components.push(h);
-    }
-    const bodyComp = { type: 'BODY', text: form.body };
-    const vars = form.body.match(/\{\{\d+\}\}/g) || [];
-    if (vars.length) bodyComp.example = { body_text: [vars.map(() => 'SampleValue')] };
-    components.push(bodyComp);
-    if (form.footer) components.push({ type: 'FOOTER', text: form.footer });
-    const buttons = [];
-    if (form.btn1Type && form.btn1Text) {
-      const b = { type: form.btn1Type, text: form.btn1Text };
-      if (form.btn1Type === 'URL') b.url = form.btn1Val;
-      if (form.btn1Type === 'PHONE_NUMBER') b.phone_number = form.btn1Val;
-      buttons.push(b);
-    }
-    if (form.btn2Text) buttons.push({ type: 'QUICK_REPLY', text: form.btn2Text });
-    if (buttons.length) components.push({ type: 'BUTTONS', buttons });
-    return { name: form.name, language: form.language, category: form.category, components };
-  };
-
-  const createTemplate = async (e) => {
-    e.preventDefault();
-    if (!form.name.trim()) { showError('fieldRequired'); return; }
-    setLoading(true); setResponse(null);
-    try {
-      const res = await fetch(`${API}/api/whatsapp/templates`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ brandId, ...buildPayload() }) });
-      const data = await res.json();
-      if (data.success) { showSuccess('templateCreated'); setCreateModal(false); setResponse({ type: 'success', text: JSON.stringify(data.result, null, 2) }); fetchTemplates(); }
-      else setResponse({ type: 'error', text: data.message || JSON.stringify(data) });
-    } catch (e) { setResponse({ type: 'error', text: e.message }); }
-    setLoading(false);
-  };
+  const setF = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const fetchTemplates = async () => {
     setListLoading(true);
@@ -126,9 +171,86 @@ export function WhatsAppManager() {
       const res = await fetch(`${API}/api/whatsapp/templates?brandId=${brandId}`);
       const data = await res.json();
       if (data.success) setTemplateList(data.templates || []);
-      else showError('loadingFailed');
-    } catch { showError('loadingFailed'); }
+    } catch { }
     setListLoading(false);
+  };
+
+  const createTemplate = async (e) => {
+    e.preventDefault();
+    if (!form.name.trim() || !form.body.trim()) { showError('fieldRequired'); return; }
+    setFormLoading(true); setFormResponse(null);
+    try {
+      const components = [{ type:'BODY', text: form.body }];
+      if (form.footer) components.push({ type:'FOOTER', text: form.footer });
+      const buttons = [];
+      if (form.btn1Type && form.btn1Text) {
+        const b = { type: form.btn1Type, text: form.btn1Text };
+        if (form.btn1Type === 'URL') b.url = form.btn1Val;
+        if (form.btn1Type === 'PHONE_NUMBER') b.phone_number = form.btn1Val;
+        buttons.push(b);
+      }
+      if (form.btn2Text) buttons.push({ type:'QUICK_REPLY', text: form.btn2Text });
+      if (buttons.length) components.push({ type:'BUTTONS', buttons });
+      const res = await fetch(`${API}/api/whatsapp/templates`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ brandId, name:form.name, category:form.category, language:form.language, components })
+      });
+      const data = await res.json();
+      if (data.success) { showSuccess('templateCreated'); setCreateModal(false); fetchTemplates(); }
+      else setFormResponse({ type:'error', text: data.message || JSON.stringify(data) });
+    } catch (err) { setFormResponse({ type:'error', text: err.message }); }
+    setFormLoading(false);
+  };
+
+  const copyJSON = () => {
+    const t = TEMPLATES[activeKey]; if (!t) return;
+    navigator.clipboard.writeText(JSON.stringify({ name:t.name, category:t.category, language:'en' }, null, 2));
+    setCopied(true); setTimeout(() => setCopied(false), 1500);
+  };
+
+  const fetchConversations = async () => {
+    setConvLoading(true);
+    try {
+      const res = await fetch(`${API}/api/whatsapp/conversations?status=${statusFilter}&brandId=${brandId}`, { credentials:'include' });
+      const data = await res.json();
+      if (data.success) setConversations(data.conversations || []);
+    } catch { }
+    setConvLoading(false);
+  };
+
+  const fetchMessages = async (conv) => {
+    setActiveConv(conv); setMsgLoading(true);
+    try {
+      const res = await fetch(`${API}/api/whatsapp/conversations/${conv.id}/messages`, { credentials:'include' });
+      const data = await res.json();
+      if (data.success) { setMessages(data.messages || []); setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count:0 } : c)); }
+    } catch { }
+    setMsgLoading(false);
+  };
+
+  const sendReply = async (e) => {
+    e.preventDefault();
+    if (!reply.trim() || !activeConv) return;
+    setSending(true);
+    try {
+      const res = await fetch(`${API}/api/whatsapp/conversations/${activeConv.id}/reply`, {
+        method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ message: reply.trim(), brandId })
+      });
+      const data = await res.json();
+      if (data.success) { setMessages(prev => [...prev, data.message]); setReply(''); }
+      else showError('sendFailed', data.message);
+    } catch (err) { showError('sendFailed', err.message); }
+    setSending(false);
+  };
+
+  const resolveConv = async (id) => {
+    try {
+      await fetch(`${API}/api/whatsapp/conversations/${id}/resolve`, { method:'PUT', credentials:'include' });
+      showSuccess('resolved');
+      setConversations(prev => prev.filter(c => c.id !== id));
+      if (activeConv?.id === id) { setActiveConv(null); setMessages([]); }
+    } catch { showError('updateFailed'); }
   };
 
   const sendTest = async (e) => {
@@ -136,270 +258,469 @@ export function WhatsAppManager() {
     if (!testPhone.trim()) { showError('fieldRequired'); return; }
     setTestLoading(true);
     try {
-      const res = await fetch(`${API}/api/whatsapp/test`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ brandId, phone: testPhone }) });
+      const res = await fetch(`${API}/api/whatsapp/test`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ brandId, phone: testPhone }) });
       const data = await res.json();
-      if (data.success) showSuccess('messageSent');
-      else showError('sendFailed', data.message);
-    } catch (e) { showError('sendFailed', e.message); }
+      if (data.success) showSuccess('messageSent'); else showError('sendFailed', data.message);
+    } catch (err) { showError('sendFailed', err.message); }
     setTestLoading(false);
   };
 
-  const copyJSON = () => {
-    const t = TEMPLATES[activeKey];
-    if (!t) return;
-    navigator.clipboard.writeText(JSON.stringify({ name: t.name, category: t.category, language: 'en' }, null, 2));
-    setCopied(true); setTimeout(() => setCopied(false), 1500);
-  };
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
+  useEffect(() => { if (page === 'inbox') fetchConversations(); }, [page, statusFilter, brandId]);
+  useEffect(() => { if (page === 'library') fetchTemplates(); }, [page, brandId]);
+  useEffect(() => {
+    if (!activeConv) return;
+    pollRef.current = setInterval(() => fetchMessages(activeConv), 10000);
+    return () => clearInterval(pollRef.current);
+  }, [activeConv?.id]);
 
-  useEffect(() => { if (tab === 'list') fetchTemplates(); }, [tab, brandId]);
+  const filteredConvs = conversations.filter(c =>
+    !convSearch || (c.customer_name || c.customer_phone || '').toLowerCase().includes(convSearch.toLowerCase())
+  );
+  const unreadCount = conversations.filter(c => c.unread_count > 0).length;
+  const filteredTpls = STATIC_TEMPLATES.filter(t => {
+    const ms = tplFilter === 'all' || t.status === tplFilter;
+    const mq = !tplSearch || t.name.toLowerCase().includes(tplSearch.toLowerCase());
+    return ms && mq;
+  });
+
+  const NAV = [
+    { k:'dashboard',  label:'Dashboard',      icon: IC.dash,    section: 'Main' },
+    { k:'inbox',      label:'Conversations',   icon: IC.msg,     badge: unreadCount || null },
+    { k:'templates',  label:'Templates',       icon: IC.tpl,     badge: STATIC_TEMPLATES.length },
+    { k:'library',    label:'Library',         icon: IC.eye,     section: 'Messaging' },
+    { k:'test',       label:'Test Message',    icon: IC.phone },
+    { k:'analytics',  label:'Analytics',       icon: IC.bar,     section: 'Account' },
+  ];
 
   return (
-    <div className="dashboard-page">
+    <div className="was-studio">
 
-      {/* ── Page Header ── */}
-      <div className="sl-page-header">
-        <div className="sl-header-left">
-          <div className="sl-header-icon">{IC.wa}</div>
+      {/* ══ LEFT SIDEBAR ══ */}
+      <aside className="was-nav">
+        <div className="was-nav-logo">
+          <div className="was-nav-logo-icon">{IC.wa}</div>
           <div>
-            <h1 className="sl-page-title">WhatsApp Manager</h1>
-            <p className="sl-page-sub">Create & manage message templates · Send test messages</p>
+            <div className="was-nav-logo-text">WA Studio</div>
+            <div className="was-nav-logo-sub">Business Platform</div>
           </div>
         </div>
-        <div className="sl-header-right">
+
+        <nav className="was-nav-links">
+          {NAV.map(({ k, label, icon, badge, section }) => (
+            <div key={k}>
+              {section && <div className="was-nav-section">{section}</div>}
+              <button className={`was-nav-item${page === k ? ' active' : ''}`} onClick={() => setPage(k)}>
+                <span className="was-nav-icon">{icon}</span>
+                <span className="was-nav-label">{label}</span>
+                {badge ? <span className="was-nav-badge">{badge}</span> : null}
+              </button>
+            </div>
+          ))}
+        </nav>
+
+        <div className="was-nav-footer">
           {brands.length > 1 && (
-            <select className="bset-brand-select" value={brandId} onChange={e => setBrandId(Number(e.target.value))}>
+            <select className="was-brand-select" value={brandId} onChange={e => setBrandId(Number(e.target.value))}>
               {brands.map(b => <option key={b.id} value={b.id}>{b.display_name || b.name}</option>)}
             </select>
           )}
-          <button className="sl-add-btn" onClick={() => { setForm(EMPTY_FORM); setCreateModal(true); }}>
-            <span className="sl-add-btn-icon">{IC.add}</span>New Template
-          </button>
         </div>
-      </div>
+      </aside>
 
-      {/* ── Tabs ── */}
-      <div className="wa-tabs">
-        {[
-          { k: 'create', label: 'Create', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> },
-          { k: 'list',   label: 'Library', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
-          { k: 'test',   label: 'Test',    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.01 1.18 2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg> },
-        ].map(({ k, label, icon }) => (
-          <button key={k} className={`wa-tab${tab === k ? ' wa-tab--active' : ''}`} onClick={() => setTab(k)}>
-            <span className="wa-tab-icon">{icon}</span>
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* ══ MAIN CONTENT ══ */}
+      <div className="was-main">
 
-      {/* ── CREATE TAB ── */}
-      {tab === 'create' && (
-        <div className="wa-create-layout">
-
-          {/* Sidebar */}
-          <div className="wa-sidebar-panel">
-            {SIDEBAR_GROUPS.map(g => (
-              <div key={g.label} className="wa-sb-group">
-                <div className="bset-cat-tab" style={{ pointerEvents:'none', background:'transparent', color:'#9ca3af', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.08em', padding:'0 0 6px', border:'none' }}>{g.label}</div>
-                {g.keys.map(k => {
-                  const t = TEMPLATES[k];
-                  return (
-                    <button key={k} className={`wa-sb-item${activeKey === k ? ' active' : ''}`} onClick={() => setActiveKey(k)}>
-                      <span className="wa-sb-item-icon">{TPL_ICONS[t.icon]}</span>
-                      <span className="wa-sb-item-name">{t.title}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-
-          {/* Form area — preview only */}
-          <div className="wa-form-col">
-            <div className="bset-settings-grid" style={{ gridTemplateColumns:'1fr' }}>
-
-              {/* Template info */}
-              <div className="bset-setting-card">
-                <div className="bset-setting-header">
-                  <div className="bset-setting-info">
-                    <h4 className="bset-setting-key">{TEMPLATES[activeKey]?.title}</h4>
-                    <span className="sl-cat-badge">{TEMPLATES[activeKey]?.category}</span>
-                  </div>
-                  <button className="sl-btn-edit" title="Copy JSON" onClick={copyJSON}>{copied ? IC.check : IC.copy}</button>
-                </div>
-                <div className="bset-setting-body">
-                  <div className="dm-field">
-                    <label className="dm-label">Template Name</label>
-                    <div className="bset-value-display" style={{ fontFamily:'monospace', fontSize:12, background:'#f9fafb', padding:'8px 12px', borderRadius:6, border:'1px solid #e5e7eb' }}>{TEMPLATES[activeKey]?.name}</div>
-                  </div>
-                </div>
+        {/* ── DASHBOARD ── */}
+        {page === 'dashboard' && (
+          <div className="was-scroll">
+            <div className="was-content-pad">
+              <div className="was-page-head">
+                <h2 className="was-page-title">Dashboard</h2>
+                <span className="was-page-sub">CrossCoin · WhatsApp Overview</span>
               </div>
 
-              {/* Body preview */}
-              <div className="bset-setting-card">
-                <div className="bset-setting-header"><div className="bset-setting-info"><h4 className="bset-setting-key">Message Body</h4></div></div>
-                <div className="bset-setting-body">
-                  <div style={{ background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:6, padding:'10px 12px', fontFamily:'monospace', fontSize:12, lineHeight:1.7, color:'#374151', whiteSpace:'pre-wrap' }}>
-                    {TEMPLATES[activeKey]?.body}
+              {/* Stats */}
+              <div className="was-stats-grid">
+                {[
+                  { label:'Messages Sent',    val:'24,891', change:'+12.4%', color:'#25D366', icon: IC.send },
+                  { label:'Delivered',        val:'23,540', change:'98.6% rate', color:'#3b82f6', icon: IC.check },
+                  { label:'Open Rate',        val:'68.2%',  change:'+3.1% vs last week', color:'#f59e0b', icon: IC.eye },
+                  { label:'Open Convs',       val: String(unreadCount || 0), change:`${unreadCount} need reply`, color:'#8b5cf6', icon: IC.msg },
+                ].map(s => (
+                  <div key={s.label} className="was-stat-card">
+                    <div className="was-stat-top">
+                      <span className="was-stat-label">{s.label}</span>
+                      <span className="was-stat-icon" style={{ background: s.color + '20', color: s.color }}>{s.icon}</span>
+                    </div>
+                    <div className="was-stat-num">{s.val}</div>
+                    <div className="was-stat-change">{s.change}</div>
                   </div>
-                  {TEMPLATES[activeKey]?.footer && (
-                    <div style={{ marginTop:8, fontSize:11, color:'#9ca3af', fontStyle:'italic' }}>{TEMPLATES[activeKey].footer}</div>
-                  )}
-                </div>
+                ))}
               </div>
 
-              {/* Variables guide */}
-              <div className="bset-setting-card">
-                <div className="bset-setting-header"><div className="bset-setting-info"><h4 className="bset-setting-key">Variables</h4></div></div>
-                <div className="bset-setting-body">
-                  {(() => {
-                    const vars = (TEMPLATES[activeKey]?.body || '').match(/\{\{\d+\}\}/g) || [];
-                    const unique = [...new Set(vars)].sort();
-                    if (!unique.length) return <p style={{ fontSize:12, color:'#9ca3af' }}>No variables in this template.</p>;
-                    return (
-                      <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                        {unique.map(v => (
-                          <span key={v} style={{ background:'#f0f9ff', border:'1px solid #bae6fd', color:'#0369a1', borderRadius:5, padding:'3px 10px', fontSize:12, fontFamily:'monospace' }}>{v} = {SAMPLES[parseInt(v.replace(/\D/g,'')) - 1] || '...'}</span>
-                        ))}
+              {/* Charts row */}
+              <div className="was-dash-row">
+                {/* Bar chart */}
+                <div className="was-dash-card">
+                  <div className="was-dash-card-head">
+                    <span className="was-dash-card-title">Messages — Last 7 Days</span>
+                  </div>
+                  <div className="was-bar-chart">
+                    {[{d:'Mon',v:3420},{d:'Tue',v:2890},{d:'Wed',v:4100},{d:'Thu',v:3650},{d:'Fri',v:4800},{d:'Sat',v:5200},{d:'Sun',v:2800}].map(b => (
+                      <div key={b.d} className="was-bar-col">
+                        <span className="was-bar-val">{(b.v/1000).toFixed(1)}k</span>
+                        <div className="was-bar" style={{ height: Math.round((b.v/5200)*80) + 'px' }} />
+                        <span className="was-bar-lbl">{b.d}</span>
                       </div>
-                    );
-                  })()}
+                    ))}
+                  </div>
+                </div>
+
+                {/* Activity */}
+                <div className="was-dash-card">
+                  <div className="was-dash-card-head">
+                    <span className="was-dash-card-title">Recent Activity</span>
+                    <button className="was-dash-link" onClick={() => setPage('inbox')}>View all</button>
+                  </div>
+                  <div className="was-activity">
+                    {[
+                      { dot:'green', text:<><strong>Order Confirmed</strong> template sent to 340 contacts</>, time:'2m ago' },
+                      { dot:'amber', text:<>Template <strong>Sale Announcement</strong> pending approval</>, time:'18m ago' },
+                      { dot:'blue',  text:<><strong>Priya Shah</strong> replied to campaign message</>, time:'34m ago' },
+                      { dot:'green', text:<>Campaign <strong>Diwali Offer</strong> completed · 98.1% delivered</>, time:'1h ago' },
+                      { dot:'red',   text:<>Template <strong>Review Request</strong> rejected by Meta</>, time:'3h ago' },
+                    ].map((a, i) => (
+                      <div key={i} className="was-act-item">
+                        <span className={`was-act-dot was-act-dot--${a.dot}`} />
+                        <span className="was-act-text">{a.text}</span>
+                        <span className="was-act-time">{a.time}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
+              {/* Quick cards */}
+              <div className="was-quick-row">
+                {[
+                  { label:'Approved Templates', val:'6',  sub:'2 pending · 1 rejected', color:'#25D366', icon: IC.tpl },
+                  { label:'Open Conversations', val: String(unreadCount||'0'), sub:'Live chats', color:'#3b82f6', icon: IC.msg },
+                  { label:'Test Messages Sent', val:'12', sub:'API verified', color:'#f59e0b', icon: IC.phone },
+                ].map(q => (
+                  <div key={q.label} className="was-quick-card">
+                    <div className="was-quick-icon" style={{ background: q.color + '20', color: q.color }}>{q.icon}</div>
+                    <div>
+                      <div className="was-quick-label">{q.label}</div>
+                      <div className="was-quick-val">{q.val}</div>
+                      <div className="was-quick-sub">{q.sub}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
+        )}
 
-          {/* Phone preview */}
-          <div className="wa-preview-col">
-            <div className="bset-setting-card" style={{ position:'sticky', top:20 }}>
-              <div className="bset-setting-header"><div className="bset-setting-info"><h4 className="bset-setting-key">📱 Live Preview</h4></div></div>
-              <div className="bset-setting-body" style={{ display:'flex', justifyContent:'center', padding:'16px 0' }}>
-                <div className="wa-phone-shell">
-                  <div className="wa-phone-notch"><div className="wa-phone-pill" /></div>
-                  <div className="wa-phone-chat">
-                    <div className="wa-bubble">
-                      <div className="wa-bubble-header">
-                        <span style={{ width:32, height:32, display:'flex', color:'#fff' }}>{TPL_ICONS[TEMPLATES[activeKey]?.icon] || IC.wa}</span>
+        {/* ── TEMPLATES ── */}
+        {page === 'templates' && (
+          <div className="was-scroll">
+            <div className="was-content-pad">
+              <div className="was-page-head">
+                <div>
+                  <h2 className="was-page-title">Templates</h2>
+                  <span className="was-page-sub">Create & preview message templates</span>
+                </div>
+                <button className="was-btn-primary" onClick={() => { setForm(EMPTY_FORM); setFormResponse(null); setCreateModal(true); }}>
+                  <span style={{width:14,height:14,display:'flex'}}>{IC.add}</span>New Template
+                </button>
+              </div>
+              <div className="was-tpl-layout">
+                {/* Sidebar */}
+                <div className="was-tpl-sidebar">
+                  {SIDEBAR_GROUPS.map(g => (
+                    <div key={g.label} className="was-sb-group">
+                      <div className="was-sb-group-label">{g.label}</div>
+                      {g.keys.map(k => {
+                        const t = TEMPLATES[k];
+                        return (
+                          <button key={k} className={`was-sb-item${activeKey === k ? ' active' : ''}`} onClick={() => setActiveKey(k)}>
+                            <span className="was-sb-icon">{TPL_ICONS[t.icon]}</span>
+                            <span>{t.title}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Detail */}
+                <div className="was-tpl-detail">
+                  <div className="was-detail-card">
+                    <div className="was-detail-head">
+                      <div>
+                        <div className="was-detail-title">{TEMPLATES[activeKey]?.title}</div>
+                        <span className={`was-cat-badge was-cat--${(TEMPLATES[activeKey]?.category||'').toLowerCase()}`}>{catLabel(TEMPLATES[activeKey]?.category)}</span>
                       </div>
-                      <div className="wa-bubble-body">
-                        <div className="wa-bubble-text" dangerouslySetInnerHTML={{ __html: previewBody }} />
-                      </div>
-                      {TEMPLATES[activeKey]?.footer && <div className="wa-bubble-footer">{TEMPLATES[activeKey].footer}</div>}
-                      <div className="wa-bubble-time">Just now ✓✓</div>
-                      {TEMPLATES[activeKey]?.btn1?.text && <button className="wa-bubble-btn">{TEMPLATES[activeKey].btn1.text}</button>}
-                      {TEMPLATES[activeKey]?.btn2 && <button className="wa-bubble-btn">{TEMPLATES[activeKey].btn2}</button>}
+                      <button className="was-icon-btn" onClick={copyJSON}>{copied ? IC.check : IC.copy}</button>
+                    </div>
+                    <div className="was-detail-label">Template Name</div>
+                    <div className="was-detail-mono">{TEMPLATES[activeKey]?.name}</div>
+                  </div>
+                  <div className="was-detail-card">
+                    <div className="was-detail-title" style={{marginBottom:10}}>Message Body</div>
+                    <div className="was-body-preview">{TEMPLATES[activeKey]?.body}</div>
+                    {TEMPLATES[activeKey]?.footer && <div className="was-body-footer">{TEMPLATES[activeKey].footer}</div>}
+                  </div>
+                  <div className="was-detail-card">
+                    <div className="was-detail-title" style={{marginBottom:10}}>Variables</div>
+                    {(() => {
+                      const vars = (TEMPLATES[activeKey]?.body||'').match(/\{\{\d+\}\}/g)||[];
+                      const unique = [...new Set(vars)].sort();
+                      if (!unique.length) return <p style={{fontSize:12,color:'#9ca3af',margin:0}}>No variables.</p>;
+                      return <div className="was-vars-wrap">{unique.map(v => <span key={v} className="was-var-chip">{v} = {SAMPLES[parseInt(v.replace(/\D/g,''))-1]||'...'}</span>)}</div>;
+                    })()}
+                  </div>
+                </div>
+
+                {/* Phone preview */}
+                <div className="was-tpl-preview">
+                  <div className="was-detail-card" style={{position:'sticky',top:0}}>
+                    <div className="was-detail-title" style={{marginBottom:14}}>📱 Live Preview</div>
+                    <div style={{display:'flex',justifyContent:'center'}}>
+                      <PhonePreview tpl={TEMPLATES[activeKey]} />
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ── LIST TAB ── */}
-      {tab === 'list' && (
-        <div>
-          <div className="sl-page-header" style={{ marginBottom: 16 }}>
-            <div className="sl-header-left">
-              <h2 className="sl-page-title" style={{ fontSize: 16 }}>Template Library</h2>
-              <p className="sl-page-sub">All submitted WhatsApp templates and their approval status</p>
-            </div>
-            <div className="sl-header-right">
-              <button className="sl-add-btn" onClick={fetchTemplates} disabled={listLoading}>
-                <span className="sl-add-btn-icon">{IC.refresh}</span>{listLoading ? 'Loading…' : 'Refresh'}
-              </button>
-            </div>
-          </div>
-          {listLoading ? <div className="sl-loader-wrap"><Loader /></div> : (
-            <Table
-              columns={[
-                { header: 'Template Name', cell: r => <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 600 }}>{r.name}</span> },
-                { header: 'Category', cell: r => <span className="sl-cat-badge">{r.category}</span> },
-                { header: 'Language', cell: r => r.language || 'en' },
-                { header: 'Status', cell: r => <span className={`sl-status-badge sl-status-${(r.status || '').toLowerCase()}`}>{r.status || 'UNKNOWN'}</span> },
-              ]}
-              data={templateList}
-              emptyMessage="No templates found. Click Refresh to load from Meta."
-            />
-          )}
-        </div>
-      )}
-
-      {/* ── TEST TAB ── */}
-      {tab === 'test' && (
-        <div className="wa-test-layout">
-
-          {/* Left — form */}
-          <div className="wa-test-form-col">
-            <div className="wa-test-card">
-              <div className="wa-test-card-icon">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#CE1E36" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
-                </svg>
+        {/* ── INBOX ── */}
+        {page === 'inbox' && (
+          <div className="was-inbox-wrap">
+            {/* Thread list */}
+            <div className="was-thread-list">
+              <div className="was-thread-top-bar">
+                <input className="was-thread-search" placeholder="Search chats…" value={convSearch} onChange={e => setConvSearch(e.target.value)} />
               </div>
-              <h3 className="wa-test-card-title">Send Test Message</h3>
-              <p className="wa-test-card-sub">Verify your WhatsApp Business API credentials by sending a test ping to any number.</p>
+              <div className="was-thread-tabs">
+                {['open','resolved','all'].map(s => (
+                  <button key={s} className={`was-thread-tab${statusFilter===s?' active':''}`} onClick={() => setStatusFilter(s)}>
+                    {s.charAt(0).toUpperCase()+s.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <div className="was-thread-scroll">
+                {convLoading ? <div style={{padding:20,textAlign:'center'}}><Loader /></div>
+                : filteredConvs.length === 0 ? (
+                  <div className="was-empty-state">
+                    <div style={{width:36,height:36,color:'#d1d5db'}}>{IC.msg}</div>
+                    <p>No {statusFilter} conversations</p>
+                  </div>
+                ) : filteredConvs.map(conv => {
+                  const col = avatarColor(conv.customer_name||conv.customer_phone);
+                  return (
+                    <div key={conv.id} className={`was-thread-item${activeConv?.id===conv.id?' active':''}`} onClick={() => fetchMessages(conv)}>
+                      <div className="was-thread-av" style={{background:col}}>{initials(conv.customer_name||conv.customer_phone)}</div>
+                      <div className="was-thread-body">
+                        <div className="was-thread-row">
+                          <span className="was-thread-name">{conv.customer_name||conv.customer_phone}</span>
+                          <span className="was-thread-time">{timeAgo(conv.last_message_at)}</span>
+                        </div>
+                        <div className="was-thread-row">
+                          <span className="was-thread-last">{conv.last_message||'No messages yet'}</span>
+                          {conv.unread_count > 0 && <span className="was-unread-dot">{conv.unread_count}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
-              <form onSubmit={sendTest} className="wa-test-form">
-                <div className="wa-test-phone-wrap">
-                  <span className="wa-test-phone-prefix">
-                    {IC.phone} +91
-                  </span>
-                  <input
-                    className="wa-test-phone-input"
-                    value={testPhone}
-                    onChange={e => setTestPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    placeholder="Enter 10-digit mobile number"
-                    inputMode="numeric"
-                    maxLength={10}
-                  />
+            {/* Chat */}
+            <div className="was-chat">
+              {!activeConv ? (
+                <div className="was-chat-empty">
+                  <div style={{width:52,height:52,color:'#d1d5db'}}>{IC.wa}</div>
+                  <h3>Select a conversation</h3>
+                  <p>Choose a chat from the left to start messaging</p>
                 </div>
-                <button type="submit" className="wa-test-send-btn" disabled={testLoading || testPhone.length < 10}>
-                  <span style={{ width: 16, height: 16, display: 'flex' }}>{IC.send}</span>
-                  {testLoading ? 'Sending…' : 'Send Test Message'}
+              ) : (
+                <>
+                  <div className="was-chat-hd">
+                    <div className="was-chat-av" style={{background:avatarColor(activeConv.customer_name||activeConv.customer_phone)}}>
+                      {initials(activeConv.customer_name||activeConv.customer_phone)}
+                    </div>
+                    <div style={{flex:1}}>
+                      <div className="was-chat-name">{activeConv.customer_name||activeConv.customer_phone}</div>
+                      <div className="was-chat-phone">+{activeConv.customer_phone}</div>
+                    </div>
+                    {activeConv.status === 'open' && (
+                      <button className="was-resolve-btn" onClick={() => resolveConv(activeConv.id)}>
+                        {IC.check} Resolve
+                      </button>
+                    )}
+                  </div>
+                  <div className="was-messages">
+                    {msgLoading ? <div style={{textAlign:'center',padding:20}}><Loader /></div>
+                    : messages.length === 0 ? <div className="was-no-msgs">No messages yet</div>
+                    : messages.map(msg => (
+                      <div key={msg.id} className={`was-msg was-msg--${msg.direction}`}>
+                        <div className="was-msg-bubble">{msg.body}</div>
+                        <div className="was-msg-meta">
+                          {formatTime(msg.sent_at||msg.createdAt)}
+                          {msg.direction==='outbound' && <span style={{color:msg.status==='read'?'#53bdeb':'#9ca3af'}}>{msg.status==='read'||msg.status==='delivered'?' ✓✓':' ✓'}</span>}
+                        </div>
+                      </div>
+                    ))}
+                    <div ref={messagesEndRef} />
+                  </div>
+                  {activeConv.status === 'open' ? (
+                    <form className="was-reply-box" onSubmit={sendReply}>
+                      <textarea className="was-reply-input" placeholder="Type a message…" value={reply}
+                        onChange={e => setReply(e.target.value)}
+                        onKeyDown={e => { if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); sendReply(e); } }}
+                        rows={2} />
+                      <button type="submit" className="was-send-btn" disabled={sending||!reply.trim()}>{IC.send}</button>
+                    </form>
+                  ) : (
+                    <div className="was-resolved-bar">This conversation is resolved</div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── LIBRARY ── */}
+        {page === 'library' && (
+          <div className="was-scroll">
+            <div className="was-content-pad">
+              <div className="was-page-head">
+                <div>
+                  <h2 className="was-page-title">Template Library</h2>
+                  <span className="was-page-sub">All submitted templates and their Meta approval status</span>
+                </div>
+                <button className="was-btn-primary" onClick={fetchTemplates} disabled={listLoading}>
+                  <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>{listLoading?'Loading…':'Refresh'}
                 </button>
-              </form>
+              </div>
+              <div className="was-lib-toolbar">
+                <div className="was-search-wrap">
+                  <span className="was-search-icon">{IC.eye}</span>
+                  <input className="was-search-input" placeholder="Search…" value={tplSearch} onChange={e => setTplSearch(e.target.value)} />
+                </div>
+                <div className="was-filter-pills">
+                  {['all','approved','pending','rejected'].map(f => (
+                    <button key={f} className={`was-filter-pill${tplFilter===f?' active':''}`} onClick={() => setTplFilter(f)}>
+                      {f.charAt(0).toUpperCase()+f.slice(1)}
+                    </button>
+                  ))}
+                </div>
+                <span className="was-tpl-count">Showing {filteredTpls.length}</span>
+              </div>
+              {listLoading ? <div style={{padding:40,textAlign:'center'}}><Loader /></div> : (
+                <div className="was-tpl-grid">
+                  {filteredTpls.map(t => (
+                    <div key={t.id} className="was-tpl-card">
+                      <div className="was-tpl-card-top">
+                        <span className={`was-cat-badge was-cat--${t.cat}`}>{catLabel(t.cat)}</span>
+                        <span className={`was-status-badge was-status--${t.status}`}>
+                          <span className="was-status-dot" />{t.status.charAt(0).toUpperCase()+t.status.slice(1)}
+                        </span>
+                      </div>
+                      <div className="was-tpl-name">{t.name}</div>
+                      <div className="was-tpl-body">{t.body}</div>
+                      <div className="was-tpl-foot">
+                        <span className="was-tpl-meta-item">{IC.info}{t.lang}</span>
+                        <span className="was-tpl-meta-item">{IC.tag}{t.vars} vars</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
+        )}
 
-          {/* Right — info */}
-          <div className="wa-test-info-col">
-            <div className="wa-test-info-card">
-              <h4 className="wa-test-info-title">What this does</h4>
-              <ul className="wa-test-info-list">
-                <li>Sends a plain text message to the number you enter</li>
-                <li>Confirms your WhatsApp API token is valid</li>
-                <li>Confirms your Phone Number ID is configured</li>
-                <li>Does not use any template — just a direct message</li>
-              </ul>
-            </div>
-            <div className="wa-test-info-card wa-test-info-card--tip">
-              <h4 className="wa-test-info-title">Tip</h4>
-              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.6, margin: 0 }}>
-                The recipient must have messaged your WhatsApp Business number in the last 24 hours, or you must use an approved template for outbound messages.
-              </p>
+        {/* ── TEST ── */}
+        {page === 'test' && (
+          <div className="was-scroll">
+            <div className="was-content-pad">
+              <div className="was-page-head">
+                <h2 className="was-page-title">Test Message</h2>
+                <span className="was-page-sub">Verify your WhatsApp API credentials</span>
+              </div>
+              <div className="was-test-layout">
+                <div className="was-test-card">
+                  <div className="was-test-icon">{IC.wa}</div>
+                  <h3 className="was-test-title">Send Test Message</h3>
+                  <p className="was-test-sub">Send a test ping to verify your API token and Phone Number ID are configured correctly.</p>
+                  <form onSubmit={sendTest} className="was-test-form">
+                    <div className="was-phone-wrap">
+                      <span className="was-phone-prefix">{IC.phone} +91</span>
+                      <input className="was-phone-input" value={testPhone} onChange={e => setTestPhone(e.target.value.replace(/\D/g,'').slice(0,10))} placeholder="10-digit mobile number" inputMode="numeric" maxLength={10} />
+                    </div>
+                    <button type="submit" className="was-test-btn" disabled={testLoading||testPhone.length<10}>
+                      <span style={{width:16,height:16,display:'flex'}}>{IC.send}</span>
+                      {testLoading?'Sending…':'Send Test Message'}
+                    </button>
+                  </form>
+                </div>
+                <div className="was-test-info-col">
+                  <div className="was-info-card">
+                    <h4 className="was-info-title">What this does</h4>
+                    <ul className="was-info-list">
+                      <li>Sends a plain text message to the number you enter</li>
+                      <li>Confirms your WhatsApp API token is valid</li>
+                      <li>Confirms your Phone Number ID is configured</li>
+                      <li>Does not use any template — just a direct message</li>
+                    </ul>
+                  </div>
+                  <div className="was-info-card was-info-card--tip">
+                    <h4 className="was-info-title">Tip</h4>
+                    <p style={{fontSize:13,color:'#555',lineHeight:1.6,margin:0}}>The recipient must have messaged your WhatsApp Business number in the last 24 hours, or you must use an approved template.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+        )}
 
-        </div>
-      )}
+        {/* ── ANALYTICS ── */}
+        {page === 'analytics' && (
+          <div className="was-scroll">
+            <div className="was-content-pad">
+              <div className="was-page-head">
+                <h2 className="was-page-title">Analytics</h2>
+                <span className="was-page-sub">Coming soon — detailed message analytics</span>
+              </div>
+              <div className="was-coming-soon">
+                <div style={{width:52,height:52,color:'#d1d5db'}}>{IC.bar}</div>
+                <h3>Analytics Coming Soon</h3>
+                <p>Detailed delivery, open rate, and campaign analytics will be available here.</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
-      {/* ── Create Modal ── */}
+      {/* ── Create Template Modal ── */}
       <Modal isOpen={createModal} onClose={() => setCreateModal(false)} title="Submit Template to Meta" closeOnOverlayClick={false}>
         <form onSubmit={createTemplate} className="seo-form">
           <div className="modal-body">
-            <div style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#92400e', marginBottom:14, lineHeight:1.5 }}>
-              Template name must be lowercase with underscores only. Approval takes 5 min – a few hours.
-            </div>
+            <div className="was-modal-notice">Template name must be lowercase with underscores only. Approval takes 5 min – a few hours.</div>
             <div className="dm-2col">
               <div className="dm-field">
                 <label className="dm-label">Template Name *</label>
-                <input className="dm-input" value={form.name} onChange={e => set('name', e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,''))} placeholder="order_confirmation" required />
+                <input className="dm-input" value={form.name} onChange={e => setF('name', e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,''))} placeholder="order_confirmation" required />
               </div>
               <div className="dm-field">
                 <label className="dm-label">Category</label>
-                <select className="dm-input dm-select" value={form.category} onChange={e => set('category', e.target.value)}>
+                <select className="dm-input dm-select" value={form.category} onChange={e => setF('category', e.target.value)}>
                   <option value="UTILITY">UTILITY</option>
                   <option value="MARKETING">MARKETING</option>
                   <option value="AUTHENTICATION">AUTHENTICATION</option>
@@ -408,79 +729,21 @@ export function WhatsAppManager() {
             </div>
             <div className="dm-field">
               <label className="dm-label">Body *</label>
-              <textarea className="dm-input dm-textarea" rows={5} value={form.body} onChange={e => set('body', e.target.value)} style={{ fontFamily:'monospace', fontSize:12 }} required />
+              <textarea className="dm-input dm-textarea" rows={5} value={form.body} onChange={e => setF('body', e.target.value)} style={{fontFamily:'monospace',fontSize:12}} required />
             </div>
             <div className="dm-field">
               <label className="dm-label">Footer</label>
-              <input className="dm-input" value={form.footer} onChange={e => set('footer', e.target.value)} />
+              <input className="dm-input" value={form.footer} onChange={e => setF('footer', e.target.value)} />
             </div>
-            {response && (
-              <div className={`wa-response wa-response-${response.type}`} style={{ marginTop:12 }}>
-                <pre>{response.text}</pre>
-              </div>
-            )}
+            {formResponse && <div className={`wa-response wa-response-${formResponse.type}`}><pre>{formResponse.text}</pre></div>}
           </div>
           <div className="modal-footer">
-            <Button variant="secondary" type="button" onClick={() => setCreateModal(false)} disabled={loading}>Cancel</Button>
-            <Button variant="primary" type="submit" disabled={loading}>{loading ? 'Submitting…' : 'Submit to Meta'}</Button>
+            <Button variant="secondary" type="button" onClick={() => setCreateModal(false)} disabled={formLoading}>Cancel</Button>
+            <Button variant="primary" type="submit" disabled={formLoading}>{formLoading?'Submitting…':'Submit to Meta'}</Button>
           </div>
         </form>
       </Modal>
 
-      <style>{`
-        .wa-tabs { display:flex; gap:4px; margin-bottom:24px; background:#f5f5f5; padding:4px; border-radius:10px; width:fit-content; }
-        .wa-tab { display:flex; align-items:center; gap:7px; padding:8px 18px; border:none; background:transparent; border-radius:8px; font-size:13px; font-weight:600; color:#888; cursor:pointer; transition:all 0.15s; font-family:inherit; }
-        .wa-tab:hover { color:#333; background:rgba(255,255,255,0.6); }
-        .wa-tab--active { background:#fff; color:#180D3E; box-shadow:0 1px 6px rgba(0,0,0,0.1); }
-        .wa-tab-icon { width:15px; height:15px; display:flex; }
-        .wa-tab-icon svg { width:100%; height:100%; }
-        .wa-create-layout { display:grid; grid-template-columns:200px 1fr 260px; gap:20px; align-items:start; }
-        .wa-test-layout { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; max-width:860px; }
-        .wa-test-card { background:#fff; border:1.5px solid #ebebeb; border-radius:16px; padding:32px; display:flex; flex-direction:column; align-items:flex-start; gap:12px; }
-        .wa-test-card-icon { width:52px; height:52px; background:#fdecea; border-radius:14px; display:flex; align-items:center; justify-content:center; }
-        .wa-test-card-title { font-size:18px; font-weight:800; color:#1a1a1a; margin:0; }
-        .wa-test-card-sub { font-size:13px; color:#888; line-height:1.6; margin:0; }
-        .wa-test-form { width:100%; display:flex; flex-direction:column; gap:14px; margin-top:8px; }
-        .wa-test-phone-wrap { display:flex; align-items:center; border:1.5px solid #e0e0e0; border-radius:10px; overflow:hidden; background:#fff; transition:border-color 0.2s; }
-        .wa-test-phone-wrap:focus-within { border-color:#180D3E; }
-        .wa-test-phone-prefix { display:flex; align-items:center; gap:6px; padding:0 14px; background:#f7f7f7; border-right:1.5px solid #e0e0e0; height:46px; font-size:13px; font-weight:600; color:#555; flex-shrink:0; }
-        .wa-test-phone-prefix svg { width:14px; height:14px; }
-        .wa-test-phone-input { border:none; outline:none; padding:0 14px; font-size:14px; flex:1; height:46px; background:#fff; font-family:inherit; color:#1a1a1a; }
-        .wa-test-send-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; height:46px; background:#CE1E36; color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; transition:background 0.15s; font-family:inherit; }
-        .wa-test-send-btn:hover:not(:disabled) { background:#a8172b; }
-        .wa-test-send-btn:disabled { opacity:0.5; cursor:not-allowed; }
-        .wa-test-info-col { display:flex; flex-direction:column; gap:16px; }
-        .wa-test-info-card { background:#f9f9f9; border:1.5px solid #ebebeb; border-radius:14px; padding:20px 22px; }
-        .wa-test-info-card--tip { background:#fffbeb; border-color:#fde68a; }
-        .wa-test-info-title { font-size:13px; font-weight:700; color:#1a1a1a; margin:0 0 12px; }
-        .wa-test-info-list { margin:0; padding-left:18px; display:flex; flex-direction:column; gap:7px; }
-        .wa-test-info-list li { font-size:13px; color:#555; line-height:1.5; }
-        .wa-sidebar-panel { background:#fff; border:1.5px solid #e5e7eb; border-radius:12px; padding:14px 10px; }
-        .wa-sb-group { margin-bottom:16px; }
-        .wa-sb-item { width:100%; text-align:left; background:transparent; border:1.5px solid transparent; border-radius:8px; padding:8px 10px; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:12px; color:#6b7280; transition:all 0.15s; margin-bottom:2px; font-family:inherit; }
-        .wa-sb-item:hover { background:#f9fafb; color:#111827; }
-        .wa-sb-item.active { background:#fff0f2; border-color:#CE1E36; color:#CE1E36; font-weight:600; }
-        .wa-sb-item-icon { width:15px; height:15px; display:flex; flex-shrink:0; }
-        .wa-sb-item-icon svg { width:100%; height:100%; }
-        .wa-sb-item-name { font-size:12px; }        .wa-form-col { display:flex; flex-direction:column; gap:16px; }
-        .wa-preview-col {}
-        .wa-phone-shell { width:220px; background:#111; border-radius:26px; border:5px solid #222; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,0.12); }
-        .wa-phone-notch { background:#111; height:22px; display:flex; align-items:center; justify-content:center; }
-        .wa-phone-pill { width:48px; height:6px; background:#222; border-radius:3px; }
-        .wa-phone-chat { background:#ECE5DD; min-height:320px; padding:10px 8px; }
-        .wa-bubble { background:#fff; border-radius:0 10px 10px 10px; max-width:95%; box-shadow:0 1px 2px rgba(0,0,0,0.1); overflow:hidden; }
-        .wa-bubble-header { background:linear-gradient(135deg,#25D366,#128C7E); height:90px; display:flex; align-items:center; justify-content:center; font-size:26px; }
-        .wa-bubble-body { padding:8px 10px 4px; }
-        .wa-bubble-text { font-size:11px; color:#333; line-height:1.5; }
-        .wa-bubble-footer { font-size:10px; color:#888; padding:0 10px 4px; font-style:italic; }
-        .wa-bubble-time { text-align:right; font-size:10px; color:#aaa; padding:0 10px 6px; }
-        .wa-bubble-btn { width:100%; border:none; border-top:1px solid #f0f0f0; background:transparent; padding:7px; font-size:11px; color:#128C7E; font-weight:600; cursor:pointer; display:block; font-family:inherit; }
-        .wa-response { border-radius:8px; padding:12px; font-size:11px; font-family:monospace; max-height:180px; overflow-y:auto; }
-        .wa-response pre { white-space:pre-wrap; word-break:break-all; margin:0; }
-        .wa-response-success { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
-        .wa-response-error { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; }
-        @media (max-width:1100px) { .wa-create-layout { grid-template-columns:1fr; } .wa-preview-col { display:none; } }
-      `}</style>
     </div>
   );
 }
