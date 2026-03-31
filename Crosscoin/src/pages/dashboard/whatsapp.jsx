@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Button } from '../../components/ui';
+import { Modal, Button, Input, Select, Table } from '../../components/ui';
 import Loader from '../../components/common/Loader';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService } from '../../services';
@@ -175,9 +175,16 @@ export default function WhatsAppManager() {
       </div>
 
       {/* ── Tabs ── */}
-      <div className="bset-category-tabs" style={{ marginBottom: 20 }}>
-        {[['create','✏️ Create'],['list','📋 Library'],['test','📱 Test']].map(([k, l]) => (
-          <button key={k} className={`bset-cat-tab${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>{l}</button>
+      <div className="wa-tabs">
+        {[
+          { k: 'create', label: 'Create', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> },
+          { k: 'list',   label: 'Library', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
+          { k: 'test',   label: 'Test',    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.01 1.18 2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg> },
+        ].map(({ k, label, icon }) => (
+          <button key={k} className={`wa-tab${tab === k ? ' wa-tab--active' : ''}`} onClick={() => setTab(k)}>
+            <span className="wa-tab-icon">{icon}</span>
+            {label}
+          </button>
         ))}
       </div>
 
@@ -289,71 +296,89 @@ export default function WhatsAppManager() {
 
       {/* ── LIST TAB ── */}
       {tab === 'list' && (
-        <div className="sl-table-wrap">
-          <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:12 }}>
-            <button className="sl-add-btn" onClick={fetchTemplates} disabled={listLoading}>
-              <span className="sl-add-btn-icon">{IC.refresh}</span>{listLoading ? 'Loading…' : 'Refresh'}
-            </button>
+        <div>
+          <div className="sl-page-header" style={{ marginBottom: 16 }}>
+            <div className="sl-header-left">
+              <h2 className="sl-page-title" style={{ fontSize: 16 }}>Template Library</h2>
+              <p className="sl-page-sub">All submitted WhatsApp templates and their approval status</p>
+            </div>
+            <div className="sl-header-right">
+              <button className="sl-add-btn" onClick={fetchTemplates} disabled={listLoading}>
+                <span className="sl-add-btn-icon">{IC.refresh}</span>{listLoading ? 'Loading…' : 'Refresh'}
+              </button>
+            </div>
           </div>
-          {listLoading ? <div className="sl-loader-wrap"><Loader /></div>
-          : templateList.length === 0 ? (
-            <div className="sl-empty">
-              <div className="sl-empty-icon">{IC.list}</div>
-              <p>No templates found. Click Refresh or Seed Defaults.</p>
-            </div>
-          ) : (
-            <div className="bset-settings-grid">
-              {templateList.map(t => (
-                <div key={t.id || t.name} className="bset-setting-card">
-                  <div className="bset-setting-header">
-                    <div className="bset-setting-info">
-                      <h4 className="bset-setting-key">{t.name}</h4>
-                      <span className="sl-cat-badge">{t.category}</span>
-                    </div>
-                    <span className={`sl-status-badge sl-status-${(t.status||'').toLowerCase()}`}>{t.status || 'UNKNOWN'}</span>
-                  </div>
-                  <div className="bset-setting-body">
-                    <div className="bset-value-display" style={{ fontSize:12, color:'#6b7280' }}>Language: {t.language}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+          {listLoading ? <div className="sl-loader-wrap"><Loader /></div> : (
+            <Table
+              columns={[
+                { header: 'Template Name', cell: r => <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 600 }}>{r.name}</span> },
+                { header: 'Category', cell: r => <span className="sl-cat-badge">{r.category}</span> },
+                { header: 'Language', cell: r => r.language || 'en' },
+                { header: 'Status', cell: r => <span className={`sl-status-badge sl-status-${(r.status || '').toLowerCase()}`}>{r.status || 'UNKNOWN'}</span> },
+              ]}
+              data={templateList}
+              emptyMessage="No templates found. Click Refresh to load from Meta."
+            />
           )}
         </div>
       )}
 
       {/* ── TEST TAB ── */}
       {tab === 'test' && (
-        <div style={{ maxWidth: 480 }}>
-          <div className="bset-setting-card">
-            <div className="bset-setting-header"><div className="bset-setting-info"><h4 className="bset-setting-key">Send Test Message</h4></div></div>
-            <div className="bset-setting-body">
-              <p style={{ fontSize:13, color:'#6b7280', marginBottom:14, lineHeight:1.5 }}>
-                Sends a plain text ping to verify your WhatsApp credentials are working correctly.
-              </p>
-              <form onSubmit={sendTest}>
-                <div className="dm-field" style={{ marginBottom:16 }}>
-                  <label className="dm-label">Phone Number</label>
-                  <div style={{ display:'flex', alignItems:'center', border:'1.5px solid #e5e7eb', borderRadius:8, overflow:'hidden' }}>
-                    <span style={{ padding:'0 12px', background:'#f9fafb', borderRight:'1.5px solid #e5e7eb', fontSize:13, color:'#6b7280', height:40, display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
-                      <span style={{ width:14, height:14, display:'flex' }}>{IC.phone}</span>+91
-                    </span>
-                    <input
-                      style={{ border:'none', outline:'none', padding:'0 12px', fontSize:13, flex:1, height:40, background:'#fff' }}
-                      value={testPhone}
-                      onChange={e => setTestPhone(e.target.value.replace(/\D/g,'').slice(0,10))}
-                      placeholder="10-digit mobile"
-                      inputMode="numeric"
-                      maxLength={10}
-                    />
-                  </div>
+        <div className="wa-test-layout">
+
+          {/* Left — form */}
+          <div className="wa-test-form-col">
+            <div className="wa-test-card">
+              <div className="wa-test-card-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#CE1E36" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+                </svg>
+              </div>
+              <h3 className="wa-test-card-title">Send Test Message</h3>
+              <p className="wa-test-card-sub">Verify your WhatsApp Business API credentials by sending a test ping to any number.</p>
+
+              <form onSubmit={sendTest} className="wa-test-form">
+                <div className="wa-test-phone-wrap">
+                  <span className="wa-test-phone-prefix">
+                    {IC.phone} +91
+                  </span>
+                  <input
+                    className="wa-test-phone-input"
+                    value={testPhone}
+                    onChange={e => setTestPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder="Enter 10-digit mobile number"
+                    inputMode="numeric"
+                    maxLength={10}
+                  />
                 </div>
-                <button type="submit" className="sl-add-btn" disabled={testLoading || testPhone.length < 10}>
-                  <span className="sl-add-btn-icon">{IC.send}</span>{testLoading ? 'Sending…' : 'Send Test Message'}
+                <button type="submit" className="wa-test-send-btn" disabled={testLoading || testPhone.length < 10}>
+                  <span style={{ width: 16, height: 16, display: 'flex' }}>{IC.send}</span>
+                  {testLoading ? 'Sending…' : 'Send Test Message'}
                 </button>
               </form>
             </div>
           </div>
+
+          {/* Right — info */}
+          <div className="wa-test-info-col">
+            <div className="wa-test-info-card">
+              <h4 className="wa-test-info-title">What this does</h4>
+              <ul className="wa-test-info-list">
+                <li>Sends a plain text message to the number you enter</li>
+                <li>Confirms your WhatsApp API token is valid</li>
+                <li>Confirms your Phone Number ID is configured</li>
+                <li>Does not use any template — just a direct message</li>
+              </ul>
+            </div>
+            <div className="wa-test-info-card wa-test-info-card--tip">
+              <h4 className="wa-test-info-title">Tip</h4>
+              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.6, margin: 0 }}>
+                The recipient must have messaged your WhatsApp Business number in the last 24 hours, or you must use an approved template for outbound messages.
+              </p>
+            </div>
+          </div>
+
         </div>
       )}
 
@@ -400,7 +425,33 @@ export default function WhatsAppManager() {
       </Modal>
 
       <style>{`
+        .wa-tabs { display:flex; gap:4px; margin-bottom:24px; background:#f5f5f5; padding:4px; border-radius:10px; width:fit-content; }
+        .wa-tab { display:flex; align-items:center; gap:7px; padding:8px 18px; border:none; background:transparent; border-radius:8px; font-size:13px; font-weight:600; color:#888; cursor:pointer; transition:all 0.15s; font-family:inherit; }
+        .wa-tab:hover { color:#333; background:rgba(255,255,255,0.6); }
+        .wa-tab--active { background:#fff; color:#180D3E; box-shadow:0 1px 6px rgba(0,0,0,0.1); }
+        .wa-tab-icon { width:15px; height:15px; display:flex; }
+        .wa-tab-icon svg { width:100%; height:100%; }
         .wa-create-layout { display:grid; grid-template-columns:200px 1fr 260px; gap:20px; align-items:start; }
+        .wa-test-layout { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; max-width:860px; }
+        .wa-test-card { background:#fff; border:1.5px solid #ebebeb; border-radius:16px; padding:32px; display:flex; flex-direction:column; align-items:flex-start; gap:12px; }
+        .wa-test-card-icon { width:52px; height:52px; background:#fdecea; border-radius:14px; display:flex; align-items:center; justify-content:center; }
+        .wa-test-card-title { font-size:18px; font-weight:800; color:#1a1a1a; margin:0; }
+        .wa-test-card-sub { font-size:13px; color:#888; line-height:1.6; margin:0; }
+        .wa-test-form { width:100%; display:flex; flex-direction:column; gap:14px; margin-top:8px; }
+        .wa-test-phone-wrap { display:flex; align-items:center; border:1.5px solid #e0e0e0; border-radius:10px; overflow:hidden; background:#fff; transition:border-color 0.2s; }
+        .wa-test-phone-wrap:focus-within { border-color:#180D3E; }
+        .wa-test-phone-prefix { display:flex; align-items:center; gap:6px; padding:0 14px; background:#f7f7f7; border-right:1.5px solid #e0e0e0; height:46px; font-size:13px; font-weight:600; color:#555; flex-shrink:0; }
+        .wa-test-phone-prefix svg { width:14px; height:14px; }
+        .wa-test-phone-input { border:none; outline:none; padding:0 14px; font-size:14px; flex:1; height:46px; background:#fff; font-family:inherit; color:#1a1a1a; }
+        .wa-test-send-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; height:46px; background:#CE1E36; color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; transition:background 0.15s; font-family:inherit; }
+        .wa-test-send-btn:hover:not(:disabled) { background:#a8172b; }
+        .wa-test-send-btn:disabled { opacity:0.5; cursor:not-allowed; }
+        .wa-test-info-col { display:flex; flex-direction:column; gap:16px; }
+        .wa-test-info-card { background:#f9f9f9; border:1.5px solid #ebebeb; border-radius:14px; padding:20px 22px; }
+        .wa-test-info-card--tip { background:#fffbeb; border-color:#fde68a; }
+        .wa-test-info-title { font-size:13px; font-weight:700; color:#1a1a1a; margin:0 0 12px; }
+        .wa-test-info-list { margin:0; padding-left:18px; display:flex; flex-direction:column; gap:7px; }
+        .wa-test-info-list li { font-size:13px; color:#555; line-height:1.5; }
         .wa-sidebar-panel { background:#fff; border:1.5px solid #e5e7eb; border-radius:12px; padding:14px 10px; }
         .wa-sb-group { margin-bottom:16px; }
         .wa-sb-item { width:100%; text-align:left; background:transparent; border:1.5px solid transparent; border-radius:8px; padding:8px 10px; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:12px; color:#6b7280; transition:all 0.15s; margin-bottom:2px; font-family:inherit; }
