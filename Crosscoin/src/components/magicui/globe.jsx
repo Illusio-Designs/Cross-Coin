@@ -1,126 +1,106 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+"use client";
+
+import { useEffect, useRef } from "react";
+import createGlobe from "cobe";
 
 export function cn(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
-// ─── Shopify-style globe config ───────────────────────────────────────────────
-const BASE_CONFIG = {
-  width: 900,
-  height: 900,
+const GLOBE_CONFIG = {
+  width: 800,
+  height: 800,
+  onRender: () => {},
   devicePixelRatio: 2,
-  phi: 0.4,
-  theta: 0.25,
+  phi: 0,
+  theta: 0.3,
   dark: 0,
-  diffuse: 1.8,
-  mapSamples: 24000,
-  mapBrightness: 2.2,
-  mapBaseBrightness: 0.08,
-  baseColor: [0.88, 0.96, 1.0],       // light blue-white base
-  markerColor: [0.25, 0.45, 1.0],     // blue visitor dots
-  glowColor: [0.72, 0.88, 1.0],       // soft blue glow
-  scale: 1,
-  offset: [0, 0],
-  opacity: 1,
+  diffuse: 0.4,
+  mapSamples: 16000,
+  mapBrightness: 1.2,
+  baseColor: [1, 1, 1],
+  markerColor: [251 / 255, 100 / 255, 21 / 255],
+  glowColor: [1, 1, 1],
+  markers: [],
 };
 
-export default function Globe({
-  className,
-  config = {},
-  markers = [],
-  arcs = [],
-  phi: fixedPhi,
-  theta: fixedTheta = 0.25,
-  autoRotate = false,
-  rotateSpeed = 0.003,
-  scale = 1,
-}) {
-  const canvasRef    = useRef(null);
-  const globeRef     = useRef(null);
-  const phiRef       = useRef(fixedPhi ?? 0.4);
-  const thetaRef     = useRef(fixedTheta);
-  const scaleRef     = useRef(scale);
-  const pointerDown  = useRef(false);
-  const pointerStartX = useRef(0);
-  const pointerStartY = useRef(0);
-  const phiOnDown    = useRef(phiRef.current);
-  const thetaOnDown  = useRef(thetaRef.current);
-
-  // sync external phi/theta
-  useEffect(() => { if (fixedPhi !== undefined) phiRef.current = fixedPhi; }, [fixedPhi]);
-  useEffect(() => { thetaRef.current = fixedTheta; }, [fixedTheta]);
-  useEffect(() => { scaleRef.current = scale; }, [scale]);
+export function Globe({ className, config = GLOBE_CONFIG }) {
+  const canvasRef = useRef(null);
+  const phiRef    = useRef(0);
+  const widthRef  = useRef(0);
+  const pointerInteracting = useRef(null);
+  const pointerMovement    = useRef(0);
+  // Simple spring: target and current
+  const springTarget  = useRef(0);
+  const springCurrent = useRef(0);
 
   useEffect(() => {
-    if (!canvasRef.current) return;
-    let destroyed = false;
+    const onResize = () => {
+      if (canvasRef.current) widthRef.current = canvasRef.current.offsetWidth;
+    };
+    window.addEventListener("resize", onResize);
+    onResize();
 
-    import("cobe").then(({ default: createGlobe }) => {
-      if (destroyed) return;
+    const globe = createGlobe(canvasRef.current, {
+      ...config,
+      width:  widthRef.current * 2,
+      height: widthRef.current * 2,
+      onRender(state) {
+        // Simple spring interpolation (replaces useSpring from motion)
+        springCurrent.current += (springTarget.current - springCurrent.current) * 0.08;
 
-      globeRef.current = createGlobe(canvasRef.current, {
-        ...BASE_CONFIG,
-        ...config,
-        phi: phiRef.current,
-        theta: thetaRef.current,
-        scale: scaleRef.current,
-        markers: markers.map(m => ({
-          location: m.location,
-          size: m.size,
-          ...(m.color ? { color: m.color } : {}),
-        })),
-        onRender: (state) => {
-          if (autoRotate && !pointerDown.current) {
-            phiRef.current += rotateSpeed;
-          }
-          state.phi   = phiRef.current;
-          state.theta = thetaRef.current;
-          state.scale = scaleRef.current;
-          state.markers = markers.map(m => ({
-            location: m.location,
-            size: m.size,
-            ...(m.color ? { color: m.color } : {}),
-          }));
-        },
-      });
+        if (!pointerInteracting.current) phiRef.current += 0.005;
+        state.phi    = phiRef.current + springCurrent.current;
+        state.width  = widthRef.current * 2;
+        state.height = widthRef.current * 2;
+      },
     });
 
+    setTimeout(() => {
+      if (canvasRef.current) canvasRef.current.style.opacity = "1";
+    }, 0);
+
     return () => {
-      destroyed = true;
-      globeRef.current?.destroy();
+      globe.destroy();
+      window.removeEventListener("resize", onResize);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [markers, autoRotate, rotateSpeed]);
-
-  // ── Drag to rotate (both X and Y axis) ──
-  const onPointerDown = useCallback((e) => {
-    pointerDown.current  = true;
-    pointerStartX.current = e.clientX;
-    pointerStartY.current = e.clientY;
-    phiOnDown.current    = phiRef.current;
-    thetaOnDown.current  = thetaRef.current;
-    e.target.setPointerCapture(e.pointerId);
-  }, []);
-
-  const onPointerMove = useCallback((e) => {
-    if (!pointerDown.current) return;
-    const dx = (e.clientX - pointerStartX.current) / 250;
-    const dy = (e.clientY - pointerStartY.current) / 250;
-    phiRef.current   = phiOnDown.current   + dx;
-    thetaRef.current = Math.max(-1.2, Math.min(1.2, thetaOnDown.current - dy));
-  }, []);
-
-  const onPointerUp = useCallback(() => { pointerDown.current = false; }, []);
+  }, [config]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className={cn("cursor-grab active:cursor-grabbing", className)}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerLeave={onPointerUp}
-      style={{ width: "100%", height: "100%", contain: "layout paint size" }}
-    />
+    <div className={cn("absolute inset-0 mx-auto aspect-square w-full max-w-[600px]", className)}>
+      <canvas
+        ref={canvasRef}
+        style={{ width: "100%", height: "100%", opacity: 0, transition: "opacity 0.5s" }}
+        onPointerDown={(e) => {
+          pointerInteracting.current = e.clientX;
+          if (canvasRef.current) canvasRef.current.style.cursor = "grabbing";
+        }}
+        onPointerUp={() => {
+          pointerInteracting.current = null;
+          if (canvasRef.current) canvasRef.current.style.cursor = "grab";
+        }}
+        onPointerOut={() => {
+          pointerInteracting.current = null;
+          if (canvasRef.current) canvasRef.current.style.cursor = "grab";
+        }}
+        onMouseMove={(e) => {
+          if (pointerInteracting.current !== null) {
+            const delta = e.clientX - pointerInteracting.current;
+            pointerMovement.current = delta;
+            springTarget.current = springTarget.current + delta / 1400;
+            pointerInteracting.current = e.clientX;
+          }
+        }}
+        onTouchMove={(e) => {
+          if (e.touches[0] && pointerInteracting.current !== null) {
+            const delta = e.touches[0].clientX - pointerInteracting.current;
+            springTarget.current = springTarget.current + delta / 1400;
+            pointerInteracting.current = e.touches[0].clientX;
+          }
+        }}
+      />
+    </div>
   );
 }
+
+export default Globe;
