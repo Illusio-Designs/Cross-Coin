@@ -125,65 +125,6 @@ router.get('/health', (req, res) => {
     });
 });
 
-// WhatsApp test route (admin only)
-router.post('/whatsapp/test', async (req, res) => {
-    try {
-        const whatsapp = require('../services/whatsappService.js');
-        const { phone, brandId = 1 } = req.body;
-        if (!phone) return res.status(400).json({ success: false, message: 'phone is required' });
-        const result = await whatsapp.testConnection(phone, brandId);
-        res.json({ success: true, message: 'WhatsApp test message sent', result });
-    } catch (err) {
-        res.status(500).json({ success: false, message: err.response?.data?.error?.message || err.message });
-    }
-});
-
-// List all templates
-router.get('/whatsapp/templates', async (req, res) => {
-    try {
-        const whatsapp = require('../services/whatsappService.js');
-        const brandId = req.query.brandId || 1;
-        const result = await whatsapp.listTemplates(brandId);
-        res.json({ success: true, templates: result.data || [], paging: result.paging });
-    } catch (err) {
-        res.status(500).json({ success: false, message: err.response?.data?.error?.message || err.message });
-    }
-});
-
-// Create a single custom template
-router.post('/whatsapp/templates', async (req, res) => {
-    try {
-        const whatsapp = require('../services/whatsappService.js');
-        const { brandId = 1, ...templateData } = req.body;
-        const result = await whatsapp.createTemplate(templateData, brandId);
-        res.json({ success: true, result });
-    } catch (err) {
-        res.status(500).json({ success: false, message: err.response?.data?.error?.message || err.message });
-    }
-});
-
-// Seed all 4 default Cross Coin templates
-router.post('/whatsapp/templates/seed', async (req, res) => {
-    try {
-        const whatsapp = require('../services/whatsappService.js');
-        const { brandId = 1 } = req.body;
-        const results = await whatsapp.seedDefaultTemplates(brandId);
-        res.json({ success: true, results });
-    } catch (err) {
-        res.status(500).json({ success: false, message: err.response?.data?.error?.message || err.message });
-    }
-});
-
-// Delete a template by name
-router.delete('/whatsapp/templates/:name', async (req, res) => {
-    try {
-        const whatsapp = require('../services/whatsappService.js');
-        const brandId = req.query.brandId || 1;
-        const result = await whatsapp.deleteTemplate(req.params.name, brandId);
-        res.json({ success: true, result });
-    } catch (err) {
-        res.status(500).json({ success: false, message: err.response?.data?.error?.message || err.message });
-    }
-});
+// WhatsApp routes are handled by whatsappRoutes.js (mounted at /whatsapp above)
 
 module.exports = router;

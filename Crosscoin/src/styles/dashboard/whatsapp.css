@@ -341,3 +341,12 @@
   .was-test-layout { grid-template-columns: 1fr; }
   .was-tpl-layout { grid-template-columns: 1fr; }
 }
+
+.was-btn-secondary {
+  display: flex; align-items: center; gap: 7px;
+  background: #fff; color: #374151; border: 1.5px solid #e5e7eb;
+  border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .15s; font-family: 'DM Sans', sans-serif;
+  white-space: nowrap;
+}
+.was-btn-secondary:hover { border-color: #25D366; color: #128C7E; }

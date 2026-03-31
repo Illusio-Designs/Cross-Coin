@@ -1728,3 +1728,59 @@ export const instagramService = {
     return response.data;
   },
 };
+
+// ─── WhatsApp Service ─────────────────────────────────────────────────────────
+export const whatsappService = {
+
+  // ── Templates ──
+  listTemplates: async (brandId = 1) => {
+    const response = await adminApi.get(`/api/whatsapp/templates?brandId=${brandId}`);
+    return response.data;
+  },
+
+  createTemplate: async (payload) => {
+    const response = await adminApi.post('/api/whatsapp/templates', payload);
+    return response.data;
+  },
+
+  deleteTemplate: async (name, brandId = 1) => {
+    const response = await adminApi.delete(`/api/whatsapp/templates/${name}?brandId=${brandId}`);
+    return response.data;
+  },
+
+  seedTemplates: async (brandId = 1) => {
+    const response = await adminApi.post('/api/whatsapp/templates/seed', { brandId });
+    return response.data;
+  },
+
+  // ── Test ──
+  testConnection: async (phone, brandId = 1) => {
+    const response = await adminApi.post('/api/whatsapp/test', { phone, brandId });
+    return response.data;
+  },
+
+  // ── Conversations / Inbox ──
+  getConversations: async (brandId = 1, status = 'open', page = 1) => {
+    const response = await adminApi.get('/api/whatsapp/conversations', {
+      params: { brandId, status, page }
+    });
+    return response.data;
+  },
+
+  getMessages: async (conversationId) => {
+    const response = await adminApi.get(`/api/whatsapp/conversations/${conversationId}/messages`);
+    return response.data;
+  },
+
+  sendReply: async (conversationId, message, brandId = 1) => {
+    const response = await adminApi.post(`/api/whatsapp/conversations/${conversationId}/reply`, {
+      message, brandId
+    });
+    return response.data;
+  },
+
+  resolveConversation: async (conversationId) => {
+    const response = await adminApi.put(`/api/whatsapp/conversations/${conversationId}/resolve`);
+    return response.data;
+  },
+};

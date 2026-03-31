@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Modal, Button } from '../../components/ui';
 import Loader from '../../components/common/Loader';
 import { showSuccess, showError } from '../../utils/toastNotification';
-import { brandService } from '../../services';
+import { brandService, whatsappService } from '../../services';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const IC = {
@@ -58,7 +58,6 @@ const SIDEBAR_GROUPS = [
 ];
 
 const SAMPLES = ['CC-20240601-0042','3 items','1,299','BlueDart','BD9812345678','SAVE10','Surat, Gujarat - 395006','https://crosscoin.in/track','CrossCoin Ankle Socks'];
-const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const EMPTY_FORM = { name:'', category:'UTILITY', language:'en', body:'', footer:'', btn1Type:'', btn1Text:'', btn1Val:'', btn2Text:'' };
 
 const STATIC_TEMPLATES = [
@@ -168,8 +167,7 @@ export function WhatsAppManager() {
   const fetchTemplates = async () => {
     setListLoading(true);
     try {
-      const res = await fetch(`${API}/api/whatsapp/templates?brandId=${brandId}`);
-      const data = await res.json();
+      const data = await whatsappService.listTemplates(brandId);
       if (data.success) setTemplateList(data.templates || []);
     } catch { }
     setListLoading(false);
@@ -191,14 +189,12 @@ export function WhatsAppManager() {
       }
       if (form.btn2Text) buttons.push({ type:'QUICK_REPLY', text: form.btn2Text });
       if (buttons.length) components.push({ type:'BUTTONS', buttons });
-      const res = await fetch(`${API}/api/whatsapp/templates`, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ brandId, name:form.name, category:form.category, language:form.language, components })
+      const data = await whatsappService.createTemplate({
+        brandId, name: form.name, category: form.category, language: form.language, components
       });
-      const data = await res.json();
       if (data.success) { showSuccess('templateCreated'); setCreateModal(false); fetchTemplates(); }
       else setFormResponse({ type:'error', text: data.message || JSON.stringify(data) });
-    } catch (err) { setFormResponse({ type:'error', text: err.message }); }
+    } catch (err) { setFormResponse({ type:'error', text: err.message || 'Failed to create template' }); }
     setFormLoading(false);
   };
 
@@ -211,8 +207,7 @@ export function WhatsAppManager() {
   const fetchConversations = async () => {
     setConvLoading(true);
     try {
-      const res = await fetch(`${API}/api/whatsapp/conversations?status=${statusFilter}&brandId=${brandId}`, { credentials:'include' });
-      const data = await res.json();
+      const data = await whatsappService.getConversations(brandId, statusFilter);
       if (data.success) setConversations(data.conversations || []);
     } catch { }
     setConvLoading(false);
@@ -221,9 +216,11 @@ export function WhatsAppManager() {
   const fetchMessages = async (conv) => {
     setActiveConv(conv); setMsgLoading(true);
     try {
-      const res = await fetch(`${API}/api/whatsapp/conversations/${conv.id}/messages`, { credentials:'include' });
-      const data = await res.json();
-      if (data.success) { setMessages(data.messages || []); setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count:0 } : c)); }
+      const data = await whatsappService.getMessages(conv.id);
+      if (data.success) {
+        setMessages(data.messages || []);
+        setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count:0 } : c));
+      }
     } catch { }
     setMsgLoading(false);
   };
@@ -233,11 +230,7 @@ export function WhatsAppManager() {
     if (!reply.trim() || !activeConv) return;
     setSending(true);
     try {
-      const res = await fetch(`${API}/api/whatsapp/conversations/${activeConv.id}/reply`, {
-        method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ message: reply.trim(), brandId })
-      });
-      const data = await res.json();
+      const data = await whatsappService.sendReply(activeConv.id, reply.trim(), brandId);
       if (data.success) { setMessages(prev => [...prev, data.message]); setReply(''); }
       else showError('sendFailed', data.message);
     } catch (err) { showError('sendFailed', err.message); }
@@ -246,7 +239,7 @@ export function WhatsAppManager() {
 
   const resolveConv = async (id) => {
     try {
-      await fetch(`${API}/api/whatsapp/conversations/${id}/resolve`, { method:'PUT', credentials:'include' });
+      await whatsappService.resolveConversation(id);
       showSuccess('resolved');
       setConversations(prev => prev.filter(c => c.id !== id));
       if (activeConv?.id === id) { setActiveConv(null); setMessages([]); }
@@ -258,8 +251,7 @@ export function WhatsAppManager() {
     if (!testPhone.trim()) { showError('fieldRequired'); return; }
     setTestLoading(true);
     try {
-      const res = await fetch(`${API}/api/whatsapp/test`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ brandId, phone: testPhone }) });
-      const data = await res.json();
+      const data = await whatsappService.testConnection(testPhone, brandId);
       if (data.success) showSuccess('messageSent'); else showError('sendFailed', data.message);
     } catch (err) { showError('sendFailed', err.message); }
     setTestLoading(false);
@@ -604,9 +596,20 @@ export function WhatsAppManager() {
                   <h2 className="was-page-title">Template Library</h2>
                   <span className="was-page-sub">All submitted templates and their Meta approval status</span>
                 </div>
-                <button className="was-btn-primary" onClick={fetchTemplates} disabled={listLoading}>
-                  <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>{listLoading?'Loading…':'Refresh'}
-                </button>
+                <div style={{display:'flex',gap:8}}>
+                  <button className="was-btn-secondary" onClick={async () => {
+                    try {
+                      const d = await whatsappService.seedTemplates(brandId);
+                      showSuccess('templateCreated');
+                      fetchTemplates();
+                    } catch(e) { showError('loadingFailed', e.message); }
+                  }}>
+                    Seed Default Templates
+                  </button>
+                  <button className="was-btn-primary" onClick={fetchTemplates} disabled={listLoading}>
+                    <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>{listLoading?'Loading…':'Refresh'}
+                  </button>
+                </div>
               </div>
               <div className="was-lib-toolbar">
                 <div className="was-search-wrap">
