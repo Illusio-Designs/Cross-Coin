@@ -170,3 +170,67 @@ exports.resolveConversation = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+// ── List templates from Meta ──────────────────────────────────────────────────
+exports.listTemplates = async (req, res) => {
+  try {
+    const brandId = req.query.brandId || req.brandId || 1;
+    const data = await whatsappService.listTemplates(brandId);
+    res.json({ success: true, templates: data.data || [] });
+  } catch (err) {
+    const msg = err.response?.data?.error?.message || err.message;
+    res.status(500).json({ success: false, message: msg });
+  }
+};
+
+// ── Create / submit template to Meta ─────────────────────────────────────────
+exports.createTemplate = async (req, res) => {
+  try {
+    const brandId = req.body.brandId || req.brandId || 1;
+    const { name, category, language, components } = req.body;
+    if (!name || !components) return res.status(400).json({ success: false, message: 'name and components are required' });
+    const result = await whatsappService.createTemplate({ name, category, language, components }, brandId);
+    res.json({ success: true, result });
+  } catch (err) {
+    const msg = err.response?.data?.error?.message || err.message;
+    res.status(500).json({ success: false, message: msg });
+  }
+};
+
+// ── Delete template from Meta ─────────────────────────────────────────────────
+exports.deleteTemplate = async (req, res) => {
+  try {
+    const brandId = req.query.brandId || req.brandId || 1;
+    const { name } = req.params;
+    const result = await whatsappService.deleteTemplate(name, brandId);
+    res.json({ success: true, result });
+  } catch (err) {
+    const msg = err.response?.data?.error?.message || err.message;
+    res.status(500).json({ success: false, message: msg });
+  }
+};
+
+// ── Seed default templates ────────────────────────────────────────────────────
+exports.seedTemplates = async (req, res) => {
+  try {
+    const brandId = req.body.brandId || req.brandId || 1;
+    const results = await whatsappService.seedDefaultTemplates(brandId);
+    res.json({ success: true, results });
+  } catch (err) {
+    const msg = err.response?.data?.error?.message || err.message;
+    res.status(500).json({ success: false, message: msg });
+  }
+};
+
+// ── Test connection ───────────────────────────────────────────────────────────
+exports.testConnection = async (req, res) => {
+  try {
+    const { phone, brandId = 1 } = req.body;
+    if (!phone) return res.status(400).json({ success: false, message: 'phone is required' });
+    const result = await whatsappService.testConnection(phone, brandId);
+    res.json({ success: true, result });
+  } catch (err) {
+    const msg = err.response?.data?.error?.message || err.message;
+    res.status(500).json({ success: false, message: msg });
+  }
+};
