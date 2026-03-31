@@ -44,7 +44,6 @@ const MENU = [
       { label: 'Coupons',       view: 'coupons' },
       { label: 'Reviews',       view: 'reviews' },
       { label: 'WhatsApp',      view: 'whatsapp' },
-      { label: 'WA Inbox',       view: 'whatsapp-chat' },
       { label: 'UTM Analytics', view: 'utm-analytics' },
     ],
   },
