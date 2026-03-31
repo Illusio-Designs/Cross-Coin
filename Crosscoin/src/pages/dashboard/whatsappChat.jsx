@@ -1,3 +1,5 @@
+// When accessed directly as a Next.js page, redirect to dashboard shell
+export { default } from './index';
 import { useState, useEffect, useRef } from 'react';
 import Loader from '../../components/common/Loader';
 import { showSuccess, showError } from '../../utils/toastNotification';
@@ -27,7 +29,7 @@ function formatTime(date) {
   return new Date(date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
-export default function WhatsAppChat() {
+export function WhatsAppChat() {
   const [conversations, setConversations] = useState([]);
   const [activeConv, setActiveConv] = useState(null);
   const [messages, setMessages] = useState([]);

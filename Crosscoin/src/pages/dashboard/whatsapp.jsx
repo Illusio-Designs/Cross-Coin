@@ -1,3 +1,6 @@
+// When accessed directly, render full dashboard shell
+export { default } from './index';
+
 import { useState, useEffect } from 'react';
 import { Modal, Button, Input, Select, Table } from '../../components/ui';
 import Loader from '../../components/common/Loader';
@@ -54,7 +57,7 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
 const EMPTY_FORM = { name:'', category:'UTILITY', language:'en', headerType:'none', headerText:'', body:'', footer:'', btn1Type:'', btn1Text:'', btn1Val:'', btn2Text:'' };
 
-export default function WhatsAppManager() {
+export function WhatsAppManager() {
   const [tab, setTab] = useState('create');
   const [activeKey, setActiveKey] = useState('order_confirm');
   const [brands, setBrands] = useState([]);

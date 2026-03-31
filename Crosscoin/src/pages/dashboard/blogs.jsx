@@ -1,3 +1,5 @@
+// When accessed directly as a Next.js page, redirect to dashboard shell
+export { default } from './index';
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { Modal, Button, Table, Pagination, Input, Select, Switch } from "../../components/ui";
@@ -104,7 +106,7 @@ function SectionsEditor({ value, onChange }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function Blogs() {
+export function Blogs() {
   const [tab, setTab] = useState('Posts');
   const [confirmState, setConfirmState] = useState(null);
   const [loading, setLoading] = useState(false);

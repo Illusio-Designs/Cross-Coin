@@ -1,3 +1,5 @@
+// When accessed directly as a Next.js page, redirect to dashboard shell
+export { default } from './index';
 import { useState, useEffect, useCallback } from "react";
 import { Button, Modal, Table, Pagination } from "../../components/ui";
 import Loader from "../../components/common/Loader";
@@ -17,7 +19,7 @@ const IC = {
 
 const EMPTY_FORM = { id: null, title: "", content: "" };
 
-export default function Policies() {
+export function Policies() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);

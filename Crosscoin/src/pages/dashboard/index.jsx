@@ -18,49 +18,58 @@ import Reviews from "./reviews/reviews";
 import SEO from "./seo/seo";
 import Slider from "./slider/slider";
 import MediaGallery from "./media/gallery";
-import Policies from "./policies";
+import { Policies } from "./policies";
 import UTMAnalytics from "./analytics/utmAnalytics";
-import LiveAnalytics from "./analytics";
-import BrandSettingsManager from "./brandSettings";
-import BrandManager from "./brands";
-import Blogs from "./blogs";
+import { LiveAnalytics } from "./analytics";
+import { BrandSettingsManager } from "./brandSettings";
+import { BrandManager } from "./brands";
+import { Blogs } from "./blogs";
 import AdminLookbooks from "./social/lookbooks";
 import AdminReels from "./social/reels";
 import AdminInstagramFeed from "./social/instagram";
-import WhatsAppManager from "./whatsapp";
-import WhatsAppChat from "./whatsappChat";
+import { WhatsAppManager } from "./whatsapp";
+import { WhatsAppChat } from "./whatsappChat";
 
 const SB_EXPANDED = 260;
 const SB_COLLAPSED = 72;
 
 function Dashboard() {
   const [currentView, setCurrentView] = useState('main');
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  // Initialize isMobile synchronously so hamburger renders on first paint
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Single init effect — runs once on mount
   useEffect(() => {
-    // Restore sidebar state from localStorage on client
-    const saved = localStorage.getItem('sidebarCollapsed');
-    if (saved !== null) {
-      setIsCollapsed(JSON.parse(saved));
+    const mobile = window.innerWidth <= 900;
+    setIsMobile(mobile);
+
+    if (mobile) {
+      setIsCollapsed(true);
+      // Clear any mobile-saved collapsed state so desktop isn't affected
+      localStorage.removeItem('sidebarCollapsed');
     } else {
-      setIsCollapsed(window.innerWidth <= 900);
+      const saved = localStorage.getItem('sidebarCollapsed');
+      setIsCollapsed(saved !== null ? JSON.parse(saved) : false);
     }
   }, []);
 
+  // Save to localStorage only on desktop
   useEffect(() => {
-    localStorage.setItem('sidebarCollapsed', JSON.stringify(isCollapsed));
-  }, [isCollapsed]);
+    if (!isMobile) {
+      localStorage.setItem('sidebarCollapsed', JSON.stringify(isCollapsed));
+    }
+  }, [isCollapsed, isMobile]);
 
+  // Resize handler
   useEffect(() => {
     const check = () => {
       const mobile = window.innerWidth <= 900;
       setIsMobile(mobile);
       if (mobile) setIsCollapsed(true);
     };
-    check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
@@ -79,7 +88,10 @@ function Dashboard() {
     document.documentElement.style.setProperty('--sb-w', `${sbw}px`);
   }, [sbw]);
 
-  const onViewChange = (v) => handleViewChange(v, setCurrentView);
+  const onViewChange = (v) => {
+    handleViewChange(v, setCurrentView);
+    if (isMobile) setIsMobileMenuOpen(false);
+  };
   const handleMobileMenuToggle = () => setIsMobileMenuOpen(p => !p);
 
   const handleToggleFullscreen = () => {
