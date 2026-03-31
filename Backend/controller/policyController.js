@@ -3,8 +3,9 @@ const { Op } = require('sequelize');
 
 exports.createPolicy = async (req, res) => {
   try {
-    const { title, content } = req.body;
-    const brand_id = req.brand ? req.brand.id : null;
+    const { title, content, brand_id: bodyBrandId } = req.body;
+    // Use brand from middleware, body, or default to 1
+    const brand_id = (req.brand && req.brand.id) ? req.brand.id : (bodyBrandId || 1);
     const policy = await Policy.create({ title, content, brand_id });
     res.status(201).json(policy);
   } catch (err) {
