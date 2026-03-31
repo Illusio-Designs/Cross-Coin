@@ -99,6 +99,7 @@ import "../styles/dashboard/brandTags.css";
 import "../styles/components/WhatsAppChat.css";
 import "../styles/dashboard/social.css";
 import "../styles/dashboard/whatsapp.css";
+import "../styles/dashboard/analytics.css";
 // Additional page CSS
 import "../styles/pages/Collections.css";
 import "../styles/pages/About.css";

@@ -1,0 +1,242 @@
+/* ============================================================
+   ANALYTICS PAGE — an-* class system
+   ============================================================ */
+
+/* ── Live pill ── */
+.an-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #09090b;
+  border: 1px solid rgba(255,255,255,.12);
+  font-size: 12px;
+  font-weight: 600;
+  color: #34d399;
+  font-family: 'DM Sans', sans-serif;
+}
+.an-live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16,185,129,.25);
+  animation: anPing 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes anPing {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(16,185,129,.25); }
+  50%       { box-shadow: 0 0 0 6px rgba(16,185,129,.08); }
+}
+
+/* ── Globe Hero ── */
+.an-globe-hero {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto 24px;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #09090b;
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+/* Visitor count overlay — top center */
+.an-globe-label {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  text-align: center;
+  pointer-events: none;
+}
+.an-globe-count {
+  display: block;
+  font-size: 72px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -3px;
+  /* MagicUI gradient text */
+  background: linear-gradient(to bottom, #ffffff 0%, rgba(180,180,180,0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  white-space: nowrap;
+}
+.an-globe-count-sub {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255,255,255,.45);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* Globe canvas fills the hero */
+.an-globe-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Bottom radial fade — same as MagicUI GlobeDemo */
+.an-globe-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 200%, rgba(0,0,0,0.55), rgba(255,255,255,0));
+  z-index: 3;
+}
+
+/* Legend bottom-left */
+.an-globe-legend {
+  position: absolute;
+  bottom: 16px;
+  left: 20px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.an-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(255,255,255,.55);
+  font-family: 'DM Sans', sans-serif;
+}
+.an-legend-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.an-legend-refresh {
+  margin-left: 8px;
+  color: rgba(255,255,255,.3);
+  font-size: 10px;
+}
+
+/* ── Stat Cards ── */
+.an-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.an-stat-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+.an-stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -.5px;
+  line-height: 1;
+}
+.an-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-top: 5px;
+}
+.an-stat-delta {
+  font-size: 12px;
+  margin-top: 5px;
+  font-weight: 500;
+}
+
+/* ── Bottom panels grid ── */
+.an-bottom-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.an-list-panel {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.an-list-title {
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  border-bottom: 1px solid #f0f0f5;
+}
+.an-list-rows {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.an-list-row {
+  display: grid;
+  grid-template-columns: 18px 1fr 70px 36px;
+  align-items: center;
+  gap: 8px;
+}
+.an-list-rank { font-size: 11px; color: #9ca3af; }
+.an-list-name { font-size: 12.5px; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.an-list-bar-wrap { height: 4px; background: #f3f4f6; border-radius: 999px; overflow: hidden; }
+.an-list-bar { height: 100%; background: #3b82f6; border-radius: 999px; transition: width 0.4s ease; }
+.an-list-val { font-size: 11px; color: #9ca3af; text-align: right; }
+
+/* ── Config Modal ── */
+.an-modal-bg {
+  position: fixed; inset: 0; z-index: 999;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(4px);
+  display: grid; place-items: center; padding: 16px;
+}
+.an-modal {
+  width: 100%; max-width: 500px;
+  background: #111115;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  padding: 24px;
+}
+.an-modal-title { color: #fff; font-size: 17px; font-weight: 700; margin: 0 0 6px; }
+.an-modal-sub   { color: #9ca3af; font-size: 13px; margin: 0 0 16px; line-height: 1.5; }
+.an-modal-fields { display: flex; flex-direction: column; gap: 10px; }
+.an-modal-input {
+  width: 100%; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12);
+  color: #e5e7eb; border-radius: 8px; padding: 10px 12px; font-size: 13px;
+  font-family: 'DM Sans', sans-serif; outline: none; box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.an-modal-input:focus { border-color: #10b981; }
+.an-modal-input::placeholder { color: #6b7280; }
+.an-modal-err { color: #f87171; font-size: 12px; margin: 8px 0 0; }
+.an-modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.an-btn {
+  padding: 9px 20px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+}
+.an-btn--ghost   { background: rgba(255,255,255,.08); color: #9ca3af; }
+.an-btn--ghost:hover { background: rgba(255,255,255,.14); }
+.an-btn--primary { background: #10b981; color: #fff; }
+.an-btn--primary:hover { background: #059669; }
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .an-stats-row   { grid-template-columns: repeat(2, 1fr); }
+  .an-bottom-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 640px) {
+  .an-globe-count { font-size: 48px; }
+  .an-stats-row   { grid-template-columns: repeat(2, 1fr); }
+  .an-bottom-grid { grid-template-columns: 1fr; }
+}
