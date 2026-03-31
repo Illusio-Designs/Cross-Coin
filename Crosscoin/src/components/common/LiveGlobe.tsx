@@ -98,6 +98,7 @@ export default function LiveGlobe({
   // ── Fetch GA4 real-time data ──────────────────────────────────────────────
 
   const fetchGA4 = useCallback(async () => {
+    if (!accessToken) return; // wait until token is available
     try {
       const body = {
         dimensions: [{ name: "city" }, { name: "country" }],
