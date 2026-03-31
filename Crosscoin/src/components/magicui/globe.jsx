@@ -1,78 +1,125 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export function cn(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
-const DARK_CONFIG = {
-  width: 800,
-  height: 800,
+// ─── Shopify-style globe config ───────────────────────────────────────────────
+const BASE_CONFIG = {
+  width: 900,
+  height: 900,
   devicePixelRatio: 2,
-  phi: 0,
-  theta: 0.3,
-  dark: 1,
-  diffuse: 0.4,
-  mapSamples: 20000,
-  mapBrightness: 1.6,
-  mapBaseBrightness: 0.05,
-  baseColor: [0.1, 0.18, 0.32],
-  markerColor: [0.18, 0.9, 0.55],
-  glowColor: [0.05, 0.12, 0.28],
+  phi: 0.4,
+  theta: 0.25,
+  dark: 0,
+  diffuse: 1.8,
+  mapSamples: 24000,
+  mapBrightness: 2.2,
+  mapBaseBrightness: 0.08,
+  baseColor: [0.88, 0.96, 1.0],       // light blue-white base
+  markerColor: [0.25, 0.45, 1.0],     // blue visitor dots
+  glowColor: [0.72, 0.88, 1.0],       // soft blue glow
   scale: 1,
   offset: [0, 0],
   opacity: 1,
 };
 
-export default function Globe({ className, config = {}, markers = [], phi: fixedPhi = 0, theta: fixedTheta = 0.3 }) {
-  const canvasRef = useRef(null);
-  const phiRef = useRef(fixedPhi);
-  const globeRef = useRef(null);
-  const pointerDown = useRef(false);
+export default function Globe({
+  className,
+  config = {},
+  markers = [],
+  arcs = [],
+  phi: fixedPhi,
+  theta: fixedTheta = 0.25,
+  autoRotate = false,
+  rotateSpeed = 0.003,
+  scale = 1,
+}) {
+  const canvasRef    = useRef(null);
+  const globeRef     = useRef(null);
+  const phiRef       = useRef(fixedPhi ?? 0.4);
+  const thetaRef     = useRef(fixedTheta);
+  const scaleRef     = useRef(scale);
+  const pointerDown  = useRef(false);
   const pointerStartX = useRef(0);
-  const phiOnPointerDown = useRef(fixedPhi);
+  const pointerStartY = useRef(0);
+  const phiOnDown    = useRef(phiRef.current);
+  const thetaOnDown  = useRef(thetaRef.current);
 
-  useEffect(() => { phiRef.current = fixedPhi; }, [fixedPhi]);
+  // sync external phi/theta
+  useEffect(() => { if (fixedPhi !== undefined) phiRef.current = fixedPhi; }, [fixedPhi]);
+  useEffect(() => { thetaRef.current = fixedTheta; }, [fixedTheta]);
+  useEffect(() => { scaleRef.current = scale; }, [scale]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
+    let destroyed = false;
+
     import("cobe").then(({ default: createGlobe }) => {
+      if (destroyed) return;
+
       globeRef.current = createGlobe(canvasRef.current, {
-        ...DARK_CONFIG,
+        ...BASE_CONFIG,
         ...config,
         phi: phiRef.current,
-        theta: fixedTheta,
-        markers: markers.map((m) => ({ location: m.location, size: m.size, ...(m.color ? { color: m.color } : {}) })),
+        theta: thetaRef.current,
+        scale: scaleRef.current,
+        markers: markers.map(m => ({
+          location: m.location,
+          size: m.size,
+          ...(m.color ? { color: m.color } : {}),
+        })),
         onRender: (state) => {
-          state.phi = phiRef.current;
-          state.theta = fixedTheta;
-          state.markers = markers.map((m) => ({ location: m.location, size: m.size, ...(m.color ? { color: m.color } : {}) }));
+          if (autoRotate && !pointerDown.current) {
+            phiRef.current += rotateSpeed;
+          }
+          state.phi   = phiRef.current;
+          state.theta = thetaRef.current;
+          state.scale = scaleRef.current;
+          state.markers = markers.map(m => ({
+            location: m.location,
+            size: m.size,
+            ...(m.color ? { color: m.color } : {}),
+          }));
         },
       });
     });
-    return () => { globeRef.current?.destroy(); };
-  }, [markers, fixedTheta, config]);
 
-  const handlePointerDown = useCallback((e) => {
-    pointerDown.current = true;
+    return () => {
+      destroyed = true;
+      globeRef.current?.destroy();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [markers, autoRotate, rotateSpeed]);
+
+  // ── Drag to rotate (both X and Y axis) ──
+  const onPointerDown = useCallback((e) => {
+    pointerDown.current  = true;
     pointerStartX.current = e.clientX;
-    phiOnPointerDown.current = phiRef.current;
+    pointerStartY.current = e.clientY;
+    phiOnDown.current    = phiRef.current;
+    thetaOnDown.current  = thetaRef.current;
     e.target.setPointerCapture(e.pointerId);
   }, []);
 
-  const handlePointerMove = useCallback((e) => {
+  const onPointerMove = useCallback((e) => {
     if (!pointerDown.current) return;
-    phiRef.current = phiOnPointerDown.current + (e.clientX - pointerStartX.current) / 300;
+    const dx = (e.clientX - pointerStartX.current) / 250;
+    const dy = (e.clientY - pointerStartY.current) / 250;
+    phiRef.current   = phiOnDown.current   + dx;
+    thetaRef.current = Math.max(-1.2, Math.min(1.2, thetaOnDown.current - dy));
   }, []);
 
-  const handlePointerUp = useCallback(() => { pointerDown.current = false; }, []);
+  const onPointerUp = useCallback(() => { pointerDown.current = false; }, []);
 
   return (
     <canvas
       ref={canvasRef}
       className={cn("cursor-grab active:cursor-grabbing", className)}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerLeave={onPointerUp}
       style={{ width: "100%", height: "100%", contain: "layout paint size" }}
     />
   );
