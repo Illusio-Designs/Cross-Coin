@@ -375,12 +375,12 @@
   }
 
   .sb--open {
-    transform: translateX(0);
+    transform: translateX(0) !important;
     box-shadow: 4px 0 24px rgba(0,0,0,0.15);
   }
 
   .sb--collapsed {
-    width: 270px;
+    width: 200px;
     transform: translateX(-100%);
   }
 
