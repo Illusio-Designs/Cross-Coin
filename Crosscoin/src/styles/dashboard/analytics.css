@@ -28,20 +28,22 @@
   50%       { box-shadow: 0 0 0 6px rgba(16,185,129,.08); }
 }
 
-/* ── Globe Hero ── */
+// ─── Globe Hero (MagicUI GlobeDemo style) ── */
 .an-globe-hero {
   position: relative;
   width: 100%;
-  max-width: 600px;
-  margin: 0 auto 24px;
-  aspect-ratio: 1 / 1;
+  max-width: 560px;
+  margin: 0 auto 28px;
+  /* tall enough to show text + half globe */
+  height: 420px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   overflow: hidden;
   border-radius: 20px;
-  background: #09090b;
-  border: 1px solid rgba(255,255,255,.08);
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  padding: 32px 40px 0;
 }
 
 /* Visitor count overlay — top center */
@@ -53,44 +55,46 @@
   z-index: 4;
   text-align: center;
   pointer-events: none;
+  white-space: nowrap;
 }
 .an-globe-count {
   display: block;
-  font-size: 72px;
+  font-size: 80px;
   font-weight: 700;
   line-height: 1;
-  letter-spacing: -3px;
-  /* MagicUI gradient text */
-  background: linear-gradient(to bottom, #ffffff 0%, rgba(180,180,180,0.7) 100%);
+  letter-spacing: -4px;
+  /* Light mode gradient — dark top, fades to gray */
+  background: linear-gradient(to bottom, #111827 0%, rgba(107,114,128,0.7) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  white-space: nowrap;
 }
 .an-globe-count-sub {
   display: block;
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(255,255,255,.45);
-  letter-spacing: .08em;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  letter-spacing: .1em;
   text-transform: uppercase;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
-/* Globe canvas fills the hero */
+/* Globe canvas — positioned at bottom, oversized so only top half shows */
 .an-globe-canvas {
-  position: absolute;
-  inset: 0;
-  width: 100% !important;
-  height: 100% !important;
+  position: absolute !important;
+  bottom: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 500px !important;
+  height: 500px !important;
 }
 
-/* Bottom radial fade — same as MagicUI GlobeDemo */
+/* Bottom radial fade */
 .an-globe-overlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(circle at 50% 200%, rgba(0,0,0,0.55), rgba(255,255,255,0));
+  background: radial-gradient(circle at 50% 200%, rgba(249,250,251,0.2), rgba(255,255,255,0));
   z-index: 3;
 }
 
@@ -109,17 +113,11 @@
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: rgba(255,255,255,.55);
+  color: #6b7280;
   font-family: 'DM Sans', sans-serif;
 }
-.an-legend-dot {
-  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
-}
-.an-legend-refresh {
-  margin-left: 8px;
-  color: rgba(255,255,255,.3);
-  font-size: 10px;
-}
+.an-legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.an-legend-refresh { margin-left: 8px; color: #9ca3af; font-size: 10px; }
 
 /* ── Stat Cards ── */
 .an-stats-row {

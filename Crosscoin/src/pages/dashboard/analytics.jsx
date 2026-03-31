@@ -217,12 +217,23 @@ export function LiveAnalytics() {
           <span className="an-globe-count-sub">visitors right now</span>
         </div>
 
-        {/* Globe */}
+        {/* Globe — light mode config */}
         <Globe
           className="an-globe-canvas"
           markers={markers}
           phi={0.4}
           theta={0.25}
+          config={{
+            dark: 0,
+            diffuse: 1.2,
+            mapSamples: 16000,
+            mapBrightness: 1.8,
+            mapBaseBrightness: 0.1,
+            baseColor: [1, 1, 1],
+            markerColor: [1, 0.5, 0.1],
+            glowColor: [1, 1, 1],
+            scale: 1,
+          }}
         />
 
         {/* Bottom radial gradient overlay */}
