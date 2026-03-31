@@ -1,10 +1,10 @@
 // When accessed directly as a Next.js page, redirect to dashboard shell
 export { default } from './index';
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Table, Pagination } from "../../components/ui";
+import { Button, Modal, Table, Pagination, Select } from "../../components/ui";
 import Loader from "../../components/common/Loader";
 import { ConfirmModal } from '../../components/common/AlertModal';
-import { policyService } from "../../services";
+import { policyService, brandService } from "../../services";
 import dynamic from "next/dynamic";
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
@@ -29,6 +29,17 @@ export function Policies() {
   const [error, setError] = useState(null);
   const [policies, setPolicies] = useState([]);
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [brands, setBrands] = useState([]);
+  const [brandId, setBrandId] = useState(null);
+
+  useEffect(() => {
+    brandService.getAllBrands(true).then(r => {
+      if (r.success && r.data?.length) {
+        setBrands(r.data);
+        setBrandId(r.data[0].id);
+      }
+    }).catch(() => {});
+  }, []);
 
   const fetchPolicies = async () => {
     try {
@@ -86,7 +97,7 @@ export function Policies() {
     try {
       setLoading(true);
       if (formData.id) await policyService.updatePolicy(formData.id, { title: formData.title, content: formData.content });
-      else await policyService.createPolicy({ title: formData.title, content: formData.content });
+      else await policyService.createPolicy({ title: formData.title, content: formData.content, brand_id: brandId || 1 });
       await fetchPolicies();
       handleModalClose();
     } catch (err) { setError(err.message); }
@@ -128,6 +139,11 @@ export function Policies() {
             </div>
           </div>
           <div className="sl-header-right">
+            {brands.length > 1 && (
+              <select className="bset-brand-select" value={brandId || ''} onChange={e => setBrandId(Number(e.target.value))}>
+                {brands.map(b => <option key={b.id} value={b.id}>{b.display_name || b.name}</option>)}
+              </select>
+            )}
             <div className="sl-search-wrap">
               <span className="sl-search-icon">{IC.search}</span>
               <input type="text" className="sl-search-input" placeholder="Search policies..." value={search} onChange={e => setSearch(e.target.value)} />
