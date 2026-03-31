@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Fetch GA4 credentials from backend Brand Settings
     const settingsRes = await fetch(
-      `${BACKEND}/api/admin/brand-settings?brandId=${brandId}&category=analytics`,
+      `${BACKEND}/api/admin/brand-settings/category/analytics?brandId=${brandId}`,
       { headers: { Authorization: authHeader, "Content-Type": "application/json" } }
     );
 
