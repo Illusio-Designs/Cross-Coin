@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import createGlobe, { COBEOptions } from "cobe";
+import type { COBEOptions } from "cobe";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -214,31 +214,37 @@ export default function LiveGlobe({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const config: COBEOptions = {
-      devicePixelRatio: 2,
-      width: canvas.offsetWidth * 2,
-      height: canvas.offsetHeight * 2,
-      phi: 1.4,
-      theta: 0.2,
-      dark: 1,
-      diffuse: 1.2,
-      mapSamples: 16000,
-      mapBrightness: 6,
-      baseColor: [0.06, 0.08, 0.14],
-      markerColor: [0.2, 0.9, 0.65],
-      glowColor: [0.12, 0.2, 0.35],
-      markers: markersRef.current,
-      onRender(state) {
-        state.phi = phiRef.current;
-        phiRef.current += 0.003;
-        state.markers = markersRef.current;
-      },
-    };
+    let globe: ReturnType<any> | null = null;
 
-    globeRef.current = createGlobe(canvas, config);
+    import("cobe").then(({ default: createGlobe }) => {
+      if (!canvasRef.current) return;
+      const config: COBEOptions = {
+        devicePixelRatio: 2,
+        width: canvas.offsetWidth * 2,
+        height: canvas.offsetHeight * 2,
+        phi: 1.4,
+        theta: 0.2,
+        dark: 1,
+        diffuse: 1.2,
+        mapSamples: 16000,
+        mapBrightness: 6,
+        baseColor: [0.06, 0.08, 0.14],
+        markerColor: [0.2, 0.9, 0.65],
+        glowColor: [0.12, 0.2, 0.35],
+        markers: markersRef.current,
+        onRender(state) {
+          state.phi = phiRef.current;
+          phiRef.current += 0.003;
+          state.markers = markersRef.current;
+        },
+      };
+      globe = createGlobe(canvas, config);
+      globeRef.current = globe;
+    });
 
     return () => {
-      globeRef.current?.destroy();
+      globe?.destroy();
+      globeRef.current = null;
     };
   }, []);
 
