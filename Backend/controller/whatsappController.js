@@ -294,6 +294,48 @@ exports.seedTemplates = async (req, res) => {
   }
 };
 
+// ─── Customer contact (website widget — takes phone, sends WA message) ───────
+exports.customerContact = async (req, res) => {
+  try {
+    const { phone, message, name, brandId = 1 } = req.body;
+    if (!phone?.trim()) return res.status(400).json({ success: false, message: 'Phone number is required' });
+    if (!message?.trim()) return res.status(400).json({ success: false, message: 'Message is required' });
+
+    // Send the message to the customer via WhatsApp
+    const result = await whatsappService.sendTextMessage(phone.trim(), message.trim(), brandId);
+
+    // Save conversation + message in DB so it appears in dashboard inbox
+    const [conv] = await WhatsappConversation.findOrCreate({
+      where: { customer_phone: whatsappService.formatE164(phone.trim()).replace('+', ''), brand_id: brandId },
+      defaults: {
+        customer_name:   name?.trim() || null,
+        wa_contact_id:   whatsappService.formatE164(phone.trim()).replace('+', ''),
+        last_message:    message.trim(),
+        last_message_at: new Date(),
+        unread_count:    0,
+        status:          'open',
+      },
+    });
+
+    await conv.update({ last_message: message.trim(), last_message_at: new Date(), status: 'open' });
+
+    await WhatsappMessage.create({
+      conversation_id: conv.id,
+      wa_message_id:   result?.messages?.[0]?.id || null,
+      direction:       'outbound',
+      type:            'text',
+      body:            message.trim(),
+      status:          'sent',
+      sent_at:         new Date(),
+    });
+
+    logger.info(`WhatsApp widget contact [${phone}]: ${message.trim()}`);
+    res.json({ success: true, message: 'Message sent to your WhatsApp successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: errMsg(err) });
+  }
+};
+
 // ─── Test connection ──────────────────────────────────────────────────────────
 exports.testConnection = async (req, res) => {
   try {

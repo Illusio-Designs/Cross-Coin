@@ -1,106 +1,32 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function formatTime(date) {
-  if (!date) return '';
-  return new Date(date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-}
-
-// ── WhatsApp Chat Widget ──────────────────────────────────────────────────────
 export default function WhatsAppChat() {
   const [open, setOpen]       = useState(false);
-  const [convId, setConvId]   = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [input, setInput]     = useState('');
+  const [showGreet, setShowGreet] = useState(true);
+  const [phone, setPhone]     = useState('');
+  const [message, setMessage] = useState('Hi, I need help with my order.');
+  const [name, setName]       = useState('');
   const [sending, setSending] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [showGreet, setShowGreet] = useState(false);
-  const messagesEndRef = useRef(null);
-  const pollRef = useRef(null);
+  const [sent, setSent]       = useState(false);
+  const [error, setError]     = useState('');
 
-  // Show greeting bubble after 3s
-  useEffect(() => {
-    const t = setTimeout(() => setShowGreet(true), 3000);
-    return () => clearTimeout(t);
-  }, []);
-
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Poll for new messages when chat is open
-  useEffect(() => {
-    if (!open || !convId) return;
-    pollRef.current = setInterval(() => fetchMessages(convId), 8000);
-    return () => clearInterval(pollRef.current);
-  }, [open, convId]);
-
-  const fetchMessages = async (id) => {
-    try {
-      const res = await fetch(`${API}/api/whatsapp/conversations/${id}/messages`, { credentials: 'include' });
-      const data = await res.json();
-      if (data.success) setMessages(data.messages || []);
-    } catch { /* silent */ }
-  };
-
-  const startOrOpenChat = async () => {
-    setOpen(true);
-    setShowGreet(false);
-    if (convId) return;
-    // Add a welcome message locally while we wait
-    setMessages([{
-      id: 'welcome',
-      direction: 'inbound',
-      body: '👋 Hi! Welcome to Cross Coin. How can we help you today?',
-      sent_at: new Date().toISOString(),
-    }]);
-  };
-
-  const sendMessage = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const text = input.trim();
-    if (!text || sending) return;
-    setSending(true);
-    setInput('');
-
-    // Optimistic UI
-    const tempMsg = { id: 'temp_' + Date.now(), direction: 'outbound', body: text, sent_at: new Date().toISOString(), status: 'sending' };
-    setMessages(prev => [...prev, tempMsg]);
-
+    if (phone.length < 10) { setError('Enter a valid 10-digit number'); return; }
+    if (!message.trim())   { setError('Message cannot be empty'); return; }
+    setSending(true); setError('');
     try {
-      if (convId) {
-        // Existing conversation — send reply
-        const res = await fetch(`${API}/api/whatsapp/conversations/${convId}/reply`, {
-          method: 'POST', credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text, brandId: 1 }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          setMessages(prev => prev.map(m => m.id === tempMsg.id ? { ...data.message, direction: 'outbound' } : m));
-        }
-      } else {
-        // New conversation — use test endpoint to initiate
-        const res = await fetch(`${API}/api/whatsapp/customer/message`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text, brandId: 1 }),
-        });
-        const data = await res.json();
-        if (data.success && data.conversationId) {
-          setConvId(data.conversationId);
-          await fetchMessages(data.conversationId);
-        } else {
-          // Fallback: show sent confirmation
-          setMessages(prev => prev.map(m => m.id === tempMsg.id ? { ...m, status: 'sent' } : m));
-        }
-      }
-    } catch {
-      setMessages(prev => prev.map(m => m.id === tempMsg.id ? { ...m, status: 'failed' } : m));
-    }
+      const res = await fetch(`${API}/api/whatsapp/customer/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, message, name, brandId: 1 }),
+      });
+      const data = await res.json();
+      if (data.success) { setSent(true); }
+      else setError(data.message || 'Failed to send. Try again.');
+    } catch { setError('Network error. Please try again.'); }
     setSending(false);
   };
 
@@ -108,7 +34,7 @@ export default function WhatsAppChat() {
     <>
       {/* Greeting bubble */}
       {showGreet && !open && (
-        <div className="wachat-greet" onClick={startOrOpenChat}>
+        <div className="wachat-greet" onClick={() => { setOpen(true); setShowGreet(false); }}>
           <span>👋 Hi! Need help? Chat with us</span>
           <button className="wachat-greet-close" onClick={e => { e.stopPropagation(); setShowGreet(false); }}>×</button>
         </div>
@@ -126,9 +52,7 @@ export default function WhatsAppChat() {
             </div>
             <div className="wachat-header-info">
               <div className="wachat-header-name">Cross Coin Support</div>
-              <div className="wachat-header-status">
-                <span className="wachat-online-dot" />Typically replies instantly
-              </div>
+              <div className="wachat-header-status"><span className="wachat-online-dot" />Typically replies instantly</div>
             </div>
             <button className="wachat-close-btn" onClick={() => setOpen(false)}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -137,48 +61,54 @@ export default function WhatsAppChat() {
             </button>
           </div>
 
-          {/* Messages */}
-          <div className="wachat-messages">
-            {loading && <div className="wachat-loading">Loading…</div>}
-            {messages.map((msg, i) => (
-              <div key={msg.id || i} className={`wachat-msg wachat-msg--${msg.direction}`}>
-                <div className="wachat-bubble">{msg.body}</div>
-                <div className="wachat-meta">
-                  {formatTime(msg.sent_at || msg.createdAt)}
-                  {msg.direction === 'outbound' && (
-                    <span className={`wachat-tick${msg.status === 'read' ? ' wachat-tick--read' : ''}`}>
-                      {msg.status === 'sending' ? ' ○' : msg.status === 'failed' ? ' ✗' : ' ✓✓'}
-                    </span>
-                  )}
-                </div>
+          {/* Body */}
+          <div className="wachat-form-body">
+            {sent ? (
+              <div className="wachat-success">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="40" height="40">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <p>Message sent to your WhatsApp!</p>
+                <span>We'll reply shortly on <strong>+91 {phone}</strong></span>
+                <button className="wachat-reset-btn" onClick={() => { setSent(false); setPhone(''); setMessage('Hi, I need help with my order.'); setName(''); }}>Send another</button>
               </div>
-            ))}
-            <div ref={messagesEndRef} />
+            ) : (
+              <form onSubmit={handleSubmit} className="wachat-form">
+                <p className="wachat-form-desc">Enter your number and we'll send you a WhatsApp message.</p>
+                <div className="wachat-field">
+                  <label>Your Name (optional)</label>
+                  <input value={name} onChange={e => setName(e.target.value)} placeholder="Rahul Shah" />
+                </div>
+                <div className="wachat-field">
+                  <label>WhatsApp Number *</label>
+                  <div className="wachat-phone-row">
+                    <span className="wachat-prefix">+91</span>
+                    <input
+                      value={phone}
+                      onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      placeholder="10-digit number"
+                      inputMode="numeric"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="wachat-field">
+                  <label>Message *</label>
+                  <textarea value={message} onChange={e => setMessage(e.target.value)} rows={3} required />
+                </div>
+                {error && <div className="wachat-error">{error}</div>}
+                <button type="submit" className="wachat-submit-btn" disabled={sending || phone.length < 10}>
+                  {sending ? 'Sending…' : 'Send on WhatsApp'}
+                </button>
+              </form>
+            )}
           </div>
-
-          {/* Input */}
-          <form className="wachat-input-wrap" onSubmit={sendMessage}>
-            <input
-              className="wachat-input"
-              placeholder="Type a message…"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(e); } }}
-              autoFocus
-            />
-            <button type="submit" className="wachat-send" disabled={sending || !input.trim()}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-              </svg>
-            </button>
-          </form>
-
-          <div className="wachat-footer">Powered by Cart Holder</div>
+          <div className="wachat-footer">Powered by Cross Coin</div>
         </div>
       )}
 
-      {/* FAB Button */}
-      <button className={`wachat-fab${open ? ' wachat-fab--open' : ''}`} onClick={() => open ? setOpen(false) : startOrOpenChat()} aria-label="Chat on WhatsApp">
+      {/* FAB */}
+      <button className={`wachat-fab${open ? ' wachat-fab--open' : ''}`} onClick={() => { setOpen(o => !o); setShowGreet(false); }} aria-label="Chat on WhatsApp">
         {open ? (
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
