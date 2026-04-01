@@ -74,6 +74,14 @@ export default function AnalyticsPage() {
   }, [mounted, ga4Configured, initMap]);
 
   // Add ping marker on map
+  const mapMarkers = useRef([]);
+
+  const clearPings = useCallback(() => {
+    if (!leafletMap.current) return;
+    mapMarkers.current.forEach(m => leafletMap.current.removeLayer(m));
+    mapMarkers.current = [];
+  }, []);
+
   const addPing = useCallback(async (lat, lng, city) => {
     if (!leafletMap.current) return;
     const L = (await import("leaflet")).default;
@@ -86,9 +94,7 @@ export default function AnalyticsPage() {
     const marker = L.marker([lat, lng], { icon })
       .bindTooltip(city, { permanent: false, direction: "top" })
       .addTo(leafletMap.current);
-    setTimeout(() => {
-      if (leafletMap.current) leafletMap.current.removeLayer(marker);
-    }, 4000);
+    mapMarkers.current.push(marker);
   }, []);
 
   // Load brands (for multi-brand selector only — default stays brandId=1)
@@ -172,6 +178,7 @@ export default function AnalyticsPage() {
       };
 
       if (leafletMap.current) {
+        clearPings();
         // Country-level fallback for cities not in the list
         const COUNTRY_COORDS = {
           India: [20.593, 78.962], "United States": [37.09, -95.712],
@@ -192,7 +199,7 @@ export default function AnalyticsPage() {
         });
       }
     } catch {}
-  }, [accessToken, propertyId, addPing]);
+  }, [accessToken, propertyId, addPing, clearPings]);
 
   // Fetch today's full report (every 5 min)
   const fetchGA4Stats = useCallback(async () => {
@@ -208,7 +215,7 @@ export default function AnalyticsPage() {
       const pageFilter = { andGroup: { expressions: [excludeDashboard, excludeAuth] } };
 
       const [mainData, yestData, pagesData, srcData, locData] = await Promise.all([
-        post({ dateRanges: [{ startDate: "today", endDate: "today" }], metrics: [{ name: "sessions" }, { name: "screenPageViews" }, { name: "activeUsers" }, { name: "bounceRate" }, { name: "averageSessionDuration" }, { name: "newUsers" }] }),
+        post({ dateRanges: [{ startDate: "today", endDate: "today" }], metrics: [{ name: "sessions" }, { name: "screenPageViews" }, { name: "activeUsers" }, { name: "bounceRate" }, { name: "averageSessionDuration" }, { name: "newUsers" }, { name: "purchaseRevenue" }, { name: "transactions" }] }),
         post({ dateRanges: [{ startDate: "yesterday", endDate: "yesterday" }], metrics: [{ name: "sessions" }] }),
         post({ dateRanges: [{ startDate: "today", endDate: "today" }], dimensions: [{ name: "pagePath" }], metrics: [{ name: "screenPageViews" }], orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }], limit: 6, dimensionFilter: pageFilter }),
         post({ dateRanges: [{ startDate: "today", endDate: "today" }], dimensions: [{ name: "sessionDefaultChannelGroup" }], metrics: [{ name: "sessions" }], orderBys: [{ metric: { metricName: "sessions" }, desc: true }], limit: 5 }),
@@ -222,11 +229,13 @@ export default function AnalyticsPage() {
       const bounceRate = (parseFloat(mv[3]?.value || "0") * 100).toFixed(1);
       const avgSession = Math.round(parseFloat(mv[4]?.value || "0"));
       const newUsers   = parseInt(mv[5]?.value || "0", 10);
+      const revenue    = parseFloat(mv[6]?.value || "0");
+      const orders     = parseInt(mv[7]?.value || "0", 10);
       const returning  = Math.max(0, active - newUsers);
       const yest       = parseInt(yestData.rows?.[0]?.metricValues?.[0]?.value || "1", 10);
       const sessionsDelta = yest > 0 ? `${sessions >= yest ? "+" : ""}${(((sessions - yest) / yest) * 100).toFixed(1)}% vs yesterday` : "";
 
-      setStats({ active, sessions, pageviews, bounceRate, avgSession, newUsers, returning, sessionsDelta });
+      setStats({ active, sessions, pageviews, bounceRate, avgSession, newUsers, returning, sessionsDelta, revenue, orders });
       setPages((pagesData.rows || []).map(r => ({ label: r.dimensionValues[0]?.value || "/", val: parseInt(r.metricValues[0]?.value || "0", 10) })));
       setSources((srcData.rows || []).map(r => ({ label: r.dimensionValues[0]?.value || "Other", val: parseInt(r.metricValues[0]?.value || "0", 10) })));
       setTopLocations((locData.rows || []).map(r => ({ name: `${r.dimensionValues[0]?.value} · ${r.dimensionValues[1]?.value}`, val: parseInt(r.metricValues[0]?.value || "0", 10) })));
@@ -306,14 +315,14 @@ export default function AnalyticsPage() {
         {/* Stat cards */}
         {(stats || realtimeUsers !== null) && (
           <div className="an-stats-row" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
-            <StatCard label="Active Now"     value={realtimeUsers ?? "—"}                accent="#CE1E36" />
-            <StatCard label="Sessions Today" value={stats ? fmt(stats.sessions) : "—"}   delta={stats?.sessionsDelta} />
+            <StatCard label="Active Now"     value={realtimeUsers ?? "—"}                                                                                              accent="#CE1E36" />
+            <StatCard label="Sessions Today" value={stats ? fmt(stats.sessions) : "—"}                                                                                delta={stats?.sessionsDelta} />
+            <StatCard label="Orders Today"   value={stats ? stats.orders : "—"}                                                                                       accent="#180D3E" />
+            <StatCard label="Revenue Today"  value={stats && stats.revenue > 0 ? `₹${stats.revenue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : "—"}    accent="#16a34a" />
             <StatCard label="Pageviews"      value={stats ? fmt(stats.pageviews) : "—"}  />
             <StatCard label="New Users"      value={stats ? fmt(stats.newUsers) : "—"}   />
-            <StatCard label="Returning"      value={stats ? fmt(stats.returning) : "—"}  />
             <StatCard label="Bounce Rate"    value={stats ? `${stats.bounceRate}%` : "—"} />
             <StatCard label="Avg Session"    value={stats ? fmtTime(stats.avgSession) : "—"} />
-            <StatCard label="Active Users"   value={stats ? fmt(stats.active) : "—"}     />
           </div>
         )}
 
