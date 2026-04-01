@@ -115,42 +115,60 @@ module.exports.register = async (req, res) => {
     }
 };
 
-// **User Login**
+// **Mobile OTP Login (consumer) — OTP verified on frontend via MSG91**
 module.exports.login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { phone } = req.body;
+        if (!phone) return res.status(400).json({ message: 'Phone number is required' });
 
-        if (!email || !password) {
-            return res.status(400).json({ message: 'All fields are required' });
+        const digits = String(phone).replace(/\D/g, '').slice(-10);
+        if (digits.length !== 10) return res.status(400).json({ message: 'Invalid phone number' });
+
+        // Find or create user by phone
+        let user = await User.findOne({ where: { phone: digits } });
+
+        if (!user) {
+            // Auto-register new user with phone
+            user = await User.create({
+                username: 'user_' + digits.slice(-6) + '_' + Date.now().toString().slice(-4),
+                email: digits + '@phone.crosscoin.in',
+                phone: digits,
+                role: 'consumer',
+            });
+
+            // Guest-to-member: re-assign guest orders by phone
+            const allGuests = await GuestUser.findAll({ where: { status: 'active' } });
+            const matchedIds = [];
+            for (const g of allGuests) {
+                const gPhone = String(g.phone || '').replace(/\D/g, '').slice(-10);
+                if (gPhone === digits) matchedIds.push(g.id);
+            }
+            if (matchedIds.length > 0) {
+                await GuestUser.update({ status: 'converted', convertedAt: new Date() }, { where: { id: matchedIds } });
+                await Order.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: matchedIds } });
+                const delivered = await Order.findAll({ where: { user_id: user.id, status: 'delivered' } });
+                for (const o of delivered) {
+                    await loyaltyService.creditPoints(user.id, o.id, o.final_amount, o.brand_id || 1);
+                }
+            }
         }
 
-        const user = await User.findOne({ where: { email } });
-        if (!user) return res.status(400).json({ message: 'User not found' });
-
-        // Only allow login for consumer role
         if (user.role !== 'consumer') {
             return res.status(403).json({ message: 'Only consumer accounts can login here.' });
         }
 
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
-
         const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role }, 
-            process.env.JWT_SECRET, 
-            { expiresIn: '1d' }
+            { id: user.id, email: user.email, role: user.role },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
         );
-
-        // Issue refresh token (7-day expiry)
         const refreshToken = await issueRefreshToken(user);
-
-        // Remove password from response
         const userResponse = user.toJSON();
         delete userResponse.password;
 
         res.json({ message: 'Login successful', token, refreshToken, user: userResponse });
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('Mobile login error:', error);
         res.status(500).json({ message: 'Login failed', error: error.message });
     }
 };
