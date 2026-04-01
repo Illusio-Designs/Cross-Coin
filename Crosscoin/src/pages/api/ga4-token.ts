@@ -31,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const list: { key: string; value: string }[] = settingsData.data || settingsData || [];
 
     const email  = list.find(s => s.key === "GA4_SA_EMAIL")?.value;
-    const rawKey = list.find(s => s.key === "GA4_SA_PRIVATE_KEY")?.value?.replace(/\\n/g, "\n");
+    const rawKey = list.find(s => s.key === "GA4_SA_PRIVATE_KEY")?.value;
 
     if (!email || !rawKey) {
       return res.status(400).json({
@@ -39,8 +39,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
+    // Normalize private key — handle both literal \n and escaped \\n
+    const normalizedKey = rawKey
+      .replace(/\\n/g, "\n")           // literal \n → newline
+      .replace(/\r\n/g, "\n")          // CRLF → LF
+      .trim();
+
+    // Validate key format before attempting import
+    if (!normalizedKey.includes("-----BEGIN PRIVATE KEY-----")) {
+      return res.status(400).json({
+        error: "GA4_SA_PRIVATE_KEY format is invalid. Must be a PEM private key starting with -----BEGIN PRIVATE KEY-----"
+      });
+    }
+
     // Mint a Google OAuth2 access token via JWT assertion
-    const privateKey = await importPKCS8(rawKey, "RS256");
+    let privateKey;
+    try {
+      privateKey = await importPKCS8(normalizedKey, "RS256");
+    } catch (keyErr: any) {
+      return res.status(400).json({
+        error: `Failed to parse private key: ${keyErr.message}. Check GA4_SA_PRIVATE_KEY in Brand Settings.`
+      });
+    }
     const now = Math.floor(Date.now() / 1000);
 
     const jwt = await new SignJWT({
