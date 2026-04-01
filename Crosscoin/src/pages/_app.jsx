@@ -94,6 +94,8 @@ import "../styles/dashboard/pages.css";
 import "../styles/dashboard/brands.css";
 import "../styles/dashboard/brandSettings.css";
 import "../styles/dashboard/brandTags.css";
+import "../styles/dashboard/brandAssignment.css";
+import "../styles/dashboard/seo.css";
 import "../styles/components/WhatsAppChat.css";
 import "../styles/dashboard/social.css";
 import "../styles/dashboard/whatsapp.css";
