@@ -172,10 +172,23 @@ export default function AnalyticsPage() {
       };
 
       if (leafletMap.current) {
+        // Country-level fallback for cities not in the list
+        const COUNTRY_COORDS = {
+          India: [20.593, 78.962], "United States": [37.09, -95.712],
+          "United Kingdom": [55.378, -3.436], Canada: [56.13, -106.347],
+          Australia: [-25.274, 133.775], UAE: [23.424, 53.848],
+          Singapore: [1.352, 103.82], Malaysia: [4.21, 101.975],
+          Germany: [51.165, 10.451], France: [46.227, 2.213],
+          Japan: [36.204, 138.252], "Hong Kong": [22.319, 114.169],
+          "Saudi Arabia": [23.886, 45.079], Qatar: [25.354, 51.184],
+          Thailand: [15.87, 100.993], Netherlands: [52.132, 5.291],
+          "New Zealand": [-40.9, 174.886], "South Africa": [-30.559, 22.937],
+        };
         rows.forEach(row => {
           const city = row.dimensionValues[0]?.value ?? "";
-          const coords = CITY_COORDS[city];
-          if (coords) addPing(coords[0], coords[1], city);
+          const country = row.dimensionValues[1]?.value ?? "";
+          const coords = CITY_COORDS[city] || COUNTRY_COORDS[country];
+          if (coords) addPing(coords[0], coords[1], city || country);
         });
       }
     } catch {}

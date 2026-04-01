@@ -72,7 +72,15 @@ const Analytics = () => {
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', '${GA_ID}', { send_page_view: true });
+          gtag('config', '${GA_ID}', {
+            send_page_view: false,
+            traffic_type: undefined
+          });
+          // Only send page_view if not dashboard/auth
+          var _path = window.location.pathname;
+          if (!_path.startsWith('/dashboard') && !_path.startsWith('/auth')) {
+            gtag('event', 'page_view', { page_path: _path });
+          }
         `}}
       />
 
