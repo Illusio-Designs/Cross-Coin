@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import createGlobe from "cobe";
 import type { COBEOptions } from "cobe";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
