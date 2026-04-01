@@ -70,6 +70,14 @@ export default function WhatsAppChat() {
                 </svg>
                 <p>Message sent to your WhatsApp!</p>
                 <span>We'll reply shortly on <strong>+91 {phone}</strong></span>
+                <a
+                  href={`https://wa.me/917434834000?text=${encodeURIComponent(message)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="wachat-open-btn"
+                >
+                  Open WhatsApp Chat
+                </a>
                 <button className="wachat-reset-btn" onClick={() => { setSent(false); setPhone(''); setMessage('Hi, I need help with my order.'); setName(''); }}>Send another</button>
               </div>
             ) : (

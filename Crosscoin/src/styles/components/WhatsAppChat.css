@@ -317,3 +317,25 @@
   font-family: 'DM Sans', sans-serif;
 }
 .wachat-reset-btn:hover { background: #e5e7eb; }
+
+.wachat-open-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px;
+  background: #25D366;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  text-decoration: none;
+  margin-top: 8px;
+  box-shadow: 0 2px 8px rgba(37,211,102,.3);
+  transition: background 0.15s;
+}
+.wachat-open-btn:hover { background: #128C7E; }
