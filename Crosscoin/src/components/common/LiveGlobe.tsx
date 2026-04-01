@@ -217,6 +217,8 @@ export default function LiveGlobe({
 
     let globe: ReturnType<any> | null = null;
 
+    let rafId: number;
+
     import("cobe").then(({ default: createGlobe }) => {
       if (!canvasRef.current) return;
       const config: COBEOptions = {
@@ -233,17 +235,21 @@ export default function LiveGlobe({
         markerColor: [0.2, 0.9, 0.65],
         glowColor: [0.12, 0.2, 0.35],
         markers: markersRef.current,
-        onRender(state) {
-          state.phi = phiRef.current;
-          phiRef.current += 0.003;
-          state.markers = markersRef.current;
-        },
       };
       globe = createGlobe(canvas, config);
       globeRef.current = globe;
+
+      // v2 API: drive rotation via requestAnimationFrame + globe.update()
+      const animate = () => {
+        phiRef.current += 0.003;
+        globe?.update({ phi: phiRef.current, markers: markersRef.current });
+        rafId = requestAnimationFrame(animate);
+      };
+      rafId = requestAnimationFrame(animate);
     });
 
     return () => {
+      cancelAnimationFrame(rafId);
       globe?.destroy();
       globeRef.current = null;
     };
