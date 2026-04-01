@@ -378,7 +378,7 @@ const startServer = async () => {
         logger.info('✓ Database connection successful');
         
         // Create all tables — only runs when schema version changes
-        const SCHEMA_VERSION = 'v1.1-whatsapp';
+        const SCHEMA_VERSION = 'v1.2-lead-capture';
         let needsSetup = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS schema_version (version VARCHAR(50) PRIMARY KEY, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);

@@ -110,6 +110,8 @@ import "leaflet/dist/leaflet.css";
 import Analytics from "../components/common/Analytics";
 import UTMTracker from "../components/common/UTMTracker";
 import WhatsAppChat from "../components/common/WhatsAppChat";
+import PhonePopupModal from "../components/common/PhonePopupModal";
+import "../styles/components/PhonePopupModal.css";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 
@@ -183,6 +185,7 @@ function AppContent({ Component, pageProps, progressRef }) {
         </button>
       )}
       {!isDashboard && !isAuthPage && <WhatsAppChat />}
+      {!isDashboard && !isAuthPage && <PhonePopupModal />}
     </>
   );
 }
