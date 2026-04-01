@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react';
 
-// Randomise within a range, stable per session
 const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 export default function FomoBar({ stock = null }) {
-  const [viewers, setViewers] = useState(() => rand(8, 24));
-  const [soldToday, setSoldToday] = useState(() => rand(5, 30));
+  const [viewers, setViewers] = useState(0);
+  const [soldToday, setSoldToday] = useState(0);
   const [pulse, setPulse] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Set random values only on client to avoid hydration mismatch
+  useEffect(() => {
+    setViewers(rand(8, 24));
+    setSoldToday(rand(5, 30));
+    setMounted(true);
+  }, []);
 
   // Slowly fluctuate viewer count
   useEffect(() => {
@@ -22,6 +29,8 @@ export default function FomoBar({ stock = null }) {
   }, []);
 
   const lowStock = stock !== null && stock <= 5;
+
+  if (!mounted) return null;
 
   return (
     <div className="fomo-bar">
