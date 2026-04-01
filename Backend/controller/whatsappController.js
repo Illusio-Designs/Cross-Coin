@@ -93,6 +93,70 @@ exports.receiveWebhook = async (req, res) => {
   }
 };
 
+// ─── Stats ────────────────────────────────────────────────────────────────────
+exports.getStats = async (req, res) => {
+  try {
+    const brandId = parseInt(req.query.brandId) || 1;
+    const { Op } = require('sequelize');
+
+    const [
+      totalConversations,
+      openConversations,
+      resolvedConversations,
+      totalMessages,
+      sentMessages,
+      deliveredMessages,
+      readMessages,
+      last7Days,
+    ] = await Promise.all([
+      WhatsappConversation.count({ where: { brand_id: brandId } }),
+      WhatsappConversation.count({ where: { brand_id: brandId, status: 'open' } }),
+      WhatsappConversation.count({ where: { brand_id: brandId, status: 'resolved' } }),
+      WhatsappMessage.count(),
+      WhatsappMessage.count({ where: { direction: 'outbound' } }),
+      WhatsappMessage.count({ where: { direction: 'outbound', status: 'delivered' } }),
+      WhatsappMessage.count({ where: { direction: 'outbound', status: 'read' } }),
+      // messages per day for last 7 days
+      WhatsappMessage.findAll({
+        where: {
+          direction: 'outbound',
+          sent_at: { [Op.gte]: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+        },
+        attributes: [
+          [require('sequelize').fn('DATE', require('sequelize').col('sent_at')), 'day'],
+          [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'count'],
+        ],
+        group: [require('sequelize').fn('DATE', require('sequelize').col('sent_at'))],
+        order: [[require('sequelize').fn('DATE', require('sequelize').col('sent_at')), 'ASC']],
+        raw: true,
+      }),
+    ]);
+
+    const deliveryRate = sentMessages > 0 ? ((deliveredMessages / sentMessages) * 100).toFixed(1) : '0.0';
+    const readRate     = sentMessages > 0 ? ((readMessages     / sentMessages) * 100).toFixed(1) : '0.0';
+    const unreadCount  = await WhatsappConversation.sum('unread_count', { where: { brand_id: brandId } }) || 0;
+
+    res.json({
+      success: true,
+      stats: {
+        totalConversations,
+        openConversations,
+        resolvedConversations,
+        totalMessages,
+        sentMessages,
+        deliveredMessages,
+        readMessages,
+        deliveryRate,
+        readRate,
+        unreadCount,
+        last7Days,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // ─── Conversations ────────────────────────────────────────────────────────────
 exports.getConversations = async (req, res) => {
   try {
