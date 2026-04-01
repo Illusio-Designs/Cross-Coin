@@ -1,0 +1,398 @@
+import { useEffect, useState, useCallback, useRef } from "react";
+import { brandSettingsService, brandService } from "../../services";
+
+const fmt = n => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+const fmtTime = s => `${Math.floor(s / 60)}m ${s % 60}s`;
+
+function StatCard({ label, value, delta, accent }) {
+  return (
+    <div className="an-stat-card">
+      <div className="an-stat-label">{label}</div>
+      <div className="an-stat-value" style={accent ? { color: accent } : {}}>{value ?? "—"}</div>
+      {delta && <div className="an-stat-delta" style={{ color: "#16a34a" }}>{delta}</div>}
+    </div>
+  );
+}
+
+function BarRow({ label, value, max, color = "#CE1E36" }) {
+  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  return (
+    <div className="an-bar-row">
+      <span className="an-bar-label">{label}</span>
+      <div className="an-bar-track">
+        <div className="an-bar-fill" style={{ width: `${pct}%`, background: color }} />
+      </div>
+      <span className="an-bar-val">{fmt(value)}</span>
+    </div>
+  );
+}
+
+export default function AnalyticsPage() {
+  const mapRef        = useRef(null);
+  const leafletMap    = useRef(null);
+  const [mounted, setMounted]               = useState(false);
+  const [stats, setStats]                   = useState(null);
+  const [realtimeUsers, setRealtimeUsers]   = useState(null);
+  const [pages, setPages]                   = useState([]);
+  const [sources, setSources]               = useState([]);
+  const [topLocations, setTopLocations]     = useState([]);
+  const [brandId, setBrandId]               = useState(1);
+  const [brands, setBrands]                 = useState([]);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [ga4Configured, setGa4Configured]   = useState(false);
+  const [propertyId, setPropertyId]         = useState("");
+  const [accessToken, setAccessToken]       = useState("");
+  const [lastUpdated, setLastUpdated]       = useState(null);
+
+  const initMap = useCallback(async () => {
+    if (!mapRef.current || leafletMap.current) return;
+    // Dynamic import — works reliably in Next.js, no SSR issues
+    const L = (await import("leaflet")).default;
+    // Fix default marker icon paths broken by webpack
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    });
+    const m = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false })
+      .setView([22.5937, 78.9629], 4);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      attribution: "© OpenStreetMap © CARTO", maxZoom: 18,
+    }).addTo(m);
+    leafletMap.current = m;
+  }, []);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  // Init map when ga4Configured becomes true (map div is now in DOM)
+  useEffect(() => {
+    if (!mounted || !ga4Configured) return;
+    // Small timeout ensures the map div is fully rendered in DOM
+    const t = setTimeout(() => initMap(), 100);
+    return () => clearTimeout(t);
+  }, [mounted, ga4Configured, initMap]);
+
+  // Add ping marker on map
+  const addPing = useCallback(async (lat, lng, city) => {
+    if (!leafletMap.current) return;
+    const L = (await import("leaflet")).default;
+    const icon = L.divIcon({
+      html: `<div class="an-map-ping"></div>`,
+      className: "",
+      iconSize: [16, 16],
+      iconAnchor: [8, 8],
+    });
+    const marker = L.marker([lat, lng], { icon })
+      .bindTooltip(city, { permanent: false, direction: "top" })
+      .addTo(leafletMap.current);
+    setTimeout(() => {
+      if (leafletMap.current) leafletMap.current.removeLayer(marker);
+    }, 4000);
+  }, []);
+
+  // Load brands (for multi-brand selector only — default stays brandId=1)
+  useEffect(() => {
+    if (!mounted) return;
+    brandService.getAllBrands(true)
+      .then(r => { if (r.success && r.data.length > 0) setBrands(r.data); })
+      .catch(() => {});
+  }, [mounted]);
+
+  // Load GA4 settings + auto-token
+  useEffect(() => {
+    if (!mounted || !brandId) return;
+    setSettingsLoading(true);
+    brandSettingsService.getSettingsByCategory(brandId, "analytics")
+      .then(r => {
+        const list = r.data || r || [];
+        const pid  = list.find(s => s.key === "GA4_PROPERTY_ID");
+        const email = list.find(s => s.key === "GA4_SA_EMAIL");
+        const pkey  = list.find(s => s.key === "GA4_SA_PRIVATE_KEY");
+        const configured = !!(pid?.value && email?.value && pkey?.value);
+        setGa4Configured(configured);
+        if (pid?.value) setPropertyId(pid.value);
+        if (configured) {
+          const authToken = typeof window !== "undefined" ? localStorage.getItem("token") : "";
+          fetch(`/api/ga4-token?brandId=${brandId}`, { headers: { Authorization: `Bearer ${authToken}` } })
+            .then(r => r.json())
+            .then(data => { if (data.accessToken) setAccessToken(data.accessToken); })
+            .catch(() => {});
+        }
+      })
+      .catch(() => setGa4Configured(false))
+      .finally(() => setSettingsLoading(false));
+  }, [mounted, brandId]);
+
+  // Fetch realtime active users (every 30s)
+  const fetchRealtime = useCallback(async () => {
+    if (!accessToken || !propertyId) return;
+    try {
+      const res = await fetch(
+        `https://analyticsdata.googleapis.com/v1beta/${propertyId}:runRealtimeReport`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            dimensions: [{ name: "city" }, { name: "country" }],
+            metrics: [{ name: "activeUsers" }],
+            minuteRanges: [{ name: "0-5", startMinutesAgo: 5, endMinutesAgo: 0 }],
+            orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }],
+            limit: 10,
+          }),
+        }
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      const rows = data.rows ?? [];
+      const total = rows.reduce((acc, r) => acc + parseInt(r.metricValues[0]?.value ?? "0", 10), 0);
+      setRealtimeUsers(total);
+
+      // Ping map for each city
+      const CITY_COORDS = {
+        Mumbai: [19.076, 72.877], Delhi: [28.613, 77.209], Bangalore: [12.971, 77.594],
+        Chennai: [13.082, 80.27], Hyderabad: [17.385, 78.487], Pune: [18.52, 73.857],
+        Kolkata: [22.572, 88.363], Ahmedabad: [23.022, 72.571], Surat: [21.17, 72.831],
+        Rajkot: [22.303, 70.802], London: [51.507, -0.128], "New York": [40.714, -74.006],
+        Dubai: [25.204, 55.27], Singapore: [1.352, 103.82],
+      };
+      rows.forEach(row => {
+        const city = row.dimensionValues[0]?.value ?? "";
+        const coords = CITY_COORDS[city];
+        if (coords) addPing(coords[0], coords[1], city);
+      });
+    } catch {}
+  }, [accessToken, propertyId, addPing]);
+
+  // Fetch today's full report (every 5 min)
+  const fetchGA4Stats = useCallback(async () => {
+    if (!accessToken || !propertyId) return;
+    try {
+      const base = `https://analyticsdata.googleapis.com/v1beta/${propertyId}:runReport`;
+      const h = { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" };
+      const post = body => fetch(base, { method: "POST", headers: h, body: JSON.stringify(body) }).then(r => r.json());
+
+      const [mainData, yestData, pagesData, srcData, locData] = await Promise.all([
+        post({ dateRanges: [{ startDate: "today", endDate: "today" }], metrics: [{ name: "sessions" }, { name: "screenPageViews" }, { name: "activeUsers" }, { name: "bounceRate" }, { name: "averageSessionDuration" }, { name: "newUsers" }] }),
+        post({ dateRanges: [{ startDate: "yesterday", endDate: "yesterday" }], metrics: [{ name: "sessions" }] }),
+        post({ dateRanges: [{ startDate: "today", endDate: "today" }], dimensions: [{ name: "pagePath" }], metrics: [{ name: "screenPageViews" }], orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }], limit: 5 }),
+        post({ dateRanges: [{ startDate: "today", endDate: "today" }], dimensions: [{ name: "sessionDefaultChannelGroup" }], metrics: [{ name: "sessions" }], orderBys: [{ metric: { metricName: "sessions" }, desc: true }], limit: 5 }),
+        post({ dateRanges: [{ startDate: "today", endDate: "today" }], dimensions: [{ name: "city" }, { name: "country" }], metrics: [{ name: "activeUsers" }], orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }], limit: 5 }),
+      ]);
+
+      const mv = mainData.rows?.[0]?.metricValues || [];
+      const sessions   = parseInt(mv[0]?.value || "0", 10);
+      const pageviews  = parseInt(mv[1]?.value || "0", 10);
+      const active     = parseInt(mv[2]?.value || "0", 10);
+      const bounceRate = (parseFloat(mv[3]?.value || "0") * 100).toFixed(1);
+      const avgSession = Math.round(parseFloat(mv[4]?.value || "0"));
+      const newUsers   = parseInt(mv[5]?.value || "0", 10);
+      const returning  = Math.max(0, active - newUsers);
+      const yest       = parseInt(yestData.rows?.[0]?.metricValues?.[0]?.value || "1", 10);
+      const sessionsDelta = yest > 0 ? `${sessions >= yest ? "+" : ""}${(((sessions - yest) / yest) * 100).toFixed(1)}% vs yesterday` : "";
+
+      setStats({ active, sessions, pageviews, bounceRate, avgSession, newUsers, returning, sessionsDelta });
+      setPages((pagesData.rows || []).map(r => ({ label: r.dimensionValues[0]?.value || "/", val: parseInt(r.metricValues[0]?.value || "0", 10) })));
+      setSources((srcData.rows || []).map(r => ({ label: r.dimensionValues[0]?.value || "Other", val: parseInt(r.metricValues[0]?.value || "0", 10) })));
+      setTopLocations((locData.rows || []).map(r => ({ name: `${r.dimensionValues[0]?.value} · ${r.dimensionValues[1]?.value}`, val: parseInt(r.metricValues[0]?.value || "0", 10) })));
+      setLastUpdated(new Date());
+    } catch (err) { console.error("[Analytics]", err); }
+  }, [accessToken, propertyId]);
+
+  useEffect(() => {
+    if (!accessToken || !propertyId) return;
+    fetchGA4Stats();
+    fetchRealtime();
+    const t1 = setInterval(fetchGA4Stats, 5 * 60 * 1000);
+    const t2 = setInterval(fetchRealtime, 30 * 1000);
+    return () => { clearInterval(t1); clearInterval(t2); };
+  }, [accessToken, propertyId, fetchGA4Stats, fetchRealtime]);
+
+  if (!mounted) return null;
+
+  return (
+    <>
+
+      <div className="dashboard-page">
+        {/* Header */}
+        <div className="sl-page-header">
+          <div className="sl-header-left">
+            <div className="sl-header-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+              </svg>
+            </div>
+            <div>
+              <h1 className="sl-page-title">Analytics</h1>
+              <p className="sl-page-sub">{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : "Google Analytics · Today"}</p>
+            </div>
+          </div>
+          <div className="sl-header-right">
+            {brands.length > 1 && (
+              <select className="bset-brand-select" value={brandId} onChange={e => setBrandId(Number(e.target.value))}>
+                {brands.map(b => <option key={b.id} value={b.id}>{b.display_name || b.name}</option>)}
+              </select>
+            )}
+            {accessToken && (
+              <div className="an-live-pill"><span className="an-live-dot" /> Live · GA4</div>
+            )}
+            {ga4Configured && accessToken && (
+              <span className="sl-add-btn" style={{ background: "#16a34a", cursor: "default" }}>✓ Connected</span>
+            )}
+            {!ga4Configured && !settingsLoading && (
+              <a href="/dashboard/brandSettings" className="sl-add-btn" style={{ textDecoration: "none" }}>Setup GA4</a>
+            )}
+          </div>
+        </div>
+
+        {/* Not configured */}
+        {!settingsLoading && !ga4Configured && (
+          <div className="an-empty-state">
+            <div className="an-empty-icon">📊</div>
+            <div className="an-empty-title">Google Analytics not configured</div>
+            <div className="an-empty-sub">Add your GA4 credentials in Brand Settings to see real data.</div>
+            <div className="an-empty-keys">
+              Add these keys under <strong>Brand Settings → Analytics</strong>:
+              <ul>
+                <li><code>GA4_PROPERTY_ID</code></li>
+                <li><code>GA4_SA_EMAIL</code></li>
+                <li><code>GA4_SA_PRIVATE_KEY</code></li>
+              </ul>
+            </div>
+            <a href="/dashboard/brandSettings" className="an-btn an-btn--primary" style={{ textDecoration: "none" }}>Go to Brand Settings</a>
+          </div>
+        )}
+
+        {!settingsLoading && ga4Configured && !accessToken && (
+          <div style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>Connecting to Google Analytics…</div>
+        )}
+
+        {/* Stat cards */}
+        {(stats || realtimeUsers !== null) && (
+          <div className="an-stats-row" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+            <StatCard label="Active Now"     value={realtimeUsers ?? "—"}                accent="#CE1E36" />
+            <StatCard label="Sessions Today" value={stats ? fmt(stats.sessions) : "—"}   delta={stats?.sessionsDelta} />
+            <StatCard label="Pageviews"      value={stats ? fmt(stats.pageviews) : "—"}  />
+            <StatCard label="New Users"      value={stats ? fmt(stats.newUsers) : "—"}   />
+            <StatCard label="Returning"      value={stats ? fmt(stats.returning) : "—"}  />
+            <StatCard label="Bounce Rate"    value={stats ? `${stats.bounceRate}%` : "—"} />
+            <StatCard label="Avg Session"    value={stats ? fmtTime(stats.avgSession) : "—"} />
+            <StatCard label="Active Users"   value={stats ? fmt(stats.active) : "—"}     />
+          </div>
+        )}
+
+        {/* Map */}
+        {ga4Configured && (
+          <div className="an-map-wrap">
+            <div className="an-map-header">
+              <span className="an-map-title">Live Visitor Map</span>
+              <span className="an-map-sub">Pings show realtime active cities</span>
+            </div>
+            <div ref={mapRef} className="an-map" />
+          </div>
+        )}
+
+        {/* Bottom panels */}
+        {stats && (
+          <div className="an-bottom-grid" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
+            <div className="an-list-panel">
+              <div className="an-list-title">Top Pages</div>
+              <div className="an-list-rows">
+                {pages.length > 0
+                  ? pages.map((p, i) => <BarRow key={i} label={p.label} value={p.val} max={pages[0]?.val || 1} color="#180D3E" />)
+                  : <div className="an-no-data">No data</div>}
+              </div>
+            </div>
+            <div className="an-list-panel">
+              <div className="an-list-title">Traffic Sources</div>
+              <div className="an-list-rows">
+                {sources.length > 0
+                  ? sources.map((s, i) => <BarRow key={i} label={s.label} value={s.val} max={sources[0]?.val || 1} color="#CE1E36" />)
+                  : <div className="an-no-data">No data</div>}
+              </div>
+            </div>
+            <div className="an-list-panel">
+              <div className="an-list-title">Top Locations</div>
+              <div className="an-list-rows">
+                {topLocations.length > 0
+                  ? topLocations.map((l, i) => <BarRow key={i} label={l.name} value={l.val} max={topLocations[0]?.val || 1} color="#7c3aed" />)
+                  : <div className="an-no-data">No data</div>}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <style>{`
+        .an-map-wrap {
+          background: #fff;
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          overflow: hidden;
+          margin-bottom: 16px;
+        }
+        .an-map-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 16px;
+          border-bottom: 1px solid #f0f0f5;
+        }
+        .an-map-title {
+          font-size: 12px;
+          font-weight: 700;
+          color: #374151;
+          text-transform: uppercase;
+          letter-spacing: .6px;
+        }
+        .an-map-sub {
+          font-size: 11px;
+          color: #9ca3af;
+        }
+        .an-map {
+          height: 340px;
+          width: 100%;
+        }
+        .an-map-ping {
+          width: 12px;
+          height: 12px;
+          background: #CE1E36;
+          border-radius: 50%;
+          position: relative;
+        }
+        .an-map-ping::after {
+          content: '';
+          position: absolute;
+          width: 28px;
+          height: 28px;
+          background: #CE1E36;
+          border-radius: 50%;
+          top: -8px;
+          left: -8px;
+          opacity: 0.3;
+          animation: anMapPulse 1.5s infinite;
+        }
+        @keyframes anMapPulse {
+          0%   { transform: scale(0.5); opacity: 0.6; }
+          100% { transform: scale(2);   opacity: 0; }
+        }
+        .an-empty-state {
+          text-align: center;
+          padding: 48px 24px;
+          background: #f9fafb;
+          border-radius: 10px;
+          border: 1px dashed #e5e7eb;
+          margin-bottom: 16px;
+        }
+        .an-empty-icon  { font-size: 40px; margin-bottom: 12px; }
+        .an-empty-title { font-size: 18px; font-weight: 700; color: #180D3E; margin-bottom: 8px; }
+        .an-empty-sub   { font-size: 13px; color: #6b7280; margin-bottom: 16px; }
+        .an-empty-keys  { font-size: 13px; color: #374151; text-align: left; display: inline-block; margin-bottom: 20px; }
+        .an-empty-keys ul { margin: 8px 0 0 16px; }
+        .an-empty-keys li { margin: 4px 0; }
+        .an-empty-keys code { background: #f3f4f6; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+        .an-no-data { font-size: 12px; color: #9ca3af; padding: 8px 0; }
+      `}</style>
+    </>
+  );
+}

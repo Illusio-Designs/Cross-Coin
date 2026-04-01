@@ -20,7 +20,7 @@ import Slider from "./slider/slider";
 import MediaGallery from "./media/gallery";
 import { Policies } from "./policies";
 import UTMAnalytics from "./analytics/utmAnalytics";
-import AnalyticsPage from "./analytics";
+import AnalyticsPage from "../../components/Dashboard/AnalyticsPage";
 import { BrandSettingsManager } from "./brandSettings";
 import { BrandManager } from "./brands";
 import { Blogs } from "./blogs";
