@@ -38,6 +38,32 @@ const FALLBACK_SHIPPING_FEES = [
   { id: 'fallback-cod', orderType: 'cod', fee: 0 },
 ];
 
+// FIX 1 — cookie-backed UUID guest session (30-day expiry)
+function getOrCreateGuestSessionId() {
+  if (typeof document === 'undefined') return 'guest-' + Date.now();
+  const key = 'guestSessionId';
+  const match = document.cookie.split('; ').find(r => r.startsWith(key + '='));
+  if (match) return match.split('=')[1];
+  const id = 'guest-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+  const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
+  document.cookie = key + '=' + id + '; expires=' + expires + '; path=/; SameSite=Lax';
+  return id;
+}
+
+// FIX 2 — idempotency key generator
+function generateIdempotencyKey() {
+  return 'idem-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+}
+
+// FIX 3 — full address field validation
+function isValidAddress(addr) {
+  if (!addr) return false;
+  const address = addr.address || '';
+  const city = addr.city || '';
+  const postalCode = addr.postal_code || addr.postalCode || '';
+  return address.trim().length > 0 && city.trim().length > 0 && postalCode.trim().length > 0;
+}
+
 function isValidEmail(value) {
   const s = String(value || '').trim();
   if (!s || !s.includes('@')) return false;
@@ -88,14 +114,14 @@ const EMPTY_ADDR = {
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 
-const IconX = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
-const IconBag = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>;
-const IconTrash = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>;
-const IconEdit = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
-const IconPlus = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
-const IconTruck = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
-const IconSuccess = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
-const IconChevronDown = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>;
+const IconX = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>;
+const IconBag = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 01-8 0" /></svg>;
+const IconTrash = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4h6v2" /></svg>;
+const IconEdit = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>;
+const IconPlus = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>;
+const IconTruck = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></svg>;
+const IconSuccess = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>;
+const IconChevronDown = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>;
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -126,15 +152,16 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const [shippingFees, setShippingFees] = useState([]);
   const [selectedFee, setSelectedFee] = useState(null);
 
-  // COD: education popup, OTP
-  const [showCodWarningModal, setShowCodWarningModal] = useState(false);
+  // COD: OTP
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otpDigits, setOtpDigits] = useState(['', '', '', '']);
   const otpRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
+  const otpPollTimerRef = useRef(null); // FIX 4 — cancel poll on modal close
   const otpCode = otpDigits.join('');
   const [otpSending, setOtpSending] = useState(false);
   const [otpHint, setOtpHint] = useState('');
   const [phoneVerifiedForCod, setPhoneVerifiedForCod] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0); // FIX 5/10 — 30s resend timer
 
   // Order
   const [isProcessing, setIsProcessing] = useState(false);
@@ -220,7 +247,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
       setAddresses(data || []);
       const def = (data || []).find(a => a.isDefault || a.is_default);
       if (def && !selectedAddress) setSelectedAddress(def);
-    }).catch(() => {}).finally(() => setAddressLoading(false));
+    }).catch(() => { }).finally(() => setAddressLoading(false));
   }, [isOpen, isAuthenticated]);
 
   // Live email validation (guest) — debounced while typing
@@ -264,47 +291,27 @@ const CartDrawer = ({ isOpen, onClose }) => {
         setShowAddressDropdown(false);
       }
     };
-    
+
     if (showAddressDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showAddressDropdown]);
+  // FIX 6 — ResizeObserver replaces 3x setTimeout scroll hint hack
   useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
-    
     const check = () => {
-      const scrollTop = el.scrollTop;
-      const scrollHeight = el.scrollHeight;
-      const clientHeight = el.clientHeight;
-      const hasScroll = scrollTop < scrollHeight - clientHeight - 40;
-      
-      setShowScrollHint(hasScroll);
+      setShowScrollHint(el.scrollTop < el.scrollHeight - el.clientHeight - 40);
     };
-    
-    // Immediate check for direct drawer opening
     check();
-    
-    // Additional delayed checks when drawer opens (for Add to Bag case)
-    if (isOpen) {
-      const timeouts = [
-        setTimeout(check, 150),
-        setTimeout(check, 300),
-        setTimeout(check, 500)
-      ];
-      
-      const cleanup = () => timeouts.forEach(clearTimeout);
-      
-      el.addEventListener('scroll', check, { passive: true });
-      return () => {
-        cleanup();
-        el.removeEventListener('scroll', check);
-      };
-    }
-    
     el.addEventListener('scroll', check, { passive: true });
-    return () => el.removeEventListener('scroll', check);
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', check);
+      ro.disconnect();
+    };
   }, [isOpen, buyNowItem, cartItems.length]);
 
   // ── Computed totals ─────────────────────────────────────────────────────
@@ -338,11 +345,26 @@ const CartDrawer = ({ isOpen, onClose }) => {
     setOtpHint('');
   }, [selectedFee?.id, selectedAddress?.id, guestInfo.phone]);
 
-  // Auto-send OTP as soon as the modal opens
+  // FIX 4/7 — cancel poll timer on close; validate phone before auto-sending OTP
   useEffect(() => {
-    if (showOtpModal) {
-      handleSendCheckoutOtp();
+    if (!showOtpModal) {
+      if (otpPollTimerRef.current) {
+        clearTimeout(otpPollTimerRef.current);
+        otpPollTimerRef.current = null;
+      }
+      return;
     }
+    const phone = getDeliveryPhone();
+    if (!isValidIndianMobileDigits(phone)) {
+      setShowOtpModal(false);
+      showValidationErrorToast(
+        isAuthenticated
+          ? 'Please add a valid 10-digit mobile number on your delivery address.'
+          : 'Please check your phone number in contact info.'
+      );
+      return;
+    }
+    handleSendCheckoutOtp();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showOtpModal]);
 
@@ -446,7 +468,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
     quantity: item.quantity,
   }));
 
-  const buildPrepaidOrderData = () => {
+  // FIX 8/9 — idempotency key in payload; ip_address removed; cookie session
+  const buildPrepaidOrderData = (idempotencyKey) => {
     const itemsPayload = buildItemsPayload();
     const base = {
       items: itemsPayload,
@@ -454,6 +477,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
       notes: '',
       discount_amount: prepaidInstantDiscount,
       coupon_id: null,
+      idempotency_key: idempotencyKey,
     };
     if (isAuthenticated) {
       return { shipping_address_id: selectedAddress.id, ...base };
@@ -469,13 +493,12 @@ const CartDrawer = ({ isOpen, onClose }) => {
         phone: selectedAddress.phone_number || selectedAddress.phoneNumber,
       },
       ...base,
-      session_id: sessionStorage.getItem('sessionId') || `guest-${Date.now()}`,
-      ip_address: window.location.hostname,
-      user_agent: window.navigator.userAgent,
+      session_id: getOrCreateGuestSessionId(),
+      user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
     };
   };
 
-  const buildCodOrderData = () => {
+  const buildCodOrderData = (idempotencyKey) => {
     const itemsPayload = buildItemsPayload();
     const base = {
       items: itemsPayload,
@@ -483,6 +506,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
       notes: '',
       discount_amount: 0,
       coupon_id: null,
+      idempotency_key: idempotencyKey,
     };
     if (isAuthenticated) {
       return { shipping_address_id: selectedAddress.id, ...base };
@@ -498,9 +522,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
         phone: selectedAddress.phone_number || selectedAddress.phoneNumber,
       },
       ...base,
-      session_id: sessionStorage.getItem('sessionId') || `guest-${Date.now()}`,
-      ip_address: window.location.hostname,
-      user_agent: window.navigator.userAgent,
+      session_id: getOrCreateGuestSessionId(),
+      user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
     };
   };
 
@@ -517,13 +540,13 @@ const CartDrawer = ({ isOpen, onClose }) => {
           quantity: i.quantity,
         })),
       }, { eventID: `Purchase_${orderNumber}` });
-    } catch (_) {}
+    } catch (_) { }
   };
 
   const placeCodOrder = async () => {
     setIsProcessing(true);
     try {
-      const orderData = buildCodOrderData();
+      const orderData = buildCodOrderData(generateIdempotencyKey());
       const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
       if (!result?.order) throw new Error('Order creation failed.');
       trackPurchase(finalTotal, result.order.order_number);
@@ -538,24 +561,25 @@ const CartDrawer = ({ isOpen, onClose }) => {
     }
   };
 
+  // FIX 4/5/10 — OTP poll timer stored in ref; cancelled on modal close; 30s resend countdown
   const handleSendCheckoutOtp = () => {
     const phone = getDeliveryPhone();
     if (phone.length < 10) {
       showValidationErrorToast('Enter a valid 10-digit mobile number.');
       return;
     }
-    // Dev mode: skip actual send, just show hint
     if (OTP_VERIFY_SKIP) {
-      setOtpHint('Dev mode: OTP skipped. Enter any 4+ digit code.');
+      if (process.env.NODE_ENV !== 'production') {
+        setOtpHint('Dev mode: OTP skipped. Enter any 4+ digit code.');
+      }
       return;
     }
 
     setOtpSending(true);
     setOtpHint('');
 
-    const identifier = phone.length === 10 ? `91${phone}` : phone;
+    const identifier = phone.length === 10 ? '91' + phone : phone;
 
-    // Poll up to 5s for window.sendOtp to be ready (script loads async)
     let attempts = 0;
     const trySend = () => {
       if (typeof window.sendOtp === 'function') {
@@ -564,6 +588,14 @@ const CartDrawer = ({ isOpen, onClose }) => {
           () => {
             setOtpHint('OTP sent. Enter the code below.');
             setOtpSending(false);
+            // Start 30s resend countdown
+            setResendCountdown(30);
+            const interval = setInterval(() => {
+              setResendCountdown(prev => {
+                if (prev <= 1) { clearInterval(interval); return 0; }
+                return prev - 1;
+              });
+            }, 1000);
           },
           (error) => {
             const msg = typeof error === 'string' ? error : (error?.message || 'Could not send OTP.');
@@ -573,7 +605,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
         );
       } else if (attempts < 10) {
         attempts++;
-        setTimeout(trySend, 500);
+        otpPollTimerRef.current = setTimeout(trySend, 500);
       } else {
         showOrderPlacedErrorToast('OTP service not ready. Please refresh and try again.');
         setOtpSending(false);
@@ -619,8 +651,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
   };
 
   const handlePlaceOrder = async () => {
-    if (!selectedAddress) {
-      showValidationErrorToast('Please add a delivery address.');
+    if (!selectedAddress || !isValidAddress(selectedAddress)) {
+      showValidationErrorToast('Please add a complete delivery address (address, city, PIN code).');
       scrollDrawerTo('cd-section-address');
       return;
     }
@@ -657,6 +689,11 @@ const CartDrawer = ({ isOpen, onClose }) => {
         showOrderPlacedErrorToast('Razorpay key not configured.');
         return;
       }
+      // FIX 11 — guard against zero/negative payable amount
+      if (prepaidPayable <= 0) {
+        showOrderPlacedErrorToast('Order amount must be greater than zero.');
+        return;
+      }
       setIsProcessing(true);
       try {
         const scriptLoaded = await loadRazorpay();
@@ -665,7 +702,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
           setIsProcessing(false);
           return;
         }
-        const orderData = buildPrepaidOrderData();
+        const prepaidIdempotencyKey = generateIdempotencyKey();
+        const orderData = buildPrepaidOrderData(prepaidIdempotencyKey);
         const rzpOrder = await createRazorpayOrder({
           amount: prepaidPayable,
           currency: 'INR',
@@ -824,7 +862,42 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 })}
               </div>
 
-              {/* ── 2. Contact (guest only) — hidden when Magic Checkout is active (it handles contact collection) ── */}
+              {/* ── 2. Order Summary (FIX 12 — shown early so user sees total immediately) ── */}
+              <div className="cd-sv-section">
+                <div className="cd-summary">
+                  <div className="cd-summary-row"><span>Subtotal ({totalQty} item{totalQty !== 1 ? 's' : ''})</span><span>₹{activeTotal.toFixed(2)}</span></div>
+                  <div className="cd-summary-row"><span>Shipping</span><span>{shippingFeeAmount === 0 ? 'Free' : `₹${shippingFeeAmount.toFixed(2)}`}</span></div>
+                  {isPrepaidDelivery && prepaidInstantDiscount > 0 && (
+                    <div className="cd-summary-row cd-summary-discount">
+                      {/* FIX 13 — green savings badge */}
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        Prepaid discount
+                        <span style={{ background: '#16a34a', color: '#fff', fontSize: 11, fontWeight: 700, borderRadius: 4, padding: '1px 6px' }}>
+                          ₹{Math.round(prepaidInstantDiscount)} saved!
+                        </span>
+                      </span>
+                      <span style={{ color: '#16a34a', fontWeight: 700 }}>-₹{prepaidInstantDiscount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {isPrepaidDelivery && (
+                    <div className="cd-summary-row cd-summary-total">
+                      <span>Pay now</span>
+                      <span>₹{prepaidPayable.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {isCodDelivery && (
+                    <div className="cd-summary-row cd-summary-total">
+                      <span>Total (pay on delivery)</span>
+                      <span>₹{finalTotal.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {!isPrepaidDelivery && !isCodDelivery && (
+                    <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{finalTotal.toFixed(2)}</span></div>
+                  )}
+                </div>
+              </div>
+
+              {/* ── 3. Contact (guest only) — hidden when Magic Checkout is active (it handles contact collection) ── */}
               {!isAuthenticated && (
                 <div className="cd-sv-section" id="cd-section-contact">
                   <div className="cd-section-title">Contact Info</div>
@@ -870,7 +943,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 </div>
               )}
 
-              {/* ── 3. Delivery Address ── */}
+              {/* ── 4. Delivery Address ── */}
               <div className="cd-sv-section" id="cd-section-address">
                 <div className="cd-section-title">Delivery Address</div>
                 {addressLoading ? <p className="cd-loading">Loading addresses...</p> : (
@@ -886,8 +959,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
                       <div className="cd-address-section">
                         <div className="cd-section-subtitle">Select your delivery address</div>
                         <div className="cd-address-dropdown-container" ref={dropdownRef}>
-                          <div 
-                            className="cd-address-dropdown-trigger" 
+                          <div
+                            className="cd-address-dropdown-trigger"
                             onClick={() => setShowAddressDropdown(!showAddressDropdown)}
                           >
                             <span>Choose Address</span>
@@ -898,8 +971,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
                           {showAddressDropdown && (
                             <div className="cd-address-dropdown">
                               {addresses.map(addr => (
-                                <div 
-                                  key={addr.id} 
+                                <div
+                                  key={addr.id}
                                   className={`cd-address-option ${selectedAddress?.id === addr.id ? 'selected' : ''}`}
                                   onClick={() => {
                                     setSelectedAddress(addr);
@@ -1008,7 +1081,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 )}
               </div>
 
-              {/* ── 4. Delivery & payment (prepaid first, COD secondary) ── */}
+              {/* ── 5. Delivery & payment (prepaid first, COD secondary) ── */}
               {sortedShippingFees.length > 0 && (
                 <div className="cd-sv-section" id="cd-section-delivery">
                   <div className="cd-section-title">How would you like to pay?</div>
@@ -1044,34 +1117,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 </div>
               )}
 
-              {/* ── 5. Order Summary ── */}
-              <div className="cd-sv-section">
-                <div className="cd-summary">
-                  <div className="cd-summary-row"><span>Subtotal ({totalQty} item{totalQty !== 1 ? 's' : ''})</span><span>₹{activeTotal.toFixed(2)}</span></div>
-                  <div className="cd-summary-row"><span>Shipping</span><span>{shippingFeeAmount === 0 ? 'Free' : `₹${shippingFeeAmount.toFixed(2)}`}</span></div>
-                  {isPrepaidDelivery && prepaidInstantDiscount > 0 && (
-                    <div className="cd-summary-row cd-summary-discount">
-                      <span>Prepaid instant discount</span>
-                      <span>-₹{prepaidInstantDiscount.toFixed(2)}</span>
-                    </div>
-                  )}
-                  {isPrepaidDelivery && (
-                    <div className="cd-summary-row cd-summary-total">
-                      <span>Pay now</span>
-                      <span>₹{prepaidPayable.toFixed(2)}</span>
-                    </div>
-                  )}
-                  {isCodDelivery && (
-                    <div className="cd-summary-row cd-summary-total">
-                      <span>Total (pay on delivery)</span>
-                      <span>₹{finalTotal.toFixed(2)}</span>
-                    </div>
-                  )}
-                  {!isPrepaidDelivery && !isCodDelivery && (
-                    <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{finalTotal.toFixed(2)}</span></div>
-                  )}
-                </div>
-              </div>
+
 
             </div>
           )}
@@ -1083,6 +1129,21 @@ const CartDrawer = ({ isOpen, onClose }) => {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="6 9 12 15 18 9" />
             </svg>
+          </div>
+        )}
+
+        {/* FIX 14 — Trust signals bar */}
+        {!orderSuccess && activeItems.length > 0 && (
+          <div className="cd-trust-bar">
+            <span className="cd-trust-item">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
+              Secure checkout
+            </span>
+            <span className="cd-trust-item">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12" /><rect x="2" y="7" width="20" height="5" /><path d="M12 22V7" /><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z" /></svg>
+              Easy returns
+            </span>
+            <span className="cd-trust-item">Powered by Razorpay</span>
           </div>
         )}
 
@@ -1106,9 +1167,6 @@ const CartDrawer = ({ isOpen, onClose }) => {
         )}
 
       </div>
-
-      {showCodWarningModal && null}
-
       {showOtpModal && (
         <div className="cd-modal-overlay" role="presentation" onClick={() => !isProcessing && setShowOtpModal(false)}>
           <div
@@ -1120,6 +1178,10 @@ const CartDrawer = ({ isOpen, onClose }) => {
             style={{ textAlign: 'center' }}
           >
             <h3 id="cd-otp-modal-title" className="cd-modal-title">Verify your number</h3>
+            {/* FIX 15 — explain why we verify */}
+            <p className="cd-modal-subtext" style={{ color: '#888', fontSize: 12, marginBottom: 4 }}>
+              We verify to prevent fake COD orders.
+            </p>
             <p className="cd-modal-text" style={{ color: '#666' }}>
               Code sent to <strong>+91 {getDeliveryPhone() || 'your number'}</strong>
             </p>
@@ -1202,17 +1264,21 @@ const CartDrawer = ({ isOpen, onClose }) => {
 
             <p className="cd-modal-muted" style={{ marginTop: 14 }}>
               Didn&apos;t receive code?{' '}
-              <button
-                type="button"
-                style={{ background: 'none', border: 'none', color: '#CE1E36', fontWeight: 600, cursor: 'pointer', padding: 0, fontSize: 13, textDecoration: 'underline' }}
-                onClick={() => { setOtpDigits(['', '', '', '']); handleSendCheckoutOtp(); otpRefs[0].current?.focus(); }}
-                disabled={otpSending || isProcessing}
-              >
-                {otpSending ? 'Sending…' : 'Request again'}
-              </button>
+              {resendCountdown > 0 ? (
+                <span style={{ color: '#999', fontSize: 13 }}>Resend in {resendCountdown}s</span>
+              ) : (
+                <button
+                  type="button"
+                  style={{ background: 'none', border: 'none', color: '#CE1E36', fontWeight: 600, cursor: 'pointer', padding: 0, fontSize: 13, textDecoration: 'underline' }}
+                  onClick={() => { setOtpDigits(['', '', '', '']); setResendCountdown(0); handleSendCheckoutOtp(); otpRefs[0].current?.focus(); }}
+                  disabled={otpSending || isProcessing}
+                >
+                  {otpSending ? 'Sending…' : 'Request again'}
+                </button>
+              )}
             </p>
 
-            {OTP_VERIFY_SKIP && (
+            {OTP_VERIFY_SKIP && process.env.NODE_ENV !== 'production' && (
               <p className="cd-modal-muted" style={{ marginTop: 6, fontSize: 11 }}>
                 Dev mode: enter any 4 digits to skip real verification.
               </p>

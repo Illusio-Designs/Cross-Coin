@@ -9,13 +9,7 @@
     "lint": "next lint",
     "analyze": "ANALYZE=true next build",
     "clean": "rimraf .next out",
-    "type-check": "tsc --noEmit",
-    "optimize:performance": "node scripts/performance-optimize.js",
-    "optimize:pre-build": "node scripts/pre-build-optimize.js",
-    "build:optimized": "npm run optimize:pre-build && npm run build && npm run optimize:performance",
-    "build:production": "npm run clean && npm run optimize:pre-build && npm run build && npm run optimize:performance",
-    "deploy": "node scripts/deploy-build.js",
-    "deploy:build": "npm run build:production"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@lottiefiles/dotlottie-react": "^0.14.1",
