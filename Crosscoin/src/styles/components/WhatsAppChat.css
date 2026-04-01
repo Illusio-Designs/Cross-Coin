@@ -3,8 +3,8 @@
 /* FAB Button */
 .wachat-fab {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 32px;
+  right: 88px;
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -26,8 +26,8 @@
 /* Greeting bubble */
 .wachat-greet {
   position: fixed;
-  bottom: 90px;
-  right: 24px;
+  bottom: 100px;
+  right: 88px;
   background: #fff;
   border-radius: 12px 12px 0 12px;
   padding: 10px 14px 10px 12px;
@@ -184,8 +184,8 @@
 /* Mobile */
 @media (max-width: 480px) {
   .wachat-window { width: calc(100vw - 24px); right: 12px; bottom: 80px; }
-  .wachat-fab { bottom: 16px; right: 16px; }
-  .wachat-greet { right: 12px; bottom: 84px; }
+  .wachat-fab { bottom: 20px; right: 68px; }
+  .wachat-greet { right: 68px; bottom: 84px; }
 }
 
 /* ── Form-based contact widget ── */
