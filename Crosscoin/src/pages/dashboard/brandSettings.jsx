@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandSettingsService, brandService } from '../../services';
 import { Modal, Button } from '../../components/ui';
+import Dropdown from '../../components/ui/Dropdown';
 import Loader from '../../components/common/Loader';
 import { ConfirmModal } from '../../components/common/AlertModal';
 
@@ -108,9 +109,12 @@ export function BrandSettingsManager() {
           </div>
         </div>
         <div className="sl-header-right">
-          <select className="bset-brand-select" value={selectedBrandId || ''} onChange={e => setSelectedBrandId(Number(e.target.value))}>
-            {brands.map(b => <option key={b.id} value={b.id}>{b.display_name || b.name}</option>)}
-          </select>
+          <Dropdown
+            value={selectedBrandId || ''}
+            onChange={val => setSelectedBrandId(Number(val))}
+            options={brands.map(b => ({ value: b.id, label: b.display_name || b.name }))}
+            className="bset-brand-select"
+          />
           <button className="sl-add-btn" onClick={() => setShowAddForm(true)} disabled={!selectedBrandId}>
             <span className="sl-add-btn-icon">{IC.add}</span>Add Setting
           </button>
@@ -128,9 +132,11 @@ export function BrandSettingsManager() {
               </div>
               <div className="dm-field">
                 <label className="dm-label">Category</label>
-                <select className="dm-input dm-select" value={newCategory} onChange={e => setNewCategory(e.target.value)}>
-                  {Object.entries(CATEGORIES).filter(([k]) => k !== 'all').map(([k, l]) => <option key={k} value={k}>{l}</option>)}
-                </select>
+                <Dropdown
+                  value={newCategory}
+                  onChange={val => setNewCategory(val)}
+                  options={Object.entries(CATEGORIES).filter(([k]) => k !== 'all').map(([k, l]) => ({ value: k, label: l }))}
+                />
               </div>
             </div>
             <div className="dm-field">
