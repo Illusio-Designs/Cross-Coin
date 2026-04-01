@@ -6,14 +6,16 @@ const FB_PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID || "1313610943804396";
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID || "G-XXXXXXXXXX";
 const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID || "seoi51zytn";
 
+const EXCLUDED_PATHS = ['/dashboard', '/auth'];
+const isExcluded = (url) => EXCLUDED_PATHS.some(p => url.startsWith(p));
+
 // Track FB PageView + GA page_view on every client-side route change
 function useRouteTracking() {
   const router = useRouter();
 
   useEffect(() => {
     const handleRouteChange = (url) => {
-      // Skip tracking for dashboard and auth pages
-      if (url.startsWith('/dashboard') || url.startsWith('/auth')) return;
+      if (isExcluded(url)) return;
 
       // Facebook Pixel — PageView on navigation
       if (typeof window !== "undefined" && window.fbq) {
@@ -21,9 +23,7 @@ function useRouteTracking() {
       }
       // Google Analytics — page_view on navigation
       if (typeof window !== "undefined" && window.gtag) {
-        window.gtag("event", "page_view", {
-          page_path: url,
-        });
+        window.gtag("event", "page_view", { page_path: url });
       }
     };
 
@@ -70,13 +70,13 @@ const Analytics = () => {
       <Script id="google-analytics" strategy="afterInteractive"
         dangerouslySetInnerHTML={{ __html: `
           window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
+          function gtag(){
+            var _p = window.location.pathname;
+            if (_p.startsWith('/dashboard') || _p.startsWith('/auth')) return;
+            dataLayer.push(arguments);
+          }
           gtag('js', new Date());
-          gtag('config', '${GA_ID}', {
-            send_page_view: false,
-            traffic_type: undefined
-          });
-          // Only send page_view if not dashboard/auth
+          gtag('config', '${GA_ID}', { send_page_view: false });
           var _path = window.location.pathname;
           if (!_path.startsWith('/dashboard') && !_path.startsWith('/auth')) {
             gtag('event', 'page_view', { page_path: _path });
