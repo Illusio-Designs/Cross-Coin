@@ -62,13 +62,11 @@ import "../styles/components/Toast.css";
 import "../styles/components/blog-section.css";
 import "../styles/components/InstagramGallery.css";
 
-// Components - Co-located CSS (in component directories)
-import "../components/Sidebar/Sidebar.css";
-import "../components/cart/CartDrawer.css";
-import "../components/cart/QuantityOfferBar.css";
+import "../styles/components/Sidebar.css";
+import "../styles/components/CartDrawer.css";
 import "../styles/components/SizeChartModal.css";
-import "../components/products/ProductFilterDrawer.css";
-import "../components/products/FomoBar.css";
+import "../styles/components/ProductFilterDrawer.css";
+import "../styles/components/FomoBar.css";
 import "../styles/common/Dropdown.css";
 
 // UI Components CSS
@@ -101,12 +99,8 @@ import "../styles/dashboard/social.css";
 import "../styles/dashboard/whatsapp.css";
 import "../styles/dashboard/analytics.css";
 // Additional page CSS
-import "../styles/pages/Collections.css";
-import "../styles/pages/About.css";
 import "../styles/pages/Lookbook.css";
 import "../styles/pages/Reels.css";
-import "../styles/pages/BlogDetails.css";
-import "../styles/components/blog-section.css";
 // Third-party
 import "react-quill/dist/quill.snow.css";
 
