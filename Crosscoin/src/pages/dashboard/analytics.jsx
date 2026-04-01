@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { brandSettingsService, brandService } from "../../services";
 
@@ -9,12 +9,6 @@ const LiveGlobe = dynamic(
 );
 
 const fmt   = n => n >= 1000 ? `${(n/1000).toFixed(1)}k` : String(n);
-const fmtRs = n => n >= 100000 ? `₹${(n/100000).toFixed(1)}L` : `₹${(n/1000).toFixed(1)}k`;
-const rnd   = (a,b) => Math.floor(Math.random()*(b-a+1)+a);
-
-const SOURCES = ["Organic Search","Direct","Social","Email","Referral"];
-const SRC_W   = [0.44, 0.28, 0.15, 0.08, 0.05];
-const PAGES   = ["/","/products","/collections","/cart","/about","/blog"];
 
 function StatCard({ label, value, delta, color }) {
   return (
@@ -44,8 +38,10 @@ export default function AnalyticsPage() {
   const [stats, setStats]             = useState(null);
   const [pages, setPages]             = useState([]);
   const [sources, setSources]         = useState([]);
+  const [topLocations, setTopLocations] = useState([]);
   const [brandId, setBrandId]         = useState(1);
   const [brands, setBrands]           = useState([]);
+  const [statsLoading, setStatsLoading] = useState(false);
   // GA4 config
   const [propertyId, setPropertyId]   = useState("");
   const [accessToken, setAccessToken] = useState("");
@@ -74,7 +70,6 @@ export default function AnalyticsPage() {
         const pid = list.find(s => s.key === "GA4_PROPERTY_ID");
         if (pid?.value) {
           setPropertyId(pid.value);
-          // Auto-connect once property ID is loaded
           const authToken = typeof window !== "undefined" ? localStorage.getItem("token") : "";
           fetch(`/api/ga4-token?brandId=${brandId}`, {
             headers: { Authorization: `Bearer ${authToken}` }
@@ -86,32 +81,129 @@ export default function AnalyticsPage() {
       }).catch(() => {});
   }, [mounted, brandId]);
 
-  useEffect(() => {
-    if (!mounted) return;
-    function generate() {
-      const sessions = rnd(3800, 5600);
-      setStats({
-        active:      rnd(80, 160),
-        sessions,
-        pageviews:   rnd(14000, 22000),
-        orders:      rnd(42, 120),
-        sales:       rnd(180000, 520000),
-        avgSession:  rnd(160, 290),
-        bounceRate:  (30 + Math.random() * 10).toFixed(1),
-        sessionsDelta: `+${rnd(5,20)}%`,
-        salesDelta:    `+${rnd(3,18)}%`,
-        firstTime:   rnd(400, 700),
-        returning:   rnd(200, 450),
-      });
-      setPages(PAGES.map(p => ({ label: p, val: rnd(200, Math.max(300, Math.floor(sessions * 0.4))) })).sort((a,b) => b.val - a.val));
-      setSources(SOURCES.map((s, i) => ({ label: s, val: Math.round(sessions * SRC_W[i]) })));
-    }
-    generate();
-    const t = setInterval(generate, 30000);
-    return () => clearInterval(t);
-  }, [mounted]);
+  // Fetch real GA4 report data (today's stats)
+  const fetchGA4Stats = useCallback(async () => {
+    if (!accessToken || !propertyId) return;
+    setStatsLoading(true);
+    try {
+      const baseUrl = `https://analyticsdata.googleapis.com/v1beta/${propertyId}:runReport`;
+      const headers = {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      };
 
-  // Fetch GA4 token from our API route — reads SA keys from Brand Settings
+      // Main stats: sessions, pageviews, active users, bounce rate, avg session
+      const mainRes = await fetch(baseUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          dateRanges: [{ startDate: "today", endDate: "today" }],
+          metrics: [
+            { name: "sessions" },
+            { name: "screenPageViews" },
+            { name: "activeUsers" },
+            { name: "bounceRate" },
+            { name: "averageSessionDuration" },
+            { name: "newUsers" },
+          ],
+        }),
+      });
+      const mainData = await mainRes.json();
+      const mv = mainData.rows?.[0]?.metricValues || [];
+      const sessions   = parseInt(mv[0]?.value || "0", 10);
+      const pageviews  = parseInt(mv[1]?.value || "0", 10);
+      const active     = parseInt(mv[2]?.value || "0", 10);
+      const bounceRate = (parseFloat(mv[3]?.value || "0") * 100).toFixed(1);
+      const avgSession = Math.round(parseFloat(mv[4]?.value || "0"));
+      const newUsers   = parseInt(mv[5]?.value || "0", 10);
+      const returning  = Math.max(0, active - newUsers);
+
+      // Compare yesterday for deltas
+      const yestRes = await fetch(baseUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          dateRanges: [{ startDate: "yesterday", endDate: "yesterday" }],
+          metrics: [{ name: "sessions" }],
+        }),
+      });
+      const yestData = await yestRes.json();
+      const yestSessions = parseInt(yestData.rows?.[0]?.metricValues?.[0]?.value || "1", 10);
+      const sessionsDelta = yestSessions > 0
+        ? `${sessions >= yestSessions ? "+" : ""}${(((sessions - yestSessions) / yestSessions) * 100).toFixed(1)}%`
+        : "";
+
+      setStats({ active, sessions, pageviews, bounceRate, avgSession, newUsers, returning, sessionsDelta });
+
+      // Top pages
+      const pagesRes = await fetch(baseUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          dateRanges: [{ startDate: "today", endDate: "today" }],
+          dimensions: [{ name: "pagePath" }],
+          metrics: [{ name: "screenPageViews" }],
+          orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
+          limit: 6,
+        }),
+      });
+      const pagesData = await pagesRes.json();
+      setPages((pagesData.rows || []).map(r => ({
+        label: r.dimensionValues[0]?.value || "/",
+        val: parseInt(r.metricValues[0]?.value || "0", 10),
+      })));
+
+      // Traffic sources
+      const srcRes = await fetch(baseUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          dateRanges: [{ startDate: "today", endDate: "today" }],
+          dimensions: [{ name: "sessionDefaultChannelGroup" }],
+          metrics: [{ name: "sessions" }],
+          orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+          limit: 5,
+        }),
+      });
+      const srcData = await srcRes.json();
+      setSources((srcData.rows || []).map(r => ({
+        label: r.dimensionValues[0]?.value || "Other",
+        val: parseInt(r.metricValues[0]?.value || "0", 10),
+      })));
+
+      // Top locations
+      const locRes = await fetch(baseUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          dateRanges: [{ startDate: "today", endDate: "today" }],
+          dimensions: [{ name: "city" }, { name: "country" }],
+          metrics: [{ name: "activeUsers" }],
+          orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }],
+          limit: 5,
+        }),
+      });
+      const locData = await locRes.json();
+      setTopLocations((locData.rows || []).map(r => ({
+        name: `${r.dimensionValues[0]?.value} · ${r.dimensionValues[1]?.value}`,
+        val: parseInt(r.metricValues[0]?.value || "0", 10),
+      })));
+
+    } catch (err) {
+      console.error("[Analytics] GA4 fetch error:", err);
+    }
+    setStatsLoading(false);
+  }, [accessToken, propertyId]);
+
+  // Fetch stats when token is ready, then refresh every 5 min
+  useEffect(() => {
+    if (!accessToken || !propertyId) return;
+    fetchGA4Stats();
+    const t = setInterval(fetchGA4Stats, 5 * 60 * 1000);
+    return () => clearInterval(t);
+  }, [accessToken, propertyId, fetchGA4Stats]);
+
+  // Manual connect button handler
   const connectGA4 = async () => {
     if (!propertyId) { setTokenErr("Property ID is required."); return; }
     setTokenLoading(true); setTokenErr("");
@@ -124,7 +216,6 @@ export default function AnalyticsPage() {
       if (data.accessToken) {
         setAccessToken(data.accessToken);
         setShowConfig(false);
-        setTimeout(() => connectGA4(), 50 * 60 * 1000);
       } else {
         setTokenErr(data.error || "Failed to get token.");
       }
@@ -133,14 +224,6 @@ export default function AnalyticsPage() {
     }
     setTokenLoading(false);
   };
-
-  const topLocations = stats ? [
-    { name: "Surat · India",     val: Math.floor(stats.sessions * 0.28) },
-    { name: "Mumbai · India",    val: Math.floor(stats.sessions * 0.18) },
-    { name: "Ahmedabad · India", val: Math.floor(stats.sessions * 0.14) },
-    { name: "Delhi · India",     val: Math.floor(stats.sessions * 0.10) },
-    { name: "Bangalore · India", val: Math.floor(stats.sessions * 0.08) },
-  ] : [];
 
   if (!mounted) return null;
 
@@ -190,13 +273,19 @@ export default function AnalyticsPage() {
       {/* Stat cards */}
       {stats && (
         <div className="an-stats-row">
-          <StatCard label="Visitors now"    value={stats.active}          />
-          <StatCard label="Sessions today"  value={fmt(stats.sessions)}   delta={stats.sessionsDelta} />
-          <StatCard label="Pageviews"       value={fmt(stats.pageviews)}  delta="+8.3%" />
-          <StatCard label="Orders today"    value={stats.orders}          />
-          <StatCard label="Revenue today"   value={fmtRs(stats.sales)}    delta={stats.salesDelta} />
-          <StatCard label="Bounce rate"     value={`${stats.bounceRate}%`} delta="vs yesterday" color="#ef4444" />
+          <StatCard label="Active Users"    value={stats.active}                                    />
+          <StatCard label="Sessions today"  value={fmt(stats.sessions)}  delta={stats.sessionsDelta} />
+          <StatCard label="Pageviews"       value={fmt(stats.pageviews)}                            />
+          <StatCard label="New Users"       value={fmt(stats.newUsers)}                             />
+          <StatCard label="Returning"       value={fmt(stats.returning)}                            />
+          <StatCard label="Bounce rate"     value={`${stats.bounceRate}%`} delta="today" color="#ef4444" />
         </div>
+      )}
+      {statsLoading && !stats && (
+        <div style={{ textAlign: "center", padding: "32px", color: "#9ca3af" }}>Loading analytics…</div>
+      )}
+      {!accessToken && !statsLoading && (
+        <div style={{ textAlign: "center", padding: "32px", color: "#9ca3af" }}>Connect GA4 to see real data.</div>
       )}
 
       {/* Bottom panels */}
@@ -223,8 +312,8 @@ export default function AnalyticsPage() {
           <div className="an-list-panel">
             <div className="an-list-title">Customers</div>
             <div className="an-list-rows">
-              <BarRow label="First-time" value={stats.firstTime} max={Math.max(stats.firstTime,stats.returning)} color="#10b981" />
-              <BarRow label="Returning"  value={stats.returning} max={Math.max(stats.firstTime,stats.returning)} color="#6366f1" />
+              <BarRow label="New Users"  value={stats.newUsers}  max={Math.max(stats.newUsers, stats.returning)} color="#10b981" />
+              <BarRow label="Returning"  value={stats.returning} max={Math.max(stats.newUsers, stats.returning)} color="#6366f1" />
             </div>
           </div>
           <div className="an-list-panel">
