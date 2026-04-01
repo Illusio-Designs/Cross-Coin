@@ -1,19 +1,32 @@
 /* ── Analytics page ── */
 .an-live-pill {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 5px 12px; border-radius: 999px;
-  background: #f0fdf4; border: 1px solid #bbf7d0;
-  font-size: 12px; font-weight: 600; color: #16a34a;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #f0eeff;
+  border: 1px solid #e0d8ff;
+  font-size: 12px;
+  font-weight: 500;
+  color: #180D3E;
   font-family: 'DM Sans', sans-serif;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.4;
 }
 .an-live-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: #22c55e; flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #CE1E36;
+  flex-shrink: 0;
+  display: inline-block;
   animation: anPing 1.5s ease-in-out infinite;
 }
 @keyframes anPing {
-  0%,100% { box-shadow: 0 0 0 2px rgba(34,197,94,.3); }
-  50%      { box-shadow: 0 0 0 5px rgba(34,197,94,.08); }
+  0%,100% { box-shadow: 0 0 0 2px rgba(206,30,54,.25); }
+  50%      { box-shadow: 0 0 0 4px rgba(206,30,54,.08); }
 }
 
 .an-stats-row {

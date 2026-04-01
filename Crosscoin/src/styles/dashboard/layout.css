@@ -163,19 +163,31 @@
 /* dashboard-page sits inside dl-content/dashboard-content — no extra padding needed */
 .dashboard-page {
   width: 100%;
-  max-width: 100%;
+  max-width: none;
+  padding: 10px;
+  margin: 0;
+  background: #ffffff;
   box-sizing: border-box;
-  padding: 15px;
+}
+
+/* main CardGrid — same white card treatment as dashboard-page */
+.dashboard-sections {
   background: #ffffff;
   border-radius: 6px;
+  padding: 15px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 @media (max-width: 900px) {
-  .dashboard-page { padding: 0; }
+  .dashboard-page,
+  .dashboard-sections { padding: 0; border-radius: 0; }
 }
 
 @media (max-width: 480px) {
-  .dashboard-page { padding: 0; }
+  .dashboard-page,
+  .dashboard-sections { padding: 0; border-radius: 0; }
 }
 
 /* ── Mobile ─────────────────────────────────────────────────── */
