@@ -178,23 +178,20 @@ async function seedDefaultTemplates(brandId = 1) {
     },
   ];
 
-  const results = [];
-  for (const tpl of templates) {
-    try {
-      const res = await createTemplate(tpl, brandId);
-      results.push({ name: tpl.name, status: 'created', id: res.id });
-      logger.info(`WhatsApp template created: ${tpl.name}`);
-    } catch (err) {
-      const msg = metaError(err);
-      if (msg.toLowerCase().includes('already exists') || msg.toLowerCase().includes('duplicate')) {
-        results.push({ name: tpl.name, status: 'already_exists' });
-      } else {
-        results.push({ name: tpl.name, status: 'error', error: msg });
+  const results = await Promise.allSettled(
+    templates.map(tpl => createTemplate(tpl, brandId)
+      .then(res => ({ name: tpl.name, status: 'created', id: res.id }))
+      .catch(err => {
+        const msg = metaError(err);
+        if (msg.toLowerCase().includes('already exists') || msg.toLowerCase().includes('duplicate')) {
+          return { name: tpl.name, status: 'already_exists' };
+        }
         logger.error(`WhatsApp template error (${tpl.name}): ${msg}`);
-      }
-    }
-  }
-  return results;
+        return { name: tpl.name, status: 'error', error: msg };
+      })
+    )
+  );
+  return results.map(r => r.value);
 }
 
 // ─── Send messages ────────────────────────────────────────────────────────────
