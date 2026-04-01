@@ -148,19 +148,36 @@ export default function AnalyticsPage() {
       const total = rows.reduce((acc, r) => acc + parseInt(r.metricValues[0]?.value ?? "0", 10), 0);
       setRealtimeUsers(total);
 
-      // Ping map for each city
+      // Ping map for each city — expanded coords list
       const CITY_COORDS = {
+        // India
         Mumbai: [19.076, 72.877], Delhi: [28.613, 77.209], Bangalore: [12.971, 77.594],
         Chennai: [13.082, 80.27], Hyderabad: [17.385, 78.487], Pune: [18.52, 73.857],
         Kolkata: [22.572, 88.363], Ahmedabad: [23.022, 72.571], Surat: [21.17, 72.831],
-        Rajkot: [22.303, 70.802], London: [51.507, -0.128], "New York": [40.714, -74.006],
-        Dubai: [25.204, 55.27], Singapore: [1.352, 103.82],
+        Rajkot: [22.303, 70.802], Jaipur: [26.912, 75.787], Lucknow: [26.846, 80.946],
+        Bhopal: [23.259, 77.413], Indore: [22.719, 75.857], Nagpur: [21.145, 79.088],
+        Patna: [25.594, 85.137], Vadodara: [22.307, 73.181], Coimbatore: [11.017, 76.955],
+        Kochi: [9.931, 76.267], Chandigarh: [30.733, 76.779], Gurgaon: [28.459, 77.026],
+        Noida: [28.535, 77.391], Visakhapatnam: [17.686, 83.218], Agra: [27.176, 78.008],
+        Varanasi: [25.317, 82.973], Meerut: [28.984, 77.706], Nashik: [19.997, 73.789],
+        Aurangabad: [19.877, 75.343], Amritsar: [31.634, 74.872], Jodhpur: [26.292, 73.017],
+        // International
+        London: [51.507, -0.128], "New York": [40.714, -74.006], "Los Angeles": [34.052, -118.244],
+        Toronto: [43.651, -79.347], Sydney: [-33.868, 151.209], Dubai: [25.204, 55.27],
+        Singapore: [1.352, 103.82], "Kuala Lumpur": [3.139, 101.687], Bangkok: [13.756, 100.502],
+        Paris: [48.857, 2.347], Berlin: [52.52, 13.405], Tokyo: [35.689, 139.692],
+        "Hong Kong": [22.319, 114.169], Riyadh: [24.688, 46.722], Doha: [25.286, 51.533],
+        Melbourne: [-37.814, 144.963], Chicago: [41.878, -87.63], Houston: [29.76, -95.37],
+        "San Francisco": [37.774, -122.419], Seattle: [47.606, -122.332],
       };
-      rows.forEach(row => {
-        const city = row.dimensionValues[0]?.value ?? "";
-        const coords = CITY_COORDS[city];
-        if (coords) addPing(coords[0], coords[1], city);
-      });
+
+      if (leafletMap.current) {
+        rows.forEach(row => {
+          const city = row.dimensionValues[0]?.value ?? "";
+          const coords = CITY_COORDS[city];
+          if (coords) addPing(coords[0], coords[1], city);
+        });
+      }
     } catch {}
   }, [accessToken, propertyId, addPing]);
 
@@ -202,10 +219,11 @@ export default function AnalyticsPage() {
   useEffect(() => {
     if (!accessToken || !propertyId) return;
     fetchGA4Stats();
-    fetchRealtime();
+    // Delay first realtime fetch to ensure map is initialized
+    const firstPing = setTimeout(() => fetchRealtime(), 500);
     const t1 = setInterval(fetchGA4Stats, 5 * 60 * 1000);
     const t2 = setInterval(fetchRealtime, 30 * 1000);
-    return () => { clearInterval(t1); clearInterval(t2); };
+    return () => { clearTimeout(firstPing); clearInterval(t1); clearInterval(t2); };
   }, [accessToken, propertyId, fetchGA4Stats, fetchRealtime]);
 
   if (!mounted) return null;
