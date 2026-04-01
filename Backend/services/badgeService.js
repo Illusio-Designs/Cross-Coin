@@ -1,4 +1,5 @@
 const { ProductVariation } = require('../model/associations');
+const { sequelize } = require('../config/db');
 const badgeConfig = require('../config/badgeConfig');
 const badgeQueue = require('../queue/badgeQueue');
 
@@ -21,7 +22,6 @@ class BadgeService {
       const isNewArrival = product.created_at > newArrivalCutoff;
 
       // Check 2: Is product hot selling? - Calculate from actual orders
-      const { sequelize } = require('../model/associations');
       const totalSoldResult = await sequelize.query(
         `SELECT SUM(oi.quantity) as total_quantity
          FROM order_items oi
