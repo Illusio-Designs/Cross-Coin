@@ -7,6 +7,9 @@ const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware.js');
 router.get('/webhook', ctrl.verifyWebhook);
 router.post('/webhook', ctrl.receiveWebhook);
 
+// ── Customer contact (public — website chat widget) ───────────────────────────
+router.post('/customer/contact', ctrl.customerContact);
+
 // ── Stats ─────────────────────────────────────────────────────────────────────
 router.get('/stats', isAuthenticated, isAdmin, ctrl.getStats);
 
