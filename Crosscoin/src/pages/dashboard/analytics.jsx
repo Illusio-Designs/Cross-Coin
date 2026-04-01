@@ -78,11 +78,11 @@ export default function AnalyticsPage() {
     }, 4000);
   }, []);
 
-  // Load brands
+  // Load brands (for multi-brand selector only — default stays brandId=1)
   useEffect(() => {
     if (!mounted) return;
     brandService.getAllBrands(true)
-      .then(r => { if (r.success && r.data.length > 0) { setBrands(r.data); setBrandId(r.data[0].id); } })
+      .then(r => { if (r.success && r.data.length > 0) setBrands(r.data); })
       .catch(() => {});
   }, [mounted]);
 
