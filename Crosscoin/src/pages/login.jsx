@@ -40,7 +40,8 @@ export default function Login() {
     }
     const trySend = (n) => {
       if (typeof window.sendOtp === "function") {
-        window.sendOtp("+91" + digits, digits,
+        window.sendOtp(
+          "+91" + digits,
           () => { setStep("otp"); setHint("OTP sent to +91 " + digits); setLoading(false); setTimer(30); },
           () => { setError("Failed to send OTP. Try again."); setLoading(false); }
         );
