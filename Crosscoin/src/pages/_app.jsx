@@ -105,6 +105,7 @@ import "../styles/pages/Lookbook.css";
 import "../styles/pages/Reels.css";
 // Third-party
 import "react-quill/dist/quill.snow.css";
+import "leaflet/dist/leaflet.css";
 
 import Analytics from "../components/common/Analytics";
 import UTMTracker from "../components/common/UTMTracker";
