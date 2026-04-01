@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import Script from "next/script";
 import { brandSettingsService, brandService } from "../../services";
 
 const fmt = n => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
@@ -46,9 +45,17 @@ export default function AnalyticsPage() {
   const [lastUpdated, setLastUpdated]       = useState(null);
   const [mapReady, setMapReady] = useState(false);
 
-  const initMap = useCallback(() => {
-    if (!mapRef.current || leafletMap.current || typeof window === "undefined" || !window.L) return;
-    const L = window.L;
+  const initMap = useCallback(async () => {
+    if (!mapRef.current || leafletMap.current) return;
+    // Dynamic import — works reliably in Next.js, no SSR issues
+    const L = (await import("leaflet")).default;
+    // Fix default marker icon paths broken by webpack
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    });
     const m = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false })
       .setView([22.5937, 78.9629], 4);
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
@@ -60,10 +67,15 @@ export default function AnalyticsPage() {
 
   useEffect(() => { setMounted(true); }, []);
 
+  // Init map on mount
+  useEffect(() => {
+    if (mounted) initMap();
+  }, [mounted, initMap]);
+
   // Add ping marker on map
-  const addPing = useCallback((lat, lng, city) => {
-    if (!leafletMap.current || typeof window === "undefined" || !window.L) return;
-    const L = window.L;
+  const addPing = useCallback(async (lat, lng, city) => {
+    if (!leafletMap.current) return;
+    const L = (await import("leaflet")).default;
     const icon = L.divIcon({
       html: `<div class="an-map-ping"></div>`,
       className: "",
@@ -199,13 +211,6 @@ export default function AnalyticsPage() {
 
   return (
     <>
-      <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-      <Script
-        src="https://unpkg.com/leaflet/dist/leaflet.js"
-        strategy="afterInteractive"
-        onLoad={initMap}
-        onReady={initMap}
-      />
 
       <div className="dashboard-page">
         {/* Header */}
