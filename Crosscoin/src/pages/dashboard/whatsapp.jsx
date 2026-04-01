@@ -147,6 +147,7 @@ export function WhatsAppManager() {
   // Test
   const [testPhone, setTestPhone] = useState('');
   const [testLoading, setTestLoading] = useState(false);
+  const [seedLoading, setSeedLoading] = useState(false);
 
   const messagesEndRef = useRef(null);
   const pollRef = useRef(null);
@@ -173,6 +174,21 @@ export function WhatsAppManager() {
       if (data.success) setTemplateList(data.templates || []);
     } catch { }
     setListLoading(false);
+  };
+
+  const seedTemplates = async () => {
+    setSeedLoading(true);
+    try {
+      const data = await whatsappService.seedTemplates(brandId);
+      if (data.success) {
+        const { created, skipped, failed } = data.summary;
+        showSuccess('templateCreated', `Created: ${created} · Skipped: ${skipped} · Failed: ${failed}`);
+        fetchTemplates();
+      } else {
+        showError('loadingFailed', data.message);
+      }
+    } catch (e) { showError('loadingFailed', e.message); }
+    setSeedLoading(false);
   };
 
   const createTemplate = async (e) => {
@@ -339,6 +355,10 @@ export function WhatsAppManager() {
               <div className="was-page-head">
                 <h2 className="was-page-title">Dashboard</h2>
                 <span className="was-page-sub">CrossCoin · WhatsApp Overview</span>
+                <button className="was-btn-secondary" onClick={seedTemplates} disabled={seedLoading}>
+                  <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>
+                  {seedLoading ? 'Seeding…' : 'Seed Templates'}
+                </button>
               </div>
 
               {/* Stats */}
@@ -615,14 +635,8 @@ export function WhatsAppManager() {
                   <span className="was-page-sub">All submitted templates and their Meta approval status</span>
                 </div>
                 <div style={{display:'flex',gap:8}}>
-                  <button className="was-btn-secondary" onClick={async () => {
-                    try {
-                      const d = await whatsappService.seedTemplates(brandId);
-                      showSuccess('templateCreated');
-                      fetchTemplates();
-                    } catch(e) { showError('loadingFailed', e.message); }
-                  }}>
-                    Seed Default Templates
+                  <button className="was-btn-secondary" onClick={seedTemplates} disabled={seedLoading}>
+                    {seedLoading ? 'Seeding…' : 'Seed Default Templates'}
                   </button>
                   <button className="was-btn-primary" onClick={fetchTemplates} disabled={listLoading}>
                     <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>{listLoading?'Loading…':'Refresh'}
