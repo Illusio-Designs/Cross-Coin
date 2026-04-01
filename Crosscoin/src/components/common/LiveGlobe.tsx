@@ -4,19 +4,6 @@ import type { COBEOptions } from "cobe";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Visitor {
-  lat: number;
-  lng: number;
-  id: string;
-}
-
-interface OrderPing {
-  lat: number;
-  lng: number;
-  id: string;
-  createdAt: number;
-}
-
 interface TrafficArc {
   startLat: number;
   startLng: number;
@@ -32,9 +19,7 @@ interface TopLocation {
 }
 
 interface GA4RealtimeResponse {
-  minuteRanges?: { startMinutesAgo: string; endMinutesAgo: string }[];
   rows?: { dimensionValues: { value: string }[]; metricValues: { value: string }[] }[];
-  totals?: { metricValues: { value: string }[] }[];
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -91,8 +76,7 @@ export default function LiveGlobe({
 
   const [topLocations, setTopLocations] = useState<TopLocation[]>([]);
   const [totalVisitors, setTotalVisitors] = useState(0);
-  const [totalOrders, setTotalOrders] = useState(0); // injected via your backend
-  const [orderPings, setOrderPings] = useState<OrderPing[]>([]);
+  const [totalSessions, setTotalSessions] = useState(0);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -180,6 +164,25 @@ export default function LiveGlobe({
 
       markersRef.current = newMarkers;
       arcsRef.current = newArcs;
+
+      // Fetch today's sessions from the standard report API
+      const sessRes = await fetch(
+        `https://analyticsdata.googleapis.com/v1beta/${propertyId}:runReport`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            dateRanges: [{ startDate: "today", endDate: "today" }],
+            metrics: [{ name: "sessions" }],
+          }),
+        }
+      );
+      if (sessRes.ok) {
+        const sessData = await sessRes.json();
+        const sessions = parseInt(sessData.rows?.[0]?.metricValues?.[0]?.value ?? "0", 10);
+        setTotalSessions(sessions);
+      }
+
       setLastUpdated(new Date());
       setLoading(false);
     } catch (err) {
@@ -187,27 +190,6 @@ export default function LiveGlobe({
       setLoading(false);
     }
   }, [propertyId, accessToken]);
-
-  // ── Simulate order pings (replace with your WebSocket / API) ─────────────
-
-  const simulateOrderPing = useCallback(() => {
-    const cities = Object.entries(CITY_COORDS);
-    const [, coords] =
-      cities[Math.floor(Math.random() * cities.length)];
-    const ping: OrderPing = {
-      lat: coords[0],
-      lng: coords[1],
-      id: Math.random().toString(36).slice(2),
-      createdAt: Date.now(),
-    };
-    setOrderPings((prev) => [...prev.slice(-19), ping]);
-    setTotalOrders((n) => n + 1);
-
-    // Expire ping after 3 s
-    setTimeout(() => {
-      setOrderPings((prev) => prev.filter((p) => p.id !== ping.id));
-    }, 3000);
-  }, []);
 
   // ── Mount globe ──────────────────────────────────────────────────────────
 
@@ -263,19 +245,6 @@ export default function LiveGlobe({
     return () => clearInterval(timer);
   }, [fetchGA4, pollInterval]);
 
-  // Demo: simulate an order every 8–20 s
-  useEffect(() => {
-    function schedule() {
-      const delay = 8000 + Math.random() * 12000;
-      return setTimeout(() => {
-        simulateOrderPing();
-        schedule();
-      }, delay);
-    }
-    const t = schedule();
-    return () => clearTimeout(t);
-  }, [simulateOrderPing]);
-
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -288,8 +257,8 @@ export default function LiveGlobe({
           accent="#22e5a0"
         />
         <StatCard
-          label="Orders today"
-          value={totalOrders.toLocaleString()}
+          label="Sessions today"
+          value={loading ? "—" : totalSessions.toLocaleString()}
           accent="#5b9dff"
         />
         <div className="last-updated">
@@ -304,13 +273,6 @@ export default function LiveGlobe({
         {/* Globe */}
         <div className="globe-container">
           <canvas ref={canvasRef} className="globe-canvas" />
-
-          {/* Order pings overlay */}
-          {orderPings.map((ping) => (
-            <div key={ping.id} className="order-ping">
-              <span className="ping-label">🧦 Order placed</span>
-            </div>
-          ))}
         </div>
 
         {/* Sidebar */}
