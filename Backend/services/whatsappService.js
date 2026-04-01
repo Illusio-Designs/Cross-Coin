@@ -166,6 +166,17 @@ async function seedDefaultTemplates(brandId = 1) {
       ],
     },
     {
+      name: 'popup_coupon', category: 'MARKETING', language: 'en',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: '🎉 Your Exclusive Coupon' },
+        { type: 'BODY',
+          text: `Hi! Here's your exclusive 10% OFF coupon for *${storeName}*.\n\nUse code *{{1}}* at checkout.\n\n⚠️ Valid on *prepaid orders only*. Limited time offer!`,
+          example: { body_text: [['PREPAID10']] } },
+        { type: 'FOOTER', text: footer },
+        { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Shop Now', url: `https://${storeUrl}` }] },
+      ],
+    },
+    {
       name: 'cart_abandoned', category: 'MARKETING', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'You left something behind' },
