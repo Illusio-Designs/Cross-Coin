@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService } from '../../services';
 import { Modal, Button } from '../../components/ui';
+import Dropdown from '../../components/ui/Dropdown';
 import Loader from '../../components/common/Loader';
 import { ConfirmModal } from '../../components/common/AlertModal';
 
@@ -142,10 +143,14 @@ export function BrandManager() {
             </div>
             <div className="dm-field">
               <label className="dm-label">Status</label>
-              <select className="dm-input dm-select" name="status" value={formData.status} onChange={handleInputChange}>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+              <Dropdown
+                value={formData.status}
+                onChange={val => handleInputChange({ target: { name: 'status', value: val } })}
+                options={[
+                  { value: 'active', label: 'Active' },
+                  { value: 'inactive', label: 'Inactive' },
+                ]}
+              />
             </div>
             <div className="dm-section-title">Brand Colors</div>
             <div className="dm-color-row">

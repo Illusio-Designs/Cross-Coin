@@ -2,6 +2,7 @@
 export { default } from './index';
 import { useState, useEffect, useCallback } from "react";
 import { Button, Modal, Table, Pagination, Select } from "../../components/ui";
+import Dropdown from "../../components/ui/Dropdown";
 import Loader from "../../components/common/Loader";
 import { ConfirmModal } from '../../components/common/AlertModal';
 import { policyService, brandService } from "../../services";
@@ -140,9 +141,12 @@ export function Policies() {
           </div>
           <div className="sl-header-right">
             {brands.length > 1 && (
-              <select className="bset-brand-select" value={brandId || ''} onChange={e => setBrandId(Number(e.target.value))}>
-                {brands.map(b => <option key={b.id} value={b.id}>{b.display_name || b.name}</option>)}
-              </select>
+              <Dropdown
+                value={brandId || ''}
+                onChange={val => setBrandId(Number(val))}
+                options={brands.map(b => ({ value: b.id, label: b.display_name || b.name }))}
+                className="bset-brand-select"
+              />
             )}
             <div className="sl-search-wrap">
               <span className="sl-search-icon">{IC.search}</span>

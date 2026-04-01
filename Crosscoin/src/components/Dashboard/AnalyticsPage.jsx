@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { brandSettingsService, brandService } from "../../services";
+import Dropdown from "../ui/Dropdown";
 
 const fmt = n => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 const fmtTime = s => `${Math.floor(s / 60)}m ${s % 60}s`;
@@ -274,9 +275,12 @@ export default function AnalyticsPage() {
           </div>
           <div className="sl-header-right">
             {brands.length > 1 && (
-              <select className="bset-brand-select" value={brandId} onChange={e => setBrandId(Number(e.target.value))}>
-                {brands.map(b => <option key={b.id} value={b.id}>{b.display_name || b.name}</option>)}
-              </select>
+              <Dropdown
+                value={brandId}
+                onChange={val => setBrandId(Number(val))}
+                options={brands.map(b => ({ value: b.id, label: b.display_name || b.name }))}
+                className="bset-brand-select"
+              />
             )}
             {accessToken && (
               <div className="an-live-pill"><span className="an-live-dot" /> Live · GA4</div>

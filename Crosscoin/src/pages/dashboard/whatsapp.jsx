@@ -3,6 +3,7 @@ export { default } from './index';
 
 import { useState, useEffect, useRef } from 'react';
 import { Modal, Button } from '../../components/ui';
+import Dropdown from '../../components/ui/Dropdown';
 import Loader from '../../components/common/Loader';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService, whatsappService } from '../../services';
@@ -313,9 +314,12 @@ export function WhatsAppManager() {
 
         <div className="was-nav-footer">
           {brands.length > 1 && (
-            <select className="was-brand-select" value={brandId} onChange={e => setBrandId(Number(e.target.value))}>
-              {brands.map(b => <option key={b.id} value={b.id}>{b.display_name || b.name}</option>)}
-            </select>
+            <Dropdown
+              value={brandId}
+              onChange={val => setBrandId(Number(val))}
+              options={brands.map(b => ({ value: b.id, label: b.display_name || b.name }))}
+              className="was-brand-select"
+            />
           )}
         </div>
       </aside>
@@ -723,11 +727,15 @@ export function WhatsAppManager() {
               </div>
               <div className="dm-field">
                 <label className="dm-label">Category</label>
-                <select className="dm-input dm-select" value={form.category} onChange={e => setF('category', e.target.value)}>
-                  <option value="UTILITY">UTILITY</option>
-                  <option value="MARKETING">MARKETING</option>
-                  <option value="AUTHENTICATION">AUTHENTICATION</option>
-                </select>
+                <Dropdown
+                  value={form.category}
+                  onChange={val => setF('category', val)}
+                  options={[
+                    { value: 'UTILITY', label: 'UTILITY' },
+                    { value: 'MARKETING', label: 'MARKETING' },
+                    { value: 'AUTHENTICATION', label: 'AUTHENTICATION' },
+                  ]}
+                />
               </div>
             </div>
             <div className="dm-field">
