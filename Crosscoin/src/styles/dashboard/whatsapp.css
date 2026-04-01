@@ -65,9 +65,34 @@
 }
 .was-nav-footer { padding: 12px 10px; border-top: 1px solid #f0f0f5; flex-shrink: 0; }
 .was-brand-select {
-  width: 100%; padding: 7px 10px; border: 1px solid #e5e7eb; border-radius: 8px;
-  font-size: 13px; font-family: 'DM Sans', sans-serif; color: #374151;
-  background: #fff; outline: none; cursor: pointer;
+  width: 100%;
+  max-width: 100%;
+}
+
+.was-brand-select .dropdown-trigger {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  color: #374151;
+  font-weight: 500;
+}
+
+.was-brand-select .dropdown-trigger:hover:not(.disabled),
+.was-brand-select .dropdown-trigger.open {
+  border-color: #180D3E;
+  box-shadow: none;
+}
+
+.was-brand-select .dropdown-icon {
+  color: #888;
+}
+
+.was-brand-select .dropdown-item.active {
+  background-color: #180D3E;
+  color: #fff;
 }
 
 /* ══ MAIN AREA ══ */
