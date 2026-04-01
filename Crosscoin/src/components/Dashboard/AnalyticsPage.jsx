@@ -56,9 +56,15 @@ export default function AnalyticsPage() {
       iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
       shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
     });
-    const m = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false })
-      .setView([20.5937, 78.9629], 5);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    const m = L.map(mapRef.current, {
+      zoomControl: true,
+      scrollWheelZoom: false,
+      minZoom: 3,
+      maxZoom: 10,
+      maxBounds: [[5, 60], [40, 100]],
+      maxBoundsViscosity: 0.8,
+    }).setView([22.5, 82.0], 4);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
       attribution: "© OpenStreetMap © CARTO", maxZoom: 18,
     }).addTo(m);
     leafletMap.current = m;
@@ -374,10 +380,10 @@ export default function AnalyticsPage() {
 
       <style>{`
         .an-map-wrap {
-          background: #fff;
-          border: 1px solid #e5e7eb;
+          background: #1a1a2e;
+          border: 1px solid #2d2d4e;
           border-radius: 10px;
-          overflow: hidden;
+          overflow: visible;
           margin-bottom: 16px;
         }
         .an-map-header {
@@ -385,22 +391,24 @@ export default function AnalyticsPage() {
           align-items: center;
           justify-content: space-between;
           padding: 12px 16px;
-          border-bottom: 1px solid #f0f0f5;
+          border-bottom: 1px solid #2d2d4e;
         }
         .an-map-title {
           font-size: 12px;
           font-weight: 700;
-          color: #374151;
+          color: #e5e7eb;
           text-transform: uppercase;
           letter-spacing: .6px;
         }
         .an-map-sub {
           font-size: 11px;
-          color: #9ca3af;
+          color: #6b7280;
         }
         .an-map {
-          height: 340px;
+          height: 600px;
           width: 100%;
+          border-radius: 0 0 10px 10px;
+          overflow: hidden;
         }
         .an-map-ping {
           width: 12px;

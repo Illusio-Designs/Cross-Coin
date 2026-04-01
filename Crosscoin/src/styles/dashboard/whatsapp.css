@@ -7,7 +7,8 @@
   display: flex;
   height: calc(100vh - 60px);
   overflow: hidden;
-  background: #f9fafb;
+  background: #f4f5f7;
+  background: #f4f5f7;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
 }

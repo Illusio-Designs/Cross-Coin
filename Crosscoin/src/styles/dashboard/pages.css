@@ -61,6 +61,11 @@
   flex-wrap: wrap;
 }
 
+/* Analytics header — keep all items on one line */
+.sl-page-header .sl-header-right:has(.bset-brand-select) {
+  flex-wrap: nowrap;
+}
+
 /* ---- Search ---- */
 .sl-search-wrap {
   position: relative;
@@ -719,8 +724,8 @@
 
 /* ---- Brand Settings ---- */
 .bset-brand-select {
-  min-width: 160px;
-  max-width: 200px;
+  min-width: 130px;
+  max-width: 160px;
 }
 
 .bset-brand-select .dropdown-trigger {
@@ -972,6 +977,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #ffffff;
+  border-radius: 6px;
+  width: 100%;
 }
 
 /* ---- Products table cells ---- */
