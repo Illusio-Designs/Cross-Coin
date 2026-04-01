@@ -12,6 +12,9 @@ function useRouteTracking() {
 
   useEffect(() => {
     const handleRouteChange = (url) => {
+      // Skip tracking for dashboard and auth pages
+      if (url.startsWith('/dashboard') || url.startsWith('/auth')) return;
+
       // Facebook Pixel — PageView on navigation
       if (typeof window !== "undefined" && window.fbq) {
         window.fbq("track", "PageView");
@@ -31,6 +34,11 @@ function useRouteTracking() {
 
 const Analytics = () => {
   useRouteTracking();
+  const router = useRouter();
+  const isDashboard = router.pathname.startsWith('/dashboard') || router.pathname.startsWith('/auth');
+
+  // Don't load any tracking scripts on dashboard/auth pages
+  if (isDashboard) return null;
 
   return (
     <>
