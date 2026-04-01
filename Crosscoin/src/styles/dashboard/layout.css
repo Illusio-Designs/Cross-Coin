@@ -160,16 +160,6 @@
   overflow-x: hidden;
 }
 
-/* dashboard-page sits inside dl-content/dashboard-content — no extra padding needed */
-.dashboard-page {
-  width: 100%;
-  max-width: none;
-  padding: 10px;
-  margin: 0;
-  background: #ffffff;
-  box-sizing: border-box;
-}
-
 /* main CardGrid — same white card treatment as dashboard-page */
 .dashboard-sections {
   background: #ffffff;

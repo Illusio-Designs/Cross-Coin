@@ -23,10 +23,14 @@ async function sendGAEvent(eventName, order, params = {}) {
 
   const items = (order.items || []).map(item => ({
     item_id: String(item.product_id || item.id || ''),
-    item_name: item.name || item.item_name || '',
+    item_name: item.name || item.item_name || item.product_name || '',
     quantity: item.quantity || 1,
-    price: parseFloat(item.price || 0),
+    price: parseFloat(item.price || item.unit_price || 0),
   }));
+
+  if (items.some(i => !i.item_name)) {
+    console.warn(`⚠️ Google Analytics: Some items missing item_name for order ${order.order_number}`, items);
+  }
 
   const eventData = {
     client_id: clientId,
