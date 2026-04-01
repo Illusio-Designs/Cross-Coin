@@ -61,17 +61,6 @@ const SIDEBAR_GROUPS = [
 const SAMPLES = ['CC-20240601-0042','3 items','1,299','BlueDart','BD9812345678','SAVE10','Surat, Gujarat - 395006','https://crosscoin.in/track','CrossCoin Ankle Socks'];
 const EMPTY_FORM = { name:'', category:'UTILITY', language:'en', body:'', footer:'', btn1Type:'', btn1Text:'', btn1Val:'', btn2Text:'' };
 
-const STATIC_TEMPLATES = [
-  { id:'t1', name:'Order Confirmed',  cat:'utility',   status:'approved', lang:'English', vars:4, body:'Hi! Your Cross Coin order #{{1}} has been placed. Items: {{2}} | Total: Rs. {{3}} | Delivery: {{4}}' },
-  { id:'t2', name:'Order Shipped',    cat:'utility',   status:'approved', lang:'English', vars:3, body:'Your Cross Coin order #{{1}} has been shipped. AWB: {{2}} | Track: {{3}}' },
-  { id:'t3', name:'Out for Delivery', cat:'utility',   status:'approved', lang:'English', vars:2, body:'Your Cross Coin order #{{1}} is out for delivery! Courier: {{2}}' },
-  { id:'t4', name:'Order Delivered',  cat:'utility',   status:'approved', lang:'English', vars:1, body:'Your Cross Coin order #{{1}} has been delivered!' },
-  { id:'t5', name:'Cart Abandoned',   cat:'marketing', status:'pending',  lang:'English', vars:3, body:'Hey {{1}}! Your {{2}} is waiting. Use code {{3}} for 10% OFF!' },
-  { id:'t6', name:'COD Confirmation', cat:'utility',   status:'approved', lang:'English', vars:3, body:'COD order #{{1}} for Rs. {{2}}. Delivery to: {{3}}' },
-  { id:'t7', name:'Review Request',   cat:'marketing', status:'rejected', lang:'English', vars:3, body:'Hi {{1}}! Loved your {{2}}? Leave a review: {{3}}' },
-  { id:'t8', name:'Refund Processed', cat:'utility',   status:'approved', lang:'English', vars:3, body:'Refund of Rs. {{2}} for order #{{1}} processed. To: {{3}}' },
-];
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = ['#7c3aed','#0284c7','#059669','#b45309','#db2777','#dc2626','#0891b2'];
 function avatarColor(str) { let h = 0; for (const c of (str||'')) h = (h*31 + c.charCodeAt(0)) & 0xffffffff; return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]; }
@@ -130,6 +119,9 @@ export function WhatsAppManager() {
   const [page, setPage] = useState('dashboard');
   const [brands, setBrands] = useState([]);
   const [brandId, setBrandId] = useState(1);
+  // Stats
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
   // Templates
   const [activeKey, setActiveKey] = useState('order_confirm');
   const [tplFilter, setTplFilter] = useState('all');
@@ -162,6 +154,15 @@ export function WhatsAppManager() {
   useEffect(() => {
     brandService.getAllBrands(true).then(r => { if (r.success) setBrands(r.data); }).catch(() => {});
   }, []);
+
+  const fetchStats = async () => {
+    setStatsLoading(true);
+    try {
+      const data = await whatsappService.getStats(brandId);
+      if (data.success) setStats(data.stats);
+    } catch { }
+    setStatsLoading(false);
+  };
 
   const setF = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -260,7 +261,8 @@ export function WhatsAppManager() {
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
   useEffect(() => { if (page === 'inbox') fetchConversations(); }, [page, statusFilter, brandId]);
-  useEffect(() => { if (page === 'library') fetchTemplates(); }, [page, brandId]);
+  useEffect(() => { if (page === 'library' || page === 'templates') fetchTemplates(); }, [page, brandId]);
+  useEffect(() => { if (page === 'dashboard') fetchStats(); }, [page, brandId]);
   useEffect(() => {
     if (!activeConv) return;
     pollRef.current = setInterval(() => fetchMessages(activeConv), 10000);
@@ -270,17 +272,20 @@ export function WhatsAppManager() {
   const filteredConvs = conversations.filter(c =>
     !convSearch || (c.customer_name || c.customer_phone || '').toLowerCase().includes(convSearch.toLowerCase())
   );
-  const unreadCount = conversations.filter(c => c.unread_count > 0).length;
-  const filteredTpls = STATIC_TEMPLATES.filter(t => {
-    const ms = tplFilter === 'all' || t.status === tplFilter;
-    const mq = !tplSearch || t.name.toLowerCase().includes(tplSearch.toLowerCase());
+  const unreadCount = stats?.unreadCount ?? conversations.filter(c => c.unread_count > 0).length;
+
+  // live template list filtered for library/templates tabs
+  const filteredTpls = templateList.filter(t => {
+    const status = (t.status || '').toLowerCase();
+    const ms = tplFilter === 'all' || status === tplFilter;
+    const mq = !tplSearch || (t.name || '').toLowerCase().includes(tplSearch.toLowerCase());
     return ms && mq;
   });
 
   const NAV = [
     { k:'dashboard',  label:'Dashboard',      icon: IC.dash,    section: 'Main' },
     { k:'inbox',      label:'Conversations',   icon: IC.msg,     badge: unreadCount || null },
-    { k:'templates',  label:'Templates',       icon: IC.tpl,     badge: STATIC_TEMPLATES.length },
+    { k:'templates',  label:'Templates',       icon: IC.tpl,     badge: templateList.length || null },
     { k:'library',    label:'Library',         icon: IC.eye,     section: 'Messaging' },
     { k:'test',       label:'Test Message',    icon: IC.phone },
     { k:'analytics',  label:'Analytics',       icon: IC.bar,     section: 'Account' },
@@ -338,11 +343,11 @@ export function WhatsAppManager() {
 
               {/* Stats */}
               <div className="was-stats-grid">
-                {[
-                  { label:'Messages Sent',    val:'24,891', change:'+12.4%', color:'#25D366', icon: IC.send },
-                  { label:'Delivered',        val:'23,540', change:'98.6% rate', color:'#3b82f6', icon: IC.check },
-                  { label:'Open Rate',        val:'68.2%',  change:'+3.1% vs last week', color:'#f59e0b', icon: IC.eye },
-                  { label:'Open Convs',       val: String(unreadCount || 0), change:`${unreadCount} need reply`, color:'#8b5cf6', icon: IC.msg },
+                {statsLoading ? <div style={{padding:20}}><Loader /></div> : [
+                  { label:'Messages Sent',    val: stats ? String(stats.sentMessages) : '—',      change: stats ? `${stats.deliveryRate}% delivery rate` : '',  color:'#25D366', icon: IC.send },
+                  { label:'Delivered',        val: stats ? String(stats.deliveredMessages) : '—', change: stats ? `${stats.deliveryRate}% rate` : '',            color:'#3b82f6', icon: IC.check },
+                  { label:'Read Rate',        val: stats ? `${stats.readRate}%` : '—',            change: stats ? `${stats.readMessages} messages read` : '',    color:'#f59e0b', icon: IC.eye },
+                  { label:'Open Convs',       val: stats ? String(stats.openConversations) : '—', change: stats ? `${stats.unreadCount} need reply` : '',        color:'#8b5cf6', icon: IC.msg },
                 ].map(s => (
                   <div key={s.label} className="was-stat-card">
                     <div className="was-stat-top">
@@ -363,29 +368,38 @@ export function WhatsAppManager() {
                     <span className="was-dash-card-title">Messages — Last 7 Days</span>
                   </div>
                   <div className="was-bar-chart">
-                    {[{d:'Mon',v:3420},{d:'Tue',v:2890},{d:'Wed',v:4100},{d:'Thu',v:3650},{d:'Fri',v:4800},{d:'Sat',v:5200},{d:'Sun',v:2800}].map(b => (
-                      <div key={b.d} className="was-bar-col">
-                        <span className="was-bar-val">{(b.v/1000).toFixed(1)}k</span>
-                        <div className="was-bar" style={{ height: Math.round((b.v/5200)*80) + 'px' }} />
-                        <span className="was-bar-lbl">{b.d}</span>
-                      </div>
-                    ))}
+                    {statsLoading ? <Loader /> : (() => {
+                      const days = stats?.last7Days || [];
+                      const maxVal = Math.max(...days.map(d => parseInt(d.count) || 0), 1);
+                      return days.length === 0
+                        ? <div style={{color:'#9ca3af',fontSize:13,padding:'20px 0'}}>No data yet</div>
+                        : days.map(d => {
+                          const val = parseInt(d.count) || 0;
+                          const label = new Date(d.day).toLocaleDateString('en-IN', { weekday:'short' });
+                          return (
+                            <div key={d.day} className="was-bar-col">
+                              <span className="was-bar-val">{val >= 1000 ? (val/1000).toFixed(1)+'k' : val}</span>
+                              <div className="was-bar" style={{ height: Math.round((val/maxVal)*80) + 'px' }} />
+                              <span className="was-bar-lbl">{label}</span>
+                            </div>
+                          );
+                        });
+                    })()}
                   </div>
                 </div>
 
-                {/* Activity */}
+                {/* Conversations summary */}
                 <div className="was-dash-card">
                   <div className="was-dash-card-head">
-                    <span className="was-dash-card-title">Recent Activity</span>
+                    <span className="was-dash-card-title">Conversations</span>
                     <button className="was-dash-link" onClick={() => setPage('inbox')}>View all</button>
                   </div>
                   <div className="was-activity">
-                    {[
-                      { dot:'green', text:<><strong>Order Confirmed</strong> template sent to 340 contacts</>, time:'2m ago' },
-                      { dot:'amber', text:<>Template <strong>Sale Announcement</strong> pending approval</>, time:'18m ago' },
-                      { dot:'blue',  text:<><strong>Priya Shah</strong> replied to campaign message</>, time:'34m ago' },
-                      { dot:'green', text:<>Campaign <strong>Diwali Offer</strong> completed · 98.1% delivered</>, time:'1h ago' },
-                      { dot:'red',   text:<>Template <strong>Review Request</strong> rejected by Meta</>, time:'3h ago' },
+                    {statsLoading ? <Loader /> : [
+                      { dot:'green', text: <><strong>{stats?.openConversations ?? 0}</strong> open conversations</>, time:'' },
+                      { dot:'blue',  text: <><strong>{stats?.resolvedConversations ?? 0}</strong> resolved conversations</>, time:'' },
+                      { dot:'amber', text: <><strong>{stats?.unreadCount ?? 0}</strong> unread messages</>, time:'' },
+                      { dot:'green', text: <><strong>{stats?.totalMessages ?? 0}</strong> total messages exchanged</>, time:'' },
                     ].map((a, i) => (
                       <div key={i} className="was-act-item">
                         <span className={`was-act-dot was-act-dot--${a.dot}`} />
@@ -400,9 +414,9 @@ export function WhatsAppManager() {
               {/* Quick cards */}
               <div className="was-quick-row">
                 {[
-                  { label:'Approved Templates', val:'6',  sub:'2 pending · 1 rejected', color:'#25D366', icon: IC.tpl },
-                  { label:'Open Conversations', val: String(unreadCount||'0'), sub:'Live chats', color:'#3b82f6', icon: IC.msg },
-                  { label:'Test Messages Sent', val:'12', sub:'API verified', color:'#f59e0b', icon: IC.phone },
+                  { label:'Approved Templates', val: String(templateList.filter(t => (t.status||'').toLowerCase() === 'approved').length), sub:`${templateList.filter(t => (t.status||'').toLowerCase() === 'pending').length} pending · ${templateList.filter(t => (t.status||'').toLowerCase() === 'rejected').length} rejected`, color:'#25D366', icon: IC.tpl },
+                  { label:'Open Conversations', val: String(stats?.openConversations ?? 0), sub:'Live chats', color:'#3b82f6', icon: IC.msg },
+                  { label:'Total Messages',     val: String(stats?.totalMessages ?? 0),     sub:`${stats?.sentMessages ?? 0} sent · ${stats?.deliveredMessages ?? 0} delivered`, color:'#f59e0b', icon: IC.phone },
                 ].map(q => (
                   <div key={q.label} className="was-quick-card">
                     <div className="was-quick-icon" style={{ background: q.color + '20', color: q.color }}>{q.icon}</div>
@@ -627,26 +641,37 @@ export function WhatsAppManager() {
                     </button>
                   ))}
                 </div>
-                <span className="was-tpl-count">Showing {filteredTpls.length}</span>
+                <span className="was-tpl-count">Showing {filteredTpls.length} of {templateList.length}</span>
               </div>
               {listLoading ? <div style={{padding:40,textAlign:'center'}}><Loader /></div> : (
                 <div className="was-tpl-grid">
-                  {filteredTpls.map(t => (
-                    <div key={t.id} className="was-tpl-card">
-                      <div className="was-tpl-card-top">
-                        <span className={`was-cat-badge was-cat--${t.cat}`}>{catLabel(t.cat)}</span>
-                        <span className={`was-status-badge was-status--${t.status}`}>
-                          <span className="was-status-dot" />{t.status.charAt(0).toUpperCase()+t.status.slice(1)}
-                        </span>
-                      </div>
-                      <div className="was-tpl-name">{t.name}</div>
-                      <div className="was-tpl-body">{t.body}</div>
-                      <div className="was-tpl-foot">
-                        <span className="was-tpl-meta-item">{IC.info}{t.lang}</span>
-                        <span className="was-tpl-meta-item">{IC.tag}{t.vars} vars</span>
-                      </div>
+                  {filteredTpls.length === 0 ? (
+                    <div className="was-empty-state" style={{gridColumn:'1/-1'}}>
+                      <div style={{width:36,height:36,color:'#d1d5db'}}>{IC.tpl}</div>
+                      <p>{templateList.length === 0 ? 'No templates yet. Click Refresh or Seed Default Templates.' : 'No templates match your filter.'}</p>
                     </div>
-                  ))}
+                  ) : filteredTpls.map((t, i) => {
+                    const status = (t.status || '').toLowerCase();
+                    const cat    = (t.category || '').toLowerCase();
+                    const body   = t.components?.find(c => c.type === 'BODY')?.text || '';
+                    const vars   = (body.match(/\{\{\d+\}\}/g) || []).length;
+                    return (
+                      <div key={t.id || i} className="was-tpl-card">
+                        <div className="was-tpl-card-top">
+                          <span className={`was-cat-badge was-cat--${cat}`}>{catLabel(t.category)}</span>
+                          <span className={`was-status-badge was-status--${status}`}>
+                            <span className="was-status-dot" />{status.charAt(0).toUpperCase()+status.slice(1)}
+                          </span>
+                        </div>
+                        <div className="was-tpl-name">{t.name}</div>
+                        <div className="was-tpl-body">{body || '—'}</div>
+                        <div className="was-tpl-foot">
+                          <span className="was-tpl-meta-item">{IC.info}{t.language || 'en'}</span>
+                          <span className="was-tpl-meta-item">{IC.tag}{vars} vars</span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

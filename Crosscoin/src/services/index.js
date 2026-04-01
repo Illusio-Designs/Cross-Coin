@@ -1732,6 +1732,12 @@ export const instagramService = {
 // ─── WhatsApp Service ─────────────────────────────────────────────────────────
 export const whatsappService = {
 
+  // ── Stats ──
+  getStats: async (brandId = 1) => {
+    const response = await adminApi.get(`/api/whatsapp/stats?brandId=${brandId}`);
+    return response.data;
+  },
+
   // ── Templates ──
   listTemplates: async (brandId = 1) => {
     const response = await adminApi.get(`/api/whatsapp/templates?brandId=${brandId}`);

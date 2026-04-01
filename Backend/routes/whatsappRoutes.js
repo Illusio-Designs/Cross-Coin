@@ -7,6 +7,9 @@ const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware.js');
 router.get('/webhook', ctrl.verifyWebhook);
 router.post('/webhook', ctrl.receiveWebhook);
 
+// ── Stats ─────────────────────────────────────────────────────────────────────
+router.get('/stats', isAuthenticated, isAdmin, ctrl.getStats);
+
 // ── Templates ─────────────────────────────────────────────────────────────────
 router.get('/templates',          isAuthenticated, isAdmin, ctrl.listTemplates);
 router.post('/templates',         isAuthenticated, isAdmin, ctrl.createTemplate);
