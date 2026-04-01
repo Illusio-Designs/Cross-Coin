@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import Head from "next/head";
+import Script from "next/script";
 import { brandSettingsService, brandService } from "../../services";
 
 const fmt = n => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
@@ -44,24 +44,21 @@ export default function AnalyticsPage() {
   const [propertyId, setPropertyId]         = useState("");
   const [accessToken, setAccessToken]       = useState("");
   const [lastUpdated, setLastUpdated]       = useState(null);
-  const [mapReady, setMapReady]             = useState(false);
+  const [mapReady, setMapReady] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
-
-  // Init Leaflet map after mount
-  useEffect(() => {
-    if (!mounted || !mapRef.current || leafletMap.current) return;
-    if (typeof window === "undefined" || !window.L) return;
+  const initMap = useCallback(() => {
+    if (!mapRef.current || leafletMap.current || typeof window === "undefined" || !window.L) return;
     const L = window.L;
     const m = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false })
       .setView([22.5937, 78.9629], 4);
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-      attribution: "© OpenStreetMap © CARTO",
-      maxZoom: 18,
+      attribution: "© OpenStreetMap © CARTO", maxZoom: 18,
     }).addTo(m);
     leafletMap.current = m;
     setMapReady(true);
-  }, [mounted, mapReady]);
+  }, []);
+
+  useEffect(() => { setMounted(true); }, []);
 
   // Add ping marker on map
   const addPing = useCallback((lat, lng, city) => {
@@ -198,33 +195,17 @@ export default function AnalyticsPage() {
     return () => { clearInterval(t1); clearInterval(t2); };
   }, [accessToken, propertyId, fetchGA4Stats, fetchRealtime]);
 
-  // Re-init map when Leaflet loads
-  useEffect(() => {
-    if (!mounted) return;
-    const check = setInterval(() => {
-      if (typeof window !== "undefined" && window.L && mapRef.current && !leafletMap.current) {
-        const L = window.L;
-        const m = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false })
-          .setView([22.5937, 78.9629], 4);
-        L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-          attribution: "© OpenStreetMap © CARTO", maxZoom: 18,
-        }).addTo(m);
-        leafletMap.current = m;
-        setMapReady(true);
-        clearInterval(check);
-      }
-    }, 200);
-    return () => clearInterval(check);
-  }, [mounted]);
-
   if (!mounted) return null;
 
   return (
     <>
-      <Head>
-        <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet/dist/leaflet.js" />
-      </Head>
+      <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+      <Script
+        src="https://unpkg.com/leaflet/dist/leaflet.js"
+        strategy="afterInteractive"
+        onLoad={initMap}
+        onReady={initMap}
+      />
 
       <div className="dashboard-page">
         {/* Header */}
