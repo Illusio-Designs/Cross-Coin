@@ -732,7 +732,12 @@ module.exports.verifyPayment = async (req, res) => {
                     country: 'in',
                     fbc: req.cookies?._fbc || req.body?.fbc || null,
                     fbp: req.cookies?._fbp || null,
-                    items: cart_items.map(i => ({ product_id: i.product_id, quantity: i.quantity || 1 })),
+                    items: validatedItems.map(i => ({
+                        product_id: i.product.id,
+                        quantity: i.quantity || 1,
+                        price: parseFloat(i.price || 0),
+                        name: i.product.name || '',
+                    })),
                 };
                 await sendFacebookEvent('Purchase', eventPayload);
                 await sendGAEvent('purchase', eventPayload);

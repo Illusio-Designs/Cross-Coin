@@ -4,12 +4,6 @@
   min-height: 100vh;
 }
 
-/* Use dashboard-page class for consistency */
-.dashboard-page {
-  background: #ffffff;
-  border-radius: 6px;
-}
-
 /* Date Filter */
 .date-filter {
   display: flex;
