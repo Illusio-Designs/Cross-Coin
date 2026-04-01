@@ -251,8 +251,12 @@ function App({ Component, pageProps }) {
       </Head>
       <UTMTracker />
       <Analytics />
-      <SpeedInsights />
-      <VercelAnalytics />
+      {!router.pathname.startsWith('/dashboard') && !router.pathname.startsWith('/auth') && (
+        <>
+          <SpeedInsights />
+          <VercelAnalytics />
+        </>
+      )}
       <AppWrapper 
         Component={Component} 
         pageProps={pageProps}
