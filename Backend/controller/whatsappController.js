@@ -304,28 +304,39 @@ exports.customerContact = async (req, res) => {
     // Send the message to the customer via WhatsApp
     const result = await whatsappService.sendTextMessage(phone.trim(), message.trim(), brandId);
 
-    // Save conversation + message in DB so it appears in dashboard inbox
-    const [conv] = await WhatsappConversation.findOrCreate({
-      where: { customer_phone: whatsappService.formatE164(phone.trim()).replace('+', ''), brand_id: brandId },
+    const normalizedPhone = whatsappService.formatE164(phone.trim()).replace('+', '');
+
+    // Save conversation in DB so it appears in dashboard inbox
+    const [conv, created] = await WhatsappConversation.findOrCreate({
+      where: { customer_phone: normalizedPhone, brand_id: brandId },
       defaults: {
         customer_name:   name?.trim() || null,
-        wa_contact_id:   whatsappService.formatE164(phone.trim()).replace('+', ''),
+        wa_contact_id:   normalizedPhone,
         last_message:    message.trim(),
         last_message_at: new Date(),
-        unread_count:    0,
+        unread_count:    1,
         status:          'open',
       },
     });
 
-    await conv.update({ last_message: message.trim(), last_message_at: new Date(), status: 'open' });
+    if (!created) {
+      await conv.update({
+        last_message:    message.trim(),
+        last_message_at: new Date(),
+        unread_count:    conv.unread_count + 1,
+        customer_name:   name?.trim() || conv.customer_name,
+        status:          'open',
+      });
+    }
 
+    // Save as inbound so it shows in inbox as a customer message
     await WhatsappMessage.create({
       conversation_id: conv.id,
       wa_message_id:   result?.messages?.[0]?.id || null,
-      direction:       'outbound',
+      direction:       'inbound',
       type:            'text',
       body:            message.trim(),
-      status:          'sent',
+      status:          'received',
       sent_at:         new Date(),
     });
 
