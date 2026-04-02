@@ -30,10 +30,10 @@ function BarRow({ label, value, max, color = "#CE1E36" }) {
 }
 
 // India center: lat 22.5, lon 82 → phi/theta for cobe
-// Cobe phi: 0 = lon 0° (Greenwich), positive = westward rotation
-// India lon ~82°E → phi = -82 * π/180 (rotate east to bring India front)
-const INDIA_PHI   = -82 * (Math.PI / 180);
-const INDIA_THETA = 0.3; // tilt down slightly to center India vertically
+// Cobe: phi=0 faces lon=0 (Atlantic). Rotating positively goes eastward.
+// India at lon 82°E → phi = 82 * π/180
+const INDIA_PHI   = 82 * (Math.PI / 180);
+const INDIA_THETA = 0.25;
 
 export default function AnalyticsPage() {
   const canvasRef     = useRef(null);
@@ -58,7 +58,7 @@ export default function AnalyticsPage() {
   // Init Cobe globe when ga4Configured becomes true
   useEffect(() => {
     if (!mounted || !ga4Configured || !canvasRef.current) return;
-    const SIZE = 500;
+    const SIZE = 700;
     const dpr  = window.devicePixelRatio || 1;
     canvasRef.current.width  = SIZE * dpr;
     canvasRef.current.height = SIZE * dpr;
@@ -321,16 +321,10 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        {/* Globe Map */}
+        {/* Globe */}
         {ga4Configured && (
-          <div className="an-map-wrap">
-            <div className="an-map-header">
-              <span className="an-map-title">Live Visitor Map</span>
-              <span className="an-map-sub">Pings show realtime active cities</span>
-            </div>
-            <div className="an-globe-container">
-              <canvas ref={canvasRef} className="an-globe-canvas" />
-            </div>
+          <div className="an-globe-container">
+            <canvas ref={canvasRef} className="an-globe-canvas" />
           </div>
         )}
 
@@ -366,44 +360,19 @@ export default function AnalyticsPage() {
       </div>
 
       <style>{`
-        .an-map-wrap {
-          background: #fff;
-          border: 1px solid #e5e7eb;
-          border-radius: 10px;
-          overflow: hidden;
-          margin-bottom: 16px;
-        }
-        .an-map-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 12px 16px;
-          border-bottom: 1px solid #e5e7eb;
-        }
-        .an-map-title {
-          font-size: 12px;
-          font-weight: 700;
-          color: #111827;
-          text-transform: uppercase;
-          letter-spacing: .6px;
-        }
-        .an-map-sub {
-          font-size: 11px;
-          color: #6b7280;
-        }
-        .an-map {
-          display: none;
-        }
+        .an-map-wrap { display: none; }
+        .an-map { display: none; }
         .an-globe-container {
           display: flex;
           justify-content: center;
           align-items: center;
-          padding: 24px 0 16px;
+          padding: 8px 0 24px;
           background: transparent;
+          margin-bottom: 16px;
         }
         .an-globe-canvas {
-          width: 500px;
-          height: 500px;
+          width: 700px;
+          height: 700px;
           cursor: default;
           pointer-events: none;
         }
