@@ -72,7 +72,7 @@ const Footer = () => {
           <div className="footer__social-icons">
             <a href="https://www.facebook.com/people/Cross-Coin/61577195743730/" className="social-icon" aria-label="Facebook" target="_blank" rel="noopener noreferrer"><FaFacebookF /></a>
             <a href="https://www.instagram.com/crosscoin99/?igsh=d2FiY29iemhtb2Nl" className="social-icon" aria-label="Instagram" target="_blank" rel="noopener noreferrer"><FaInstagram /></a>
-            <a href="https://wa.me/919712891700" className="social-icon" aria-label="WhatsApp" target="_blank" rel="noopener noreferrer"><FaWhatsapp /></a>
+            <a href="https://wa.me/917434834000" className="social-icon" aria-label="WhatsApp" target="_blank" rel="noopener noreferrer"><FaWhatsapp /></a>
           </div>
         </div>
 
@@ -115,8 +115,8 @@ const Footer = () => {
             <div className="contact-item">
               <MdOutlinePhoneInTalk className="contact-icon" />
               <div>
-                <p className="contact-label">Mon–Fri, 8AM–9PM</p>
-                <a href="tel:+919712891700" className="contact-link">+91 97128 91700</a>
+                <p className="contact-label">Mon–Fri, 24 Hours</p>
+                <a href="tel:+917434834000" className="contact-link">+91 74348 34000</a>
               </div>
             </div>
             <div className="contact-item">

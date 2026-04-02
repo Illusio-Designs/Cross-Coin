@@ -222,6 +222,18 @@ const setupDatabase = async () => {
       }
 
       console.log("✓ coupon_usages.guest_user_id ensured pre-sync");
+
+      // Fix: ensure userId is nullable (guest orders have no userId)
+      try {
+        await sequelize.query(`
+          ALTER TABLE coupon_usages
+          MODIFY COLUMN userId INT NULL
+        `);
+        console.log("✓ coupon_usages.userId set to NULL-able");
+      } catch (e) {
+        console.log("⚠️ coupon_usages.userId alter skipped:", e.message);
+      }
+
     } catch (couponPreSyncError) {
       console.log(
         "⚠️ Pre-sync coupon_usages column fix skipped:",
