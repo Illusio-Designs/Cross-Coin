@@ -74,11 +74,12 @@ const HeroSlider = ({ slides = [] }) => {
       </div>
       <div className="hero-slider__nav">
         {slides.map((_, idx) => (
-          <span 
-            key={idx} 
-            className={`dot${idx === current ? ' active' : ''}`} 
+          <button
+            key={idx}
+            className={`dot${idx === current ? ' active' : ''}`}
             onClick={() => setCurrent(idx)}
             aria-label={`Go to slide ${idx + 1}`}
+            type="button"
           />
         ))}
       </div>

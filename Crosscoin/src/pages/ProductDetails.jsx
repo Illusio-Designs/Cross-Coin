@@ -318,7 +318,7 @@ export default function ProductDetails() {
             <div style={{ textAlign: 'center' }}>
               <h2>Product Not Found</h2>
               <p>The product you&apos;re looking for doesn&apos;t exist or has been removed.</p>
-              <button onClick={() => window.history.back()} style={{ marginTop: 16, padding: '10px 24px', background: '#180D3E', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 700 }}>Go Back</button>
+              <button onClick={() => window.history.back()} aria-label="Go back" style={{ marginTop: 16, padding: '10px 24px', background: '#180D3E', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 700 }}>Go Back</button>
             </div>
           </div>
         </div>

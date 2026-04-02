@@ -899,9 +899,9 @@ const CartDrawer = ({ isOpen, onClose }) => {
                           </div>
                           {!buyNowItem && (
                             <div className="cd-qty">
-                              <button className="cd-qty-btn" onClick={() => updateQuantity(item.id, -1)} disabled={item.quantity <= 1}>−</button>
+                              <button className="cd-qty-btn" onClick={() => updateQuantity(item.id, -1)} disabled={item.quantity <= 1} aria-label="Decrease quantity">−</button>
                               <span className="cd-qty-val">{item.quantity}</span>
-                              <button className="cd-qty-btn" onClick={() => updateQuantity(item.id, 1)}>+</button>
+                              <button className="cd-qty-btn" onClick={() => updateQuantity(item.id, 1)} aria-label="Increase quantity">+</button>
                             </div>
                           )}
                         </div>

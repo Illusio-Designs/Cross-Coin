@@ -77,6 +77,7 @@ const InstagramGallery = () => {
                   <button
                     type="button"
                     className="instagram-gallery__tag-btn"
+                    aria-label="View tagged products"
                     onClick={() => setActivePostId(isOpen ? null : post.id)}
                   >
                     🛍

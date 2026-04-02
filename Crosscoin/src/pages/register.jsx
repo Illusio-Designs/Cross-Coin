@@ -122,7 +122,7 @@ export default function Register() {
                     required
                     disabled={isLoading}
                   />
-                  <button type="button" className="auth-pw-eye" onClick={() => setShowPassword(v => !v)}>
+                  <button type="button" className="auth-pw-eye" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
                     {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                   </button>
                 </div>

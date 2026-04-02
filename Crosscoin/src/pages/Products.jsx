@@ -1105,6 +1105,7 @@ const Products = () => {
                         className={`color-btn ${
                           Array.isArray(selectedColors) && selectedColors.includes(color) ? "active" : ""
                         }`}
+                        aria-label={`Filter by color: ${color}`}
                         style={{
                           backgroundColor:
                             colorMap[color?.toLowerCase()] || color,
@@ -1189,6 +1190,7 @@ const Products = () => {
                   <button
                     className="modal-close"
                     onClick={() => setShowFilters(false)}
+                    aria-label="Close filters"
                   >
                     &times;
                   </button>
@@ -1324,6 +1326,7 @@ const Products = () => {
                             className={`color-btn ${
                               Array.isArray(selectedColors) && selectedColors.includes(color) ? "active" : ""
                             }`}
+                            aria-label={`Filter by color: ${color}`}
                             style={{
                               backgroundColor:
                                 colorMap[color?.toLowerCase()] || color,
