@@ -274,7 +274,7 @@ img {
 
 /* Lift above sticky bar (pdt-sticky ~68px tall) on all screen sizes */
 body:has(.pdt-sticky.visible) .back-to-top {
-  bottom: 144px;
+  bottom: 172px;
 }
 
 @media (max-width: 768px) {
