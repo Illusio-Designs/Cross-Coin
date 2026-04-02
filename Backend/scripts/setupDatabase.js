@@ -836,7 +836,7 @@ const setupDatabase = async () => {
     // Now it's safe to create the admin user.
     // Use raw SQL to avoid model-column mismatch issues on legacy schemas.
     if (models["User"]) {
-      const bcrypt = require("bcryptjs");
+      const bcrypt = require("bcrypt");
       const adminEmail = "admin@admin.com";
       const adminPassword = "Admin@123";
       const adminUsername = "admin";

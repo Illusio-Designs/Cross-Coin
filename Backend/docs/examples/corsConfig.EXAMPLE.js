@@ -1,6 +1,7 @@
 // Backend/config/corsConfig.js
-const Brand = require('../model/brandModel.js');
-const { logger } = require('./logging.js');
+// Dynamic CORS Configuration for Multi-Brand System
+
+const { Brand } = require('../../model/brandModel.js');
 
 // Cache for brand domains (refreshed periodically)
 let brandDomainsCache = [];
@@ -30,9 +31,8 @@ const fetchBrandDomains = async () => {
         
         return domains;
     } catch (error) {
-        // Requirement 5.6: log at warn level and fall back to static origins (not empty array)
-        logger.warn('Error fetching brand domains for CORS, falling back to static origins:', error.message);
-        return staticAllowedOrigins;
+        console.error('Error fetching brand domains:', error);
+        return [];
     }
 };
 
@@ -46,6 +46,7 @@ const getBrandDomains = async () => {
     if (!lastCacheUpdate || (now - lastCacheUpdate) > CACHE_DURATION || brandDomainsCache.length === 0) {
         brandDomainsCache = await fetchBrandDomains();
         lastCacheUpdate = now;
+        console.log('✅ Brand domains cache updated:', brandDomainsCache);
     }
     
     return brandDomainsCache;
@@ -65,24 +66,13 @@ const staticAllowedOrigins = [
     'http://localhost:5000',
     'http://127.0.0.1:5000',
     
-    // Production domains (fallback if database is not available)
-    'https://crosscoin.in',
-    'https://www.crosscoin.in',
-    'http://crosscoin.in',
-    'http://www.crosscoin.in',
-    
     // API domain
-    'https://api.crosscoin.in',
-    'http://api.crosscoin.in',
-    
-    // Environment variables
     process.env.API_URL,
-    process.env.BACKEND_URL,
-    process.env.FRONTEND_URL
+    process.env.BACKEND_URL
 ].filter(Boolean); // Remove undefined values
 
 const corsOptions = {
-    origin: function (origin, callback) {
+    origin: async function (origin, callback) {
         // Allow requests with no origin (mobile apps, Postman, curl, etc.)
         if (!origin) {
             return callback(null, true);
@@ -98,28 +88,15 @@ const corsOptions = {
             return callback(null, true);
         }
         
-        // Check dynamic brand domains asynchronously
-        getBrandDomains()
-            .then(brandDomains => {
-                if (brandDomains.includes(origin)) {
-                    return callback(null, true);
-                }
-                
-                if (process.env.NODE_ENV === 'production') {
-                  logger.warn(`CORS blocked request from: ${origin}`);
-                  return callback(new Error('Not allowed by CORS'));
-                } else {
-                  return callback(null, true);
-                }
-            })
-            .catch(error => {
-                // Requirement 5.6: log at warn level and fall back to static origins
-                logger.warn('CORS brand domain check error, falling back to static origins:', error.message);
-                if (staticAllowedOrigins.includes(origin)) {
-                    return callback(null, true);
-                }
-                return callback(null, process.env.NODE_ENV !== 'production');
-            });
+        // Check dynamic brand domains
+        const brandDomains = await getBrandDomains();
+        if (brandDomains.includes(origin)) {
+            return callback(null, true);
+        }
+        
+        // Log blocked request
+        console.warn(`❌ CORS blocked request from: ${origin}`);
+        return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -130,14 +107,15 @@ const corsOptions = {
         'Accept',
         'Origin',
         'X-API-Key',
-        'X-Brand-Name',
-        'Cache-Control',
-        'Pragma'
+        'X-Brand-Name' // ✅ Required for brand identification
     ],
-    exposedHeaders: ['Content-Range', 'X-Content-Range', 'X-Total-Count', 'Set-Cookie'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range', 'X-Total-Count'],
     maxAge: 86400, // 24 hours
     preflightContinue: false,
     optionsSuccessStatus: 204
 };
 
-module.exports = corsOptions; 
+// Export for manual cache refresh
+module.exports = corsOptions;
+module.exports.getBrandDomains = getBrandDomains;
+module.exports.lastCacheUpdate = lastCacheUpdate;

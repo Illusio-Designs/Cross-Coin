@@ -73,6 +73,8 @@ async function createBrand(req, res) {
         
         const brand = await brandService.createBrand(brandData);
         
+        await brandService.invalidateBrandCache();
+
         res.status(201).json({
             success: true,
             message: 'Brand created successfully',
@@ -114,6 +116,8 @@ async function updateBrand(req, res) {
             });
         }
         
+        await brandService.invalidateBrandCache();
+
         res.json({
             success: true,
             message: 'Brand updated successfully',
@@ -154,6 +158,8 @@ async function deleteBrand(req, res) {
             });
         }
         
+        await brandService.invalidateBrandCache();
+
         res.json({
             success: true,
             message: 'Brand deleted successfully'

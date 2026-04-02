@@ -214,12 +214,6 @@ const handleProductAttributes = async (variation, transaction) => {
   const productAttributes = [];
   if (variation.attributes) {
     for (const attributeName in variation.attributes) {
-      console.log(
-        "Processing attribute:",
-        attributeName,
-        "with values:",
-        variation.attributes[attributeName]
-      );
       const normalizedAttributeName = attributeName.toLowerCase();
       let attributeValues = variation.attributes[attributeName];
 
@@ -266,24 +260,14 @@ module.exports.createProduct = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    console.log("=== CREATE PRODUCT REQUEST ===");
-    console.log("Request Body:", JSON.stringify(req.body, null, 2));
-    console.log(
-      "Files:",
-      req.files
-        ? req.files.map((f) => ({
-            filename: f.filename,
-            fieldname: f.fieldname,
-            originalname: f.originalname,
-            mimetype: f.mimetype,
-            size: f.size,
-          }))
-        : "No files"
-    );
+    const { logger } = require('../config/logging.js');
+    logger.debug("=== CREATE PRODUCT REQUEST ===");
+
+    const { sanitize } = require('../utils/sanitize.js');
 
     // Parse form data
-    const name = req.body.name?.trim();
-    const description = req.body.description?.trim();
+    const name = sanitize(req.body.name?.trim());
+    const description = sanitize(req.body.description?.trim());
     const categoryId = req.body.categoryId;
     const status = req.body.status || "active";
     const variations = JSON.parse(req.body.variations || "[]");
@@ -291,39 +275,21 @@ module.exports.createProduct = async (req, res) => {
     const images = req.files;
     const brandIds = JSON.parse(req.body.brandIds || "[1]"); // ✅ Array of brand IDs
 
-    console.log("--- After parsing form data ---");
-    console.log("Name:", name);
-    console.log("Description:", description);
-    console.log("Category ID:", categoryId);
-    console.log("Status:", status);
-    console.log("Variations:", JSON.stringify(variations));
-    console.log("SEO:", JSON.stringify(seo));
-    console.log("Images:", images?.length || 0);
-
     // Validate required fields
     if (!name) {
-      const errMsg = "Product name is required";
-      console.error(errMsg);
-      throw new Error(errMsg);
+      throw new Error("Product name is required");
     }
     if (!categoryId) {
-      const errMsg = "Category is required";
-      console.error(errMsg);
-      throw new Error(errMsg);
+      throw new Error("Category is required");
     }
 
     // Validate category
-    console.log("--- Before Category.findByPk ---");
     const category = await Category.findByPk(categoryId);
-    console.log("--- After Category.findByPk ---");
     if (!category) {
-      const errMsg = "Invalid category";
-      console.error(errMsg);
-      throw new Error(errMsg);
+      throw new Error("Invalid category");
     }
 
     // Create product with basic info
-    console.log("--- Before Product.create ---");
     const product = await Product.create(
       {
         name,
@@ -340,11 +306,8 @@ module.exports.createProduct = async (req, res) => {
       },
       { transaction }
     );
-    console.log("--- After Product.create ---");
-    console.log("Product created with ID:", product.id);
 
     // ✅ Assign product to multiple brands
-    console.log("--- Before assigning brands ---");
     const { ProductBrand } = require('../model/productBrandModel.js');
     for (const brandId of brandIds) {
       await ProductBrand.create({
@@ -353,10 +316,8 @@ module.exports.createProduct = async (req, res) => {
         status: 'active'
       }, { transaction });
     }
-    console.log("--- After assigning brands:", brandIds);
 
     // Create SEO record
-    console.log("--- Before ProductSEO.create ---");
     const seoRecord = await ProductSEO.create(
       {
         product_id: product.id,
@@ -420,29 +381,18 @@ module.exports.createProduct = async (req, res) => {
       },
       { transaction }
     );
-    console.log("--- After ProductSEO.create ---");
-    console.log("SEO record created with ID:", seoRecord.id);
 
     // Handle variations with attributes
     if (variations && variations.length > 0) {
-      console.log("--- Before creating variations ---");
       for (let i = 0; i < variations.length; i++) {
         const variation = variations[i];
-        console.log(`--- Before validation of variation ${i} ---`);
         if (
           !variation.price ||
           isNaN(variation.price) ||
           variation.price <= 0
         ) {
-          const errMsg = `Invalid price for variation at index ${i}: ${JSON.stringify(
-            variation
-          )}`;
-          console.error(errMsg);
-          throw new Error(errMsg);
+          throw new Error(`Invalid price for variation at index ${i}: ${JSON.stringify(variation)}`);
         }
-        console.log(
-          `--- Before ProductVariation.create for variation ${i} ---`
-        );
         const timestamp = Date.now();
         const randomString = Math.random().toString(36).substring(2, 8);
         const uniqueSku =
@@ -460,11 +410,7 @@ module.exports.createProduct = async (req, res) => {
           },
           { transaction }
         );
-        console.log(
-          `--- After ProductVariation.create for variation ${i}, ID: ${variationRecord.id} ---`
-        );
         await handleProductAttributes(variation, transaction);
-        console.log(`--- After handleProductAttributes for variation ${i} ---`);
         // Associate images with the variation if provided
         if (images && images.length > 0) {
           for (const image of images) {
@@ -472,9 +418,6 @@ module.exports.createProduct = async (req, res) => {
             if (match) {
               const variationIdx = parseInt(match[1], 10);
               if (variationIdx === i) {
-                console.log(
-                  `--- Before ProductImage.create for variation image (variationIdx: ${variationIdx}, i: ${i}) ---`
-                );
                 await ProductImage.create(
                   {
                     product_id: product.id,
@@ -487,9 +430,6 @@ module.exports.createProduct = async (req, res) => {
                   },
                   { transaction }
                 );
-                console.log(
-                  `--- After ProductImage.create for variation image (variationIdx: ${variationIdx}, i: ${i}) ---`
-                );
               }
             }
           }
@@ -499,9 +439,6 @@ module.exports.createProduct = async (req, res) => {
         const variationLibraryImages = JSON.parse(req.body.variationLibraryImages || "[]");
         if (variationLibraryImages.length > 0 && variationLibraryImages[i]) {
           for (const libraryImage of variationLibraryImages[i]) {
-            console.log(
-              `--- Before ProductImage.create for variation library image (variation ${i}) ---`
-            );
             await ProductImage.create(
               {
                 product_id: product.id,
@@ -514,20 +451,14 @@ module.exports.createProduct = async (req, res) => {
               },
               { transaction }
             );
-            console.log(
-              `--- After ProductImage.create for variation library image (variation ${i}) ---`
-            );
           }
         }
       }
-      console.log("--- After creating all variations ---");
     }
 
     // Calculate and set initial badge
-    console.log("--- Before calculateBadge ---");
     const badge = await BadgeService.calculateBadge(product, transaction);
     await product.update({ badge }, { transaction });
-    console.log("--- After calculateBadge and product.update ---");
 
     // Handle product-level images
     if (images && images.length > 0) {
@@ -536,9 +467,6 @@ module.exports.createProduct = async (req, res) => {
       );
       if (productLevelImages.length > 0) {
         for (const [index, image] of productLevelImages.entries()) {
-          console.log(
-            `--- Before ProductImage.create for product-level image ${index} ---`
-          );
           await ProductImage.create(
             {
               product_id: product.id,
@@ -551,19 +479,13 @@ module.exports.createProduct = async (req, res) => {
             },
             { transaction }
           );
-          console.log(
-            `--- After ProductImage.create for product-level image ${index} ---`
-          );
         }
-        console.log("--- After creating all product-level images ---");
       }
     }
 
     await transaction.commit();
-    console.log("--- After transaction.commit ---");
 
     // Fetch the complete product with all relations
-    console.log("--- Before Product.findByPk for response ---");
     const completeProduct = await Product.findByPk(product.id, {
       include: [
         { model: Category },
@@ -576,7 +498,6 @@ module.exports.createProduct = async (req, res) => {
         { model: ProductSEO, as: "ProductSEO" },
       ],
     });
-    console.log("--- After Product.findByPk for response ---");
 
     res.status(201).json({
       success: true,
@@ -736,11 +657,13 @@ module.exports.updateProduct = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
+    const { logger } = require('../config/logging.js');
+    const { sanitize } = require('../utils/sanitize.js');
     const { id } = req.params;
     
-    // Parse form data FIRST
-    const name = req.body.name?.trim();
-    const description = req.body.description?.trim();
+    // Parse form data
+    const name = req.body.name ? sanitize(req.body.name.trim()) : undefined;
+    const description = req.body.description ? sanitize(req.body.description.trim()) : undefined;
     const categoryId = req.body.categoryId;
     const status = req.body.status || "active";
     const variations = JSON.parse(req.body.variations || "[]");
@@ -753,24 +676,7 @@ module.exports.updateProduct = async (req, res) => {
     const preserveImageIds = JSON.parse(req.body.preserveImageIds || "[]");
     const preserveVariationImageIds = JSON.parse(req.body.preserveVariationImageIds || "[]");
     
-    // THEN do the logging
-    console.log("=== UPDATE PRODUCT REQUEST ===");
-    console.log("Product ID:", id);
-    console.log("Request Body Keys:", Object.keys(req.body));
-    console.log("Images to delete:", imagesToDelete);
-    console.log("Variation images to delete:", variationImagesToDelete);
-    console.log("Preserve image IDs:", preserveImageIds);
-    console.log("Preserve variation image IDs:", preserveVariationImageIds);
-    console.log("Library images:", req.body.libraryImages);
-    console.log(
-      "Files:",
-      req.files
-        ? req.files.map((f) => ({
-            filename: f.filename,
-            fieldname: f.fieldname,
-            originalname: f.originalname,
-            mimetype: f.mimetype,
-            size: f.size,
+    logger.debug("UPDATE PRODUCT REQUEST: id=" + id);
           }))
         : "No files"
     );
@@ -802,18 +708,10 @@ module.exports.updateProduct = async (req, res) => {
     }
 
     // --- Delete product-level images marked for deletion ---
-    console.log('=== IMAGE DELETION CHECK ===');
-    console.log('Images to delete array:', imagesToDelete);
-    console.log('Images to delete length:', imagesToDelete.length);
-    console.log('Images to delete type:', typeof imagesToDelete);
-    
     if (Array.isArray(imagesToDelete) && imagesToDelete.length > 0) {
-      console.log('DELETING IMAGES:', imagesToDelete);
       for (const imgId of imagesToDelete) {
-        console.log('Deleting image with ID:', imgId);
         const img = await ProductImage.findByPk(imgId, { transaction });
         if (img) {
-          console.log('Found image to delete:', img.image_url);
           // Remove file from storage
           const imagePath = path.join(
             __dirname,
@@ -828,8 +726,6 @@ module.exports.updateProduct = async (req, res) => {
           await img.destroy({ transaction });
         }
       }
-    } else {
-      console.log('NO IMAGES TO DELETE');
     }
     // --- Delete variation images marked for deletion ---
     if (
@@ -956,11 +852,6 @@ module.exports.updateProduct = async (req, res) => {
     );
     const incomingVariationIds = variations.map((v) => v.id).filter(id => id);
 
-    console.log('=== VARIATION UPDATE DEBUG ===');
-    console.log('Existing variations:', existingVariations.map(v => ({ id: v.id, sku: v.sku })));
-    console.log('Incoming variations:', variations.map(v => ({ id: v.id, sku: v.sku })));
-    console.log('Preserve variation image IDs:', preserveVariationImageIds);
-
     // 2. Update or create incoming variations
     for (const variation of variations) {
       let dbVariation = null;
@@ -970,7 +861,6 @@ module.exports.updateProduct = async (req, res) => {
         dbVariation = existingVariationMap.get(variation.id);
       }
       if (dbVariation) {
-        console.log('Updating existing variation ID:', variation.id, 'SKU:', variation.sku);
         // Update existing variation (including SKU change)
         await dbVariation.update(
           {
@@ -986,7 +876,6 @@ module.exports.updateProduct = async (req, res) => {
         );
         await handleProductAttributes(variation, transaction);
       } else {
-        console.log('Creating new variation:', variation.sku);
         // Create new variation
         const timestamp = Date.now();
         const randomString = Math.random().toString(36).substring(2, 8);
@@ -1032,7 +921,6 @@ module.exports.updateProduct = async (req, res) => {
               
               // Only add if this image URL doesn't already exist for this variation
               if (!existingVariationImageUrls.has(imageUrl)) {
-                console.log('Adding new variation image for ID:', variation.id, 'SKU:', variation.sku);
                 await ProductImage.create(
                   {
                     product_id: product.id,
@@ -1045,8 +933,6 @@ module.exports.updateProduct = async (req, res) => {
                   },
                   { transaction }
                 );
-              } else {
-                console.log('Skipping duplicate variation uploaded image:', imageUrl);
               }
             }
           }
@@ -1073,7 +959,6 @@ module.exports.updateProduct = async (req, res) => {
             
             // Only add if this image URL doesn't already exist for this variation
             if (!existingVariationImageUrls.has(imageUrl)) {
-              console.log('Adding new library image for variation ID:', variation.id, 'SKU:', variation.sku);
               await ProductImage.create(
                 {
                   product_id: product.id,
@@ -1086,27 +971,15 @@ module.exports.updateProduct = async (req, res) => {
                 },
                 { transaction }
               );
-            } else {
-              console.log('Skipping duplicate variation library image:', imageUrl);
             }
           }
         }
       }
     }
 
-    // 3. ONLY delete variations that are explicitly removed (not just different SKUs)
-    // For now, we preserve all existing variations to avoid accidental deletion
-    console.log('Preserving all existing variations and their images');
-    
-    // Note: Variation deletion should be handled separately with explicit user action
-    // This prevents accidental deletion when just editing product details
+    // 3. Preserve all existing variations (deletion handled separately with explicit user action)
 
     // --- SIMPLE IMAGE LOGIC: NEVER TOUCH EXISTING IMAGES ---
-    
-    console.log('=== IMAGE UPDATE LOGIC ===');
-    console.log('Images to delete:', imagesToDelete.length);
-    console.log('New files to add:', images ? images.length : 0);
-    console.log('Library images to add:', JSON.parse(req.body.libraryImages || "[]").length);
     
     // Step 1: Only add NEW uploaded files (if any) - but check for duplicates
     if (images && images.length > 0) {
@@ -1115,8 +988,6 @@ module.exports.updateProduct = async (req, res) => {
       );
       
       if (productLevelImages.length > 0) {
-        console.log('Adding', productLevelImages.length, 'new uploaded images');
-        
         // Get existing image URLs to avoid duplicates
         const existingImages = await ProductImage.findAll({
           where: { 
@@ -1132,7 +1003,6 @@ module.exports.updateProduct = async (req, res) => {
           
           // Only add if this image URL doesn't already exist
           if (!existingImageUrls.has(imageUrl)) {
-            console.log('Adding new uploaded image:', imageUrl);
             await ProductImage.create(
               {
                 product_id: product.id,
@@ -1145,8 +1015,6 @@ module.exports.updateProduct = async (req, res) => {
               },
               { transaction }
             );
-          } else {
-            console.log('Skipping duplicate uploaded image:', imageUrl);
           }
         }
       }
@@ -1155,7 +1023,6 @@ module.exports.updateProduct = async (req, res) => {
     // Step 2: Only add NEW library images (if any) - but check for duplicates
     const libraryImages = JSON.parse(req.body.libraryImages || "[]");
     if (libraryImages.length > 0) {
-      console.log('Adding', libraryImages.length, 'new library images');
       
       // Get existing image URLs to avoid duplicates
       const existingImages = await ProductImage.findAll({
@@ -1172,7 +1039,6 @@ module.exports.updateProduct = async (req, res) => {
         
         // Only add if this image URL doesn't already exist
         if (!existingImageUrls.has(imageUrl)) {
-          console.log('Adding new library image:', imageUrl);
           await ProductImage.create(
             {
               product_id: product.id,
@@ -1185,16 +1051,12 @@ module.exports.updateProduct = async (req, res) => {
             },
             { transaction }
           );
-        } else {
-          console.log('Skipping duplicate library image:', imageUrl);
         }
       }
     }
     
     // Step 3: EXISTING IMAGES ARE COMPLETELY UNTOUCHED
     // They stay exactly as they are unless explicitly deleted
-    
-    console.log('=== EXISTING IMAGES LEFT ALONE ===');
     
     // If no new images and no library images, preserve all existing images (do nothing)
 
@@ -1217,21 +1079,17 @@ module.exports.updateProduct = async (req, res) => {
       ],
     });
 
-    console.log('=== SENDING RESPONSE ===');
-    console.log('Updated product found:', !!updatedProduct);
-    console.log('Sending success response');
-
     res.json({
       success: true,
       message: "Product updated successfully",
       data: formatProductResponse(updatedProduct),
     });
   } catch (error) {
-    await transaction.rollback();
-    console.error("=== UPDATE PRODUCT ERROR ===");
-    console.error("Error updating product:", error);
-    console.error("Error stack:", error.stack);
-    console.error("=== END UPDATE ERROR ===");
+    if (transaction && !transaction.finished) {
+      await transaction.rollback();
+    }
+    const { logger } = require('../config/logging.js');
+    logger.error("UPDATE PRODUCT ERROR:", error.message);
     res.status(500).json({
       success: false,
       message: "Failed to update product",
@@ -1582,11 +1440,6 @@ module.exports.getPublicProductBySlug = async (req, res) => {
     // Decode the URL-encoded slug to handle special characters like %28 and %29
     const decodedSlug = decodeURIComponent(slug);
 
-    console.log("=== BACKEND SLUG DEBUG ===");
-    console.log("Raw slug from URL:", slug);
-    console.log("Decoded slug:", decodedSlug);
-    console.log("========================");
-
     const product = await Product.findOne({
       where: { 
         slug: decodedSlug,
@@ -1931,7 +1784,8 @@ module.exports.uploadImages = async (req, res) => {
 
         console.log(`Uploaded to ImageKit: ${ikResult.filePath}`);
       } catch (error) {
-        console.error(`Failed to upload ${file.originalname} to ImageKit:`, error);
+        const { logger: _logger } = require('../config/logging.js');
+        _logger.error(`Failed to upload ${file.originalname} to ImageKit:`, error.message);
         failedImages.push({
           originalName: file.originalname,
           error: error.message
@@ -2033,10 +1887,9 @@ module.exports.deleteImages = async (req, res) => {
         // Delete the file
         await fs.unlink(fullPath);
         deletedImages.push(imagePath);
-        
-        console.log(`Deleted image: ${fullPath}`);
       } catch (error) {
-        console.error(`Failed to delete image ${imagePath}:`, error);
+        const { logger: _logger } = require('../config/logging.js');
+        _logger.error(`Failed to delete image ${imagePath}:`, error.message);
         failedImages.push({
           path: imagePath,
           error: error.message

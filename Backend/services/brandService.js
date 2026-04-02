@@ -1,23 +1,44 @@
 const Brand = require('../model/brandModel');
 const { Op } = require('sequelize');
+const cacheManager = require('./cacheManager');
+
+const BRAND_CACHE_TTL = 300; // 5 minutes (Requirement 2.1)
 
 /**
- * Get all brands
+ * Get all brands — with cache-aside (Requirement 2.1)
  */
 async function getAllBrands(includeInactive = false) {
+    const cacheKey = `brands:list:${includeInactive ? 'all' : 'active'}`;
     try {
+        const cached = await cacheManager.get(cacheKey);
+        if (cached) return cached;
+
         const where = includeInactive ? {} : { status: 'active' };
-        
         const brands = await Brand.findAll({
             where,
+            attributes: [
+                'id', 'name', 'slug', 'display_name', 'domain', 'logo_url',
+                'primary_color', 'secondary_color', 'contact_email', 'contact_phone',
+                'status', 'createdAt', 'updatedAt'
+            ],
             order: [['created_at', 'DESC']]
         });
-        
+
+        await cacheManager.set(cacheKey, brands, BRAND_CACHE_TTL);
         return brands;
     } catch (error) {
-        console.error('Error fetching brands:', error);
+        const { logger } = require('../config/logging.js');
+        logger.error('Error fetching brands:', error.message);
         throw error;
     }
+}
+
+/**
+ * Invalidate all brand caches (Requirement 2.2)
+ */
+async function invalidateBrandCache() {
+    await cacheManager.invalidate('brands:*');
+    await cacheManager.invalidate('brand:*');
 }
 
 /**
@@ -183,5 +204,6 @@ module.exports = {
     updateBrand,
     deleteBrand,
     toggleBrandStatus,
-    searchBrands
+    searchBrands,
+    invalidateBrandCache
 };

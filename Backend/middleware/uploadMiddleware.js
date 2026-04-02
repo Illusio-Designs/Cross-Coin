@@ -55,13 +55,15 @@ const storage = multer.diskStorage({
     }
 });
 
-// File filter function
+// Allowlist of permitted MIME types (Requirement 4.1, 7.8)
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm'];
+
+// File filter function — rejects disallowed MIME types before any bytes are written to disk
 const fileFilter = (req, file, cb) => {
-    // Accept images only
-    if (file.mimetype.startsWith('image/')) {
+    if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
         cb(null, true);
     } else {
-        cb(new Error('Invalid file type. Only images are allowed.'), false);
+        cb(new Error(`Invalid file type. Allowed types: ${ALLOWED_MIME_TYPES.join(', ')}`), false);
     }
 };
 
@@ -94,7 +96,7 @@ const categoryUpload = multer({
     }
 });
 
-// Reels upload (video + thumbnail image)
+// Reels upload (video + thumbnail image) — 50 MB for video, 5 MB for image (Requirement 4.3)
 const reelUpload = multer({
     storage: storage,
     fileFilter: (req, file, cb) => {
@@ -111,7 +113,7 @@ const reelUpload = multer({
         return cb(new Error('Invalid reel upload field.'), false);
     },
     limits: {
-        fileSize: 50 * 1024 * 1024, // 50MB max for video
+        fileSize: 50 * 1024 * 1024, // 50 MB max for video (Requirement 4.3)
         files: 2
     }
 });
@@ -157,4 +159,4 @@ const validateMagicBytes = (req, res, next) => {
   }
 };
 
-module.exports = { upload, productUpload, categoryUpload, reelUpload, validateMagicBytes };
+module.exports = { upload, productUpload, categoryUpload, reelUpload, validateMagicBytes, ALLOWED_MIME_TYPES };
