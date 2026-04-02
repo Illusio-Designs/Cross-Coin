@@ -51,9 +51,11 @@ const CITY_COORDS = {
   "San Francisco": [37.774, -122.419], Seattle: [47.606, -122.332],
 };
 
-// India center: lat 22.5, lon 82 → phi/theta for cobe
-const INDIA_PHI   = 0.4;
-const INDIA_THETA = 5.5;
+// Cobe official docs: phi = horizontal rotation (0–2π), theta = vertical tilt (-π/2 to π/2)
+// India: lat ~20°N → theta = 20 * π/180 ≈ 0.35
+// India: lon ~78°E → phi = 2π - (78 * π/180) ≈ 4.92 (cobe rotates westward with positive phi)
+const INDIA_PHI   = 4.92;
+const INDIA_THETA = 0.35;
 
 export default function AnalyticsPage() {
   const canvasRef     = useRef(null);
@@ -78,7 +80,7 @@ export default function AnalyticsPage() {
   // Init Cobe globe
   useEffect(() => {
     if (!mounted || !ga4Configured || !canvasRef.current) return;
-    const SIZE = 700;
+    const SIZE = 600;
     const dpr  = window.devicePixelRatio || 1;
     canvasRef.current.width  = SIZE * dpr;
     canvasRef.current.height = SIZE * dpr;
@@ -91,11 +93,11 @@ export default function AnalyticsPage() {
       theta:  INDIA_THETA,
       dark:   0,
       diffuse: 1.2,
-      mapSamples: 20000,
+      mapSamples: 16000,
       mapBrightness: 6,
       baseColor:   [1, 1, 1],
       markerColor: [0.808, 0.118, 0.212],
-      glowColor:   [0.85, 0.85, 0.95],
+      glowColor:   [1, 1, 1],
       markers: markersRef.current,
       scale: 1,
       onRender: (state) => {
@@ -361,18 +363,19 @@ export default function AnalyticsPage() {
         .an-map { display: none; }
 
         .an-globe-container {
+          width: 100%;
           display: flex;
           justify-content: center;
           align-items: center;
-          padding: 8px 0 24px;
-          background: transparent;
+          padding: 16px 0 24px;
           margin-bottom: 16px;
         }
         .an-globe-canvas {
-          width: 700px;
-          height: 700px;
+          width: 600px;
+          height: 600px;
           cursor: default;
           pointer-events: none;
+          display: block;
         }
 
         /* Empty state */
