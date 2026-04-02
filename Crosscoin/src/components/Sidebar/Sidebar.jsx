@@ -155,9 +155,9 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
 
   const roleLabel = {
     admin:            'Admin',
-    product_manager:  'Product Mgr',
-    order_manager:    'Order Mgr',
-    whatsapp_manager: 'WA Manager',
+    product_manager:  'Product Manager',
+    order_manager:    'Order Manager',
+    whatsapp_manager: 'WhatsApp Manager',
   }[role] || role;
 
   return (
@@ -188,13 +188,7 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
           ) : null}
         </div>
 
-        {/* Role badge */}
-        {expanded && user && (
-          <div className="sb-role-badge" style={{ borderColor: roleBadgeColor, color: roleBadgeColor }}>
-            <span className="sb-role-dot" style={{ background: roleBadgeColor }} />
-            {roleLabel}
-          </div>
-        )}
+        {/* Role badge — now shown in dashboard header */}
 
         <nav className="sb-nav">
           {MENU.map((item, idx) => {

@@ -919,7 +919,7 @@
 /* ---- Stat Cards ---- */
 .sl-stat-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
   margin-bottom: 20px;
 }
@@ -968,7 +968,9 @@
   color: #888;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.3;
 }
 
 .sl-stat-value {

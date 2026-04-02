@@ -396,21 +396,26 @@
 
 /* Role badge */
 .sb-role-badge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin: 0 12px 8px;
-  padding: 5px 10px;
-  border-radius: 20px;
+  margin: 0 12px 10px;
+  padding: 4px 10px;
+  border-radius: 6px;
   border: 1px solid currentColor;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.3px;
-  opacity: 0.85;
+  letter-spacing: 0.2px;
+  background: transparent;
+  width: fit-content;
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .sb-role-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
 }
