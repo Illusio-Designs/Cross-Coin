@@ -58,7 +58,7 @@ const InstagramGallery = () => {
           const isOpen = activePostId === post.id;
           return (
             <div className="instagram-gallery__item" key={post.id}>
-              <a href={post.permalink} target="_blank" rel="noreferrer" className="instagram-gallery__link">
+              <a href={post.permalink} target="_blank" rel="noreferrer" className="instagram-gallery__link" aria-label="View Instagram post">
                 {imageUrl ? (
                   <img src={imageUrl} alt={post.caption || "Instagram post"} className="instagram-gallery__image" />
                 ) : (
