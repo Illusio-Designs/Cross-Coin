@@ -29,9 +29,139 @@ function BarRow({ label, value, max, color = "#CE1E36" }) {
   );
 }
 
+// ─── India SVG Map ────────────────────────────────────────────────────────────
+// Bounding box for India: lat 6–37°N, lon 68–98°E
+// SVG viewport: 400 × 480
+const INDIA_MAP_W = 400;
+const INDIA_MAP_H = 480;
+const INDIA_LAT_MIN = 6,  INDIA_LAT_MAX = 37;
+const INDIA_LON_MIN = 68, INDIA_LON_MAX = 98;
+
+function latLonToSVG(lat, lon) {
+  const x = ((lon - INDIA_LON_MIN) / (INDIA_LON_MAX - INDIA_LON_MIN)) * INDIA_MAP_W;
+  const y = ((INDIA_LAT_MAX - lat) / (INDIA_LAT_MAX - INDIA_LAT_MIN)) * INDIA_MAP_H;
+  return [x, y];
+}
+
+function isIndianCity(lat, lon) {
+  return lat >= INDIA_LAT_MIN && lat <= INDIA_LAT_MAX &&
+         lon >= INDIA_LON_MIN && lon <= INDIA_LON_MAX;
+}
+
+// Simplified India border path (approximate outline for SVG)
+// Points are [lon, lat] pairs converted to SVG space
+const INDIA_BORDER_COORDS = [
+  [77.8,35.5],[78.9,34.5],[79.3,33.0],[80.2,32.4],[81.1,30.8],[82.6,30.1],
+  [84.1,28.5],[85.2,27.9],[87.1,27.1],[88.9,27.3],[89.5,26.7],[90.4,26.9],
+  [92.1,26.8],[93.5,27.2],[95.2,28.0],[96.5,28.3],[97.1,27.8],[97.4,26.5],
+  [96.2,25.5],[95.3,23.8],[94.2,22.7],[93.1,22.3],[92.6,21.8],[92.5,21.0],
+  [91.9,22.0],[91.4,22.8],[90.5,22.7],[89.8,21.7],[89.5,22.0],[88.9,22.8],
+  [88.1,22.5],[87.4,21.6],[86.7,20.4],[85.8,19.8],[85.1,19.1],[84.4,18.3],
+  [83.5,18.4],[82.3,17.1],[81.4,16.5],[80.3,15.9],[80.1,14.0],[79.4,12.5],
+  [78.9,11.1],[78.2,10.0],[77.6,8.4],[76.8,8.2],[76.3,9.5],[76.2,10.3],
+  [75.7,11.8],[74.8,12.9],[74.1,14.1],[73.8,15.0],[73.5,16.0],[73.3,17.0],
+  [72.8,18.9],[72.6,20.2],[72.7,21.1],[70.4,22.1],[68.9,22.9],[68.1,23.6],
+  [68.2,24.3],[69.1,24.9],[70.5,25.0],[71.0,25.7],[70.3,26.0],[70.0,27.5],
+  [69.5,28.5],[70.2,29.5],[70.8,30.0],[71.6,31.0],[72.3,32.1],[73.9,33.5],
+  [74.3,34.1],[75.3,34.7],[76.2,35.0],[77.2,35.5],[77.8,35.5],
+];
+
+const INDIA_PATH_D = (() => {
+  return INDIA_BORDER_COORDS.map(([lon, lat], i) => {
+    const [x, y] = latLonToSVG(lat, lon);
+    return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ") + " Z";
+})();
+
+function IndiaPingMap({ indianMarkers }) {
+
+  if (!indianMarkers || indianMarkers.length === 0) return null;
+
+  return (
+    <div className="an-india-map-wrap">
+      <div className="an-india-map-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+        Live Traffic · India
+      </div>
+      <div className="an-india-map-svg-wrap">
+        <svg
+          viewBox={`0 0 ${INDIA_MAP_W} ${INDIA_MAP_H}`}
+          width={INDIA_MAP_W}
+          height={INDIA_MAP_H}
+          className="an-india-svg"
+        >
+          {/* Map fill & border */}
+          <path d={INDIA_PATH_D} className="an-india-border" />
+
+          {/* Grid lines (subtle lat/lon grid) */}
+          {[10, 15, 20, 25, 30, 35].map(lat => {
+            const [, y] = latLonToSVG(lat, 68);
+            return <line key={`lat-${lat}`} x1="0" y1={y} x2={INDIA_MAP_W} y2={y} className="an-india-grid" />;
+          })}
+          {[70, 75, 80, 85, 90, 95].map(lon => {
+            const [x] = latLonToSVG(6, lon);
+            return <line key={`lon-${lon}`} x1={x} y1="0" x2={x} y2={INDIA_MAP_H} className="an-india-grid" />;
+          })}
+
+          {/* Ping markers */}
+          {indianMarkers.map((m, i) => {
+            const [lat, lon] = m.location;
+            const [x, y] = latLonToSVG(lat, lon);
+            const delay = (i * 0.4) % 2;
+            return (
+              <g key={`${lat}-${lon}-${i}`}>
+                {/* Outer pulse ring */}
+                <circle
+                  cx={x} cy={y} r="10"
+                  className="an-india-ping-ring"
+                  style={{ animationDelay: `${delay}s` }}
+                />
+                {/* Mid ring */}
+                <circle
+                  cx={x} cy={y} r="6"
+                  className="an-india-ping-mid"
+                  style={{ animationDelay: `${delay + 0.15}s` }}
+                />
+                {/* Core dot */}
+                <circle cx={x} cy={y} r="3" className="an-india-ping-core" />
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+// City coords (India only subset for map filtering)
+export const CITY_COORDS = {
+  Mumbai: [19.076, 72.877], Delhi: [28.613, 77.209], Bangalore: [12.971, 77.594],
+  Chennai: [13.082, 80.27], Hyderabad: [17.385, 78.487], Pune: [18.52, 73.857],
+  Kolkata: [22.572, 88.363], Ahmedabad: [23.022, 72.571], Surat: [21.17, 72.831],
+  Rajkot: [22.303, 70.802], Jaipur: [26.912, 75.787], Lucknow: [26.846, 80.946],
+  Bhopal: [23.259, 77.413], Indore: [22.719, 75.857], Nagpur: [21.145, 79.088],
+  Patna: [25.594, 85.137], Vadodara: [22.307, 73.181], Coimbatore: [11.017, 76.955],
+  Kochi: [9.931, 76.267], Chandigarh: [30.733, 76.779], Gurgaon: [28.459, 77.026],
+  Noida: [28.535, 77.391], Visakhapatnam: [17.686, 83.218], Agra: [27.176, 78.008],
+  Varanasi: [25.317, 82.973], Meerut: [28.984, 77.706], Nashik: [19.997, 73.789],
+  Aurangabad: [19.877, 75.343], Amritsar: [31.634, 74.872], Jodhpur: [26.292, 73.017],
+  // International (kept for globe only)
+  London: [51.507, -0.128], "New York": [40.714, -74.006], "Los Angeles": [34.052, -118.244],
+  Toronto: [43.651, -79.347], Sydney: [-33.868, 151.209], Dubai: [25.204, 55.27],
+  Singapore: [1.352, 103.82], "Kuala Lumpur": [3.139, 101.687], Bangkok: [13.756, 100.502],
+  Paris: [48.857, 2.347], Berlin: [52.52, 13.405], Tokyo: [35.689, 139.692],
+  "Hong Kong": [22.319, 114.169], Riyadh: [24.688, 46.722], Doha: [25.286, 51.533],
+  Melbourne: [-37.814, 144.963], Chicago: [41.878, -87.63], Houston: [29.76, -95.37],
+  "San Francisco": [37.774, -122.419], Seattle: [47.606, -122.332],
+};
+
 // India center: lat 22.5, lon 82 → phi/theta for cobe
-const INDIA_PHI   = 0.4;  // vertical tilt — centers India (~20°N)
-const INDIA_THETA = 5.5;  // horizontal rotation — India longitude
+const INDIA_PHI   = 0.4;
+const INDIA_THETA = 5.5;
 
 export default function AnalyticsPage() {
   const canvasRef     = useRef(null);
@@ -50,10 +180,12 @@ export default function AnalyticsPage() {
   const [propertyId, setPropertyId]         = useState("");
   const [accessToken, setAccessToken]       = useState("");
   const [lastUpdated, setLastUpdated]       = useState(null);
+  // NEW: Indian markers for the SVG map
+  const [indianMapMarkers, setIndianMapMarkers] = useState([]);
 
   useEffect(() => { setMounted(true); }, []);
 
-  // Init Cobe globe when ga4Configured becomes true
+  // Init Cobe globe
   useEffect(() => {
     if (!mounted || !ga4Configured || !canvasRef.current) return;
     const SIZE = 700;
@@ -72,7 +204,7 @@ export default function AnalyticsPage() {
       mapSamples: 20000,
       mapBrightness: 6,
       baseColor:   [1, 1, 1],
-      markerColor: [0.808, 0.118, 0.212], // #CE1E36
+      markerColor: [0.808, 0.118, 0.212],
       glowColor:   [0.85, 0.85, 0.95],
       markers: markersRef.current,
       scale: 1,
@@ -86,7 +218,7 @@ export default function AnalyticsPage() {
     return () => { globeRef.current?.destroy(); globeRef.current = null; };
   }, [mounted, ga4Configured]);
 
-  // Load brands (for multi-brand selector only — default stays brandId=1)
+  // Load brands
   useEffect(() => {
     if (!mounted) return;
     brandService.getAllBrands(true)
@@ -119,6 +251,18 @@ export default function AnalyticsPage() {
       .finally(() => setSettingsLoading(false));
   }, [mounted, brandId]);
 
+  const COUNTRY_COORDS = {
+    India: [20.593, 78.962], "United States": [37.09, -95.712],
+    "United Kingdom": [55.378, -3.436], Canada: [56.13, -106.347],
+    Australia: [-25.274, 133.775], UAE: [23.424, 53.848],
+    Singapore: [1.352, 103.82], Malaysia: [4.21, 101.975],
+    Germany: [51.165, 10.451], France: [46.227, 2.213],
+    Japan: [36.204, 138.252], "Hong Kong": [22.319, 114.169],
+    "Saudi Arabia": [23.886, 45.079], Qatar: [25.354, 51.184],
+    Thailand: [15.87, 100.993], Netherlands: [52.132, 5.291],
+    "New Zealand": [-40.9, 174.886], "South Africa": [-30.559, 22.937],
+  };
+
   // Fetch realtime active users (every 30s)
   const fetchRealtime = useCallback(async () => {
     if (!accessToken || !propertyId) return;
@@ -143,51 +287,32 @@ export default function AnalyticsPage() {
       const total = rows.reduce((acc, r) => acc + parseInt(r.metricValues[0]?.value ?? "0", 10), 0);
       setRealtimeUsers(total);
 
-      // Ping map for each city — expanded coords list
-      const CITY_COORDS = {
-        // India
-        Mumbai: [19.076, 72.877], Delhi: [28.613, 77.209], Bangalore: [12.971, 77.594],
-        Chennai: [13.082, 80.27], Hyderabad: [17.385, 78.487], Pune: [18.52, 73.857],
-        Kolkata: [22.572, 88.363], Ahmedabad: [23.022, 72.571], Surat: [21.17, 72.831],
-        Rajkot: [22.303, 70.802], Jaipur: [26.912, 75.787], Lucknow: [26.846, 80.946],
-        Bhopal: [23.259, 77.413], Indore: [22.719, 75.857], Nagpur: [21.145, 79.088],
-        Patna: [25.594, 85.137], Vadodara: [22.307, 73.181], Coimbatore: [11.017, 76.955],
-        Kochi: [9.931, 76.267], Chandigarh: [30.733, 76.779], Gurgaon: [28.459, 77.026],
-        Noida: [28.535, 77.391], Visakhapatnam: [17.686, 83.218], Agra: [27.176, 78.008],
-        Varanasi: [25.317, 82.973], Meerut: [28.984, 77.706], Nashik: [19.997, 73.789],
-        Aurangabad: [19.877, 75.343], Amritsar: [31.634, 74.872], Jodhpur: [26.292, 73.017],
-        // International
-        London: [51.507, -0.128], "New York": [40.714, -74.006], "Los Angeles": [34.052, -118.244],
-        Toronto: [43.651, -79.347], Sydney: [-33.868, 151.209], Dubai: [25.204, 55.27],
-        Singapore: [1.352, 103.82], "Kuala Lumpur": [3.139, 101.687], Bangkok: [13.756, 100.502],
-        Paris: [48.857, 2.347], Berlin: [52.52, 13.405], Tokyo: [35.689, 139.692],
-        "Hong Kong": [22.319, 114.169], Riyadh: [24.688, 46.722], Doha: [25.286, 51.533],
-        Melbourne: [-37.814, 144.963], Chicago: [41.878, -87.63], Houston: [29.76, -95.37],
-        "San Francisco": [37.774, -122.419], Seattle: [47.606, -122.332],
-      };
+      const newMarkers = [];
+      const newIndiaMarkers = [];
 
-      if (globeRef.current) {
-        const COUNTRY_COORDS = {
-          India: [20.593, 78.962], "United States": [37.09, -95.712],
-          "United Kingdom": [55.378, -3.436], Canada: [56.13, -106.347],
-          Australia: [-25.274, 133.775], UAE: [23.424, 53.848],
-          Singapore: [1.352, 103.82], Malaysia: [4.21, 101.975],
-          Germany: [51.165, 10.451], France: [46.227, 2.213],
-          Japan: [36.204, 138.252], "Hong Kong": [22.319, 114.169],
-          "Saudi Arabia": [23.886, 45.079], Qatar: [25.354, 51.184],
-          Thailand: [15.87, 100.993], Netherlands: [52.132, 5.291],
-          "New Zealand": [-40.9, 174.886], "South Africa": [-30.559, 22.937],
-        };
-        const newMarkers = [];
-        rows.forEach(row => {
-          const city = row.dimensionValues[0]?.value ?? "";
-          const country = row.dimensionValues[1]?.value ?? "";
-          const coords = CITY_COORDS[city] || COUNTRY_COORDS[country];
-          if (coords) newMarkers.push({ location: [coords[0], coords[1]], size: 0.05 });
-        });
-        markersRef.current = newMarkers;
-        globeRef.current.update({ markers: newMarkers });
-      }
+      rows.forEach(row => {
+        const city    = row.dimensionValues[0]?.value ?? "";
+        const country = row.dimensionValues[1]?.value ?? "";
+        const coords  = CITY_COORDS[city] || COUNTRY_COORDS[country];
+        if (!coords) return;
+
+        const [lat, lon] = coords;
+
+        // Globe markers (all locations)
+        newMarkers.push({ location: [lat, lon], size: 0.05 });
+
+        // India map markers (only Indian bounding box)
+        if (isIndianCity(lat, lon)) {
+          newIndiaMarkers.push({ location: [lat, lon], city, users: parseInt(row.metricValues[0]?.value ?? "1", 10) });
+        }
+      });
+
+      markersRef.current = newMarkers;
+      if (globeRef.current) globeRef.current.update({ markers: newMarkers });
+
+      // Update India SVG map
+      setIndianMapMarkers(newIndiaMarkers);
+
     } catch {}
   }, [accessToken, propertyId]);
 
@@ -199,7 +324,6 @@ export default function AnalyticsPage() {
       const h = { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" };
       const post = body => fetch(base, { method: "POST", headers: h, body: JSON.stringify(body) }).then(r => r.json());
 
-      // Filter to exclude /dashboard and /auth paths from all page-based queries
       const excludeDashboard = { notExpression: { filter: { fieldName: "pagePath", stringFilter: { matchType: "BEGINS_WITH", value: "/dashboard" } } } };
       const excludeAuth = { notExpression: { filter: { fieldName: "pagePath", stringFilter: { matchType: "BEGINS_WITH", value: "/auth" } } } };
       const pageFilter = { andGroup: { expressions: [excludeDashboard, excludeAuth] } };
@@ -236,7 +360,6 @@ export default function AnalyticsPage() {
   useEffect(() => {
     if (!accessToken || !propertyId) return;
     fetchGA4Stats();
-    // Delay first realtime fetch to ensure map is initialized
     const firstPing = setTimeout(() => fetchRealtime(), 500);
     const t1 = setInterval(fetchGA4Stats, 5 * 60 * 1000);
     const t2 = setInterval(fetchRealtime, 30 * 1000);
@@ -247,7 +370,6 @@ export default function AnalyticsPage() {
 
   return (
     <>
-
       <div className="dashboard-page">
         {/* Header */}
         <div className="sl-page-header">
@@ -319,10 +441,16 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        {/* Globe */}
+        {/* Globe + India Map side by side */}
         {ga4Configured && (
-          <div className="an-globe-container">
-            <canvas ref={canvasRef} className="an-globe-canvas" />
+          <div className="an-maps-row">
+            <div className="an-globe-container">
+              <canvas ref={canvasRef} className="an-globe-canvas" />
+            </div>
+            {/* India SVG map — shown when there's Indian traffic */}
+            {indianMapMarkers.length > 0 && (
+              <IndiaPingMap indianMarkers={indianMapMarkers} />
+            )}
           </div>
         )}
 
@@ -360,13 +488,25 @@ export default function AnalyticsPage() {
       <style>{`
         .an-map-wrap { display: none; }
         .an-map { display: none; }
+
+        /* ── Globe + India map row ── */
+        .an-maps-row {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 32px;
+          padding: 8px 0 24px;
+          flex-wrap: wrap;
+          margin-bottom: 16px;
+        }
+
+        /* Globe */
         .an-globe-container {
           display: flex;
           justify-content: center;
           align-items: center;
-          padding: 8px 0 24px;
           background: transparent;
-          margin-bottom: 16px;
+          flex-shrink: 0;
         }
         .an-globe-canvas {
           width: 700px;
@@ -374,6 +514,85 @@ export default function AnalyticsPage() {
           cursor: default;
           pointer-events: none;
         }
+
+        /* ── India SVG Map ── */
+        .an-india-map-wrap {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 10px;
+          flex-shrink: 0;
+        }
+        .an-india-map-title {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          color: #6b7280;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+        }
+        .an-india-map-svg-wrap {
+          border-radius: 12px;
+          overflow: hidden;
+          background: #f8f9ff;
+          border: 1px solid #e5e7eb;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+          padding: 8px;
+        }
+        .an-india-svg {
+          display: block;
+        }
+
+        /* India map path */
+        .an-india-border {
+          fill: #eef0f8;
+          stroke: #c7cde8;
+          stroke-width: 1.5;
+          stroke-linejoin: round;
+          filter: drop-shadow(0 2px 4px rgba(24,13,62,0.08));
+        }
+
+        /* Grid lines */
+        .an-india-grid {
+          stroke: #dde1f0;
+          stroke-width: 0.4;
+          stroke-dasharray: 3 4;
+        }
+
+        /* Ping animations */
+        .an-india-ping-ring {
+          fill: none;
+          stroke: #CE1E36;
+          stroke-width: 1.2;
+          opacity: 0;
+          animation: india-ping 2s ease-out infinite;
+        }
+        .an-india-ping-mid {
+          fill: none;
+          stroke: #CE1E36;
+          stroke-width: 1;
+          opacity: 0;
+          animation: india-ping-mid 2s ease-out infinite;
+        }
+        .an-india-ping-core {
+          fill: #CE1E36;
+          opacity: 0.92;
+          filter: drop-shadow(0 0 3px rgba(206,30,54,0.6));
+        }
+
+        @keyframes india-ping {
+          0%   { r: 3;  opacity: 0.7; }
+          100% { r: 14; opacity: 0; }
+        }
+        @keyframes india-ping-mid {
+          0%   { r: 3;  opacity: 0.5; }
+          60%  { r: 9;  opacity: 0.2; }
+          100% { r: 9;  opacity: 0; }
+        }
+
+        /* Empty state */
         .an-empty-state {
           text-align: center;
           padding: 48px 24px;
