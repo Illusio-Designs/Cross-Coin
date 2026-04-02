@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import createGlobe from "cobe";
+import dynamic from "next/dynamic";
 import { brandSettingsService, brandService } from "../../services";
 import Dropdown from "../ui/Dropdown";
+
+const ThreeGlobe = dynamic(() => import("./ThreeGlobe"), { ssr: false });
 
 const fmt = n => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 const fmtTime = s => `${Math.floor(s / 60)}m ${s % 60}s`;
@@ -51,15 +53,8 @@ const CITY_COORDS = {
   "San Francisco": [37.774, -122.419], Seattle: [47.606, -122.332],
 };
 
-// Cobe official docs: phi = horizontal rotation (0–2π), theta = vertical tilt (-π/2 to π/2)
-// India: lat ~20°N → theta = 20 * π/180 ≈ 0.35
-// India: lon ~78°E → phi = 2π - (78 * π/180) ≈ 4.92 (cobe rotates westward with positive phi)
-const INDIA_PHI   = 4.92;
-const INDIA_THETA = 0.35;
 
 export default function AnalyticsPage() {
-  const canvasRef     = useRef(null);
-  const globeRef      = useRef(null);
   const markersRef    = useRef([]);
   const [mounted, setMounted]               = useState(false);
   const [stats, setStats]                   = useState(null);
@@ -76,39 +71,6 @@ export default function AnalyticsPage() {
   const [lastUpdated, setLastUpdated]       = useState(null);
 
   useEffect(() => { setMounted(true); }, []);
-
-  // Init Cobe globe
-  useEffect(() => {
-    if (!mounted || !ga4Configured || !canvasRef.current) return;
-    const SIZE = 600;
-    const dpr  = window.devicePixelRatio || 1;
-    canvasRef.current.width  = SIZE * dpr;
-    canvasRef.current.height = SIZE * dpr;
-
-    globeRef.current = createGlobe(canvasRef.current, {
-      devicePixelRatio: dpr,
-      width:  SIZE * dpr,
-      height: SIZE * dpr,
-      phi:    INDIA_PHI,
-      theta:  INDIA_THETA,
-      dark:   0,
-      diffuse: 1.2,
-      mapSamples: 16000,
-      mapBrightness: 6,
-      baseColor:   [1, 1, 1],
-      markerColor: [0.808, 0.118, 0.212],
-      glowColor:   [1, 1, 1],
-      markers: markersRef.current,
-      scale: 1,
-      onRender: (state) => {
-        state.phi     = INDIA_PHI;
-        state.theta   = INDIA_THETA;
-        state.markers = markersRef.current;
-      },
-    });
-
-    return () => { globeRef.current?.destroy(); globeRef.current = null; };
-  }, [mounted, ga4Configured]);
 
   // Load brands
   useEffect(() => {
@@ -190,7 +152,6 @@ export default function AnalyticsPage() {
       });
 
       markersRef.current = newMarkers;
-      if (globeRef.current) globeRef.current.update({ markers: newMarkers });
 
     } catch {}
   }, [accessToken, propertyId]);
@@ -323,7 +284,9 @@ export default function AnalyticsPage() {
         {/* Globe */}
         {ga4Configured && (
           <div className="an-globe-container">
-            <canvas ref={canvasRef} className="an-globe-canvas" />
+            <div style={{ width: 600, height: 600 }}>
+              <ThreeGlobe markersRef={markersRef} />
+            </div>
           </div>
         )}
 
@@ -370,13 +333,7 @@ export default function AnalyticsPage() {
           padding: 16px 0 24px;
           margin-bottom: 16px;
         }
-        .an-globe-canvas {
-          width: 600px;
-          height: 600px;
-          cursor: default;
-          pointer-events: none;
-          display: block;
-        }
+        .an-globe-canvas { display: none; }
 
         /* Empty state */
         .an-empty-state {
