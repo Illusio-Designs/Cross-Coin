@@ -10,9 +10,9 @@ const contactInfo = [
       </svg>
     ),
     label: 'Phone',
-    value: '+91 97128 91700',
-    sub: 'Mon – Sat, 9:00 AM – 7:00 PM',
-    href: 'tel:+919712891700',
+    value: '+91 74348 34000',
+    sub: 'Mon – Fri, 24 Hours',
+    href: 'tel:+917434834000',
   },
   {
     icon: (
@@ -21,9 +21,9 @@ const contactInfo = [
       </svg>
     ),
     label: 'Email',
-    value: 'crosscoinindia@gmail.com',
+    value: 'info@crosscoin.in',
     sub: 'We reply within 24 hours',
-    href: 'mailto:crosscoinindia@gmail.com',
+    href: 'mailto:info@crosscoin.in',
   },
   {
     icon: (
@@ -59,7 +59,7 @@ const socials = [
   },
   {
     label: 'WhatsApp',
-    href: 'https://wa.me/919712891700',
+    href: 'https://wa.me/917434834000',
     icon: (
       <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
         <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
@@ -120,7 +120,7 @@ export default function Contact() {
               </div>
               <div className="ct-pill">
                 <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                Mon – Sat support
+                Mon – Fri support
               </div>
               <div className="ct-pill">
                 <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
