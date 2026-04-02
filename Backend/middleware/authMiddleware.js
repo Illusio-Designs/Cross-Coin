@@ -1,6 +1,9 @@
 const jwt = require('jsonwebtoken');
 const { User } = require('../model/userModel.js');
 
+// All non-consumer staff roles
+const STAFF_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager'];
+
 // Authentication middleware
 module.exports.authenticate = async (req, res, next) => {
     try {
@@ -23,7 +26,6 @@ module.exports.authenticate = async (req, res, next) => {
         if (error.name === 'TokenExpiredError') {
             return res.status(401).json({ message: 'Token expired', code: 'TOKEN_EXPIRED' });
         }
-        // Only log unexpected errors, not normal auth failures
         if (error.name !== 'JsonWebTokenError') {
             console.error('Authentication error:', error);
         }
@@ -34,13 +36,12 @@ module.exports.authenticate = async (req, res, next) => {
 // For backward compatibility
 module.exports.isAuthenticated = module.exports.authenticate;
 
-// Authorization middleware
+// Authorization middleware — pass an array of allowed roles
 module.exports.authorize = (roles) => {
     return (req, res, next) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Authentication required' });
         }
-
         if (!roles.includes(req.user.role)) {
             return res.status(403).json({ message: 'Access denied' });
         }
@@ -48,14 +49,57 @@ module.exports.authorize = (roles) => {
     };
 };
 
-// Admin middleware
+// Admin only (full access)
 module.exports.isAdmin = (req, res, next) => {
     if (!req.user) {
         return res.status(401).json({ message: 'Authentication required' });
     }
-
     if (req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied. Admin only.' });
+    }
+    next();
+};
+
+// Any staff role (admin + all managers) — use for shared admin panel access
+module.exports.isStaff = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+    }
+    if (!STAFF_ROLES.includes(req.user.role)) {
+        return res.status(403).json({ message: 'Access denied. Staff only.' });
+    }
+    next();
+};
+
+// Product manager or admin
+module.exports.isProductManager = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+    }
+    if (!['admin', 'product_manager'].includes(req.user.role)) {
+        return res.status(403).json({ message: 'Access denied. Product manager role required.' });
+    }
+    next();
+};
+
+// Order manager or admin
+module.exports.isOrderManager = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+    }
+    if (!['admin', 'order_manager'].includes(req.user.role)) {
+        return res.status(403).json({ message: 'Access denied. Order manager role required.' });
+    }
+    next();
+};
+
+// WhatsApp manager or admin
+module.exports.isWhatsappManager = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+    }
+    if (!['admin', 'whatsapp_manager'].includes(req.user.role)) {
+        return res.status(403).json({ message: 'Access denied. WhatsApp manager role required.' });
     }
     next();
 };

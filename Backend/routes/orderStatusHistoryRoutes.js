@@ -4,15 +4,15 @@ const {
     addOrderStatusEntry,
     getAllOrderStatusHistory
 } = require('../controller/orderStatusHistoryController.js');
-const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, isOrderManager } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 
-// Route to get all status history records (admin only)
-router.get('/', isAuthenticated, isAdmin, getAllOrderStatusHistory);
+// Order Manager routes
+router.get('/', isAuthenticated, isOrderManager, getAllOrderStatusHistory);
 
 // Routes for specific order status history
 router.get('/order/:orderId', isAuthenticated, getOrderStatusHistory);
-router.post('/order/:orderId', isAuthenticated, isAdmin, addOrderStatusEntry);
+router.post('/order/:orderId', isAuthenticated, isOrderManager, addOrderStatusEntry);
 
 module.exports = router; 

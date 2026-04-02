@@ -6,7 +6,7 @@ const {
     getShippingFeeByType,
     deleteShippingFee
 } = require('../controller/shippingFeeController.js');
-const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, authorize, isOrderManager } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 
@@ -14,9 +14,9 @@ const router = express.Router();
 router.get('/', getAllShippingFees);
 router.get('/:type', getShippingFeeByType);
 
-// Admin routes
-router.post('/', isAuthenticated, authorize(['admin']), createShippingFee);
-router.put('/:id', isAuthenticated, authorize(['admin']), updateShippingFee);
-router.delete('/:id', isAuthenticated, authorize(['admin']), deleteShippingFee);
+// Order Manager routes
+router.post('/', isAuthenticated, isOrderManager, createShippingFee);
+router.put('/:id', isAuthenticated, isOrderManager, updateShippingFee);
+router.delete('/:id', isAuthenticated, isOrderManager, deleteShippingFee);
 
 module.exports = router; 

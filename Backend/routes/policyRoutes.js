@@ -1,12 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const policyController = require('../controller/policyController');
+const { authenticate, isAdmin } = require('../middleware/authMiddleware');
 
-router.post('/', policyController.createPolicy);
+// Public routes
 router.get('/', policyController.getPolicies);
 router.get('/name/:name', policyController.getPublicPolicyByName);
 router.get('/:id', policyController.getPolicyById);
-router.put('/:id', policyController.updatePolicy);
-router.delete('/:id', policyController.deletePolicy);
 
-module.exports = router; 
+// Admin-only routes (site policies are sensitive config)
+router.post('/', authenticate, isAdmin, policyController.createPolicy);
+router.put('/:id', authenticate, isAdmin, policyController.updatePolicy);
+router.delete('/:id', authenticate, isAdmin, policyController.deletePolicy);
+
+module.exports = router;

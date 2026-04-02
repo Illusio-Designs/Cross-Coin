@@ -318,6 +318,22 @@ const setupDatabase = async () => {
       );
     }
 
+    // Ensure users.role ENUM includes all management roles
+    console.log("Ensuring users.role ENUM values...");
+    try {
+      await sequelize.query(`
+        ALTER TABLE users
+        MODIFY COLUMN role ENUM('admin','product_manager','order_manager','whatsapp_manager','consumer')
+        NOT NULL DEFAULT 'consumer'
+      `);
+      console.log("✓ users.role ENUM updated with all management roles");
+    } catch (roleEnumError) {
+      console.log(
+        "⚠️ users.role ENUM update skipped:",
+        roleEnumError.message
+      );
+    }
+
     // Ensure lookbook tables exist.
     console.log("Ensuring lookbook tables...");
     try {

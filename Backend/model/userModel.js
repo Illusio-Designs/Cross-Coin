@@ -23,7 +23,7 @@ const User = sequelize.define('User', {
         allowNull: true // Nullable for Google login
     },
     role: {
-        type: DataTypes.ENUM('admin', 'consumer'),
+        type: DataTypes.ENUM('admin', 'product_manager', 'order_manager', 'whatsapp_manager', 'consumer'),
         defaultValue: 'consumer',
         allowNull: false
     },
