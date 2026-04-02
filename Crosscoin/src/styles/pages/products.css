@@ -16,7 +16,7 @@
 
 .products-header .section-title {
   font-size: clamp(20px, 5vw, 40px);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0.16em;
   color: #1a1a1a;
   text-transform: uppercase;
@@ -33,9 +33,9 @@
 .products-header .section-subtitle {
   margin: 6px 0 0 0;
   font-size: clamp(11px, 2vw, 13px);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0.08em;
-  color: #999;
+  color: #1a1a1a;
 }
 
 .products-count {

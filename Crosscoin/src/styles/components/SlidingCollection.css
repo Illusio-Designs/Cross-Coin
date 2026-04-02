@@ -19,7 +19,7 @@
 
 .section-header h2 {
   font-size: clamp(20px, 5vw, 40px);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0.16em;
   color: #1a1a1a;
   text-transform: uppercase;
@@ -37,9 +37,9 @@
 .section-header p {
   margin: 8px 0 0 0;
   font-size: clamp(11px, 2vw, 13px);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0.08em;
-  color: #999;
+  color: #1a1a1a;
   padding: 0;
 }
 
@@ -132,7 +132,7 @@
 .line1 {
   display: block;
   font-size: clamp(11px, 2.5vw, 18px);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   line-height: 1;
@@ -175,7 +175,7 @@
 .line2-small {
   display: block;
   font-size: clamp(11px, 2.5vw, 18px);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   line-height: 1;
@@ -189,7 +189,7 @@
 .line2-regular {
   display: block;
   font-size: clamp(14px, 3.5vw, 24px);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   line-height: 1.2;

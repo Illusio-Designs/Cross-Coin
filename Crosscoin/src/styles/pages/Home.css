@@ -55,7 +55,7 @@
 }
 
 .trust-badge p {
-  color: #666;
+  color: #1a1a1a;
   font-size: 0.9rem;
   line-height: 1.4;
 }
@@ -432,7 +432,7 @@
   cursor: pointer;
   transition: all 0.3s ease;
   z-index: 10;
-  color: #666;
+  color: #1a1a1a;
   pointer-events: auto;
 }
 
@@ -612,7 +612,7 @@
 }
 
 .featured-product-card .review-count {
-  color: #666;
+  color: #1a1a1a;
 }
 
 .featured-product-card .current-price {
@@ -757,7 +757,7 @@
 
 .featured-product-card .details-label {
   font-weight: 600;
-  color: #666;
+  color: #1a1a1a;
   margin-right: 0.5rem;
 }
 
@@ -819,7 +819,7 @@
 
 .featured-product-card .color-pack-count {
   font-size: 0.85rem;
-  color: #666;
+  color: #1a1a1a;
 }
 
 .featured-product-card .size-swatch-btn {
@@ -981,10 +981,10 @@
 
 .section-header-sub {
   margin: 6px 0 0 0;
-  font-size: clamp(11px, 2vw, 13px);
-  font-weight: 300;
-  letter-spacing: 0.08em;
-  color: #999;
+  font-size: clamp(13px, 2vw, 15px);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: #1a1a1a;
   padding: 0;
 }
 
@@ -1269,7 +1269,7 @@
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.85rem;
-    color: #666;
+    color: #1a1a1a;
     margin-top: 0.5rem;
     transition: all 0.2s ease;
   }
@@ -1605,7 +1605,7 @@
   .featured-product-card .option-label {
     font-size: 0.8rem;
     font-weight: 500;
-    color: #666;
+    color: #1a1a1a;
     margin-bottom: 0.25rem;
   }
   
