@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { AiOutlineMail } from "react-icons/ai";
-import { FaFacebookF, FaInstagram } from "react-icons/fa";
+import { FaFacebookF, FaInstagram, FaWhatsapp } from "react-icons/fa";
 import { MdOutlinePhoneInTalk } from "react-icons/md";
 import SafeImage from "../common/SafeImage";
 import { getPublicCategories } from "../../services/publicApi";
@@ -72,6 +72,7 @@ const Footer = () => {
           <div className="footer__social-icons">
             <a href="https://www.facebook.com/people/Cross-Coin/61577195743730/" className="social-icon" aria-label="Facebook" target="_blank" rel="noopener noreferrer"><FaFacebookF /></a>
             <a href="https://www.instagram.com/crosscoin99/?igsh=d2FiY29iemhtb2Nl" className="social-icon" aria-label="Instagram" target="_blank" rel="noopener noreferrer"><FaInstagram /></a>
+            <a href="https://wa.me/919712891700" className="social-icon" aria-label="WhatsApp" target="_blank" rel="noopener noreferrer"><FaWhatsapp /></a>
           </div>
         </div>
 
@@ -104,7 +105,6 @@ const Footer = () => {
             <li><Link href="/policy?name=terms-and-conditions">Terms & Conditions</Link></li>
             <li><Link href="/policy?name=shipping-policy">Shipping Policy</Link></li>
             <li><Link href="/policy?name=cancellation-and-refund">Cancellation & Refund</Link></li>
-            <li><Link href="/sitemap">Sitemap</Link></li>
           </ul>
         </div>
 
@@ -123,7 +123,7 @@ const Footer = () => {
               <AiOutlineMail className="contact-icon" />
               <div>
                 <p className="contact-label">Email Support</p>
-                <a href="mailto:Crosscoinindia@gmail.com" className="contact-link">Crosscoinindia@gmail.com</a>
+                <a href="mailto:info@crosscoin.in" className="contact-link">info@crosscoin.in</a>
               </div>
             </div>
           </div>
