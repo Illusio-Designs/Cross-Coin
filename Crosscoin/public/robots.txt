@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+# Block dashboard and auth pages
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /login
+Disallow: /register
+Disallow: /profile
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://www.crosscoin.in/sitemap.xml
