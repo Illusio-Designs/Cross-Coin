@@ -18,7 +18,9 @@ const {
     deleteUser,
     getAllUsers,
     refreshToken,
-    upload
+    upload,
+    updateUserRole,
+    createStaffUser
 } = require('../controller/userController.js');
 const { isAuthenticated, authorize, isAdmin } = require('../middleware/authMiddleware.js');
 
@@ -72,5 +74,7 @@ router.delete('/delete', isAuthenticated, deleteUser);
 
 // Admin routes
 router.get('/all', isAuthenticated, isAdmin, getAllUsers);
+router.post('/staff', isAuthenticated, isAdmin, createStaffUser);
+router.put('/:id/role', isAuthenticated, isAdmin, updateUserRole);
 
 module.exports = router;

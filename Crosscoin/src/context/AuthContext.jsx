@@ -11,6 +11,34 @@ import {
 
 const AuthContext = createContext(null);
 
+// All non-consumer staff roles
+export const STAFF_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager'];
+
+// Role display labels
+export const ROLE_LABELS = {
+  admin:             'Admin',
+  product_manager:   'Product Manager',
+  order_manager:     'Order Manager',
+  whatsapp_manager:  'WhatsApp Manager',
+  consumer:          'Consumer',
+};
+
+// Which sidebar views each role can access
+export const ROLE_VIEWS = {
+  admin: null, // null = all views
+  product_manager: [
+    'main', 'products', 'categories', 'attributes', 'media-gallery',
+    'brands', 'slider', 'blogs', 'seo', 'lookbooks', 'reels-admin', 'instagram-admin',
+  ],
+  order_manager: [
+    'main', 'orders', 'payments', 'coupons', 'shippingFees',
+    'reviews', 'consumers',
+  ],
+  whatsapp_manager: [
+    'main', 'whatsapp', 'whatsapp-chat',
+  ],
+};
+
 function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -20,7 +48,6 @@ function AuthProvider({ children }) {
         try {
             const token = localStorage.getItem('token');
             if (token) {
-                // Unified check for current user
                 try {
                     const userData = await userService.getCurrentUser();
                     setUser(userData);
@@ -29,7 +56,6 @@ function AuthProvider({ children }) {
                         const userData = await getPublicCurrentUser();
                         setUser(userData);
                     } catch {
-                        // If both fail, clear token but don't redirect
                         localStorage.removeItem('token');
                         setUser(null);
                     }
@@ -44,7 +70,7 @@ function AuthProvider({ children }) {
     }, []);
 
     useEffect(() => {
-        if (apiCalledRef.current) return; // Prevent multiple calls
+        if (apiCalledRef.current) return;
         apiCalledRef.current = true;
         checkAuth();
     }, [checkAuth]);
@@ -68,6 +94,10 @@ function AuthProvider({ children }) {
     const adminLogin = useCallback(async (credentials) => {
         try {
             const response = await authService.login(credentials);
+            // Allow any staff role
+            if (!STAFF_ROLES.includes(response.user?.role)) {
+                throw new Error('Access denied. Staff accounts only.');
+            }
             localStorage.setItem('token', response.token);
             setUser(response.user);
             showLoginSuccessToast();
@@ -91,18 +121,22 @@ function AuthProvider({ children }) {
 
     const logout = useCallback(async () => {
         try {
-            try {
-                await publicLogout();
-            } catch {
-                await userService.logout();
-            }
+            try { await publicLogout(); } catch { await userService.logout(); }
         } catch (error) {
-            } finally {
+        } finally {
             localStorage.removeItem('token');
             setUser(null);
             showLogoutSuccessToast();
         }
     }, []);
+
+    // Helper: can this user access a given view?
+    const canAccessView = useCallback((view) => {
+        if (!user) return false;
+        const allowed = ROLE_VIEWS[user.role];
+        if (allowed === null) return true; // admin
+        return allowed?.includes(view) ?? false;
+    }, [user]);
 
     const value = {
         user,
@@ -112,7 +146,11 @@ function AuthProvider({ children }) {
         logout,
         register,
         checkAuth,
-        isAuthenticated: !!user
+        canAccessView,
+        isAuthenticated: !!user,
+        isAdmin: user?.role === 'admin',
+        isStaff: STAFF_ROLES.includes(user?.role),
+        role: user?.role ?? null,
     };
 
     return (

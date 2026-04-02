@@ -4,6 +4,7 @@ import CardGrid from '../../components/Dashboard/Card';
 import DashboardHeader from '../../components/Dashboard/DashboardHeader';
 import DashboardFooter from '../../components/Dashboard/DashboardFooter';
 import { useState, useEffect } from "react";
+import { useAuth, ROLE_VIEWS } from "../../context/AuthContext";
 import { handleViewChange, getViewFromPath } from "../../utils/dashboardRouting";
 
 import Products from "./products/products";
@@ -28,26 +29,35 @@ import AdminLookbooks from "./social/lookbooks";
 import AdminReels from "./social/reels";
 import AdminInstagramFeed from "./social/instagram";
 import { WhatsAppManager } from "./whatsapp";
+import StaffUsers from "./staff-users/staffUsers";
 
 const SB_EXPANDED = 260;
 const SB_COLLAPSED = 72;
 
+// Unauthorized placeholder
+function NoAccess() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: 12, color: '#6b7280' }}>
+      <svg width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      <p style={{ fontSize: 18, fontWeight: 600, color: '#374151' }}>Access Denied</p>
+      <p style={{ fontSize: 14 }}>You don't have permission to view this page.</p>
+    </div>
+  );
+}
+
 function Dashboard() {
+  const { role, canAccessView } = useAuth();
   const [currentView, setCurrentView] = useState('main');
-  // Initialize isMobile synchronously so hamburger renders on first paint
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Single init effect — runs once on mount
   useEffect(() => {
     const mobile = window.innerWidth <= 900;
     setIsMobile(mobile);
-
     if (mobile) {
       setIsCollapsed(true);
-      // Clear any mobile-saved collapsed state so desktop isn't affected
       localStorage.removeItem('sidebarCollapsed');
     } else {
       const saved = localStorage.getItem('sidebarCollapsed');
@@ -55,14 +65,10 @@ function Dashboard() {
     }
   }, []);
 
-  // Save to localStorage only on desktop
   useEffect(() => {
-    if (!isMobile) {
-      localStorage.setItem('sidebarCollapsed', JSON.stringify(isCollapsed));
-    }
+    if (!isMobile) localStorage.setItem('sidebarCollapsed', JSON.stringify(isCollapsed));
   }, [isCollapsed, isMobile]);
 
-  // Resize handler
   useEffect(() => {
     const check = () => {
       const mobile = window.innerWidth <= 900;
@@ -81,7 +87,6 @@ function Dashboard() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  // Drive header/footer/main offset via a single CSS variable
   const sbw = isMobile ? 0 : (isCollapsed ? SB_COLLAPSED : SB_EXPANDED);
   useEffect(() => {
     document.documentElement.style.setProperty('--sb-w', `${sbw}px`);
@@ -91,6 +96,7 @@ function Dashboard() {
     handleViewChange(v, setCurrentView);
     if (isMobile) setIsMobileMenuOpen(false);
   };
+
   const handleMobileMenuToggle = () => setIsMobileMenuOpen(p => !p);
 
   const handleToggleFullscreen = () => {
@@ -119,36 +125,42 @@ function Dashboard() {
   }, []);
 
   const renderContent = () => {
+    // Check access for non-main views
+    if (currentView !== 'main' && !canAccessView(currentView)) {
+      return <NoAccess />;
+    }
+
     switch (currentView) {
-      case 'products':       return <Products />;
-      case 'categories':     return <Categories />;
-      case 'attributes':     return <Attributes />;
-      case 'orders':         return <Orders />;
-      case 'consumers':      return <Consumers />;
-      case 'shippingFees':   return <ShippingFees />;
-      case 'payments':       return <Payments />;
-      case 'coupons':        return <Coupons />;
-      case 'reviews':        return <Reviews />;
-      case 'seo':            return <SEO />;
-      case 'policies':       return <Policies />;
-      case 'blogs':          return <Blogs />;
-      case 'lookbooks':      return <AdminLookbooks />;
-      case 'reels-admin':    return <AdminReels />;
+      case 'products':        return <Products />;
+      case 'categories':      return <Categories />;
+      case 'attributes':      return <Attributes />;
+      case 'orders':          return <Orders />;
+      case 'consumers':       return <Consumers />;
+      case 'shippingFees':    return <ShippingFees />;
+      case 'payments':        return <Payments />;
+      case 'coupons':         return <Coupons />;
+      case 'reviews':         return <Reviews />;
+      case 'seo':             return <SEO />;
+      case 'policies':        return <Policies />;
+      case 'blogs':           return <Blogs />;
+      case 'lookbooks':       return <AdminLookbooks />;
+      case 'reels-admin':     return <AdminReels />;
       case 'instagram-admin': return <AdminInstagramFeed />;
-      case 'whatsapp':       return <WhatsAppManager />;
-      case 'whatsapp-chat':  return <WhatsAppManager />;
-      case 'brands':         return <BrandManager />;
-      case 'brand-settings': return <BrandSettingsManager />;
-      case 'slider':         return <Slider />;
-      case 'media-gallery':  return <MediaGallery />;
-      case 'analytics':      return <AnalyticsPage />;
-      case 'utm-analytics':  return <UTMAnalytics />;
-      default:               return <CardGrid />;
+      case 'whatsapp':        return <WhatsAppManager />;
+      case 'whatsapp-chat':   return <WhatsAppManager />;
+      case 'brands':          return <BrandManager />;
+      case 'brand-settings':  return <BrandSettingsManager />;
+      case 'slider':          return <Slider />;
+      case 'media-gallery':   return <MediaGallery />;
+      case 'analytics':       return <AnalyticsPage />;
+      case 'utm-analytics':   return <UTMAnalytics />;
+      case 'staff-users':     return <StaffUsers />;
+      default:                return <CardGrid />;
     }
   };
 
   return (
-    <ProtectedRoute requireAdmin={true}>
+    <ProtectedRoute>
       <div className="dl">
         <Sidebar
           isCollapsed={isCollapsed}

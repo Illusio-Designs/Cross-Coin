@@ -717,3 +717,68 @@ module.exports.refreshToken = async (req, res) => {
         res.status(500).json({ success: false, message: 'Failed to refresh token', error: error.message });
     }
 };
+
+// **Update User Role (admin only)**
+module.exports.updateUserRole = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { role, password } = req.body;
+
+        const VALID_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager', 'consumer'];
+        if (role && !VALID_ROLES.includes(role)) {
+            return res.status(400).json({ message: 'Invalid role' });
+        }
+
+        const user = await User.findByPk(id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const updates = {};
+        if (role) updates.role = role;
+        if (password) {
+            const strengthCheck = validatePasswordStrength(password);
+            if (!strengthCheck.valid) return res.status(400).json({ message: strengthCheck.message });
+            updates.password = await bcrypt.hash(password, 10);
+        }
+
+        await user.update(updates);
+
+        const userResponse = user.toJSON();
+        delete userResponse.password;
+        res.json({ message: 'User updated successfully', user: userResponse });
+    } catch (error) {
+        console.error('Update user role error:', error);
+        res.status(500).json({ message: 'Failed to update user', error: error.message });
+    }
+};
+
+// **Create Staff User (admin only)**
+module.exports.createStaffUser = async (req, res) => {
+    try {
+        const { username, email, password, role } = req.body;
+
+        const STAFF_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager'];
+        if (!STAFF_ROLES.includes(role)) {
+            return res.status(400).json({ message: 'Invalid staff role' });
+        }
+
+        if (!username || !email || !password) {
+            return res.status(400).json({ message: 'Username, email and password are required' });
+        }
+
+        const strengthCheck = validatePasswordStrength(password);
+        if (!strengthCheck.valid) return res.status(400).json({ message: strengthCheck.message });
+
+        const existing = await User.findOne({ where: { email } });
+        if (existing) return res.status(400).json({ message: 'Email already exists' });
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const user = await User.create({ username, email, password: hashedPassword, role });
+
+        const userResponse = user.toJSON();
+        delete userResponse.password;
+        res.status(201).json({ message: 'Staff user created successfully', user: userResponse });
+    } catch (error) {
+        console.error('Create staff user error:', error);
+        res.status(500).json({ message: 'Failed to create staff user', error: error.message });
+    }
+};
