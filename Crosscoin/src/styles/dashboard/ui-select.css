@@ -2,7 +2,7 @@
    UI Select Component
    ============================================================ */
 
-.sel-container { position: relative; width: 100%; margin-bottom: 16px; }
+.sel-container { position: relative; width: 100%; }
 .sel-container-disabled { opacity: 0.55; pointer-events: none; }
 
 .sel-label {

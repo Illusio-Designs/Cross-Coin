@@ -152,29 +152,31 @@ export default function StaffUsers() {
             <p className="sl-page-sub">{filtered.length} staff member{filtered.length !== 1 ? 's' : ''}</p>
           </div>
           <div style={{ flex: 1 }} />
-          <div className="sl-search-wrap" style={{ flexShrink: 0 }}>
-            <span className="sl-search-icon">{IC.search}</span>
-            <input
-              type="text"
-              className="sl-search-input"
-              placeholder="Search..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{ width: 180 }}
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <div className="sl-search-wrap">
+              <span className="sl-search-icon">{IC.search}</span>
+              <input
+                type="text"
+                className="sl-search-input"
+                placeholder="Search..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ width: 180, height: 38 }}
+              />
+            </div>
+            <div style={{ width: 150 }}>
+              <Select
+                options={[{ value: 'all', label: 'All Roles' }, ...ROLES.map(r => ({ value: r.value, label: r.label }))]}
+                value={filterRole}
+                onChange={val => setFilterRole(val || 'all')}
+                placeholder="All Roles"
+              />
+            </div>
+            <Button variant="primary" onClick={openCreate} style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', height: 38 }}>
+              <span style={{ width: 16, height: 16 }}>{IC.add}</span>
+              Add Staff
+            </Button>
           </div>
-          <div style={{ width: 150, flexShrink: 0 }}>
-            <Select
-              options={[{ value: 'all', label: 'All Roles' }, ...ROLES.map(r => ({ value: r.value, label: r.label }))]}
-              value={filterRole}
-              onChange={val => setFilterRole(val || 'all')}
-              placeholder="All Roles"
-            />
-          </div>
-          <Button variant="primary" onClick={openCreate} style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, whiteSpace: 'nowrap' }}>
-            <span style={{ width: 16, height: 16 }}>{IC.add}</span>
-            Add Staff
-          </Button>
         </div>
 
         {/* ── Stat Cards ── */}
