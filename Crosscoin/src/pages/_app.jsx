@@ -185,7 +185,6 @@ function AppContent({ Component, pageProps, progressRef }) {
         </button>
       )}
       {!isDashboard && !isAuthPage && <WhatsAppChat />}
-      {!isDashboard && !isAuthPage && <PhonePopupModal />}
     </>
   );
 }
