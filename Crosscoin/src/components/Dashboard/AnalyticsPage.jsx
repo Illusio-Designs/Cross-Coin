@@ -29,116 +29,8 @@ function BarRow({ label, value, max, color = "#CE1E36" }) {
   );
 }
 
-// ─── India SVG Map ────────────────────────────────────────────────────────────
-// Bounding box for India: lat 6–37°N, lon 68–98°E
-// SVG viewport: 400 × 480
-const INDIA_MAP_W = 400;
-const INDIA_MAP_H = 480;
-const INDIA_LAT_MIN = 6,  INDIA_LAT_MAX = 37;
-const INDIA_LON_MIN = 68, INDIA_LON_MAX = 98;
-
-function latLonToSVG(lat, lon) {
-  const x = ((lon - INDIA_LON_MIN) / (INDIA_LON_MAX - INDIA_LON_MIN)) * INDIA_MAP_W;
-  const y = ((INDIA_LAT_MAX - lat) / (INDIA_LAT_MAX - INDIA_LAT_MIN)) * INDIA_MAP_H;
-  return [x, y];
-}
-
-function isIndianCity(lat, lon) {
-  return lat >= INDIA_LAT_MIN && lat <= INDIA_LAT_MAX &&
-         lon >= INDIA_LON_MIN && lon <= INDIA_LON_MAX;
-}
-
-// Simplified India border path (approximate outline for SVG)
-// Points are [lon, lat] pairs converted to SVG space
-const INDIA_BORDER_COORDS = [
-  [77.8,35.5],[78.9,34.5],[79.3,33.0],[80.2,32.4],[81.1,30.8],[82.6,30.1],
-  [84.1,28.5],[85.2,27.9],[87.1,27.1],[88.9,27.3],[89.5,26.7],[90.4,26.9],
-  [92.1,26.8],[93.5,27.2],[95.2,28.0],[96.5,28.3],[97.1,27.8],[97.4,26.5],
-  [96.2,25.5],[95.3,23.8],[94.2,22.7],[93.1,22.3],[92.6,21.8],[92.5,21.0],
-  [91.9,22.0],[91.4,22.8],[90.5,22.7],[89.8,21.7],[89.5,22.0],[88.9,22.8],
-  [88.1,22.5],[87.4,21.6],[86.7,20.4],[85.8,19.8],[85.1,19.1],[84.4,18.3],
-  [83.5,18.4],[82.3,17.1],[81.4,16.5],[80.3,15.9],[80.1,14.0],[79.4,12.5],
-  [78.9,11.1],[78.2,10.0],[77.6,8.4],[76.8,8.2],[76.3,9.5],[76.2,10.3],
-  [75.7,11.8],[74.8,12.9],[74.1,14.1],[73.8,15.0],[73.5,16.0],[73.3,17.0],
-  [72.8,18.9],[72.6,20.2],[72.7,21.1],[70.4,22.1],[68.9,22.9],[68.1,23.6],
-  [68.2,24.3],[69.1,24.9],[70.5,25.0],[71.0,25.7],[70.3,26.0],[70.0,27.5],
-  [69.5,28.5],[70.2,29.5],[70.8,30.0],[71.6,31.0],[72.3,32.1],[73.9,33.5],
-  [74.3,34.1],[75.3,34.7],[76.2,35.0],[77.2,35.5],[77.8,35.5],
-];
-
-const INDIA_PATH_D = (() => {
-  return INDIA_BORDER_COORDS.map(([lon, lat], i) => {
-    const [x, y] = latLonToSVG(lat, lon);
-    return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(" ") + " Z";
-})();
-
-function IndiaPingMap({ indianMarkers }) {
-
-  if (!indianMarkers || indianMarkers.length === 0) return null;
-
-  return (
-    <div className="an-india-map-wrap">
-      <div className="an-india-map-title">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-        </svg>
-        Live Traffic · India
-      </div>
-      <div className="an-india-map-svg-wrap">
-        <svg
-          viewBox={`0 0 ${INDIA_MAP_W} ${INDIA_MAP_H}`}
-          width={INDIA_MAP_W}
-          height={INDIA_MAP_H}
-          className="an-india-svg"
-        >
-          {/* Map fill & border */}
-          <path d={INDIA_PATH_D} className="an-india-border" />
-
-          {/* Grid lines (subtle lat/lon grid) */}
-          {[10, 15, 20, 25, 30, 35].map(lat => {
-            const [, y] = latLonToSVG(lat, 68);
-            return <line key={`lat-${lat}`} x1="0" y1={y} x2={INDIA_MAP_W} y2={y} className="an-india-grid" />;
-          })}
-          {[70, 75, 80, 85, 90, 95].map(lon => {
-            const [x] = latLonToSVG(6, lon);
-            return <line key={`lon-${lon}`} x1={x} y1="0" x2={x} y2={INDIA_MAP_H} className="an-india-grid" />;
-          })}
-
-          {/* Ping markers */}
-          {indianMarkers.map((m, i) => {
-            const [lat, lon] = m.location;
-            const [x, y] = latLonToSVG(lat, lon);
-            const delay = (i * 0.4) % 2;
-            return (
-              <g key={`${lat}-${lon}-${i}`}>
-                {/* Outer pulse ring */}
-                <circle
-                  cx={x} cy={y} r="10"
-                  className="an-india-ping-ring"
-                  style={{ animationDelay: `${delay}s` }}
-                />
-                {/* Mid ring */}
-                <circle
-                  cx={x} cy={y} r="6"
-                  className="an-india-ping-mid"
-                  style={{ animationDelay: `${delay + 0.15}s` }}
-                />
-                {/* Core dot */}
-                <circle cx={x} cy={y} r="3" className="an-india-ping-core" />
-              </g>
-            );
-          })}
-        </svg>
-      </div>
-    </div>
-  );
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
-// City coords (India only subset for map filtering)
-export const CITY_COORDS = {
+// City coords
+const CITY_COORDS = {
   Mumbai: [19.076, 72.877], Delhi: [28.613, 77.209], Bangalore: [12.971, 77.594],
   Chennai: [13.082, 80.27], Hyderabad: [17.385, 78.487], Pune: [18.52, 73.857],
   Kolkata: [22.572, 88.363], Ahmedabad: [23.022, 72.571], Surat: [21.17, 72.831],
@@ -180,8 +72,6 @@ export default function AnalyticsPage() {
   const [propertyId, setPropertyId]         = useState("");
   const [accessToken, setAccessToken]       = useState("");
   const [lastUpdated, setLastUpdated]       = useState(null);
-  // NEW: Indian markers for the SVG map
-  const [indianMapMarkers, setIndianMapMarkers] = useState([]);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -288,30 +178,17 @@ export default function AnalyticsPage() {
       setRealtimeUsers(total);
 
       const newMarkers = [];
-      const newIndiaMarkers = [];
 
       rows.forEach(row => {
         const city    = row.dimensionValues[0]?.value ?? "";
         const country = row.dimensionValues[1]?.value ?? "";
         const coords  = CITY_COORDS[city] || COUNTRY_COORDS[country];
         if (!coords) return;
-
-        const [lat, lon] = coords;
-
-        // Globe markers (all locations)
-        newMarkers.push({ location: [lat, lon], size: 0.05 });
-
-        // India map markers (only Indian bounding box)
-        if (isIndianCity(lat, lon)) {
-          newIndiaMarkers.push({ location: [lat, lon], city, users: parseInt(row.metricValues[0]?.value ?? "1", 10) });
-        }
+        newMarkers.push({ location: [coords[0], coords[1]], size: 0.05 });
       });
 
       markersRef.current = newMarkers;
       if (globeRef.current) globeRef.current.update({ markers: newMarkers });
-
-      // Update India SVG map
-      setIndianMapMarkers(newIndiaMarkers);
 
     } catch {}
   }, [accessToken, propertyId]);
@@ -441,16 +318,10 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        {/* Globe + India Map side by side */}
+        {/* Globe */}
         {ga4Configured && (
-          <div className="an-maps-row">
-            <div className="an-globe-container">
-              <canvas ref={canvasRef} className="an-globe-canvas" />
-            </div>
-            {/* India SVG map — shown when there's Indian traffic */}
-            {indianMapMarkers.length > 0 && (
-              <IndiaPingMap indianMarkers={indianMapMarkers} />
-            )}
+          <div className="an-globe-container">
+            <canvas ref={canvasRef} className="an-globe-canvas" />
           </div>
         )}
 
@@ -489,107 +360,19 @@ export default function AnalyticsPage() {
         .an-map-wrap { display: none; }
         .an-map { display: none; }
 
-        /* ── Globe + India map row ── */
-        .an-maps-row {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 32px;
-          padding: 8px 0 24px;
-          flex-wrap: wrap;
-          margin-bottom: 16px;
-        }
-
-        /* Globe */
         .an-globe-container {
           display: flex;
           justify-content: center;
           align-items: center;
+          padding: 8px 0 24px;
           background: transparent;
-          flex-shrink: 0;
+          margin-bottom: 16px;
         }
         .an-globe-canvas {
           width: 700px;
           height: 700px;
           cursor: default;
           pointer-events: none;
-        }
-
-        /* ── India SVG Map ── */
-        .an-india-map-wrap {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 10px;
-          flex-shrink: 0;
-        }
-        .an-india-map-title {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 12px;
-          font-weight: 600;
-          color: #6b7280;
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-        }
-        .an-india-map-svg-wrap {
-          border-radius: 12px;
-          overflow: hidden;
-          background: #f8f9ff;
-          border: 1px solid #e5e7eb;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-          padding: 8px;
-        }
-        .an-india-svg {
-          display: block;
-        }
-
-        /* India map path */
-        .an-india-border {
-          fill: #eef0f8;
-          stroke: #c7cde8;
-          stroke-width: 1.5;
-          stroke-linejoin: round;
-          filter: drop-shadow(0 2px 4px rgba(24,13,62,0.08));
-        }
-
-        /* Grid lines */
-        .an-india-grid {
-          stroke: #dde1f0;
-          stroke-width: 0.4;
-          stroke-dasharray: 3 4;
-        }
-
-        /* Ping animations */
-        .an-india-ping-ring {
-          fill: none;
-          stroke: #CE1E36;
-          stroke-width: 1.2;
-          opacity: 0;
-          animation: india-ping 2s ease-out infinite;
-        }
-        .an-india-ping-mid {
-          fill: none;
-          stroke: #CE1E36;
-          stroke-width: 1;
-          opacity: 0;
-          animation: india-ping-mid 2s ease-out infinite;
-        }
-        .an-india-ping-core {
-          fill: #CE1E36;
-          opacity: 0.92;
-          filter: drop-shadow(0 0 3px rgba(206,30,54,0.6));
-        }
-
-        @keyframes india-ping {
-          0%   { r: 3;  opacity: 0.7; }
-          100% { r: 14; opacity: 0; }
-        }
-        @keyframes india-ping-mid {
-          0%   { r: 3;  opacity: 0.5; }
-          60%  { r: 9;  opacity: 0.2; }
-          100% { r: 9;  opacity: 0; }
         }
 
         /* Empty state */
