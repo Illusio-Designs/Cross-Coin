@@ -340,3 +340,8 @@
   transition: background 0.15s;
 }
 .wachat-open-btn:hover { background: #128C7E; }
+
+/* Lift above product sticky bar */
+body:has(.pdt-sticky.visible) .wachat-fab {
+  bottom: 100px;
+}

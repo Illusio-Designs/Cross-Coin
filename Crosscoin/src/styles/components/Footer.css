@@ -1,6 +1,12 @@
 .footer {
   background: #ffffff;
   border-top: 1px solid #e5e7eb;
+  padding-bottom: 0;
+}
+
+/* When product sticky bar is visible, push footer down so it fully scrolls above the bar */
+body:has(.pdt-sticky.visible) .footer {
+  padding-bottom: 72px;
   font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
