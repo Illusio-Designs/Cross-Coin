@@ -30,11 +30,10 @@ function BarRow({ label, value, max, color = "#CE1E36" }) {
 }
 
 // India center: lat 22.5, lon 82 → phi/theta for cobe
-// phi = lon in radians (east = positive), theta = lat tilt
-// cobe phi: 0 = front (lon 0), increases eastward
-// India lon ~82° → phi = (180 - 82) * π/180 so India faces front
-const INDIA_PHI   = (180 - 82) * (Math.PI / 180);
-const INDIA_THETA = -0.18; // slight tilt to show India well
+// Cobe phi: 0 = lon 0° (Greenwich), positive = westward rotation
+// India lon ~82°E → phi = -82 * π/180 (rotate east to bring India front)
+const INDIA_PHI   = -82 * (Math.PI / 180);
+const INDIA_THETA = 0.3; // tilt down slightly to center India vertically
 
 export default function AnalyticsPage() {
   const canvasRef     = useRef(null);
@@ -59,31 +58,29 @@ export default function AnalyticsPage() {
   // Init Cobe globe when ga4Configured becomes true
   useEffect(() => {
     if (!mounted || !ga4Configured || !canvasRef.current) return;
-    const size = canvasRef.current.offsetWidth || 600;
+    const SIZE = 500;
     const dpr  = window.devicePixelRatio || 1;
-    canvasRef.current.width  = size * dpr;
-    canvasRef.current.height = size * dpr;
+    canvasRef.current.width  = SIZE * dpr;
+    canvasRef.current.height = SIZE * dpr;
 
     globeRef.current = createGlobe(canvasRef.current, {
       devicePixelRatio: dpr,
-      width:  size * dpr,
-      height: size * dpr,
+      width:  SIZE * dpr,
+      height: SIZE * dpr,
       phi:    INDIA_PHI,
       theta:  INDIA_THETA,
-      dark:   1,
-      diffuse: 1.4,
+      dark:   0,
+      diffuse: 1.2,
       mapSamples: 20000,
-      mapBrightness: 8,
-      baseColor:   [0.1, 0.05, 0.2],
+      mapBrightness: 6,
+      baseColor:   [1, 1, 1],
       markerColor: [0.808, 0.118, 0.212], // #CE1E36
-      glowColor:   [0.094, 0.051, 0.243], // #180D3E
+      glowColor:   [0.85, 0.85, 0.95],
       markers: markersRef.current,
-      scale: 1.8,
-      offset: [0, 0],
+      scale: 1,
       onRender: (state) => {
-        // Lock to India — no auto-rotation
-        state.phi   = INDIA_PHI;
-        state.theta = INDIA_THETA;
+        state.phi     = INDIA_PHI;
+        state.theta   = INDIA_THETA;
         state.markers = markersRef.current;
       },
     });
@@ -370,10 +367,10 @@ export default function AnalyticsPage() {
 
       <style>{`
         .an-map-wrap {
-          background: #1a1a2e;
-          border: 1px solid #2d2d4e;
+          background: #fff;
+          border: 1px solid #e5e7eb;
           border-radius: 10px;
-          overflow: visible;
+          overflow: hidden;
           margin-bottom: 16px;
         }
         .an-map-header {
@@ -381,12 +378,12 @@ export default function AnalyticsPage() {
           align-items: center;
           justify-content: space-between;
           padding: 12px 16px;
-          border-bottom: 1px solid #2d2d4e;
+          border-bottom: 1px solid #e5e7eb;
         }
         .an-map-title {
           font-size: 12px;
           font-weight: 700;
-          color: #e5e7eb;
+          color: #111827;
           text-transform: uppercase;
           letter-spacing: .6px;
         }
@@ -401,14 +398,12 @@ export default function AnalyticsPage() {
           display: flex;
           justify-content: center;
           align-items: center;
-          padding: 24px 0;
-          background: #0d0d1a;
-          border-radius: 0 0 10px 10px;
+          padding: 24px 0 16px;
+          background: transparent;
         }
         .an-globe-canvas {
           width: 500px;
           height: 500px;
-          border-radius: 50%;
           cursor: default;
           pointer-events: none;
         }
