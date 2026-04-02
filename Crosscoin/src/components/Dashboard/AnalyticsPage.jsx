@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import createGlobe from "cobe";
 import { brandSettingsService, brandService } from "../../services";
 import Dropdown from "../ui/Dropdown";
 
@@ -28,9 +29,17 @@ function BarRow({ label, value, max, color = "#CE1E36" }) {
   );
 }
 
+// India center: lat 22.5, lon 82 → phi/theta for cobe
+// phi = lon in radians (east = positive), theta = lat tilt
+// cobe phi: 0 = front (lon 0), increases eastward
+// India lon ~82° → phi = (180 - 82) * π/180 so India faces front
+const INDIA_PHI   = (180 - 82) * (Math.PI / 180);
+const INDIA_THETA = -0.18; // slight tilt to show India well
+
 export default function AnalyticsPage() {
-  const mapRef        = useRef(null);
-  const leafletMap    = useRef(null);
+  const canvasRef     = useRef(null);
+  const globeRef      = useRef(null);
+  const markersRef    = useRef([]);
   const [mounted, setMounted]               = useState(false);
   const [stats, setStats]                   = useState(null);
   const [realtimeUsers, setRealtimeUsers]   = useState(null);
@@ -45,64 +54,42 @@ export default function AnalyticsPage() {
   const [accessToken, setAccessToken]       = useState("");
   const [lastUpdated, setLastUpdated]       = useState(null);
 
-  const initMap = useCallback(async () => {
-    if (!mapRef.current || leafletMap.current) return;
-    // Dynamic import — works reliably in Next.js, no SSR issues
-    const L = (await import("leaflet")).default;
-    // Fix default marker icon paths broken by webpack
-    delete L.Icon.Default.prototype._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-    });
-    const m = L.map(mapRef.current, {
-      zoomControl: true,
-      scrollWheelZoom: false,
-      minZoom: 3,
-      maxZoom: 10,
-      maxBounds: [[5, 60], [40, 100]],
-      maxBoundsViscosity: 0.8,
-    }).setView([22.5, 82.0], 4);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      attribution: "© OpenStreetMap © CARTO", maxZoom: 18,
-    }).addTo(m);
-    leafletMap.current = m;
-  }, []);
-
   useEffect(() => { setMounted(true); }, []);
 
-  // Init map when ga4Configured becomes true (map div is now in DOM)
+  // Init Cobe globe when ga4Configured becomes true
   useEffect(() => {
-    if (!mounted || !ga4Configured) return;
-    // Small timeout ensures the map div is fully rendered in DOM
-    const t = setTimeout(() => initMap(), 100);
-    return () => clearTimeout(t);
-  }, [mounted, ga4Configured, initMap]);
+    if (!mounted || !ga4Configured || !canvasRef.current) return;
+    const size = canvasRef.current.offsetWidth || 600;
+    const dpr  = window.devicePixelRatio || 1;
+    canvasRef.current.width  = size * dpr;
+    canvasRef.current.height = size * dpr;
 
-  // Add ping marker on map
-  const mapMarkers = useRef([]);
-
-  const clearPings = useCallback(() => {
-    if (!leafletMap.current) return;
-    mapMarkers.current.forEach(m => leafletMap.current.removeLayer(m));
-    mapMarkers.current = [];
-  }, []);
-
-  const addPing = useCallback(async (lat, lng, city) => {
-    if (!leafletMap.current) return;
-    const L = (await import("leaflet")).default;
-    const icon = L.divIcon({
-      html: `<div class="an-map-ping"></div>`,
-      className: "",
-      iconSize: [16, 16],
-      iconAnchor: [8, 8],
+    globeRef.current = createGlobe(canvasRef.current, {
+      devicePixelRatio: dpr,
+      width:  size * dpr,
+      height: size * dpr,
+      phi:    INDIA_PHI,
+      theta:  INDIA_THETA,
+      dark:   1,
+      diffuse: 1.4,
+      mapSamples: 20000,
+      mapBrightness: 8,
+      baseColor:   [0.1, 0.05, 0.2],
+      markerColor: [0.808, 0.118, 0.212], // #CE1E36
+      glowColor:   [0.094, 0.051, 0.243], // #180D3E
+      markers: markersRef.current,
+      scale: 1.8,
+      offset: [0, 0],
+      onRender: (state) => {
+        // Lock to India — no auto-rotation
+        state.phi   = INDIA_PHI;
+        state.theta = INDIA_THETA;
+        state.markers = markersRef.current;
+      },
     });
-    const marker = L.marker([lat, lng], { icon })
-      .bindTooltip(city, { permanent: false, direction: "top" })
-      .addTo(leafletMap.current);
-    mapMarkers.current.push(marker);
-  }, []);
+
+    return () => { globeRef.current?.destroy(); globeRef.current = null; };
+  }, [mounted, ga4Configured]);
 
   // Load brands (for multi-brand selector only — default stays brandId=1)
   useEffect(() => {
@@ -184,9 +171,7 @@ export default function AnalyticsPage() {
         "San Francisco": [37.774, -122.419], Seattle: [47.606, -122.332],
       };
 
-      if (leafletMap.current) {
-        clearPings();
-        // Country-level fallback for cities not in the list
+      if (globeRef.current) {
         const COUNTRY_COORDS = {
           India: [20.593, 78.962], "United States": [37.09, -95.712],
           "United Kingdom": [55.378, -3.436], Canada: [56.13, -106.347],
@@ -198,15 +183,18 @@ export default function AnalyticsPage() {
           Thailand: [15.87, 100.993], Netherlands: [52.132, 5.291],
           "New Zealand": [-40.9, 174.886], "South Africa": [-30.559, 22.937],
         };
+        const newMarkers = [];
         rows.forEach(row => {
           const city = row.dimensionValues[0]?.value ?? "";
           const country = row.dimensionValues[1]?.value ?? "";
           const coords = CITY_COORDS[city] || COUNTRY_COORDS[country];
-          if (coords) addPing(coords[0], coords[1], city || country);
+          if (coords) newMarkers.push({ location: [coords[0], coords[1]], size: 0.05 });
         });
+        markersRef.current = newMarkers;
+        globeRef.current.update({ markers: newMarkers });
       }
     } catch {}
-  }, [accessToken, propertyId, addPing, clearPings]);
+  }, [accessToken, propertyId]);
 
   // Fetch today's full report (every 5 min)
   const fetchGA4Stats = useCallback(async () => {
@@ -336,14 +324,16 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        {/* Map */}
+        {/* Globe Map */}
         {ga4Configured && (
           <div className="an-map-wrap">
             <div className="an-map-header">
               <span className="an-map-title">Live Visitor Map</span>
               <span className="an-map-sub">Pings show realtime active cities</span>
             </div>
-            <div ref={mapRef} className="an-map" />
+            <div className="an-globe-container">
+              <canvas ref={canvasRef} className="an-globe-canvas" />
+            </div>
           </div>
         )}
 
@@ -405,33 +395,22 @@ export default function AnalyticsPage() {
           color: #6b7280;
         }
         .an-map {
-          height: 600px;
-          width: 100%;
+          display: none;
+        }
+        .an-globe-container {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 24px 0;
+          background: #0d0d1a;
           border-radius: 0 0 10px 10px;
-          overflow: hidden;
         }
-        .an-map-ping {
-          width: 12px;
-          height: 12px;
-          background: #CE1E36;
+        .an-globe-canvas {
+          width: 500px;
+          height: 500px;
           border-radius: 50%;
-          position: relative;
-        }
-        .an-map-ping::after {
-          content: '';
-          position: absolute;
-          width: 28px;
-          height: 28px;
-          background: #CE1E36;
-          border-radius: 50%;
-          top: -8px;
-          left: -8px;
-          opacity: 0.3;
-          animation: anMapPulse 1.5s infinite;
-        }
-        @keyframes anMapPulse {
-          0%   { transform: scale(0.5); opacity: 0.6; }
-          100% { transform: scale(2);   opacity: 0; }
+          cursor: default;
+          pointer-events: none;
         }
         .an-empty-state {
           text-align: center;
