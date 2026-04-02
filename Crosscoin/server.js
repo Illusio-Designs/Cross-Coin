@@ -58,8 +58,13 @@ app.prepare().then(() => {
         res.setHeader('Expires', new Date(Date.now() + 31536000000).toUTCString());
         res.setHeader('ETag', `"${Date.now()}"`);
       } else {
-        // Cache HTML pages for 1 hour
-        res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600');
+        // robots.txt and sitemap.xml — short cache so crawlers always get fresh copy
+        if (pathname === '/robots.txt' || pathname === '/sitemap.xml') {
+          res.setHeader('Cache-Control', 'public, max-age=3600');
+        } else {
+          // Cache HTML pages for 1 hour
+          res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600');
+        }
       }
       
       if (process.env.NODE_ENV === 'production') {
