@@ -10,12 +10,10 @@ const passport = require('./config/passport.js');
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
 const dbConfig = require('./config/db');
-const { dirname, join } = require('path');
-const { fileURLToPath } = require('url');
+const { join } = require('path');
 const { initializeSeoData } = require('./utils/initializeSeoData.js');
 const fs = require('fs');
 const { setupDatabase } = require('./scripts/setupDatabase.js');
-const { runMigrations } = require('./scripts/migrateToImageKit.js');
 const corsOptions = require('./config/corsConfig.js');
 const { sendFacebookEvent } = require('./integration/facebookPixel.js');
 const { initializeCronJobs } = require('./config/cronJobs.js');
@@ -34,6 +32,12 @@ const adminReelRoutes = require('./routes/adminReelRoutes.js');
 
 // Initialize dotenv
 dotenv.config();
+
+// Fatal check: SESSION_SECRET must be set in production
+if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+    logger.error('FATAL: SESSION_SECRET environment variable is not set. Refusing to start in production.');
+    process.exit(1);
+};
 
 // Debug environment variables on startup (only in development)
 if (process.env.NODE_ENV !== 'production') {
@@ -110,6 +114,24 @@ app.use(express.urlencoded({
 // Compression middleware
 app.use(compression());
 
+// Cache-Control middleware (Requirement 2.5)
+// Public read-only GET endpoints get public cache; authenticated/write endpoints get no-store
+app.use((req, res, next) => {
+    const originalJson = res.json.bind(res);
+    res.json = (body) => {
+        if (!res.getHeader('Cache-Control')) {
+            const isPublicGet = req.method === 'GET' && !req.headers.authorization && !req.headers['x-brand-name'];
+            if (isPublicGet) {
+                res.set('Cache-Control', 'public, max-age=300');
+            } else {
+                res.set('Cache-Control', 'no-store');
+            }
+        }
+        return originalJson(body);
+    };
+    next();
+});
+
 app.use(cookieParser());
 
 // Logging middleware
@@ -134,7 +156,7 @@ const sessionStore = new MySQLStore({
 });
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  secret: process.env.SESSION_SECRET || 'dev-only-session-secret-change-in-production',
   resave: false,
   saveUninitialized: false,
   store: sessionStore,
@@ -161,9 +183,9 @@ if (!fs.existsSync(seoUploadsDir)) {
     fs.mkdirSync(seoUploadsDir, { recursive: true });
 }
 
-// Serve static files with logging
+// Serve static files with Cache-Control and ETag headers (Requirement 4.4)
 app.use('/uploads', (req, res, next) => {
-    logger.debug('Static file request:', req.originalUrl);
+    res.set('Cache-Control', 'public, max-age=86400');
     next();
 }, express.static(uploadsDir));
 
@@ -284,17 +306,13 @@ app.use('*', (req, res) => {
 
 // Enhanced error handling middleware
 app.use((err, req, res, next) => {
-    logger.error('Error:', err);
-    
-    // Log additional error details in production
-    if (process.env.NODE_ENV === 'production') {
-        logger.error('Error details:', {
-            url: req.url,
-            method: req.method,
-            ip: req.ip,
-            userAgent: req.get('User-Agent'),
-            timestamp: new Date().toISOString()
-        });
+    const isProd = process.env.NODE_ENV === 'production';
+
+    if (!isProd) {
+        logger.error('Error:', err);
+    } else {
+        // In production, log without stack/SQL details in response
+        logger.error('Error:', { message: err.message, url: req.url, method: req.method, ip: req.ip });
     }
     
     // Handle specific error types
@@ -302,7 +320,7 @@ app.use((err, req, res, next) => {
         return res.status(503).json({
             success: false,
             message: 'Database connection error',
-            error: process.env.NODE_ENV === 'development' ? err.message : 'Service temporarily unavailable'
+            error: isProd ? 'Service temporarily unavailable' : err.message
         });
     }
     
@@ -313,12 +331,22 @@ app.use((err, req, res, next) => {
             errors: err.errors
         });
     }
+
+    // Multer file size error
+    if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ success: false, message: 'File too large' });
+    }
+
+    // Multer invalid file type
+    if (err.message && err.message.startsWith('Invalid file type')) {
+        return res.status(400).json({ success: false, message: err.message });
+    }
     
-    // Default error response
+    // Default error response — never expose stack/SQL in production
     res.status(err.status || 500).json({
         success: false,
-        message: err.message || 'Something went wrong!',
-        error: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        message: isProd ? 'Something went wrong' : (err.message || 'Something went wrong!'),
+        error: isProd ? undefined : err.stack
     });
 });
 
@@ -396,16 +424,6 @@ const startServer = async () => {
             logger.info('✓ Database schema up-to-date, skipping setup');
         }
 
-        // Run ImageKit migration for existing images
-        logger.info('Checking for images to migrate to ImageKit...');
-        try {
-            await runMigrations();
-            logger.info('✓ ImageKit migration completed');
-        } catch (error) {
-            logger.warn('ImageKit migration skipped or failed:', error.message);
-            logger.warn('You can run migration manually later if needed');
-        }
-
         // Initialize SEO data
         logger.info('Initializing SEO data...');
         await initializeSeoData();
@@ -425,21 +443,30 @@ const startServer = async () => {
         });
         
         // Graceful shutdown
-        process.on('SIGTERM', () => {
-            logger.info('SIGTERM received, shutting down gracefully');
-            server.close(() => {
+        const gracefulShutdown = (signal) => {
+            logger.info(`${signal} received, shutting down gracefully`);
+            // Force exit after 10 seconds
+            const forceExit = setTimeout(() => {
+                logger.error('Graceful shutdown timed out, forcing exit');
+                process.exit(1);
+            }, 10000);
+            forceExit.unref();
+
+            server.close(async () => {
+                try {
+                    const redisService = require('./services/redisService.js');
+                    await redisService.close();
+                } catch (e) { logger.warn('Redis close error:', e.message); }
+                try {
+                    await sequelize.close();
+                } catch (e) { logger.warn('DB close error:', e.message); }
                 logger.info('Process terminated');
                 process.exit(0);
             });
-        });
-        
-        process.on('SIGINT', () => {
-            logger.info('SIGINT received, shutting down gracefully');
-            server.close(() => {
-                logger.info('Process terminated');
-                process.exit(0);
-            });
-        });
+        };
+
+        process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+        process.on('SIGINT', () => gracefulShutdown('SIGINT'));
         
         // Handle uncaught exceptions
         process.on('uncaughtException', (error) => {

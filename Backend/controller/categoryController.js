@@ -32,6 +32,7 @@ const formatCategoryResponse = (category) => {
 // Create Category
 const createCategory = async (req, res) => {
     try {
+        const { sanitize } = require('../utils/sanitize.js');
         console.log('Request body:', req.body);
         console.log('Request file:', req.file);
 
@@ -45,7 +46,9 @@ const createCategory = async (req, res) => {
             metaKeywords
         } = req.body;
         
-        const brandIds = JSON.parse(req.body.brandIds || "[1]"); // ✅ Array of brand IDs
+        const sanitizedName = sanitize(name);
+        const sanitizedDescription = sanitize(description);
+        const brandIds = JSON.parse(req.body.brandIds || "[1]");
 
         // Validate required fields
         if (!name) {
@@ -56,7 +59,7 @@ const createCategory = async (req, res) => {
         }
         
         // Generate slug from name
-        const slug = slugify(name.toString(), { 
+        const slug = slugify(sanitizedName.toString(), { 
             lower: true,
             strict: true,
             trim: true
@@ -66,7 +69,7 @@ const createCategory = async (req, res) => {
         const existingCategory = await Category.findOne({
             where: { 
                 [Op.or]: [
-                    { name },
+                    { name: sanitizedName },
                     { slug }
                 ]
             }
@@ -113,13 +116,13 @@ const createCategory = async (req, res) => {
 
         // Create category with correct field names
         const category = await Category.create({
-            name,
-            description,
+            name: sanitizedName,
+            description: sanitizedDescription,
             status,
             parentId,
             image,
-            metaTitle: metaTitle || name,
-            metaDescription: metaDescription || description,
+            metaTitle: metaTitle || sanitizedName,
+            metaDescription: metaDescription || sanitizedDescription,
             metaKeywords,
             slug
         });
@@ -133,6 +136,9 @@ const createCategory = async (req, res) => {
                 status: 'active'
             });
         }
+
+        // Invalidate category cache (Requirement 2.2)
+        await CategoryService.invalidateCache();
 
         // Get category with parent info
         const categoryWithParent = await Category.findByPk(category.id, {
@@ -244,6 +250,9 @@ const deleteCategory = async (req, res) => {
 
         await category.destroy();
 
+        // Invalidate category cache (Requirement 2.2)
+        await CategoryService.invalidateCache(id);
+
         res.json({ 
             success: true, 
             message: 'Category deleted successfully' 
@@ -345,6 +354,9 @@ const updateCategory = async (req, res) => {
         }
 
         await category.update(updateData);
+        
+        // Invalidate category cache (Requirement 2.2)
+        await CategoryService.invalidateCache(id);
         
         res.json({ 
             success: true, 

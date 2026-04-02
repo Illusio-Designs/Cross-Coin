@@ -25,11 +25,10 @@ class CacheManager {
       } else {
         await client.set(key, serialized);
       }
-      
-      console.log(`✅ Cache SET: ${key} (TTL: ${ttl}s)`);
     } catch (error) {
-      console.error(`❌ Cache SET error for key ${key}:`, error.message);
-      throw error;
+      // Requirement 7.3: cache errors must not propagate to callers
+      const { logger } = require('../config/logging.js');
+      logger.warn(`Cache SET error for key ${key}: ${error.message}`);
     }
   }
 
@@ -97,7 +96,6 @@ class CacheManager {
       // Convert pattern to glob pattern if it's a regex
       let globPattern = pattern;
       if (pattern instanceof RegExp) {
-        // Convert regex to glob pattern (simplified)
         globPattern = pattern.source.replace(/\^/, '').replace(/\$/, '').replace(/\./g, '*');
       }
 
@@ -124,15 +122,14 @@ class CacheManager {
           const batch = keysToDelete.slice(i, i + batchSize);
           deletedCount += await client.del(...batch);
         }
-        console.log(`✅ Cache INVALIDATE: ${globPattern} (${deletedCount} key(s) deleted)`);
-      } else {
-        console.log(`⚠️ Cache INVALIDATE: ${globPattern} (no matching keys)`);
       }
 
       return deletedCount;
     } catch (error) {
-      console.error(`❌ Cache INVALIDATE error for pattern ${pattern}:`, error.message);
-      throw error;
+      // Requirement 7.3: cache errors must not propagate to callers
+      const { logger } = require('../config/logging.js');
+      logger.warn(`Cache INVALIDATE error for pattern ${pattern}: ${error.message}`);
+      return 0;
     }
   }
 
@@ -194,10 +191,18 @@ class CacheManager {
   async getKeys(pattern) {
     try {
       const client = redisService.getClient();
-      const keys = await client.keys(pattern);
+      // Requirement 5.7: use SCAN instead of KEYS to avoid blocking Redis event loop
+      let cursor = '0';
+      const keys = [];
+      do {
+        const [newCursor, batch] = await client.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        cursor = newCursor;
+        keys.push(...batch);
+      } while (cursor !== '0');
       return keys;
     } catch (error) {
-      console.error(`❌ Cache KEYS error for pattern ${pattern}:`, error.message);
+      const { logger } = require('../config/logging.js');
+      logger.warn(`Cache KEYS error for pattern ${pattern}: ${error.message}`);
       return [];
     }
   }

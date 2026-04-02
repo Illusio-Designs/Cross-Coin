@@ -14,7 +14,6 @@
   const UTMTracking = require("../model/utmModel.js");
   const { Op, Transaction } = require("sequelize");
   const { sequelize } = require("../config/db.js");
-  const XLSX = require('xlsx');
   const axios = require('axios');
   const { logger } = require("../config/logging.js");
   // Import FShip service for shipping integration
@@ -31,7 +30,7 @@
   const { invalidateDashboardCache } = require("../services/dashboardService.js");
   const loyaltyService = require("../services/loyaltyService.js");
 
-  // Generate unique order number
+  // Generate unique order number with collision retry (Requirement 5.3)
   const generateOrderNumber = () => {
     const date = new Date();
     const year = date.getFullYear();
@@ -41,6 +40,18 @@
       .toString()
       .padStart(4, "0");
     return `ORD-${year}${month}${day}-${random}`;
+  };
+
+  // Generate a unique order number, retrying up to 3 times on collision
+  const generateUniqueOrderNumber = async (transaction) => {
+    const { UniqueConstraintError } = require("sequelize");
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const orderNumber = generateOrderNumber();
+      const existing = await Order.findOne({ where: { order_number: orderNumber }, transaction });
+      if (!existing) return orderNumber;
+    }
+    // Fallback: append timestamp for guaranteed uniqueness
+    return `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
   };
 
   // Calculate shipping fee based on payment type
@@ -317,7 +328,7 @@
       // Create order
       const order = await Order.create(
         {
-          order_number: generateOrderNumber(),
+          order_number: await generateUniqueOrderNumber(transaction),
           user_id: userId,
           total_amount: subTotal,
           discount_amount: appliedDiscount,
@@ -855,7 +866,7 @@
       logger.debug("createGuestOrder: Final amount calculated:", finalAmount);
 
       // Generate order number
-      const orderNumber = generateOrderNumber();
+      const orderNumber = await generateUniqueOrderNumber(transaction);
       logger.debug("createGuestOrder: Order number generated:", orderNumber);
 
       // Handle UTM tracking
