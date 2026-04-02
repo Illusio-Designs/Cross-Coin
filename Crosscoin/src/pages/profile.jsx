@@ -350,7 +350,7 @@ export default function Profile() {
                       <label>{label}</label>
                       <div className="pf-pw-wrap">
                         <input type={show ? "text" : "password"} value={val} onChange={e => set(e.target.value)} />
-                        <button type="button" className="pf-pw-eye" onClick={toggle}>{show ? <EyeOffIcon /> : <EyeIcon />}</button>
+                        <button type="button" className="pf-pw-eye" onClick={toggle} aria-label={show ? 'Hide password' : 'Show password'}>{show ? <EyeOffIcon /> : <EyeIcon />}</button>
                       </div>
                     </div>
                   ))}
@@ -367,7 +367,7 @@ export default function Profile() {
             <div className="pf-modal" onClick={e => e.stopPropagation()}>
               <div className="pf-modal-header">
                 <div className="pf-modal-title">{editingId ? "Edit Address" : "Add New Address"}</div>
-                <button type="button" className="pf-modal-close" onClick={() => setShowAddressModal(false)}>×</button>
+                <button type="button" className="pf-modal-close" onClick={() => setShowAddressModal(false)} aria-label="Close">×</button>
               </div>
               <form onSubmit={handleAddressSubmit} className="pf-form">
                 {[

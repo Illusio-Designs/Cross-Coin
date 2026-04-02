@@ -205,10 +205,10 @@ const UnlockedExclusives = ({ products = [], loading = false }) => {
                 </div>
               </div>
               <div className="strip-nav">
-                <button className="strip-btn" onClick={() => scrollStrip(-1)} disabled={stripOffset === 0}>
+                <button className="strip-btn" onClick={() => scrollStrip(-1)} disabled={stripOffset === 0} aria-label="Previous products">
                   <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></svg>
                 </button>
-                <button className="strip-btn" onClick={() => scrollStrip(1)} disabled={stripOffset >= (products.length - VISIBLE_CARDS) * CARD_TOTAL_WIDTH}>
+                <button className="strip-btn" onClick={() => scrollStrip(1)} disabled={stripOffset >= (products.length - VISIBLE_CARDS) * CARD_TOTAL_WIDTH} aria-label="Next products">
                   <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" /></svg>
                 </button>
               </div>
@@ -230,7 +230,7 @@ const UnlockedExclusives = ({ products = [], loading = false }) => {
                       <button className="btn-explore" onClick={() => setShowDetail(true)}>Explore</button>
                       <button className="btn-cart" onClick={() => {
                         addToCart(product, null, null, 1, firstVariation?.id || null, product.images?.map(i => i.image_url || i) || []);
-                      }}>
+                      }} aria-label={`Add ${product.name} to cart`}>
                         <svg viewBox="0 0 24 24">
                           <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
                           <line x1="3" y1="6" x2="21" y2="6" />
@@ -300,9 +300,9 @@ const UnlockedExclusives = ({ products = [], loading = false }) => {
 
                     <p className="qty-label">Quantity:</p>
                     <div className="qty-row">
-                      <button className="qty-btn" onClick={() => handleChangeQty(-1)}>−</button>
-                      <input className="qty-val" type="text" value={qty} readOnly />
-                      <button className="qty-btn" onClick={() => handleChangeQty(1)}>+</button>
+                      <button className="qty-btn" onClick={() => handleChangeQty(-1)} aria-label="Decrease quantity">−</button>
+                      <input className="qty-val" type="text" value={qty} readOnly aria-label="Quantity" />
+                      <button className="qty-btn" onClick={() => handleChangeQty(1)} aria-label="Increase quantity">+</button>
                     </div>
 
                     <div className="action-row">
@@ -338,12 +338,12 @@ const UnlockedExclusives = ({ products = [], loading = false }) => {
       {galleryOpen && product.images && (
         <div className="gallery-modal" onClick={closeGallery}>
           <div className="gallery-content" onClick={(e) => e.stopPropagation()}>
-            <button className="gallery-close" onClick={closeGallery}>✕</button>
+            <button className="gallery-close" onClick={closeGallery} aria-label="Close gallery">✕</button>
             <div className="gallery-main">
               <SafeImage imageData={{ image_url: product.images[galleryImageIndex]?.image_url }} alt={`${product.name} ${galleryImageIndex + 1}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
-            <button className="gallery-arrow gallery-arrow-left" onClick={prevGalleryImage} disabled={galleryImageIndex === 0}>‹</button>
-            <button className="gallery-arrow gallery-arrow-right" onClick={nextGalleryImage} disabled={galleryImageIndex === product.images.length - 1}>›</button>
+            <button className="gallery-arrow gallery-arrow-left" onClick={prevGalleryImage} disabled={galleryImageIndex === 0} aria-label="Previous image">‹</button>
+            <button className="gallery-arrow gallery-arrow-right" onClick={nextGalleryImage} disabled={galleryImageIndex === product.images.length - 1} aria-label="Next image">›</button>
             <div className="gallery-thumbnails">
               {product.images.map((img, idx) => (
                 <div key={idx} className={`gallery-thumb ${idx === galleryImageIndex ? 'active' : ''}`} onClick={() => setGalleryImageIndex(idx)}>

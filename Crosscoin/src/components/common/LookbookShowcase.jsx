@@ -95,6 +95,7 @@ const LookbookShowcase = () => {
           return (
             <button key={lb.id} type="button"
               className={`lb-list-item${isActive ? ' lb-list-item--active' : ''}`}
+              aria-label={`View lookbook: ${lb.title}`}
               onClick={() => selectLookbook(lb)}>
               {isActive && <div className="lb-list-active-bar" />}
               <div className="lb-list-thumb">
@@ -118,6 +119,7 @@ const LookbookShowcase = () => {
                 {images.map((img, i) => (
                   <button key={img.id} type="button"
                     className={`lb-thumb${activeImg === i ? ' lb-thumb--active' : ''}`}
+                    aria-label={img.alt_text || `View image ${i + 1}`}
                     onClick={() => { setActiveImg(i); setActiveHotspot(null); setFullProduct(null); }}>
                     <img src={img.image_url} alt={img.alt_text || `Image ${i + 1}`} />
                   </button>

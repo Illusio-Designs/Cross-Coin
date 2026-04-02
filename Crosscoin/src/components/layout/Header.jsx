@@ -220,10 +220,10 @@ const Header = () => {
     <header className={`header ${isSticky ? "header--sticky" : ""} ${!isHeaderVisible ? "header--hidden" : ""}`}>
       {/* Desktop Header */}
       <div className="header__top header__desktop">
-        <div className="header__logo" onClick={() => window.location.href = '/'} style={{ cursor: 'pointer' }}>
+        <Link href="/" className="header__logo" aria-label="CrossCoin Home">
           <SafeImage
             imageData={{ image_url: "/assets/crosscoin_logo.webp" }}
-            alt="logo"
+            alt="CrossCoin logo"
             width={120}
             height={48}
             priority={true}
@@ -231,7 +231,7 @@ const Header = () => {
             style={{ objectFit: 'contain' }}
             isLogo={true}
           />
-        </div>
+        </Link>
         <nav className="header__nav">
           <ul>
             <li
@@ -374,20 +374,20 @@ const Header = () => {
               </div>
             )}
           </div>
-          <Link href="/Wishlist" className="header__wishlist">
+          <Link href="/Wishlist" className="header__wishlist" aria-label="Wishlist">
             <WishlistIcon />
-            {wishlistCount > 0 && <span className="header__badge">{wishlistCount}</span>}
+            {wishlistCount > 0 && <span className="header__badge" aria-label={`${wishlistCount} items`}>{wishlistCount}</span>}
           </Link>
           <button className="header__cart" onClick={() => setIsDrawerOpen(true)} aria-label="Open cart">
             <CartIcon />
             {cartCount > 0 && <span className="header__badge">{cartCount}</span>}
           </button>
           {isAuthenticated && user ? (
-            <Link href="/profile" className="header__account">
+            <Link href="/profile" className="header__account" aria-label="My account">
               <UserIcon />
             </Link>
           ) : (
-            <Link href="/login" className="header__account">
+            <Link href="/login" className="header__account" aria-label="Login">
               <UserIcon />
             </Link>
           )}
@@ -406,10 +406,10 @@ const Header = () => {
         </button>
 
         {/* Logo */}
-        <div className="header__mobile-logo" onClick={() => window.location.href = '/'} style={{ cursor: 'pointer' }}>
+        <Link href="/" className="header__mobile-logo" aria-label="CrossCoin Home">
           <SafeImage
             imageData={{ image_url: "/assets/crosscoin_logo.webp" }}
-            alt="logo"
+            alt="CrossCoin logo"
             width={80}
             height={32}
             priority={true}
@@ -417,7 +417,7 @@ const Header = () => {
             style={{ objectFit: 'contain' }}
             isLogo={true}
           />
-        </div>
+        </Link>
 
         {/* Search Icon */}
         <button
@@ -429,10 +429,10 @@ const Header = () => {
         </button>
 
         {/* Wishlist Icon */}
-        <Link href="/Wishlist" className="header__mobile-wishlist">
+        <Link href="/Wishlist" className="header__mobile-wishlist" aria-label="Wishlist">
           <WishlistIcon />
           {wishlistCount > 0 && (
-            <span className="header__badge">{wishlistCount}</span>
+            <span className="header__badge" aria-label={`${wishlistCount} items`}>{wishlistCount}</span>
           )}
         </Link>
 
@@ -448,6 +448,7 @@ const Header = () => {
         <Link
           href={isAuthenticated ? "/profile" : "/login"}
           className="header__mobile-user"
+          aria-label={isAuthenticated ? "My account" : "Login"}
         >
           <UserIcon />
         </Link>

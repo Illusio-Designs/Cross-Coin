@@ -92,6 +92,7 @@ const CouponStrip = () => {
             <button 
               className={`coupon-code-pill ${copiedCode === coupon.code ? 'copied' : ''}`}
               onClick={(e) => handleCopyCode(coupon.code, e)}
+              aria-label={`Copy coupon code ${coupon.code}`}
               title="Click to copy code"
             >
               {copiedCode === coupon.code ? '✓ COPIED' : coupon.code}
