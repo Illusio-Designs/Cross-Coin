@@ -185,9 +185,10 @@ module.exports.adminLogin = async (req, res) => {
         const user = await User.findOne({ where: { email } });
         if (!user) return res.status(400).json({ message: 'User not found' });
 
-        // Only allow login for admin role
-        if (user.role !== 'admin') {
-            return res.status(403).json({ message: 'Access denied. Only admin accounts can log in here.' });
+        // Only allow login for staff roles (not consumers)
+        const STAFF_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager'];
+        if (!STAFF_ROLES.includes(user.role)) {
+            return res.status(403).json({ message: 'Access denied. Only staff accounts can log in here.' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);

@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const brandAssignmentController = require('../controller/brandAssignmentController');
-const { authenticate, isAdmin } = require('../middleware/authMiddleware');
+const { authenticate, isAdmin, isProductManager } = require('../middleware/authMiddleware');
 
-// All routes require admin authentication
-router.use('/', authenticate, isAdmin);
+// All routes require product manager or admin authentication
+router.use('/', authenticate, isProductManager);
 
 // Product brand assignments
 router.post('/products/:productId/brands', brandAssignmentController.assignBrandsToProduct);

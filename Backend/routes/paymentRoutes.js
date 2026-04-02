@@ -19,7 +19,7 @@ const {
     createOrder,
     verifyPayment
 } = require('../controller/magicCheckoutController.js');
-const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, authorize, isOrderManager } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 
@@ -44,8 +44,8 @@ router.post('/magic-checkout/shipping-info', getShippingInfo);
 // Public routes (no authentication required for payment updates)
 router.post('/update-order-payment', updateOrderPayment);
 
-// Admin routes
-router.get('/', isAuthenticated, authorize(['admin']), getAllPayments);
-router.post('/refund/:paymentId', isAuthenticated, authorize(['admin']), refundPayment);
+// Order Manager routes
+router.get('/', isAuthenticated, isOrderManager, getAllPayments);
+router.post('/refund/:paymentId', isAuthenticated, isOrderManager, refundPayment);
 
 module.exports = router; 

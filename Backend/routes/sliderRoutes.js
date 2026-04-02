@@ -1,5 +1,5 @@
 const express = require('express');
-const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, authorize, isProductManager } = require('../middleware/authMiddleware.js');
 const { etagMiddleware } = require('../middleware/etagMiddleware.js');
 const {
     createSlider, 
@@ -18,15 +18,15 @@ const router = express.Router();
 // Public routes - MUST come before parameterized routes
 router.get('/public', etagMiddleware, getPublicSliders);
 
-// Admin routes (requires authentication)
-router.get('/admin/all', isAuthenticated, authorize(['admin']), getAllSliders);
+// Product Manager routes
+router.get('/admin/all', isAuthenticated, isProductManager, getAllSliders);
 router.get('/:id', getSliderById);
-router.post('/', isAuthenticated, authorize(['admin']), upload.single('image'), createSlider);
-router.put('/:id', isAuthenticated, authorize(['admin']), upload.single('image'), updateSlider);
-router.delete('/:id', isAuthenticated, authorize(['admin']), deleteSlider);
+router.post('/', isAuthenticated, isProductManager, upload.single('image'), createSlider);
+router.put('/:id', isAuthenticated, isProductManager, upload.single('image'), updateSlider);
+router.delete('/:id', isAuthenticated, isProductManager, deleteSlider);
 
 // Brand assignment routes
-router.post('/:id/brands', isAuthenticated, authorize(['admin']), assignSliderToBrands);
-router.delete('/:id/brands/:brandId', isAuthenticated, authorize(['admin']), removeSliderFromBrand);
+router.post('/:id/brands', isAuthenticated, isProductManager, assignSliderToBrands);
+router.delete('/:id/brands/:brandId', isAuthenticated, isProductManager, removeSliderFromBrand);
 
 module.exports = router; 

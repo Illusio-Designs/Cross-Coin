@@ -20,7 +20,7 @@ const {
     refreshToken,
     upload
 } = require('../controller/userController.js');
-const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, authorize, isAdmin } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 
@@ -71,6 +71,6 @@ router.put('/update-password', isAuthenticated, updatePassword);
 router.delete('/delete', isAuthenticated, deleteUser);
 
 // Admin routes
-router.get('/all', isAuthenticated, authorize(['admin']), getAllUsers);
+router.get('/all', isAuthenticated, isAdmin, getAllUsers);
 
 module.exports = router;
