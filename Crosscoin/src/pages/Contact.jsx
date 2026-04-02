@@ -159,7 +159,7 @@ export default function Contact() {
                 <div className="ct-social-title">Follow Us</div>
                 <div className="ct-socials">
                   {socials.map((s, i) => (
-                    <a key={i} href={s.href} target="_blank" rel="noopener noreferrer" className="ct-social-btn" title={s.label}>
+                    <a key={i} href={s.href} target="_blank" rel="noopener noreferrer" className="ct-social-btn" aria-label={s.label} title={s.label}>
                       {s.icon}
                       <span>{s.label}</span>
                     </a>
