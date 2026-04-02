@@ -9,7 +9,7 @@ const {
     getAttributeById,
     getMegaMenu
 } = require('../controller/attributeController.js');
-const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, authorize, isProductManager } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 
@@ -22,19 +22,11 @@ router.get('/', getAllAttributes);
 // Get attribute by ID
 router.get('/:id', getAttributeById);
 
-// Create a new attribute
-router.post('/', isAuthenticated, createAttribute);
-
-// Update an attribute
-router.put('/:id', isAuthenticated, updateAttribute);
-
-// Delete an attribute
-router.delete('/:id', isAuthenticated, deleteAttribute);
-
-// Add values to an attribute
-router.post('/:id/values', isAuthenticated, addAttributeValues);
-
-// Remove values from an attribute
-router.delete('/:id/values', isAuthenticated, removeAttributeValues);
+// Product Manager routes
+router.post('/', isAuthenticated, isProductManager, createAttribute);
+router.put('/:id', isAuthenticated, isProductManager, updateAttribute);
+router.delete('/:id', isAuthenticated, isProductManager, deleteAttribute);
+router.post('/:id/values', isAuthenticated, isProductManager, addAttributeValues);
+router.delete('/:id/values', isAuthenticated, isProductManager, removeAttributeValues);
 
 module.exports = router;

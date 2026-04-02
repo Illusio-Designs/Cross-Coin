@@ -8,13 +8,13 @@ const {
   assignProducts,
   removeProduct,
 } = require('../controller/reelController.js');
-const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, authorize, isProductManager } = require('../middleware/authMiddleware.js');
 const { reelUpload } = require('../middleware/uploadMiddleware.js');
 
 router.post(
   '/',
   isAuthenticated,
-  authorize(['admin']),
+  isProductManager,
   reelUpload.fields([
     { name: 'video', maxCount: 1 },
     { name: 'thumbnail', maxCount: 1 },
@@ -25,7 +25,7 @@ router.post(
 router.put(
   '/:id',
   isAuthenticated,
-  authorize(['admin']),
+  isProductManager,
   reelUpload.fields([
     { name: 'video', maxCount: 1 },
     { name: 'thumbnail', maxCount: 1 },
@@ -33,9 +33,9 @@ router.put(
   updateReel
 );
 
-router.delete('/:id', isAuthenticated, authorize(['admin']), deleteReel);
-router.post('/:id/products', isAuthenticated, authorize(['admin']), assignProducts);
-router.delete('/:id/products/:productId', isAuthenticated, authorize(['admin']), removeProduct);
+router.delete('/:id', isAuthenticated, isProductManager, deleteReel);
+router.post('/:id/products', isAuthenticated, isProductManager, assignProducts);
+router.delete('/:id/products/:productId', isAuthenticated, isProductManager, removeProduct);
 
 module.exports = router;
 

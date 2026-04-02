@@ -29,7 +29,7 @@ const {
     getPendingLabels,
     getLabelDownloadStats
 } = require('../controller/orderController.js');
-const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, authorize, isOrderManager } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 
@@ -44,24 +44,24 @@ router.get('/test', (req, res) => {
     res.json({ message: 'Orders router is working' });
 });
 
-// Admin routes (specific routes first)
-router.get('/', isAuthenticated, authorize(['admin']), getAllOrders);
-router.get('/stats/overview', isAuthenticated, authorize(['admin']), getOrderStats);
-router.get('/export/delivered', isAuthenticated, authorize(['admin']), exportDeliveredOrders);
-router.post('/fship/sync', isAuthenticated, authorize(['admin']), syncOrdersWithFShip);
-router.post('/fship/cancel', isAuthenticated, authorize(['admin']), cancelOrdersInFShip);
-router.get('/fship/couriers', isAuthenticated, authorize(['admin']), getFShipCouriers);
+// Admin/Order Manager routes (specific routes first)
+router.get('/', isAuthenticated, isOrderManager, getAllOrders);
+router.get('/stats/overview', isAuthenticated, isOrderManager, getOrderStats);
+router.get('/export/delivered', isAuthenticated, isOrderManager, exportDeliveredOrders);
+router.post('/fship/sync', isAuthenticated, isOrderManager, syncOrdersWithFShip);
+router.post('/fship/cancel', isAuthenticated, isOrderManager, cancelOrdersInFShip);
+router.get('/fship/couriers', isAuthenticated, isOrderManager, getFShipCouriers);
 
 // Label management routes
-router.get('/labels/pending', isAuthenticated, authorize(['admin']), getPendingLabels);
-router.get('/labels/stats', isAuthenticated, authorize(['admin']), getLabelDownloadStats);
-router.post('/labels/bulk-download', isAuthenticated, authorize(['admin']), bulkDownloadLabels);
-router.post('/labels/:orderId/mark-downloaded', isAuthenticated, authorize(['admin']), markLabelDownloaded);
-router.get('/labels/:orderId/download', isAuthenticated, authorize(['admin']), downloadLabel);
+router.get('/labels/pending', isAuthenticated, isOrderManager, getPendingLabels);
+router.get('/labels/stats', isAuthenticated, isOrderManager, getLabelDownloadStats);
+router.post('/labels/bulk-download', isAuthenticated, isOrderManager, bulkDownloadLabels);
+router.post('/labels/:orderId/mark-downloaded', isAuthenticated, isOrderManager, markLabelDownloaded);
+router.get('/labels/:orderId/download', isAuthenticated, isOrderManager, downloadLabel);
 
-router.put('/:id/fship/sync', isAuthenticated, authorize(['admin']), syncSingleOrderWithFShip);
-router.put('/:id/admin/cancel', isAuthenticated, authorize(['admin']), adminCancelOrder);
-router.put('/:id/awb', isAuthenticated, authorize(['admin']), updateAwbNumber);
+router.put('/:id/fship/sync', isAuthenticated, isOrderManager, syncSingleOrderWithFShip);
+router.put('/:id/admin/cancel', isAuthenticated, isOrderManager, adminCancelOrder);
+router.put('/:id/awb', isAuthenticated, isOrderManager, updateAwbNumber);
 
 // Guest checkout route (no authentication required)
 router.post('/guest', createGuestOrder);
@@ -82,7 +82,7 @@ router.post('/', isAuthenticated, createOrder);
 router.get('/my-orders', isAuthenticated, getUserOrders);
 router.get('/:id', isAuthenticated, getOrder);
 router.put('/:id/cancel', isAuthenticated, cancelOrder);
-router.put('/:id/status', isAuthenticated, authorize(['admin']), updateOrderStatus);
+router.put('/:id/status', isAuthenticated, isOrderManager, updateOrderStatus);
 router.get('/:id/fship/tracking', isAuthenticated, getFShipTrackingForOrder);
 router.get('/:id/fship/label', isAuthenticated, getFShipLabelForOrder);
 
