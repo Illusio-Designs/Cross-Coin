@@ -1,14 +1,39 @@
+import { useState, useEffect } from 'react';
+
 export default function WhatsAppChat() {
+  const [greetVisible, setGreetVisible] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
   const waUrl = `https://wa.me/917434834000?text=${encodeURIComponent('Hi! I need help with my order.')}`;
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 200);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // hide bubble when user scrolls (back-to-top appears)
+  const showGreet = greetVisible && !scrolled;
 
   return (
     <>
-      {/* Greeting bubble */}
-      <div className="wachat-greet" onClick={() => window.open(waUrl, '_blank')}>
-        <span>👋 Hi! Need help? Chat with us</span>
-      </div>
+      {showGreet && (
+        <div className="wachat-greet">
+          <span
+            onClick={() => window.open(waUrl, '_blank')}
+            style={{ cursor: 'pointer', flex: 1, whiteSpace: 'nowrap' }}
+          >
+            👋 Hi! Need help? Chat with us
+          </span>
+          <button
+            className="wachat-greet-close"
+            onClick={() => setGreetVisible(false)}
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
-      {/* FAB */}
       <a
         href={waUrl}
         target="_blank"
