@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Button, Table, Pagination, Modal } from "../../../components/ui";
+import { Button, Table, Pagination, Modal, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from "../../../components/common/AlertModal";
 import { userService } from "../../../services";
@@ -26,13 +26,8 @@ function RoleBadge({ role }) {
   const r = ROLES.find(x => x.value === role);
   if (!r) return <span style={{ fontSize: 12, color: '#9ca3af' }}>{role}</span>;
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 5,
-      padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-      background: r.color + '18', color: r.color,
-      border: `1px solid ${r.color}40`,
-    }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: r.color, flexShrink: 0 }} />
+    <span className="brand-tag" style={{ color: r.color, background: r.color + '12', borderColor: r.color + '40' }}>
+      <span className="brand-tag-dot" style={{ backgroundColor: r.color }} />
       {r.label}
     </span>
   );
@@ -150,40 +145,36 @@ export default function StaffUsers() {
       <div className="dashboard-page">
 
         {/* ── Header ── */}
-        <div className="sl-page-header" style={{ flexWrap: 'nowrap', alignItems: 'center' }}>
-          <div className="sl-header-left" style={{ flexShrink: 0 }}>
-            <div className="sl-header-icon">{IC.users}</div>
-            <div>
-              <h1 className="sl-page-title">Staff Users</h1>
-              <p className="sl-page-sub">{filtered.length} staff member{filtered.length !== 1 ? 's' : ''}</p>
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, flexWrap: 'nowrap' }}>
+          <div className="sl-header-icon" style={{ flexShrink: 0 }}>{IC.users}</div>
+          <div style={{ flexShrink: 0 }}>
+            <h1 className="sl-page-title">Staff Users</h1>
+            <p className="sl-page-sub">{filtered.length} staff member{filtered.length !== 1 ? 's' : ''}</p>
           </div>
-          <div className="sl-header-right" style={{ flexWrap: 'nowrap', marginLeft: 'auto' }}>
-            <div className="sl-search-wrap">
-              <span className="sl-search-icon">{IC.search}</span>
-              <input
-                type="text"
-                className="sl-search-input"
-                placeholder="Search by name or email..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{ width: 200 }}
-              />
-            </div>
-            <select
-              className="dm-input"
+          <div style={{ flex: 1 }} />
+          <div className="sl-search-wrap" style={{ flexShrink: 0 }}>
+            <span className="sl-search-icon">{IC.search}</span>
+            <input
+              type="text"
+              className="sl-search-input"
+              placeholder="Search..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ width: 180 }}
+            />
+          </div>
+          <div style={{ width: 150, flexShrink: 0 }}>
+            <Select
+              options={[{ value: 'all', label: 'All Roles' }, ...ROLES.map(r => ({ value: r.value, label: r.label }))]}
               value={filterRole}
-              onChange={e => setFilterRole(e.target.value)}
-              style={{ height: 38, width: 140, flexShrink: 0 }}
-            >
-              <option value="all">All Roles</option>
-              {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-            </select>
-            <Button variant="primary" onClick={openCreate} style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, whiteSpace: 'nowrap' }}>
-              <span style={{ width: 16, height: 16 }}>{IC.add}</span>
-              Add Staff
-            </Button>
+              onChange={val => setFilterRole(val || 'all')}
+              placeholder="All Roles"
+            />
           </div>
+          <Button variant="primary" onClick={openCreate} style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, whiteSpace: 'nowrap' }}>
+            <span style={{ width: 16, height: 16 }}>{IC.add}</span>
+            Add Staff
+          </Button>
         </div>
 
         {/* ── Stat Cards ── */}
