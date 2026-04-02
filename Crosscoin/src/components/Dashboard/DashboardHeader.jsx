@@ -1,4 +1,19 @@
 import { getPageTitle } from "../../utils/dashboardRouting";
+import { useAuth } from "../../context/AuthContext";
+
+const ROLE_COLORS = {
+  admin:            '#ef4444',
+  product_manager:  '#8b5cf6',
+  order_manager:    '#f59e0b',
+  whatsapp_manager: '#10b981',
+};
+
+const ROLE_LABELS = {
+  admin:            'Admin',
+  product_manager:  'Product Manager',
+  order_manager:    'Order Manager',
+  whatsapp_manager: 'WhatsApp Manager',
+};
 
 const IC = {
   menu: (
@@ -19,6 +34,10 @@ const IC = {
 };
 
 function DashboardHeader({ isFullscreen, onToggleFullscreen, currentView, isMobile, onMobileMenuToggle }) {
+  const { role } = useAuth();
+  const color = ROLE_COLORS[role] || '#6b7280';
+  const label = ROLE_LABELS[role] || role;
+
   return (
     <header className="dh">
       <div className="dh-left">
@@ -30,6 +49,12 @@ function DashboardHeader({ isFullscreen, onToggleFullscreen, currentView, isMobi
         <span className="dh-title">{getPageTitle(currentView)}</span>
       </div>
       <div className="dh-right">
+        {role && (
+          <span className="dh-role-badge" style={{ color, borderColor: color, background: color + '12' }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0, display: 'inline-block' }} />
+            {label}
+          </span>
+        )}
         <button className="dh-action" onClick={onToggleFullscreen} title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}>
           {isFullscreen ? IC.minimize : IC.maximize}
         </button>
