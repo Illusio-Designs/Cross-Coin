@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth, STAFF_ROLES } from "../../context/AuthContext";
 
-export default function ProtectedRoute({ children, requireAdmin = false }) {
+// allowedRoles: array of roles that can access this route
+// if omitted, any authenticated staff can access
+export default function ProtectedRoute({ children, allowedRoles }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [redirecting, setRedirecting] = useState(false);
@@ -18,20 +20,21 @@ export default function ProtectedRoute({ children, requireAdmin = false }) {
       return;
     }
 
-    if (requireAdmin && user.role !== 'admin') {
+    // Must be a staff role to access dashboard
+    if (!STAFF_ROLES.includes(user.role)) {
       setRedirecting(true);
       router.replace("/");
+      return;
     }
-  }, [loading, user, router, requireAdmin]);
 
-  // Show layout shell while loading auth or while redirect is in flight
-  if (loading || redirecting) {
-    return children;
-  }
+    // If specific roles required, check them
+    if (allowedRoles && !allowedRoles.includes(user.role)) {
+      setRedirecting(true);
+      router.replace("/dashboard");
+    }
+  }, [loading, user, router, allowedRoles]);
 
-  if (user) {
-    return children;
-  }
-
+  if (loading || redirecting) return children;
+  if (user) return children;
   return null;
 }

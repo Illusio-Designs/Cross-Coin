@@ -32,12 +32,8 @@ export default function AdminLogin() {
     setLoading(true);
     try {
       const response = await adminLogin({ email, password });
-      if (response.user && response.user.role === "admin") {
-        router.replace("/dashboard");
-      } else {
-        await logout();
-        setError("Access denied. Admin accounts only.");
-      }
+      // Any staff role lands on dashboard
+      router.replace("/dashboard");
     } catch (err) {
       setError(err.message || "Invalid email or password.");
     } finally {

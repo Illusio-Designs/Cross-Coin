@@ -22,6 +22,7 @@ export const getPageTitle = (view) => {
     'lookbooks': 'Lookbooks',
     'reels-admin': 'Reels',
     'instagram-admin': 'Instagram Feed',
+    'staff-users': 'Staff Users',
   };
   return titles[view] || 'Dashboard';
 };

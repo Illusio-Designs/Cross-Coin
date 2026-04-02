@@ -739,6 +739,26 @@ export const userService = {
       throw handleApiError(error);
     }
   },
+
+  // Update a specific user by ID (admin — role changes, etc.)
+  updateUser: async (id, data) => {
+    try {
+      const response = await adminApi.put(`/api/users/${id}/role`, data);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+
+  // Create a staff user (admin only)
+  createStaffUser: async (userData) => {
+    try {
+      const response = await adminApi.post("/api/users/staff", userData);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
 };
 
 // Category Services
