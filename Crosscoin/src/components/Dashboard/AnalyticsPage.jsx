@@ -30,10 +30,8 @@ function BarRow({ label, value, max, color = "#CE1E36" }) {
 }
 
 // India center: lat 22.5, lon 82 → phi/theta for cobe
-// Cobe: phi=0 faces lon=0 (Atlantic). Rotating positively goes eastward.
-// India at lon 82°E → phi = 82 * π/180
-const INDIA_PHI   = 82 * (Math.PI / 180);
-const INDIA_THETA = 0.25;
+const INDIA_PHI   = 0.4;  // vertical tilt — centers India (~20°N)
+const INDIA_THETA = 5.5;  // horizontal rotation — India longitude
 
 export default function AnalyticsPage() {
   const canvasRef     = useRef(null);
