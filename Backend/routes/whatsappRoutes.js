@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ctrl = require('../controller/whatsappController.js');
-const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, isAdmin, isWhatsappManager } = require('../middleware/authMiddleware.js');
 
 // ── Webhook (no auth — Meta calls these) ─────────────────────────────────────
 router.get('/webhook', ctrl.verifyWebhook);
@@ -11,21 +11,21 @@ router.post('/webhook', ctrl.receiveWebhook);
 router.post('/customer/contact', ctrl.customerContact);
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
-router.get('/stats', isAuthenticated, isAdmin, ctrl.getStats);
+router.get('/stats', isAuthenticated, isWhatsappManager, ctrl.getStats);
 
 // ── Templates ─────────────────────────────────────────────────────────────────
-router.get('/templates',          isAuthenticated, isAdmin, ctrl.listTemplates);
-router.post('/templates',         isAuthenticated, isAdmin, ctrl.createTemplate);
-router.delete('/templates/:name', isAuthenticated, isAdmin, ctrl.deleteTemplate);
-router.post('/templates/seed',    isAuthenticated, isAdmin, ctrl.seedTemplates);
+router.get('/templates',          isAuthenticated, isWhatsappManager, ctrl.listTemplates);
+router.post('/templates',         isAuthenticated, isWhatsappManager, ctrl.createTemplate);
+router.delete('/templates/:name', isAuthenticated, isWhatsappManager, ctrl.deleteTemplate);
+router.post('/templates/seed',    isAuthenticated, isAdmin, ctrl.seedTemplates); // admin only
 
 // ── Test connection ───────────────────────────────────────────────────────────
-router.post('/test', isAuthenticated, isAdmin, ctrl.testConnection);
+router.post('/test', isAuthenticated, isAdmin, ctrl.testConnection); // admin only
 
 // ── Conversations / Inbox ─────────────────────────────────────────────────────
-router.get('/conversations',              isAuthenticated, isAdmin, ctrl.getConversations);
-router.get('/conversations/:id/messages', isAuthenticated, isAdmin, ctrl.getMessages);
-router.post('/conversations/:id/reply',   isAuthenticated, isAdmin, ctrl.sendReply);
-router.put('/conversations/:id/resolve',  isAuthenticated, isAdmin, ctrl.resolveConversation);
+router.get('/conversations',              isAuthenticated, isWhatsappManager, ctrl.getConversations);
+router.get('/conversations/:id/messages', isAuthenticated, isWhatsappManager, ctrl.getMessages);
+router.post('/conversations/:id/reply',   isAuthenticated, isWhatsappManager, ctrl.sendReply);
+router.put('/conversations/:id/resolve',  isAuthenticated, isWhatsappManager, ctrl.resolveConversation);
 
 module.exports = router;

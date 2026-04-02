@@ -8,7 +8,7 @@ const {
     getPublicCategories,
     getPublicCategoryByName
 } = require('../controller/categoryController.js');
-const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, authorize, isProductManager } = require('../middleware/authMiddleware.js');
 const { categoryUpload } = require('../middleware/uploadMiddleware.js');
 const { etagMiddleware } = require('../middleware/etagMiddleware.js');
 
@@ -18,11 +18,11 @@ const router = express.Router();
 router.get('/public', etagMiddleware, getPublicCategories);
 router.get('/public/name/:name', getPublicCategoryByName);
 
-// Admin routes
-router.post('/', isAuthenticated, authorize(['admin']), categoryUpload.single('image'), createCategory);
-router.put('/:id', isAuthenticated, authorize(['admin']), categoryUpload.single('image'), updateCategory);
-router.delete('/:id', isAuthenticated, authorize(['admin']), deleteCategory);
-router.get('/', isAuthenticated, authorize(['admin']), getAllCategories);
-router.get('/:id', isAuthenticated, authorize(['admin']), getCategoryById);
+// Product Manager routes
+router.post('/', isAuthenticated, isProductManager, categoryUpload.single('image'), createCategory);
+router.put('/:id', isAuthenticated, isProductManager, categoryUpload.single('image'), updateCategory);
+router.delete('/:id', isAuthenticated, isProductManager, deleteCategory);
+router.get('/', isAuthenticated, isProductManager, getAllCategories);
+router.get('/:id', isAuthenticated, isProductManager, getCategoryById);
 
 module.exports = router;

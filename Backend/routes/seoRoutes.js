@@ -6,28 +6,18 @@ const {
     createSEOData,
     deleteSEOData
 } = require('../controller/seoController.js');
-const { isAuthenticated, authorize } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, authorize, isProductManager } = require('../middleware/authMiddleware.js');
 const { upload } = require('../middleware/uploadMiddleware.js');
 
 const router = express.Router();
 
 // Public routes
-router.get('/', getSEOData); // Get SEO data for a specific page (?page_name=home)
+router.get('/', getSEOData);
 
-// Admin routes
-router.get('/all', isAuthenticated, authorize(['admin']), getAllSEOData);
-router.post('/create', 
-    isAuthenticated, 
-    authorize(['admin']), 
-    upload.single('meta_image'), 
-    createSEOData
-);
-router.put('/update', 
-    isAuthenticated, 
-    authorize(['admin']), 
-    upload.single('meta_image'), 
-    updateSEOData
-);
-router.delete('/:pageName', isAuthenticated, authorize(['admin']), deleteSEOData);
+// Product Manager routes
+router.get('/all', isAuthenticated, isProductManager, getAllSEOData);
+router.post('/create', isAuthenticated, isProductManager, upload.single('meta_image'), createSEOData);
+router.put('/update', isAuthenticated, isProductManager, upload.single('meta_image'), updateSEOData);
+router.delete('/:pageName', isAuthenticated, isProductManager, deleteSEOData);
 
 module.exports = router; 
