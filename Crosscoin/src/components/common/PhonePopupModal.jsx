@@ -93,10 +93,11 @@ export default function PhonePopupModal() {
         ) : (
           <>
             <div className="phone-popup-emoji">✅</div>
-            <h2 className="phone-popup-title">Here's your coupon!</h2>
-            <p className="phone-popup-subtitle">Use this code at checkout on prepaid orders:</p>
-            <div className="phone-popup-coupon">{coupon}</div>
-            <p className="phone-popup-note">We've also sent it to your WhatsApp.</p>
+            <h2 className="phone-popup-title">Coupon Sent!</h2>
+            <p className="phone-popup-subtitle">
+              Your exclusive 10% OFF coupon has been sent to your WhatsApp. Please check your messages and use it at checkout on prepaid orders.
+            </p>
+            <p className="phone-popup-note">Didn't receive it? Check your WhatsApp or spam folder.</p>
             <button className="phone-popup-btn" onClick={dismiss}>Start Shopping</button>
           </>
         )}

@@ -17,7 +17,7 @@
 
 .phone-popup-box {
   background: #fff;
-  border-radius: 16px;
+  border-radius: 8px;
   padding: 36px 28px 28px;
   max-width: 380px;
   width: 100%;
@@ -25,6 +25,7 @@
   text-align: center;
   animation: popup-slide-up 0.3s ease;
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  border-top: 4px solid #CE1E36;
 }
 
 @keyframes popup-slide-up {
@@ -55,7 +56,7 @@
 .phone-popup-title {
   font-size: 22px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: #180D3E;
   margin: 0 0 8px;
 }
 
@@ -82,7 +83,7 @@
 }
 
 .phone-popup-input-wrap:focus-within {
-  border-color: #1a1a1a;
+  border-color: #180D3E;
 }
 
 .phone-popup-prefix {
@@ -116,7 +117,7 @@
 }
 
 .phone-popup-btn {
-  background: #1a1a1a;
+  background: #CE1E36;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -128,7 +129,7 @@
   margin-top: 4px;
 }
 
-.phone-popup-btn:hover:not(:disabled) { background: #333; }
+.phone-popup-btn:hover:not(:disabled) { background: #a8172b; }
 .phone-popup-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .phone-popup-note {
@@ -141,9 +142,9 @@
   font-size: 26px;
   font-weight: 800;
   letter-spacing: 3px;
-  color: #1a1a1a;
-  background: #f5f5f5;
-  border: 2px dashed #ccc;
+  color: #180D3E;
+  background: #f5f0ff;
+  border: 2px dashed #CE1E36;
   border-radius: 10px;
   padding: 14px 20px;
   margin: 16px 0;
