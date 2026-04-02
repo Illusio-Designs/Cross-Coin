@@ -567,7 +567,8 @@ module.exports.updateOrderPayment = async (req, res) => {
     await order.save();
 
     // Convert order amount to smallest unit for consistent storage
-    const amountInSmallestUnit = toSmallestUnit(order.final_amount, 'INR');
+    // Sequelize returns DECIMAL columns as strings — parse to float first
+    const amountInSmallestUnit = toSmallestUnit(parseFloat(order.final_amount), 'INR');
 
     // Find existing payment record for this order
     let payment = await Payment.findOne({
@@ -825,7 +826,7 @@ module.exports.verifyMagicCheckoutPayment = async (req, res) => {
     }
 
     // Validate payment amount matches order amount using standardized converter
-    const orderAmountInSmallestUnit = toSmallestUnit(order.final_amount, 'INR');
+    const orderAmountInSmallestUnit = toSmallestUnit(parseFloat(order.final_amount), 'INR');
     
     // Update order status
     order.payment_status = 'paid';
