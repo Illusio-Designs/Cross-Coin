@@ -167,6 +167,13 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
 
+  // Coupon
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null); // { id, code, discountAmount, paymentModeRestriction }
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
+  const [couponSuccess, setCouponSuccess] = useState('');
+
   // Scroll hint
   const bodyRef = useRef(null);
   const dropdownRef = useRef(null);
@@ -189,7 +196,14 @@ const CartDrawer = ({ isOpen, onClose }) => {
     if (isOpen) {
       setIsVisible(true);
     } else {
-      const t = setTimeout(() => { setIsVisible(false); setOrderSuccess(null); }, 300);
+      const t = setTimeout(() => {
+        setIsVisible(false);
+        setOrderSuccess(null);
+        setCouponCode('');
+        setAppliedCoupon(null);
+        setCouponError('');
+        setCouponSuccess('');
+      }, 300);
       return () => clearTimeout(t);
     }
   }, [isOpen]);
@@ -318,7 +332,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const activeItems = buyNowItem ? [buyNowItem] : cartItems;
   const activeTotal = buyNowItem ? buyNowTotal : cartTotal;
   const shippingFeeAmount = parseFloat(selectedFee?.fee || 0);
-  const finalTotal = Math.max(0, activeTotal + shippingFeeAmount);
+  const couponDiscount = appliedCoupon ? parseFloat(appliedCoupon.discountAmount) : 0;
+  const finalTotal = Math.max(0, activeTotal + shippingFeeAmount - couponDiscount);
   const totalQty = activeItems.reduce((s, i) => s + (i.quantity || 1), 0);
 
   const sortedShippingFees = useMemo(() => {
@@ -462,6 +477,43 @@ const CartDrawer = ({ isOpen, onClose }) => {
     document.body.appendChild(s);
   });
 
+  // ── Coupon ──────────────────────────────────────────────────────────────
+  const handleApplyCoupon = async () => {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) return;
+    setCouponError('');
+    setCouponSuccess('');
+    setCouponLoading(true);
+    try {
+      const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+      const paymentMode = selectedFee?.orderType === 'cod' ? 'cod' : 'prepaid';
+      const res = await fetch(`${API}/api/coupons/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Brand-Name': 'crosscoin' },
+        body: JSON.stringify({ code, cartTotal: activeTotal, paymentMode, cartItems: activeItems }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code, discountAmount: data.discountAmount, paymentModeRestriction: data.coupon.paymentModeRestriction });
+        setCouponSuccess(`"${data.coupon.code}" applied — ₹${parseFloat(data.discountAmount).toFixed(2)} off!`);
+        setCouponCode('');
+      } else {
+        setCouponError(data.message || 'Invalid coupon code');
+      }
+    } catch {
+      setCouponError('Failed to validate coupon. Please try again.');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponSuccess('');
+    setCouponError('');
+    setCouponCode('');
+  };
+
   const buildItemsPayload = () => activeItems.map(item => ({
     product_id: item.productId || item.id,
     variation_id: item.variationId || item.variation?.id || null,
@@ -475,8 +527,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
       items: itemsPayload,
       payment_type: 'upi',
       notes: '',
-      discount_amount: prepaidInstantDiscount,
-      coupon_id: null,
+      discount_amount: prepaidInstantDiscount + couponDiscount,
+      coupon_id: appliedCoupon?.id || null,
       idempotency_key: idempotencyKey,
     };
     if (isAuthenticated) {
@@ -504,8 +556,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
       items: itemsPayload,
       payment_type: 'cod',
       notes: '',
-      discount_amount: 0,
-      coupon_id: null,
+      discount_amount: couponDiscount,
+      coupon_id: appliedCoupon?.id || null,
       idempotency_key: idempotencyKey,
     };
     if (isAuthenticated) {
@@ -862,11 +914,20 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 })}
               </div>
 
-              {/* ── 2. Order Summary (FIX 12 — shown early so user sees total immediately) ── */}
+              {/* ── 2. Order Summary ── */}
               <div className="cd-sv-section">
                 <div className="cd-summary">
                   <div className="cd-summary-row"><span>Subtotal ({totalQty} item{totalQty !== 1 ? 's' : ''})</span><span>₹{activeTotal.toFixed(2)}</span></div>
                   <div className="cd-summary-row"><span>Shipping</span><span>{shippingFeeAmount === 0 ? 'Free' : `₹${shippingFeeAmount.toFixed(2)}`}</span></div>
+                  {couponDiscount > 0 && (
+                    <div className="cd-summary-row cd-summary-discount">
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        Coupon ({appliedCoupon.code})
+                        <button onClick={handleRemoveCoupon} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#CE1E36', fontSize: 11, fontWeight: 700, padding: 0 }}>✕ Remove</button>
+                      </span>
+                      <span style={{ color: '#16a34a', fontWeight: 700 }}>-₹{couponDiscount.toFixed(2)}</span>
+                    </div>
+                  )}
                   {isPrepaidDelivery && prepaidInstantDiscount > 0 && (
                     <div className="cd-summary-row cd-summary-discount">
                       {/* FIX 13 — green savings badge */}
@@ -897,7 +958,34 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
-              {/* ── 3. Contact (guest only) — hidden when Magic Checkout is active (it handles contact collection) ── */}
+              {/* ── Coupon ── */}
+              {!appliedCoupon ? (
+                <div className="cd-sv-section">
+                  <div className="cd-coupon-wrap">
+                    <input
+                      className="cd-coupon-input"
+                      type="text"
+                      placeholder="Enter coupon code"
+                      value={couponCode}
+                      onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); }}
+                      onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
+                    />
+                    <button className="cd-coupon-btn" onClick={handleApplyCoupon} disabled={couponLoading || !couponCode.trim()}>
+                      {couponLoading ? '...' : 'Apply'}
+                    </button>
+                  </div>
+                  {couponError && <p className="cd-coupon-error">{couponError}</p>}
+                </div>
+              ) : (
+                <div className="cd-sv-section">
+                  <div className="cd-coupon-applied">
+                    <span>🎉 {couponSuccess}</span>
+                    <button className="cd-coupon-remove" onClick={handleRemoveCoupon}>Remove</button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── 3. Contact (guest only) ── */}
               {!isAuthenticated && (
                 <div className="cd-sv-section" id="cd-section-contact">
                   <div className="cd-section-title">Contact Info</div>
