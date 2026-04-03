@@ -421,6 +421,10 @@
       await transaction.commit();
       logger.debug("createOrder: Transaction committed successfully");
 
+      // Emit real-time notification
+      const notificationService = require('../services/notificationService.js');
+      notificationService.emitNewOrder(order);
+
       // Enqueue badge recalculation for async processing (non-blocking)
       logger.debug("createOrder: Enqueueing badge recalculation for products in order...");
       try {
@@ -1029,6 +1033,10 @@
       // Commit transaction
       await transaction.commit();
       logger.debug("createGuestOrder: Transaction committed successfully");
+
+      // Emit real-time notification
+      const notificationService = require('../services/notificationService.js');
+      notificationService.emitNewOrder(order);
 
       // Fire Purchase analytics ONLY for COD guest orders — prepaid fires in updateOrderPayment
       if (payment_type === 'cod') {

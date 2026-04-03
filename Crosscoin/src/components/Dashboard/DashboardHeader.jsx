@@ -1,5 +1,6 @@
 import { getPageTitle } from "../../utils/dashboardRouting";
 import { useAuth } from "../../context/AuthContext";
+import NotificationBell from "./NotificationBell";
 
 const ROLE_COLORS = {
   admin:            '#ef4444',
@@ -55,6 +56,7 @@ function DashboardHeader({ isFullscreen, onToggleFullscreen, currentView, isMobi
             {label}
           </span>
         )}
+        <NotificationBell />
         <button className="dh-action" onClick={onToggleFullscreen} title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}>
           {isFullscreen ? IC.minimize : IC.maximize}
         </button>
