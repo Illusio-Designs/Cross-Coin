@@ -283,7 +283,7 @@ export default function AnalyticsPage() {
 
         {/* Globe — always visible */}
         <div className="an-globe-container">
-          <div style={{ width: 600, height: 600, background: '#0f172a', borderRadius: 16 }}>
+          <div style={{ width: 600, height: 600 }}>
             <ThreeGlobe markersRef={markersRef} />
           </div>
         </div>
