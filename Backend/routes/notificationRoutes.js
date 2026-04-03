@@ -4,7 +4,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, isStaff } = require('../middleware/authMiddleware.js');
 const { Order } = require('../model/orderModel.js');
-const { WhatsappConversation } = require('../model/whatsappConversationModel.js');
+const { WhatsappConversation, WhatsappMessage } = require('../model/whatsappConversationModel.js');
 const { Op } = require('sequelize');
 
 // Poll for new notifications since a given timestamp
@@ -23,6 +23,15 @@ router.get('/poll', authenticate, isStaff, async (req, res) => {
       WhatsappConversation.findAll({
         where: { last_message_at: { [Op.gt]: since }, status: 'open' },
         attributes: ['id', 'customer_phone', 'last_message', 'last_message_at'],
+        include: [{
+          model: WhatsappMessage,
+          as: 'Messages',
+          attributes: ['direction'],
+          where: { direction: 'inbound', createdAt: { [Op.gt]: since } },
+          required: true,
+          limit: 1,
+          order: [['createdAt', 'DESC']],
+        }],
         order: [['last_message_at', 'DESC']],
         limit: 10,
       }),
