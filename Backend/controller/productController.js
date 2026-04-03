@@ -677,9 +677,6 @@ module.exports.updateProduct = async (req, res) => {
     const preserveVariationImageIds = JSON.parse(req.body.preserveVariationImageIds || "[]");
     
     logger.debug("UPDATE PRODUCT REQUEST: id=" + id);
-          }))
-        : "No files"
-    );
 
     // Validate required fields
     if (!name) {
