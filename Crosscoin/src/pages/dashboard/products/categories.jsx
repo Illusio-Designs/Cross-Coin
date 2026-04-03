@@ -233,7 +233,16 @@ export default function Categories() {
               </div>
               {formData.image && (
                 <div className="dm-img-preview">
-                  <img src={typeof formData.image === 'string' ? `${process.env.NEXT_PUBLIC_API_URL}${formData.image}` : URL.createObjectURL(formData.image)} alt="Preview" />
+                  <img
+                    src={
+                      formData.image instanceof File
+                        ? URL.createObjectURL(formData.image)
+                        : typeof formData.image === 'string' && formData.image.startsWith('http')
+                          ? formData.image
+                          : `${process.env.NEXT_PUBLIC_API_URL}${formData.image}`
+                    }
+                    alt="Preview"
+                  />
                 </div>
               )}
             </div>

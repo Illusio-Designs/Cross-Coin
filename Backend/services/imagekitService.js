@@ -67,6 +67,19 @@ class ImageKitService {
 
     console.log('🔧 Clean path:', cleanPath);
 
+    // If already a full URL, extract just the path portion
+    if (cleanPath.startsWith('http')) {
+      try {
+        const parsed = new URL(cleanPath);
+        cleanPath = parsed.pathname + parsed.search;
+        // Strip existing tr= param so we can apply our own
+        cleanPath = cleanPath.split('?tr=')[0].split('&tr=')[0];
+      } catch (e) {
+        console.warn('⚠️ Could not parse URL:', cleanPath);
+        return cleanPath;
+      }
+    }
+
     // Construct full URL: endpoint + path
     let fullUrl = `${urlEndpoint}${cleanPath}`;
 
