@@ -86,8 +86,8 @@ export const getOptimizedImageUrl = (imageData, size = 'medium') => {
   const separator = baseUrl.includes('?') ? '&' : '?';
   const sizeConfig = {
     thumbnail: 'w-150,h-150,q-70',
-    medium: 'w-400,h-400,q-75',
-    large: 'w-800,h-800,q-80'
+    medium: 'w-300,h-300,q-75',
+    large: 'w-600,h-600,q-80'
   };
 
   return `${baseUrl}${separator}tr=${sizeConfig[size]},f-auto`;

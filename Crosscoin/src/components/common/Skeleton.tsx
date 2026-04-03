@@ -187,9 +187,9 @@ const SkeletonBase: React.FC<SkeletonBaseProps> = ({
 
   const animationStyle = variant === 'shimmer' 
     ? {
-        background: 'linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%)',
-        backgroundSize: '200% 100%',
-        animation: 'skeleton-shimmer 1.5s infinite linear'
+        backgroundColor: '#e5e7eb',
+        overflow: 'hidden',
+        position: 'relative' as const,
       }
     : {
         backgroundColor: '#e0e0e0',
@@ -209,10 +209,20 @@ const SkeletonBase: React.FC<SkeletonBaseProps> = ({
         ...style
       }}
     >
+      {variant === 'shimmer' && (
+        <div style={{
+          position: 'absolute',
+          top: 0, left: 0,
+          width: '100%', height: '100%',
+          background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.5) 50%, transparent 100%)',
+          animation: 'skeleton-shimmer 1.5s infinite linear',
+          transform: 'translateX(-100%)',
+        }} />
+      )}
       <style jsx>{`
         @keyframes skeleton-shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
+          0%   { transform: translateX(-100%); }
+          100% { transform: translateX(200%); }
         }
         @keyframes skeleton-pulse {
           0%, 100% { opacity: 1; }

@@ -4,13 +4,13 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        {/* Preconnect — max 4 most critical origins */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Preconnect — only the 2 most critical image/API origins */}
         <link rel="preconnect" href="https://api.crosscoin.in" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://ik.imagekit.io" crossOrigin="anonymous" />
 
-        {/* DNS prefetch for remaining 3rd parties */}
+        {/* DNS prefetch for fonts and 3rd parties — non-blocking */}
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
         <link rel="dns-prefetch" href="https://connect.facebook.net" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://www.clarity.ms" />
@@ -26,9 +26,6 @@ export default function Document() {
         <noscript>
           <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700;800&display=swap" />
         </noscript>
-
-        {/* Preload ImageKit origin for LCP slider image */}
-        <link rel="preconnect" href="https://ik.imagekit.io" crossOrigin="anonymous" />
         
         {/* Prevent zoom on form inputs on iOS */}
         <meta name="format-detection" content="telephone=no" />

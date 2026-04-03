@@ -22,8 +22,8 @@ class ImageKitService {
 
     const sizeConfig = {
       thumbnail: { width: 150, height: 150, quality: 70 },
-      medium: { width: 400, height: 400, quality: 75 },
-      large: { width: 800, height: 800, quality: 80 },
+      medium: { width: 300, height: 300, quality: 75 },
+      large: { width: 600, height: 600, quality: 80 },
     };
 
     const config = sizeConfig[size] || sizeConfig.medium;

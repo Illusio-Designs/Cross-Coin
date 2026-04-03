@@ -70,6 +70,7 @@
   overflow: hidden;
   transition: transform 0.22s ease, box-shadow 0.22s ease;
   cursor: default;
+  min-height: 220px;
 }
 
 .trust-badge-card:hover {
