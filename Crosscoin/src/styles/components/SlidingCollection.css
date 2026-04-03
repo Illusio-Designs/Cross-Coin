@@ -297,20 +297,19 @@
 }
 
 .dot {
-  width: clamp(5px, 1.5vw, 8px);
-  height: clamp(5px, 1.5vw, 8px);
-  background-clip: content-box;
+  width: 30px;
+  height: 44px;
   border-radius: 50%;
   border: none;
-  background: #ccc;
+  background: radial-gradient(circle, #ccc 4px, transparent 4px);
   cursor: pointer;
-  padding: 0;
-  transition: background 0.25s, transform 0.25s;
+  flex-shrink: 0;
+  margin: 0 -10px;
+  transition: background 0.25s;
 }
 
 .dot.active {
-  background: #1a1a1a;
-  transform: scale(1.4);
+  background: radial-gradient(circle, #1a1a1a 5px, transparent 5px);
 }
 
 /* Responsive design - All handled by clamp() */
