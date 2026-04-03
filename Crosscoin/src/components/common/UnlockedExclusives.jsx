@@ -44,9 +44,9 @@ const UnlockedExclusives = ({ products = [], loading = false }) => {
   }, [currentProduct, products]);
 
   const shimmer = {
-    background: 'linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%)',
-    backgroundSize: '200% 100%',
-    animation: 'shimmer-skeleton 1.5s infinite linear',
+    backgroundColor: '#e5e7eb',
+    position: 'relative',
+    overflow: 'hidden',
   };
 
   if (loading || !products || products.length === 0) {
@@ -87,8 +87,8 @@ const UnlockedExclusives = ({ products = [], loading = false }) => {
         </div>
         <style jsx>{`
           @keyframes shimmer-skeleton {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+            0%   { transform: translateX(-100%); }
+            100% { transform: translateX(200%); }
           }
         `}</style>
       </div>
