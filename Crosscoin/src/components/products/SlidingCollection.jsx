@@ -75,9 +75,9 @@ const SlidingCollection = ({ collections = [], isLoading = false }) => {
 
     if (isMobile) {
       ACTIVE_W = sw * 0.78;
-      ACTIVE_H = sh * 0.88;
+      ACTIVE_H = 300;
       SIDE_W = sw * 0.78;
-      SIDE_H = sh * 0.72;
+      SIDE_H = 300;
       SIDE_PEEK = sw * 0.22;
     } else if (isTablet) {
       ACTIVE_W = sw * 0.55;
