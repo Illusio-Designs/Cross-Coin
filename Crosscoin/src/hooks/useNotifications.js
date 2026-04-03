@@ -38,6 +38,8 @@ export function useNotifications() {
   const [unreadCount, setUnreadCount] = useState(0);
   const esRef = useRef(null);
   const reconnectTimer = useRef(null);
+  const errorCount = useRef(0);
+  const connectTime = useRef(null);
 
   const addNotification = useCallback((type, data) => {
     const item = { id: Date.now(), type, data, read: false, time: new Date() };
@@ -58,18 +60,29 @@ export function useNotifications() {
     // SSE doesn't support custom headers — pass token as query param
     const es = new EventSource(`${url}?token=${encodeURIComponent(token)}`);
     esRef.current = es;
+    connectTime.current = Date.now();
 
     es.addEventListener('new_order', (e) => {
+      errorCount.current = 0;
       try { addNotification('order', JSON.parse(e.data)); } catch (_) {}
     });
 
     es.addEventListener('new_whatsapp', (e) => {
+      errorCount.current = 0;
       try { addNotification('whatsapp', JSON.parse(e.data)); } catch (_) {}
     });
 
     es.onerror = () => {
       es.close();
-      // Reconnect after 5s
+      const aliveMs = Date.now() - (connectTime.current || 0);
+      // If it failed within 2s of connecting, likely auth error — back off longer
+      if (aliveMs < 2000) {
+        errorCount.current += 1;
+      } else {
+        errorCount.current = 0;
+      }
+      // Stop retrying after 3 quick failures (expired/invalid token)
+      if (errorCount.current >= 3) return;
       reconnectTimer.current = setTimeout(connect, 5000);
     };
   }, [addNotification]);
