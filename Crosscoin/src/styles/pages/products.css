@@ -32,9 +32,9 @@
 
 .products-header .section-subtitle {
   margin: 6px 0 0 0;
-  font-size: clamp(11px, 2vw, 13px);
+  font-size: clamp(13px, 2vw, 15px);
   font-weight: 400;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   color: #1a1a1a;
 }
 
@@ -265,8 +265,8 @@
   right: 1rem;
   background: white;
   border: none;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -960,8 +960,8 @@
 }
 
 .color-btn {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: 8px;
   border: 1px solid #eee;
 }
@@ -1203,8 +1203,8 @@
 
 .color-swatch {
   display: inline-block;
-  width: 24px;
-  height: 24px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 1px solid #888;
   box-sizing: border-box;

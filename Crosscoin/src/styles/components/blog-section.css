@@ -24,14 +24,6 @@
   color: #CE1E36;
 }
 
-.section-header-sub {
-  margin: 8px 0 0;
-  font-size: 13px;
-  font-weight: 400;
-  letter-spacing: 0.05em;
-  color: #1a1a1a;
-}
-
 /* ── GRID ── */
 .blog-grid-home {
   display: grid;
