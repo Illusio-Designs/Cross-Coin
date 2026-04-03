@@ -284,7 +284,7 @@
 
 .pdt-compare {
   font-size: 16px;
-  color: var(--gray-light);
+  color: #777;
   text-decoration: line-through;
 }
 
