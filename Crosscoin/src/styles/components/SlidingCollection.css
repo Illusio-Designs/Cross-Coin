@@ -299,7 +299,6 @@
 .dot {
   width: clamp(5px, 1.5vw, 8px);
   height: clamp(5px, 1.5vw, 8px);
-  padding: 18px;
   background-clip: content-box;
   border-radius: 50%;
   border: none;
