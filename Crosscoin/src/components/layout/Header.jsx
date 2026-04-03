@@ -224,12 +224,13 @@ const Header = () => {
           <SafeImage
             imageData={{ image_url: "/assets/crosscoin_logo.webp" }}
             alt="CrossCoin logo"
-            width={120}
-            height={48}
+            width={140}
+            height={56}
             priority={true}
             quality={90}
             style={{ objectFit: 'contain' }}
             isLogo={true}
+            fetchPriority="high"
           />
         </Link>
         <nav className="header__nav">

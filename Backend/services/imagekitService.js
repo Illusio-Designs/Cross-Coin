@@ -21,9 +21,9 @@ class ImageKitService {
     console.log('🔍 ImageKit getOptimizedUrl input:', imagePath);
 
     const sizeConfig = {
-      thumbnail: { width: 300, height: 300, quality: 70 },
-      medium: { width: 600, height: 600, quality: 75 },
-      large: { width: 1000, height: 1000, quality: 80 },
+      thumbnail: { width: 150, height: 150, quality: 70 },
+      medium: { width: 400, height: 400, quality: 75 },
+      large: { width: 800, height: 800, quality: 80 },
     };
 
     const config = sizeConfig[size] || sizeConfig.medium;
@@ -90,9 +90,9 @@ class ImageKitService {
    */
   getResponsiveSrcSet(imagePath) {
     return `
-      ${this.getOptimizedUrl(imagePath, 'thumbnail')} 300w,
-      ${this.getOptimizedUrl(imagePath, 'medium')} 600w,
-      ${this.getOptimizedUrl(imagePath, 'large')} 1000w
+      ${this.getOptimizedUrl(imagePath, 'thumbnail')} 150w,
+      ${this.getOptimizedUrl(imagePath, 'medium')} 400w,
+      ${this.getOptimizedUrl(imagePath, 'large')} 800w
     `.trim();
   }
 

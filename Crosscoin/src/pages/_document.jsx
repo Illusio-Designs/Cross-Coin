@@ -4,31 +4,27 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        {/* DNS Prefetch and Preconnect for faster resource loading */}
-        <link rel="dns-prefetch" href="https://api.crosscoin.in" />
-        <link rel="preconnect" href="https://api.crosscoin.in" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        {/* Preconnect — max 4 most critical origins */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://www.clarity.ms" />
-        <link rel="preconnect" href="https://www.clarity.ms" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://connect.facebook.net" />
-        <link rel="preconnect" href="https://connect.facebook.net" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
-        <link rel="preconnect" href="https://www.googletagmanager.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://api.crosscoin.in" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://ik.imagekit.io" crossOrigin="anonymous" />
 
-        {/* Font Optimization - Preload critical fonts with font-display: swap */}
+        {/* DNS prefetch for remaining 3rd parties */}
+        <link rel="dns-prefetch" href="https://connect.facebook.net" />
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+        <link rel="dns-prefetch" href="https://www.clarity.ms" />
+        <link rel="dns-prefetch" href="https://verify.msg91.com" />
+
+        {/* DM Sans font — non-render-blocking */}
         <link
           rel="preload"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700;800&display=swap"
           as="style"
           onLoad="this.onload=null;this.rel='stylesheet'"
         />
         <noscript>
-          <link
-            rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-          />
+          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700;800&display=swap" />
         </noscript>
         
         {/* Prevent zoom on form inputs on iOS */}
