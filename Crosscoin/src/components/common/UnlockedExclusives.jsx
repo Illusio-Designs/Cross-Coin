@@ -168,7 +168,7 @@ const UnlockedExclusives = ({ products = [], loading = false }) => {
             <div className="thumb-grid">
               {product.images?.slice(0, 4).map((img, idx) => (
                 <div key={idx} className={`thumb ${idx === 0 ? 'active' : ''}`} onClick={() => openGallery(idx)} style={{ cursor: 'pointer' }}>
-                  <SafeImage imageData={{ image_url: img.image_url }} alt={`${product.name} ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <SafeImage imageData={{ image_url: img.image_url, tr: 'w-200,h-200,q-80,f-auto' }} alt={`${product.name} ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
               ))}
             </div>
@@ -177,7 +177,7 @@ const UnlockedExclusives = ({ products = [], loading = false }) => {
           {/* Center: hero image */}
           <div className="hero-col">
             <div className="hero-img-wrap">
-              <SafeImage imageData={{ image_url: product.images?.[0]?.image_url }} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <SafeImage imageData={{ image_url: product.images?.[0]?.image_url, tr: 'w-700,h-700,q-85,f-auto' }} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
           </div>
 
@@ -199,7 +199,7 @@ const UnlockedExclusives = ({ products = [], loading = false }) => {
                 <div className="strip" style={{ transform: `translateX(-${stripOffset}px)`, transition: isDragging ? 'none' : 'transform 0.3s ease' }}>
                   {products.map((prod, idx) => (
                     <div key={idx} className={`strip-card ${idx === currentProduct ? 'active' : ''}`} onClick={() => !dragRef.current.dragging && handleSelectProduct(idx)} style={{ cursor: 'pointer' }}>
-                      <SafeImage imageData={{ image_url: prod.images?.[0]?.image_url }} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <SafeImage imageData={{ image_url: prod.images?.[0]?.image_url, tr: 'w-150,h-150,q-75,f-auto' }} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                   ))}
                 </div>

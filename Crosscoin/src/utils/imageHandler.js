@@ -30,8 +30,10 @@ export const getImageUrl = (imageData) => {
   // Handle different URL formats
   if (rawUrl.startsWith('http')) {
     // Already a full URL (ImageKit or external)
-    if (transformations && !rawUrl.includes('?tr=')) {
-      return `${rawUrl}?tr=${transformations}`;
+    if (transformations) {
+      // Override any existing transform with the specified one
+      const baseWithoutTr = rawUrl.split('?tr=')[0].split('&tr=')[0];
+      return `${baseWithoutTr}?tr=${transformations}`;
     }
     return rawUrl;
   }
