@@ -134,6 +134,9 @@ const LookbookShowcase = () => {
                     src={currentImage.image_url}
                     alt={currentImage.alt_text || selectedLb.title}
                     className="lb-main-img"
+                    width={600}
+                    height={600}
+                    loading="lazy"
                   />
                   {(currentImage.Hotspots || []).map(hs => (
                     <div key={hs.id}

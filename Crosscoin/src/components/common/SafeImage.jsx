@@ -34,25 +34,20 @@ const SUPPORTED_FORMAT = (() => {
  */
 function getResponsiveSizingParams(sizes) {
   if (typeof window === 'undefined') {
-    // Server-side: default to desktop sizing
-    return { width: 600, quality: 85 };
+    return { width: 400, quality: 80 };
   }
 
-  // Determine viewport width
   const viewportWidth = window.innerWidth;
 
-  // Mobile (< 640px): smaller image, lower quality
   if (viewportWidth < 640) {
-    return { width: 300, quality: 80 };
+    return { width: 200, quality: 75 };
   }
 
-  // Tablet (640px - 1024px): medium image, medium quality
   if (viewportWidth < 1024) {
-    return { width: 450, quality: 82 };
+    return { width: 300, quality: 78 };
   }
 
-  // Desktop (> 1024px): larger image, higher quality
-  return { width: 600, quality: 85 };
+  return { width: 400, quality: 80 };
 }
 
 const SafeImage = ({ 
