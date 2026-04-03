@@ -76,6 +76,10 @@ exports.receiveWebhook = async (req, res) => {
             sent_at:         sentAt,
           });
 
+          // Emit real-time notification
+          const notificationService = require('../services/notificationService.js');
+          notificationService.emitNewWhatsApp(phone, text);
+
           logger.info(`WhatsApp inbound [${phone}]: ${text}`);
         }
 
