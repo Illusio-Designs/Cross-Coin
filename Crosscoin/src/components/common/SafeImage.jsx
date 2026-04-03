@@ -34,20 +34,20 @@ const SUPPORTED_FORMAT = (() => {
  */
 function getResponsiveSizingParams(sizes) {
   if (typeof window === 'undefined') {
-    return { width: 400, quality: 80 };
+    return { width: 500, quality: 80 };
   }
 
   const viewportWidth = window.innerWidth;
 
   if (viewportWidth < 640) {
-    return { width: 200, quality: 75 };
-  }
-
-  if (viewportWidth < 1024) {
     return { width: 300, quality: 78 };
   }
 
-  return { width: 400, quality: 80 };
+  if (viewportWidth < 1024) {
+    return { width: 400, quality: 80 };
+  }
+
+  return { width: 500, quality: 80 };
 }
 
 const SafeImage = ({ 
