@@ -380,7 +380,7 @@
 }
 
 .products-slider .original-price {
-  color: #777;
+  color: #555;
   text-decoration: line-through;
   margin-right: 0.5rem;
 }
@@ -623,7 +623,7 @@
 
 .featured-product-card .original-price {
   font-size: 1.1rem;
-  color: #777;
+  color: #555;
   text-decoration: line-through;
 }
 
