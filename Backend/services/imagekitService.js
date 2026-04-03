@@ -67,13 +67,13 @@ class ImageKitService {
 
     console.log('🔧 Clean path:', cleanPath);
 
-    // If already a full URL, extract just the path portion
+    // If already a full URL, just replace the transform and return directly
     if (cleanPath.startsWith('http')) {
       try {
-        const parsed = new URL(cleanPath);
-        cleanPath = parsed.pathname + parsed.search;
-        // Strip existing tr= param so we can apply our own
-        cleanPath = cleanPath.split('?tr=')[0].split('&tr=')[0];
+        const baseWithoutTr = cleanPath.split('?tr=')[0].split('&tr=')[0];
+        const result = `${baseWithoutTr}?tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
+        console.log('✅ ImageKit URL (full URL input):', result);
+        return result;
       } catch (e) {
         console.warn('⚠️ Could not parse URL:', cleanPath);
         return cleanPath;
