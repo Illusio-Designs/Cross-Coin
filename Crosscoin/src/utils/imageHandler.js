@@ -80,8 +80,13 @@ export const getOptimizedImageUrl = (imageData, size = 'medium') => {
   const baseUrl = getImageUrl(imageData);
   if (!baseUrl) return null;
 
-  // Check if already has ImageKit transformations
-  if (baseUrl.includes('?tr=') || baseUrl.includes('ik.imagekit.io')) {
+  // Already has transformations — return as-is
+  if (baseUrl.includes('?tr=') || baseUrl.includes('&tr=')) {
+    return baseUrl;
+  }
+
+  // Not an ImageKit URL — return as-is
+  if (!baseUrl.includes('ik.imagekit.io')) {
     return baseUrl;
   }
 
