@@ -112,7 +112,7 @@ body:has(.pdt-sticky.visible) .footer {
 
 .footer__col ul li a {
   font-size: 14px;
-  color: #555;
+  color: #222;
   text-decoration: none;
   transition: color 0.2s, padding-left 0.2s;
   display: inline-block;
@@ -124,8 +124,8 @@ body:has(.pdt-sticky.visible) .footer {
 .footer__brand .footer__logo { margin-bottom: 14px; }
 
 .footer__brand-desc {
-  font-size: 13px;
-  color: #777;
+  font-size: 14px;
+  color: #222;
   line-height: 1.7;
   margin: 0 0 20px;
 }
@@ -153,7 +153,7 @@ body:has(.pdt-sticky.visible) .footer {
 
 .contact-icon { font-size: 18px; color: #CE1E36; flex-shrink: 0; margin-top: 2px; }
 
-.contact-label { font-size: 12px; color: #999; margin: 0 0 2px; }
+.contact-label { font-size: 14px; color: #222; margin: 0 0 2px; }
 
 .contact-link {
   font-size: 13px; font-weight: 600; color: #111;
@@ -212,10 +212,10 @@ body:has(.pdt-sticky.visible) .footer {
   background: #fafafa;
 }
 
-.footer__copyright { font-size: 13px; color: #888; }
+.footer__copyright { font-size: 13px; color: #222; }
 
 .footer__credit {
-  font-size: 13px; color: #888;
+  font-size: 13px; color: #222;
   display: flex; align-items: center; gap: 4px;
 }
 
