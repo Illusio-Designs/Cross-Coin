@@ -2,47 +2,41 @@
 
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
-const { User } = require('../model/userModel.js');
-const { addClient, removeClient } = require('../services/notificationService.js');
-const STAFF_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager'];
+const { authenticate, isStaff } = require('../middleware/authMiddleware.js');
+const { Order } = require('../model/orderModel.js');
+const { WhatsappConversation } = require('../model/whatsappConversationModel.js');
+const { Op } = require('sequelize');
 
-// SSE stream — token passed as query param (EventSource can't set headers)
-router.get('/stream', async (req, res) => {
-  // Set CORS first — before any early returns so the browser always gets the header
-  const origin = req.headers.origin;
-  if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-
-  // Auth
+// Poll for new notifications since a given timestamp
+// GET /api/notifications/poll?since=<ISO timestamp>
+router.get('/poll', authenticate, isStaff, async (req, res) => {
   try {
-    const token = req.query.token;
-    if (!token) return res.status(401).json({ message: 'No token' });
+    const since = req.query.since ? new Date(req.query.since) : new Date(Date.now() - 10000);
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findByPk(decoded.id);
-    if (!user || !STAFF_ROLES.includes(user.role)) return res.status(403).json({ message: 'Forbidden' });
+    const [newOrders, newMessages] = await Promise.all([
+      Order.findAll({
+        where: { createdAt: { [Op.gt]: since } },
+        attributes: ['id', 'order_number', 'final_amount', 'payment_type', 'createdAt'],
+        order: [['createdAt', 'DESC']],
+        limit: 10,
+      }),
+      WhatsappConversation.findAll({
+        where: { last_message_at: { [Op.gt]: since }, status: 'open' },
+        attributes: ['id', 'customer_phone', 'last_message', 'last_message_at'],
+        order: [['last_message_at', 'DESC']],
+        limit: 10,
+      }),
+    ]);
+
+    res.json({
+      success: true,
+      orders: newOrders,
+      whatsapp: newMessages,
+      serverTime: new Date(),
+    });
   } catch (err) {
-    return res.status(401).json({ message: 'Invalid or expired token' });
+    res.status(500).json({ success: false, message: err.message });
   }
-
-  // SSE headers
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
-
-  const heartbeat = setInterval(() => {
-    try { res.write(': heartbeat\n\n'); } catch (_) {}
-  }, 25000);
-
-  addClient(res);
-
-  req.on('close', () => {
-    clearInterval(heartbeat);
-    removeClient(res);
-  });
 });
 
 module.exports = router;
