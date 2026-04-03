@@ -301,7 +301,7 @@
 
 .original-price {
   font-size: clamp(0.7rem, 1.5vw, 0.8rem);
-  color: #777;
+  color: #555;
   text-decoration: line-through;
   font-weight: 400;
   white-space: nowrap;
