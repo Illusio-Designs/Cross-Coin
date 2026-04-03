@@ -1,9 +1,9 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+const POLL_INTERVAL = 8000; // 8 seconds
 const MAX_NOTIFICATIONS = 50;
 
-// Generate a short beep using Web Audio API
 function playSound(type) {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -13,7 +13,6 @@ function playSound(type) {
     gain.connect(ctx.destination);
 
     if (type === 'order') {
-      // Two ascending tones for new order
       osc.frequency.setValueAtTime(520, ctx.currentTime);
       osc.frequency.setValueAtTime(780, ctx.currentTime + 0.12);
       gain.gain.setValueAtTime(0.4, ctx.currentTime);
@@ -21,7 +20,6 @@ function playSound(type) {
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + 0.4);
     } else {
-      // Single soft tone for WhatsApp
       osc.frequency.setValueAtTime(660, ctx.currentTime);
       gain.gain.setValueAtTime(0.3, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
@@ -36,64 +34,73 @@ function playSound(type) {
 export function useNotifications() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const esRef = useRef(null);
-  const reconnectTimer = useRef(null);
-  const errorCount = useRef(0);
-  const connectTime = useRef(null);
+  const lastPollTime = useRef(new Date().toISOString());
+  const timerRef = useRef(null);
+  const seenIds = useRef({ orders: new Set(), whatsapp: new Set() });
 
   const addNotification = useCallback((type, data) => {
-    const item = { id: Date.now(), type, data, read: false, time: new Date() };
+    const item = { id: `${type}-${data.id || Date.now()}`, type, data, read: false, time: new Date() };
     setNotifications(prev => [item, ...prev].slice(0, MAX_NOTIFICATIONS));
     setUnreadCount(c => c + 1);
     playSound(type);
   }, []);
 
-  const connect = useCallback(() => {
+  const poll = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    if (esRef.current) {
-      esRef.current.close();
-    }
+    try {
+      const since = lastPollTime.current;
+      lastPollTime.current = new Date().toISOString();
 
-    const url = `${API_BASE}/api/notifications/stream`;
-    // SSE doesn't support custom headers — pass token as query param
-    const es = new EventSource(`${url}?token=${encodeURIComponent(token)}`);
-    esRef.current = es;
-    connectTime.current = Date.now();
+      const res = await fetch(
+        `${API_BASE}/api/notifications/poll?since=${encodeURIComponent(since)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-    es.addEventListener('new_order', (e) => {
-      errorCount.current = 0;
-      try { addNotification('order', JSON.parse(e.data)); } catch (_) {}
-    });
+      if (!res.ok) return;
+      const data = await res.json();
 
-    es.addEventListener('new_whatsapp', (e) => {
-      errorCount.current = 0;
-      try { addNotification('whatsapp', JSON.parse(e.data)); } catch (_) {}
-    });
-
-    es.onerror = () => {
-      es.close();
-      const aliveMs = Date.now() - (connectTime.current || 0);
-      // If it failed within 2s of connecting, likely auth error — back off longer
-      if (aliveMs < 2000) {
-        errorCount.current += 1;
-      } else {
-        errorCount.current = 0;
+      // New orders
+      for (const order of (data.orders || [])) {
+        if (!seenIds.current.orders.has(order.id)) {
+          seenIds.current.orders.add(order.id);
+          addNotification('order', {
+            id: order.id,
+            orderNumber: order.order_number,
+            amount: order.final_amount,
+            paymentType: order.payment_type,
+          });
+        }
       }
-      // Stop retrying after 3 quick failures (expired/invalid token)
-      if (errorCount.current >= 3) return;
-      reconnectTimer.current = setTimeout(connect, 5000);
-    };
+
+      // New WhatsApp messages
+      for (const conv of (data.whatsapp || [])) {
+        const key = `${conv.id}-${conv.last_message_at}`;
+        if (!seenIds.current.whatsapp.has(key)) {
+          seenIds.current.whatsapp.add(key);
+          addNotification('whatsapp', {
+            id: conv.id,
+            phone: conv.customer_phone,
+            message: conv.last_message,
+          });
+        }
+      }
+    } catch (_) {}
   }, [addNotification]);
 
   useEffect(() => {
-    connect();
+    // Initial poll after 2s, then every POLL_INTERVAL
+    const initial = setTimeout(() => {
+      poll();
+      timerRef.current = setInterval(poll, POLL_INTERVAL);
+    }, 2000);
+
     return () => {
-      esRef.current?.close();
-      clearTimeout(reconnectTimer.current);
+      clearTimeout(initial);
+      clearInterval(timerRef.current);
     };
-  }, [connect]);
+  }, [poll]);
 
   const markAllRead = useCallback(() => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
