@@ -736,6 +736,14 @@
         });
       }
 
+      if (!/^\d{6}$/.test(String(pincode).trim())) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Please enter a valid 6-digit pincode",
+        });
+      }
+
       logger.debug("createGuestOrder: Creating guest user...");
       // Create or find guest user
       let guestUser = await GuestUser.findOne({
@@ -1076,7 +1084,7 @@
             customer_Address: String(guestShippingAddress.address),
             landMark: "",
             customer_Address_Type: "Home",
-            customer_PinCode: String(guestShippingAddress.pincode),
+            customer_PinCode: String(guestShippingAddress.pincode).replace(/\D/g, '').slice(0, 6),
             customer_City: String(guestShippingAddress.city || "Mumbai"),
             orderId: String(order.order_number),
             invoice_Number: String(order.order_number),
