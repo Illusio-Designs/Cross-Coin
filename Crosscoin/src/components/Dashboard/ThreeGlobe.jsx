@@ -65,15 +65,15 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
     renderer.setClearColor(0x000000, 0);
     mountRef.current.appendChild(renderer.domElement);
 
-    // ── Globe base — white/light sphere ──────────────────────────────────
+    // ── Globe base — dark sphere ──────────────────────────────────
     const globe = new THREE.Mesh(
       new THREE.SphereGeometry(1, 64, 64),
       new THREE.MeshPhongMaterial({
-        color:      0xf0f4ff,   // very light blue-white
-        emissive:   0xdde8ff,
-        shininess:  30,
+        color:      0x0f172a,   // dark navy
+        emissive:   0x1e3a5f,
+        shininess:  40,
         transparent: true,
-        opacity:    0.95,
+        opacity:    0.98,
       })
     );
     scene.add(globe);
@@ -82,7 +82,7 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
     scene.add(new THREE.Mesh(
       new THREE.SphereGeometry(1.15, 64, 64),
       new THREE.MeshBasicMaterial({
-        color: 0x93c5fd, transparent: true, opacity: 0.10, side: THREE.BackSide,
+        color: 0x3b82f6, transparent: true, opacity: 0.12, side: THREE.BackSide,
       })
     ));
 
@@ -90,7 +90,7 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
     const dir = new THREE.DirectionalLight(0xffffff, 1.6);
     dir.position.set(4, 3, 5);
     scene.add(dir);
-    scene.add(new THREE.AmbientLight(0xc7d2fe, 0.8));
+    scene.add(new THREE.AmbientLight(0x6366f1, 0.6));
 
     // ── Marker group ──────────────────────────────────────────────────────
     const markerGroup = new THREE.Group();
@@ -141,10 +141,10 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
         size:            0.012,
         map:             dotTex,
         transparent:     true,
-        opacity:         0.85,
+        opacity:         1.0,
         depthWrite:      false,
         sizeAttenuation: true,
-        color:           0x3b82f6,   // blue land dots
+        color:           0x60a5fa,   // bright blue land dots
         blending:        THREE.AdditiveBlending,
       });
 
