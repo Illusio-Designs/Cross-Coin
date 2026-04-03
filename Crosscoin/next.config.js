@@ -1,3 +1,9 @@
+const { copyLibFiles } = require("@qwik.dev/partytown/utils");
+const path = require("path");
+
+// Copy Partytown lib files to public/~partytown at build time
+copyLibFiles(path.join(__dirname, "public", "~partytown"));
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
