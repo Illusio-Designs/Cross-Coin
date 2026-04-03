@@ -26,6 +26,9 @@ export default function Document() {
         <noscript>
           <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700;800&display=swap" />
         </noscript>
+
+        {/* Preload ImageKit origin for LCP slider image */}
+        <link rel="preconnect" href="https://ik.imagekit.io" crossOrigin="anonymous" />
         
         {/* Prevent zoom on form inputs on iOS */}
         <meta name="format-detection" content="telephone=no" />

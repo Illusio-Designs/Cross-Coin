@@ -29,7 +29,7 @@
 }
 
 .section-header h2 strong {
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.1em;
   color: #CE1E36;
 }
@@ -68,10 +68,9 @@
               top 0.5s cubic-bezier(0.4, 0, 0.2, 1),
               width 0.5s cubic-bezier(0.4, 0, 0.2, 1),
               height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.5s ease,
-              box-shadow 0.5s ease;
+              opacity 0.5s ease;
   user-select: none;
-  will-change: left, top, width, height, opacity;
+  will-change: left, top, opacity;
 }
 
 .card-inner {
@@ -95,15 +94,23 @@
 .card-bg-fallback {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, #d0d0d0 0%, #b8b8b8 50%, #d0d0d0 100%);
-  background-size: 200% 200%;
-  animation: shimmer 1.5s infinite;
+  background: #d0d0d0;
   z-index: 0;
+  overflow: hidden;
+}
+
+.card-bg-fallback::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+  animation: shimmer 1.5s infinite;
+  transform: translateX(-100%);
 }
 
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
 }
 
 /* SVG decorative pattern */
@@ -160,7 +167,7 @@
 
 .line2 {
   display: block;
-  font-size: clamp(18px, 5vw, 38px);
+  font-size: clamp(18px, 5vw, 30px);
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
