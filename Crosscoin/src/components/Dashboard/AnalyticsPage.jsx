@@ -281,14 +281,12 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        {/* Globe */}
-        {ga4Configured && (
-          <div className="an-globe-container">
-            <div style={{ width: 600, height: 600 }}>
-              <ThreeGlobe markersRef={markersRef} />
-            </div>
+        {/* Globe — always visible */}
+        <div className="an-globe-container">
+          <div style={{ width: 600, height: 600, background: '#0f172a', borderRadius: 16 }}>
+            <ThreeGlobe markersRef={markersRef} />
           </div>
-        )}
+        </div>
 
         {/* Bottom panels */}
         {stats && (
