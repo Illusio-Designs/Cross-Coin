@@ -1,4 +1,5 @@
 import { Html, Head, Main, NextScript } from "next/document";
+import { Partytown } from "@qwik.dev/partytown/react";
 
 export default function Document() {
   return (
@@ -26,7 +27,7 @@ export default function Document() {
         <noscript>
           <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700;800&display=swap" />
         </noscript>
-        
+
         {/* Prevent zoom on form inputs on iOS */}
         <meta name="format-detection" content="telephone=no" />
 
@@ -40,7 +41,21 @@ export default function Document() {
         <meta name="color-scheme" content="light" />
         <meta name="supported-color-schemes" content="light" />
 
-        {/* MSG91 OTP Widget — loads provider then calls initSendOTP with exposeMethods:true */}
+        {/*
+          Partytown — moves third-party scripts off the main thread into a Web Worker.
+          forward: proxies calls like fbq(), gtag(), clarity() from the worker back to the main thread.
+          lib: points to the copied Partytown lib files in /public/~partytown.
+        */}
+        <Partytown
+          lib="/~partytown/"
+          forward={["fbq", "gtag", "dataLayer.push"]}
+        />
+
+        {/*
+          MSG91 OTP Widget — stays on main thread intentionally.
+          It manipulates the DOM and calls initSendOTP(), which requires
+          direct browser API access that Web Workers cannot provide.
+        */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -61,7 +76,6 @@ export default function Document() {
             `,
           }}
         />
-
       </Head>
       <body>
         <noscript>

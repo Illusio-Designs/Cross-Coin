@@ -44,8 +44,8 @@ const Analytics = () => {
 
   return (
     <>
-      {/* ── Facebook Pixel ── */}
-      <Script id="fb-pixel" strategy="afterInteractive"
+      {/* ── Facebook Pixel — runs in Web Worker via Partytown ── */}
+      <Script id="fb-pixel" strategy="worker"
         dangerouslySetInnerHTML={{ __html: `
           !function(f,b,e,v,n,t,s)
           {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -67,9 +67,12 @@ const Analytics = () => {
         />
       </noscript>
 
-      {/* ── Google Analytics 4 ── */}
-      <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
-      <Script id="google-analytics" strategy="afterInteractive"
+      {/* ── Google Analytics 4 — runs in Web Worker via Partytown ── */}
+      <Script
+        src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+        strategy="worker"
+      />
+      <Script id="google-analytics" strategy="worker"
         dangerouslySetInnerHTML={{ __html: `
           window.dataLayer = window.dataLayer || [];
           function gtag(){
@@ -86,7 +89,10 @@ const Analytics = () => {
         `}}
       />
 
-      {/* ── Microsoft Clarity ── */}
+      {/* ── Microsoft Clarity — stays on main thread (afterInteractive).
+           Clarity does session recording + DOM observation via MutationObserver,
+           which requires real DOM access. Partytown's proxied DOM is too slow
+           for heatmaps and session replay to work correctly. ── */}
       <Script id="microsoft-clarity" strategy="afterInteractive"
         dangerouslySetInnerHTML={{ __html: `
           (function(c,l,a,r,i,t,y){
