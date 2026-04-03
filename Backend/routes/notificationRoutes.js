@@ -24,6 +24,10 @@ router.get('/stream', async (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
+  // Explicitly set CORS for SSE — flushHeaders fires before async CORS middleware resolves
+  const origin = req.headers.origin;
+  if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.flushHeaders();
 
   const heartbeat = setInterval(() => {
