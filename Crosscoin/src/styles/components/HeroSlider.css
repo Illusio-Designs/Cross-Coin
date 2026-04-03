@@ -316,11 +316,6 @@
     right: 20px;
     gap: 10px;
   }
-
-  .hero-slider__nav .dot {
-    width: 8px;
-    height: 8px;
-  }
 }
 
 @media (max-width: 600px) {
