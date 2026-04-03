@@ -6,6 +6,8 @@ const FB_PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID || "1313610943804396";
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID || "G-XXXXXXXXXX";
 const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID || "seoi51zytn";
 
+const IS_LOCALHOST = typeof window !== "undefined" && window.location.hostname === "localhost";
+
 const EXCLUDED_PATHS = ['/dashboard', '/auth'];
 const isExcluded = (url) => EXCLUDED_PATHS.some(p => url.startsWith(p));
 
@@ -15,7 +17,7 @@ function useRouteTracking() {
 
   useEffect(() => {
     const handleRouteChange = (url) => {
-      if (isExcluded(url)) return;
+      if (IS_LOCALHOST || isExcluded(url)) return;
 
       // Facebook Pixel — PageView on navigation
       if (typeof window !== "undefined" && window.fbq) {
@@ -37,8 +39,8 @@ const Analytics = () => {
   const router = useRouter();
   const isDashboard = router.pathname.startsWith('/dashboard') || router.pathname.startsWith('/auth');
 
-  // Don't load any tracking scripts on dashboard/auth pages
-  if (isDashboard) return null;
+  // Don't load any tracking scripts on dashboard/auth pages or localhost
+  if (isDashboard || IS_LOCALHOST) return null;
 
   return (
     <>
@@ -88,6 +90,8 @@ const Analytics = () => {
       <Script id="microsoft-clarity" strategy="afterInteractive"
         dangerouslySetInnerHTML={{ __html: `
           (function(c,l,a,r,i,t,y){
+            var _p = window.location.pathname;
+            if (_p.startsWith('/dashboard') || _p.startsWith('/auth')) return;
             c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
             t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
             y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
