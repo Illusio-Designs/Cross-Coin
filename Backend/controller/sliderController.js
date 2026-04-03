@@ -320,10 +320,16 @@ const getPublicSliders = async (req, res) => {
                     ? slider.image
                     : `/sliders/${slider.image}`;
 
-                sliderData.image = imagekitService.getOptimizedUrl(imagePath, 'large');
-                sliderData.imageMobile = imagekitService.getOptimizedUrl(imagePath, 'medium');
-                sliderData.imageThumbnail = imagekitService.getOptimizedUrl(imagePath, 'thumbnail');
-                sliderData.imageSrcSet = imagekitService.getResponsiveSrcSet(imagePath);
+                // Slider images: use width-only transforms to preserve aspect ratio
+                const IK = process.env.IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/wp2oatzmf';
+                const basePath = imagePath.startsWith('http')
+                  ? imagePath.split('?tr=')[0].split('&tr=')[0]
+                  : `${IK}${imagePath.split('?tr=')[0].split('&tr=')[0]}`;
+
+                sliderData.image = `${basePath}?tr=w-1600,q-85,f-auto`;
+                sliderData.imageMobile = `${basePath}?tr=w-800,q-82,f-auto`;
+                sliderData.imageThumbnail = `${basePath}?tr=w-400,q-75,f-auto`;
+                sliderData.imageSrcSet = `${basePath}?tr=w-400,q-75,f-auto 400w, ${basePath}?tr=w-800,q-82,f-auto 800w, ${basePath}?tr=w-1200,q-85,f-auto 1200w, ${basePath}?tr=w-1600,q-85,f-auto 1600w`;
             } else {
                 sliderData.image = null;
                 sliderData.imageMobile = null;

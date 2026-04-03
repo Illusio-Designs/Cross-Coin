@@ -51,8 +51,8 @@ const HeroSlider = ({ slides = [] }) => {
         <div className="hero-slide__image">
           <img
             src={slides[current].image}
-            srcSet={slides[current].imageSrcSet || `${slides[current].imageThumbnail || slides[current].image} 300w, ${slides[current].imageMobile || slides[current].image} 600w, ${slides[current].image} 1000w`}
-            sizes="(max-width: 600px) 300px, (max-width: 1024px) 600px, 1000px"
+            srcSet={slides[current].imageSrcSet || `${slides[current].imageThumbnail || slides[current].image} 400w, ${slides[current].imageMobile || slides[current].image} 800w, ${slides[current].image} 1600w`}
+            sizes="(max-width: 600px) 100vw, (max-width: 1024px) 100vw, 100vw"
             alt={slides[current].title}
             fetchpriority="high"
             loading="eager"
