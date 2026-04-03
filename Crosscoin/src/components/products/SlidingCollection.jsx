@@ -87,10 +87,10 @@ const SlidingCollection = ({ collections = [], isLoading = false }) => {
       SIDE_PEEK = sw * 0.28;
     } else {
       ACTIVE_W = 480;
-      ACTIVE_H = 420;
+      ACTIVE_H = 480;
       SIDE_W = 480;
-      SIDE_H = 360;
-      SIDE_PEEK = 320;
+      SIDE_H = 420;
+      SIDE_PEEK = 380;
     }
 
     let x, y, w, h, opacity, zIndex, shadow;
