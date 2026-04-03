@@ -143,8 +143,13 @@ function AppContent({ Component, pageProps, progressRef }) {
       </div>
       {!isDashboard && !isAuthPage && <Header />}
       {!isDashboard && !isAuthPage && <Breadcrumb />}
-      {/* Removed blocking loader - pages load instantly */}
-      <Component {...pageProps} />
+      {isDashboard || isAuthPage ? (
+        <Component {...pageProps} />
+      ) : (
+        <main id="main-content">
+          <Component {...pageProps} />
+        </main>
+      )}
       {!isDashboard && !isAuthPage && <Footer />}
       <CartDrawer 
         isOpen={isDrawerOpen} 
