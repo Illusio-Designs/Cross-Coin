@@ -30,6 +30,7 @@ const instagramRoutes = require('./instagramRoutes.js');
 const whatsappRoutes = require('./whatsappRoutes.js');
 const brandSettingsRoutes = require('./brandSettingsRoutes.js');
 const leadRoutes = require('./leadRoutes.js');
+const notificationRoutes = require('./notificationRoutes.js');
 
 // User routes - shared across brands (optional brand)
 router.use('/users', optionalBrand, userRoutes);
@@ -68,6 +69,7 @@ router.use('/instagram', optionalBrand, instagramRoutes);
 router.use('/whatsapp', whatsappRoutes);
 router.use('/leads', leadRoutes);
 router.use('/admin', brandSettingsRoutes);
+router.use('/notifications', notificationRoutes);
 
 // Public serviceability check (no auth required)
 router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
