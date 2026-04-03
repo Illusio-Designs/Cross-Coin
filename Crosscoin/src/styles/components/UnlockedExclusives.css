@@ -38,9 +38,9 @@
 
 .section-subtitle {
   margin: 8px 0 0 0;
-  font-size: clamp(11px, 2vw, 13px);
+  font-size: clamp(13px, 2vw, 15px);
   font-weight: 400;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   color: #1a1a1a;
   padding: 0;
 }
@@ -62,7 +62,7 @@
 .thumb-label {
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   color: #666;
   text-transform: uppercase;
 }
@@ -146,7 +146,7 @@
 .strip-label {
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   color: #666;
   text-transform: uppercase;
   margin: 0;
@@ -271,7 +271,7 @@
   color: #fff;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   padding: 6px 12px;
   border-radius: 4px;
   flex-shrink: 0;
@@ -644,7 +644,7 @@
   font-family: 'DM Sans', sans-serif;
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.2s;
@@ -663,7 +663,7 @@
   font-family: 'DM Sans', sans-serif;
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.2s;
@@ -778,7 +778,7 @@
   .right-col { grid-column: 1; gap: 12px; }
   .strip-viewport { max-width: 100%; overflow: hidden; }
   .strip-card { width: 68px; height: 84px; }
-  .strip-btn { width: 32px; height: 32px; }
+  .strip-btn { width: 44px; height: 44px; }
   .strip-btn svg { width: 14px; height: 14px; }
   .price { font-size: 20px; }
   .price-row { flex-direction: column; align-items: flex-start; gap: 10px; }
@@ -832,7 +832,7 @@
 .gallery-close {
   position: absolute;
   top: 16px; right: 16px;
-  width: 40px; height: 40px;
+  width: 44px; height: 44px;
   border-radius: 50%;
   background: #fff;
   border: none;
