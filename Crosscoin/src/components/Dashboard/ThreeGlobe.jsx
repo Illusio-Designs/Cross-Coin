@@ -60,7 +60,7 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
 
     const scene  = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(40, W / H, 0.1, 100);
-    camera.position.z = 2.6;
+    camera.position.z = 3.0;
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(dpr);
@@ -90,7 +90,6 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
     ));
 
     // ── Lights ────────────────────────────────────────────────────────────
-    scene.add(new THREE.DirectionalLight(0xffffff, 1.2).position.set(5, 3, 5) && new THREE.DirectionalLight(0xffffff, 1.2));
     const dir = new THREE.DirectionalLight(0xffffff, 1.2);
     dir.position.set(5, 3, 5);
     scene.add(dir);
