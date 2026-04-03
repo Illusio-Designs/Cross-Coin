@@ -283,7 +283,7 @@ export default function AnalyticsPage() {
 
         {/* Globe — always visible */}
         <div className="an-globe-container">
-          <div style={{ width: 600, height: 600, background: '#0f172a', borderRadius: 16 }}>
+          <div className="an-globe-box">
             <ThreeGlobe markersRef={markersRef} />
           </div>
         </div>
@@ -328,8 +328,16 @@ export default function AnalyticsPage() {
           display: flex;
           justify-content: center;
           align-items: center;
-          padding: 16px 0 24px;
+          padding: 24px 0;
           margin-bottom: 16px;
+        }
+        .an-globe-box {
+          width: min(560px, 90vw);
+          height: min(560px, 90vw);
+          border-radius: 20px;
+          overflow: visible;
+          background: transparent;
+          position: relative;
         }
         .an-globe-canvas { display: none; }
 

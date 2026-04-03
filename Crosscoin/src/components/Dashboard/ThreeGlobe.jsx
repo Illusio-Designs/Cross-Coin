@@ -2,7 +2,6 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 
-// lat/lng → 3D point on unit sphere
 function latLngToVec3(lat, lng, r = 1) {
   const phi   = (90 - lat) * (Math.PI / 180);
   const theta = (lng + 180) * (Math.PI / 180);
@@ -13,8 +12,16 @@ function latLngToVec3(lat, lng, r = 1) {
   );
 }
 
-// Sample a world map image → return land dot positions on sphere
-function buildLandDots(imgData, imgW, imgH, dotCount = 30000, landIsBright = false) {
+// Approximate land mask using a simple inline base64 world map
+// We'll generate dots using a Fibonacci sphere + land check via canvas
+function buildDotsFromImage(img, dotCount = 35000) {
+  const W = 512, H = 256;
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const ctx = c.getContext("2d");
+  ctx.drawImage(img, 0, 0, W, H);
+  const { data } = ctx.getImageData(0, 0, W, H);
+
   const positions = [];
   for (let i = 0; i < dotCount; i++) {
     const y     = 1 - (i / (dotCount - 1)) * 2;
@@ -22,24 +29,35 @@ function buildLandDots(imgData, imgW, imgH, dotCount = 30000, landIsBright = fal
     const theta = Math.PI * (3 - Math.sqrt(5)) * i;
     const x     = r * Math.cos(theta);
     const z     = r * Math.sin(theta);
-
-    const lat = Math.asin(y) * (180 / Math.PI);
-    const lng = Math.atan2(z, -x) * (180 / Math.PI);
-
-    const px = Math.floor(((lng + 180) / 360) * imgW);
-    const py = Math.floor(((90 - lat) / 180) * imgH);
-    const idx = (py * imgW + px) * 4;
-
-    const red = imgData[idx];
-    if (red === undefined) continue;
-    // landIsBright=true: land pixels are bright (topology map)
-    // landIsBright=false: land pixels are dark
-    if (landIsBright ? red < 80 : red > 100) continue;
-
+    const lat   = Math.asin(Math.max(-1, Math.min(1, y))) * (180 / Math.PI);
+    const lng   = Math.atan2(z, -x) * (180 / Math.PI);
+    const px    = Math.floor(((lng + 180) / 360) * W);
+    const py    = Math.floor(((90 - lat) / 180) * H);
+    const idx   = (Math.min(py, H - 1) * W + Math.min(px, W - 1)) * 4;
+    // land = dark pixel (r < 100) on natural earth map
+    if (data[idx] > 120) continue;
     positions.push(x, y, z);
   }
   return new Float32Array(positions);
 }
+
+const DEFAULT_MARKERS = [
+  { lat: 19.076, lng: 72.877  }, // Mumbai
+  { lat: 28.613, lng: 77.209  }, // Delhi
+  { lat: 12.971, lng: 77.594  }, // Bangalore
+  { lat: 22.572, lng: 88.363  }, // Kolkata
+  { lat: 17.385, lng: 78.487  }, // Hyderabad
+  { lat: 23.022, lng: 72.571  }, // Ahmedabad
+  { lat: 13.082, lng: 80.270  }, // Chennai
+  { lat: 18.520, lng: 73.856  }, // Pune
+];
+
+// Multiple CDN fallbacks for the world map
+const MAP_URLS = [
+  "https://raw.githubusercontent.com/turban/webgl-earth/master/images/2_no_clouds_4k.jpg",
+  "https://unpkg.com/three-globe@2.31.1/example/img/earth-dark.jpg",
+  "https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-dark.jpg",
+];
 
 export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
   const mountRef       = useRef(null);
@@ -47,17 +65,15 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
 
   useEffect(() => {
     if (!mountRef.current) return;
-    let animId;
-    let renderer;
+    let animId, renderer;
 
-    const W   = mountRef.current.clientWidth  || 600;
-    const H   = mountRef.current.clientHeight || 600;
+    const W   = mountRef.current.clientWidth  || 560;
+    const H   = mountRef.current.clientHeight || 560;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    // Scene / Camera / Renderer
     const scene  = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(40, W / H, 0.1, 100);
-    camera.position.z = 2.5;
+    const camera = new THREE.PerspectiveCamera(38, W / H, 0.1, 100);
+    camera.position.z = 2.8;
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(dpr);
@@ -65,155 +81,176 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
     renderer.setClearColor(0x000000, 0);
     mountRef.current.appendChild(renderer.domElement);
 
-    // ── Globe base — dark sphere ──────────────────────────────────
+    // Globe base — light grey
     const globe = new THREE.Mesh(
       new THREE.SphereGeometry(1, 64, 64),
       new THREE.MeshPhongMaterial({
-        color:      0x0f172a,   // dark navy
-        emissive:   0x1e3a5f,
-        shininess:  40,
-        transparent: true,
-        opacity:    0.98,
+        color:       0xeef1f7,
+        emissive:    0xe2e8f0,
+        shininess:   15,
+        transparent: false,
       })
     );
     scene.add(globe);
 
-    // ── Atmosphere glow ───────────────────────────────────────────────────
+    // Soft outer glow ring
     scene.add(new THREE.Mesh(
-      new THREE.SphereGeometry(1.15, 64, 64),
+      new THREE.SphereGeometry(1.06, 64, 64),
       new THREE.MeshBasicMaterial({
-        color: 0x3b82f6, transparent: true, opacity: 0.12, side: THREE.BackSide,
+        color: 0xbfcfe8, transparent: true, opacity: 0.15, side: THREE.BackSide,
       })
     ));
 
-    // ── Lights ────────────────────────────────────────────────────────────
-    const dir = new THREE.DirectionalLight(0xffffff, 1.6);
-    dir.position.set(4, 3, 5);
+    // Lights
+    const dir = new THREE.DirectionalLight(0xffffff, 1.0);
+    dir.position.set(5, 3, 5);
     scene.add(dir);
-    scene.add(new THREE.AmbientLight(0x6366f1, 0.6));
+    scene.add(new THREE.AmbientLight(0xffffff, 1.0));
 
-    // ── Marker group ──────────────────────────────────────────────────────
+    // Marker group
     const markerGroup = new THREE.Group();
     scene.add(markerGroup);
 
-    // India-facing static rotation
-    // lon 78°E, lat 20°N
+    // India-facing rotation
     const BASE_Y = -(78 * Math.PI / 180);
     const BASE_X = -(20 * Math.PI / 180);
-
-    // ── Dot sprite texture ────────────────────────────────────────────────
-    const dotCanvas = document.createElement("canvas");
-    dotCanvas.width = dotCanvas.height = 32;
-    const dctx = dotCanvas.getContext("2d");
-    const grad = dctx.createRadialGradient(16, 16, 0, 16, 16, 14);
-    grad.addColorStop(0,   "rgba(59,130,246,1)");
-    grad.addColorStop(0.5, "rgba(99,102,241,0.8)");
-    grad.addColorStop(1,   "rgba(99,102,241,0)");
-    dctx.fillStyle = grad;
-    dctx.fillRect(0, 0, 32, 32);
-    const dotTex = new THREE.CanvasTexture(dotCanvas);
-
-    // ── Load world map → build land dots ─────────────────────────────────
-    // Using a simple black-land / white-ocean equirectangular map
-    const mapImg = new Image();
-    mapImg.crossOrigin = "anonymous";
-    // earth-topology.png: land = bright, ocean = dark (public domain)
-    mapImg.src = "https://unpkg.com/three-globe@2.31.1/example/img/earth-topology.png";
-
-    mapImg.onload = () => {
-      const mapW = 1024, mapH = 512;
-      const offscreen = document.createElement("canvas");
-      offscreen.width  = mapW;
-      offscreen.height = mapH;
-      const oc = offscreen.getContext("2d");
-      oc.drawImage(mapImg, 0, 0, mapW, mapH);
-      const { data } = oc.getImageData(0, 0, mapW, mapH);
-
-      // topology: land is bright (r > 80), ocean is dark
-      const landPositions = buildLandDots(data, mapW, mapH, 40000, true);
-
-      if (landPositions.length === 0) return;
-
-      const dotGeo = new THREE.BufferGeometry();
-      dotGeo.setAttribute("position", new THREE.BufferAttribute(landPositions, 3));
-
-      const dotMat = new THREE.PointsMaterial({
-        size:            0.012,
-        map:             dotTex,
-        transparent:     true,
-        opacity:         1.0,
-        depthWrite:      false,
-        sizeAttenuation: true,
-        color:           0x60a5fa,   // bright blue land dots
-        blending:        THREE.AdditiveBlending,
-      });
-
-      const dots = new THREE.Points(dotGeo, dotMat);
-      dots.rotation.set(BASE_X, BASE_Y, 0);
-      scene.add(dots);
-    };
-
-    // ── Ping animation state ──────────────────────────────────────────────
-    // Each ping: { mesh, halo, born }
-    const pings = [];
-
-    function rebuildMarkers(markerList) {
-      // Remove old
-      while (markerGroup.children.length) markerGroup.remove(markerGroup.children[0]);
-      pings.length = 0;
-
-      markerList.forEach(({ location }) => {
-        const [lat, lng] = location;
-        const pos = latLngToVec3(lat, lng, 1.015);
-
-        // Core red dot
-        const pin = new THREE.Mesh(
-          new THREE.SphereGeometry(0.018, 12, 12),
-          new THREE.MeshBasicMaterial({ color: 0xce1e36 })
-        );
-        pin.position.copy(pos);
-        markerGroup.add(pin);
-
-        // Animated ping ring (starts small, expands + fades)
-        const haloGeo = new THREE.RingGeometry(0.02, 0.03, 24);
-        // Orient ring to face outward from sphere surface
-        haloGeo.lookAt = pos.clone().normalize();
-        const haloMat = new THREE.MeshBasicMaterial({
-          color: 0xce1e36, transparent: true, opacity: 0.8,
-          side: THREE.DoubleSide,
-        });
-        const halo = new THREE.Mesh(haloGeo, haloMat);
-        halo.position.copy(pos);
-        // Orient ring to face outward
-        halo.lookAt(pos.clone().multiplyScalar(2));
-        markerGroup.add(halo);
-
-        pings.push({ pin, halo, mat: haloMat, born: performance.now(), basePos: pos });
-      });
-    }
-
-    // Set static rotation on globe + markerGroup
     globe.rotation.set(BASE_X, BASE_Y, 0);
     markerGroup.rotation.set(BASE_X, BASE_Y, 0);
 
-    // ── Render loop (NO rotation) ─────────────────────────────────────────
+    // Try loading map from multiple sources
+    let dotsAdded = false;
+    function tryLoadMap(urls, idx = 0) {
+      if (idx >= urls.length) {
+        // All failed — draw fallback grid dots
+        addFallbackDots();
+        return;
+      }
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        if (dotsAdded) return;
+        dotsAdded = true;
+        try {
+          const positions = buildDotsFromImage(img, 35000);
+          if (positions.length < 100) { tryLoadMap(urls, idx + 1); return; }
+          addDots(positions);
+        } catch { tryLoadMap(urls, idx + 1); }
+      };
+      img.onerror = () => tryLoadMap(urls, idx + 1);
+      img.src = urls[idx];
+    }
+
+    function addDots(positions) {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      const mat = new THREE.PointsMaterial({
+        size: 0.009, transparent: true, opacity: 0.8,
+        depthWrite: false, sizeAttenuation: true,
+        color: 0x1e293b,
+      });
+      const pts = new THREE.Points(geo, mat);
+      pts.rotation.set(BASE_X, BASE_Y, 0);
+      scene.add(pts);
+    }
+
+    // Fallback: draw dots on a lat/lng grid for land areas (hardcoded rough land mask)
+    function addFallbackDots() {
+      const positions = [];
+      // Dense Fibonacci sphere, skip obvious ocean areas
+      for (let i = 0; i < 25000; i++) {
+        const y     = 1 - (i / 24999) * 2;
+        const r     = Math.sqrt(Math.max(0, 1 - y * y));
+        const theta = Math.PI * (3 - Math.sqrt(5)) * i;
+        const x     = r * Math.cos(theta);
+        const z     = r * Math.sin(theta);
+        const lat   = Math.asin(Math.max(-1, Math.min(1, y))) * (180 / Math.PI);
+        const lng   = Math.atan2(z, -x) * (180 / Math.PI);
+        if (isRoughlyLand(lat, lng)) positions.push(x, y, z);
+      }
+      addDots(new Float32Array(positions));
+    }
+
+    // Very rough land check (bounding boxes of major continents)
+    function isRoughlyLand(lat, lng) {
+      // Asia
+      if (lat > 5 && lat < 75 && lng > 25 && lng < 145) return true;
+      // Europe
+      if (lat > 35 && lat < 72 && lng > -10 && lng < 40) return true;
+      // Africa
+      if (lat > -35 && lat < 38 && lng > -18 && lng < 52) return true;
+      // North America
+      if (lat > 15 && lat < 75 && lng > -170 && lng < -50) return true;
+      // South America
+      if (lat > -55 && lat < 15 && lng > -82 && lng < -34) return true;
+      // Australia
+      if (lat > -45 && lat < -10 && lng > 113 && lng < 155) return true;
+      return false;
+    }
+
+    tryLoadMap(MAP_URLS);
+
+    // Pings
+    const pings = [];
+
+    function buildMarkers(list) {
+      while (markerGroup.children.length) markerGroup.remove(markerGroup.children[0]);
+      pings.length = 0;
+
+      list.forEach(({ lat, lng, location }) => {
+        const la = lat ?? location?.[0];
+        const lo = lng ?? location?.[1];
+        if (la == null || lo == null) return;
+
+        const pos = latLngToVec3(la, lo, 1.013);
+
+        // Outer blue dot
+        const dot = new THREE.Mesh(
+          new THREE.SphereGeometry(0.026, 16, 16),
+          new THREE.MeshBasicMaterial({ color: 0x2563eb })
+        );
+        dot.position.copy(pos);
+        markerGroup.add(dot);
+
+        // White center
+        const inner = new THREE.Mesh(
+          new THREE.SphereGeometry(0.011, 12, 12),
+          new THREE.MeshBasicMaterial({ color: 0xffffff })
+        );
+        inner.position.copy(pos);
+        markerGroup.add(inner);
+
+        // Two pulse rings with offset phase
+        [0, 900].forEach(offset => {
+          const ring = new THREE.Mesh(
+            new THREE.RingGeometry(0.028, 0.038, 32),
+            new THREE.MeshBasicMaterial({
+              color: 0x2563eb, transparent: true, opacity: 0.7, side: THREE.DoubleSide,
+            })
+          );
+          ring.position.copy(pos);
+          ring.lookAt(pos.clone().multiplyScalar(2));
+          markerGroup.add(ring);
+          pings.push({ mesh: ring, mat: ring.material, offset });
+        });
+      });
+    }
+
+    buildMarkers(externalMarkersRef?.current?.length ? externalMarkersRef.current : DEFAULT_MARKERS);
+
     const animate = () => {
       animId = requestAnimationFrame(animate);
       const now = performance.now();
 
-      // Sync markers from external ref
-      const current = externalMarkersRef?.current ?? [];
+      const current = externalMarkersRef?.current ?? null;
       if (current !== prevMarkersRef.current) {
         prevMarkersRef.current = current;
-        rebuildMarkers(current);
+        buildMarkers(current?.length ? current : DEFAULT_MARKERS);
       }
 
-      // Animate ping rings
-      pings.forEach(({ halo, mat, born }) => {
-        const t = ((now - born) % 2000) / 2000; // 0→1 every 2s
-        const scale = 1 + t * 4;
-        halo.scale.setScalar(scale);
-        mat.opacity = 0.8 * (1 - t);
+      pings.forEach(({ mesh, mat, offset }) => {
+        const t = ((now + offset) % 2000) / 2000;
+        mesh.scale.setScalar(1 + t * 4);
+        mat.opacity = 0.65 * (1 - t);
       });
 
       renderer.render(scene, camera);
