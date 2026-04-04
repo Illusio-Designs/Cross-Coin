@@ -481,12 +481,19 @@ const setupDatabase = async () => {
           last_message_at DATETIME NULL,
           unread_count INT NOT NULL DEFAULT 0,
           status ENUM('open','resolved') NOT NULL DEFAULT 'open',
+          assigned_to INT NULL COMMENT 'User ID of assigned agent',
+          tags VARCHAR(255) NULL COMMENT 'Comma-separated tags: vip,cod_risk,first_time',
+          opted_out TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Marketing opt-out flag',
+          first_response_at DATETIME NULL COMMENT 'SLA: first outbound response timestamp',
+          user_id INT NULL COMMENT 'Linked registered user ID',
           createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           INDEX idx_wa_conv_brand (brand_id),
           INDEX idx_wa_conv_phone (customer_phone),
           INDEX idx_wa_conv_status (status),
-          INDEX idx_wa_conv_last_msg (last_message_at)
+          INDEX idx_wa_conv_last_msg (last_message_at),
+          INDEX idx_wa_conv_assigned (assigned_to),
+          INDEX idx_wa_conv_opted_out (opted_out)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
       `);
 
@@ -511,6 +518,82 @@ const setupDatabase = async () => {
       console.log("✓ WhatsApp conversation tables ensured");
     } catch (waTableError) {
       console.log("⚠️ WhatsApp tables creation skipped:", waTableError.message);
+    }
+
+    // Migrate existing whatsapp_conversations — add new columns if missing
+    console.log("Migrating whatsapp_conversations new columns...");
+    try {
+      const waNewCols = [
+        { col: 'assigned_to',       sql: 'ADD COLUMN assigned_to INT NULL COMMENT "User ID of assigned agent"' },
+        { col: 'tags',              sql: 'ADD COLUMN tags VARCHAR(255) NULL COMMENT "Comma-separated tags"' },
+        { col: 'opted_out',         sql: 'ADD COLUMN opted_out TINYINT(1) NOT NULL DEFAULT 0 COMMENT "Marketing opt-out"' },
+        { col: 'first_response_at', sql: 'ADD COLUMN first_response_at DATETIME NULL COMMENT "SLA first response"' },
+        { col: 'user_id',           sql: 'ADD COLUMN user_id INT NULL COMMENT "Linked registered user"' },
+      ];
+      for (const { col, sql } of waNewCols) {
+        const [exists] = await sequelize.query(`
+          SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'whatsapp_conversations' AND COLUMN_NAME = '${col}'
+        `);
+        if (exists[0].count === 0) {
+          await sequelize.query(`ALTER TABLE whatsapp_conversations ${sql}`);
+          console.log(`  ✓ Added whatsapp_conversations.${col}`);
+        }
+      }
+      console.log("✓ whatsapp_conversations migration done");
+    } catch (waMigrateError) {
+      console.log("⚠️ whatsapp_conversations migration skipped:", waMigrateError.message);
+    }
+
+    // Create whatsapp_canned_responses table
+    console.log("Ensuring whatsapp_canned_responses table...");
+    try {
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS whatsapp_canned_responses (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          brand_id INT NOT NULL DEFAULT 1,
+          shortcut VARCHAR(50) NOT NULL COMMENT 'e.g. /track',
+          title VARCHAR(100) NOT NULL,
+          body TEXT NOT NULL,
+          created_by INT NULL,
+          createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_wa_canned_brand (brand_id),
+          INDEX idx_wa_canned_shortcut (shortcut)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+      `);
+      console.log("✓ whatsapp_canned_responses table ensured");
+    } catch (cannedErr) {
+      console.log("⚠️ whatsapp_canned_responses skipped:", cannedErr.message);
+    }
+
+    // Create whatsapp_broadcasts table
+    console.log("Ensuring whatsapp_broadcasts table...");
+    try {
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS whatsapp_broadcasts (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          brand_id INT NOT NULL DEFAULT 1,
+          name VARCHAR(150) NOT NULL,
+          template_name VARCHAR(100) NOT NULL,
+          audience_filter TEXT NULL COMMENT 'JSON filter criteria',
+          status ENUM('draft','running','done','failed') NOT NULL DEFAULT 'draft',
+          total_recipients INT NOT NULL DEFAULT 0,
+          sent_count INT NOT NULL DEFAULT 0,
+          failed_count INT NOT NULL DEFAULT 0,
+          scheduled_at DATETIME NULL,
+          started_at DATETIME NULL,
+          completed_at DATETIME NULL,
+          created_by INT NULL,
+          createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_wa_broadcast_brand (brand_id),
+          INDEX idx_wa_broadcast_status (status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+      `);
+      console.log("✓ whatsapp_broadcasts table ensured");
+    } catch (broadcastErr) {
+      console.log("⚠️ whatsapp_broadcasts skipped:", broadcastErr.message);
     }
 
     // Ensure encrypted PII columns have the expected width.

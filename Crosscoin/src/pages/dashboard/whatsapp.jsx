@@ -148,6 +148,21 @@ export function WhatsAppManager() {
   const [testPhone, setTestPhone] = useState('');
   const [testLoading, setTestLoading] = useState(false);
   const [seedLoading, setSeedLoading] = useState(false);
+  // Canned Responses
+  const [cannedResponses, setCannedResponses] = useState([]);
+  const [cannedLoading, setCannedLoading] = useState(false);
+  const [cannedForm, setCannedForm] = useState({ shortcut: '', title: '', body: '' });
+  const [cannedEditId, setCannedEditId] = useState(null);
+  const [cannedModal, setCannedModal] = useState(false);
+  // Broadcasts
+  const [broadcasts, setBroadcasts] = useState([]);
+  const [broadcastLoading, setBroadcastLoading] = useState(false);
+  const [broadcastForm, setBroadcastForm] = useState({ name: '', templateName: '', audienceFilter: '' });
+  const [broadcastModal, setBroadcastModal] = useState(false);
+  const [broadcastRunning, setBroadcastRunning] = useState(null);
+  // SLA Analytics
+  const [slaStats, setSlaStats] = useState(null);
+  const [slaLoading, setSlaLoading] = useState(false);
 
   const messagesEndRef = useRef(null);
   const pollRef = useRef(null);
@@ -285,6 +300,96 @@ export function WhatsAppManager() {
     return () => clearInterval(pollRef.current);
   }, [activeConv?.id]);
 
+  // Fetch canned responses
+  const fetchCannedResponses = async () => {
+    setCannedLoading(true);
+    try {
+      const data = await whatsappService.getCannedResponses(brandId);
+      if (data.success) setCannedResponses(data.cannedResponses || []);
+    } catch { }
+    setCannedLoading(false);
+  };
+
+  const saveCannedResponse = async (e) => {
+    e.preventDefault();
+    if (!cannedForm.shortcut || !cannedForm.title || !cannedForm.body) { showError('fieldRequired'); return; }
+    try {
+      if (cannedEditId) {
+        await whatsappService.updateCannedResponse(cannedEditId, cannedForm);
+      } else {
+        await whatsappService.createCannedResponse({ ...cannedForm, brandId });
+      }
+      showSuccess('saved');
+      setCannedModal(false);
+      setCannedEditId(null);
+      setCannedForm({ shortcut: '', title: '', body: '' });
+      fetchCannedResponses();
+    } catch (err) { showError('saveFailed', err.message); }
+  };
+
+  const deleteCannedResponse = async (id) => {
+    try {
+      await whatsappService.deleteCannedResponse(id);
+      showSuccess('deleted');
+      fetchCannedResponses();
+    } catch { showError('deleteFailed'); }
+  };
+
+  // Fetch broadcasts
+  const fetchBroadcasts = async () => {
+    setBroadcastLoading(true);
+    try {
+      const data = await whatsappService.getBroadcasts(brandId);
+      if (data.success) setBroadcasts(data.broadcasts || []);
+    } catch { }
+    setBroadcastLoading(false);
+  };
+
+  const createBroadcast = async (e) => {
+    e.preventDefault();
+    if (!broadcastForm.name || !broadcastForm.templateName) { showError('fieldRequired'); return; }
+    try {
+      await whatsappService.createBroadcast({ ...broadcastForm, brandId });
+      showSuccess('broadcastCreated');
+      setBroadcastModal(false);
+      setBroadcastForm({ name: '', templateName: '', audienceFilter: '' });
+      fetchBroadcasts();
+    } catch (err) { showError('saveFailed', err.message); }
+  };
+
+  const runBroadcast = async (id) => {
+    setBroadcastRunning(id);
+    try {
+      const data = await whatsappService.runBroadcast(id);
+      if (data.success) { showSuccess('broadcastStarted'); fetchBroadcasts(); }
+      else showError('sendFailed', data.message);
+    } catch (err) { showError('sendFailed', err.message); }
+    setBroadcastRunning(null);
+  };
+
+  // Fetch SLA stats
+  const fetchSLAStats = async () => {
+    setSlaLoading(true);
+    try {
+      const data = await whatsappService.getSLAStats(brandId);
+      if (data.success) setSlaStats(data.sla);
+    } catch { }
+    setSlaLoading(false);
+  };
+
+  // Canned response shortcut in reply box
+  const handleReplyChange = (val) => {
+    setReply(val);
+    if (val.startsWith('/')) {
+      const match = cannedResponses.find(c => c.shortcut === val.trim());
+      if (match) setReply(match.body);
+    }
+  };
+
+  useEffect(() => { if (page === 'canned') fetchCannedResponses(); }, [page, brandId]);
+  useEffect(() => { if (page === 'broadcast') fetchBroadcasts(); }, [page, brandId]);
+  useEffect(() => { if (page === 'analytics') { fetchStats(); fetchSLAStats(); } }, [page, brandId]);
+
   const filteredConvs = conversations.filter(c =>
     !convSearch || (c.customer_name || c.customer_phone || '').toLowerCase().includes(convSearch.toLowerCase())
   );
@@ -299,12 +404,14 @@ export function WhatsAppManager() {
   });
 
   const NAV = [
-    { k:'dashboard',  label:'Dashboard',      icon: IC.dash,    section: 'Main' },
-    { k:'inbox',      label:'Conversations',   icon: IC.msg,     badge: unreadCount || null },
-    { k:'templates',  label:'Templates',       icon: IC.tpl,     badge: templateList.length || null },
-    { k:'library',    label:'Library',         icon: IC.eye,     section: 'Messaging' },
-    { k:'test',       label:'Test Message',    icon: IC.phone },
-    { k:'analytics',  label:'Analytics',       icon: IC.bar,     section: 'Account' },
+    { k:'dashboard',  label:'Dashboard',        icon: IC.dash,    section: 'Main' },
+    { k:'inbox',      label:'Conversations',     icon: IC.msg,     badge: unreadCount || null },
+    { k:'templates',  label:'Templates',         icon: IC.tpl,     badge: templateList.length || null },
+    { k:'library',    label:'Library',           icon: IC.eye,     section: 'Messaging' },
+    { k:'canned',     label:'Canned Responses',  icon: IC.tag },
+    { k:'broadcast',  label:'Broadcast',         icon: IC.send },
+    { k:'test',       label:'Test Message',      icon: IC.phone },
+    { k:'analytics',  label:'Analytics',         icon: IC.bar,     section: 'Account' },
   ];
 
   return (
@@ -610,8 +717,8 @@ export function WhatsAppManager() {
                   </div>
                   {activeConv.status === 'open' ? (
                     <form className="was-reply-box" onSubmit={sendReply}>
-                      <textarea className="was-reply-input" placeholder="Type a message…" value={reply}
-                        onChange={e => setReply(e.target.value)}
+                      <textarea className="was-reply-input" placeholder="Type a message… (type /shortcut for canned responses)" value={reply}
+                        onChange={e => handleReplyChange(e.target.value)}
                         onKeyDown={e => { if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); sendReply(e); } }}
                         rows={2} />
                       <button type="submit" className="was-send-btn" disabled={sending||!reply.trim()}>{IC.send}</button>
@@ -736,19 +843,160 @@ export function WhatsAppManager() {
           </div>
         )}
 
+        {/* ── CANNED RESPONSES ── */}
+        {page === 'canned' && (
+          <div className="was-scroll">
+            <div className="was-content-pad">
+              <div className="was-page-head">
+                <div>
+                  <h2 className="was-page-title">Canned Responses</h2>
+                  <span className="was-page-sub">Type /shortcut in the inbox to auto-fill</span>
+                </div>
+                <button className="was-btn-primary" onClick={() => { setCannedEditId(null); setCannedForm({ shortcut:'', title:'', body:'' }); setCannedModal(true); }}>
+                  <span style={{width:14,height:14,display:'flex'}}>{IC.add}</span>New Response
+                </button>
+              </div>
+              {cannedLoading ? <div style={{padding:40,textAlign:'center'}}><Loader /></div> : (
+                <div className="was-tpl-grid">
+                  {cannedResponses.length === 0 ? (
+                    <div className="was-empty-state" style={{gridColumn:'1/-1'}}>
+                      <div style={{width:36,height:36,color:'#d1d5db'}}>{IC.tag}</div>
+                      <p>No canned responses yet. Create one to speed up replies.</p>
+                    </div>
+                  ) : cannedResponses.map(cr => (
+                    <div key={cr.id} className="was-tpl-card">
+                      <div className="was-tpl-card-top">
+                        <span className="was-cat-badge was-cat--utility">{cr.shortcut}</span>
+                      </div>
+                      <div className="was-tpl-name">{cr.title}</div>
+                      <div className="was-tpl-body">{cr.body}</div>
+                      <div className="was-tpl-foot" style={{gap:8}}>
+                        <button className="was-btn-secondary" style={{fontSize:11,padding:'3px 10px'}} onClick={() => { setCannedEditId(cr.id); setCannedForm({ shortcut: cr.shortcut, title: cr.title, body: cr.body }); setCannedModal(true); }}>Edit</button>
+                        <button className="was-btn-secondary" style={{fontSize:11,padding:'3px 10px',color:'#ef4444'}} onClick={() => deleteCannedResponse(cr.id)}>Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── BROADCAST ── */}
+        {page === 'broadcast' && (
+          <div className="was-scroll">
+            <div className="was-content-pad">
+              <div className="was-page-head">
+                <div>
+                  <h2 className="was-page-title">Broadcast Campaigns</h2>
+                  <span className="was-page-sub">Send a template to all opted-in customers</span>
+                </div>
+                <button className="was-btn-primary" onClick={() => { setBroadcastForm({ name:'', templateName:'', audienceFilter:'' }); setBroadcastModal(true); }}>
+                  <span style={{width:14,height:14,display:'flex'}}>{IC.add}</span>New Campaign
+                </button>
+              </div>
+              {broadcastLoading ? <div style={{padding:40,textAlign:'center'}}><Loader /></div> : (
+                <div className="was-tpl-grid">
+                  {broadcasts.length === 0 ? (
+                    <div className="was-empty-state" style={{gridColumn:'1/-1'}}>
+                      <div style={{width:36,height:36,color:'#d1d5db'}}>{IC.send}</div>
+                      <p>No broadcasts yet. Create a campaign to reach all your customers at once.</p>
+                    </div>
+                  ) : broadcasts.map(b => {
+                    const statusColor = { draft:'#9ca3af', running:'#f59e0b', done:'#22c55e', failed:'#ef4444' }[b.status] || '#9ca3af';
+                    return (
+                      <div key={b.id} className="was-tpl-card">
+                        <div className="was-tpl-card-top">
+                          <span className="was-cat-badge was-cat--marketing">{b.template_name}</span>
+                          <span style={{fontSize:11,color:statusColor,fontWeight:600}}>{b.status}</span>
+                        </div>
+                        <div className="was-tpl-name">{b.name}</div>
+                        <div className="was-tpl-body" style={{fontSize:12}}>
+                          Recipients: {b.total_recipients} · Sent: {b.sent_count} · Failed: {b.failed_count}
+                        </div>
+                        <div className="was-tpl-foot">
+                          {(b.status === 'draft' || b.status === 'failed') && (
+                            <button className="was-btn-primary" style={{fontSize:11,padding:'4px 12px'}} disabled={broadcastRunning === b.id} onClick={() => runBroadcast(b.id)}>
+                              {broadcastRunning === b.id ? 'Starting…' : '▶ Run'}
+                            </button>
+                          )}
+                          {b.completed_at && <span style={{fontSize:11,color:'#9ca3af'}}>Done {new Date(b.completed_at).toLocaleDateString('en-IN')}</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ── ANALYTICS ── */}
         {page === 'analytics' && (
           <div className="was-scroll">
             <div className="was-content-pad">
               <div className="was-page-head">
                 <h2 className="was-page-title">Analytics</h2>
-                <span className="was-page-sub">Coming soon — detailed message analytics</span>
+                <span className="was-page-sub">Message performance and SLA metrics</span>
               </div>
-              <div className="was-coming-soon">
-                <div style={{width:52,height:52,color:'#d1d5db'}}>{IC.bar}</div>
-                <h3>Analytics Coming Soon</h3>
-                <p>Detailed delivery, open rate, and campaign analytics will be available here.</p>
+
+              {/* Stats row */}
+              <div className="was-stats-grid">
+                {statsLoading ? <div style={{padding:20}}><Loader /></div> : [
+                  { label:'Messages Sent',    val: stats ? String(stats.sentMessages) : '—',      color:'#25D366', icon: IC.send },
+                  { label:'Delivery Rate',    val: stats ? `${stats.deliveryRate}%` : '—',        color:'#3b82f6', icon: IC.check },
+                  { label:'Read Rate',        val: stats ? `${stats.readRate}%` : '—',            color:'#f59e0b', icon: IC.eye },
+                  { label:'Avg Response',     val: slaStats?.avgFirstResponseMinutes ? `${slaStats.avgFirstResponseMinutes}m` : '—', color:'#8b5cf6', icon: IC.phone },
+                ].map(s => (
+                  <div key={s.label} className="was-stat-card">
+                    <div className="was-stat-top">
+                      <span className="was-stat-label">{s.label}</span>
+                      <span className="was-stat-icon" style={{ background: s.color + '20', color: s.color }}>{s.icon}</span>
+                    </div>
+                    <div className="was-stat-num">{s.val}</div>
+                  </div>
+                ))}
               </div>
+
+              {/* 7-day chart */}
+              <div className="was-dash-card" style={{marginTop:20}}>
+                <div className="was-dash-card-head"><span className="was-dash-card-title">Messages — Last 7 Days</span></div>
+                <div className="was-bar-chart">
+                  {statsLoading ? <Loader /> : (() => {
+                    const days = stats?.last7Days || [];
+                    const maxVal = Math.max(...days.map(d => parseInt(d.count) || 0), 1);
+                    return days.length === 0
+                      ? <div style={{color:'#9ca3af',fontSize:13,padding:'20px 0'}}>No data yet</div>
+                      : days.map(d => {
+                        const val = parseInt(d.count) || 0;
+                        const label = new Date(d.day).toLocaleDateString('en-IN', { weekday:'short' });
+                        return (
+                          <div key={d.day} className="was-bar-col">
+                            <span className="was-bar-val">{val}</span>
+                            <div className="was-bar" style={{ height: Math.round((val/maxVal)*80) + 'px' }} />
+                            <span className="was-bar-lbl">{label}</span>
+                          </div>
+                        );
+                      });
+                  })()}
+                </div>
+              </div>
+
+              {/* Tag stats */}
+              {slaStats?.tagStats?.length > 0 && (
+                <div className="was-dash-card" style={{marginTop:20}}>
+                  <div className="was-dash-card-head"><span className="was-dash-card-title">Conversations by Tag</span></div>
+                  <div className="was-activity">
+                    {slaStats.tagStats.map((t, i) => (
+                      <div key={i} className="was-act-item">
+                        <span className="was-act-dot was-act-dot--blue" />
+                        <span className="was-act-text"><strong>{t.tags}</strong></span>
+                        <span className="was-act-time">{t.count} convs</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -790,6 +1038,57 @@ export function WhatsAppManager() {
           <div className="modal-footer">
             <Button variant="secondary" type="button" onClick={() => setCreateModal(false)} disabled={formLoading}>Cancel</Button>
             <Button variant="primary" type="submit" disabled={formLoading}>{formLoading?'Submitting…':'Submit to Meta'}</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── Canned Response Modal ── */}
+      <Modal isOpen={cannedModal} onClose={() => setCannedModal(false)} title={cannedEditId ? 'Edit Canned Response' : 'New Canned Response'} closeOnOverlayClick={false}>
+        <form onSubmit={saveCannedResponse} className="seo-form">
+          <div className="modal-body">
+            <div className="dm-2col">
+              <div className="dm-field">
+                <label className="dm-label">Shortcut *</label>
+                <input className="dm-input" value={cannedForm.shortcut} onChange={e => setCannedForm(p => ({...p, shortcut: e.target.value.toLowerCase().replace(/\s/g,'')}))} placeholder="/track" required />
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Title *</label>
+                <input className="dm-input" value={cannedForm.title} onChange={e => setCannedForm(p => ({...p, title: e.target.value}))} placeholder="Order Tracking Reply" required />
+              </div>
+            </div>
+            <div className="dm-field">
+              <label className="dm-label">Message Body *</label>
+              <textarea className="dm-input dm-textarea" rows={4} value={cannedForm.body} onChange={e => setCannedForm(p => ({...p, body: e.target.value}))} required />
+            </div>
+          </div>
+          <div className="modal-footer">
+            <Button variant="secondary" type="button" onClick={() => setCannedModal(false)}>Cancel</Button>
+            <Button variant="primary" type="submit">Save</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── Broadcast Modal ── */}
+      <Modal isOpen={broadcastModal} onClose={() => setBroadcastModal(false)} title="New Broadcast Campaign" closeOnOverlayClick={false}>
+        <form onSubmit={createBroadcast} className="seo-form">
+          <div className="modal-body">
+            <div className="was-modal-notice">Broadcasts are sent to all opted-in customers. Only use approved templates.</div>
+            <div className="dm-field">
+              <label className="dm-label">Campaign Name *</label>
+              <input className="dm-input" value={broadcastForm.name} onChange={e => setBroadcastForm(p => ({...p, name: e.target.value}))} placeholder="Summer Sale 2025" required />
+            </div>
+            <div className="dm-field">
+              <label className="dm-label">Template Name *</label>
+              <input className="dm-input" value={broadcastForm.templateName} onChange={e => setBroadcastForm(p => ({...p, templateName: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,'')}))} placeholder="cart_abandoned" required />
+            </div>
+            <div className="dm-field">
+              <label className="dm-label">Audience Filter (optional)</label>
+              <input className="dm-input" value={broadcastForm.audienceFilter} onChange={e => setBroadcastForm(p => ({...p, audienceFilter: e.target.value}))} placeholder='e.g. {"tags":"vip"}' />
+            </div>
+          </div>
+          <div className="modal-footer">
+            <Button variant="secondary" type="button" onClick={() => setBroadcastModal(false)}>Cancel</Button>
+            <Button variant="primary" type="submit">Create Campaign</Button>
           </div>
         </form>
       </Modal>

@@ -76,6 +76,21 @@ async function creditPoints(userId, orderId, orderAmount, brandId = 1, options =
     await user.update({ loyalty_points: balanceAfter }, { transaction: tx });
 
     if (ownTx) await tx.commit();
+
+    // Fire WhatsApp loyalty notification (non-blocking)
+    setImmediate(async () => {
+      try {
+        if (user.phone) {
+          const whatsappService = require('./whatsappService.js');
+          await whatsappService.sendLoyaltyNotification(user.phone, {
+            customerName: user.username,
+            points,
+            balance: balanceAfter,
+          }, brandId);
+        }
+      } catch (_) {}
+    });
+
     return transaction;
   } catch (error) {
     if (ownTx) await tx.rollback();
