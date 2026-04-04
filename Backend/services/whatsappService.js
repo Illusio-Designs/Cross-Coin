@@ -300,6 +300,78 @@ async function sendRefundProcessed(phone, data, brandId = 1) {
   ], brandId);
 }
 
+// ─── New ecommerce notification helpers ──────────────────────────────────────
+
+async function sendAbandonedCart(phone, data, brandId = 1) {
+  return sendTemplate(phone, 'cart_abandoned', [
+    data.customerName || 'there',
+    data.productName || 'your items',
+    data.couponCode || 'SAVE10',
+  ], brandId);
+}
+
+async function sendReviewRequest(phone, data, brandId = 1) {
+  const storeUrl = (await settingsHelper.getSetting(brandId, 'STORE_URL')) || 'crosscoin.in';
+  return sendTemplate(phone, 'review_request', [
+    data.customerName || 'there',
+    data.productName || 'your recent purchase',
+    `https://${storeUrl}/product/${data.productSlug || ''}`,
+  ], brandId);
+}
+
+async function sendBackInStock(phone, data, brandId = 1) {
+  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
+  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
+  const text = `🎉 Good news! *${data.productName}* is back in stock at *${storeName}*.\n\nGrab it before it sells out again!\n👉 https://${storeUrl}/product/${data.productSlug}`;
+  return sendTextMessage(phone, text, brandId);
+}
+
+async function sendLoyaltyNotification(phone, data, brandId = 1) {
+  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
+  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
+  const text = `🌟 *${storeName} Rewards*\n\nHi ${data.customerName || 'there'}! You just earned *${data.points} points* for your order.\n\nYour balance: *${data.balance} points*\n\nRedeem at checkout 👉 https://${storeUrl}`;
+  return sendTextMessage(phone, text, brandId);
+}
+
+async function sendWinBack(phone, data, brandId = 1) {
+  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
+  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
+  const text = `Hey ${data.customerName || 'there'}! 👋\n\nWe miss you at *${storeName}*. It's been a while since your last order.\n\nHere's *${data.couponCode || '10% OFF'}* just for you — use it on your next order!\n\n👉 https://${storeUrl}`;
+  return sendTextMessage(phone, text, brandId);
+}
+
+async function sendPostPurchaseUpsell(phone, data, brandId = 1) {
+  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
+  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
+  const text = `Hi ${data.customerName || 'there'}! 😊\n\nLoved your *${data.purchasedProduct}* from *${storeName}*?\n\nYou might also like: *${data.suggestedProduct}*\n\n👉 https://${storeUrl}/product/${data.suggestedSlug}`;
+  return sendTextMessage(phone, text, brandId);
+}
+
+async function sendPopupCoupon(phone, data, brandId = 1) {
+  return sendTemplate(phone, 'popup_coupon', [data.couponCode || 'PREPAID10'], brandId);
+}
+
+// ─── Broadcast: send template to a list of phones ────────────────────────────
+// Returns { sent, failed } counts
+async function sendBroadcast(phones, templateName, paramsArray, brandId = 1, delayMs = 200) {
+  let sent = 0; let failed = 0;
+  for (let i = 0; i < phones.length; i++) {
+    try {
+      const params = Array.isArray(paramsArray[i]) ? paramsArray[i] : paramsArray[0] || [];
+      await sendTemplate(phones[i], templateName, params, brandId);
+      sent++;
+    } catch (err) {
+      logger.warn(`Broadcast failed for ${phones[i]}: ${metaError(err)}`);
+      failed++;
+    }
+    // Throttle to avoid Meta rate limits (5 msg/sec safe limit)
+    if (delayMs > 0 && i < phones.length - 1) {
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+  return { sent, failed };
+}
+
 module.exports = {
   formatE164,
   metaError,
@@ -321,4 +393,13 @@ module.exports = {
   sendOrderCancelled,
   sendCodConfirmation,
   sendRefundProcessed,
+  // New ecommerce features
+  sendAbandonedCart,
+  sendReviewRequest,
+  sendBackInStock,
+  sendLoyaltyNotification,
+  sendWinBack,
+  sendPostPurchaseUpsell,
+  sendPopupCoupon,
+  sendBroadcast,
 };
