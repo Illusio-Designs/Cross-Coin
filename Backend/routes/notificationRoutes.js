@@ -26,7 +26,7 @@ router.get('/poll', authenticate, isStaff, async (req, res) => {
         include: [{
           model: WhatsappMessage,
           as: 'Messages',
-          attributes: ['direction'],
+          attributes: ['direction', 'createdAt'],
           where: { direction: 'inbound', createdAt: { [Op.gt]: since } },
           required: true,
           limit: 1,
