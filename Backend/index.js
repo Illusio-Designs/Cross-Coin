@@ -100,17 +100,12 @@ app.use(cors(corsOptions));
 // Handle preflight requests for all routes
 app.options('*', cors(corsOptions));
 
-// Body parsing middleware with increased limits for production
+// Body parsing middleware — keep limits tight on 2GB server
 app.use(express.json({ 
-    limit: process.env.MAX_FILE_SIZE || '5mb',
-    verify: (req, res, buf) => {
-        req.rawBody = buf;
-    }
+    limit: '1mb',
+    verify: (req, res, buf) => { req.rawBody = buf; }
 }));
-app.use(express.urlencoded({ 
-    extended: true, 
-    limit: process.env.MAX_FILE_SIZE || '5mb' 
-}));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Compression middleware
 app.use(compression());
@@ -135,15 +130,8 @@ app.use((req, res, next) => {
 
 app.use(cookieParser());
 
-// Logging middleware
-const loggingConfig = getLoggingConfig();
-if (process.env.NODE_ENV === 'production') {
-    // In production, use minimal HTTP request logging
-    if (!loggingConfig.disableHttpLogging) {
-        app.use(morgan('combined'));
-    }
-} else {
-    // In development, use detailed logging
+// HTTP request logging — disabled in production to save I/O and memory
+if (process.env.NODE_ENV !== 'production') {
     app.use(morgan('dev'));
 }
 
@@ -359,46 +347,31 @@ const startServer = async () => {
         logger.info(`Environment: ${process.env.NODE_ENV}`);
         logger.info(`Port: ${PORT}`);
         
-        // Monitor memory usage
+        // Memory monitor — warn at 300MB (safe ceiling on 2GB shared server)
+        // API + Worker + MySQL + Redis should all fit under 1.5GB total
         const logMemoryUsage = () => {
             const used = process.memoryUsage();
-            logger.debug('Memory Usage:', {
-                rss: `${Math.round(used.rss / 1024 / 1024)} MB`,
-                heapTotal: `${Math.round(used.heapTotal / 1024 / 1024)} MB`,
-                heapUsed: `${Math.round(used.heapUsed / 1024 / 1024)} MB`,
-                external: `${Math.round(used.external / 1024 / 1024)} MB`
-            });
-            
-            // Warn if memory usage is high
-            const heapUsedMB = used.heapUsed / 1024 / 1024;
-            if (heapUsedMB > 400) {
-                logger.warn('High memory usage detected! Consider restarting the server.');
-                
-                // Force garbage collection if available (requires --expose-gc flag)
-                if (global.gc) {
-                    logger.debug('Running garbage collection...');
-                    global.gc();
-                }
+            const heapUsedMB = Math.round(used.heapUsed / 1024 / 1024);
+            const rssMB = Math.round(used.rss / 1024 / 1024);
+
+            if (heapUsedMB > 300) {
+                logger.warn(`[Memory] HIGH — heap: ${heapUsedMB}MB rss: ${rssMB}MB`);
+                if (global.gc) global.gc();
+            } else {
+                logger.info(`[Memory] heap: ${heapUsedMB}MB rss: ${rssMB}MB`);
             }
         };
+
+        // Check every 30 minutes
+        setInterval(logMemoryUsage, 30 * 60 * 1000);
         
-        // Log memory usage every hour (reduced from 30 minutes)
-        setInterval(logMemoryUsage, 60 * 60 * 1000);
-        
-        // Initialize Redis connection
-        logger.info('Initializing Redis connection...');
+        // Initialize Redis — skip cache flush on boot (wastes memory and time)
         const redisService = require('./services/redisService.js');
         try {
             await redisService.initialize();
-            logger.info('✓ Redis connection initialized');
-
-            // Clear all cache on server start
-            const cacheManager = require('./services/cacheManager.js');
-            await cacheManager.clear();
-            logger.info('✓ Cache cleared on startup');
+            logger.info('✓ Redis connected');
         } catch (error) {
-            logger.warn('Redis initialization failed:', error.message);
-            logger.warn('Caching will be disabled. Ensure Redis is running for optimal performance.');
+            logger.warn('Redis unavailable — caching disabled: ' + error.message);
         }
         
         // Test database connection first
@@ -448,7 +421,8 @@ const startServer = async () => {
         const spawnWorker = () => {
           const worker = fork(path.join(__dirname, 'worker.js'), [], {
             env: process.env,
-            silent: false, // worker logs go to same stdout/stderr
+            silent: false,
+            execArgv: ['--max-old-space-size=256'], // cap worker heap at 256MB
           });
 
           worker.on('exit', (code, signal) => {

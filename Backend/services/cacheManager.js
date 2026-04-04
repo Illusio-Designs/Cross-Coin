@@ -43,17 +43,12 @@ class CacheManager {
       const data = await client.get(key);
       
       if (data === null) {
-        console.log(`⚠️ Cache MISS: ${key}`);
         return null;
       }
       
       try {
-        const parsed = JSON.parse(data);
-        console.log(`✅ Cache HIT: ${key}`);
-        return parsed;
-      } catch (parseError) {
-        console.error(`❌ Cache parse error for key ${key}:`, parseError.message);
-        // If parsing fails, delete the corrupted cache entry
+        return JSON.parse(data);
+      } catch {
         await this.delete(key);
         return null;
       }
@@ -71,12 +66,9 @@ class CacheManager {
   async delete(key) {
     try {
       const client = redisService.getClient();
-      const deleted = await client.del(key);
-      console.log(`✅ Cache DELETE: ${key} (${deleted} key(s) deleted)`);
-      return deleted;
+      return await client.del(key);
     } catch (error) {
-      console.error(`❌ Cache DELETE error for key ${key}:`, error.message);
-      throw error;
+      return 0;
     }
   }
 
@@ -174,12 +166,9 @@ class CacheManager {
   async expire(key, ttl) {
     try {
       const client = redisService.getClient();
-      const result = await client.expire(key, ttl);
-      console.log(`✅ Cache EXPIRE: ${key} (TTL: ${ttl}s)`);
-      return result;
+      return await client.expire(key, ttl);
     } catch (error) {
-      console.error(`❌ Cache EXPIRE error for key ${key}:`, error.message);
-      throw error;
+      return 0;
     }
   }
 
@@ -235,11 +224,7 @@ class CacheManager {
     try {
       const client = redisService.getClient();
       await client.flushdb();
-      console.log('✅ Cache CLEAR: All cache cleared');
-    } catch (error) {
-      console.error('❌ Cache CLEAR error:', error.message);
-      throw error;
-    }
+    } catch (_) {}
   }
 }
 

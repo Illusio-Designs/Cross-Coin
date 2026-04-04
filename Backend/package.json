@@ -4,9 +4,9 @@
   "description": "Backend for CrossCoin e-commerce platform",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node --max-old-space-size=512 index.js",
     "dev": "nodemon index.js",
-    "worker": "node worker.js",
+    "worker": "node --max-old-space-size=256 worker.js",
     "worker:dev": "nodemon worker.js",
     "db:setup": "node scripts/setupDatabase.js",
     "build": "echo \"Building the project...\""
