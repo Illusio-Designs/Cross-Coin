@@ -17,6 +17,8 @@ const { setupDatabase } = require('./scripts/setupDatabase.js');
 const corsOptions = require('./config/corsConfig.js');
 const { sendFacebookEvent } = require('./integration/facebookPixel.js');
 const { logger, getLoggingConfig } = require('./config/logging.js');
+const { fork } = require('child_process');
+const path = require('path');
 
 // Import routes
 const facebookPixelRouter = require('./integration/facebookPixel.js');
@@ -427,6 +429,31 @@ const startServer = async () => {
         logger.info('Initializing SEO data...');
         await initializeSeoData();
         logger.info('✓ SEO data initialized');
+
+        // ── Spawn background worker (separate process) ──────────────────────
+        // Runs all cron jobs in its own process so they never compete with
+        // API request handling. Auto-restarts on crash with backoff.
+        const spawnWorker = () => {
+          const worker = fork(path.join(__dirname, 'worker.js'), [], {
+            env: process.env,
+            silent: false, // worker logs go to same stdout/stderr
+          });
+
+          worker.on('exit', (code, signal) => {
+            if (signal === 'SIGTERM' || signal === 'SIGINT') return; // intentional shutdown
+            logger.warn(`[Worker] exited (code=${code}), restarting in 10s…`);
+            setTimeout(spawnWorker, 10_000);
+          });
+
+          worker.on('error', (err) => {
+            logger.error('[Worker] spawn error:', err.message);
+          });
+
+          logger.info(`[Worker] started (pid=${worker.pid})`);
+          return worker;
+        };
+
+        let workerProcess = spawnWorker();
         
         // Start server
         const server = app.listen(PORT, () => {
@@ -445,6 +472,11 @@ const startServer = async () => {
                 process.exit(1);
             }, 10000);
             forceExit.unref();
+
+            // Stop worker first
+            if (workerProcess && !workerProcess.killed) {
+                workerProcess.kill('SIGTERM');
+            }
 
             server.close(async () => {
                 try {
