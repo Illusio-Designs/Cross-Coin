@@ -430,29 +430,103 @@ exports.receiveWebhook = async (req, res) => {
         for (const msg of (value.messages || [])) {
           const phone       = msg.from;
           const contactName = value.contacts?.find(c => c.wa_id === phone)?.profile?.name || null;
-          const text        = msg.type === 'text' ? msg.text?.body : `[${msg.type}]`;
           const waMessageId = msg.id;
           const sentAt      = new Date(parseInt(msg.timestamp) * 1000);
 
+          // ── Resolve message type + body + media_url ──────────────────────
+          let msgType = 'text';
+          let text    = '';
+          let mediaUrl = null;
+          let mediaMime = null;
+          let mediaCaption = null;
+
+          switch (msg.type) {
+            case 'text':
+              msgType  = 'text';
+              text     = msg.text?.body || '';
+              break;
+            case 'image':
+              msgType      = 'image';
+              mediaUrl     = msg.image?.url || msg.image?.id || null;
+              mediaMime    = msg.image?.mime_type || 'image/jpeg';
+              mediaCaption = msg.image?.caption || null;
+              text         = mediaCaption || '📷 Image';
+              break;
+            case 'audio':
+            case 'voice':
+              msgType  = 'audio';
+              mediaUrl = msg.audio?.url || msg.audio?.id || msg.voice?.url || msg.voice?.id || null;
+              mediaMime = msg.audio?.mime_type || msg.voice?.mime_type || 'audio/ogg';
+              text     = '🎤 Voice message';
+              break;
+            case 'video':
+              msgType      = 'video';
+              mediaUrl     = msg.video?.url || msg.video?.id || null;
+              mediaMime    = msg.video?.mime_type || 'video/mp4';
+              mediaCaption = msg.video?.caption || null;
+              text         = mediaCaption || '🎥 Video';
+              break;
+            case 'document':
+              msgType      = 'document';
+              mediaUrl     = msg.document?.url || msg.document?.id || null;
+              mediaMime    = msg.document?.mime_type || 'application/octet-stream';
+              mediaCaption = msg.document?.filename || msg.document?.caption || null;
+              text         = mediaCaption || '📎 Document';
+              break;
+            case 'sticker':
+              msgType  = 'image';
+              mediaUrl = msg.sticker?.url || msg.sticker?.id || null;
+              text     = '🎭 Sticker';
+              break;
+            case 'location':
+              msgType = 'text';
+              text    = `📍 Location: ${msg.location?.name || ''} (${msg.location?.latitude}, ${msg.location?.longitude})`;
+              break;
+            case 'contacts':
+              msgType = 'text';
+              text    = `👤 Contact: ${msg.contacts?.[0]?.name?.formatted_name || 'Shared contact'}`;
+              break;
+            default:
+              msgType = 'text';
+              text    = `[${msg.type}]`;
+          }
+
+          // Build metadata JSON stored in body for media messages
+          const bodyContent = msgType !== 'text'
+            ? JSON.stringify({ url: mediaUrl, mime: mediaMime, caption: mediaCaption, text })
+            : text;
+
+          const lastMsgPreview = msgType !== 'text' ? text : text;
+
           const [conv, created] = await WhatsappConversation.findOrCreate({
             where: { customer_phone: phone, brand_id: brandId },
-            defaults: { customer_name: contactName, wa_contact_id: phone, last_message: text, last_message_at: sentAt, unread_count: 1, status: 'open' },
+            defaults: { customer_name: contactName, wa_contact_id: phone, last_message: lastMsgPreview, last_message_at: sentAt, unread_count: 1, status: 'open' },
           });
           if (!created) {
-            await conv.update({ last_message: text, last_message_at: sentAt, unread_count: conv.unread_count + 1, customer_name: contactName || conv.customer_name, status: 'open' });
+            await conv.update({ last_message: lastMsgPreview, last_message_at: sentAt, unread_count: conv.unread_count + 1, customer_name: contactName || conv.customer_name, status: 'open' });
           }
-          await WhatsappMessage.create({ conversation_id: conv.id, wa_message_id: waMessageId, direction: 'inbound', type: msg.type === 'text' ? 'text' : 'document', body: text, status: 'received', sent_at: sentAt });
+
+          await WhatsappMessage.create({
+            conversation_id: conv.id,
+            wa_message_id:   waMessageId,
+            direction:       'inbound',
+            type:            msgType,
+            body:            bodyContent,
+            status:          'received',
+            sent_at:         sentAt,
+          });
+
           const notificationService = require('../services/notificationService.js');
-          notificationService.emitNewWhatsApp(phone, text);
-          logger.info(`WhatsApp inbound [${phone}]: ${text}`);
-          // Auto-reply bot
+          notificationService.emitNewWhatsApp(phone, lastMsgPreview);
+          logger.info(`WhatsApp inbound [${phone}] (${msgType}): ${lastMsgPreview}`);
+
+          // Auto-reply bot — only for text messages
           if (msg.type === 'text') {
             setImmediate(() => handleAutoReply(phone, text, brandId).catch(() => {}));
           }
         }
         for (const status of (value.statuses || [])) {
           await WhatsappMessage.update({ status: status.status }, { where: { wa_message_id: status.id } });
-          // Track first response time for SLA
           if (status.status === 'delivered') {
             const msg = await WhatsappMessage.findOne({ where: { wa_message_id: status.id } });
             if (msg) {
