@@ -1,7 +1,7 @@
 // When accessed directly, render full dashboard shell
 export { default } from './index';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Modal, Button } from '../../components/ui';
 import Dropdown from '../../components/ui/Dropdown';
 import Loader from '../../components/common/Loader';
@@ -115,74 +115,222 @@ function PhonePreview({ tpl }) {
 }
 
 // ─── Message Content Renderer ─────────────────────────────────────────────────
-function MsgContent({ msg }) {
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+
+function getProxyUrl(mediaId, brandId = 1) {
+  if (!mediaId) return null;
+  // If it's already a full URL (old messages), return as-is
+  if (mediaId.startsWith('http')) return mediaId;
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : '';
+  return `${API_BASE}/api/whatsapp/media/${mediaId}?brandId=${brandId}&token=${encodeURIComponent(token)}`;
+}
+
+// WhatsApp-style audio player with waveform bars
+function AudioPlayer({ src }) {
+  const audioRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+
+  const toggle = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing) { a.pause(); } else { a.play().catch(() => {}); }
+  };
+
+  const fmt = (s) => {
+    if (!s || isNaN(s)) return '0:00';
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  const seek = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    if (audioRef.current) audioRef.current.currentTime = ratio * duration;
+  };
+
+  // Fake waveform bars (30 bars with random heights, seeded by src)
+  const bars = useMemo(() => {
+    const seed = (src || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    return Array.from({ length: 30 }, (_, i) => {
+      const h = 20 + ((seed * (i + 1) * 7919) % 60);
+      return Math.max(8, Math.min(h, 28));
+    });
+  }, [src]);
+
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:220, maxWidth:280 }}>
+      <audio
+        ref={audioRef}
+        src={src}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => { setPlaying(false); setProgress(0); setCurrentTime(0); }}
+        onTimeUpdate={() => {
+          const a = audioRef.current;
+          if (a && a.duration) {
+            setCurrentTime(a.currentTime);
+            setProgress(a.currentTime / a.duration);
+          }
+        }}
+        onLoadedMetadata={() => { if (audioRef.current) setDuration(audioRef.current.duration); }}
+        style={{ display:'none' }}
+      />
+
+      {/* Play/Pause button */}
+      <button
+        onClick={toggle}
+        style={{
+          width:36, height:36, borderRadius:'50%', border:'none', cursor:'pointer',
+          background:'#25D366', display:'flex', alignItems:'center', justifyContent:'center',
+          flexShrink:0, boxShadow:'0 1px 3px rgba(0,0,0,0.2)'
+        }}
+      >
+        {playing
+          ? <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          : <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><polygon points="5,3 19,12 5,21"/></svg>
+        }
+      </button>
+
+      {/* Waveform + scrubber */}
+      <div style={{ flex:1, display:'flex', flexDirection:'column', gap:4 }}>
+        <div
+          onClick={seek}
+          style={{ display:'flex', alignItems:'center', gap:1.5, height:28, cursor:'pointer' }}
+        >
+          {bars.map((h, i) => {
+            const filled = i / bars.length <= progress;
+            return (
+              <div
+                key={i}
+                style={{
+                  width:3, height:h, borderRadius:2, flexShrink:0,
+                  background: filled ? '#25D366' : '#d1d5db',
+                  transition:'background 0.1s',
+                }}
+              />
+            );
+          })}
+        </div>
+        <div style={{ fontSize:10, color:'#9ca3af', display:'flex', justifyContent:'space-between' }}>
+          <span>{fmt(currentTime)}</span>
+          <span>{fmt(duration)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Lightbox for images
+function ImageMsg({ src, caption }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div>
+        <img
+          src={src}
+          alt={caption || 'image'}
+          onClick={() => setOpen(true)}
+          style={{ maxWidth:220, maxHeight:220, borderRadius:8, display:'block', cursor:'zoom-in', objectFit:'cover' }}
+          onError={e => { e.target.style.display='none'; }}
+        />
+        {caption && <div style={{ fontSize:12, marginTop:4, color:'#374151' }}>{caption}</div>}
+      </div>
+      {open && (
+        <div
+          onClick={() => setOpen(false)}
+          style={{
+            position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:9999,
+            display:'flex', alignItems:'center', justifyContent:'center', cursor:'zoom-out'
+          }}
+        >
+          <img src={src} alt={caption || 'image'} style={{ maxWidth:'90vw', maxHeight:'90vh', borderRadius:8, objectFit:'contain' }} />
+        </div>
+      )}
+    </>
+  );
+}
+
+function MsgContent({ msg, brandId = 1 }) {
   // Try to parse JSON body (media messages store metadata as JSON)
   let media = null;
   if (msg.type !== 'text' && msg.body) {
     try { media = JSON.parse(msg.body); } catch (_) {}
   }
 
+  // Resolve the media URL — use proxy for IDs, direct for full URLs
+  const rawUrl = media?.url;
+  const proxyUrl = rawUrl ? getProxyUrl(rawUrl, brandId) : null;
+
   if (msg.type === 'audio') {
-    const url = media?.url;
-    return (
-      <div style={{ display:'flex', alignItems:'center', gap:8, minWidth:200 }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,color:'#25D366'}}>
-          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
-        </svg>
-        {url
-          ? <audio controls style={{ height:32, maxWidth:220, flex:1 }} src={url} />
-          : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>🎤 Voice message</span>
-        }
-      </div>
-    );
+    return proxyUrl
+      ? <AudioPlayer src={proxyUrl} />
+      : (
+        <div style={{ display:'flex', alignItems:'center', gap:8, color:'#6b7280', fontSize:13 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          </svg>
+          <span style={{ fontStyle:'italic' }}>🎤 Voice message</span>
+        </div>
+      );
   }
 
   if (msg.type === 'image') {
-    const url = media?.url;
-    const caption = media?.caption;
-    return (
-      <div>
-        {url
-          ? <img src={url} alt="image" style={{ maxWidth:220, maxHeight:220, borderRadius:8, display:'block', cursor:'pointer' }} onClick={() => window.open(url, '_blank')} />
-          : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>📷 Image</span>
-        }
-        {caption && <div style={{ fontSize:12, marginTop:4, color:'#374151' }}>{caption}</div>}
-      </div>
-    );
+    return proxyUrl
+      ? <ImageMsg src={proxyUrl} caption={media?.caption} />
+      : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>📷 Image</span>;
   }
 
   if (msg.type === 'video') {
-    const url = media?.url;
-    const caption = media?.caption;
-    return (
-      <div>
-        {url
-          ? <video controls style={{ maxWidth:220, maxHeight:180, borderRadius:8, display:'block' }} src={url} />
-          : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>🎥 Video</span>
-        }
-        {caption && <div style={{ fontSize:12, marginTop:4, color:'#374151' }}>{caption}</div>}
-      </div>
-    );
+    return proxyUrl
+      ? (
+        <div>
+          <video
+            controls
+            style={{ maxWidth:220, maxHeight:180, borderRadius:8, display:'block', background:'#000' }}
+            src={proxyUrl}
+          />
+          {media?.caption && <div style={{ fontSize:12, marginTop:4, color:'#374151' }}>{media.caption}</div>}
+        </div>
+      )
+      : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>🎥 Video</span>;
   }
 
   if (msg.type === 'document') {
-    const url = media?.url;
     const filename = media?.caption || 'Document';
     return (
-      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,color:'#3b82f6'}}>
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-        </svg>
-        {url
-          ? <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize:13, color:'#3b82f6', textDecoration:'underline', wordBreak:'break-all' }}>{filename}</a>
-          : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>📎 {filename}</span>
-        }
-      </div>
+      <a
+        href={proxyUrl || '#'}
+        target="_blank"
+        rel="noopener noreferrer"
+        download={filename}
+        style={{ display:'flex', alignItems:'center', gap:8, textDecoration:'none', color:'inherit' }}
+      >
+        <div style={{
+          width:40, height:40, borderRadius:8, background:'#eff6ff',
+          display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0
+        }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div>
+          <div style={{ fontSize:13, fontWeight:500, color:'#1d4ed8', wordBreak:'break-all' }}>{filename}</div>
+          <div style={{ fontSize:11, color:'#6b7280' }}>Tap to download</div>
+        </div>
+      </a>
     );
   }
 
-  // Default: plain text — render newlines and bold (*text*)
-  const formatted = (msg.body || '').replace(/\*(.*?)\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+  // Default: plain text — render WhatsApp formatting
+  const formatted = (msg.body || '')
+    .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+    .replace(/_(.*?)_/g, '<em>$1</em>')
+    .replace(/~(.*?)~/g, '<s>$1</s>')
+    .replace(/\n/g, '<br>');
   return <span style={{ fontSize:14, lineHeight:1.5 }} dangerouslySetInnerHTML={{ __html: formatted }} />;
 }
 
@@ -849,7 +997,7 @@ export function WhatsAppManager() {
                     : messages.map(msg => (
                       <div key={msg.id} className={`was-msg was-msg--${msg.direction}`}>
                         <div className="was-msg-bubble">
-                          <MsgContent msg={msg} />
+                          <MsgContent msg={msg} brandId={brandId} />
                         </div>
                         <div className="was-msg-meta">
                           {formatTime(msg.sent_at||msg.createdAt)}

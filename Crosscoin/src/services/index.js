@@ -1888,4 +1888,10 @@ export const whatsappService = {
     const response = await adminApi.post(`/api/whatsapp/conversations/${conversationId}/send-catalogue`, { productIds, headerText, bodyText, brandId });
     return response.data;
   },
+
+  // Returns a proxied URL for a Meta media ID (audio, image, video, document)
+  getMediaProxyUrl: (mediaId, brandId = 1) => {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : '';
+    return `${adminApi.defaults.baseURL}/api/whatsapp/media/${mediaId}?brandId=${brandId}&token=${token}`;
+  },
 };
