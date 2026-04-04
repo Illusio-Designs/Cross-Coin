@@ -1884,8 +1884,10 @@ export const whatsappService = {
     return response.data;
   },
 
-  sendCatalogue: async (conversationId, productIds, headerText, bodyText, brandId = 1) => {
-    const response = await adminApi.post(`/api/whatsapp/conversations/${conversationId}/send-catalogue`, { productIds, headerText, bodyText, brandId });
+  sendCatalogue: async (conversationId, retailerIds, productIds, headerText, bodyText, brandId = 1) => {
+    const response = await adminApi.post(`/api/whatsapp/conversations/${conversationId}/send-catalogue`, {
+      retailerIds, productIds, headerText, bodyText, brandId
+    });
     return response.data;
   },
 

@@ -394,8 +394,9 @@ async function sendBroadcast(phones, templateName, paramsArray, brandId = 1, del
 }
 
 // ─── Send single product card (interactive product message) ──────────────────
-// Requires: Meta catalogue connected + WHATSAPP_CATALOG_ID in brand settings
-async function sendProductCard(phone, productId, brandId = 1) {
+// product_retailer_id in your catalogue feed is "{productId}_{variationId}"
+// Pass retailerIds as an array like ["123_456"] matching your catalogue g:id values
+async function sendProductCard(phone, retailerId, brandId = 1) {
   const { token, phoneNumberId } = await getCredentials(brandId);
   const catalogId = await settingsHelper.getSetting(brandId, 'WHATSAPP_CATALOG_ID');
   if (!catalogId) throw new Error('WHATSAPP_CATALOG_ID not configured for brand ' + brandId);
@@ -412,7 +413,8 @@ async function sendProductCard(phone, productId, brandId = 1) {
         body: { text: 'Check out this product from Cross Coin 👇' },
         action: {
           catalog_id: catalogId,
-          product_retailer_id: String(productId),
+          // retailerId must match g:id in your catalogue feed exactly: "{productId}_{variationId}"
+          product_retailer_id: String(retailerId),
         },
       },
     },
@@ -422,7 +424,8 @@ async function sendProductCard(phone, productId, brandId = 1) {
 }
 
 // ─── Send catalogue section (multi-product message — up to 30 items) ─────────
-async function sendCatalogueMessage(phone, productIds, opts = {}, brandId = 1) {
+// retailerIds must be an array of strings matching g:id in your catalogue feed
+async function sendCatalogueMessage(phone, retailerIds, opts = {}, brandId = 1) {
   const { token, phoneNumberId } = await getCredentials(brandId);
   const catalogId = await settingsHelper.getSetting(brandId, 'WHATSAPP_CATALOG_ID');
   if (!catalogId) throw new Error('WHATSAPP_CATALOG_ID not configured for brand ' + brandId);
@@ -433,10 +436,10 @@ async function sendCatalogueMessage(phone, productIds, opts = {}, brandId = 1) {
   // Meta allows max 30 products per section, max 10 sections
   const sections = [];
   const chunkSize = 30;
-  for (let i = 0; i < productIds.length; i += chunkSize) {
+  for (let i = 0; i < retailerIds.length; i += chunkSize) {
     sections.push({
-      title: i === 0 ? (opts.headerText || `${storeName} Products`) : `More Products`,
-      product_items: productIds.slice(i, i + chunkSize).map(id => ({
+      title: i === 0 ? (opts.sectionTitle || `${storeName} Products`) : `More Products`,
+      product_items: retailerIds.slice(i, i + chunkSize).map(id => ({
         product_retailer_id: String(id),
       })),
     });
