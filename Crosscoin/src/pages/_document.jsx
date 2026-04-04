@@ -5,11 +5,11 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        {/* Preconnect — only the 2 most critical image/API origins */}
+        {/* Preconnect */}
         <link rel="preconnect" href="https://api.crosscoin.in" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://ik.imagekit.io" crossOrigin="anonymous" />
 
-        {/* DNS prefetch for fonts and 3rd parties — non-blocking */}
+        {/* DNS prefetch */}
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
         <link rel="dns-prefetch" href="https://connect.facebook.net" />
@@ -28,23 +28,40 @@ export default function Document() {
           <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700;800&display=swap" />
         </noscript>
 
-        {/* Prevent zoom on form inputs on iOS */}
         <meta name="format-detection" content="telephone=no" />
-
-        {/* Theme color for mobile browsers */}
         <meta name="theme-color" content="#180D3E" />
-
-        {/* Favicon */}
         <link rel="icon" href="/crosscoin icon.png" />
-
-        {/* Prevent dark mode */}
         <meta name="color-scheme" content="light" />
         <meta name="supported-color-schemes" content="light" />
 
         {/*
-          Partytown — moves third-party scripts off the main thread into a Web Worker.
-          forward: proxies calls like fbq(), gtag(), clarity() from the worker back to the main thread.
-          lib: points to the copied Partytown lib files in /public/~partytown.
+          Window stubs — MUST be defined before Partytown initialises.
+          When fbq() / gtag() are called from React components, these stubs
+          queue the calls. Partytown then forwards them into the Web Worker
+          once the real scripts have loaded there.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // FB Pixel stub — queues calls until fbevents.js loads in worker
+              window.fbq = window.fbq || function() {
+                (window.fbq.q = window.fbq.q || []).push(arguments);
+              };
+              window._fbq = window._fbq || window.fbq;
+
+              // GA4 stub — queues calls until gtag.js loads in worker
+              window.dataLayer = window.dataLayer || [];
+              window.gtag = window.gtag || function() {
+                window.dataLayer.push(arguments);
+              };
+            `,
+          }}
+        />
+
+        {/*
+          Partytown config — forward proxies these globals from the worker
+          back to the main thread so window.fbq() / window.gtag() work
+          from anywhere in your React app.
         */}
         <Partytown
           lib="/~partytown/"
@@ -52,9 +69,8 @@ export default function Document() {
         />
 
         {/*
-          MSG91 OTP Widget — stays on main thread intentionally.
-          It manipulates the DOM and calls initSendOTP(), which requires
-          direct browser API access that Web Workers cannot provide.
+          MSG91 OTP Widget — main thread only.
+          Calls initSendOTP() and injects DOM elements — cannot run in a worker.
         */}
         <script
           dangerouslySetInnerHTML={{
