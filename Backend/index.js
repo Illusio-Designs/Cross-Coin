@@ -16,7 +16,6 @@ const fs = require('fs');
 const { setupDatabase } = require('./scripts/setupDatabase.js');
 const corsOptions = require('./config/corsConfig.js');
 const { sendFacebookEvent } = require('./integration/facebookPixel.js');
-const { initializeCronJobs } = require('./config/cronJobs.js');
 const { logger, getLoggingConfig } = require('./config/logging.js');
 
 // Import routes
@@ -428,11 +427,6 @@ const startServer = async () => {
         logger.info('Initializing SEO data...');
         await initializeSeoData();
         logger.info('✓ SEO data initialized');
-        
-        // Initialize cron jobs
-        logger.info('Initializing cron jobs...');
-        initializeCronJobs();
-        logger.info('✓ Cron jobs initialized');
         
         // Start server
         const server = app.listen(PORT, () => {
