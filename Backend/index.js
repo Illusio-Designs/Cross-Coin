@@ -425,10 +425,22 @@ const startServer = async () => {
             logger.info('✓ Database schema up-to-date, skipping setup');
         }
 
-        // Initialize SEO data
-        logger.info('Initializing SEO data...');
-        await initializeSeoData();
-        logger.info('✓ SEO data initialized');
+        // Initialize SEO data — only runs once, skipped on subsequent boots
+        // Piggybacks on the schema_version table to avoid a DB query every start
+        try {
+            const [seoRows] = await sequelize.query(`SELECT version FROM schema_version WHERE version = 'seo-init-done' LIMIT 1`);
+            if (!seoRows.length) {
+                logger.info('Initializing SEO data (first time only)...');
+                await initializeSeoData();
+                await sequelize.query(`INSERT IGNORE INTO schema_version (version) VALUES ('seo-init-done')`);
+                logger.info('✓ SEO data initialized');
+            } else {
+                logger.info('✓ SEO data already initialized, skipping');
+            }
+        } catch {
+            // Fallback: run it anyway if the check fails
+            await initializeSeoData();
+        }
 
         // ── Spawn background worker (separate process) ──────────────────────
         // Runs all cron jobs in its own process so they never compete with
