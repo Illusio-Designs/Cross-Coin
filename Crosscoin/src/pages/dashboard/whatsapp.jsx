@@ -114,6 +114,78 @@ function PhonePreview({ tpl }) {
   );
 }
 
+// ─── Message Content Renderer ─────────────────────────────────────────────────
+function MsgContent({ msg }) {
+  // Try to parse JSON body (media messages store metadata as JSON)
+  let media = null;
+  if (msg.type !== 'text' && msg.body) {
+    try { media = JSON.parse(msg.body); } catch (_) {}
+  }
+
+  if (msg.type === 'audio') {
+    const url = media?.url;
+    return (
+      <div style={{ display:'flex', alignItems:'center', gap:8, minWidth:200 }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,color:'#25D366'}}>
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+        {url
+          ? <audio controls style={{ height:32, maxWidth:220, flex:1 }} src={url} />
+          : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>🎤 Voice message</span>
+        }
+      </div>
+    );
+  }
+
+  if (msg.type === 'image') {
+    const url = media?.url;
+    const caption = media?.caption;
+    return (
+      <div>
+        {url
+          ? <img src={url} alt="image" style={{ maxWidth:220, maxHeight:220, borderRadius:8, display:'block', cursor:'pointer' }} onClick={() => window.open(url, '_blank')} />
+          : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>📷 Image</span>
+        }
+        {caption && <div style={{ fontSize:12, marginTop:4, color:'#374151' }}>{caption}</div>}
+      </div>
+    );
+  }
+
+  if (msg.type === 'video') {
+    const url = media?.url;
+    const caption = media?.caption;
+    return (
+      <div>
+        {url
+          ? <video controls style={{ maxWidth:220, maxHeight:180, borderRadius:8, display:'block' }} src={url} />
+          : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>🎥 Video</span>
+        }
+        {caption && <div style={{ fontSize:12, marginTop:4, color:'#374151' }}>{caption}</div>}
+      </div>
+    );
+  }
+
+  if (msg.type === 'document') {
+    const url = media?.url;
+    const filename = media?.caption || 'Document';
+    return (
+      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,color:'#3b82f6'}}>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        </svg>
+        {url
+          ? <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize:13, color:'#3b82f6', textDecoration:'underline', wordBreak:'break-all' }}>{filename}</a>
+          : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>📎 {filename}</span>
+        }
+      </div>
+    );
+  }
+
+  // Default: plain text — render newlines and bold (*text*)
+  const formatted = (msg.body || '').replace(/\*(.*?)\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+  return <span style={{ fontSize:14, lineHeight:1.5 }} dangerouslySetInnerHTML={{ __html: formatted }} />;
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function WhatsAppManager() {
   const [page, setPage] = useState('dashboard');
@@ -706,7 +778,9 @@ export function WhatsAppManager() {
                     : messages.length === 0 ? <div className="was-no-msgs">No messages yet</div>
                     : messages.map(msg => (
                       <div key={msg.id} className={`was-msg was-msg--${msg.direction}`}>
-                        <div className="was-msg-bubble">{msg.body}</div>
+                        <div className="was-msg-bubble">
+                          <MsgContent msg={msg} />
+                        </div>
                         <div className="was-msg-meta">
                           {formatTime(msg.sent_at||msg.createdAt)}
                           {msg.direction==='outbound' && <span style={{color:msg.status==='read'?'#53bdeb':'#9ca3af'}}>{msg.status==='read'||msg.status==='delivered'?' ✓✓':' ✓'}</span>}
