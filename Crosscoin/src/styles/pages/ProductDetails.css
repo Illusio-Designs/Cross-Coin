@@ -1235,6 +1235,6 @@
   }
 }
 
-@media (max-width: 384px) {
+@media (max-width: 400px) {
   .pdt-fit-row { max-width: 240px; }
 }
