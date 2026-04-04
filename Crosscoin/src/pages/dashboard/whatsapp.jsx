@@ -1,7 +1,7 @@
 // When accessed directly, render full dashboard shell
 export { default } from './index';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Modal, Button } from '../../components/ui';
 import Dropdown from '../../components/ui/Dropdown';
 import Loader from '../../components/common/Loader';
@@ -114,6 +114,226 @@ function PhonePreview({ tpl }) {
   );
 }
 
+// ─── Message Content Renderer ─────────────────────────────────────────────────
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+
+function getProxyUrl(mediaId, brandId = 1) {
+  if (!mediaId) return null;
+  // If it's already a full URL (old messages), return as-is
+  if (mediaId.startsWith('http')) return mediaId;
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : '';
+  return `${API_BASE}/api/whatsapp/media/${mediaId}?brandId=${brandId}&token=${encodeURIComponent(token)}`;
+}
+
+// WhatsApp-style audio player with waveform bars
+function AudioPlayer({ src }) {
+  const audioRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+
+  const toggle = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing) { a.pause(); } else { a.play().catch(() => {}); }
+  };
+
+  const fmt = (s) => {
+    if (!s || isNaN(s)) return '0:00';
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  const seek = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    if (audioRef.current) audioRef.current.currentTime = ratio * duration;
+  };
+
+  // Fake waveform bars (30 bars with random heights, seeded by src)
+  const bars = useMemo(() => {
+    const seed = (src || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    return Array.from({ length: 30 }, (_, i) => {
+      const h = 20 + ((seed * (i + 1) * 7919) % 60);
+      return Math.max(8, Math.min(h, 28));
+    });
+  }, [src]);
+
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:220, maxWidth:280 }}>
+      <audio
+        ref={audioRef}
+        src={src}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => { setPlaying(false); setProgress(0); setCurrentTime(0); }}
+        onTimeUpdate={() => {
+          const a = audioRef.current;
+          if (a && a.duration) {
+            setCurrentTime(a.currentTime);
+            setProgress(a.currentTime / a.duration);
+          }
+        }}
+        onLoadedMetadata={() => { if (audioRef.current) setDuration(audioRef.current.duration); }}
+        style={{ display:'none' }}
+      />
+
+      {/* Play/Pause button */}
+      <button
+        onClick={toggle}
+        style={{
+          width:36, height:36, borderRadius:'50%', border:'none', cursor:'pointer',
+          background:'#25D366', display:'flex', alignItems:'center', justifyContent:'center',
+          flexShrink:0, boxShadow:'0 1px 3px rgba(0,0,0,0.2)'
+        }}
+      >
+        {playing
+          ? <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          : <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><polygon points="5,3 19,12 5,21"/></svg>
+        }
+      </button>
+
+      {/* Waveform + scrubber */}
+      <div style={{ flex:1, display:'flex', flexDirection:'column', gap:4 }}>
+        <div
+          onClick={seek}
+          style={{ display:'flex', alignItems:'center', gap:1.5, height:28, cursor:'pointer' }}
+        >
+          {bars.map((h, i) => {
+            const filled = i / bars.length <= progress;
+            return (
+              <div
+                key={i}
+                style={{
+                  width:3, height:h, borderRadius:2, flexShrink:0,
+                  background: filled ? '#25D366' : '#d1d5db',
+                  transition:'background 0.1s',
+                }}
+              />
+            );
+          })}
+        </div>
+        <div style={{ fontSize:10, color:'#9ca3af', display:'flex', justifyContent:'space-between' }}>
+          <span>{fmt(currentTime)}</span>
+          <span>{fmt(duration)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Lightbox for images
+function ImageMsg({ src, caption }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div>
+        <img
+          src={src}
+          alt={caption || 'image'}
+          onClick={() => setOpen(true)}
+          style={{ maxWidth:220, maxHeight:220, borderRadius:8, display:'block', cursor:'zoom-in', objectFit:'cover' }}
+          onError={e => { e.target.style.display='none'; }}
+        />
+        {caption && <div style={{ fontSize:12, marginTop:4, color:'#374151' }}>{caption}</div>}
+      </div>
+      {open && (
+        <div
+          onClick={() => setOpen(false)}
+          style={{
+            position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:9999,
+            display:'flex', alignItems:'center', justifyContent:'center', cursor:'zoom-out'
+          }}
+        >
+          <img src={src} alt={caption || 'image'} style={{ maxWidth:'90vw', maxHeight:'90vh', borderRadius:8, objectFit:'contain' }} />
+        </div>
+      )}
+    </>
+  );
+}
+
+function MsgContent({ msg, brandId = 1 }) {
+  // Try to parse JSON body (media messages store metadata as JSON)
+  let media = null;
+  if (msg.type !== 'text' && msg.body) {
+    try { media = JSON.parse(msg.body); } catch (_) {}
+  }
+
+  // Resolve the media URL — use proxy for IDs, direct for full URLs
+  const rawUrl = media?.url;
+  const proxyUrl = rawUrl ? getProxyUrl(rawUrl, brandId) : null;
+
+  if (msg.type === 'audio') {
+    return proxyUrl
+      ? <AudioPlayer src={proxyUrl} />
+      : (
+        <div style={{ display:'flex', alignItems:'center', gap:8, color:'#6b7280', fontSize:13 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          </svg>
+          <span style={{ fontStyle:'italic' }}>🎤 Voice message</span>
+        </div>
+      );
+  }
+
+  if (msg.type === 'image') {
+    return proxyUrl
+      ? <ImageMsg src={proxyUrl} caption={media?.caption} />
+      : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>📷 Image</span>;
+  }
+
+  if (msg.type === 'video') {
+    return proxyUrl
+      ? (
+        <div>
+          <video
+            controls
+            style={{ maxWidth:220, maxHeight:180, borderRadius:8, display:'block', background:'#000' }}
+            src={proxyUrl}
+          />
+          {media?.caption && <div style={{ fontSize:12, marginTop:4, color:'#374151' }}>{media.caption}</div>}
+        </div>
+      )
+      : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>🎥 Video</span>;
+  }
+
+  if (msg.type === 'document') {
+    const filename = media?.caption || 'Document';
+    return (
+      <a
+        href={proxyUrl || '#'}
+        target="_blank"
+        rel="noopener noreferrer"
+        download={filename}
+        style={{ display:'flex', alignItems:'center', gap:8, textDecoration:'none', color:'inherit' }}
+      >
+        <div style={{
+          width:40, height:40, borderRadius:8, background:'#eff6ff',
+          display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0
+        }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div>
+          <div style={{ fontSize:13, fontWeight:500, color:'#1d4ed8', wordBreak:'break-all' }}>{filename}</div>
+          <div style={{ fontSize:11, color:'#6b7280' }}>Tap to download</div>
+        </div>
+      </a>
+    );
+  }
+
+  // Default: plain text — render WhatsApp formatting
+  const formatted = (msg.body || '')
+    .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+    .replace(/_(.*?)_/g, '<em>$1</em>')
+    .replace(/~(.*?)~/g, '<s>$1</s>')
+    .replace(/\n/g, '<br>');
+  return <span style={{ fontSize:14, lineHeight:1.5 }} dangerouslySetInnerHTML={{ __html: formatted }} />;
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function WhatsAppManager() {
   const [page, setPage] = useState('dashboard');
@@ -148,6 +368,29 @@ export function WhatsAppManager() {
   const [testPhone, setTestPhone] = useState('');
   const [testLoading, setTestLoading] = useState(false);
   const [seedLoading, setSeedLoading] = useState(false);
+  // Canned Responses
+  const [cannedResponses, setCannedResponses] = useState([]);
+  const [cannedLoading, setCannedLoading] = useState(false);
+  const [cannedForm, setCannedForm] = useState({ shortcut: '', title: '', body: '' });
+  const [cannedEditId, setCannedEditId] = useState(null);
+  const [cannedModal, setCannedModal] = useState(false);
+  // Broadcasts
+  const [broadcasts, setBroadcasts] = useState([]);
+  const [broadcastLoading, setBroadcastLoading] = useState(false);
+  const [broadcastForm, setBroadcastForm] = useState({ name: '', templateName: '', audienceFilter: '' });
+  const [broadcastModal, setBroadcastModal] = useState(false);
+  const [broadcastRunning, setBroadcastRunning] = useState(null);
+  // SLA Analytics
+  const [slaStats, setSlaStats] = useState(null);
+  const [slaLoading, setSlaLoading] = useState(false);
+  // Product / Catalogue send
+  const [productModal, setProductModal] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
+  const [productList, setProductList] = useState([]);
+  const [productLoading, setProductLoading] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [sendMode, setSendMode] = useState('single'); // 'single' | 'catalogue'
+  const [sendingProduct, setSendingProduct] = useState(false);
 
   const messagesEndRef = useRef(null);
   const pollRef = useRef(null);
@@ -285,6 +528,165 @@ export function WhatsAppManager() {
     return () => clearInterval(pollRef.current);
   }, [activeConv?.id]);
 
+  // Fetch canned responses
+  const fetchCannedResponses = async () => {
+    setCannedLoading(true);
+    try {
+      const data = await whatsappService.getCannedResponses(brandId);
+      if (data.success) setCannedResponses(data.cannedResponses || []);
+    } catch { }
+    setCannedLoading(false);
+  };
+
+  const saveCannedResponse = async (e) => {
+    e.preventDefault();
+    if (!cannedForm.shortcut || !cannedForm.title || !cannedForm.body) { showError('fieldRequired'); return; }
+    try {
+      if (cannedEditId) {
+        await whatsappService.updateCannedResponse(cannedEditId, cannedForm);
+      } else {
+        await whatsappService.createCannedResponse({ ...cannedForm, brandId });
+      }
+      showSuccess('saved');
+      setCannedModal(false);
+      setCannedEditId(null);
+      setCannedForm({ shortcut: '', title: '', body: '' });
+      fetchCannedResponses();
+    } catch (err) { showError('saveFailed', err.message); }
+  };
+
+  const deleteCannedResponse = async (id) => {
+    try {
+      await whatsappService.deleteCannedResponse(id);
+      showSuccess('deleted');
+      fetchCannedResponses();
+    } catch { showError('deleteFailed'); }
+  };
+
+  // Fetch broadcasts
+  const fetchBroadcasts = async () => {
+    setBroadcastLoading(true);
+    try {
+      const data = await whatsappService.getBroadcasts(brandId);
+      if (data.success) setBroadcasts(data.broadcasts || []);
+    } catch { }
+    setBroadcastLoading(false);
+  };
+
+  const createBroadcast = async (e) => {
+    e.preventDefault();
+    if (!broadcastForm.name || !broadcastForm.templateName) { showError('fieldRequired'); return; }
+    try {
+      await whatsappService.createBroadcast({ ...broadcastForm, brandId });
+      showSuccess('broadcastCreated');
+      setBroadcastModal(false);
+      setBroadcastForm({ name: '', templateName: '', audienceFilter: '' });
+      fetchBroadcasts();
+    } catch (err) { showError('saveFailed', err.message); }
+  };
+
+  const runBroadcast = async (id) => {
+    setBroadcastRunning(id);
+    try {
+      const data = await whatsappService.runBroadcast(id);
+      if (data.success) { showSuccess('broadcastStarted'); fetchBroadcasts(); }
+      else showError('sendFailed', data.message);
+    } catch (err) { showError('sendFailed', err.message); }
+    setBroadcastRunning(null);
+  };
+
+  // Fetch SLA stats
+  const fetchSLAStats = async () => {
+    setSlaLoading(true);
+    try {
+      const data = await whatsappService.getSLAStats(brandId);
+      if (data.success) setSlaStats(data.sla);
+    } catch { }
+    setSlaLoading(false);
+  };
+
+  // Canned response shortcut in reply box
+  const handleReplyChange = (val) => {
+    setReply(val);
+    if (val.startsWith('/')) {
+      const match = cannedResponses.find(c => c.shortcut === val.trim());
+      if (match) setReply(match.body);
+    }
+  };
+
+  useEffect(() => { if (page === 'canned') fetchCannedResponses(); }, [page, brandId]);
+  useEffect(() => { if (page === 'broadcast') fetchBroadcasts(); }, [page, brandId]);
+  useEffect(() => { if (page === 'analytics') { fetchStats(); fetchSLAStats(); } }, [page, brandId]);
+
+  // Search products for send-product modal
+  const searchProducts = async (q) => {
+    setProductLoading(true);
+    try {
+      const { productService } = await import('../../services');
+      const data = await productService.getAllProducts(1, 20, q);
+      setProductList(data?.products || data?.rows || []);
+    } catch { setProductList([]); }
+    setProductLoading(false);
+  };
+
+  useEffect(() => {
+    if (!productModal) return;
+    const t = setTimeout(() => searchProducts(productSearch), 300);
+    return () => clearTimeout(t);
+  }, [productSearch, productModal]);
+
+  const openProductModal = (mode) => {
+    setSendMode(mode);
+    setSelectedProducts([]);
+    setProductSearch('');
+    setProductList([]);
+    setProductModal(true);
+    searchProducts('');
+  };
+
+  const toggleProduct = (p) => {
+    if (sendMode === 'single') {
+      setSelectedProducts([p]);
+    } else {
+      setSelectedProducts(prev =>
+        prev.find(x => x.id === p.id) ? prev.filter(x => x.id !== p.id) : [...prev, p]
+      );
+    }
+  };
+
+  const confirmSendProduct = async () => {
+    if (!selectedProducts.length || !activeConv) return;
+    setSendingProduct(true);
+    try {
+      if (sendMode === 'single') {
+        // Pass productId — backend auto-resolves to {productId}_{variationId} matching catalogue
+        await whatsappService.sendProduct(activeConv.id, selectedProducts[0].id, brandId);
+        showSuccess('messageSent');
+      } else {
+        // Pass productIds array — backend resolves each to first variation retailer ID
+        await whatsappService.sendCatalogue(
+          activeConv.id,
+          null,                                    // retailerIds — let backend resolve
+          selectedProducts.map(p => p.id),         // productIds
+          null, null, brandId
+        );
+        showSuccess('messageSent');
+      }
+      setProductModal(false);
+      fetchMessages(activeConv);
+    } catch (err) { showError('sendFailed', err.message); }
+    setSendingProduct(false);
+  };
+
+  // Seed canned responses
+  const seedCannedResponses = async () => {
+    try {
+      const data = await whatsappService.seedCannedResponses(brandId);
+      showSuccess('saved', `Created: ${data.summary?.created} · Skipped: ${data.summary?.skipped}`);
+      fetchCannedResponses();
+    } catch (err) { showError('loadingFailed', err.message); }
+  };
+
   const filteredConvs = conversations.filter(c =>
     !convSearch || (c.customer_name || c.customer_phone || '').toLowerCase().includes(convSearch.toLowerCase())
   );
@@ -299,12 +701,14 @@ export function WhatsAppManager() {
   });
 
   const NAV = [
-    { k:'dashboard',  label:'Dashboard',      icon: IC.dash,    section: 'Main' },
-    { k:'inbox',      label:'Conversations',   icon: IC.msg,     badge: unreadCount || null },
-    { k:'templates',  label:'Templates',       icon: IC.tpl,     badge: templateList.length || null },
-    { k:'library',    label:'Library',         icon: IC.eye,     section: 'Messaging' },
-    { k:'test',       label:'Test Message',    icon: IC.phone },
-    { k:'analytics',  label:'Analytics',       icon: IC.bar,     section: 'Account' },
+    { k:'dashboard',  label:'Dashboard',        icon: IC.dash,    section: 'Main' },
+    { k:'inbox',      label:'Conversations',     icon: IC.msg,     badge: unreadCount || null },
+    { k:'templates',  label:'Templates',         icon: IC.tpl,     badge: templateList.length || null },
+    { k:'library',    label:'Library',           icon: IC.eye,     section: 'Messaging' },
+    { k:'canned',     label:'Canned Responses',  icon: IC.tag },
+    { k:'broadcast',  label:'Broadcast',         icon: IC.send },
+    { k:'test',       label:'Test Message',      icon: IC.phone },
+    { k:'analytics',  label:'Analytics',         icon: IC.bar,     section: 'Account' },
   ];
 
   return (
@@ -599,7 +1003,9 @@ export function WhatsAppManager() {
                     : messages.length === 0 ? <div className="was-no-msgs">No messages yet</div>
                     : messages.map(msg => (
                       <div key={msg.id} className={`was-msg was-msg--${msg.direction}`}>
-                        <div className="was-msg-bubble">{msg.body}</div>
+                        <div className="was-msg-bubble">
+                          <MsgContent msg={msg} brandId={brandId} />
+                        </div>
                         <div className="was-msg-meta">
                           {formatTime(msg.sent_at||msg.createdAt)}
                           {msg.direction==='outbound' && <span style={{color:msg.status==='read'?'#53bdeb':'#9ca3af'}}>{msg.status==='read'||msg.status==='delivered'?' ✓✓':' ✓'}</span>}
@@ -609,13 +1015,34 @@ export function WhatsAppManager() {
                     <div ref={messagesEndRef} />
                   </div>
                   {activeConv.status === 'open' ? (
-                    <form className="was-reply-box" onSubmit={sendReply}>
-                      <textarea className="was-reply-input" placeholder="Type a message…" value={reply}
-                        onChange={e => setReply(e.target.value)}
-                        onKeyDown={e => { if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); sendReply(e); } }}
-                        rows={2} />
-                      <button type="submit" className="was-send-btn" disabled={sending||!reply.trim()}>{IC.send}</button>
-                    </form>
+                    <div>
+                      {/* Action bar — product/catalogue send */}
+                      <div style={{ display:'flex', gap:6, padding:'6px 12px', borderTop:'1px solid #f3f4f6', background:'#fafafa' }}>
+                        <button
+                          className="was-btn-secondary"
+                          style={{ fontSize:11, padding:'3px 10px', display:'flex', alignItems:'center', gap:4 }}
+                          onClick={() => openProductModal('single')}
+                          title="Send a single product card"
+                        >
+                          🛍️ Send Product
+                        </button>
+                        <button
+                          className="was-btn-secondary"
+                          style={{ fontSize:11, padding:'3px 10px', display:'flex', alignItems:'center', gap:4 }}
+                          onClick={() => openProductModal('catalogue')}
+                          title="Send multiple products as catalogue"
+                        >
+                          📦 Send Catalogue
+                        </button>
+                      </div>
+                      <form className="was-reply-box" onSubmit={sendReply}>
+                        <textarea className="was-reply-input" placeholder="Type a message… (type /shortcut for canned responses)" value={reply}
+                          onChange={e => handleReplyChange(e.target.value)}
+                          onKeyDown={e => { if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); sendReply(e); } }}
+                          rows={2} />
+                        <button type="submit" className="was-send-btn" disabled={sending||!reply.trim()}>{IC.send}</button>
+                      </form>
+                    </div>
                   ) : (
                     <div className="was-resolved-bar">This conversation is resolved</div>
                   )}
@@ -736,19 +1163,163 @@ export function WhatsAppManager() {
           </div>
         )}
 
+        {/* ── CANNED RESPONSES ── */}
+        {page === 'canned' && (
+          <div className="was-scroll">
+            <div className="was-content-pad">
+              <div className="was-page-head">
+                <div>
+                  <h2 className="was-page-title">Canned Responses</h2>
+                  <span className="was-page-sub">Type /shortcut in the inbox to auto-fill</span>
+                </div>
+                <button className="was-btn-primary" onClick={() => { setCannedEditId(null); setCannedForm({ shortcut:'', title:'', body:'' }); setCannedModal(true); }}>
+                  <span style={{width:14,height:14,display:'flex'}}>{IC.add}</span>New Response
+                </button>
+                <button className="was-btn-secondary" onClick={seedCannedResponses} title="Load 20 default ecommerce responses">
+                  <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>Seed Defaults
+                </button>
+              </div>
+              {cannedLoading ? <div style={{padding:40,textAlign:'center'}}><Loader /></div> : (
+                <div className="was-tpl-grid">
+                  {cannedResponses.length === 0 ? (
+                    <div className="was-empty-state" style={{gridColumn:'1/-1'}}>
+                      <div style={{width:36,height:36,color:'#d1d5db'}}>{IC.tag}</div>
+                      <p>No canned responses yet. Create one to speed up replies.</p>
+                    </div>
+                  ) : cannedResponses.map(cr => (
+                    <div key={cr.id} className="was-tpl-card">
+                      <div className="was-tpl-card-top">
+                        <span className="was-cat-badge was-cat--utility">{cr.shortcut}</span>
+                      </div>
+                      <div className="was-tpl-name">{cr.title}</div>
+                      <div className="was-tpl-body">{cr.body}</div>
+                      <div className="was-tpl-foot" style={{gap:8}}>
+                        <button className="was-btn-secondary" style={{fontSize:11,padding:'3px 10px'}} onClick={() => { setCannedEditId(cr.id); setCannedForm({ shortcut: cr.shortcut, title: cr.title, body: cr.body }); setCannedModal(true); }}>Edit</button>
+                        <button className="was-btn-secondary" style={{fontSize:11,padding:'3px 10px',color:'#ef4444'}} onClick={() => deleteCannedResponse(cr.id)}>Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── BROADCAST ── */}
+        {page === 'broadcast' && (
+          <div className="was-scroll">
+            <div className="was-content-pad">
+              <div className="was-page-head">
+                <div>
+                  <h2 className="was-page-title">Broadcast Campaigns</h2>
+                  <span className="was-page-sub">Send a template to all opted-in customers</span>
+                </div>
+                <button className="was-btn-primary" onClick={() => { setBroadcastForm({ name:'', templateName:'', audienceFilter:'' }); setBroadcastModal(true); }}>
+                  <span style={{width:14,height:14,display:'flex'}}>{IC.add}</span>New Campaign
+                </button>
+              </div>
+              {broadcastLoading ? <div style={{padding:40,textAlign:'center'}}><Loader /></div> : (
+                <div className="was-tpl-grid">
+                  {broadcasts.length === 0 ? (
+                    <div className="was-empty-state" style={{gridColumn:'1/-1'}}>
+                      <div style={{width:36,height:36,color:'#d1d5db'}}>{IC.send}</div>
+                      <p>No broadcasts yet. Create a campaign to reach all your customers at once.</p>
+                    </div>
+                  ) : broadcasts.map(b => {
+                    const statusColor = { draft:'#9ca3af', running:'#f59e0b', done:'#22c55e', failed:'#ef4444' }[b.status] || '#9ca3af';
+                    return (
+                      <div key={b.id} className="was-tpl-card">
+                        <div className="was-tpl-card-top">
+                          <span className="was-cat-badge was-cat--marketing">{b.template_name}</span>
+                          <span style={{fontSize:11,color:statusColor,fontWeight:600}}>{b.status}</span>
+                        </div>
+                        <div className="was-tpl-name">{b.name}</div>
+                        <div className="was-tpl-body" style={{fontSize:12}}>
+                          Recipients: {b.total_recipients} · Sent: {b.sent_count} · Failed: {b.failed_count}
+                        </div>
+                        <div className="was-tpl-foot">
+                          {(b.status === 'draft' || b.status === 'failed') && (
+                            <button className="was-btn-primary" style={{fontSize:11,padding:'4px 12px'}} disabled={broadcastRunning === b.id} onClick={() => runBroadcast(b.id)}>
+                              {broadcastRunning === b.id ? 'Starting…' : '▶ Run'}
+                            </button>
+                          )}
+                          {b.completed_at && <span style={{fontSize:11,color:'#9ca3af'}}>Done {new Date(b.completed_at).toLocaleDateString('en-IN')}</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ── ANALYTICS ── */}
         {page === 'analytics' && (
           <div className="was-scroll">
             <div className="was-content-pad">
               <div className="was-page-head">
                 <h2 className="was-page-title">Analytics</h2>
-                <span className="was-page-sub">Coming soon — detailed message analytics</span>
+                <span className="was-page-sub">Message performance and SLA metrics</span>
               </div>
-              <div className="was-coming-soon">
-                <div style={{width:52,height:52,color:'#d1d5db'}}>{IC.bar}</div>
-                <h3>Analytics Coming Soon</h3>
-                <p>Detailed delivery, open rate, and campaign analytics will be available here.</p>
+
+              {/* Stats row */}
+              <div className="was-stats-grid">
+                {statsLoading ? <div style={{padding:20}}><Loader /></div> : [
+                  { label:'Messages Sent',    val: stats ? String(stats.sentMessages) : '—',      color:'#25D366', icon: IC.send },
+                  { label:'Delivery Rate',    val: stats ? `${stats.deliveryRate}%` : '—',        color:'#3b82f6', icon: IC.check },
+                  { label:'Read Rate',        val: stats ? `${stats.readRate}%` : '—',            color:'#f59e0b', icon: IC.eye },
+                  { label:'Avg Response',     val: slaStats?.avgFirstResponseMinutes ? `${slaStats.avgFirstResponseMinutes}m` : '—', color:'#8b5cf6', icon: IC.phone },
+                ].map(s => (
+                  <div key={s.label} className="was-stat-card">
+                    <div className="was-stat-top">
+                      <span className="was-stat-label">{s.label}</span>
+                      <span className="was-stat-icon" style={{ background: s.color + '20', color: s.color }}>{s.icon}</span>
+                    </div>
+                    <div className="was-stat-num">{s.val}</div>
+                  </div>
+                ))}
               </div>
+
+              {/* 7-day chart */}
+              <div className="was-dash-card" style={{marginTop:20}}>
+                <div className="was-dash-card-head"><span className="was-dash-card-title">Messages — Last 7 Days</span></div>
+                <div className="was-bar-chart">
+                  {statsLoading ? <Loader /> : (() => {
+                    const days = stats?.last7Days || [];
+                    const maxVal = Math.max(...days.map(d => parseInt(d.count) || 0), 1);
+                    return days.length === 0
+                      ? <div style={{color:'#9ca3af',fontSize:13,padding:'20px 0'}}>No data yet</div>
+                      : days.map(d => {
+                        const val = parseInt(d.count) || 0;
+                        const label = new Date(d.day).toLocaleDateString('en-IN', { weekday:'short' });
+                        return (
+                          <div key={d.day} className="was-bar-col">
+                            <span className="was-bar-val">{val}</span>
+                            <div className="was-bar" style={{ height: Math.round((val/maxVal)*80) + 'px' }} />
+                            <span className="was-bar-lbl">{label}</span>
+                          </div>
+                        );
+                      });
+                  })()}
+                </div>
+              </div>
+
+              {/* Tag stats */}
+              {slaStats?.tagStats?.length > 0 && (
+                <div className="was-dash-card" style={{marginTop:20}}>
+                  <div className="was-dash-card-head"><span className="was-dash-card-title">Conversations by Tag</span></div>
+                  <div className="was-activity">
+                    {slaStats.tagStats.map((t, i) => (
+                      <div key={i} className="was-act-item">
+                        <span className="was-act-dot was-act-dot--blue" />
+                        <span className="was-act-text"><strong>{t.tags}</strong></span>
+                        <span className="was-act-time">{t.count} convs</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -792,6 +1363,124 @@ export function WhatsAppManager() {
             <Button variant="primary" type="submit" disabled={formLoading}>{formLoading?'Submitting…':'Submit to Meta'}</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* ── Canned Response Modal ── */}
+      <Modal isOpen={cannedModal} onClose={() => setCannedModal(false)} title={cannedEditId ? 'Edit Canned Response' : 'New Canned Response'} closeOnOverlayClick={false}>
+        <form onSubmit={saveCannedResponse} className="seo-form">
+          <div className="modal-body">
+            <div className="dm-2col">
+              <div className="dm-field">
+                <label className="dm-label">Shortcut *</label>
+                <input className="dm-input" value={cannedForm.shortcut} onChange={e => setCannedForm(p => ({...p, shortcut: e.target.value.toLowerCase().replace(/\s/g,'')}))} placeholder="/track" required />
+              </div>
+              <div className="dm-field">
+                <label className="dm-label">Title *</label>
+                <input className="dm-input" value={cannedForm.title} onChange={e => setCannedForm(p => ({...p, title: e.target.value}))} placeholder="Order Tracking Reply" required />
+              </div>
+            </div>
+            <div className="dm-field">
+              <label className="dm-label">Message Body *</label>
+              <textarea className="dm-input dm-textarea" rows={4} value={cannedForm.body} onChange={e => setCannedForm(p => ({...p, body: e.target.value}))} required />
+            </div>
+          </div>
+          <div className="modal-footer">
+            <Button variant="secondary" type="button" onClick={() => setCannedModal(false)}>Cancel</Button>
+            <Button variant="primary" type="submit">Save</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── Broadcast Modal ── */}
+      <Modal isOpen={broadcastModal} onClose={() => setBroadcastModal(false)} title="New Broadcast Campaign" closeOnOverlayClick={false}>
+        <form onSubmit={createBroadcast} className="seo-form">
+          <div className="modal-body">
+            <div className="was-modal-notice">Broadcasts are sent to all opted-in customers. Only use approved templates.</div>
+            <div className="dm-field">
+              <label className="dm-label">Campaign Name *</label>
+              <input className="dm-input" value={broadcastForm.name} onChange={e => setBroadcastForm(p => ({...p, name: e.target.value}))} placeholder="Summer Sale 2025" required />
+            </div>
+            <div className="dm-field">
+              <label className="dm-label">Template Name *</label>
+              <input className="dm-input" value={broadcastForm.templateName} onChange={e => setBroadcastForm(p => ({...p, templateName: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,'')}))} placeholder="cart_abandoned" required />
+            </div>
+            <div className="dm-field">
+              <label className="dm-label">Audience Filter (optional)</label>
+              <input className="dm-input" value={broadcastForm.audienceFilter} onChange={e => setBroadcastForm(p => ({...p, audienceFilter: e.target.value}))} placeholder='e.g. {"tags":"vip"}' />
+            </div>
+          </div>
+          <div className="modal-footer">
+            <Button variant="secondary" type="button" onClick={() => setBroadcastModal(false)}>Cancel</Button>
+            <Button variant="primary" type="submit">Create Campaign</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── Product / Catalogue Send Modal ── */}
+      <Modal isOpen={productModal} onClose={() => setProductModal(false)} title={sendMode === 'single' ? 'Send Product Card' : 'Send Catalogue'} closeOnOverlayClick={false}>
+        <div className="modal-body">
+          <p style={{ fontSize:13, color:'#6b7280', marginBottom:12 }}>
+            {sendMode === 'single'
+              ? 'Select one product to send as an interactive card. Customer can tap to view and order.'
+              : 'Select multiple products to send as a browsable catalogue. Max 30 items.'}
+          </p>
+          <input
+            className="dm-input"
+            placeholder="Search products…"
+            value={productSearch}
+            onChange={e => setProductSearch(e.target.value)}
+            style={{ marginBottom:12 }}
+          />
+          <div style={{ maxHeight:320, overflowY:'auto', display:'flex', flexDirection:'column', gap:6 }}>
+            {productLoading
+              ? <div style={{ textAlign:'center', padding:20 }}><Loader /></div>
+              : productList.length === 0
+                ? <div style={{ textAlign:'center', color:'#9ca3af', fontSize:13, padding:20 }}>No products found</div>
+                : productList.map(p => {
+                  const selected = !!selectedProducts.find(x => x.id === p.id);
+                  const price = p.ProductVariations?.[0]?.price || p.price || '—';
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => toggleProduct(p)}
+                      style={{
+                        display:'flex', alignItems:'center', gap:10, padding:'8px 10px',
+                        borderRadius:8, cursor:'pointer', border:`1.5px solid ${selected ? '#25D366' : '#e5e7eb'}`,
+                        background: selected ? '#f0fdf4' : '#fff', transition:'all 0.15s'
+                      }}
+                    >
+                      <div style={{
+                        width:18, height:18, borderRadius:4, border:`2px solid ${selected ? '#25D366' : '#d1d5db'}`,
+                        background: selected ? '#25D366' : 'transparent', flexShrink:0,
+                        display:'flex', alignItems:'center', justifyContent:'center'
+                      }}>
+                        {selected && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:13, fontWeight:500, color:'#111827', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</div>
+                        <div style={{ fontSize:11, color:'#6b7280' }}>₹{price} · ID: {p.id}</div>
+                      </div>
+                    </div>
+                  );
+                })
+            }
+          </div>
+          {selectedProducts.length > 0 && (
+            <div style={{ marginTop:10, fontSize:12, color:'#25D366', fontWeight:500 }}>
+              {selectedProducts.length} product{selectedProducts.length > 1 ? 's' : ''} selected
+            </div>
+          )}
+        </div>
+        <div className="modal-footer">
+          <button className="was-btn-secondary" onClick={() => setProductModal(false)}>Cancel</button>
+          <button
+            className="was-btn-primary"
+            disabled={!selectedProducts.length || sendingProduct}
+            onClick={confirmSendProduct}
+          >
+            {sendingProduct ? 'Sending…' : `Send ${sendMode === 'single' ? 'Product' : 'Catalogue'}`}
+          </button>
+        </div>
       </Modal>
 
     </div>

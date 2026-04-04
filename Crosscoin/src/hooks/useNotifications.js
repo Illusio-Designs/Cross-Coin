@@ -74,9 +74,14 @@ export function useNotifications() {
         }
       }
 
-      // New WhatsApp messages
+      // New WhatsApp messages — only inbound (customer messages)
       for (const conv of (data.whatsapp || [])) {
-        const key = `${conv.id}-${conv.last_message_at}`;
+        // The poll endpoint already filters for inbound messages via the Messages include.
+        // Use the inbound message's createdAt as the dedup key so outbound replies
+        // on the same conversation never re-trigger a notification.
+        const inboundMsg = conv.Messages?.[0];
+        if (!inboundMsg) continue; // skip if no inbound message (shouldn't happen)
+        const key = `${conv.id}-${inboundMsg.createdAt || conv.last_message_at}`;
         if (!seenIds.current.whatsapp.has(key)) {
           seenIds.current.whatsapp.add(key);
           addNotification('whatsapp', {

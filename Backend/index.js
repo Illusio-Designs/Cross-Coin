@@ -16,8 +16,9 @@ const fs = require('fs');
 const { setupDatabase } = require('./scripts/setupDatabase.js');
 const corsOptions = require('./config/corsConfig.js');
 const { sendFacebookEvent } = require('./integration/facebookPixel.js');
-const { initializeCronJobs } = require('./config/cronJobs.js');
 const { logger, getLoggingConfig } = require('./config/logging.js');
+const { fork } = require('child_process');
+const path = require('path');
 
 // Import routes
 const facebookPixelRouter = require('./integration/facebookPixel.js');
@@ -99,17 +100,12 @@ app.use(cors(corsOptions));
 // Handle preflight requests for all routes
 app.options('*', cors(corsOptions));
 
-// Body parsing middleware with increased limits for production
+// Body parsing middleware — keep limits tight on 2GB server
 app.use(express.json({ 
-    limit: process.env.MAX_FILE_SIZE || '5mb',
-    verify: (req, res, buf) => {
-        req.rawBody = buf;
-    }
+    limit: '1mb',
+    verify: (req, res, buf) => { req.rawBody = buf; }
 }));
-app.use(express.urlencoded({ 
-    extended: true, 
-    limit: process.env.MAX_FILE_SIZE || '5mb' 
-}));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Compression middleware
 app.use(compression());
@@ -134,15 +130,8 @@ app.use((req, res, next) => {
 
 app.use(cookieParser());
 
-// Logging middleware
-const loggingConfig = getLoggingConfig();
-if (process.env.NODE_ENV === 'production') {
-    // In production, use minimal HTTP request logging
-    if (!loggingConfig.disableHttpLogging) {
-        app.use(morgan('combined'));
-    }
-} else {
-    // In development, use detailed logging
+// HTTP request logging — disabled in production to save I/O and memory
+if (process.env.NODE_ENV !== 'production') {
     app.use(morgan('dev'));
 }
 
@@ -358,46 +347,31 @@ const startServer = async () => {
         logger.info(`Environment: ${process.env.NODE_ENV}`);
         logger.info(`Port: ${PORT}`);
         
-        // Monitor memory usage
+        // Memory monitor — warn at 300MB (safe ceiling on 2GB shared server)
+        // API + Worker + MySQL + Redis should all fit under 1.5GB total
         const logMemoryUsage = () => {
             const used = process.memoryUsage();
-            logger.debug('Memory Usage:', {
-                rss: `${Math.round(used.rss / 1024 / 1024)} MB`,
-                heapTotal: `${Math.round(used.heapTotal / 1024 / 1024)} MB`,
-                heapUsed: `${Math.round(used.heapUsed / 1024 / 1024)} MB`,
-                external: `${Math.round(used.external / 1024 / 1024)} MB`
-            });
-            
-            // Warn if memory usage is high
-            const heapUsedMB = used.heapUsed / 1024 / 1024;
-            if (heapUsedMB > 400) {
-                logger.warn('High memory usage detected! Consider restarting the server.');
-                
-                // Force garbage collection if available (requires --expose-gc flag)
-                if (global.gc) {
-                    logger.debug('Running garbage collection...');
-                    global.gc();
-                }
+            const heapUsedMB = Math.round(used.heapUsed / 1024 / 1024);
+            const rssMB = Math.round(used.rss / 1024 / 1024);
+
+            if (heapUsedMB > 300) {
+                logger.warn(`[Memory] HIGH — heap: ${heapUsedMB}MB rss: ${rssMB}MB`);
+                if (global.gc) global.gc();
+            } else {
+                logger.info(`[Memory] heap: ${heapUsedMB}MB rss: ${rssMB}MB`);
             }
         };
+
+        // Check every 30 minutes
+        setInterval(logMemoryUsage, 30 * 60 * 1000);
         
-        // Log memory usage every hour (reduced from 30 minutes)
-        setInterval(logMemoryUsage, 60 * 60 * 1000);
-        
-        // Initialize Redis connection
-        logger.info('Initializing Redis connection...');
+        // Initialize Redis — skip cache flush on boot (wastes memory and time)
         const redisService = require('./services/redisService.js');
         try {
             await redisService.initialize();
-            logger.info('✓ Redis connection initialized');
-
-            // Clear all cache on server start
-            const cacheManager = require('./services/cacheManager.js');
-            await cacheManager.clear();
-            logger.info('✓ Cache cleared on startup');
+            logger.info('✓ Redis connected');
         } catch (error) {
-            logger.warn('Redis initialization failed:', error.message);
-            logger.warn('Caching will be disabled. Ensure Redis is running for optimal performance.');
+            logger.warn('Redis unavailable — caching disabled: ' + error.message);
         }
         
         // Test database connection first
@@ -406,7 +380,7 @@ const startServer = async () => {
         logger.info('✓ Database connection successful');
         
         // Create all tables — only runs when schema version changes
-        const SCHEMA_VERSION = 'v1.3-rbac-roles';
+        const SCHEMA_VERSION = 'v1.4-whatsapp-features';
         let needsSetup = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS schema_version (version VARCHAR(50) PRIMARY KEY, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
@@ -424,15 +398,48 @@ const startServer = async () => {
             logger.info('✓ Database schema up-to-date, skipping setup');
         }
 
-        // Initialize SEO data
-        logger.info('Initializing SEO data...');
-        await initializeSeoData();
-        logger.info('✓ SEO data initialized');
-        
-        // Initialize cron jobs
-        logger.info('Initializing cron jobs...');
-        initializeCronJobs();
-        logger.info('✓ Cron jobs initialized');
+        // Initialize SEO data — only runs once, skipped on subsequent boots
+        // Piggybacks on the schema_version table to avoid a DB query every start
+        try {
+            const [seoRows] = await sequelize.query(`SELECT version FROM schema_version WHERE version = 'seo-init-done' LIMIT 1`);
+            if (!seoRows.length) {
+                logger.info('Initializing SEO data (first time only)...');
+                await initializeSeoData();
+                await sequelize.query(`INSERT IGNORE INTO schema_version (version) VALUES ('seo-init-done')`);
+                logger.info('✓ SEO data initialized');
+            } else {
+                logger.info('✓ SEO data already initialized, skipping');
+            }
+        } catch {
+            // Fallback: run it anyway if the check fails
+            await initializeSeoData();
+        }
+
+        // ── Spawn background worker (separate process) ──────────────────────
+        // Runs all cron jobs in its own process so they never compete with
+        // API request handling. Auto-restarts on crash with backoff.
+        const spawnWorker = () => {
+          const worker = fork(path.join(__dirname, 'worker.js'), [], {
+            env: process.env,
+            silent: false,
+            execArgv: ['--max-old-space-size=256'], // cap worker heap at 256MB
+          });
+
+          worker.on('exit', (code, signal) => {
+            if (signal === 'SIGTERM' || signal === 'SIGINT') return; // intentional shutdown
+            logger.warn(`[Worker] exited (code=${code}), restarting in 10s…`);
+            setTimeout(spawnWorker, 10_000);
+          });
+
+          worker.on('error', (err) => {
+            logger.error('[Worker] spawn error:', err.message);
+          });
+
+          logger.info(`[Worker] started (pid=${worker.pid})`);
+          return worker;
+        };
+
+        let workerProcess = spawnWorker();
         
         // Start server
         const server = app.listen(PORT, () => {
@@ -451,6 +458,11 @@ const startServer = async () => {
                 process.exit(1);
             }, 10000);
             forceExit.unref();
+
+            // Stop worker first
+            if (workerProcess && !workerProcess.killed) {
+                workerProcess.kill('SIGTERM');
+            }
 
             server.close(async () => {
                 try {
