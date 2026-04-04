@@ -628,6 +628,59 @@ exports.deleteCannedResponse = async (req, res) => {
   }
 };
 
+// ─── Seed default canned responses ───────────────────────────────────────────
+exports.seedCannedResponses = async (req, res) => {
+  try {
+    const brandId = parseInt(req.body.brandId) || 1;
+
+    const defaults = [
+      // Order related
+      { shortcut: '/track',      title: 'Track Order',           body: `📦 To track your order, please visit:\nhttps://crosscoin.in/OrderTracking\n\nOr share your order number (e.g. ORD-20240101-0001) and I'll check it for you right away!` },
+      { shortcut: '/orderstatus',title: 'Order Status',          body: `✅ Your order is currently being processed. You'll receive a shipping notification with tracking details once it's dispatched.\n\nUsually takes 1-2 business days. 😊` },
+      { shortcut: '/delay',      title: 'Order Delay',           body: `🙏 We sincerely apologize for the delay in your order. Our team is working on it and it will be dispatched within 24 hours.\n\nWe appreciate your patience!` },
+      { shortcut: '/shipped',    title: 'Order Shipped',         body: `🚚 Great news! Your order has been shipped.\n\nAWB: {{awb}}\nCourier: {{courier}}\n\nTrack here: https://crosscoin.in/OrderTracking` },
+      { shortcut: '/cancel',     title: 'Cancel Order',          body: `We're sorry to hear you'd like to cancel. Please note:\n\n• Orders can be cancelled before dispatch\n• Once shipped, cancellation is not possible\n\nPlease share your order number and we'll check the status for you.` },
+
+      // Returns & Refunds
+      { shortcut: '/return',     title: 'Return Policy',         body: `↩️ *Return Policy*\n\nWe accept returns within *7 days* of delivery for:\n• Wrong product received\n• Damaged/defective item\n\nTo initiate a return, share:\n1. Order number\n2. Photo of the product\n3. Reason for return\n\nRefund is processed within 5-7 business days.` },
+      { shortcut: '/refund',     title: 'Refund Status',         body: `💰 Refunds are processed within *5-7 business days* after we receive the returned item.\n\nThe amount will be credited to your original payment method.\n\nPlease share your order number to check the status.` },
+      { shortcut: '/exchange',   title: 'Exchange Request',      body: `🔄 We'd be happy to help with an exchange!\n\nPlease share:\n1. Your order number\n2. Photo of the item\n3. The size/variant you'd like instead\n\nExchanges are processed within 3-5 business days.` },
+      { shortcut: '/damaged',    title: 'Damaged Product',       body: `😔 We're really sorry you received a damaged product! This is not the experience we want for you.\n\nPlease share:\n1. Order number\n2. Clear photos of the damage\n\nWe'll arrange a replacement or full refund immediately.` },
+
+      // Payment
+      { shortcut: '/payment',    title: 'Payment Methods',       body: `💳 *Payment Options at Cross Coin:*\n\n• UPI (GPay, PhonePe, Paytm)\n• Credit/Debit Card\n• Net Banking\n• Cash on Delivery (COD)\n\nAll online payments are 100% secure. 🔒` },
+      { shortcut: '/cod',        title: 'COD Info',              body: `🏠 *Cash on Delivery is available!*\n\nJust select COD at checkout. Please keep the exact amount ready at the time of delivery.\n\nNote: COD orders may take 1 extra day to process.` },
+      { shortcut: '/paymentfail',title: 'Payment Failed',        body: `❌ Sorry your payment didn't go through! Here's what you can try:\n\n1. Check your bank balance\n2. Try a different payment method\n3. Clear browser cache and retry\n\nIf the amount was deducted but order wasn't placed, it will be auto-refunded in 5-7 days.` },
+
+      // Product & Stock
+      { shortcut: '/size',       title: 'Size Guide',            body: `📏 *Size Guide for Cross Coin Socks:*\n\n• S/M — Fits shoe size 5-8\n• L/XL — Fits shoe size 9-12\n\nWhen in doubt, size up! Our socks have good stretch. 😊\n\nNeed more help? Share your shoe size and I'll recommend the right size.` },
+      { shortcut: '/stock',      title: 'Stock Availability',    body: `🔍 Let me check the stock for you! Please share the product name or link and I'll confirm availability right away.` },
+      { shortcut: '/restock',    title: 'Restock Notification',  body: `🔔 I've noted your interest! We'll notify you on WhatsApp as soon as this product is back in stock.\n\nYou can also add it to your Wishlist on our website to get automatic alerts.` },
+      { shortcut: '/bulk',       title: 'Bulk Order',            body: `📦 *Bulk Orders Welcome!*\n\nFor orders of 10+ pairs, we offer special pricing.\n\nPlease share:\n1. Product name\n2. Quantity needed\n3. Delivery timeline\n\nOur team will get back with a custom quote within 24 hours.` },
+
+      // Shipping
+      { shortcut: '/shipping',   title: 'Shipping Info',         body: `🚚 *Shipping Details:*\n\n• Prepaid orders: FREE shipping\n• COD orders: ₹50 shipping charge\n• Delivery time: 3-7 business days\n• We ship across India 🇮🇳\n\nExpress delivery available in select cities.` },
+      { shortcut: '/address',    title: 'Change Address',        body: `📍 Address can be changed only *before the order is dispatched*.\n\nPlease share your order number and new address quickly and we'll update it for you!` },
+
+      // General
+      { shortcut: '/hi',         title: 'Welcome Greeting',      body: `👋 Hi! Welcome to *Cross Coin* — India's premium sock brand!\n\nHow can I help you today?\n\n• 📦 Track order → type /track\n• ↩️ Return/exchange → type /return\n• 💳 Payment help → type /payment\n• 📏 Size guide → type /size\n\nOr just type your question!` },
+      { shortcut: '/thanks',     title: 'Thank You',             body: `🙏 Thank you for shopping with *Cross Coin*! We hope you love your purchase.\n\nDon't forget to leave us a review — it means the world to us! ⭐\n\nSee you again soon! 😊` },
+    ];
+
+    let created = 0; let skipped = 0;
+    for (const cr of defaults) {
+      const existing = await WhatsappCannedResponse.findOne({ where: { brand_id: brandId, shortcut: cr.shortcut } });
+      if (!existing) {
+        await WhatsappCannedResponse.create({ brand_id: brandId, ...cr });
+        created++;
+      } else { skipped++; }
+    }
+    res.json({ success: true, summary: { created, skipped } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // ─── Broadcast Campaigns ──────────────────────────────────────────────────────
 exports.getBroadcasts = async (req, res) => {
   try {
@@ -731,6 +784,71 @@ exports.getSLAStats = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ─── Send product card to customer (interactive product message) ─────────────
+// Uses Meta's "product" interactive message type — requires catalogue connected
+exports.sendProduct = async (req, res) => {
+  try {
+    const { id } = req.params; // conversation id
+    const { productId, brandId = 1 } = req.body;
+    if (!productId) return res.status(400).json({ success: false, message: 'productId required' });
+
+    const conv = await WhatsappConversation.findByPk(id);
+    if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
+
+    const result = await whatsappService.sendProductCard(conv.customer_phone, productId, brandId);
+
+    const saved = await WhatsappMessage.create({
+      conversation_id: id,
+      wa_message_id:   result?.messages?.[0]?.id || null,
+      direction:       'outbound',
+      type:            'template',
+      body:            JSON.stringify({ type: 'product', productId }),
+      status:          'sent',
+      sent_at:         new Date(),
+    });
+
+    await conv.update({ last_message: '🛍️ Product shared', last_message_at: new Date() });
+    res.json({ success: true, message: saved });
+  } catch (err) {
+    res.status(500).json({ success: false, message: errMsg(err) });
+  }
+};
+
+// ─── Send catalogue section to customer ──────────────────────────────────────
+// Sends up to 30 products from your Meta catalogue as a browsable list
+exports.sendCatalogue = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { productIds, headerText, bodyText, brandId = 1 } = req.body;
+    if (!productIds?.length) return res.status(400).json({ success: false, message: 'productIds required' });
+
+    const conv = await WhatsappConversation.findByPk(id);
+    if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
+
+    const result = await whatsappService.sendCatalogueMessage(
+      conv.customer_phone,
+      productIds,
+      { headerText, bodyText },
+      brandId
+    );
+
+    const saved = await WhatsappMessage.create({
+      conversation_id: id,
+      wa_message_id:   result?.messages?.[0]?.id || null,
+      direction:       'outbound',
+      type:            'template',
+      body:            JSON.stringify({ type: 'catalogue', productIds }),
+      status:          'sent',
+      sent_at:         new Date(),
+    });
+
+    await conv.update({ last_message: `🛍️ Catalogue shared (${productIds.length} products)`, last_message_at: new Date() });
+    res.json({ success: true, message: saved });
+  } catch (err) {
+    res.status(500).json({ success: false, message: errMsg(err) });
   }
 };
 

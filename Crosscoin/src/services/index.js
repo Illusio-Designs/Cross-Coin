@@ -1873,4 +1873,19 @@ export const whatsappService = {
     const response = await adminApi.post('/api/whatsapp/notify/back-in-stock', { productId, brandId });
     return response.data;
   },
+
+  seedCannedResponses: async (brandId = 1) => {
+    const response = await adminApi.post('/api/whatsapp/canned-responses/seed', { brandId });
+    return response.data;
+  },
+
+  sendProduct: async (conversationId, productId, brandId = 1) => {
+    const response = await adminApi.post(`/api/whatsapp/conversations/${conversationId}/send-product`, { productId, brandId });
+    return response.data;
+  },
+
+  sendCatalogue: async (conversationId, productIds, headerText, bodyText, brandId = 1) => {
+    const response = await adminApi.post(`/api/whatsapp/conversations/${conversationId}/send-catalogue`, { productIds, headerText, bodyText, brandId });
+    return response.data;
+  },
 };

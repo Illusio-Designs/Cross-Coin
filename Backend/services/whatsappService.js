@@ -372,6 +372,77 @@ async function sendBroadcast(phones, templateName, paramsArray, brandId = 1, del
   return { sent, failed };
 }
 
+// ─── Send single product card (interactive product message) ──────────────────
+// Requires: Meta catalogue connected + WHATSAPP_CATALOG_ID in brand settings
+async function sendProductCard(phone, productId, brandId = 1) {
+  const { token, phoneNumberId } = await getCredentials(brandId);
+  const catalogId = await settingsHelper.getSetting(brandId, 'WHATSAPP_CATALOG_ID');
+  if (!catalogId) throw new Error('WHATSAPP_CATALOG_ID not configured for brand ' + brandId);
+
+  const to = formatE164(phone);
+  const res = await axios.post(
+    `${GRAPH_API_URL}/${phoneNumberId}/messages`,
+    {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'interactive',
+      interactive: {
+        type: 'product',
+        body: { text: 'Check out this product from Cross Coin 👇' },
+        action: {
+          catalog_id: catalogId,
+          product_retailer_id: String(productId),
+        },
+      },
+    },
+    { headers: authHeader(token) }
+  );
+  return res.data;
+}
+
+// ─── Send catalogue section (multi-product message — up to 30 items) ─────────
+async function sendCatalogueMessage(phone, productIds, opts = {}, brandId = 1) {
+  const { token, phoneNumberId } = await getCredentials(brandId);
+  const catalogId = await settingsHelper.getSetting(brandId, 'WHATSAPP_CATALOG_ID');
+  if (!catalogId) throw new Error('WHATSAPP_CATALOG_ID not configured for brand ' + brandId);
+
+  const to = formatE164(phone);
+  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
+
+  // Meta allows max 30 products per section, max 10 sections
+  const sections = [];
+  const chunkSize = 30;
+  for (let i = 0; i < productIds.length; i += chunkSize) {
+    sections.push({
+      title: i === 0 ? (opts.headerText || `${storeName} Products`) : `More Products`,
+      product_items: productIds.slice(i, i + chunkSize).map(id => ({
+        product_retailer_id: String(id),
+      })),
+    });
+  }
+
+  const res = await axios.post(
+    `${GRAPH_API_URL}/${phoneNumberId}/messages`,
+    {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'interactive',
+      interactive: {
+        type: 'product_list',
+        header: { type: 'text', text: opts.headerText || `${storeName} Collection` },
+        body: { text: opts.bodyText || `Browse our latest products and tap to order directly! 🛍️` },
+        footer: { text: `Powered by ${storeName}` },
+        action: {
+          catalog_id: catalogId,
+          sections,
+        },
+      },
+    },
+    { headers: authHeader(token) }
+  );
+  return res.data;
+}
+
 module.exports = {
   formatE164,
   metaError,
@@ -402,4 +473,7 @@ module.exports = {
   sendPostPurchaseUpsell,
   sendPopupCoupon,
   sendBroadcast,
+  // Catalogue & product
+  sendProductCard,
+  sendCatalogueMessage,
 };

@@ -46,4 +46,11 @@ router.post('/broadcasts/:id/run', isAuthenticated, isAdmin, ctrl.runBroadcast);
 // ── Back-in-stock notifications ───────────────────────────────────────────────
 router.post('/notify/back-in-stock', isAuthenticated, isAdmin, ctrl.notifyBackInStock);
 
+// ── Canned responses seed ─────────────────────────────────────────────────────
+router.post('/canned-responses/seed', isAuthenticated, isAdmin, ctrl.seedCannedResponses);
+
+// ── Send product / catalogue ──────────────────────────────────────────────────
+router.post('/conversations/:id/send-product',   isAuthenticated, isWhatsappManager, ctrl.sendProduct);
+router.post('/conversations/:id/send-catalogue', isAuthenticated, isWhatsappManager, ctrl.sendCatalogue);
+
 module.exports = router;

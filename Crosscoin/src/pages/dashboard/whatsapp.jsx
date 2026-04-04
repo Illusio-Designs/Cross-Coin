@@ -235,6 +235,14 @@ export function WhatsAppManager() {
   // SLA Analytics
   const [slaStats, setSlaStats] = useState(null);
   const [slaLoading, setSlaLoading] = useState(false);
+  // Product / Catalogue send
+  const [productModal, setProductModal] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
+  const [productList, setProductList] = useState([]);
+  const [productLoading, setProductLoading] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [sendMode, setSendMode] = useState('single'); // 'single' | 'catalogue'
+  const [sendingProduct, setSendingProduct] = useState(false);
 
   const messagesEndRef = useRef(null);
   const pollRef = useRef(null);
@@ -461,6 +469,68 @@ export function WhatsAppManager() {
   useEffect(() => { if (page === 'canned') fetchCannedResponses(); }, [page, brandId]);
   useEffect(() => { if (page === 'broadcast') fetchBroadcasts(); }, [page, brandId]);
   useEffect(() => { if (page === 'analytics') { fetchStats(); fetchSLAStats(); } }, [page, brandId]);
+
+  // Search products for send-product modal
+  const searchProducts = async (q) => {
+    setProductLoading(true);
+    try {
+      const { productService } = await import('../../services');
+      const data = await productService.getAllProducts(1, 20, q);
+      setProductList(data?.products || data?.rows || []);
+    } catch { setProductList([]); }
+    setProductLoading(false);
+  };
+
+  useEffect(() => {
+    if (!productModal) return;
+    const t = setTimeout(() => searchProducts(productSearch), 300);
+    return () => clearTimeout(t);
+  }, [productSearch, productModal]);
+
+  const openProductModal = (mode) => {
+    setSendMode(mode);
+    setSelectedProducts([]);
+    setProductSearch('');
+    setProductList([]);
+    setProductModal(true);
+    searchProducts('');
+  };
+
+  const toggleProduct = (p) => {
+    if (sendMode === 'single') {
+      setSelectedProducts([p]);
+    } else {
+      setSelectedProducts(prev =>
+        prev.find(x => x.id === p.id) ? prev.filter(x => x.id !== p.id) : [...prev, p]
+      );
+    }
+  };
+
+  const confirmSendProduct = async () => {
+    if (!selectedProducts.length || !activeConv) return;
+    setSendingProduct(true);
+    try {
+      if (sendMode === 'single') {
+        await whatsappService.sendProduct(activeConv.id, selectedProducts[0].id, brandId);
+        showSuccess('messageSent');
+      } else {
+        await whatsappService.sendCatalogue(activeConv.id, selectedProducts.map(p => p.id), null, null, brandId);
+        showSuccess('messageSent');
+      }
+      setProductModal(false);
+      fetchMessages(activeConv);
+    } catch (err) { showError('sendFailed', err.message); }
+    setSendingProduct(false);
+  };
+
+  // Seed canned responses
+  const seedCannedResponses = async () => {
+    try {
+      const data = await whatsappService.seedCannedResponses(brandId);
+      showSuccess('saved', `Created: ${data.summary?.created} · Skipped: ${data.summary?.skipped}`);
+      fetchCannedResponses();
+    } catch (err) { showError('loadingFailed', err.message); }
+  };
 
   const filteredConvs = conversations.filter(c =>
     !convSearch || (c.customer_name || c.customer_phone || '').toLowerCase().includes(convSearch.toLowerCase())
@@ -790,13 +860,34 @@ export function WhatsAppManager() {
                     <div ref={messagesEndRef} />
                   </div>
                   {activeConv.status === 'open' ? (
-                    <form className="was-reply-box" onSubmit={sendReply}>
-                      <textarea className="was-reply-input" placeholder="Type a message… (type /shortcut for canned responses)" value={reply}
-                        onChange={e => handleReplyChange(e.target.value)}
-                        onKeyDown={e => { if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); sendReply(e); } }}
-                        rows={2} />
-                      <button type="submit" className="was-send-btn" disabled={sending||!reply.trim()}>{IC.send}</button>
-                    </form>
+                    <div>
+                      {/* Action bar — product/catalogue send */}
+                      <div style={{ display:'flex', gap:6, padding:'6px 12px', borderTop:'1px solid #f3f4f6', background:'#fafafa' }}>
+                        <button
+                          className="was-btn-secondary"
+                          style={{ fontSize:11, padding:'3px 10px', display:'flex', alignItems:'center', gap:4 }}
+                          onClick={() => openProductModal('single')}
+                          title="Send a single product card"
+                        >
+                          🛍️ Send Product
+                        </button>
+                        <button
+                          className="was-btn-secondary"
+                          style={{ fontSize:11, padding:'3px 10px', display:'flex', alignItems:'center', gap:4 }}
+                          onClick={() => openProductModal('catalogue')}
+                          title="Send multiple products as catalogue"
+                        >
+                          📦 Send Catalogue
+                        </button>
+                      </div>
+                      <form className="was-reply-box" onSubmit={sendReply}>
+                        <textarea className="was-reply-input" placeholder="Type a message… (type /shortcut for canned responses)" value={reply}
+                          onChange={e => handleReplyChange(e.target.value)}
+                          onKeyDown={e => { if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); sendReply(e); } }}
+                          rows={2} />
+                        <button type="submit" className="was-send-btn" disabled={sending||!reply.trim()}>{IC.send}</button>
+                      </form>
+                    </div>
                   ) : (
                     <div className="was-resolved-bar">This conversation is resolved</div>
                   )}
@@ -928,6 +1019,9 @@ export function WhatsAppManager() {
                 </div>
                 <button className="was-btn-primary" onClick={() => { setCannedEditId(null); setCannedForm({ shortcut:'', title:'', body:'' }); setCannedModal(true); }}>
                   <span style={{width:14,height:14,display:'flex'}}>{IC.add}</span>New Response
+                </button>
+                <button className="was-btn-secondary" onClick={seedCannedResponses} title="Load 20 default ecommerce responses">
+                  <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>Seed Defaults
                 </button>
               </div>
               {cannedLoading ? <div style={{padding:40,textAlign:'center'}}><Loader /></div> : (
@@ -1165,6 +1259,73 @@ export function WhatsAppManager() {
             <Button variant="primary" type="submit">Create Campaign</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* ── Product / Catalogue Send Modal ── */}
+      <Modal isOpen={productModal} onClose={() => setProductModal(false)} title={sendMode === 'single' ? 'Send Product Card' : 'Send Catalogue'} closeOnOverlayClick={false}>
+        <div className="modal-body">
+          <p style={{ fontSize:13, color:'#6b7280', marginBottom:12 }}>
+            {sendMode === 'single'
+              ? 'Select one product to send as an interactive card. Customer can tap to view and order.'
+              : 'Select multiple products to send as a browsable catalogue. Max 30 items.'}
+          </p>
+          <input
+            className="dm-input"
+            placeholder="Search products…"
+            value={productSearch}
+            onChange={e => setProductSearch(e.target.value)}
+            style={{ marginBottom:12 }}
+          />
+          <div style={{ maxHeight:320, overflowY:'auto', display:'flex', flexDirection:'column', gap:6 }}>
+            {productLoading
+              ? <div style={{ textAlign:'center', padding:20 }}><Loader /></div>
+              : productList.length === 0
+                ? <div style={{ textAlign:'center', color:'#9ca3af', fontSize:13, padding:20 }}>No products found</div>
+                : productList.map(p => {
+                  const selected = !!selectedProducts.find(x => x.id === p.id);
+                  const price = p.ProductVariations?.[0]?.price || p.price || '—';
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => toggleProduct(p)}
+                      style={{
+                        display:'flex', alignItems:'center', gap:10, padding:'8px 10px',
+                        borderRadius:8, cursor:'pointer', border:`1.5px solid ${selected ? '#25D366' : '#e5e7eb'}`,
+                        background: selected ? '#f0fdf4' : '#fff', transition:'all 0.15s'
+                      }}
+                    >
+                      <div style={{
+                        width:18, height:18, borderRadius:4, border:`2px solid ${selected ? '#25D366' : '#d1d5db'}`,
+                        background: selected ? '#25D366' : 'transparent', flexShrink:0,
+                        display:'flex', alignItems:'center', justifyContent:'center'
+                      }}>
+                        {selected && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:13, fontWeight:500, color:'#111827', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</div>
+                        <div style={{ fontSize:11, color:'#6b7280' }}>₹{price} · ID: {p.id}</div>
+                      </div>
+                    </div>
+                  );
+                })
+            }
+          </div>
+          {selectedProducts.length > 0 && (
+            <div style={{ marginTop:10, fontSize:12, color:'#25D366', fontWeight:500 }}>
+              {selectedProducts.length} product{selectedProducts.length > 1 ? 's' : ''} selected
+            </div>
+          )}
+        </div>
+        <div className="modal-footer">
+          <button className="was-btn-secondary" onClick={() => setProductModal(false)}>Cancel</button>
+          <button
+            className="was-btn-primary"
+            disabled={!selectedProducts.length || sendingProduct}
+            onClick={confirmSendProduct}
+          >
+            {sendingProduct ? 'Sending…' : `Send ${sendMode === 'single' ? 'Product' : 'Catalogue'}`}
+          </button>
+        </div>
       </Modal>
 
     </div>
