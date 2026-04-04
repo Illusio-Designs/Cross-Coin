@@ -659,10 +659,17 @@ export function WhatsAppManager() {
     setSendingProduct(true);
     try {
       if (sendMode === 'single') {
+        // Pass productId — backend auto-resolves to {productId}_{variationId} matching catalogue
         await whatsappService.sendProduct(activeConv.id, selectedProducts[0].id, brandId);
         showSuccess('messageSent');
       } else {
-        await whatsappService.sendCatalogue(activeConv.id, selectedProducts.map(p => p.id), null, null, brandId);
+        // Pass productIds array — backend resolves each to first variation retailer ID
+        await whatsappService.sendCatalogue(
+          activeConv.id,
+          null,                                    // retailerIds — let backend resolve
+          selectedProducts.map(p => p.id),         // productIds
+          null, null, brandId
+        );
         showSuccess('messageSent');
       }
       setProductModal(false);

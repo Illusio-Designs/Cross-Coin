@@ -788,24 +788,35 @@ exports.getSLAStats = async (req, res) => {
 };
 
 // ─── Send product card to customer (interactive product message) ─────────────
-// Uses Meta's "product" interactive message type — requires catalogue connected
 exports.sendProduct = async (req, res) => {
   try {
-    const { id } = req.params; // conversation id
-    const { productId, brandId = 1 } = req.body;
+    const { id } = req.params;
+    const { productId, variationId, brandId = 1 } = req.body;
     if (!productId) return res.status(400).json({ success: false, message: 'productId required' });
 
     const conv = await WhatsappConversation.findByPk(id);
     if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
 
-    const result = await whatsappService.sendProductCard(conv.customer_phone, productId, brandId);
+    // Build retailer ID matching catalogue feed format: "{productId}_{variationId}"
+    let retailerId;
+    if (variationId) {
+      retailerId = `${productId}_${variationId}`;
+    } else {
+      // Auto-pick first variation
+      const { ProductVariation } = require('../model/productVariationModel.js');
+      const firstVar = await ProductVariation.findOne({ where: { productId }, order: [['id', 'ASC']] });
+      if (!firstVar) return res.status(400).json({ success: false, message: 'No variation found for this product' });
+      retailerId = `${productId}_${firstVar.id}`;
+    }
+
+    const result = await whatsappService.sendProductCard(conv.customer_phone, retailerId, brandId);
 
     const saved = await WhatsappMessage.create({
       conversation_id: id,
       wa_message_id:   result?.messages?.[0]?.id || null,
       direction:       'outbound',
       type:            'template',
-      body:            JSON.stringify({ type: 'product', productId }),
+      body:            JSON.stringify({ type: 'product', retailerId }),
       status:          'sent',
       sent_at:         new Date(),
     });
@@ -818,19 +829,33 @@ exports.sendProduct = async (req, res) => {
 };
 
 // ─── Send catalogue section to customer ──────────────────────────────────────
-// Sends up to 30 products from your Meta catalogue as a browsable list
 exports.sendCatalogue = async (req, res) => {
   try {
     const { id } = req.params;
-    const { productIds, headerText, bodyText, brandId = 1 } = req.body;
-    if (!productIds?.length) return res.status(400).json({ success: false, message: 'productIds required' });
+    // retailerIds: array of "{productId}_{variationId}" strings
+    // OR productIds: array of productIds — we'll auto-resolve to first variation
+    const { retailerIds, productIds, headerText, bodyText, brandId = 1 } = req.body;
 
     const conv = await WhatsappConversation.findByPk(id);
     if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
 
+    let finalRetailerIds = retailerIds;
+
+    // If only productIds provided, resolve each to "{productId}_{firstVariationId}"
+    if (!finalRetailerIds?.length && productIds?.length) {
+      const { ProductVariation } = require('../model/productVariationModel.js');
+      finalRetailerIds = [];
+      for (const pid of productIds) {
+        const v = await ProductVariation.findOne({ where: { productId: pid }, order: [['id', 'ASC']] });
+        if (v) finalRetailerIds.push(`${pid}_${v.id}`);
+      }
+    }
+
+    if (!finalRetailerIds?.length) return res.status(400).json({ success: false, message: 'No valid retailer IDs resolved' });
+
     const result = await whatsappService.sendCatalogueMessage(
       conv.customer_phone,
-      productIds,
+      finalRetailerIds,
       { headerText, bodyText },
       brandId
     );
@@ -840,12 +865,12 @@ exports.sendCatalogue = async (req, res) => {
       wa_message_id:   result?.messages?.[0]?.id || null,
       direction:       'outbound',
       type:            'template',
-      body:            JSON.stringify({ type: 'catalogue', productIds }),
+      body:            JSON.stringify({ type: 'catalogue', retailerIds: finalRetailerIds }),
       status:          'sent',
       sent_at:         new Date(),
     });
 
-    await conv.update({ last_message: `🛍️ Catalogue shared (${productIds.length} products)`, last_message_at: new Date() });
+    await conv.update({ last_message: `🛍️ Catalogue shared (${finalRetailerIds.length} products)`, last_message_at: new Date() });
     res.json({ success: true, message: saved });
   } catch (err) {
     res.status(500).json({ success: false, message: errMsg(err) });
