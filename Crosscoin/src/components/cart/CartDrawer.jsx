@@ -122,6 +122,20 @@ const IconPlus = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor
 const IconTruck = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></svg>;
 const IconSuccess = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>;
 const IconChevronDown = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>;
+const IconFlame = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M12 2c0 0-4 4-4 8a4 4 0 008 0c0-1.5-.5-3-1-4 0 0-1 2-2 2s-1-2-1-4z"/><path d="M12 22c-3.3 0-6-2.7-6-6 0-2.2 1.2-4.2 3-5.4"/></svg>;
+const IconClock = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+const IconStar = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="13" height="13"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+const IconStarFilled = () => <svg viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1" width="15" height="15"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+const IconWhatsApp = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>;
+const IconMoneyBag = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20"><path d="M12 2C9 2 7 4 7 6h10c0-2-2-4-5-4z"/><path d="M7 6C4 6 2 9 2 12c0 5 4 10 10 10s10-5 10-10c0-3-2-6-5-6H7z"/><path d="M12 10v4"/><path d="M10 12h4"/></svg>;
+const IconLock = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="12" height="12"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>;
+const IconShield = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2L4 5.5V11c0 5.25 3.5 9.74 8 11 4.5-1.26 8-5.75 8-11V5.5L12 2z" fill="#16a34a"/>
+    <polyline points="8.5 12 11 14.5 15.5 10" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const IconTruckSmall = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="12" height="12"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -131,6 +145,29 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const router = useRouter();
 
   const [isVisible, setIsVisible] = useState(false);
+  const [urgencySeconds, setUrgencySeconds] = useState(10 * 60);
+  const [reviewStats, setReviewStats] = useState({ total: 0, avg: 4.8 });
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setUrgencySeconds(10 * 60);
+    const id = setInterval(() => setUrgencySeconds(s => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(id);
+  }, [isOpen]);
+
+  useEffect(() => {
+    const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+    fetch(`${API}/api/reviews/public/all?limit=1`, {
+      headers: { 'X-Brand-Name': 'crosscoin' }
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data?.pagination?.total) {
+          setReviewStats(prev => ({ ...prev, total: data.pagination.total }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Guest contact
   const [guestInfo, setGuestInfo] = useState({ email: '', firstName: '', lastName: '', phone: '' });
@@ -339,8 +376,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const sortedShippingFees = useMemo(() => {
     const arr = [...shippingFees];
     arr.sort((a, b) => {
-      if (a.orderType === 'prepaid' && b.orderType !== 'prepaid') return -1;
-      if (a.orderType !== 'prepaid' && b.orderType === 'prepaid') return 1;
+      if (a.orderType === 'cod' && b.orderType !== 'cod') return -1;
+      if (a.orderType !== 'cod' && b.orderType === 'cod') return 1;
       return 0;
     });
     return arr;
@@ -921,23 +958,20 @@ const CartDrawer = ({ isOpen, onClose }) => {
                   <div className="cd-summary-row"><span>Shipping</span><span>{shippingFeeAmount === 0 ? 'Free' : `₹${shippingFeeAmount.toFixed(2)}`}</span></div>
                   {couponDiscount > 0 && (
                     <div className="cd-summary-row cd-summary-discount">
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span className="cd-coupon-row-label">
                         Coupon ({appliedCoupon.code})
-                        <button onClick={handleRemoveCoupon} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#CE1E36', fontSize: 11, fontWeight: 700, padding: 0 }}>✕ Remove</button>
+                        <button onClick={handleRemoveCoupon} className="cd-coupon-inline-remove">✕ Remove</button>
                       </span>
-                      <span style={{ color: '#16a34a', fontWeight: 700 }}>-₹{couponDiscount.toFixed(2)}</span>
+                      <span>-₹{couponDiscount.toFixed(2)}</span>
                     </div>
                   )}
                   {isPrepaidDelivery && prepaidInstantDiscount > 0 && (
                     <div className="cd-summary-row cd-summary-discount">
-                      {/* FIX 13 — green savings badge */}
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span className="cd-coupon-row-label">
                         Prepaid discount
-                        <span style={{ background: '#16a34a', color: '#fff', fontSize: 11, fontWeight: 700, borderRadius: 4, padding: '1px 6px' }}>
-                          ₹{Math.round(prepaidInstantDiscount)} saved!
-                        </span>
+                        <span className="cd-saved-badge">₹{Math.round(prepaidInstantDiscount)} saved!</span>
                       </span>
-                      <span style={{ color: '#16a34a', fontWeight: 700 }}>-₹{prepaidInstantDiscount.toFixed(2)}</span>
+                      <span>-₹{prepaidInstantDiscount.toFixed(2)}</span>
                     </div>
                   )}
                   {isPrepaidDelivery && (
@@ -956,34 +990,17 @@ const CartDrawer = ({ isOpen, onClose }) => {
                     <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{finalTotal.toFixed(2)}</span></div>
                   )}
                 </div>
+                {/* Secure checkout line */}
+                <div className="cd-secure-line">
+                  <span className="cd-secure-item">
+                    <IconShield /> Secure checkout
+                  </span>
+                  <span className="cd-secure-sep" />
+                  <span className="cd-secure-item cd-secure-plain">
+                    Easy returns
+                  </span>
+                </div>
               </div>
-
-              {/* ── Coupon ── */}
-              {!appliedCoupon ? (
-                <div className="cd-sv-section">
-                  <div className="cd-coupon-wrap">
-                    <input
-                      className="cd-coupon-input"
-                      type="text"
-                      placeholder="Enter coupon code"
-                      value={couponCode}
-                      onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); }}
-                      onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
-                    />
-                    <button className="cd-coupon-btn" onClick={handleApplyCoupon} disabled={couponLoading || !couponCode.trim()}>
-                      {couponLoading ? '...' : 'Apply'}
-                    </button>
-                  </div>
-                  {couponError && <p className="cd-coupon-error">{couponError}</p>}
-                </div>
-              ) : (
-                <div className="cd-sv-section">
-                  <div className="cd-coupon-applied">
-                    <span>🎉 {couponSuccess}</span>
-                    <button className="cd-coupon-remove" onClick={handleRemoveCoupon}>Remove</button>
-                  </div>
-                </div>
-              )}
 
               {/* ── 3. Contact (guest only) ── */}
               {!isAuthenticated && (
@@ -1034,6 +1051,28 @@ const CartDrawer = ({ isOpen, onClose }) => {
               {/* ── 4. Delivery Address ── */}
               <div className="cd-sv-section" id="cd-section-address">
                 <div className="cd-section-title">Delivery Address</div>
+
+                {/* Delivery info strip */}
+                <div className="cd-delivery-info-strip">
+                  <div className="cd-dinfo-row">
+                    <IconShield />
+                    <span>Delivery by 6 April&nbsp;·&nbsp;Ships from India</span>
+                  </div>
+                  <div className="cd-dinfo-row">
+                    <span className="cd-dinfo-stars">
+                      <IconStarFilled /><IconStarFilled /><IconStarFilled /><IconStarFilled /><IconStarFilled />
+                    </span>
+                    <span>
+                      <strong>{reviewStats.avg}</strong> rating from&nbsp;
+                      <strong>{reviewStats.total > 0 ? `${reviewStats.total.toLocaleString('en-IN')}+` : '1,200+'}</strong> reviews
+                    </span>
+                  </div>
+                </div>
+                <div className="cd-orders-delivered">
+                  <IconShield />
+                  <span>Over <strong>10,000+</strong> Orders Delivered</span>
+                  <span className="cd-orders-arrow">›</span>
+                </div>
                 {addressLoading ? <p className="cd-loading">Loading addresses...</p> : (
                   <>
                     {isAuthenticated && addresses.length === 0 && !showAddressForm && (
@@ -1169,11 +1208,10 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 )}
               </div>
 
-              {/* ── 5. Delivery & payment (prepaid first, COD secondary) ── */}
+              {/* ── 5. Payment method ── */}
               {sortedShippingFees.length > 0 && (
                 <div className="cd-sv-section" id="cd-section-delivery">
                   <div className="cd-section-title">How would you like to pay?</div>
-                  <p className="cd-prepaid-nudge">{PREPAID_NUDGE_LINE}</p>
                   <div className="cd-delivery-list">
                     {sortedShippingFees.map(fee => (
                       <label
@@ -1181,19 +1219,21 @@ const CartDrawer = ({ isOpen, onClose }) => {
                         className={`cd-delivery-card ${fee.orderType === 'prepaid' ? 'cd-delivery-prepaid' : 'cd-delivery-cod'} ${selectedFee?.id === fee.id ? 'cd-delivery-selected' : ''}`}
                       >
                         <input type="radio" name="delivery" checked={selectedFee?.id === fee.id} onChange={() => handleSelectFee(fee)} />
-                        <span className="cd-delivery-icon"><IconTruck /></span>
+                        <span className="cd-delivery-icon">
+                          {fee.orderType === 'cod' ? <IconMoneyBag /> : <IconTruck />}
+                        </span>
                         <div className="cd-delivery-info">
                           <p className="cd-delivery-name">
                             {fee.orderType === 'cod'
-                              ? 'Cash on Delivery'
+                              ? <span>Cash on Delivery <span className="cd-delivery-popular">Most Popular ⭐</span></span>
                               : fee.orderType === 'prepaid'
                                 ? 'UPI / Card (Prepaid)'
                                 : fee.orderType}
                           </p>
                           <p className="cd-delivery-desc">
                             {fee.orderType === 'cod'
-                              ? 'Pay when you receive · OTP when you confirm the order'
-                              : 'Recommended — fastest confirmation'}
+                              ? 'Pay after delivery · Delivery by 5–7 Apr'
+                              : '₹50 OFF applied | Limited Offer'}
                           </p>
                         </div>
                         <span className={`cd-delivery-fee ${parseFloat(fee.fee || 0) === 0 ? 'free' : ''}`}>
@@ -1209,35 +1249,38 @@ const CartDrawer = ({ isOpen, onClose }) => {
 
             </div>
           )}
+
+          {/* Scroll hint — inside body so it never overlaps the footer */}
+          {showScrollHint && !orderSuccess && activeItems.length > 0 && (
+            <div className="cd-scroll-hint" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </div>
+          )}
         </div>
 
-        {/* Scroll hint */}
-        {showScrollHint && !orderSuccess && activeItems.length > 0 && (
-          <div className="cd-scroll-hint" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </div>
-        )}
-
-        {/* FIX 14 — Trust signals bar */}
-        {!orderSuccess && activeItems.length > 0 && (
-          <div className="cd-trust-bar">
-            <span className="cd-trust-item">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
-              Secure checkout
-            </span>
-            <span className="cd-trust-item">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12" /><rect x="2" y="7" width="20" height="5" /><path d="M12 22V7" /><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z" /></svg>
-              Easy returns
-            </span>
-            <span className="cd-trust-item">Powered by Razorpay</span>
-          </div>
-        )}
-
-        {/* ── Single CTA footer ── */}
+        {/* ── Fixed bottom area: urgency → CTA → WhatsApp → trust ── */}
         {!orderSuccess && activeItems.length > 0 && (
           <div className="cd-footer">
+            {/* Urgency row */}
+            {(() => {
+              const mm = String(Math.floor(urgencySeconds / 60)).padStart(2, '0');
+              const ss = String(urgencySeconds % 60).padStart(2, '0');
+              return (
+                <div className="cd-urgency-bar">
+                  <span className="cd-urgency-item" style={{ color: '#CE1E36' }}>
+                    <IconFlame /> <strong>Only 7</strong>&nbsp;left in stock
+                  </span>
+                  <span style={{ color: '#ccc' }}>|</span>
+                  <span className="cd-urgency-item" style={{ color: '#555' }}>
+                    <IconClock /> Offer ends in <span className="cd-urgency-timer">{mm}:{ss}</span>
+                  </span>
+                </div>
+              );
+            })()}
+
+            {/* CTA button */}
             <button
               className="cd-btn-primary cd-btn-full"
               onClick={handlePlaceOrder}
@@ -1246,11 +1289,30 @@ const CartDrawer = ({ isOpen, onClose }) => {
               {isProcessing
                 ? 'Processing...'
                 : isPrepaidDelivery
-                  ? `Pay ₹${prepaidPayable.toFixed(2)}`
+                  ? `Place Order – ₹${prepaidPayable.toFixed(2)}`
                   : isCodDelivery
-                    ? 'Place COD order'
-                    : 'Place order'}
+                    ? `Place Order – ₹${finalTotal.toFixed(2)}`
+                    : 'Place Order'}
             </button>
+
+            {/* WhatsApp */}
+            <a
+              href="https://wa.me/917434834000?text=Hi%2C+I+need+help+with+my+order"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="cd-whatsapp-help"
+            >
+              <IconWhatsApp /> Need help? Chat on WhatsApp
+            </a>
+
+            {/* Trust bar */}
+            <div className="cd-trust-bar">
+              <span className="cd-trust-item"><IconShield /> 100% Money-Back</span>
+              <span className="cd-trust-sep">·</span>
+              <span className="cd-trust-item"><IconTruckSmall /> Easy Returns</span>
+              <span className="cd-trust-sep">·</span>
+              <span className="cd-trust-item"><IconLock /> Powered by Razorpay</span>
+            </div>
           </div>
         )}
 

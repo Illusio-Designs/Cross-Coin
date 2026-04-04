@@ -41,6 +41,27 @@ function authHeader(token) {
   return { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
 }
 
+// ─── Fetch media download URL from Meta ───────────────────────────────────────
+// Meta webhook gives us a media ID. We need to call the API to get the real URL.
+async function getMediaUrl(mediaId, brandId = 1) {
+  const { token } = await getCredentials(brandId);
+  const res = await axios.get(
+    `${GRAPH_API_URL}/${mediaId}`,
+    { headers: authHeader(token) }
+  );
+  return { url: res.data.url, mimeType: res.data.mime_type, fileSize: res.data.file_size };
+}
+
+// ─── Download media bytes from Meta (for proxying to browser) ────────────────
+async function downloadMedia(mediaUrl, brandId = 1) {
+  const { token } = await getCredentials(brandId);
+  const res = await axios.get(mediaUrl, {
+    headers: { Authorization: 'Bearer ' + token },
+    responseType: 'stream',
+  });
+  return { stream: res.data, contentType: res.headers['content-type'], contentLength: res.headers['content-length'] };
+}
+
 // ─── Template management ──────────────────────────────────────────────────────
 
 async function listTemplates(brandId = 1) {
@@ -300,6 +321,152 @@ async function sendRefundProcessed(phone, data, brandId = 1) {
   ], brandId);
 }
 
+// ─── New ecommerce notification helpers ──────────────────────────────────────
+
+async function sendAbandonedCart(phone, data, brandId = 1) {
+  return sendTemplate(phone, 'cart_abandoned', [
+    data.customerName || 'there',
+    data.productName || 'your items',
+    data.couponCode || 'SAVE10',
+  ], brandId);
+}
+
+async function sendReviewRequest(phone, data, brandId = 1) {
+  const storeUrl = (await settingsHelper.getSetting(brandId, 'STORE_URL')) || 'crosscoin.in';
+  return sendTemplate(phone, 'review_request', [
+    data.customerName || 'there',
+    data.productName || 'your recent purchase',
+    `https://${storeUrl}/product/${data.productSlug || ''}`,
+  ], brandId);
+}
+
+async function sendBackInStock(phone, data, brandId = 1) {
+  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
+  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
+  const text = `🎉 Good news! *${data.productName}* is back in stock at *${storeName}*.\n\nGrab it before it sells out again!\n👉 https://${storeUrl}/product/${data.productSlug}`;
+  return sendTextMessage(phone, text, brandId);
+}
+
+async function sendLoyaltyNotification(phone, data, brandId = 1) {
+  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
+  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
+  const text = `🌟 *${storeName} Rewards*\n\nHi ${data.customerName || 'there'}! You just earned *${data.points} points* for your order.\n\nYour balance: *${data.balance} points*\n\nRedeem at checkout 👉 https://${storeUrl}`;
+  return sendTextMessage(phone, text, brandId);
+}
+
+async function sendWinBack(phone, data, brandId = 1) {
+  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
+  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
+  const text = `Hey ${data.customerName || 'there'}! 👋\n\nWe miss you at *${storeName}*. It's been a while since your last order.\n\nHere's *${data.couponCode || '10% OFF'}* just for you — use it on your next order!\n\n👉 https://${storeUrl}`;
+  return sendTextMessage(phone, text, brandId);
+}
+
+async function sendPostPurchaseUpsell(phone, data, brandId = 1) {
+  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
+  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
+  const text = `Hi ${data.customerName || 'there'}! 😊\n\nLoved your *${data.purchasedProduct}* from *${storeName}*?\n\nYou might also like: *${data.suggestedProduct}*\n\n👉 https://${storeUrl}/product/${data.suggestedSlug}`;
+  return sendTextMessage(phone, text, brandId);
+}
+
+async function sendPopupCoupon(phone, data, brandId = 1) {
+  return sendTemplate(phone, 'popup_coupon', [data.couponCode || 'PREPAID10'], brandId);
+}
+
+// ─── Broadcast: send template to a list of phones ────────────────────────────
+// Returns { sent, failed } counts
+async function sendBroadcast(phones, templateName, paramsArray, brandId = 1, delayMs = 200) {
+  let sent = 0; let failed = 0;
+  for (let i = 0; i < phones.length; i++) {
+    try {
+      const params = Array.isArray(paramsArray[i]) ? paramsArray[i] : paramsArray[0] || [];
+      await sendTemplate(phones[i], templateName, params, brandId);
+      sent++;
+    } catch (err) {
+      logger.warn(`Broadcast failed for ${phones[i]}: ${metaError(err)}`);
+      failed++;
+    }
+    // Throttle to avoid Meta rate limits (5 msg/sec safe limit)
+    if (delayMs > 0 && i < phones.length - 1) {
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+  return { sent, failed };
+}
+
+// ─── Send single product card (interactive product message) ──────────────────
+// product_retailer_id in your catalogue feed is "{productId}_{variationId}"
+// Pass retailerIds as an array like ["123_456"] matching your catalogue g:id values
+async function sendProductCard(phone, retailerId, brandId = 1) {
+  const { token, phoneNumberId } = await getCredentials(brandId);
+  const catalogId = await settingsHelper.getSetting(brandId, 'WHATSAPP_CATALOG_ID');
+  if (!catalogId) throw new Error('WHATSAPP_CATALOG_ID not configured for brand ' + brandId);
+
+  const to = formatE164(phone);
+  const res = await axios.post(
+    `${GRAPH_API_URL}/${phoneNumberId}/messages`,
+    {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'interactive',
+      interactive: {
+        type: 'product',
+        body: { text: 'Check out this product from Cross Coin 👇' },
+        action: {
+          catalog_id: catalogId,
+          // retailerId must match g:id in your catalogue feed exactly: "{productId}_{variationId}"
+          product_retailer_id: String(retailerId),
+        },
+      },
+    },
+    { headers: authHeader(token) }
+  );
+  return res.data;
+}
+
+// ─── Send catalogue section (multi-product message — up to 30 items) ─────────
+// retailerIds must be an array of strings matching g:id in your catalogue feed
+async function sendCatalogueMessage(phone, retailerIds, opts = {}, brandId = 1) {
+  const { token, phoneNumberId } = await getCredentials(brandId);
+  const catalogId = await settingsHelper.getSetting(brandId, 'WHATSAPP_CATALOG_ID');
+  if (!catalogId) throw new Error('WHATSAPP_CATALOG_ID not configured for brand ' + brandId);
+
+  const to = formatE164(phone);
+  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
+
+  // Meta allows max 30 products per section, max 10 sections
+  const sections = [];
+  const chunkSize = 30;
+  for (let i = 0; i < retailerIds.length; i += chunkSize) {
+    sections.push({
+      title: i === 0 ? (opts.sectionTitle || `${storeName} Products`) : `More Products`,
+      product_items: retailerIds.slice(i, i + chunkSize).map(id => ({
+        product_retailer_id: String(id),
+      })),
+    });
+  }
+
+  const res = await axios.post(
+    `${GRAPH_API_URL}/${phoneNumberId}/messages`,
+    {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'interactive',
+      interactive: {
+        type: 'product_list',
+        header: { type: 'text', text: opts.headerText || `${storeName} Collection` },
+        body: { text: opts.bodyText || `Browse our latest products and tap to order directly! 🛍️` },
+        footer: { text: `Powered by ${storeName}` },
+        action: {
+          catalog_id: catalogId,
+          sections,
+        },
+      },
+    },
+    { headers: authHeader(token) }
+  );
+  return res.data;
+}
+
 module.exports = {
   formatE164,
   metaError,
@@ -321,4 +488,19 @@ module.exports = {
   sendOrderCancelled,
   sendCodConfirmation,
   sendRefundProcessed,
+  // New ecommerce features
+  sendAbandonedCart,
+  sendReviewRequest,
+  sendBackInStock,
+  sendLoyaltyNotification,
+  sendWinBack,
+  sendPostPurchaseUpsell,
+  sendPopupCoupon,
+  sendBroadcast,
+  // Catalogue & product
+  sendProductCard,
+  sendCatalogueMessage,
+  // Media
+  getMediaUrl,
+  downloadMedia,
 };

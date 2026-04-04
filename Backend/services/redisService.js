@@ -24,24 +24,19 @@ class RedisService {
     try {
       this.client = new Redis({
         host: process.env.REDIS_HOST || 'localhost',
-        port: process.env.REDIS_PORT || 6379,
+        port: parseInt(process.env.REDIS_PORT) || 6379,
         password: process.env.REDIS_PASSWORD || undefined,
-        db: process.env.REDIS_DB || 0,
+        db: parseInt(process.env.REDIS_DB) || 0,
+        // Stop retrying after 5 attempts — don't spam logs forever
         retryStrategy: (times) => {
-          const delay = Math.min(times * 50, 2000);
-          return delay;
+          if (times > 5) return null; // stop retrying
+          return Math.min(times * 500, 3000);
         },
-        maxRetriesPerRequest: null,
+        maxRetriesPerRequest: 1,
         enableReadyCheck: false,
-        enableOfflineQueue: true,
-        lazyConnect: false,
-        reconnectOnError: (err) => {
-          const targetError = 'READONLY';
-          if (err.message.includes(targetError)) {
-            return true;
-          }
-          return false;
-        }
+        enableOfflineQueue: false, // don't queue commands when disconnected
+        lazyConnect: true,        // don't connect until .ping() is called
+        reconnectOnError: () => false,
       });
 
       // Handle connection events
@@ -65,6 +60,9 @@ class RedisService {
         this.isConnected = true;
       });
 
+      // Connect explicitly (lazyConnect: true means it won't auto-connect)
+      await this.client.connect();
+
       // Test connection
       await this.client.ping();
       this.isConnected = true;
@@ -72,6 +70,11 @@ class RedisService {
     } catch (error) {
       console.error('❌ Failed to initialize Redis:', error.message);
       this.isConnected = false;
+      // Disconnect cleanly so it doesn't keep retrying in background
+      if (this.client) {
+        this.client.disconnect();
+        this.client = null;
+      }
       throw error;
     }
   }

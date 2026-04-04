@@ -1,38 +1,54 @@
-const Queue = require("bull");
+'use strict';
 
-// Create Bull queue for badge recalculation
-const badgeQueue = new Queue("badge_recalculation", {
-  redis: {
-    host: process.env.REDIS_HOST || "localhost",
-    port: process.env.REDIS_PORT || 6379,
-    password: process.env.REDIS_PASSWORD || undefined,
+const Queue = require('bull');
+const { logger } = require('../config/logging.js');
+
+// Only create the queue if Redis is configured
+const redisConfig = {
+  host: process.env.REDIS_HOST || 'localhost',
+  port: parseInt(process.env.REDIS_PORT) || 6379,
+  password: process.env.REDIS_PASSWORD || undefined,
+  // Stop retrying after 3 attempts — prevents log spam when Redis is down
+  maxRetriesPerRequest: 1,
+  enableReadyCheck: false,
+  retryStrategy: (times) => {
+    if (times > 3) return null; // give up
+    return Math.min(times * 1000, 5000);
   },
-  defaultJobOptions: {
-    attempts: 3, // Retry up to 3 times
-    backoff: {
-      type: "exponential",
-      delay: 2000, // Start with 2 second delay
+};
+
+let badgeQueue = null;
+
+try {
+  badgeQueue = new Queue('badge_recalculation', {
+    redis: redisConfig,
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 2000 },
+      removeOnComplete: true,
+      removeOnFail: false,
     },
-    removeOnComplete: true, // Remove job after completion
-    removeOnFail: false, // Keep failed jobs for debugging
-  },
-});
+  });
 
-// Event listeners for queue
-badgeQueue.on("completed", (job) => {
-  console.log(`✅ Badge recalculation job ${job.id} completed for user ${job.data.user_id}`);
-});
+  badgeQueue.on('completed', (job) => {
+    logger.debug(`✅ Badge job ${job.id} completed for user ${job.data.user_id}`);
+  });
 
-badgeQueue.on("failed", (job, err) => {
-  console.error(`❌ Badge recalculation job ${job.id} failed:`, err.message);
-});
+  badgeQueue.on('failed', (job, err) => {
+    logger.warn(`⚠️ Badge job ${job.id} failed: ${err.message}`);
+  });
 
-badgeQueue.on("error", (error) => {
-  console.error("❌ Badge queue error:", error);
-});
+  // Log error once, don't spam
+  let errorLogged = false;
+  badgeQueue.on('error', (error) => {
+    if (!errorLogged) {
+      logger.warn('Badge queue unavailable (Redis): ' + error.message);
+      errorLogged = true;
+    }
+  });
 
-badgeQueue.on("stalled", (job) => {
-  console.warn(`⚠️ Badge recalculation job ${job.id} stalled`);
-});
+} catch (err) {
+  logger.warn('Badge queue disabled — Redis not available: ' + err.message);
+}
 
 module.exports = badgeQueue;

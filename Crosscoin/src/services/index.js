@@ -1809,4 +1809,91 @@ export const whatsappService = {
     const response = await adminApi.put(`/api/whatsapp/conversations/${conversationId}/resolve`);
     return response.data;
   },
+
+  assignConversation: async (conversationId, agentId) => {
+    const response = await adminApi.put(`/api/whatsapp/conversations/${conversationId}/assign`, { agentId });
+    return response.data;
+  },
+
+  tagConversation: async (conversationId, tags) => {
+    const response = await adminApi.put(`/api/whatsapp/conversations/${conversationId}/tags`, { tags });
+    return response.data;
+  },
+
+  setOptOut: async (conversationId, opted_out) => {
+    const response = await adminApi.put(`/api/whatsapp/conversations/${conversationId}/optout`, { opted_out });
+    return response.data;
+  },
+
+  // ── Canned Responses ──
+  getCannedResponses: async (brandId = 1) => {
+    const response = await adminApi.get(`/api/whatsapp/canned-responses?brandId=${brandId}`);
+    return response.data;
+  },
+
+  createCannedResponse: async (payload) => {
+    const response = await adminApi.post('/api/whatsapp/canned-responses', payload);
+    return response.data;
+  },
+
+  updateCannedResponse: async (id, payload) => {
+    const response = await adminApi.put(`/api/whatsapp/canned-responses/${id}`, payload);
+    return response.data;
+  },
+
+  deleteCannedResponse: async (id) => {
+    const response = await adminApi.delete(`/api/whatsapp/canned-responses/${id}`);
+    return response.data;
+  },
+
+  // ── Broadcasts ──
+  getBroadcasts: async (brandId = 1) => {
+    const response = await adminApi.get(`/api/whatsapp/broadcasts?brandId=${brandId}`);
+    return response.data;
+  },
+
+  createBroadcast: async (payload) => {
+    const response = await adminApi.post('/api/whatsapp/broadcasts', payload);
+    return response.data;
+  },
+
+  runBroadcast: async (id) => {
+    const response = await adminApi.post(`/api/whatsapp/broadcasts/${id}/run`);
+    return response.data;
+  },
+
+  // ── SLA Analytics ──
+  getSLAStats: async (brandId = 1) => {
+    const response = await adminApi.get(`/api/whatsapp/stats/sla?brandId=${brandId}`);
+    return response.data;
+  },
+
+  // ── Back-in-stock ──
+  notifyBackInStock: async (productId, brandId = 1) => {
+    const response = await adminApi.post('/api/whatsapp/notify/back-in-stock', { productId, brandId });
+    return response.data;
+  },
+
+  seedCannedResponses: async (brandId = 1) => {
+    const response = await adminApi.post('/api/whatsapp/canned-responses/seed', { brandId });
+    return response.data;
+  },
+
+  sendProduct: async (conversationId, productId, brandId = 1) => {
+    const response = await adminApi.post(`/api/whatsapp/conversations/${conversationId}/send-product`, { productId, brandId });
+    return response.data;
+  },
+
+  sendCatalogue: async (conversationId, retailerIds, productIds, headerText, bodyText, brandId = 1) => {
+    const response = await adminApi.post(`/api/whatsapp/conversations/${conversationId}/send-catalogue`, {
+      retailerIds, productIds, headerText, bodyText, brandId
+    });
+    return response.data;
+  },
+
+  // Returns a proxied URL for a Meta media ID (audio, image, video, document)
+  getMediaProxyUrl: (mediaId, brandId = 1) => {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : '';
+    return `${adminApi.defaults.baseURL}/api/whatsapp/media/${mediaId}?brandId=${brandId}&token=${token}`;
+  },
 };

@@ -141,24 +141,16 @@ class BadgeService {
    */
   static async enqueueBadgeRecalculation(user_id, badge_types = []) {
     try {
-      console.log(`📤 Enqueueing badge recalculation for user ${user_id}`);
-      
+      // Queue is null when Redis is unavailable — skip silently
+      if (!badgeQueue) return null;
+
       const job = await badgeQueue.add(
-        {
-          user_id,
-          badge_types,
-        },
-        {
-          priority: 'normal',
-          delay: 0, // Process immediately
-        }
+        { user_id, badge_types },
+        { priority: 'normal', delay: 0 }
       );
-      
-      console.log(`✅ Badge recalculation job ${job.id} enqueued for user ${user_id}`);
       return job;
     } catch (error) {
-      console.error(`❌ Error enqueueing badge recalculation:`, error);
-      // Don't throw - allow order creation to continue even if queue fails
+      // Don't throw — badge queue failure must never block order creation
       return null;
     }
   }
