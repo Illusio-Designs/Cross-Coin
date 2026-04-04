@@ -852,6 +852,34 @@ exports.sendCatalogue = async (req, res) => {
   }
 };
 
+// ─── Media proxy — fetches media from Meta and streams to browser ─────────────
+// GET /api/whatsapp/media/:mediaId?brandId=1
+// The browser cannot call Meta directly (needs auth token), so we proxy it.
+exports.proxyMedia = async (req, res) => {
+  try {
+    const { mediaId } = req.params;
+    const brandId = parseInt(req.query.brandId) || 1;
+
+    // Step 1: get the real download URL from Meta
+    const { url, mimeType } = await whatsappService.getMediaUrl(mediaId, brandId);
+
+    // Step 2: stream the bytes back to the browser
+    const { stream, contentType, contentLength } = await whatsappService.downloadMedia(url, brandId);
+
+    res.setHeader('Content-Type', contentType || mimeType || 'application/octet-stream');
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    if (contentLength) res.setHeader('Content-Length', contentLength);
+    // Allow range requests so audio/video seeking works
+    res.setHeader('Accept-Ranges', 'bytes');
+
+    stream.pipe(res);
+    stream.on('error', () => res.status(500).end());
+  } catch (err) {
+    logger.error('Media proxy error: ' + err.message);
+    res.status(500).json({ success: false, message: errMsg(err) });
+  }
+};
+
 // ─── Back-in-stock: notify wishlisted customers ───────────────────────────────
 exports.notifyBackInStock = async (req, res) => {
   try {

@@ -41,6 +41,27 @@ function authHeader(token) {
   return { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
 }
 
+// ─── Fetch media download URL from Meta ───────────────────────────────────────
+// Meta webhook gives us a media ID. We need to call the API to get the real URL.
+async function getMediaUrl(mediaId, brandId = 1) {
+  const { token } = await getCredentials(brandId);
+  const res = await axios.get(
+    `${GRAPH_API_URL}/${mediaId}`,
+    { headers: authHeader(token) }
+  );
+  return { url: res.data.url, mimeType: res.data.mime_type, fileSize: res.data.file_size };
+}
+
+// ─── Download media bytes from Meta (for proxying to browser) ────────────────
+async function downloadMedia(mediaUrl, brandId = 1) {
+  const { token } = await getCredentials(brandId);
+  const res = await axios.get(mediaUrl, {
+    headers: { Authorization: 'Bearer ' + token },
+    responseType: 'stream',
+  });
+  return { stream: res.data, contentType: res.headers['content-type'], contentLength: res.headers['content-length'] };
+}
+
 // ─── Template management ──────────────────────────────────────────────────────
 
 async function listTemplates(brandId = 1) {
@@ -476,4 +497,7 @@ module.exports = {
   // Catalogue & product
   sendProductCard,
   sendCatalogueMessage,
+  // Media
+  getMediaUrl,
+  downloadMedia,
 };
