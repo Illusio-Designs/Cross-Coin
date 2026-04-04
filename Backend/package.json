@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "worker": "node worker.js",
+    "worker:dev": "nodemon worker.js",
     "db:setup": "node scripts/setupDatabase.js",
     "build": "echo \"Building the project...\""
   },
