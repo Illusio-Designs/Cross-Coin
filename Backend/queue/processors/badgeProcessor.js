@@ -16,86 +16,35 @@ const { batchInsert } = require("../../utils/batchInsert.js");
  * @returns {Object} Job result
  */
 const processBadgeRecalculation = async (job) => {
-  const { user_id, badge_types } = job.data;
-  
-  console.log(`🏅 Processing badge recalculation for user ${user_id}`);
-  
+  const { user_id } = job.data;
   try {
-    // Fetch user's transaction history (orders)
-    console.log(`  📊 Fetching order history for user ${user_id}...`);
     const orders = await Order.findAll({
       where: { user_id },
-      include: [
-        {
-          model: OrderItem,
-          as: "OrderItems",
-          include: [Product],
-        },
-      ],
-      order: [["createdAt", "DESC"]],
-      limit: 50, // Cap at 50 most recent orders — sufficient for badge calculation
+      include: [{ model: OrderItem, as: 'OrderItems', include: [Product] }],
+      order: [['createdAt', 'DESC']],
+      limit: 30, // reduced from 50 — saves memory on 2GB server
     });
 
-    console.log(`  ✅ Found ${orders.length} orders`);
-
-    // Calculate badge eligibility based on transaction history
     const badges = calculateBadgeEligibility(orders, user_id);
-    
-    console.log(`  🎖️ Calculated badges:`, badges);
-
-    // BATCH UPDATE: Update badges for all products in user's orders
-    console.log(`  📦 Batch updating badges for ${Object.keys(badges).length} products...`);
     let updatedCount = 0;
-    const updatePromises = [];
-    
+
     for (const order of orders) {
-      if (order.OrderItems) {
-        for (const item of order.OrderItems) {
-          if (item.Product) {
-            const product = item.Product;
-            
-            // Check if badge needs updating
-            const newBadge = badges[product.id] || null;
-            if (product.badge !== newBadge) {
-              updatePromises.push(
-                product.update({ badge: newBadge }).then(() => {
-                  updatedCount++;
-                  console.log(`  ✅ Updated badge for product ${product.id}: ${product.badge} → ${newBadge}`);
-                })
-              );
-            }
+      for (const item of (order.OrderItems || [])) {
+        if (item.Product) {
+          const newBadge = badges[item.Product.id] || null;
+          if (item.Product.badge !== newBadge) {
+            await item.Product.update({ badge: newBadge });
+            updatedCount++;
           }
         }
       }
     }
 
-    // Execute all updates in parallel for better performance
-    if (updatePromises.length > 0) {
-      await Promise.all(updatePromises);
-      console.log(`✅ Batch update complete - ${updatedCount} products updated`);
-    }
+    try { await invalidateDashboardCache(user_id); } catch (_) {}
 
-    // Invalidate user dashboard cache
-    console.log(`  🗑️ Invalidating dashboard cache for user ${user_id}...`);
-    try {
-      await invalidateDashboardCache(user_id);
-    } catch (cacheError) {
-      console.warn(`  ⚠️ Cache invalidation warning:`, cacheError.message);
-      // Don't fail the job if cache invalidation fails
-    }
-
-    console.log(`✅ Badge recalculation complete for user ${user_id} - ${updatedCount} products updated`);
-    
-    return {
-      success: true,
-      user_id,
-      orders_processed: orders.length,
-      products_updated: updatedCount,
-      badges_calculated: Object.keys(badges).length,
-    };
+    return { success: true, user_id, orders_processed: orders.length, products_updated: updatedCount };
   } catch (error) {
-    console.error(`❌ Error processing badge recalculation for user ${user_id}:`, error);
-    throw error; // Re-throw to trigger retry
+    throw error;
   }
 };
 

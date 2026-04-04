@@ -9,20 +9,16 @@ const sequelize = new Sequelize(
     {
         host: process.env.DB_HOST,
         dialect: 'mysql',
-        logging: process.env.NODE_ENV === 'development' ? console.log : false,
-        dialectOptions: {
-            charset: 'utf8mb4'
-        },
+        logging: false, // never log SQL — saves memory and I/O
+        dialectOptions: { charset: 'utf8mb4' },
         pool: {
-            max: 10, // Increased from 5 for better concurrency
-            min: 2, // Keep minimum connections ready
+            max: 5,      // 2GB server — keep pool small, MySQL uses ~8MB per connection
+            min: 1,      // only 1 idle connection kept alive
             acquire: 30000,
-            idle: 10000,
-            evict: 5000 // Check for idle connections every 5 seconds
+            idle: 20000, // release idle connections after 20s
+            evict: 10000,
         },
-        retry: {
-            max: 3 // Retry failed queries up to 3 times
-        }
+        retry: { max: 2 },
     }
 );
 
