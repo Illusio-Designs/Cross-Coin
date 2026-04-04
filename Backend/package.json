@@ -5,11 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node --max-old-space-size=512 index.js",
-    "dev": "nodemon index.js",
-    "worker": "node --max-old-space-size=256 worker.js",
-    "worker:dev": "nodemon worker.js",
-    "db:setup": "node scripts/setupDatabase.js",
-    "build": "echo \"Building the project...\""
+    "db:setup": "node scripts/setupDatabase.js"
   },
   "keywords": [
     "e-commerce",
