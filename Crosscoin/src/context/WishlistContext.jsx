@@ -184,6 +184,13 @@ function WishlistProvider({ children }) {
         return prevWishlist;
       });
       showAddToWishlistSuccessToast(product.name);
+      fbqTrack('AddToWishlist', {
+        content_ids: [String(product.id)],
+        content_name: product.name,
+        content_type: 'product',
+        value: product.price,
+        currency: 'INR',
+      });
     }
   };
 

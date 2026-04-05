@@ -248,8 +248,10 @@ const CartDrawer = ({ isOpen, onClose }) => {
   // ── InitiateCheckout when drawer opens (one shot per open) ──────────────
   useEffect(() => {
     if (!isOpen) return;
-    const activeItems = buyNowItem ? [buyNowItem] : cartItems;
-    const activeTotal = buyNowItem ? buyNowTotal : cartTotal;
+    // Skip when buyNowItem is set — ProductDetails.handleBuyNow already fired InitiateCheckout
+    if (buyNowItem) return;
+    const activeItems = cartItems;
+    const activeTotal = cartTotal;
     if (activeItems.length === 0) return;
     fbqTrack('InitiateCheckout', {
       content_ids: activeItems.map(i => String(i.productId || i.id)),
@@ -618,6 +620,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
 
   const trackPurchase = (value, orderNumber) => {
     try {
+      const trackingKey = `fb_purchase_tracked_${orderNumber}`;
+      if (sessionStorage.getItem(trackingKey)) return;
       fbqTrack('Purchase', {
         value: Number(value.toFixed(2)),
         currency: 'INR',
@@ -629,6 +633,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
           quantity: i.quantity,
         })),
       }, { eventID: `Purchase_${orderNumber}` });
+      sessionStorage.setItem(trackingKey, 'true');
     } catch (_) { }
   };
 
