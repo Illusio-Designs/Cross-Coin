@@ -35,6 +35,7 @@ export default function ProductDetails() {
   const [rawProduct, setRawProduct] = useState(null);
   const [allReviews, setAllReviews] = useState([]);
   const [error, setError] = useState(null);
+  const viewContentFiredRef = useRef(null);
 
   // Helper: extract image URLs from a variation + api fallback
   const getVariationImages = (variation, api) => {
@@ -96,19 +97,22 @@ export default function ProductDetails() {
             { label: api.name || 'Product', path: router.asPath, isLast: true },
           ]);
 
-          // ViewContent — fire once when product page loads
-          fbqTrack('ViewContent', {
-            content_ids: [firstVar ? `${api.id}_${firstVar.id}` : String(api.id)],
-            content_name: api.name || '',
-            content_type: 'product',
-            value: parseFloat(firstVar.price || api.price || 0),
-            currency: 'INR',
-          });
-          gtagTrack('view_item', {
-            currency: 'INR',
-            value: parseFloat(firstVar.price || api.price || 0),
-            items: [{ item_id: String(api.id), item_name: api.name || '', price: parseFloat(firstVar.price || api.price || 0) }],
-          });
+          // ViewContent — fire once per product slug load
+          if (viewContentFiredRef.current !== slug) {
+            viewContentFiredRef.current = slug;
+            fbqTrack('ViewContent', {
+              content_ids: [firstVar ? `${api.id}_${firstVar.id}` : String(api.id)],
+              content_name: api.name || '',
+              content_type: 'product',
+              value: parseFloat(firstVar.price || api.price || 0),
+              currency: 'INR',
+            });
+            gtagTrack('view_item', {
+              currency: 'INR',
+              value: parseFloat(firstVar.price || api.price || 0),
+              items: [{ item_id: String(api.id), item_name: api.name || '', price: parseFloat(firstVar.price || api.price || 0) }],
+            });
+          }
         } else {
           setError('Product not found');
         }
