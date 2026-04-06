@@ -8,10 +8,19 @@ const StarRating = ({ rating }) => (
   </div>
 );
 
-const ReviewCard = ({ review }) => {
+// Generate a deterministic but varied dummy date based on review id/index
+const getDummyDate = (review, index) => {
+  const seed = (review.id || index + 1) * 7 + index * 13;
+  const daysAgo = (seed % 180) + 30; // between 30 and 210 days ago
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const ReviewCard = ({ review, index = 0 }) => {
   const name = review.reviewerName || review.User?.username || review.guestName || 'Anonymous';
   const text = review.review || '';
-  const date = review.createdAt ? new Date(review.createdAt).toLocaleDateString() : '';
+  const date = getDummyDate(review, index);
 
   return (
     <div className="irs-card">
@@ -47,7 +56,7 @@ const InfiniteReviewsSlider = ({ reviews }) => {
       <div className="irs-track-outer">
         <div className="irs-track irs-track--left">
           {[...topReviews, ...topReviews].map((r, i) => (
-            <ReviewCard key={`top-${i}`} review={r} />
+            <ReviewCard key={`top-${i}`} review={r} index={i} />
           ))}
         </div>
       </div>
@@ -56,7 +65,7 @@ const InfiniteReviewsSlider = ({ reviews }) => {
       <div className="irs-track-outer">
         <div className="irs-track irs-track--right">
           {[...botReviews, ...botReviews].map((r, i) => (
-            <ReviewCard key={`bot-${i}`} review={r} />
+            <ReviewCard key={`bot-${i}`} review={r} index={i + 50} />
           ))}
         </div>
       </div>

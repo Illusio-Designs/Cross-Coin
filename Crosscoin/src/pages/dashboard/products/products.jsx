@@ -429,6 +429,7 @@ const ProductsPage = () => {
       weightUnit: "g",
       dimensions: { length: "", width: "", height: "" },
       dimensionUnit: "cm",
+      brandIds: [],
       variations: [{
         price: "",
         comparePrice: "",
@@ -731,6 +732,11 @@ const ProductsPage = () => {
           setLoading(false);
           return;
         }
+        if (!formData.brandIds || formData.brandIds.length === 0) {
+          setError("Please assign the product to at least one brand.");
+          setLoading(false);
+          return;
+        }
 
         // Handle SEO data
         const seoData = {
@@ -772,7 +778,7 @@ const ProductsPage = () => {
         formDataToSend.append('dimensionUnit', formData.dimensionUnit || 'cm');
         
         // Add brand IDs
-        formDataToSend.append('brandIds', JSON.stringify(formData.brandIds || [1]));
+        formDataToSend.append('brandIds', JSON.stringify(formData.brandIds || []));
 
         // Add variations
         formDataToSend.append('variations', JSON.stringify(variationsWithAttributes));
