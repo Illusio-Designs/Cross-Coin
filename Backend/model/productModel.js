@@ -88,6 +88,15 @@ const Product = sequelize.define('Product', {
     created_at: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW
+    },
+    brand_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'brands',
+            key: 'id'
+        },
+        onUpdate: 'CASCADE'
     }
 }, {
     tableName: 'products',

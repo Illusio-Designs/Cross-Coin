@@ -273,7 +273,14 @@ module.exports.createProduct = async (req, res) => {
     const variations = JSON.parse(req.body.variations || "[]");
     const seo = JSON.parse(req.body.seo || "{}");
     const images = req.files;
-    const brandIds = JSON.parse(req.body.brandIds || "[1]"); // ✅ Array of brand IDs
+    const brandIds = JSON.parse(req.body.brandIds || "[]"); // ✅ Array of brand IDs
+
+    logger.debug("brandIds received:", brandIds);
+    logger.debug("req.body.brandIds raw:", req.body.brandIds);
+
+    if (!brandIds || brandIds.length === 0) {
+      throw new Error("Please assign the product to at least one brand.");
+    }
 
     // Validate required fields
     if (!name) {
@@ -303,6 +310,7 @@ module.exports.createProduct = async (req, res) => {
           ? JSON.parse(req.body.dimensions)
           : null,
         dimensionUnit: req.body.dimensionUnit || "cm",
+        brand_id: brandIds[0] ? Number(brandIds[0]) : null,
       },
       { transaction }
     );

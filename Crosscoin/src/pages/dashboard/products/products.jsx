@@ -55,7 +55,7 @@ const ProductsPage = () => {
     weightUnit: "g",
     dimensions: { length: "", width: "", height: "" },
     dimensionUnit: "cm",
-    brandIds: [1], // Default to CrossCoin brand
+    brandIds: [], // Will be set by BrandAssignment component
     variations: [{
       price: "",
       comparePrice: "",
@@ -285,7 +285,7 @@ const ProductsPage = () => {
         status: product.status,
         badge: product.badge || 'none',
         total_sold: product.total_sold || 0,
-        brandIds: product.brands?.map(b => b.id) || [1], // Extract brand IDs or default to CrossCoin
+        brandIds: product.brands?.map(b => b.id) || [], // Extract brand IDs
         imagesToDelete: [], // Reset deletion tracking
         variationImagesToDelete: [], // Reset deletion tracking
         images: product.images?.map(img => {
@@ -1190,7 +1190,7 @@ const ProductsPage = () => {
                         />
                         <AttributeSelector
                           variationIndex={index}
-                          attributes={{ ...attributes, material: ["Cotton"] }}
+                          attributes={attributes}
                           selectedAttributes={variation.attributes || {}}
                           onChange={handleAttributeChange}
                         />
