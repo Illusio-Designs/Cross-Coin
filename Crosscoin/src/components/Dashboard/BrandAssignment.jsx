@@ -17,7 +17,7 @@ const BrandAssignment = ({ selectedBrands = [], onChange, disabled = false }) =>
         try {
             setLoading(true);
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/admin/brands`,
+                `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/brands`,
                 {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`,
