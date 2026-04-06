@@ -113,6 +113,10 @@ const colorMap = {
   "olive green": "#708238", // Olive Green
   "crimson red": "#DC143C", // Crimson Red
   "slate blue": "#6A5ACD", // Slate Blue
+  "light heather blue": "#B0C4DE", // Light Heather Blue
+  "ocean blue": "#006994", // Ocean Blue
+  "ice blue": "#D6EAF8", // Ice Blue
+  "dusty blue": "#7393B3", // Dusty Blue
   // Add more as needed
 };
 
