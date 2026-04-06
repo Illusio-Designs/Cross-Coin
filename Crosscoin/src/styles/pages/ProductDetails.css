@@ -899,6 +899,8 @@
   line-height: 1.8;
   margin: 16px 0 28px;
   font-family: Poppins, sans-serif;
+  text-align: justify;
+  width: 100%;
 }
 
 .pdt-desc-body * {
@@ -1146,7 +1148,7 @@
   }
 
   .pdt-details {
-    padding: 0 28px 80px;
+    padding: 0 20px 80px;
   }
 
   .pdt-title {
@@ -1232,6 +1234,19 @@
     font-size: 12px;
     padding: 0;
     width: auto;
+  }
+    .pdt-ideal-chip{
+    font-size: 10px;
+  }
+  .pdt-ideal-row{
+    gap: 4px;
+  }
+  .pdt-wash-box {
+    gap: 13px;
+  }
+  .pdt-ideal-chip svg{
+    height: 10px;
+    width: 10px;
   }
 }
 

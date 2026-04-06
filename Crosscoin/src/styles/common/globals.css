@@ -286,6 +286,12 @@ body:has(.pdt-sticky.visible) .back-to-top {
   }
 
   body:has(.pdt-sticky.visible) .back-to-top {
-    bottom: 82px;
+    bottom: 170px;
   }
+}
+
+@media (max-width: 600px) {
+    body:has(.pdt-sticky.visible) .back-to-top {
+        bottom: 200px;
+    }
 }
