@@ -12,7 +12,10 @@ import BrandTags from '../../../components/Dashboard/BrandTags';
 import BrandAssignment from '../../../components/Dashboard/BrandAssignment';
 import ProductFilterDrawer from '../../../components/products/ProductFilterDrawer';
 import dynamic from 'next/dynamic';
-const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
+const ReactQuill = dynamic(() => import('react-quill'), { 
+  ssr: false,
+  loading: () => <div style={{ height: 150, border: '1px solid #e5e7eb', borderRadius: 6 }} />
+});
 
 const ProductsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
