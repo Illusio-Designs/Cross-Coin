@@ -35,15 +35,15 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
 
   useEffect(() => {
     if (!product?.id) return;
-    // If already provided by API, use them directly
-    if (product.reviewCount !== undefined && product.avgRating !== undefined) {
-      setReviewCount(product.reviewCount);
+    // If already provided by API with a real rating, use them directly
+    if (product.avgRating != null) {
+      setReviewCount(product.reviewCount ?? 0);
       setAvgRating(product.avgRating);
       return;
     }
-    if (product.review_count !== undefined && product.avg_rating !== undefined) {
-      setReviewCount(product.review_count);
-      setAvgRating(product.avg_rating);
+    if (product.avg_rating != null) {
+      setReviewCount(product.review_count ?? 0);
+      setAvgRating(parseFloat(product.avg_rating));
       return;
     }
     // Otherwise fetch from API
