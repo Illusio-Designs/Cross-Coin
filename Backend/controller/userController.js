@@ -892,7 +892,7 @@ module.exports.bulkMergeGuestUsers = async (req, res) => {
         const [guestResult] = await sequelize.query(`
             UPDATE guest_users g
             JOIN users u ON LOWER(u.email) = LOWER(g.email)
-            SET g.status = 'converted', g.convertedAt = NOW()
+            SET g.status = 'converted', g.converted_at = NOW()
             WHERE g.status = 'active'
         `);
 
