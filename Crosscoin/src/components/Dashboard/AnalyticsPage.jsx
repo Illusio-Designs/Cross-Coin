@@ -351,41 +351,42 @@ export default function AnalyticsPage() {
 
         /* Globe — full width panel, no clipping */
         .an-globe-wrap {
-          background: #fff;
-          border: 1px solid #e5e7eb;
-          border-radius: 10px;
+          background: #0d0a2a;
+          border: 1px solid #2a1f5e;
+          border-radius: 12px;
           margin-bottom: 14px;
+          overflow: hidden;
         }
         .an-globe-header {
           padding: 12px 16px;
           font-size: 12px;
           font-weight: 700;
-          color: #374151;
+          color: #a89fd4;
           text-transform: uppercase;
           letter-spacing: .6px;
-          border-bottom: 1px solid #f0f0f5;
+          border-bottom: 1px solid #1e1650;
           display: flex;
           align-items: center;
           justify-content: space-between;
+          background: #0d0a2a;
         }
         .an-active-badge {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          background: #fef2f2;
-          color: #CE1E36;
+          background: rgba(206,30,54,0.15);
+          color: #ff6b7a;
           font-size: 12px;
           font-weight: 600;
           padding: 3px 10px;
           border-radius: 999px;
           letter-spacing: 0;
           text-transform: none;
-          border: 1px solid #fecaca;
+          border: 1px solid rgba(206,30,54,0.3);
         }
         .an-globe-canvas-wrap {
           width: 100%;
           height: 500px;
-          /* NO overflow:hidden — let globe breathe */
         }
 
         /* Bottom grid: 3 cols */
