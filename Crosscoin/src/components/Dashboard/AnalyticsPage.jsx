@@ -146,13 +146,12 @@ export default function AnalyticsPage() {
       rows.forEach(row => {
         const city    = row.dimensionValues[0]?.value ?? "";
         const country = row.dimensionValues[1]?.value ?? "";
+        const count   = parseInt(row.metricValues[0]?.value ?? "1", 10);
         const coords  = CITY_COORDS[city] || COUNTRY_COORDS[country];
-        // Pass city name too so globe can do its own lookup
         if (coords) {
-          newMarkers.push({ location: [coords[0], coords[1]], city, size: 0.05 });
+          newMarkers.push({ location: [coords[0], coords[1]], city, count, size: 0.05 });
         } else {
-          // No coords found in AnalyticsPage map — pass city name only, globe will resolve
-          newMarkers.push({ city, size: 0.05 });
+          newMarkers.push({ city, count, size: 0.05 });
         }
       });
 
@@ -351,8 +350,8 @@ export default function AnalyticsPage() {
 
         /* Globe — full width panel, no clipping */
         .an-globe-wrap {
-          background: #0d0a2a;
-          border: 1px solid #2a1f5e;
+          background: #ffffff;
+          border: 1px solid #e5e7eb;
           border-radius: 12px;
           margin-bottom: 14px;
           overflow: hidden;
@@ -361,14 +360,14 @@ export default function AnalyticsPage() {
           padding: 12px 16px;
           font-size: 12px;
           font-weight: 700;
-          color: #a89fd4;
+          color: #374151;
           text-transform: uppercase;
           letter-spacing: .6px;
-          border-bottom: 1px solid #1e1650;
+          border-bottom: 1px solid #f3f4f6;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          background: #0d0a2a;
+          background: #ffffff;
         }
         .an-active-badge {
           display: inline-flex;

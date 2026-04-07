@@ -75,9 +75,9 @@ const SlidingCollection = ({ collections = [], isLoading = false }) => {
 
     if (isMobile) {
       ACTIVE_W = sw * 0.78;
-      ACTIVE_H = 300;
+      ACTIVE_H = 270;
       SIDE_W = sw * 0.78;
-      SIDE_H = 300;
+      SIDE_H = 270;
       SIDE_PEEK = sw * 0.22;
     } else if (isTablet) {
       ACTIVE_W = sw * 0.55;
@@ -166,11 +166,11 @@ const SlidingCollection = ({ collections = [], isLoading = false }) => {
         </div>
         <div className="stage" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', position: 'relative' }}>
           {/* side card left */}
-          <div style={{ ...shimmerStyle, width: '340px', height: '300px', borderRadius: '16px', opacity: 0.5, flexShrink: 0 }} />
+          <div style={{ ...shimmerStyle, width: '340px', height: '270px', borderRadius: '16px', opacity: 0.5, flexShrink: 0 }} />
           {/* center card */}
           <div style={{ ...shimmerStyle, width: '480px', height: '380px', borderRadius: '16px', flexShrink: 0 }} />
           {/* side card right */}
-          <div style={{ ...shimmerStyle, width: '340px', height: '300px', borderRadius: '16px', opacity: 0.5, flexShrink: 0 }} />
+          <div style={{ ...shimmerStyle, width: '340px', height: '270px', borderRadius: '16px', opacity: 0.5, flexShrink: 0 }} />
         </div>
         <div className="dots" style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '16px' }}>
           {[0,1,2,3].map(i => (
