@@ -95,33 +95,40 @@ const INTL_MAP = {
   "kuala lumpur": [3.139, 101.687], "bangkok": [13.756, 100.502],
 };
 
-function makeLabel(text, position, camera) {
-  // Returns a canvas-based sprite for city name
+function makeLabel(text, position) {
   const canvas = document.createElement("canvas");
-  canvas.width = 256; canvas.height = 64;
+  canvas.width = 256; canvas.height = 56;
   const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "rgba(0,0,0,0)";
-  ctx.fillRect(0, 0, 256, 64);
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 22px sans-serif";
-  ctx.textAlign = "center";
-  // Red pill background
+  ctx.clearRect(0, 0, 256, 56);
+
+  ctx.font = "bold 20px sans-serif";
   const tw = ctx.measureText(text).width;
+
+  // Brand red background
   ctx.fillStyle = "#CE1E36";
   ctx.beginPath();
-  ctx.roundRect(128 - tw / 2 - 10, 14, tw + 20, 32, 8);
+  ctx.roundRect(8, 10, tw + 16, 30, 5);
   ctx.fill();
+
+  // White text
   ctx.fillStyle = "#ffffff";
-  ctx.fillText(text, 128, 36);
+  ctx.textAlign = "left";
+  ctx.fillText(text, 16, 31);
 
   const tex = new THREE.CanvasTexture(canvas);
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
   const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(0.45, 0.12, 1);
+  sprite.scale.set(0.28 + text.length * 0.011, 0.075, 1);
 
-  // Offset label slightly above the marker
+  // Position label just to the right of the dot
   const dir = position.clone().normalize();
-  sprite.position.copy(position.clone().add(dir.multiplyScalar(0.18)));
+  const up = new THREE.Vector3(0, 1, 0);
+  const right = new THREE.Vector3().crossVectors(dir, up).normalize();
+  sprite.position.copy(
+    position.clone()
+      .add(right.multiplyScalar(0.12))
+      .add(dir.clone().multiplyScalar(0.04))
+  );
   return sprite;
 }
 
@@ -155,25 +162,40 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
     earth.rotation.x =  22 * (Math.PI / 180);
     scene.add(earth);
 
-    // Globe sphere
+    // Globe sphere — deep navy base
     earth.add(new THREE.Mesh(
       new THREE.SphereGeometry(1, 64, 64),
-      new THREE.MeshPhongMaterial({ color: 0xeef2fb, emissive: 0xe0e8f8, shininess: 6 })
+      new THREE.MeshPhongMaterial({ color: 0x0a0720, emissive: 0x0d0a2e, shininess: 20 })
     ));
 
-    // Glow
+    // White edge ring — visible globe border
+    scene.add(new THREE.Mesh(
+      new THREE.SphereGeometry(1.015, 64, 64),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25, side: THREE.BackSide })
+    ));
+
+    // Glow — brand red tint
     earth.add(new THREE.Mesh(
-      new THREE.SphereGeometry(1.04, 64, 64),
-      new THREE.MeshBasicMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.10, side: THREE.BackSide })
+      new THREE.SphereGeometry(1.06, 64, 64),
+      new THREE.MeshBasicMaterial({ color: 0xce1e36, transparent: true, opacity: 0.04, side: THREE.BackSide })
     ));
 
-    // Lights
-    const dir = new THREE.DirectionalLight(0xffffff, 1.1);
+    // Outer atmosphere glow
+    scene.add(new THREE.Mesh(
+      new THREE.SphereGeometry(1.12, 64, 64),
+      new THREE.MeshBasicMaterial({ color: 0x180d3e, transparent: true, opacity: 0.08, side: THREE.BackSide })
+    ));
+
+    // Lights — cool blue-white
+    const dir = new THREE.DirectionalLight(0xaac4ff, 0.8);
     dir.position.set(5, 3, 5);
     scene.add(dir);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+    const dir2 = new THREE.DirectionalLight(0xce1e36, 0.15);
+    dir2.position.set(-4, -2, -3);
+    scene.add(dir2);
+    scene.add(new THREE.AmbientLight(0x8899cc, 0.6));
 
-    // ── World land dots (faint) ──────────────────────────────────────────────
+    // ── World land dots — muted navy/purple ─────────────────────────────────
     const worldPos = [];
     for (let i = 0; i < 18000; i++) {
       const y = 1 - (i / 17999) * 2;
@@ -187,10 +209,10 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
     const wGeo = new THREE.BufferGeometry();
     wGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(worldPos), 3));
     earth.add(new THREE.Points(wGeo, new THREE.PointsMaterial({
-      size: 0.006, color: 0xb0bec5, transparent: true, opacity: 0.28, depthWrite: false,
+      size: 0.006, color: 0x3d2f6e, transparent: true, opacity: 0.55, depthWrite: false,
     })));
 
-    // ── India fill dots (blue) ───────────────────────────────────────────────
+    // ── India fill dots — brand red tinted blue ──────────────────────────────
     const indiaPos = [];
     for (let lat = 8; lat <= 37; lat += 0.45) {
       for (let lng = 68; lng <= 97; lng += 0.45) {
@@ -202,10 +224,10 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
     const iGeo = new THREE.BufferGeometry();
     iGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(indiaPos), 3));
     earth.add(new THREE.Points(iGeo, new THREE.PointsMaterial({
-      size: 0.009, color: 0x3b82f6, transparent: true, opacity: 0.55, depthWrite: false,
+      size: 0.009, color: 0x6d4aff, transparent: true, opacity: 0.75, depthWrite: false,
     })));
 
-    // ── City dots (all Indian cities, always visible) ────────────────────────
+    // ── City dots — bright accent ────────────────────────────────────────────
     const cityPos = [];
     INDIA_CITIES.forEach(({ lat, lng }) => {
       const v = latLngToVec3(lat, lng, 1.004);
@@ -214,7 +236,7 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
     const cGeo = new THREE.BufferGeometry();
     cGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(cityPos), 3));
     earth.add(new THREE.Points(cGeo, new THREE.PointsMaterial({
-      size: 0.015, color: 0x1d4ed8, transparent: true, opacity: 0.80, depthWrite: false,
+      size: 0.013, color: 0x9d7fff, transparent: true, opacity: 0.90, depthWrite: false,
     })));
 
     // ── Live marker group ────────────────────────────────────────────────────
@@ -242,28 +264,28 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
         if (!r) return;
         const pos = latLngToVec3(r.lat, r.lng, 1.016);
 
-        // Red dot
+        // Red dot — smaller, brand color
         const dot = new THREE.Mesh(
-          new THREE.SphereGeometry(0.028, 16, 16),
+          new THREE.SphereGeometry(0.016, 16, 16),
           new THREE.MeshBasicMaterial({ color: 0xce1e36 })
         );
         dot.position.copy(pos);
         markerGroup.add(dot);
 
-        // White center
+        // White center — tiny
         const inner = new THREE.Mesh(
-          new THREE.SphereGeometry(0.011, 12, 12),
+          new THREE.SphereGeometry(0.006, 12, 12),
           new THREE.MeshBasicMaterial({ color: 0xffffff })
         );
         inner.position.copy(pos);
         markerGroup.add(inner);
 
-        // Pulse rings
-        [0, 600].forEach(offset => {
+        // Pulse rings — brand red, tighter
+        [0, 500].forEach(offset => {
           const ring = new THREE.Mesh(
-            new THREE.RingGeometry(0.030, 0.044, 32),
+            new THREE.RingGeometry(0.018, 0.026, 32),
             new THREE.MeshBasicMaterial({
-              color: 0xce1e36, transparent: true, opacity: 0.7, side: THREE.DoubleSide,
+              color: 0xce1e36, transparent: true, opacity: 0.8, side: THREE.DoubleSide,
             })
           );
           ring.position.copy(pos);
@@ -280,13 +302,8 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
       });
     }
 
-    // Default: show a few cities until realtime data arrives
-    const defaults = [
-      { lat: 19.076, lng: 72.877, city: "Mumbai" },
-      { lat: 28.613, lng: 77.209, city: "Delhi" },
-      { lat: 12.971, lng: 77.594, city: "Bangalore" },
-    ];
-    buildMarkers(externalMarkersRef?.current?.length ? externalMarkersRef.current : defaults);
+    // No defaults — only show markers when real active users exist
+    buildMarkers(externalMarkersRef?.current?.length ? externalMarkersRef.current : []);
 
     // ── Animate — NO auto-rotation ───────────────────────────────────────────
     const animate = () => {
@@ -297,7 +314,7 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
       const current = externalMarkersRef?.current ?? null;
       if (current !== prevMarkersRef.current) {
         prevMarkersRef.current = current;
-        buildMarkers(current?.length ? current : defaults);
+        buildMarkers(current?.length ? current : []);
       }
 
       // Pulse rings
