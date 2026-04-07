@@ -753,109 +753,7 @@ const setupDatabase = async () => {
       );
     }
 
-    // Run Magic Checkout migrations
-    console.log("Running Magic Checkout migrations...");
     try {
-      // Migration 001: Add Magic Checkout fields to payments table
-      console.log("Running migration 001: Add Magic Checkout fields to payments...");
-      
-      // Check and add magic_checkout_order_id
-      const [orderIdExists] = await sequelize.query(`
-        SELECT COUNT(*) as count
-        FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_SCHEMA = DATABASE() 
-        AND TABLE_NAME = 'payments' 
-        AND COLUMN_NAME = 'magic_checkout_order_id'
-      `);
-      
-      if (orderIdExists[0].count === 0) {
-        await sequelize.query(`
-          ALTER TABLE payments 
-          ADD COLUMN magic_checkout_order_id VARCHAR(255) NULL 
-          COMMENT 'Razorpay Magic Checkout order identifier'
-        `);
-        console.log("  ✓ Added magic_checkout_order_id column");
-      } else {
-        console.log("  ✓ magic_checkout_order_id column already exists");
-      }
-      
-      // Check and add magic_checkout_payment_id
-      const [paymentIdExists] = await sequelize.query(`
-        SELECT COUNT(*) as count
-        FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_SCHEMA = DATABASE() 
-        AND TABLE_NAME = 'payments' 
-        AND COLUMN_NAME = 'magic_checkout_payment_id'
-      `);
-      
-      if (paymentIdExists[0].count === 0) {
-        await sequelize.query(`
-          ALTER TABLE payments 
-          ADD COLUMN magic_checkout_payment_id VARCHAR(255) NULL 
-          COMMENT 'Razorpay Magic Checkout payment identifier'
-        `);
-        console.log("  ✓ Added magic_checkout_payment_id column");
-      } else {
-        console.log("  ✓ magic_checkout_payment_id column already exists");
-      }
-      
-      // Check and add magic_checkout_signature
-      const [signatureExists] = await sequelize.query(`
-        SELECT COUNT(*) as count
-        FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_SCHEMA = DATABASE() 
-        AND TABLE_NAME = 'payments' 
-        AND COLUMN_NAME = 'magic_checkout_signature'
-      `);
-      
-      if (signatureExists[0].count === 0) {
-        await sequelize.query(`
-          ALTER TABLE payments 
-          ADD COLUMN magic_checkout_signature VARCHAR(255) NULL 
-          COMMENT 'Razorpay Magic Checkout payment signature for verification'
-        `);
-        console.log("  ✓ Added magic_checkout_signature column");
-      } else {
-        console.log("  ✓ magic_checkout_signature column already exists");
-      }
-      
-      // Check and add indexes
-      const [orderIndexExists] = await sequelize.query(`
-        SELECT COUNT(*) as count
-        FROM INFORMATION_SCHEMA.STATISTICS 
-        WHERE TABLE_SCHEMA = DATABASE() 
-        AND TABLE_NAME = 'payments' 
-        AND INDEX_NAME = 'idx_magic_checkout_order'
-      `);
-      
-      if (orderIndexExists[0].count === 0) {
-        await sequelize.query(`
-          ALTER TABLE payments 
-          ADD INDEX idx_magic_checkout_order (magic_checkout_order_id)
-        `);
-        console.log("  ✓ Added idx_magic_checkout_order index");
-      } else {
-        console.log("  ✓ idx_magic_checkout_order index already exists");
-      }
-      
-      const [paymentIndexExists] = await sequelize.query(`
-        SELECT COUNT(*) as count
-        FROM INFORMATION_SCHEMA.STATISTICS 
-        WHERE TABLE_SCHEMA = DATABASE() 
-        AND TABLE_NAME = 'payments' 
-        AND INDEX_NAME = 'idx_magic_checkout_payment'
-      `);
-      
-      if (paymentIndexExists[0].count === 0) {
-        await sequelize.query(`
-          ALTER TABLE payments 
-          ADD INDEX idx_magic_checkout_payment (magic_checkout_payment_id)
-        `);
-        console.log("  ✓ Added idx_magic_checkout_payment index");
-      } else {
-        console.log("  ✓ idx_magic_checkout_payment index already exists");
-      }
-      
       console.log("✓ Migration 001 completed");
       
       // Migration 002: Create address_quality_scores table
@@ -898,7 +796,35 @@ const setupDatabase = async () => {
       `);
       console.log("✓ Migration 003 completed");
       
-      console.log("✓ All Magic Checkout migrations completed successfully");
+      // Migration 004: webhooks_log table for Razorpay webhook deduplication
+      console.log("Running migration 004: Create webhooks_log table...");
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS webhooks_log (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          event_id VARCHAR(100) NOT NULL UNIQUE,
+          event_type VARCHAR(100) NOT NULL,
+          processed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          INDEX idx_webhooks_event_id (event_id),
+          INDEX idx_webhooks_processed_at (processed_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+      `);
+      console.log("✓ Migration 004 completed");
+
+      // Migration 005: rto_risk_score column on orders
+      console.log("Running migration 005: Add rto_risk_score to orders...");
+      const [rtoCol] = await sequelize.query(`
+        SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' AND COLUMN_NAME = 'rto_risk_score'
+      `);
+      if (rtoCol[0].count === 0) {
+        await sequelize.query(`ALTER TABLE orders ADD COLUMN rto_risk_score INT NOT NULL DEFAULT 0 COMMENT 'RTO risk score'`);
+        console.log("  ✓ Added orders.rto_risk_score");
+      } else {
+        console.log("  ✓ orders.rto_risk_score already exists");
+      }
+      console.log("✓ Migration 005 completed");
+
+      console.log("✓ All migrations completed successfully");
     } catch (migrationError) {
       console.log("⚠️ Magic Checkout migration warning:", migrationError.message);
       // Don't fail the entire setup if migrations have issues
@@ -1016,6 +942,8 @@ const setupDatabase = async () => {
     throw error;
   }
 };
+
+
 
 // Function to clean up duplicate payments
 const cleanupDuplicatePayments = async () => {

@@ -120,8 +120,10 @@ function AppContent({ Component, pageProps, progressRef }) {
   const { user } = useAuth();
   const router = useRouter();
   const [showBackTop, setShowBackTop] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
+    setHasMounted(true);
     const onScroll = () => setShowBackTop(window.scrollY > 400);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -178,7 +180,7 @@ function AppContent({ Component, pageProps, progressRef }) {
       />
 
       {/* Back to top button */}
-      {showBackTop && (
+      {hasMounted && showBackTop && (
         <button
           className="back-to-top"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -189,7 +191,7 @@ function AppContent({ Component, pageProps, progressRef }) {
           </svg>
         </button>
       )}
-      {!isDashboard && !isAuthPage && <WhatsAppChat />}
+      {!isDashboard && !isAuthPage && hasMounted && <WhatsAppChat />}
     </>
   );
 }

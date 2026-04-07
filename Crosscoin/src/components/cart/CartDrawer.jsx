@@ -12,6 +12,7 @@ import {
   createGuestOrder,
   createRazorpayOrder,
   updateOrderPayment,
+  checkPincodeServiceability,
 } from '../../services/publicApi';
 import {
   showOrderPlacedSuccessToast,
@@ -203,6 +204,11 @@ const CartDrawer = ({ isOpen, onClose }) => {
   // Order
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
+  const [paymentFailed, setPaymentFailed] = useState({ error: null, rzpOrder: null, retryCount: 0 });
+  const [pincodeServiceability, setPincodeServiceability] = useState(null); // { serviceable, cod_allowed, city, state }
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => { setIsMounted(true); }, []);
 
   // Coupon
   const [couponCode, setCouponCode] = useState('');
@@ -299,7 +305,21 @@ const CartDrawer = ({ isOpen, onClose }) => {
     getUserShippingAddresses().then(data => {
       setAddresses(data || []);
       const def = (data || []).find(a => a.isDefault || a.is_default);
-      if (def && !selectedAddress) setSelectedAddress(def);
+      if (def && !selectedAddress) {
+        setSelectedAddress(def);
+        // Check serviceability for default address pincode
+        const pin = String(def.postal_code || def.postalCode || '').replace(/\D/g, '');
+        if (pin.length === 6) {
+          checkPincodeServiceability(pin)
+            .then(result => setPincodeServiceability({
+              serviceable: result?.serviceable !== false,
+              cod_allowed: result?.cod_allowed !== false,
+              city: result?.city || '',
+              state: result?.state || '',
+            }))
+            .catch(() => setPincodeServiceability(null));
+        }
+      }
     }).catch(() => { }).finally(() => setAddressLoading(false));
   }, [isOpen, isAuthenticated]);
 
@@ -452,6 +472,31 @@ const CartDrawer = ({ isOpen, onClose }) => {
       next = next.replace(/\D/g, '').slice(0, 10);
     }
     setAddressForm(p => ({ ...p, [name]: next }));
+  };
+
+  // Task 16: check pincode serviceability on blur, auto-fill city/state
+  const handlePincodeBlur = async (e) => {
+    const pin = e.target.value.replace(/\D/g, '');
+    if (pin.length !== 6) return;
+    try {
+      const result = await checkPincodeServiceability(pin);
+      const serviceable = result?.serviceable !== false;
+      const cod_allowed = result?.cod_allowed !== false;
+      const city = result?.city || '';
+      const state = result?.state || '';
+      setPincodeServiceability({ serviceable, cod_allowed, city, state });
+      // Auto-fill city and state if returned
+      if (city || state) {
+        setAddressForm(p => ({
+          ...p,
+          city: city || p.city,
+          state: state || p.state,
+        }));
+      }
+    } catch {
+      // Non-fatal — don't block checkout on serviceability failure
+      setPincodeServiceability(null);
+    }
   };
 
   const handleEditAddress = (addr) => {
@@ -840,14 +885,18 @@ const CartDrawer = ({ isOpen, onClose }) => {
           },
           modal: {
             ondismiss: () => {
-              showOrderPlacedErrorToast('Payment was cancelled.');
+              setPaymentFailed(prev => ({ error: 'Payment was cancelled.', rzpOrder: rzpOrder, retryCount: prev.retryCount }));
               setIsProcessing(false);
             },
           },
         };
         const rzp = new window.Razorpay(options);
         rzp.on('payment.failed', (r) => {
-          showOrderPlacedErrorToast(`Payment failed: ${r.error?.description || 'Please try again'}`);
+          setPaymentFailed(prev => ({
+            error: r.error?.description || 'Payment failed. Please try again.',
+            rzpOrder: rzpOrder,
+            retryCount: prev.retryCount,
+          }));
           setIsProcessing(false);
         });
         rzp.open();
@@ -902,6 +951,97 @@ const CartDrawer = ({ isOpen, onClose }) => {
               <p className="cd-success-msg">Thank you! You will receive a confirmation shortly.</p>
               <button className="cd-btn-primary" onClick={() => { onClose(); router.push(`/ThankYou?order_number=${orderSuccess.orderNumber}`); }}>View Order</button>
               <button className="cd-btn-ghost" style={{ marginTop: 8 }} onClick={onClose}>Continue Shopping</button>
+            </div>
+          ) : isMounted && paymentFailed.error ? (
+            /* ── Payment Failure Panel (Task 3) ── */
+            <div className="cd-success" style={{ textAlign: 'center', padding: '32px 24px' }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>❌</div>
+              <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#b91c1c' }}>Payment Failed</h3>
+              <p style={{ margin: '0 0 20px', fontSize: 14, color: '#6b7280' }}>{paymentFailed.error}</p>
+              {paymentFailed.retryCount < 3 ? (
+                <button
+                  className="cd-btn-primary"
+                  onClick={async () => {
+                    setPaymentFailed(prev => ({ ...prev, retryCount: prev.retryCount + 1, error: null }));
+                    setIsProcessing(true);
+                    try {
+                      const rzpOrder = paymentFailed.rzpOrder;
+                      const prepaidIdempotencyKey = generateIdempotencyKey();
+                      const orderData = buildPrepaidOrderData(prepaidIdempotencyKey);
+                      const options = {
+                        key: RAZORPAY_KEY,
+                        amount: rzpOrder.amount,
+                        currency: rzpOrder.currency,
+                        name: 'Cross Coin',
+                        description: 'Payment for Cross Coin Order',
+                        order_id: rzpOrder.id,
+                        prefill: {
+                          name: isAuthenticated ? (user?.name || '') : `${guestInfo.firstName} ${guestInfo.lastName}`,
+                          email: isAuthenticated ? (user?.email || '') : guestInfo.email,
+                          contact: selectedAddress?.phone_number || selectedAddress?.phoneNumber || '',
+                        },
+                        theme: { color: '#CE1E36' },
+                        handler: async (response) => {
+                          try {
+                            const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
+                            if (!result?.order) throw new Error('Order creation failed.');
+                            await updateOrderPayment({
+                              orderId: result.order.id,
+                              razorpayPaymentId: response.razorpay_payment_id,
+                              razorpayOrderId: response.razorpay_order_id,
+                              razorpaySignature: response.razorpay_signature,
+                            });
+                            trackPurchase(prepaidPayable, result.order.order_number);
+                            clearCart(); clearBuyNow();
+                            setPaymentFailed({ error: null, rzpOrder: null, retryCount: 0 });
+                            showOrderPlacedSuccessToast(result.order.order_number);
+                            setOrderSuccess({ orderNumber: result.order.order_number });
+                          } catch {
+                            showOrderPlacedErrorToast('Payment successful but order creation failed. Please contact support.');
+                          } finally { setIsProcessing(false); }
+                        },
+                        modal: {
+                          ondismiss: () => {
+                            setPaymentFailed(prev => ({ ...prev, error: 'Payment was cancelled.' }));
+                            setIsProcessing(false);
+                          },
+                        },
+                      };
+                      const rzp = new window.Razorpay(options);
+                      rzp.on('payment.failed', (r) => {
+                        setPaymentFailed(prev => ({ ...prev, error: r.error?.description || 'Payment failed. Please try again.' }));
+                        setIsProcessing(false);
+                      });
+                      rzp.open();
+                    } catch (err) {
+                      showOrderPlacedErrorToast(err.message || 'Could not retry payment.');
+                      setIsProcessing(false);
+                    }
+                  }}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? 'Loading...' : `Retry Payment (${3 - paymentFailed.retryCount} left)`}
+                </button>
+              ) : (
+                <p style={{ fontSize: 13, color: '#b91c1c', marginBottom: 16 }}>Maximum retries reached. Please start a new order.</p>
+              )}
+              <button
+                className="cd-btn-ghost"
+                style={{ marginTop: 10 }}
+                onClick={() => {
+                  setPaymentFailed({ error: null, rzpOrder: null, retryCount: 0 });
+                  // Fire-and-forget: record failure if we have a rzpOrder
+                  if (paymentFailed.rzpOrder?.id) {
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/payments/payment-failed`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'X-Brand-Name': 'crosscoin' },
+                      body: JSON.stringify({ razorpayOrderId: paymentFailed.rzpOrder.id, errorDescription: paymentFailed.error }),
+                    }).catch(() => {});
+                  }
+                }}
+              >
+                Cancel
+              </button>
             </div>
           ) : activeItems.length === 0 ? (
             /* ── Empty ── */
@@ -1106,9 +1246,24 @@ const CartDrawer = ({ isOpen, onClose }) => {
                                 <div
                                   key={addr.id}
                                   className={`cd-address-option ${selectedAddress?.id === addr.id ? 'selected' : ''}`}
-                                  onClick={() => {
+                                  onClick={async () => {
                                     setSelectedAddress(addr);
                                     setShowAddressDropdown(false);
+                                    // Task 16: check serviceability for saved address pincode
+                                    const pin = String(addr.postal_code || addr.postalCode || '').replace(/\D/g, '');
+                                    if (pin.length === 6) {
+                                      try {
+                                        const result = await checkPincodeServiceability(pin);
+                                        setPincodeServiceability({
+                                          serviceable: result?.serviceable !== false,
+                                          cod_allowed: result?.cod_allowed !== false,
+                                          city: result?.city || '',
+                                          state: result?.state || '',
+                                        });
+                                      } catch { setPincodeServiceability(null); }
+                                    } else {
+                                      setPincodeServiceability(null);
+                                    }
                                   }}
                                 >
                                   <div className="cd-address-body">
@@ -1197,7 +1352,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                           <div className="cd-form-group cd-form-full"><label className="cd-label">Address *</label><input className="cd-input" name="address" value={addressForm.address} onChange={handleAddrChange} required placeholder="Street address, flat, area" autoComplete="street-address" /></div>
                           <div className="cd-form-group"><label className="cd-label">City *</label><input className="cd-input" name="city" value={addressForm.city} onChange={handleAddrChange} required placeholder="City" autoComplete="address-level2" /></div>
                           <div className="cd-form-group"><label className="cd-label">State *</label><input className="cd-input" name="state" value={addressForm.state} onChange={handleAddrChange} required placeholder="State" autoComplete="address-level1" /></div>
-                          <div className="cd-form-group"><label className="cd-label">Postal Code *</label><input className="cd-input" name="postalCode" value={addressForm.postalCode} onChange={handleAddrChange} required placeholder="PIN code" autoComplete="postal-code" /></div>
+                          <div className="cd-form-group"><label className="cd-label">Postal Code *</label><input className="cd-input" name="postalCode" value={addressForm.postalCode} onChange={handleAddrChange} onBlur={handlePincodeBlur} required placeholder="PIN code" autoComplete="postal-code" /></div>
                           <div className="cd-form-group"><label className="cd-label">Country</label><input className="cd-input" name="country" value={addressForm.country} onChange={handleAddrChange} placeholder="Country" autoComplete="country-name" /></div>
                           {isAuthenticated && (
                             <div className="cd-form-group cd-form-full"><label className="cd-checkbox-label"><input type="checkbox" name="isDefault" checked={addressForm.isDefault} onChange={handleAddrChange} /> Set as default address</label></div>
@@ -1218,34 +1373,40 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 <div className="cd-sv-section" id="cd-section-delivery">
                   <div className="cd-section-title">How would you like to pay?</div>
                   <div className="cd-delivery-list">
-                    {sortedShippingFees.map(fee => (
-                      <label
-                        key={fee.id}
-                        className={`cd-delivery-card ${fee.orderType === 'prepaid' ? 'cd-delivery-prepaid' : 'cd-delivery-cod'} ${selectedFee?.id === fee.id ? 'cd-delivery-selected' : ''}`}
-                      >
-                        <input type="radio" name="delivery" checked={selectedFee?.id === fee.id} onChange={() => handleSelectFee(fee)} />
-                        <span className="cd-delivery-icon">
-                          {fee.orderType === 'cod' ? <IconMoneyBag /> : <IconTruck />}
-                        </span>
-                        <div className="cd-delivery-info">
-                          <p className="cd-delivery-name">
-                            {fee.orderType === 'cod'
-                              ? <span>Cash on Delivery <span className="cd-delivery-popular">Most Popular ⭐</span></span>
-                              : fee.orderType === 'prepaid'
-                                ? 'UPI / Card (Prepaid)'
-                                : fee.orderType}
-                          </p>
-                          <p className="cd-delivery-desc">
-                            {fee.orderType === 'cod'
-                              ? 'Pay after delivery · Delivery by 5–7 Apr'
-                              : '₹50 OFF applied | Limited Offer'}
-                          </p>
-                        </div>
-                        <span className={`cd-delivery-fee ${parseFloat(fee.fee || 0) === 0 ? 'free' : ''}`}>
-                          {parseFloat(fee.fee || 0) === 0 ? 'Free' : `₹${parseFloat(fee.fee || 0).toFixed(2)}`}
-                        </span>
-                      </label>
-                    ))}
+                    {sortedShippingFees.map(fee => {
+                      const isCodBlocked = isMounted && fee.orderType === 'cod' && pincodeServiceability && pincodeServiceability.cod_allowed === false;
+                      return (
+                        <label
+                          key={fee.id}
+                          className={`cd-delivery-card ${fee.orderType === 'prepaid' ? 'cd-delivery-prepaid' : 'cd-delivery-cod'} ${selectedFee?.id === fee.id ? 'cd-delivery-selected' : ''} ${isCodBlocked ? 'cd-delivery-disabled' : ''}`}
+                          style={isCodBlocked ? { opacity: 0.5, pointerEvents: 'none' } : {}}
+                        >
+                          <input type="radio" name="delivery" checked={selectedFee?.id === fee.id} onChange={() => !isCodBlocked && handleSelectFee(fee)} disabled={isCodBlocked} />
+                          <span className="cd-delivery-icon">
+                            {fee.orderType === 'cod' ? <IconMoneyBag /> : <IconTruck />}
+                          </span>
+                          <div className="cd-delivery-info">
+                            <p className="cd-delivery-name">
+                              {fee.orderType === 'cod'
+                                ? <span>Cash on Delivery <span className="cd-delivery-popular">Most Popular ⭐</span></span>
+                                : fee.orderType === 'prepaid'
+                                  ? 'UPI / Card (Prepaid)'
+                                  : fee.orderType}
+                            </p>
+                            <p className="cd-delivery-desc">
+                              {isCodBlocked
+                                ? 'COD not available for this location. Please pay online.'
+                                : fee.orderType === 'cod'
+                                  ? 'Pay after delivery · Delivery by 5–7 Apr'
+                                  : '₹50 OFF applied | Limited Offer'}
+                            </p>
+                          </div>
+                          <span className={`cd-delivery-fee ${parseFloat(fee.fee || 0) === 0 ? 'free' : ''}`}>
+                            {parseFloat(fee.fee || 0) === 0 ? 'Free' : `₹${parseFloat(fee.fee || 0).toFixed(2)}`}
+                          </span>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               )}

@@ -16,7 +16,7 @@ import { gtagTrack } from '../utils/gtagTrack';
 // Lazy load CouponStrip to prevent module-level side effects
 const CouponStrip = dynamic(() => import("../components/common/CouponStrip"), {
   loading: () => null,
-  ssr: true
+  ssr: false
 });
 
 import TrustBadges from "../components/common/TrustBadges";
@@ -25,7 +25,8 @@ import { useRouter } from 'next/router';
 
 // Lazy load below-the-fold components for better performance
 const BlogSection = dynamic(() => import("../components/blog/BlogSection"), {
-  loading: () => <div style={{ minHeight: '400px', background: '#fff' }} />
+  loading: () => <div style={{ minHeight: '400px', background: '#fff' }} />,
+  ssr: false
 });
 
 const Home = () => {

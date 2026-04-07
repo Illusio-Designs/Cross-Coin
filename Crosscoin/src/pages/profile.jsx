@@ -13,6 +13,8 @@ import {
   deleteShippingAddress,
   setDefaultShippingAddress,
   getUserOrders,
+  cancelOrder,
+  initiateReturn,
 } from "../services/publicApi";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -71,6 +73,7 @@ export default function Profile() {
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [ordersError, setOrdersError] = useState("");
+  const [orderActionLoading, setOrderActionLoading] = useState(null); // orderId being actioned
 
   // Addresses
   const [addresses, setAddresses] = useState([]);
@@ -211,6 +214,12 @@ export default function Profile() {
           <div className="pf-stat"><div className="pf-stat-val">{addresses.length}</div><div className="pf-stat-label">Addresses</div></div>
           <div className="pf-stat"><div className="pf-stat-val">{orders.filter(o => o.status === "delivered").length}</div><div className="pf-stat-label">Delivered</div></div>
           <div className="pf-stat"><div className="pf-stat-val">{orders.filter(o => ["pending","processing","shipped","booked"].includes(o.status)).length}</div><div className="pf-stat-label">Active</div></div>
+          {(user?.loyalty_points > 0) && (
+            <div className="pf-stat" title="Earn points on every delivery. Redeem on future orders.">
+              <div className="pf-stat-val" style={{ color: '#f59e0b' }}>⭐ {user.loyalty_points}</div>
+              <div className="pf-stat-label">Points</div>
+            </div>
+          )}
         </div>
 
         {/* Body */}
@@ -267,6 +276,43 @@ export default function Profile() {
                           <span className="pf-order-total">Total: ₹{parseFloat(order.final_amount || 0).toFixed(2)}</span>
                           <div className="pf-order-actions">
                             <button className="pf-btn-ghost" onClick={() => router.push(`/order-tracking?order=${order.order_number}`)}>Track Order</button>
+                            {['pending', 'confirmed', 'processing'].includes(order.status) && (
+                              <button
+                                className="pf-btn-ghost"
+                                style={{ color: '#c62828', borderColor: '#c62828' }}
+                                disabled={orderActionLoading === order.id}
+                                onClick={async () => {
+                                  if (!window.confirm('Cancel this order?')) return;
+                                  setOrderActionLoading(order.id);
+                                  try {
+                                    await cancelOrder(order.id, 'Cancelled by customer');
+                                    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'cancelled' } : o));
+                                  } catch (e) {
+                                    showValidationErrorToast(e?.message || 'Could not cancel order. Please try again.');
+                                  } finally { setOrderActionLoading(null); }
+                                }}
+                              >
+                                {orderActionLoading === order.id ? 'Cancelling...' : 'Cancel'}
+                              </button>
+                            )}
+                            {order.status === 'delivered' && (
+                              <button
+                                className="pf-btn-ghost"
+                                disabled={orderActionLoading === order.id}
+                                onClick={async () => {
+                                  const reason = window.prompt('Reason for return (optional):') ?? '';
+                                  setOrderActionLoading(order.id);
+                                  try {
+                                    await initiateReturn(order.id, reason);
+                                    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'return_initiated' } : o));
+                                  } catch (e) {
+                                    showValidationErrorToast(e?.message || 'Could not initiate return. Please try again.');
+                                  } finally { setOrderActionLoading(null); }
+                                }}
+                              >
+                                {orderActionLoading === order.id ? 'Processing...' : 'Return'}
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

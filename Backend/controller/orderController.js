@@ -30,6 +30,77 @@
   const { invalidateDashboardCache } = require("../services/dashboardService.js");
   const loyaltyService = require("../services/loyaltyService.js");
 
+  // ─── Validation helpers ───────────────────────────────────────────────────
+  const PHONE_REGEX = /^[6-9]\d{9}$/;
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const DISPATCHED_STATUSES = [
+    'booked', 'pickup initiated', 'manifested', 'in transit',
+    'shipped', 'out for delivery', 'delivered', 'return_initiated', 'returned_rto'
+  ];
+
+  /**
+   * Compute server-side discount for a coupon against a subtotal.
+   * Returns the discount amount in rupees.
+   */
+  async function computeCouponDiscount(couponId, subTotal, items = []) {
+    if (!couponId) return 0;
+    const { Coupon } = require('../model/associations.js');
+    const coupon = await Coupon.findOne({
+      where: {
+        id: couponId,
+        status: 'active',
+        startDate: { [Op.lte]: new Date() },
+        endDate: { [Op.gte]: new Date() },
+      },
+    });
+    if (!coupon) return 0;
+    if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) return 0;
+    if (coupon.minPurchase && subTotal < parseFloat(coupon.minPurchase)) return 0;
+
+    let discount = 0;
+    if (coupon.type === 'percentage') {
+      discount = (subTotal * parseFloat(coupon.value)) / 100;
+      if (coupon.maxDiscount) discount = Math.min(discount, parseFloat(coupon.maxDiscount));
+    } else if (coupon.type === 'fixed') {
+      discount = parseFloat(coupon.value);
+    } else if (coupon.type === 'tiered') {
+      let tiers = coupon.tieredDiscounts;
+      if (typeof tiers === 'string') { try { tiers = JSON.parse(tiers); } catch { tiers = []; } }
+      if (!Array.isArray(tiers)) tiers = [];
+      const tier = tiers.sort((a, b) => b.minAmount - a.minAmount).find(t => subTotal >= t.minAmount);
+      if (tier) discount = parseFloat(tier.discount);
+    } else if (coupon.type === 'quantity_based') {
+      const totalQty = items.reduce((s, i) => s + (i.quantity || 0), 0);
+      let tiers = coupon.quantityBasedDiscounts;
+      if (typeof tiers === 'string') { try { tiers = JSON.parse(tiers); } catch { tiers = []; } }
+      if (!Array.isArray(tiers)) tiers = [];
+      const tier = tiers.sort((a, b) => b.minQuantity - a.minQuantity).find(t => totalQty >= t.minQuantity);
+      if (tier) discount = parseFloat(tier.discount);
+    }
+    return Math.min(discount, subTotal);
+  }
+
+  /**
+   * Get count of RTO orders for a phone number in the last 6 months.
+   */
+  async function getRtoCount(phone) {
+    if (!phone) return 0;
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const { ShippingAddress: SA } = require('../model/shippingAddressModel.js');
+    // Find all shipping address IDs with this phone
+    const addresses = await SA.findAll({ where: { phone }, attributes: ['id'] });
+    if (!addresses.length) return 0;
+    const addressIds = addresses.map(a => a.id);
+    return Order.count({
+      where: {
+        shipping_address_id: { [Op.in]: addressIds },
+        status: 'returned_rto',
+        createdAt: { [Op.gte]: sixMonthsAgo },
+      },
+    });
+  }
+
   // Generate unique order number with collision retry (Requirement 5.3)
   const generateOrderNumber = () => {
     const date = new Date();
@@ -155,6 +226,28 @@
       }
       logger.debug("createOrder: Shipping address validated");
 
+      // ── Input validation (Task 4) ─────────────────────────────────────────
+      if (shippingAddress.phone && !PHONE_REGEX.test(String(shippingAddress.phone).replace(/\D/g, '').slice(-10))) {
+        await transaction.rollback();
+        return res.status(400).json({ message: "Please enter a valid 10-digit mobile number on your delivery address." });
+      }
+      if (shippingAddress.address && String(shippingAddress.address).trim().length < 15) {
+        await transaction.rollback();
+        return res.status(400).json({ message: "Address must be at least 15 characters." });
+      }
+
+      // ── Idempotency key dedup (Task 7) ────────────────────────────────────
+      const idempotencyKey = req.headers['x-idempotency-key'] || req.body.idempotency_key;
+      if (idempotencyKey) {
+        const redisService = require('../services/redisService.js');
+        const cached = await redisService.get(`idem:${userId}:${idempotencyKey}`).catch(() => null);
+        if (cached) {
+          await transaction.rollback();
+          const existingOrder = await Order.findByPk(JSON.parse(cached).orderId);
+          if (existingOrder) return res.status(200).json({ message: "Order already created", order: existingOrder });
+        }
+      }
+
       // Calculate total amount and validate items
       let totalAmount = 0;
       const validatedItems = [];
@@ -190,6 +283,12 @@
           return res.status(400).json({
             message: "Product ID and quantity are required for each item",
           });
+        }
+
+        // Task 4: qty >= 1 guard
+        if (quantity < 1) {
+          await transaction.rollback();
+          return res.status(400).json({ message: "Quantity must be at least 1 for each item." });
         }
 
         // Get product from map (O(1) lookup instead of database query)
@@ -289,7 +388,36 @@
       logger.debug("appliedDiscount:", appliedDiscount);
       logger.debug("shippingFee:", shippingFee);
       logger.debug("finalAmount:", finalAmount);
-      
+
+      // ── Task 5: Server-side discount verification ─────────────────────────
+      if (appliedDiscount > 0 && !coupon_id) {
+        await transaction.rollback();
+        return res.status(400).json({ message: "Invalid discount amount." });
+      }
+      if (coupon_id) {
+        const serverDiscount = await computeCouponDiscount(coupon_id, subTotal, validatedItems);
+        if (Math.abs(appliedDiscount - serverDiscount) > 1) {
+          await transaction.rollback();
+          return res.status(400).json({ message: "Order total mismatch. Please refresh and try again." });
+        }
+      }
+
+      // ── Task 6: COD max order value cap ───────────────────────────────────
+      let rtoRiskScore = 0;
+      if (payment_type === 'cod') {
+        const codMax = parseFloat(await settingsHelper.getSetting(req.brand?.id || 1, 'COD_MAX_ORDER_VALUE', '1500'));
+        if (finalAmount > codMax) {
+          await transaction.rollback();
+          return res.status(400).json({ message: `COD is not available for orders above ₹${codMax}. Please pay online.` });
+        }
+        const rtoCount = await getRtoCount(shippingAddress.phone);
+        if (rtoCount >= 2) {
+          await transaction.rollback();
+          return res.status(400).json({ message: "COD is not available for your account. Please pay online." });
+        }
+        if (rtoCount === 1) rtoRiskScore += 20;
+        if (!shippingAddress.landmark) rtoRiskScore += 10;
+      }
       // Handle UTM tracking
       const UTMTracking = require("../model/utmModel.js");
       let utmTrackingId = null;
@@ -340,7 +468,8 @@
           status: "pending",
           notes: notes || null,
           utm_tracking_id: utmTrackingId,
-          brand_id: req.brand ? req.brand.id : 1, // ✅ Multi-brand support
+          brand_id: req.brand ? req.brand.id : 1,
+          rto_risk_score: rtoRiskScore,
         },
         { transaction }
       );
@@ -420,6 +549,18 @@
 
       await transaction.commit();
       logger.debug("createOrder: Transaction committed successfully");
+
+      // Task 10: Set confirmed status for COD orders
+      if (payment_type === 'cod') {
+        await order.update({ status: 'confirmed' });
+        await OrderStatusHistory.create({ order_id: order.id, status: 'confirmed', updated_by: userId, notes: 'Order confirmed' });
+      }
+
+      // Task 7: Store idempotency key → order_id mapping (30min TTL)
+      if (idempotencyKey) {
+        const redisService = require('../services/redisService.js');
+        await redisService.set(`idem:${userId}:${idempotencyKey}`, JSON.stringify({ orderId: order.id }), 'EX', 86400).catch(() => {});
+      }
 
       // Emit real-time notification
       const notificationService = require('../services/notificationService.js');
@@ -587,6 +728,56 @@
         }
       });
 
+      // Fire AddShippingInfo for all orders + InitiateCheckout for COD (prepaid fires InitiateCheckout in createRazorpayOrder)
+      setImmediate(async () => {
+        try {
+          const [orderUser, orderAddress] = await Promise.all([
+            User.findByPk(userId, { attributes: ['email', 'username'] }),
+            ShippingAddress.findByPk(shipping_address_id),
+          ]);
+          const nameParts = (orderUser?.username || '').trim().split(/\s+/);
+          const basePayload = {
+            brand_id: createdOrder.brand_id || 1,
+            order_number: createdOrder.order_number,
+            total_amount: parseFloat(createdOrder.final_amount),
+            final_amount: parseFloat(createdOrder.final_amount),
+            currency: "INR",
+            ip_address: req.ip || null,
+            user_agent: req.headers["user-agent"] || null,
+            email: orderUser?.email || null,
+            phone: orderAddress?.phone || null,
+            first_name: nameParts[0] || null,
+            last_name: nameParts.slice(1).join(' ') || null,
+            zip_code: orderAddress?.pincode || null,
+            city: orderAddress?.city || null,
+            state: orderAddress?.state || null,
+            country: 'in',
+            fbc: req.cookies?._fbc || req.body?.fbc || null,
+            fbp: req.cookies?._fbp || null,
+            items: createdOrder.OrderItems.map(i => ({
+              product_id: i.product_id,
+              quantity: i.quantity,
+              price: parseFloat(i.price || 0),
+              name: i.Product?.name || '',
+            })),
+          };
+
+          // AddShippingInfo fires for all orders when shipping address is confirmed
+          await sendFacebookEvent("AddShippingInfo", basePayload);
+          await sendGAEvent("add_shipping_info", basePayload);
+
+          // COD: also fire InitiateCheckout + AddPaymentInfo here (prepaid fires these in createRazorpayOrder)
+          if (payment_type === 'cod') {
+            await sendFacebookEvent("InitiateCheckout", basePayload);
+            await sendGAEvent("begin_checkout", basePayload);
+            await sendFacebookEvent("AddPaymentInfo", basePayload);
+            await sendGAEvent("add_payment_info", basePayload);
+          }
+        } catch (fbErr) {
+          logger.error("createOrder: AddShippingInfo/InitiateCheckout analytics error:", fbErr.message);
+        }
+      });
+
       // Fire Purchase analytics ONLY for COD orders — prepaid fires in updateOrderPayment after payment confirmation
       if (payment_type === 'cod') {
         setImmediate(async () => {
@@ -748,6 +939,38 @@
         });
       }
 
+      // ── Task 4: Input validation ──────────────────────────────────────────
+      const guestPhone = String(guest_info.phone || '').replace(/\D/g, '').slice(-10);
+      if (!PHONE_REGEX.test(guestPhone)) {
+        await transaction.rollback();
+        return res.status(400).json({ success: false, message: "Please enter a valid 10-digit mobile number." });
+      }
+      if (!EMAIL_REGEX.test(String(email).trim())) {
+        await transaction.rollback();
+        return res.status(400).json({ success: false, message: "Please enter a valid email address." });
+      }
+      if (String(firstName).trim().length < 2 || /\d/.test(firstName)) {
+        await transaction.rollback();
+        return res.status(400).json({ success: false, message: "Please enter a valid first name (min 2 characters, no digits)." });
+      }
+      if (String(address).trim().length < 15) {
+        await transaction.rollback();
+        return res.status(400).json({ success: false, message: "Address must be at least 15 characters." });
+      }
+
+      // ── Task 7: Idempotency key dedup ─────────────────────────────────────
+      const idempotencyKey = req.headers['x-idempotency-key'] || req.body.idempotency_key;
+      if (idempotencyKey) {
+        const redisService = require('../services/redisService.js');
+        const idemKey = `idem:guest:${guestPhone}:${idempotencyKey}`;
+        const cached = await redisService.get(idemKey).catch(() => null);
+        if (cached) {
+          await transaction.rollback();
+          const existingOrder = await Order.findByPk(JSON.parse(cached).orderId);
+          if (existingOrder) return res.status(200).json({ success: true, message: "Order already created", order: existingOrder });
+        }
+      }
+
       logger.debug("createGuestOrder: Creating guest user...");
       // Create or find guest user
       let guestUser = await GuestUser.findOne({
@@ -805,6 +1028,12 @@
             success: false,
             message: "Product ID and quantity are required for each item",
           });
+        }
+
+        // Task 4: qty >= 1 guard
+        if (quantity < 1) {
+          await transaction.rollback();
+          return res.status(400).json({ success: false, message: "Quantity must be at least 1 for each item." });
         }
 
         const product = await Product.findByPk(product_id, {
@@ -876,6 +1105,37 @@
 
       const finalAmount = Number(totalAmount) + Number(shippingFee) - Number(finalDiscountAmount);
       logger.debug("createGuestOrder: Final amount calculated:", finalAmount);
+
+      // ── Task 5: Server-side discount verification ─────────────────────────
+      if (finalDiscountAmount > 0 && !coupon_id) {
+        await transaction.rollback();
+        return res.status(400).json({ success: false, message: "Invalid discount amount." });
+      }
+      if (coupon_id) {
+        const serverDiscount = await computeCouponDiscount(coupon_id, Number(totalAmount), validatedItems);
+        if (Math.abs(finalDiscountAmount - serverDiscount) > 1) {
+          await transaction.rollback();
+          return res.status(400).json({ success: false, message: "Order total mismatch. Please refresh and try again." });
+        }
+        finalDiscountAmount = serverDiscount; // use server value
+      }
+
+      // ── Task 6: COD max order value cap ───────────────────────────────────
+      let rtoRiskScore = 0;
+      if (payment_type === 'cod') {
+        const codMax = parseFloat(await settingsHelper.getSetting(req.brand?.id || 1, 'COD_MAX_ORDER_VALUE', '1500'));
+        if (finalAmount > codMax) {
+          await transaction.rollback();
+          return res.status(400).json({ success: false, message: `COD is not available for orders above ₹${codMax}. Please pay online.` });
+        }
+        const rtoCount = await getRtoCount(String(guest_info.phone || '').replace(/\D/g, '').slice(-10));
+        if (rtoCount >= 2) {
+          await transaction.rollback();
+          return res.status(400).json({ success: false, message: "COD is not available for your account. Please pay online." });
+        }
+        if (rtoCount === 1) rtoRiskScore += 20;
+        if (!shipping_address.landmark) rtoRiskScore += 10;
+      }
 
       // Generate order number
       const orderNumber = await generateUniqueOrderNumber(transaction);
@@ -1034,47 +1294,70 @@
       await transaction.commit();
       logger.debug("createGuestOrder: Transaction committed successfully");
 
+      // Task 10: Set confirmed status for COD orders
+      if (payment_type === 'cod') {
+        await order.update({ status: 'confirmed' });
+        await OrderStatusHistory.create({ order_id: order.id, status: 'confirmed', updated_by: null, notes: 'Order confirmed' });
+      }
+
+      // Task 7: Store idempotency key
+      if (idempotencyKey) {
+        const redisService = require('../services/redisService.js');
+        const idemKey = `idem:guest:${String(guest_info.phone || '').replace(/\D/g, '').slice(-10)}:${idempotencyKey}`;
+        await redisService.set(idemKey, JSON.stringify({ orderId: order.id }), 'EX', 86400).catch(() => {});
+      }
+
       // Emit real-time notification
       const notificationService = require('../services/notificationService.js');
       notificationService.emitNewOrder(order);
 
       // Fire Purchase analytics ONLY for COD guest orders — prepaid fires in updateOrderPayment
-      if (payment_type === 'cod') {
-        setImmediate(async () => {
-          try {
-            const nameParts = (guestUser.firstName || '').trim().split(/\s+/);
-            const eventPayload = {
-              brand_id: req.brand ? req.brand.id : 1,
-              order_number: order.order_number,
-              total_amount: finalAmount,
-              final_amount: finalAmount,
-              currency: "INR",
-              ip_address: req.ip || null,
-              user_agent: req.headers["user-agent"] || null,
-              email: guestUser.email || null,
-              phone: shipping_address.phone || guestUser.phone || null,
-              first_name: guestUser.firstName || null,
-              last_name: guestUser.lastName || null,
-              zip_code: shipping_address.pincode || null,
-              city: shipping_address.city || null,
-              state: shipping_address.state || null,
-              country: 'in',
-              fbc: req.cookies?._fbc || req.body?.fbc || null,
-              fbp: req.cookies?._fbp || null,
-              items: validatedItems.map((item) => ({
-                product_id: item.product.id,
-                quantity: item.quantity,
-                price: parseFloat(item.price || 0),
-                name: item.product.name || '',
-              })),
-            };
-            await sendFacebookEvent("Purchase", eventPayload);
-            await sendGAEvent("purchase", eventPayload);
-          } catch (fbError) {
-            logger.error("createGuestOrder: analytics event error:", fbError.message);
+      // AddShippingInfo fires for all guest orders
+      setImmediate(async () => {
+        try {
+          const basePayload = {
+            brand_id: req.brand ? req.brand.id : 1,
+            order_number: order.order_number,
+            total_amount: finalAmount,
+            final_amount: finalAmount,
+            currency: "INR",
+            ip_address: req.ip || null,
+            user_agent: req.headers["user-agent"] || null,
+            email: guestUser.email || null,
+            phone: shipping_address.phone || guestUser.phone || null,
+            first_name: guestUser.firstName || null,
+            last_name: guestUser.lastName || null,
+            zip_code: shipping_address.pincode || null,
+            city: shipping_address.city || null,
+            state: shipping_address.state || null,
+            country: 'in',
+            fbc: req.cookies?._fbc || req.body?.fbc || null,
+            fbp: req.cookies?._fbp || null,
+            items: validatedItems.map((item) => ({
+              product_id: item.product.id,
+              quantity: item.quantity,
+              price: parseFloat(item.price || 0),
+              name: item.product.name || '',
+            })),
+          };
+
+          // AddShippingInfo fires for all guest orders
+          await sendFacebookEvent("AddShippingInfo", basePayload);
+          await sendGAEvent("add_shipping_info", basePayload);
+
+          // COD: also fire InitiateCheckout + AddPaymentInfo (prepaid fires these in createRazorpayOrder)
+          if (payment_type === 'cod') {
+            await sendFacebookEvent("InitiateCheckout", basePayload);
+            await sendGAEvent("begin_checkout", basePayload);
+            await sendFacebookEvent("AddPaymentInfo", basePayload);
+            await sendGAEvent("add_payment_info", basePayload);
+            await sendFacebookEvent("Purchase", basePayload);
+            await sendGAEvent("purchase", basePayload);
           }
-        });
-      }
+        } catch (fbError) {
+          logger.error("createGuestOrder: analytics event error:", fbError.message);
+        }
+      });
 
       // Create FShip order automatically for guest orders
       await order.update({ fship_sync_status: 'syncing', fship_sync_attempts: 1 });
@@ -2322,8 +2605,14 @@
           .json({ message: `Cannot cancel ${order.status} orders` });
       }
 
-      // Can only cancel pending or processing orders
-      if (order.status !== "pending" && order.status !== "processing") {
+      // Block cancellation once dispatched (Task 12)
+      if (DISPATCHED_STATUSES.includes(order.status)) {
+        await transaction.rollback();
+        return res.status(400).json({ message: `Order cannot be cancelled after it has been dispatched. Contact support.` });
+      }
+
+      // Allow cancel for pending, confirmed, processing only
+      if (!['pending', 'confirmed', 'processing'].includes(order.status)) {
         await transaction.rollback();
         return res
           .status(400)
@@ -2418,9 +2707,37 @@
     }
   };
 
+  // Initiate return (Task 11) — transitions delivered → return_initiated
+  module.exports.initiateReturn = async (req, res) => {
+    try {
+      const orderId = req.params.id;
+      const userId = req.user.id;
+      const { reason } = req.body;
+
+      const order = await Order.findByPk(orderId);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+      if (order.user_id !== userId) return res.status(403).json({ message: "Access denied" });
+      if (order.status !== 'delivered') {
+        return res.status(400).json({ message: "Returns can only be initiated for delivered orders." });
+      }
+
+      await order.update({ status: 'return_initiated' });
+      await OrderStatusHistory.create({
+        order_id: order.id,
+        status: 'return_initiated',
+        updated_by: userId,
+        notes: reason || 'Return initiated by customer',
+      });
+
+      res.json({ success: true, message: "Return initiated successfully.", order });
+    } catch (error) {
+      logger.error("Error initiating return:", error);
+      res.status(500).json({ message: "Failed to initiate return", error: error.message });
+    }
+  };
+
   // Cancel guest order (by email + order_number)
-  module.exports.cancelGuestOrder = async (req, res) => {
-    const transaction = await sequelize.transaction();
+  module.exports.cancelGuestOrder = async (req, res) => {    const transaction = await sequelize.transaction();
     try {
       const { email, order_number, reason } = req.body;
       if (!email || !order_number) {

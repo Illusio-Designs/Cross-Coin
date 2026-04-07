@@ -26,19 +26,20 @@ function CartProvider({ children }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [lastAddedItem, setLastAddedItem] = useState(null);
   const [buyNowItem, setBuyNowItem] = useState(null);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   // ✅ Request deduplication - prevent duplicate API calls
   const pendingRequestRef = React.useRef(null);
 
-  // Initialize authentication state
+  // Track previous auth state to detect false→true transition for cart merge
+  const prevIsAuthRef = React.useRef(false);
+
+  // Mark hydrated and initialize authentication state (client-side only)
   useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem('token');
-      setIsAuthenticated(!!token);
-      setAuthChecked(true);
-    };
-    
-    checkAuth();
+    const token = localStorage.getItem('token');
+    setIsAuthenticated(!!token);
+    setAuthChecked(true);
+    setIsHydrated(true);
   }, []);
 
   // Sync isAuthenticated on token change
@@ -53,8 +54,8 @@ function CartProvider({ children }) {
 
   // Load cart from backend or localStorage on initial render or auth change
   useEffect(() => {
-    // Don't fetch cart until auth is checked
-    if (!authChecked) {
+    // Don't fetch cart until hydrated and auth is checked
+    if (!isHydrated || !authChecked) {
       return;
     }
 
@@ -65,15 +66,39 @@ function CartProvider({ children }) {
 
     const fetchCart = async () => {
       try {
-        // Mark request as pending
         pendingRequestRef.current = true;
         setIsCartLoading(true);
         
         if (isAuthenticated) {
+          // Detect false→true login transition — merge guest localStorage cart first
+          const justLoggedIn = !prevIsAuthRef.current && isAuthenticated;
+          let guestItems = [];
+          if (justLoggedIn) {
+            try {
+              const raw = localStorage.getItem('cartItems');
+              if (raw) guestItems = JSON.parse(raw) || [];
+            } catch { guestItems = []; }
+          }
+
+          // Merge guest items into DB cart (fire sequentially, ignore individual failures)
+          if (guestItems.length > 0) {
+            for (const item of guestItems) {
+              try {
+                await apiAddToCart({
+                  productId: item.productId || item.id,
+                  variationId: item.variationId || item.variation?.id || null,
+                  quantity: item.quantity || 1,
+                  size: item.size || null,
+                });
+              } catch { /* non-fatal */ }
+            }
+            localStorage.removeItem('cartItems');
+          }
+
           try {
             const backendCart = await apiGetCart();
             setCartItems(Array.isArray(backendCart) ? backendCart : []);
-          } catch (error){
+          } catch (error) {
             // Fallback to localStorage if backend fails
             const savedCartItems = localStorage.getItem('cartItems');
             if (savedCartItems) {
@@ -82,7 +107,7 @@ function CartProvider({ children }) {
                 setCartItems(Array.isArray(parsedItems) ? parsedItems : []);
               } catch (parseError) {
                 setCartItems([]);
-                localStorage.removeItem('cartItems'); // Clear corrupted data
+                localStorage.removeItem('cartItems');
               }
             } else {
               setCartItems([]);
@@ -96,26 +121,26 @@ function CartProvider({ children }) {
               setCartItems(Array.isArray(parsedItems) ? parsedItems : []);
             } catch (parseError) {
               setCartItems([]);
-              localStorage.removeItem('cartItems'); // Clear corrupted data
+              localStorage.removeItem('cartItems');
             }
           } else {
             setCartItems([]);
           }
         }
       } finally {
+        prevIsAuthRef.current = isAuthenticated;
         setIsCartLoading(false);
-        // Mark request as complete
         pendingRequestRef.current = null;
       }
     };
     
     fetchCart();
-  }, [isAuthenticated, authChecked]);
+  }, [isAuthenticated, authChecked, isHydrated]);
 
   // Save cart items to localStorage whenever they change (for guests)
   useEffect(() => {
-    // Don't save until auth is checked and cart is loaded
-    if (!authChecked || isCartLoading) {
+    // Don't save until hydrated, auth is checked and cart is loaded
+    if (!isHydrated || !authChecked || isCartLoading) {
       return;
     }
 
@@ -129,7 +154,7 @@ function CartProvider({ children }) {
     
     const newCartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
     setCartCount(newCartCount);
-    }, [cartItems, isAuthenticated, authChecked, isCartLoading]);
+    }, [cartItems, isAuthenticated, authChecked, isCartLoading, isHydrated]);
 
   const addToCart = async (product, selectedColor, selectedSize, quantity = 1, variationId = null, variationImages = null) => {
     if (isAuthenticated) {

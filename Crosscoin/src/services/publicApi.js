@@ -736,6 +736,34 @@ export const trackOrderByAWB = async (awbNumber) => {
   }
 };
 
+export const cancelOrder = async (orderId, reason = '') => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.put(
+      `${API_URL}/api/orders/${orderId}/cancel`,
+      { reason },
+      { headers: { Authorization: `Bearer ${token}`, "X-Brand-Name": BRAND_NAME } }
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const initiateReturn = async (orderId, reason = '') => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.post(
+      `${API_URL}/api/orders/${orderId}/return`,
+      { reason },
+      { headers: { Authorization: `Bearer ${token}`, "X-Brand-Name": BRAND_NAME } }
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
 // ============ PAYMENT APIs ============
 export const createRazorpayOrder = async ({ amount, currency = "INR", receipt, isGuest = false }) => {
   try {
