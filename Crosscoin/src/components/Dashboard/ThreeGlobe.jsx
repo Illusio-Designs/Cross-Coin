@@ -120,15 +120,9 @@ function makeLabel(text, position) {
   const sprite = new THREE.Sprite(mat);
   sprite.scale.set(0.28 + text.length * 0.011, 0.075, 1);
 
-  // Position label just to the right of the dot
+  // Position label just above the dot, along the surface normal
   const dir = position.clone().normalize();
-  const up = new THREE.Vector3(0, 1, 0);
-  const right = new THREE.Vector3().crossVectors(dir, up).normalize();
-  sprite.position.copy(
-    position.clone()
-      .add(right.multiplyScalar(0.12))
-      .add(dir.clone().multiplyScalar(0.04))
-  );
+  sprite.position.copy(position.clone().add(dir.multiplyScalar(0.10)));
   return sprite;
 }
 
@@ -280,10 +274,10 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
         inner.position.copy(pos);
         markerGroup.add(inner);
 
-        // Pulse rings — brand red, tighter
+        // Pulse rings — tight, fast
         [0, 500].forEach(offset => {
           const ring = new THREE.Mesh(
-            new THREE.RingGeometry(0.018, 0.026, 32),
+            new THREE.RingGeometry(0.020, 0.028, 32),
             new THREE.MeshBasicMaterial({
               color: 0xce1e36, transparent: true, opacity: 0.8, side: THREE.DoubleSide,
             })
@@ -320,7 +314,7 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
       // Pulse rings
       pings.forEach(({ mesh, mat, offset }) => {
         const t = ((now + offset) % 1600) / 1600;
-        mesh.scale.setScalar(1 + t * 4);
+        mesh.scale.setScalar(1 + t * 2.5);
         mat.opacity = 0.7 * (1 - t);
       });
 
