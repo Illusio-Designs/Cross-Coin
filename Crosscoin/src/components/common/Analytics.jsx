@@ -6,8 +6,6 @@ const FB_PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID || "1313610943804396";
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID || "G-XXXXXXXXXX";
 const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID || "seoi51zytn";
 
-const IS_LOCALHOST = typeof window !== "undefined" && window.location.hostname === "localhost";
-
 const EXCLUDED_PATHS = ['/dashboard', '/auth'];
 const isExcluded = (url) => EXCLUDED_PATHS.some(p => url.startsWith(p));
 
@@ -16,8 +14,9 @@ function useRouteTracking() {
   const router = useRouter();
 
   useEffect(() => {
+    const isLocalhost = typeof window !== "undefined" && window.location.hostname === "localhost";
     const handleRouteChange = (url) => {
-      if (IS_LOCALHOST || isExcluded(url)) return;
+      if (isLocalhost || isExcluded(url)) return;
 
       // Facebook Pixel — PageView on navigation
       if (typeof window !== "undefined" && window.fbq) {
@@ -38,9 +37,10 @@ const Analytics = () => {
   useRouteTracking();
   const router = useRouter();
   const isDashboard = router.pathname.startsWith('/dashboard') || router.pathname.startsWith('/auth');
+  const isLocalhost = typeof window !== "undefined" && window.location.hostname === "localhost";
 
   // Don't load any tracking scripts on dashboard/auth pages or localhost
-  if (isDashboard || IS_LOCALHOST) return null;
+  if (isDashboard || isLocalhost) return null;
 
   return (
     <>

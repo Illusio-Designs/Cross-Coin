@@ -51,7 +51,7 @@ const Order = sequelize.define('Order', {
         allowNull: false
     },
     payment_type: {
-        type: DataTypes.ENUM('cod', 'credit_card', 'debit_card', 'upi', 'wallet'),
+        type: DataTypes.ENUM('cod', 'credit_card', 'debit_card', 'upi', 'wallet', 'razorpay'),
         allowNull: false
     },
     coupon_id: {
@@ -69,7 +69,8 @@ const Order = sequelize.define('Order', {
     },
     status: {
         type: DataTypes.ENUM(
-            'pending', 
+            'pending',
+            'confirmed',
             'processing', 
             'booked', 
             'pickup initiated', 
@@ -81,6 +82,8 @@ const Order = sequelize.define('Order', {
             'undelivered',
             'rto',
             'rto delivered',
+            'return_initiated',
+            'returned_rto',
             'cancelled', 
             'order cancelled', 
             'exception'
@@ -190,6 +193,12 @@ const Order = sequelize.define('Order', {
         type: DataTypes.INTEGER,
         defaultValue: 0,
         comment: 'Number of FShip sync attempts made'
+    },
+    rto_risk_score: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 0,
+        comment: 'RTO risk score: landmark missing +10, repeat RTO customer +20'
     }
 }, {
     tableName: 'orders',
