@@ -53,11 +53,8 @@ function initializeCronJobs() {
   cron.schedule('0 * * * *', async () => {
     console.log('\n⏰ [CRON] Abandoned cart check started at:', new Date().toISOString());
     try {
-      const { Cart } = require('../model/cartModel.js');
-      const { CartItem } = require('../model/cartItemModel.js');
-      const { User } = require('../model/userModel.js');
-      const { Order } = require('../model/orderModel.js');
-      const { Product } = require('../model/productModel.js');
+      // Load via associations to ensure all relationships are registered
+      const { Cart, CartItem, User, Order, Product } = require('../model/associations.js');
       const { Op } = require('sequelize');
       const whatsappService = require('../services/whatsappService.js');
       const { WhatsappConversation } = require('../model/whatsappConversationModel.js');

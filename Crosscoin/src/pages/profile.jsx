@@ -112,7 +112,7 @@ export default function Profile() {
     }
     if (activeTab === 1) {
       setLoadingAddresses(true);
-      getUserShippingAddresses().then(d => setAddresses(d || [])).catch(() => {}).finally(() => setLoadingAddresses(false));
+      getUserShippingAddresses().then(d => setAddresses(Array.isArray(d) ? d : (d ? [d] : []))).catch(() => {}).finally(() => setLoadingAddresses(false));
     }
   }, [activeTab]);
 
@@ -143,7 +143,7 @@ export default function Profile() {
       } else {
         const res = await createShippingAddress(addressForm);
         if (res?.shippingAddress) setAddresses(prev => [...prev, res.shippingAddress]);
-        else { const d = await getUserShippingAddresses(); setAddresses(d); }
+        else { const d = await getUserShippingAddresses(); setAddresses(Array.isArray(d) ? d : (d ? [d] : [])); }
         showAddressAddedSuccessToast();
       }
       setShowAddressModal(false);
@@ -155,7 +155,7 @@ export default function Profile() {
       await deleteShippingAddress(id);
       // Re-fetch to get accurate default state after backend auto-promotes
       const updated = await getUserShippingAddresses();
-      setAddresses(updated || []);
+      setAddresses(Array.isArray(updated) ? updated : (updated ? [updated] : []));
       showAddressDeletedSuccessToast();
     } catch (err) { showProfileUpdateErrorToast(err.message || "Failed to delete"); }
   };
