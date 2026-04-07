@@ -147,8 +147,13 @@ export default function AnalyticsPage() {
         const city    = row.dimensionValues[0]?.value ?? "";
         const country = row.dimensionValues[1]?.value ?? "";
         const coords  = CITY_COORDS[city] || COUNTRY_COORDS[country];
-        if (!coords) return;
-        newMarkers.push({ location: [coords[0], coords[1]], size: 0.05 });
+        // Pass city name too so globe can do its own lookup
+        if (coords) {
+          newMarkers.push({ location: [coords[0], coords[1]], city, size: 0.05 });
+        } else {
+          // No coords found in AnalyticsPage map — pass city name only, globe will resolve
+          newMarkers.push({ city, size: 0.05 });
+        }
       });
 
       markersRef.current = newMarkers;
@@ -208,6 +213,9 @@ export default function AnalyticsPage() {
 
   if (!mounted) return null;
 
+  // Show loader while GA4 is configured and connected but data hasn't loaded yet
+  const dataLoading = ga4Configured && accessToken && !stats;
+
   return (
     <>
       <div className="dashboard-page">
@@ -264,7 +272,17 @@ export default function AnalyticsPage() {
         )}
 
         {!settingsLoading && ga4Configured && !accessToken && (
-          <div style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>Connecting to Google Analytics…</div>
+          <div className="an-data-loader">
+            <div className="an-spinner" />
+            <span>Connecting to Google Analytics…</span>
+          </div>
+        )}
+
+        {dataLoading && (
+          <div className="an-data-loader">
+            <div className="an-spinner" />
+            <span>Loading analytics data…</span>
+          </div>
         )}
 
         {/* Stat cards */}
@@ -281,18 +299,26 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        {/* Globe — always visible */}
-        <div className="an-globe-container">
-          <div className="an-globe-box">
+        {/* Globe — full width, no clipping */}
+        <div className="an-globe-wrap">
+          <div className="an-globe-header">
+            <span>Live Visitor Map</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {realtimeUsers !== null && (
+                <span className="an-active-badge"><span className="an-live-dot" /> {realtimeUsers} active now</span>
+              )}
+            </div>
+          </div>
+          <div className="an-globe-canvas-wrap">
             <ThreeGlobe markersRef={markersRef} />
           </div>
         </div>
 
         {/* Bottom panels */}
         {stats && (
-          <div className="an-bottom-grid" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
+          <div className="an-bottom-grid">
             <div className="an-list-panel">
-              <div className="an-list-title">Top Pages</div>
+              <div className="an-panel-header">Top Pages</div>
               <div className="an-list-rows">
                 {pages.length > 0
                   ? pages.map((p, i) => <BarRow key={i} label={p.label} value={p.val} max={pages[0]?.val || 1} color="#180D3E" />)
@@ -300,7 +326,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
             <div className="an-list-panel">
-              <div className="an-list-title">Traffic Sources</div>
+              <div className="an-panel-header">Traffic Sources</div>
               <div className="an-list-rows">
                 {sources.length > 0
                   ? sources.map((s, i) => <BarRow key={i} label={s.label} value={s.val} max={sources[0]?.val || 1} color="#CE1E36" />)
@@ -308,7 +334,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
             <div className="an-list-panel">
-              <div className="an-list-title">Top Locations</div>
+              <div className="an-panel-header">Top Locations</div>
               <div className="an-list-rows">
                 {topLocations.length > 0
                   ? topLocations.map((l, i) => <BarRow key={i} label={l.name} value={l.val} max={topLocations[0]?.val || 1} color="#7c3aed" />)
@@ -323,23 +349,60 @@ export default function AnalyticsPage() {
         .an-map-wrap { display: none; }
         .an-map { display: none; }
 
-        .an-globe-container {
-          width: 100%;
+        /* Globe — full width panel, no clipping */
+        .an-globe-wrap {
+          background: #fff;
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          margin-bottom: 14px;
+        }
+        .an-globe-header {
+          padding: 12px 16px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #374151;
+          text-transform: uppercase;
+          letter-spacing: .6px;
+          border-bottom: 1px solid #f0f0f5;
           display: flex;
-          justify-content: center;
           align-items: center;
-          padding: 24px 0;
-          margin-bottom: 16px;
+          justify-content: space-between;
         }
-        .an-globe-box {
-          width: min(560px, 90vw);
-          height: min(560px, 90vw);
-          border-radius: 20px;
-          overflow: visible;
-          background: transparent;
-          position: relative;
+        .an-active-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: #fef2f2;
+          color: #CE1E36;
+          font-size: 12px;
+          font-weight: 600;
+          padding: 3px 10px;
+          border-radius: 999px;
+          letter-spacing: 0;
+          text-transform: none;
+          border: 1px solid #fecaca;
         }
-        .an-globe-canvas { display: none; }
+        .an-globe-canvas-wrap {
+          width: 100%;
+          height: 500px;
+          /* NO overflow:hidden — let globe breathe */
+        }
+
+        /* Bottom grid: 3 cols */
+        .an-bottom-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 14px;
+        }
+        .an-panel-header {
+          padding: 12px 16px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #374151;
+          text-transform: uppercase;
+          letter-spacing: .6px;
+          border-bottom: 1px solid #f0f0f5;
+        }
 
         /* Empty state */
         .an-empty-state {
@@ -357,7 +420,32 @@ export default function AnalyticsPage() {
         .an-empty-keys ul { margin: 8px 0 0 16px; }
         .an-empty-keys li { margin: 4px 0; }
         .an-empty-keys code { background: #f3f4f6; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
-        .an-no-data { font-size: 12px; color: #9ca3af; padding: 8px 0; }
+        .an-data-loader {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 14px;
+          padding: 80px 24px;
+          color: #6b7280;
+          font-size: 14px;
+        }
+        .an-spinner {
+          width: 36px;
+          height: 36px;
+          border: 3px solid #e5e7eb;
+          border-top-color: #CE1E36;
+          border-radius: 50%;
+          animation: anSpin 0.8s linear infinite;
+        }
+        @keyframes anSpin {
+          to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 900px) {
+          .an-globe-canvas-wrap { height: 320px; }
+          .an-bottom-grid { grid-template-columns: 1fr; }
+        }
       `}</style>
     </>
   );

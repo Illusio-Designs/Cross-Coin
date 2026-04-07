@@ -2,62 +2,128 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 
+// Standard spherical coords — lng=0 faces +Z (toward camera)
 function latLngToVec3(lat, lng, r = 1) {
   const phi   = (90 - lat) * (Math.PI / 180);
-  const theta = (lng + 180) * (Math.PI / 180);
+  const theta = lng        * (Math.PI / 180);
   return new THREE.Vector3(
-    -r * Math.sin(phi) * Math.cos(theta),
-     r * Math.cos(phi),
-     r * Math.sin(phi) * Math.sin(theta)
+    r * Math.sin(phi) * Math.sin(theta),
+    r * Math.cos(phi),
+    r * Math.sin(phi) * Math.cos(theta)
   );
 }
 
-// Approximate land mask using a simple inline base64 world map
-// We'll generate dots using a Fibonacci sphere + land check via canvas
-function buildDotsFromImage(img, dotCount = 35000) {
-  const W = 512, H = 256;
-  const c = document.createElement("canvas");
-  c.width = W; c.height = H;
-  const ctx = c.getContext("2d");
-  ctx.drawImage(img, 0, 0, W, H);
-  const { data } = ctx.getImageData(0, 0, W, H);
+// 70+ Indian cities
+const INDIA_CITIES = [
+  { name: "Mumbai",             lat: 19.076, lng: 72.877 },
+  { name: "Delhi",              lat: 28.613, lng: 77.209 },
+  { name: "Bangalore",          lat: 12.971, lng: 77.594 },
+  { name: "Chennai",            lat: 13.082, lng: 80.270 },
+  { name: "Hyderabad",          lat: 17.385, lng: 78.487 },
+  { name: "Kolkata",            lat: 22.572, lng: 88.363 },
+  { name: "Pune",               lat: 18.520, lng: 73.856 },
+  { name: "Ahmedabad",          lat: 23.022, lng: 72.571 },
+  { name: "Jaipur",             lat: 26.912, lng: 75.787 },
+  { name: "Lucknow",            lat: 26.846, lng: 80.946 },
+  { name: "Surat",              lat: 21.170, lng: 72.831 },
+  { name: "Rajkot",             lat: 22.303, lng: 70.802 },
+  { name: "Bhopal",             lat: 23.259, lng: 77.413 },
+  { name: "Indore",             lat: 22.719, lng: 75.857 },
+  { name: "Nagpur",             lat: 21.145, lng: 79.088 },
+  { name: "Patna",              lat: 25.594, lng: 85.137 },
+  { name: "Vadodara",           lat: 22.307, lng: 73.181 },
+  { name: "Coimbatore",         lat: 11.017, lng: 76.955 },
+  { name: "Kochi",              lat:  9.931, lng: 76.267 },
+  { name: "Chandigarh",         lat: 30.733, lng: 76.779 },
+  { name: "Gurgaon",            lat: 28.459, lng: 77.026 },
+  { name: "Noida",              lat: 28.535, lng: 77.391 },
+  { name: "Visakhapatnam",      lat: 17.686, lng: 83.218 },
+  { name: "Agra",               lat: 27.176, lng: 78.008 },
+  { name: "Varanasi",           lat: 25.317, lng: 82.973 },
+  { name: "Meerut",             lat: 28.984, lng: 77.706 },
+  { name: "Nashik",             lat: 19.997, lng: 73.789 },
+  { name: "Aurangabad",         lat: 19.877, lng: 75.343 },
+  { name: "Amritsar",           lat: 31.634, lng: 74.872 },
+  { name: "Jodhpur",            lat: 26.292, lng: 73.017 },
+  { name: "Hubli",              lat: 15.317, lng: 75.713 },
+  { name: "Mysore",             lat: 12.295, lng: 76.639 },
+  { name: "Thrissur",           lat: 10.527, lng: 76.213 },
+  { name: "Thiruvananthapuram", lat:  8.524, lng: 76.936 },
+  { name: "Salem",              lat: 11.127, lng: 78.656 },
+  { name: "Vijayawada",         lat: 16.307, lng: 80.436 },
+  { name: "Bhubaneswar",        lat: 20.296, lng: 85.824 },
+  { name: "Guwahati",           lat: 26.184, lng: 91.746 },
+  { name: "Ranchi",             lat: 23.344, lng: 85.309 },
+  { name: "Dehradun",           lat: 30.316, lng: 78.032 },
+  { name: "Shimla",             lat: 31.104, lng: 77.167 },
+  { name: "Srinagar",           lat: 34.083, lng: 74.797 },
+  { name: "Allahabad",          lat: 25.435, lng: 81.846 },
+  { name: "Raipur",             lat: 21.250, lng: 81.629 },
+  { name: "Udaipur",            lat: 24.585, lng: 73.712 },
+  { name: "Ajmer",              lat: 26.460, lng: 74.639 },
+  { name: "Bikaner",            lat: 28.022, lng: 73.312 },
+  { name: "Jammu",              lat: 32.726, lng: 74.857 },
+  { name: "Ludhiana",           lat: 30.901, lng: 75.857 },
+  { name: "Jalandhar",          lat: 31.326, lng: 75.576 },
+  { name: "Kanpur",             lat: 26.449, lng: 80.331 },
+  { name: "Gorakhpur",          lat: 26.760, lng: 83.373 },
+  { name: "Madurai",            lat:  9.925, lng: 78.120 },
+  { name: "Tiruchirappalli",    lat: 10.790, lng: 78.704 },
+  { name: "Tirupati",           lat: 13.629, lng: 79.419 },
+  { name: "Mangalore",          lat: 12.914, lng: 74.856 },
+  { name: "Panaji",             lat: 15.499, lng: 73.824 },
+  { name: "Puducherry",         lat: 11.934, lng: 79.830 },
+  { name: "Gwalior",            lat: 26.218, lng: 78.182 },
+  { name: "Jabalpur",           lat: 23.181, lng: 79.987 },
+  { name: "Faridabad",          lat: 28.408, lng: 77.317 },
+  { name: "Ghaziabad",          lat: 28.669, lng: 77.453 },
+  { name: "Agartala",           lat: 23.833, lng: 91.279 },
+  { name: "Shillong",           lat: 25.578, lng: 91.893 },
+  { name: "Gangtok",            lat: 27.336, lng: 88.612 },
+  { name: "Imphal",             lat: 24.817, lng: 93.944 },
+];
 
-  const positions = [];
-  for (let i = 0; i < dotCount; i++) {
-    const y     = 1 - (i / (dotCount - 1)) * 2;
-    const r     = Math.sqrt(Math.max(0, 1 - y * y));
-    const theta = Math.PI * (3 - Math.sqrt(5)) * i;
-    const x     = r * Math.cos(theta);
-    const z     = r * Math.sin(theta);
-    const lat   = Math.asin(Math.max(-1, Math.min(1, y))) * (180 / Math.PI);
-    const lng   = Math.atan2(z, -x) * (180 / Math.PI);
-    const px    = Math.floor(((lng + 180) / 360) * W);
-    const py    = Math.floor(((90 - lat) / 180) * H);
-    const idx   = (Math.min(py, H - 1) * W + Math.min(px, W - 1)) * 4;
-    // land = dark pixel (r < 100) on natural earth map
-    if (data[idx] > 120) continue;
-    positions.push(x, y, z);
-  }
-  return new Float32Array(positions);
+// City name → coords (lowercase key)
+const CITY_MAP = {};
+INDIA_CITIES.forEach(c => { CITY_MAP[c.name.toLowerCase()] = [c.lat, c.lng]; });
+
+// International fallback
+const INTL_MAP = {
+  "london": [51.507, -0.128], "new york": [40.714, -74.006],
+  "dubai": [25.204, 55.270],  "singapore": [1.352, 103.820],
+  "toronto": [43.651, -79.347], "sydney": [-33.868, 151.209],
+  "kuala lumpur": [3.139, 101.687], "bangkok": [13.756, 100.502],
+};
+
+function makeLabel(text, position, camera) {
+  // Returns a canvas-based sprite for city name
+  const canvas = document.createElement("canvas");
+  canvas.width = 256; canvas.height = 64;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "rgba(0,0,0,0)";
+  ctx.fillRect(0, 0, 256, 64);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 22px sans-serif";
+  ctx.textAlign = "center";
+  // Red pill background
+  const tw = ctx.measureText(text).width;
+  ctx.fillStyle = "#CE1E36";
+  ctx.beginPath();
+  ctx.roundRect(128 - tw / 2 - 10, 14, tw + 20, 32, 8);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(text, 128, 36);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(0.45, 0.12, 1);
+
+  // Offset label slightly above the marker
+  const dir = position.clone().normalize();
+  sprite.position.copy(position.clone().add(dir.multiplyScalar(0.18)));
+  return sprite;
 }
-
-const DEFAULT_MARKERS = [
-  { lat: 19.076, lng: 72.877  }, // Mumbai
-  { lat: 28.613, lng: 77.209  }, // Delhi
-  { lat: 12.971, lng: 77.594  }, // Bangalore
-  { lat: 22.572, lng: 88.363  }, // Kolkata
-  { lat: 17.385, lng: 78.487  }, // Hyderabad
-  { lat: 23.022, lng: 72.571  }, // Ahmedabad
-  { lat: 13.082, lng: 80.270  }, // Chennai
-  { lat: 18.520, lng: 73.856  }, // Pune
-];
-
-// Multiple CDN fallbacks for the world map
-const MAP_URLS = [
-  "https://raw.githubusercontent.com/turban/webgl-earth/master/images/2_no_clouds_4k.jpg",
-  "https://unpkg.com/three-globe@2.31.1/example/img/earth-dark.jpg",
-  "https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-dark.jpg",
-];
 
 export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
   const mountRef       = useRef(null);
@@ -67,8 +133,8 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
     if (!mountRef.current) return;
     let animId, renderer;
 
-    const W   = mountRef.current.clientWidth  || 560;
-    const H   = mountRef.current.clientHeight || 560;
+    const W   = mountRef.current.clientWidth  || 600;
+    const H   = mountRef.current.clientHeight || 500;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     const scene  = new THREE.Scene();
@@ -81,132 +147,105 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
     renderer.setClearColor(0x000000, 0);
     mountRef.current.appendChild(renderer.domElement);
 
-    // Globe base — light grey
-    const globe = new THREE.Mesh(
-      new THREE.SphereGeometry(1, 64, 64),
-      new THREE.MeshPhongMaterial({
-        color:       0xeef1f7,
-        emissive:    0xe2e8f0,
-        shininess:   15,
-        transparent: false,
-      })
-    );
-    scene.add(globe);
+    // ── Earth group — everything in here, rotated to face India ─────────────
+    const earth = new THREE.Group();
+    // India center: lat 22, lng 78 → rotate Y by -78°, tilt X by +22°
+    earth.rotation.order = "YXZ";
+    earth.rotation.y = -78 * (Math.PI / 180);
+    earth.rotation.x =  22 * (Math.PI / 180);
+    scene.add(earth);
 
-    // Soft outer glow ring
-    scene.add(new THREE.Mesh(
-      new THREE.SphereGeometry(1.06, 64, 64),
-      new THREE.MeshBasicMaterial({
-        color: 0xbfcfe8, transparent: true, opacity: 0.15, side: THREE.BackSide,
-      })
+    // Globe sphere
+    earth.add(new THREE.Mesh(
+      new THREE.SphereGeometry(1, 64, 64),
+      new THREE.MeshPhongMaterial({ color: 0xeef2fb, emissive: 0xe0e8f8, shininess: 6 })
+    ));
+
+    // Glow
+    earth.add(new THREE.Mesh(
+      new THREE.SphereGeometry(1.04, 64, 64),
+      new THREE.MeshBasicMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.10, side: THREE.BackSide })
     ));
 
     // Lights
-    const dir = new THREE.DirectionalLight(0xffffff, 1.0);
+    const dir = new THREE.DirectionalLight(0xffffff, 1.1);
     dir.position.set(5, 3, 5);
     scene.add(dir);
-    scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.9));
 
-    // Marker group
+    // ── World land dots (faint) ──────────────────────────────────────────────
+    const worldPos = [];
+    for (let i = 0; i < 18000; i++) {
+      const y = 1 - (i / 17999) * 2;
+      const r = Math.sqrt(Math.max(0, 1 - y * y));
+      const t = Math.PI * (3 - Math.sqrt(5)) * i;
+      const x = r * Math.cos(t), z = r * Math.sin(t);
+      const lat = Math.asin(Math.max(-1, Math.min(1, y))) * (180 / Math.PI);
+      const lng = Math.atan2(x, z) * (180 / Math.PI);
+      if (isLand(lat, lng)) worldPos.push(x, y, z);
+    }
+    const wGeo = new THREE.BufferGeometry();
+    wGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(worldPos), 3));
+    earth.add(new THREE.Points(wGeo, new THREE.PointsMaterial({
+      size: 0.006, color: 0xb0bec5, transparent: true, opacity: 0.28, depthWrite: false,
+    })));
+
+    // ── India fill dots (blue) ───────────────────────────────────────────────
+    const indiaPos = [];
+    for (let lat = 8; lat <= 37; lat += 0.45) {
+      for (let lng = 68; lng <= 97; lng += 0.45) {
+        if (!isIndia(lat, lng)) continue;
+        const v = latLngToVec3(lat, lng, 1.002);
+        indiaPos.push(v.x, v.y, v.z);
+      }
+    }
+    const iGeo = new THREE.BufferGeometry();
+    iGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(indiaPos), 3));
+    earth.add(new THREE.Points(iGeo, new THREE.PointsMaterial({
+      size: 0.009, color: 0x3b82f6, transparent: true, opacity: 0.55, depthWrite: false,
+    })));
+
+    // ── City dots (all Indian cities, always visible) ────────────────────────
+    const cityPos = [];
+    INDIA_CITIES.forEach(({ lat, lng }) => {
+      const v = latLngToVec3(lat, lng, 1.004);
+      cityPos.push(v.x, v.y, v.z);
+    });
+    const cGeo = new THREE.BufferGeometry();
+    cGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(cityPos), 3));
+    earth.add(new THREE.Points(cGeo, new THREE.PointsMaterial({
+      size: 0.015, color: 0x1d4ed8, transparent: true, opacity: 0.80, depthWrite: false,
+    })));
+
+    // ── Live marker group ────────────────────────────────────────────────────
     const markerGroup = new THREE.Group();
-    scene.add(markerGroup);
-
-    // India-facing rotation
-    const BASE_Y = -(78 * Math.PI / 180);
-    const BASE_X = -(20 * Math.PI / 180);
-    globe.rotation.set(BASE_X, BASE_Y, 0);
-    markerGroup.rotation.set(BASE_X, BASE_Y, 0);
-
-    // Try loading map from multiple sources
-    let dotsAdded = false;
-    function tryLoadMap(urls, idx = 0) {
-      if (idx >= urls.length) {
-        // All failed — draw fallback grid dots
-        addFallbackDots();
-        return;
-      }
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        if (dotsAdded) return;
-        dotsAdded = true;
-        try {
-          const positions = buildDotsFromImage(img, 35000);
-          if (positions.length < 100) { tryLoadMap(urls, idx + 1); return; }
-          addDots(positions);
-        } catch { tryLoadMap(urls, idx + 1); }
-      };
-      img.onerror = () => tryLoadMap(urls, idx + 1);
-      img.src = urls[idx];
-    }
-
-    function addDots(positions) {
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-      const mat = new THREE.PointsMaterial({
-        size: 0.009, transparent: true, opacity: 0.8,
-        depthWrite: false, sizeAttenuation: true,
-        color: 0x1e293b,
-      });
-      const pts = new THREE.Points(geo, mat);
-      pts.rotation.set(BASE_X, BASE_Y, 0);
-      scene.add(pts);
-    }
-
-    // Fallback: draw dots on a lat/lng grid for land areas (hardcoded rough land mask)
-    function addFallbackDots() {
-      const positions = [];
-      // Dense Fibonacci sphere, skip obvious ocean areas
-      for (let i = 0; i < 25000; i++) {
-        const y     = 1 - (i / 24999) * 2;
-        const r     = Math.sqrt(Math.max(0, 1 - y * y));
-        const theta = Math.PI * (3 - Math.sqrt(5)) * i;
-        const x     = r * Math.cos(theta);
-        const z     = r * Math.sin(theta);
-        const lat   = Math.asin(Math.max(-1, Math.min(1, y))) * (180 / Math.PI);
-        const lng   = Math.atan2(z, -x) * (180 / Math.PI);
-        if (isRoughlyLand(lat, lng)) positions.push(x, y, z);
-      }
-      addDots(new Float32Array(positions));
-    }
-
-    // Very rough land check (bounding boxes of major continents)
-    function isRoughlyLand(lat, lng) {
-      // Asia
-      if (lat > 5 && lat < 75 && lng > 25 && lng < 145) return true;
-      // Europe
-      if (lat > 35 && lat < 72 && lng > -10 && lng < 40) return true;
-      // Africa
-      if (lat > -35 && lat < 38 && lng > -18 && lng < 52) return true;
-      // North America
-      if (lat > 15 && lat < 75 && lng > -170 && lng < -50) return true;
-      // South America
-      if (lat > -55 && lat < 15 && lng > -82 && lng < -34) return true;
-      // Australia
-      if (lat > -45 && lat < -10 && lng > 113 && lng < 155) return true;
-      return false;
-    }
-
-    tryLoadMap(MAP_URLS);
-
-    // Pings
+    earth.add(markerGroup);
     const pings = [];
+
+    function resolveCoords(m) {
+      if (m.lat != null && m.lng != null) return { lat: m.lat, lng: m.lng, name: m.city || "" };
+      if (m.location) return { lat: m.location[0], lng: m.location[1], name: m.city || "" };
+      if (m.city) {
+        const key = m.city.toLowerCase();
+        const c = CITY_MAP[key] || INTL_MAP[key];
+        if (c) return { lat: c[0], lng: c[1], name: m.city };
+      }
+      return null;
+    }
 
     function buildMarkers(list) {
       while (markerGroup.children.length) markerGroup.remove(markerGroup.children[0]);
       pings.length = 0;
 
-      list.forEach(({ lat, lng, location }) => {
-        const la = lat ?? location?.[0];
-        const lo = lng ?? location?.[1];
-        if (la == null || lo == null) return;
+      list.forEach(m => {
+        const r = resolveCoords(m);
+        if (!r) return;
+        const pos = latLngToVec3(r.lat, r.lng, 1.016);
 
-        const pos = latLngToVec3(la, lo, 1.013);
-
-        // Outer blue dot
+        // Red dot
         const dot = new THREE.Mesh(
-          new THREE.SphereGeometry(0.026, 16, 16),
-          new THREE.MeshBasicMaterial({ color: 0x2563eb })
+          new THREE.SphereGeometry(0.028, 16, 16),
+          new THREE.MeshBasicMaterial({ color: 0xce1e36 })
         );
         dot.position.copy(pos);
         markerGroup.add(dot);
@@ -219,12 +258,12 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
         inner.position.copy(pos);
         markerGroup.add(inner);
 
-        // Two pulse rings with offset phase
-        [0, 900].forEach(offset => {
+        // Pulse rings
+        [0, 600].forEach(offset => {
           const ring = new THREE.Mesh(
-            new THREE.RingGeometry(0.028, 0.038, 32),
+            new THREE.RingGeometry(0.030, 0.044, 32),
             new THREE.MeshBasicMaterial({
-              color: 0x2563eb, transparent: true, opacity: 0.7, side: THREE.DoubleSide,
+              color: 0xce1e36, transparent: true, opacity: 0.7, side: THREE.DoubleSide,
             })
           );
           ring.position.copy(pos);
@@ -232,25 +271,40 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
           markerGroup.add(ring);
           pings.push({ mesh: ring, mat: ring.material, offset });
         });
+
+        // City name label
+        if (r.name) {
+          const label = makeLabel(r.name, pos, camera);
+          markerGroup.add(label);
+        }
       });
     }
 
-    buildMarkers(externalMarkersRef?.current?.length ? externalMarkersRef.current : DEFAULT_MARKERS);
+    // Default: show a few cities until realtime data arrives
+    const defaults = [
+      { lat: 19.076, lng: 72.877, city: "Mumbai" },
+      { lat: 28.613, lng: 77.209, city: "Delhi" },
+      { lat: 12.971, lng: 77.594, city: "Bangalore" },
+    ];
+    buildMarkers(externalMarkersRef?.current?.length ? externalMarkersRef.current : defaults);
 
+    // ── Animate — NO auto-rotation ───────────────────────────────────────────
     const animate = () => {
       animId = requestAnimationFrame(animate);
       const now = performance.now();
 
+      // Check for realtime marker updates
       const current = externalMarkersRef?.current ?? null;
       if (current !== prevMarkersRef.current) {
         prevMarkersRef.current = current;
-        buildMarkers(current?.length ? current : DEFAULT_MARKERS);
+        buildMarkers(current?.length ? current : defaults);
       }
 
+      // Pulse rings
       pings.forEach(({ mesh, mat, offset }) => {
-        const t = ((now + offset) % 2000) / 2000;
+        const t = ((now + offset) % 1600) / 1600;
         mesh.scale.setScalar(1 + t * 4);
-        mat.opacity = 0.65 * (1 - t);
+        mat.opacity = 0.7 * (1 - t);
       });
 
       renderer.render(scene, camera);
@@ -279,4 +333,23 @@ export default function ThreeGlobe({ markersRef: externalMarkersRef }) {
   }, []);
 
   return <div ref={mountRef} style={{ width: "100%", height: "100%" }} />;
+}
+
+function isIndia(lat, lng) {
+  if (lat < 8 || lat > 37 || lng < 68 || lng > 97) return false;
+  if (lat > 30 && lng < 72) return false;
+  if (lat < 12 && lng > 80) return false;
+  if (lat > 33 && lng > 88) return false;
+  return true;
+}
+
+function isLand(lat, lng) {
+  if (isIndia(lat, lng)) return true;
+  if (lat > 35  && lat < 72  && lng > -10  && lng < 40)  return true; // Europe
+  if (lat > -35 && lat < 38  && lng > -18  && lng < 52)  return true; // Africa
+  if (lat > 15  && lat < 75  && lng > -170 && lng < -50) return true; // N America
+  if (lat > -55 && lat < 15  && lng > -82  && lng < -34) return true; // S America
+  if (lat > -45 && lat < -10 && lng > 113  && lng < 155) return true; // Australia
+  if (lat > 10  && lat < 75  && lng > 60   && lng < 145) return true; // Asia
+  return false;
 }
