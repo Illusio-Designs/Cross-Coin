@@ -119,103 +119,108 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
 function getProxyUrl(mediaId, brandId = 1) {
   if (!mediaId) return null;
-  // If it's already a full URL (old messages), return as-is
-  if (mediaId.startsWith('http')) return mediaId;
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : '';
-  return `${API_BASE}/api/whatsapp/media/${mediaId}?brandId=${brandId}&token=${encodeURIComponent(token)}`;
+  // Always proxy through backend — whether it's a media ID or a full Facebook URL
+  // The backend media proxy handles both cases
+  const encoded = encodeURIComponent(mediaId);
+  return `${API_BASE}/api/whatsapp/media/${encoded}?brandId=${brandId}&token=${encodeURIComponent(token)}`;
 }
 
-// WhatsApp-style audio player with waveform bars
+// WhatsApp-style audio player � fetches as blob so auth token works, plays inline
 function AudioPlayer({ src }) {
   const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [loadState, setLoadState] = useState('loading');
+
+  const blobUrlRef = useRef(null);
+
+  useEffect(() => {
+    if (!src) return;
+    setLoadState('loading');
+    setBlobUrl(null);
+    let cancelled = false;
+    fetch(src)
+      .then(r => { if (!r.ok) throw new Error('Failed'); return r.blob(); })
+      .then(blob => {
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        blobUrlRef.current = url;
+        setBlobUrl(url);
+        setLoadState('ready');
+      })
+      .catch(() => { if (!cancelled) setLoadState('error'); });
+    return () => {
+      cancelled = true;
+      // Don't revoke here — let the audio keep playing if it started
+    };
+  }, [src]);
+
+  // Revoke only on unmount
+  useEffect(() => {
+    return () => { if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current); };
+  }, []);
 
   const toggle = () => {
     const a = audioRef.current;
-    if (!a) return;
-    if (playing) { a.pause(); } else { a.play().catch(() => {}); }
+    if (!a || loadState !== 'ready') return;
+    playing ? a.pause() : a.play().catch(() => {});
   };
 
-  const fmt = (s) => {
-    if (!s || isNaN(s)) return '0:00';
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return `${m}:${sec.toString().padStart(2, '0')}`;
-  };
+  const fmt = s => (!s || isNaN(s)) ? '0:00' : `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
 
-  const seek = (e) => {
+  const seek = e => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = (e.clientX - rect.left) / rect.width;
-    if (audioRef.current) audioRef.current.currentTime = ratio * duration;
+    if (audioRef.current) audioRef.current.currentTime = ((e.clientX - rect.left) / rect.width) * duration;
   };
 
-  // Fake waveform bars (30 bars with random heights, seeded by src)
   const bars = useMemo(() => {
-    const seed = (src || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-    return Array.from({ length: 30 }, (_, i) => {
-      const h = 20 + ((seed * (i + 1) * 7919) % 60);
-      return Math.max(8, Math.min(h, 28));
-    });
+    const seed = (src||'').split('').reduce((a,c) => a + c.charCodeAt(0), 0);
+    return Array.from({length:30}, (_,i) => Math.max(8, Math.min(20 + ((seed*(i+1)*7919)%60), 28)));
   }, [src]);
 
-  return (
-    <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:220, maxWidth:280 }}>
-      <audio
-        ref={audioRef}
-        src={src}
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        onEnded={() => { setPlaying(false); setProgress(0); setCurrentTime(0); }}
-        onTimeUpdate={() => {
-          const a = audioRef.current;
-          if (a && a.duration) {
-            setCurrentTime(a.currentTime);
-            setProgress(a.currentTime / a.duration);
-          }
-        }}
-        onLoadedMetadata={() => { if (audioRef.current) setDuration(audioRef.current.duration); }}
-        style={{ display:'none' }}
-      />
+  if (loadState === 'error') return (
+    <div style={{fontSize:12, color:'#9ca3af', fontStyle:'italic', display:'flex', alignItems:'center', gap:6}}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+      Voice message unavailable
+    </div>
+  );
 
-      {/* Play/Pause button */}
-      <button
-        onClick={toggle}
-        style={{
-          width:36, height:36, borderRadius:'50%', border:'none', cursor:'pointer',
-          background:'#25D366', display:'flex', alignItems:'center', justifyContent:'center',
-          flexShrink:0, boxShadow:'0 1px 3px rgba(0,0,0,0.2)'
-        }}
-      >
-        {playing
-          ? <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-          : <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><polygon points="5,3 19,12 5,21"/></svg>
+  return (
+    <div style={{display:'flex', alignItems:'center', gap:8, minWidth:220, maxWidth:280}}>
+      {blobUrl && (
+        <audio ref={audioRef} src={blobUrl}
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+          onEnded={() => { setPlaying(false); setProgress(0); setCurrentTime(0); }}
+          onTimeUpdate={() => { const a = audioRef.current; if (a?.duration) { setCurrentTime(a.currentTime); setProgress(a.currentTime/a.duration); } }}
+          onLoadedMetadata={() => { if (audioRef.current) setDuration(audioRef.current.duration); }}
+          style={{display:'none'}}
+        />
+      )}
+      <button onClick={toggle} disabled={loadState !== 'ready'} style={{
+        width:36, height:36, borderRadius:'50%', border:'none',
+        cursor: loadState === 'ready' ? 'pointer' : 'wait',
+        background:'#CE1E36', display:'flex', alignItems:'center', justifyContent:'center',
+        flexShrink:0, boxShadow:'0 1px 3px rgba(0,0,0,0.2)', opacity: loadState === 'loading' ? 0.6 : 1,
+      }}>
+        {loadState === 'loading'
+          ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><circle cx="12" cy="12" r="9" strokeDasharray="28" strokeDashoffset="10"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite"/></circle></svg>
+          : playing
+            ? <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            : <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><polygon points="5,3 19,12 5,21"/></svg>
         }
       </button>
-
-      {/* Waveform + scrubber */}
-      <div style={{ flex:1, display:'flex', flexDirection:'column', gap:4 }}>
-        <div
-          onClick={seek}
-          style={{ display:'flex', alignItems:'center', gap:1.5, height:28, cursor:'pointer' }}
-        >
-          {bars.map((h, i) => {
-            const filled = i / bars.length <= progress;
-            return (
-              <div
-                key={i}
-                style={{
-                  width:3, height:h, borderRadius:2, flexShrink:0,
-                  background: filled ? '#25D366' : '#d1d5db',
-                  transition:'background 0.1s',
-                }}
-              />
-            );
-          })}
+      <div style={{flex:1, display:'flex', flexDirection:'column', gap:4}}>
+        <div onClick={seek} style={{display:'flex', alignItems:'center', gap:1.5, height:28, cursor:'pointer'}}>
+          {bars.map((h,i) => (
+            <div key={i} style={{width:3, height:h, borderRadius:2, flexShrink:0, background: i/bars.length <= progress ? '#CE1E36' : '#d1d5db', transition:'background 0.1s'}}/>
+          ))}
         </div>
-        <div style={{ fontSize:10, color:'#9ca3af', display:'flex', justifyContent:'space-between' }}>
+        <div style={{fontSize:10, color:'#9ca3af', display:'flex', justifyContent:'space-between'}}>
           <span>{fmt(currentTime)}</span>
           <span>{fmt(duration)}</span>
         </div>
@@ -223,15 +228,28 @@ function AudioPlayer({ src }) {
     </div>
   );
 }
-
-// Lightbox for images
+// Lightbox for images — fetches as blob to handle auth
 function ImageMsg({ src, caption }) {
   const [open, setOpen] = useState(false);
+  const [blobUrl, setBlobUrl] = useState(null);
+
+  useEffect(() => {
+    if (!src) return;
+    let url;
+    fetch(src)
+      .then(r => r.ok ? r.blob() : null)
+      .then(blob => { if (blob) { url = URL.createObjectURL(blob); setBlobUrl(url); } })
+      .catch(() => {});
+    return () => { if (url) URL.revokeObjectURL(url); };
+  }, [src]);
+
+  if (!blobUrl) return <div style={{width:120,height:80,background:'#f3f4f6',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',color:'#9ca3af',fontSize:11}}>Loading…</div>;
+
   return (
     <>
       <div>
         <img
-          src={src}
+          src={blobUrl}
           alt={caption || 'image'}
           onClick={() => setOpen(true)}
           style={{ maxWidth:220, maxHeight:220, borderRadius:8, display:'block', cursor:'zoom-in', objectFit:'cover' }}
@@ -247,25 +265,93 @@ function ImageMsg({ src, caption }) {
             display:'flex', alignItems:'center', justifyContent:'center', cursor:'zoom-out'
           }}
         >
-          <img src={src} alt={caption || 'image'} style={{ maxWidth:'90vw', maxHeight:'90vh', borderRadius:8, objectFit:'contain' }} />
+          <img src={blobUrl} alt={caption || 'image'} style={{ maxWidth:'90vw', maxHeight:'90vh', borderRadius:8, objectFit:'contain' }} />
         </div>
       )}
     </>
   );
 }
 
+function VideoMsg({ src, caption }) {
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [loadState, setLoadState] = useState('loading');
+  const blobRef = useRef(null);
+
+  useEffect(() => {
+    if (!src) return;
+    let cancelled = false;
+    setLoadState('loading');
+    fetch(src)
+      .then(r => {
+        if (!r.ok) {
+          return r.text().then(t => { console.error('VideoMsg fetch failed:', r.status, t); return Promise.reject(); });
+        }
+        return r.blob();
+      })
+      .then(blob => {
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        blobRef.current = url;
+        setBlobUrl(url);
+        setLoadState('ready');
+      })
+      .catch(() => { if (!cancelled) setLoadState('error'); });
+    return () => { cancelled = true; };
+  }, [src]);
+
+  useEffect(() => {
+    return () => { if (blobRef.current) URL.revokeObjectURL(blobRef.current); };
+  }, []);
+
+  if (!blobUrl) return (
+    <div style={{width:220,height:80,background:'#f3f4f6',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',color:'#9ca3af',fontSize:12,gap:6}}>
+      {loadState === 'error'
+        ? <><span>🎥</span> Video unavailable</>
+        : <><span style={{animation:'spin 1s linear infinite',display:'inline-block'}}>⏳</span> Loading…</>
+      }
+    </div>
+  );
+
+  return (
+    <div>
+      <video controls style={{maxWidth:220,maxHeight:180,borderRadius:8,display:'block',background:'#000'}} src={blobUrl}/>
+      {caption && <div style={{fontSize:12,marginTop:4,color:'#374151'}}>{caption}</div>}
+    </div>
+  );
+}
+
 function MsgContent({ msg, brandId = 1 }) {
   // Try to parse JSON body (media messages store metadata as JSON)
   let media = null;
-  if (msg.type !== 'text' && msg.body) {
-    try { media = JSON.parse(msg.body); } catch (_) {}
+  let effectiveType = msg.type;
+
+  if (msg.body) {
+    try {
+      const parsed = JSON.parse(msg.body);
+      if (parsed && typeof parsed === 'object' && parsed.url) {
+        media = parsed;
+        // If type is 'text' but body is JSON media, detect real type from mime or text field
+        if (msg.type === 'text') {
+          const mime = parsed.mime_type || parsed.mime || '';
+          const txt = (parsed.text || parsed.caption || '').toLowerCase();
+          if (mime.startsWith('video') || txt.includes('video')) effectiveType = 'video';
+          else if (mime.startsWith('audio') || txt.includes('voice') || txt.includes('audio')) effectiveType = 'audio';
+          else if (mime.startsWith('image') || txt.includes('image') || txt.includes('photo')) effectiveType = 'image';
+          else if (mime.includes('pdf') || mime.includes('document') || txt.includes('document')) effectiveType = 'document';
+          // If body has a url field pointing to Facebook CDN, it's definitely media
+          else if (parsed.url && (parsed.url.includes('fbsbx') || parsed.url.includes('facebook'))) effectiveType = 'document';
+        }      }
+    } catch (_) {
+      if (msg.type !== 'text') media = { url: msg.body };
+    }
   }
 
-  // Resolve the media URL — use proxy for IDs, direct for full URLs
+  // Resolve the media URL
   const rawUrl = media?.url;
-  const proxyUrl = rawUrl ? getProxyUrl(rawUrl, brandId) : null;
+  const effectiveUrl = rawUrl || (msg.body?.startsWith('http') ? msg.body : null);
+  const proxyUrl = effectiveUrl ? getProxyUrl(effectiveUrl, brandId) : null;
 
-  if (msg.type === 'audio') {
+  if (effectiveType === 'audio') {
     return proxyUrl
       ? <AudioPlayer src={proxyUrl} />
       : (
@@ -278,54 +364,69 @@ function MsgContent({ msg, brandId = 1 }) {
       );
   }
 
-  if (msg.type === 'image') {
+  if (effectiveType === 'image') {
     return proxyUrl
       ? <ImageMsg src={proxyUrl} caption={media?.caption} />
       : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>📷 Image</span>;
   }
 
-  if (msg.type === 'video') {
+  if (effectiveType === 'video') {
     return proxyUrl
-      ? (
-        <div>
-          <video
-            controls
-            style={{ maxWidth:220, maxHeight:180, borderRadius:8, display:'block', background:'#000' }}
-            src={proxyUrl}
-          />
-          {media?.caption && <div style={{ fontSize:12, marginTop:4, color:'#374151' }}>{media.caption}</div>}
-        </div>
-      )
+      ? <VideoMsg src={proxyUrl} caption={media?.caption} />
       : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>🎥 Video</span>;
   }
 
-  if (msg.type === 'document') {
+  if (effectiveType === 'document') {
     const filename = media?.caption || 'Document';
+    const isPdf = (media?.mime_type || '').includes('pdf') || filename.endsWith('.pdf');
+    const handleDownload = async () => {
+      if (!proxyUrl) return;
+      try {
+        const res = await fetch(proxyUrl);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch { }
+    };
     return (
-      <a
-        href={proxyUrl || '#'}
-        target="_blank"
-        rel="noopener noreferrer"
-        download={filename}
-        style={{ display:'flex', alignItems:'center', gap:8, textDecoration:'none', color:'inherit' }}
+      <div
+        onClick={handleDownload}
+        style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer', minWidth:200 }}
       >
         <div style={{
-          width:40, height:40, borderRadius:8, background:'#eff6ff',
+          width:44, height:44, borderRadius:10,
+          background: isPdf ? '#fef2f2' : '#eff6ff',
           display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0
         }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={isPdf ? '#CE1E36' : '#3b82f6'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
           </svg>
         </div>
-        <div>
-          <div style={{ fontSize:13, fontWeight:500, color:'#1d4ed8', wordBreak:'break-all' }}>{filename}</div>
-          <div style={{ fontSize:11, color:'#6b7280' }}>Tap to download</div>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontSize:13, fontWeight:600, color:'#111827', wordBreak:'break-all', marginBottom:2 }}>{filename}</div>
+          <div style={{ fontSize:11, color:'#6b7280', display:'flex', alignItems:'center', gap:4 }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Download {isPdf ? 'PDF' : 'file'}
+          </div>
         </div>
-      </a>
+      </div>
     );
   }
 
-  // Default: plain text — render WhatsApp formatting
+  // Default: plain text — but first check if it looks like raw JSON media (old format)
+  if (msg.body) {
+    const trimmed = msg.body.trim();
+    if (trimmed.startsWith('{')) {
+      // It's JSON that wasn't detected as a known media type — show generic media unavailable
+      return <span style={{ fontSize:13, color:'#9ca3af', fontStyle:'italic' }}>📎 Media (unavailable)</span>;
+    }
+  }
   const formatted = (msg.body || '')
     .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
     .replace(/_(.*?)_/g, '<em>$1</em>')
@@ -476,6 +577,7 @@ export function WhatsAppManager() {
 
   const fetchMessages = async (conv) => {
     setActiveConv(conv); setMsgLoading(true);
+    isNearBottomRef.current = false; // don't auto-scroll when opening a chat
     try {
       const data = await whatsappService.getMessages(conv.id);
       if (data.success) {
@@ -518,13 +620,39 @@ export function WhatsAppManager() {
     setTestLoading(false);
   };
 
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
+  const messagesContainerRef = useRef(null);
+  const isNearBottomRef = useRef(true);
+
+  // Track if user is near bottom
+  const handleMessagesScroll = () => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  };
+
+  // Silent poll — does NOT reset scroll position
+  const pollMessages = async (conv) => {
+    try {
+      const data = await whatsappService.getMessages(conv.id);
+      if (data.success) {
+        setMessages(data.messages || []);
+        setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c));
+      }
+    } catch { }
+  };
+
+  // Only auto-scroll if user is near bottom and a new message was sent
+  useEffect(() => {
+    if (isNearBottomRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
   useEffect(() => { if (page === 'inbox') fetchConversations(); }, [page, statusFilter, brandId]);
   useEffect(() => { if (page === 'library' || page === 'templates') fetchTemplates(); }, [page, brandId]);
   useEffect(() => { if (page === 'dashboard') fetchStats(); }, [page, brandId]);
   useEffect(() => {
     if (!activeConv) return;
-    pollRef.current = setInterval(() => fetchMessages(activeConv), 10000);
+    pollRef.current = setInterval(() => pollMessages(activeConv), 10000);
     return () => clearInterval(pollRef.current);
   }, [activeConv?.id]);
 
@@ -998,7 +1126,7 @@ export function WhatsAppManager() {
                       </button>
                     )}
                   </div>
-                  <div className="was-messages">
+                  <div className="was-messages" ref={messagesContainerRef} onScroll={handleMessagesScroll}>
                     {msgLoading ? <div style={{textAlign:'center',padding:20}}><Loader /></div>
                     : messages.length === 0 ? <div className="was-no-msgs">No messages yet</div>
                     : messages.map(msg => (

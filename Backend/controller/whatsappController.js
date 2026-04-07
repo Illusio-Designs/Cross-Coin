@@ -40,9 +40,44 @@ exports.receiveWebhook = async (req, res) => {
         for (const msg of (value.messages || [])) {
           const phone       = msg.from;
           const contactName = value.contacts?.find(c => c.wa_id === phone)?.profile?.name || null;
-          const text        = msg.type === 'text' ? msg.text?.body : `[${msg.type}]`;
           const waMessageId = msg.id;
           const sentAt      = new Date(parseInt(msg.timestamp) * 1000);
+
+          // Determine message type and body
+          let msgType = msg.type;
+          let msgBody = '';
+          let displayText = '';
+
+          if (msg.type === 'text') {
+            msgBody = msg.text?.body || '';
+            displayText = msgBody;
+          } else if (msg.type === 'audio') {
+            const mediaId = msg.audio?.id;
+            msgBody = JSON.stringify({ url: mediaId, mime_type: msg.audio?.mime_type });
+            displayText = '🎤 Voice message';
+          } else if (msg.type === 'image') {
+            const mediaId = msg.image?.id;
+            msgBody = JSON.stringify({ url: mediaId, caption: msg.image?.caption, mime_type: msg.image?.mime_type });
+            displayText = msg.image?.caption || '📷 Image';
+          } else if (msg.type === 'video') {
+            const mediaId = msg.video?.id;
+            msgBody = JSON.stringify({ url: mediaId, caption: msg.video?.caption, mime_type: msg.video?.mime_type });
+            displayText = msg.video?.caption || '🎥 Video';
+          } else if (msg.type === 'document') {
+            const mediaId = msg.document?.id;
+            msgBody = JSON.stringify({ url: mediaId, caption: msg.document?.filename || msg.document?.caption, mime_type: msg.document?.mime_type });
+            displayText = msg.document?.filename || '📄 Document';
+          } else if (msg.type === 'sticker') {
+            const mediaId = msg.sticker?.id;
+            msgBody = JSON.stringify({ url: mediaId, mime_type: msg.sticker?.mime_type });
+            displayText = '🎭 Sticker';
+          } else if (msg.type === 'location') {
+            msgBody = JSON.stringify({ lat: msg.location?.latitude, lng: msg.location?.longitude, name: msg.location?.name });
+            displayText = `📍 Location: ${msg.location?.name || `${msg.location?.latitude}, ${msg.location?.longitude}`}`;
+          } else {
+            msgBody = `[${msg.type}]`;
+            displayText = `[${msg.type}]`;
+          }
 
           // findOrCreate returns [instance, created]
           const [conv, created] = await WhatsappConversation.findOrCreate({
@@ -50,7 +85,7 @@ exports.receiveWebhook = async (req, res) => {
             defaults: {
               customer_name:   contactName,
               wa_contact_id:   phone,
-              last_message:    text,
+              last_message:    displayText,
               last_message_at: sentAt,
               unread_count:    1,
               status:          'open',
@@ -59,7 +94,7 @@ exports.receiveWebhook = async (req, res) => {
 
           if (!created) {
             await conv.update({
-              last_message:    text,
+              last_message:    displayText,
               last_message_at: sentAt,
               unread_count:    conv.unread_count + 1,
               customer_name:   contactName || conv.customer_name,
@@ -71,17 +106,17 @@ exports.receiveWebhook = async (req, res) => {
             conversation_id: conv.id,
             wa_message_id:   waMessageId,
             direction:       'inbound',
-            type:            msg.type === 'text' ? 'text' : 'document',
-            body:            text,
+            type:            msgType,
+            body:            msgBody,
             status:          'received',
             sent_at:         sentAt,
           });
 
           // Emit real-time notification
           const notificationService = require('../services/notificationService.js');
-          notificationService.emitNewWhatsApp(phone, text);
+          notificationService.emitNewWhatsApp(phone, displayText);
 
-          logger.info(`WhatsApp inbound [${phone}]: ${text}`);
+          logger.info(`WhatsApp inbound [${phone}] [${msgType}]: ${displayText}`);
         }
 
         // ── Status updates (sent → delivered → read) ──
@@ -960,16 +995,29 @@ exports.proxyMedia = async (req, res) => {
     const { mediaId } = req.params;
     const brandId = parseInt(req.query.brandId) || 1;
 
-    // Step 1: get the real download URL from Meta
-    const { url, mimeType } = await whatsappService.getMediaUrl(mediaId, brandId);
+    // Decode in case it was URL-encoded (full Facebook URLs)
+    const decoded = decodeURIComponent(mediaId);
 
-    // Step 2: stream the bytes back to the browser
-    const { stream, contentType, contentLength } = await whatsappService.downloadMedia(url, brandId);
+    let downloadUrl, mimeType;
+
+    if (decoded.startsWith('http')) {
+      // Already a full URL (old messages stored full Facebook CDN URL)
+      downloadUrl = decoded;
+      mimeType = 'application/octet-stream';
+    } else {
+      // Meta media ID — resolve to download URL first
+      const result = await whatsappService.getMediaUrl(decoded, brandId);
+      downloadUrl = result.url;
+      mimeType = result.mimeType;
+    }
+
+    // Stream the bytes back to the browser
+    const { stream, contentType, contentLength } = await whatsappService.downloadMedia(downloadUrl, brandId);
 
     res.setHeader('Content-Type', contentType || mimeType || 'application/octet-stream');
     res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     if (contentLength) res.setHeader('Content-Length', contentLength);
-    // Allow range requests so audio/video seeking works
     res.setHeader('Accept-Ranges', 'bytes');
 
     stream.pipe(res);
