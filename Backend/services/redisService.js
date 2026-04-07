@@ -135,6 +135,21 @@ class RedisService {
       status: this.client ? this.client.status : 'not_initialized'
     };
   }
+
+  async get(key) {
+    if (!this.client || !this.isConnected) return null;
+    return this.client.get(key);
+  }
+
+  async set(key, value, ...args) {
+    if (!this.client || !this.isConnected) return null;
+    return this.client.set(key, value, ...args);
+  }
+
+  async del(key) {
+    if (!this.client || !this.isConnected) return null;
+    return this.client.del(key);
+  }
 }
 
 // Export singleton instance
