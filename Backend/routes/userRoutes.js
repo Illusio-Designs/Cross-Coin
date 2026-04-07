@@ -20,7 +20,9 @@ const {
     refreshToken,
     upload,
     updateUserRole,
-    createStaffUser
+    createStaffUser,
+    getGuestUserMergeReport,
+    bulkMergeGuestUsers
 } = require('../controller/userController.js');
 const { isAuthenticated, authorize, isAdmin } = require('../middleware/authMiddleware.js');
 
@@ -76,5 +78,9 @@ router.delete('/delete', isAuthenticated, deleteUser);
 router.get('/all', isAuthenticated, isAdmin, getAllUsers);
 router.post('/staff', isAuthenticated, isAdmin, createStaffUser);
 router.put('/:id/role', isAuthenticated, isAdmin, updateUserRole);
+
+// Guest merge admin routes
+router.get('/admin/guest-merge-report', isAuthenticated, isAdmin, getGuestUserMergeReport);
+router.post('/admin/bulk-merge-guests', isAuthenticated, isAdmin, bulkMergeGuestUsers);
 
 module.exports = router;
