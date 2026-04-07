@@ -2418,13 +2418,7 @@
       const { status, page = 1, limit = 10 } = req.query;
 
       // Build filter
-      const filter = {
-        user_id: userId,
-        [Op.or]: [
-          { payment_type: "cod" },
-          { payment_status: { [Op.ne]: "pending" } },
-        ],
-      };
+      const filter = { user_id: userId };
       if (status) filter.status = status;
 
       // Pagination
