@@ -63,40 +63,36 @@ module.exports.register = async (req, res) => {
             role
         });
 
-        // Guest-to-member conversion: mark guest records converted and
-        // retroactively credit delivered guest orders.
+        // Guest-to-member conversion: link guest orders by email and phone
         let pointsCredited = 0;
-        const guestUsers = await GuestUser.findAll({
-            where: { email: email.toLowerCase() }
-        });
+        const { Op } = require('sequelize');
 
-        if (guestUsers.length > 0) {
-            const guestIds = guestUsers.map((g) => g.id);
+        // Find guests by email
+        const guestsByEmail = await GuestUser.findAll({ where: { email: email.toLowerCase(), status: 'active' } });
+        const guestIds = guestsByEmail.map(g => g.id);
 
-            // Mark guest users as converted.
-            await GuestUser.update(
-                { status: 'converted', convertedAt: new Date() },
-                { where: { id: guestIds } }
-            );
+        // Also find guests by phone if provided in request
+        const phone = req.body.phone ? String(req.body.phone).replace(/\D/g, '').slice(-10) : null;
+        if (phone) {
+            const guestsByPhone = await GuestUser.findAll({ where: { status: 'active' } });
+            for (const g of guestsByPhone) {
+                const gPhone = String(g.phone || '').replace(/\D/g, '').slice(-10);
+                if (gPhone === phone && !guestIds.includes(g.id)) guestIds.push(g.id);
+            }
+        }
 
-            // Credit delivered guest orders to the newly created user.
-            const deliveredGuestOrders = await Order.findAll({
-                where: {
-                    guest_user_id: guestIds,
-                    status: 'delivered'
-                }
-            });
+        if (guestIds.length > 0) {
+            await GuestUser.update({ status: 'converted', convertedAt: new Date() }, { where: { id: guestIds } });
+            // Re-assign ALL guest orders (not just delivered)
+            await Order.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: guestIds, user_id: null } });
 
+            // Credit loyalty for delivered orders
+            const deliveredGuestOrders = await Order.findAll({ where: { user_id: user.id, status: 'delivered' } });
             for (const guestOrder of deliveredGuestOrders) {
-                const loyaltyTxn = await loyaltyService.creditPoints(
-                    user.id,
-                    guestOrder.id,
-                    guestOrder.final_amount,
-                    guestOrder.brand_id || 1
-                );
-                if (loyaltyTxn && loyaltyTxn.type === 'earned') {
-                    pointsCredited += Math.max(loyaltyTxn.points || 0, 0);
-                }
+                try {
+                    const loyaltyTxn = await loyaltyService.creditPoints(user.id, guestOrder.id, guestOrder.final_amount, guestOrder.brand_id || 1);
+                    if (loyaltyTxn?.type === 'earned') pointsCredited += Math.max(loyaltyTxn.points || 0, 0);
+                } catch (_) {}
             }
         }
 
@@ -135,21 +131,20 @@ module.exports.login = async (req, res) => {
                 phone: digits,
                 role: 'consumer',
             });
+        }
 
-            // Guest-to-member: re-assign guest orders by phone
-            const allGuests = await GuestUser.findAll({ where: { status: 'active' } });
-            const matchedIds = [];
-            for (const g of allGuests) {
-                const gPhone = String(g.phone || '').replace(/\D/g, '').slice(-10);
-                if (gPhone === digits) matchedIds.push(g.id);
-            }
-            if (matchedIds.length > 0) {
-                await GuestUser.update({ status: 'converted', convertedAt: new Date() }, { where: { id: matchedIds } });
-                await Order.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: matchedIds } });
-                const delivered = await Order.findAll({ where: { user_id: user.id, status: 'delivered' } });
-                for (const o of delivered) {
-                    await loyaltyService.creditPoints(user.id, o.id, o.final_amount, o.brand_id || 1);
-                }
+        // Guest-to-member: re-assign guest orders by phone (runs for both new and existing users)
+        const allGuests = await GuestUser.findAll({ where: { phone: { [require('sequelize').Op.like]: `%${digits}` }, status: 'active' } });
+        const matchedIds = allGuests
+            .filter(g => String(g.phone || '').replace(/\D/g, '').slice(-10) === digits)
+            .map(g => g.id);
+
+        if (matchedIds.length > 0) {
+            await GuestUser.update({ status: 'converted', convertedAt: new Date() }, { where: { id: matchedIds } });
+            await Order.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: matchedIds, user_id: null } });
+            const delivered = await Order.findAll({ where: { user_id: user.id, status: 'delivered' } });
+            for (const o of delivered) {
+                try { await loyaltyService.creditPoints(user.id, o.id, o.final_amount, o.brand_id || 1); } catch (_) {}
             }
         }
 
