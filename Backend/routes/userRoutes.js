@@ -22,7 +22,8 @@ const {
     updateUserRole,
     createStaffUser,
     getGuestUserMergeReport,
-    bulkMergeGuestUsers
+    bulkMergeGuestUsers,
+    autoCreateUsersFromGuests
 } = require('../controller/userController.js');
 const { isAuthenticated, authorize, isAdmin } = require('../middleware/authMiddleware.js');
 
@@ -82,5 +83,6 @@ router.put('/:id/role', isAuthenticated, isAdmin, updateUserRole);
 // Guest merge admin routes
 router.get('/admin/guest-merge-report', isAuthenticated, isAdmin, getGuestUserMergeReport);
 router.post('/admin/bulk-merge-guests', isAuthenticated, isAdmin, bulkMergeGuestUsers);
+router.post('/admin/auto-create-from-guests', isAuthenticated, isAdmin, autoCreateUsersFromGuests);
 
 module.exports = router;

@@ -908,3 +908,92 @@ module.exports.bulkMergeGuestUsers = async (req, res) => {
         res.status(500).json({ message: 'Bulk merge failed', error: error.message });
     }
 };
+
+// **Auto-create users for unmatched guests and merge their orders/addresses (admin only)**
+module.exports.autoCreateUsersFromGuests = async (req, res) => {
+    try {
+        const { sequelize } = require('../config/db.js');
+        const { Op } = require('sequelize');
+        const { ShippingAddress } = require('../model/shippingAddressModel.js');
+        const bcrypt = require('bcrypt');
+
+        // Find all guest users that have orders/addresses but no matching user account
+        const [unmatchedGuests] = await sequelize.query(`
+            SELECT DISTINCT g.id, g.email, g.first_name, g.last_name
+            FROM guest_users g
+            LEFT JOIN users u ON LOWER(u.email) = LOWER(g.email)
+            WHERE u.id IS NULL
+              AND g.status = 'active'
+              AND (
+                EXISTS (SELECT 1 FROM orders o WHERE o.guest_user_id = g.id AND o.user_id IS NULL)
+                OR
+                EXISTS (SELECT 1 FROM shipping_addresses sa WHERE sa.guest_user_id = g.id AND sa.user_id IS NULL)
+              )
+        `);
+
+        let created = 0;
+        let orders_moved = 0;
+        let addresses_moved = 0;
+        const results = [];
+
+        for (const guest of unmatchedGuests) {
+            try {
+                // Generate a random password — user can reset via OTP login
+                const tempPassword = await bcrypt.hash(Math.random().toString(36).slice(-10), 10);
+                const username = `${(guest.first_name || 'user').toLowerCase().replace(/\s+/g, '')}_${guest.id}_${Date.now().toString().slice(-4)}`;
+
+                const newUser = await User.create({
+                    username,
+                    email: guest.email.toLowerCase(),
+                    password: tempPassword,
+                    role: 'consumer',
+                });
+
+                // Move orders
+                const [orderUpdate] = await sequelize.query(`
+                    UPDATE orders SET user_id = ${newUser.id}, guest_user_id = NULL
+                    WHERE guest_user_id = ${guest.id} AND user_id IS NULL
+                `);
+                const movedOrders = orderUpdate.affectedRows || 0;
+
+                // Move addresses
+                const [addrUpdate] = await sequelize.query(`
+                    UPDATE shipping_addresses SET user_id = ${newUser.id}, guest_user_id = NULL
+                    WHERE guest_user_id = ${guest.id} AND user_id IS NULL
+                `);
+                const movedAddresses = addrUpdate.affectedRows || 0;
+
+                // Mark guest converted
+                await GuestUser.update(
+                    { status: 'converted', convertedAt: new Date() },
+                    { where: { id: guest.id } }
+                );
+
+                orders_moved += movedOrders;
+                addresses_moved += movedAddresses;
+                created++;
+                results.push({
+                    guest_id: guest.id,
+                    email: guest.email,
+                    new_user_id: newUser.id,
+                    orders_moved: movedOrders,
+                    addresses_moved: movedAddresses,
+                });
+            } catch (err) {
+                results.push({ guest_id: guest.id, email: guest.email, error: err.message });
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `Auto-create completed`,
+            users_created: created,
+            orders_moved,
+            addresses_moved,
+            results,
+        });
+    } catch (error) {
+        console.error('Auto-create users from guests error:', error);
+        res.status(500).json({ message: 'Auto-create failed', error: error.message });
+    }
+};
