@@ -63,40 +63,39 @@ module.exports.register = async (req, res) => {
             role
         });
 
-        // Guest-to-member conversion: mark guest records converted and
-        // retroactively credit delivered guest orders.
+        // Guest-to-member conversion: link guest orders by email and phone
         let pointsCredited = 0;
-        const guestUsers = await GuestUser.findAll({
-            where: { email: email.toLowerCase() }
-        });
+        const { Op } = require('sequelize');
 
-        if (guestUsers.length > 0) {
-            const guestIds = guestUsers.map((g) => g.id);
+        // Find guests by email
+        const guestsByEmail = await GuestUser.findAll({ where: { email: email.toLowerCase(), status: 'active' } });
+        const guestIds = guestsByEmail.map(g => g.id);
 
-            // Mark guest users as converted.
-            await GuestUser.update(
-                { status: 'converted', convertedAt: new Date() },
-                { where: { id: guestIds } }
-            );
+        // Also find guests by phone if provided in request
+        const phone = req.body.phone ? String(req.body.phone).replace(/\D/g, '').slice(-10) : null;
+        if (phone) {
+            const guestsByPhone = await GuestUser.findAll({ where: { status: 'active' } });
+            for (const g of guestsByPhone) {
+                const gPhone = String(g.phone || '').replace(/\D/g, '').slice(-10);
+                if (gPhone === phone && !guestIds.includes(g.id)) guestIds.push(g.id);
+            }
+        }
 
-            // Credit delivered guest orders to the newly created user.
-            const deliveredGuestOrders = await Order.findAll({
-                where: {
-                    guest_user_id: guestIds,
-                    status: 'delivered'
-                }
-            });
+        if (guestIds.length > 0) {
+            await GuestUser.update({ status: 'converted', convertedAt: new Date() }, { where: { id: guestIds } });
+            // Re-assign ALL guest orders (not just delivered)
+            await Order.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: guestIds, user_id: null } });
+            // Re-assign guest shipping addresses
+            const { ShippingAddress } = require('../model/shippingAddressModel.js');
+            await ShippingAddress.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: guestIds, user_id: null } });
 
+            // Credit loyalty for delivered orders
+            const deliveredGuestOrders = await Order.findAll({ where: { user_id: user.id, status: 'delivered' } });
             for (const guestOrder of deliveredGuestOrders) {
-                const loyaltyTxn = await loyaltyService.creditPoints(
-                    user.id,
-                    guestOrder.id,
-                    guestOrder.final_amount,
-                    guestOrder.brand_id || 1
-                );
-                if (loyaltyTxn && loyaltyTxn.type === 'earned') {
-                    pointsCredited += Math.max(loyaltyTxn.points || 0, 0);
-                }
+                try {
+                    const loyaltyTxn = await loyaltyService.creditPoints(user.id, guestOrder.id, guestOrder.final_amount, guestOrder.brand_id || 1);
+                    if (loyaltyTxn?.type === 'earned') pointsCredited += Math.max(loyaltyTxn.points || 0, 0);
+                } catch (_) {}
             }
         }
 
@@ -135,21 +134,25 @@ module.exports.login = async (req, res) => {
                 phone: digits,
                 role: 'consumer',
             });
+        }
 
-            // Guest-to-member: re-assign guest orders by phone
-            const allGuests = await GuestUser.findAll({ where: { status: 'active' } });
-            const matchedIds = [];
-            for (const g of allGuests) {
-                const gPhone = String(g.phone || '').replace(/\D/g, '').slice(-10);
-                if (gPhone === digits) matchedIds.push(g.id);
-            }
-            if (matchedIds.length > 0) {
-                await GuestUser.update({ status: 'converted', convertedAt: new Date() }, { where: { id: matchedIds } });
-                await Order.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: matchedIds } });
-                const delivered = await Order.findAll({ where: { user_id: user.id, status: 'delivered' } });
-                for (const o of delivered) {
-                    await loyaltyService.creditPoints(user.id, o.id, o.final_amount, o.brand_id || 1);
-                }
+        // Guest-to-member: re-assign guest orders by email (primary) since phone is encrypted
+        const { Op } = require('sequelize');
+        const { ShippingAddress } = require('../model/shippingAddressModel.js');
+
+        const guestsByEmail = user.email && !user.email.endsWith('@phone.crosscoin.in')
+            ? await GuestUser.findAll({ where: { email: user.email.toLowerCase(), status: 'active' } })
+            : [];
+
+        const matchedIds = guestsByEmail.map(g => g.id);
+
+        if (matchedIds.length > 0) {
+            await GuestUser.update({ status: 'converted', convertedAt: new Date() }, { where: { id: matchedIds } });
+            await Order.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: matchedIds, user_id: null } });
+            await ShippingAddress.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: matchedIds, user_id: null } });
+            const delivered = await Order.findAll({ where: { user_id: user.id, status: 'delivered' } });
+            for (const o of delivered) {
+                try { await loyaltyService.creditPoints(user.id, o.id, o.final_amount, o.brand_id || 1); } catch (_) {}
             }
         }
 
@@ -780,5 +783,217 @@ module.exports.createStaffUser = async (req, res) => {
     } catch (error) {
         console.error('Create staff user error:', error);
         res.status(500).json({ message: 'Failed to create staff user', error: error.message });
+    }
+};
+
+// **Guest-User Merge Report + Bulk Merge (admin only)**
+module.exports.getGuestUserMergeReport = async (req, res) => {
+    try {
+        const { sequelize } = require('../config/db.js');
+
+        // Find all users that have matching guest records by email
+        const [matches] = await sequelize.query(`
+            SELECT 
+                u.id          AS user_id,
+                u.username,
+                u.email       AS user_email,
+                u.phone       AS user_phone,
+                u.createdAt   AS user_created,
+                g.id          AS guest_id,
+                g.email       AS guest_email,
+                g.status      AS guest_status,
+                g.converted_at AS convertedAt,
+                COUNT(DISTINCT o_u.id)  AS user_orders,
+                COUNT(DISTINCT o_g.id)  AS guest_orders,
+                COUNT(DISTINCT sa_u.id) AS user_addresses,
+                COUNT(DISTINCT sa_g.id) AS guest_addresses
+            FROM users u
+            JOIN guest_users g ON LOWER(g.email) = LOWER(u.email)
+            LEFT JOIN orders o_u  ON o_u.user_id       = u.id
+            LEFT JOIN orders o_g  ON o_g.guest_user_id = g.id
+            LEFT JOIN shipping_addresses sa_u ON sa_u.user_id       = u.id
+            LEFT JOIN shipping_addresses sa_g ON sa_g.guest_user_id = g.id
+            WHERE u.role = 'consumer'
+            GROUP BY u.id, g.id
+            ORDER BY (COUNT(DISTINCT o_g.id) + COUNT(DISTINCT sa_g.id)) DESC, u.createdAt DESC
+        `);
+
+        // Also find orphaned orders (no user_id, no guest_user_id)
+        const [orphanedOrders] = await sequelize.query(`
+            SELECT id, order_number, status, final_amount, created_at
+            FROM orders
+            WHERE user_id IS NULL AND guest_user_id IS NULL
+            ORDER BY created_at DESC
+        `);
+
+        // Orders still on guest_user_id (not yet moved to a user)
+        const [pendingGuestOrders] = await sequelize.query(`
+            SELECT o.id, o.order_number, o.status, o.user_id, 
+                   o.guest_user_id, o.final_amount, o.created_at,
+                   g.email AS guest_email, g.status AS guest_status
+            FROM orders o
+            JOIN guest_users g ON g.id = o.guest_user_id
+            ORDER BY o.created_at DESC
+        `);
+
+        // Shipping addresses still on guest_user_id
+        const [pendingGuestAddresses] = await sequelize.query(`
+            SELECT sa.id, sa.user_id, sa.guest_user_id, 
+                   sa.city, sa.state, sa.createdAt,
+                   g.email AS guest_email
+            FROM shipping_addresses sa
+            JOIN guest_users g ON g.id = sa.guest_user_id
+            ORDER BY sa.createdAt DESC
+        `);
+
+        res.json({
+            success: true,
+            summary: {
+                total_matches: matches.length,
+                pending_guest_orders: pendingGuestOrders.length,
+                pending_guest_addresses: pendingGuestAddresses.length,
+                orphaned_orders: orphanedOrders.length,
+            },
+            matches,
+            pendingGuestOrders,
+            pendingGuestAddresses,
+            orphanedOrders,
+        });
+    } catch (error) {
+        console.error('Guest merge report error:', error);
+        res.status(500).json({ message: 'Failed to generate report', error: error.message });
+    }
+};
+
+// **Bulk merge all guest data to matched users by email (admin only)**
+module.exports.bulkMergeGuestUsers = async (req, res) => {
+    try {
+        const { sequelize } = require('../config/db.js');
+
+        // Move orders from guest to matched user
+        const [orderResult] = await sequelize.query(`
+            UPDATE orders o
+            JOIN guest_users g ON g.id = o.guest_user_id
+            JOIN users u ON LOWER(u.email) = LOWER(g.email)
+            SET o.user_id = u.id, o.guest_user_id = NULL
+            WHERE o.user_id IS NULL
+        `);
+
+        // Move shipping addresses
+        const [addressResult] = await sequelize.query(`
+            UPDATE shipping_addresses sa
+            JOIN guest_users g ON g.id = sa.guest_user_id
+            JOIN users u ON LOWER(u.email) = LOWER(g.email)
+            SET sa.user_id = u.id, sa.guest_user_id = NULL
+            WHERE sa.user_id IS NULL
+        `);
+
+        // Mark matched guests as converted
+        const [guestResult] = await sequelize.query(`
+            UPDATE guest_users g
+            JOIN users u ON LOWER(u.email) = LOWER(g.email)
+            SET g.status = 'converted', g.converted_at = NOW()
+            WHERE g.status = 'active'
+        `);
+
+        res.json({
+            success: true,
+            message: 'Bulk merge completed',
+            orders_moved: orderResult.affectedRows || 0,
+            addresses_moved: addressResult.affectedRows || 0,
+            guests_converted: guestResult.affectedRows || 0,
+        });
+    } catch (error) {
+        console.error('Bulk merge error:', error);
+        res.status(500).json({ message: 'Bulk merge failed', error: error.message });
+    }
+};
+
+// **Auto-create users for unmatched guests and merge their orders/addresses (admin only)**
+module.exports.autoCreateUsersFromGuests = async (req, res) => {
+    try {
+        const { sequelize } = require('../config/db.js');
+        const { Op } = require('sequelize');
+        const { ShippingAddress } = require('../model/shippingAddressModel.js');
+        const bcrypt = require('bcrypt');
+
+        // Find all guest users that have orders/addresses but no matching user account
+        const [unmatchedGuests] = await sequelize.query(`
+            SELECT DISTINCT g.id, g.email, g.first_name, g.last_name
+            FROM guest_users g
+            LEFT JOIN users u ON LOWER(u.email) = LOWER(g.email)
+            WHERE u.id IS NULL
+              AND g.status = 'active'
+              AND (
+                EXISTS (SELECT 1 FROM orders o WHERE o.guest_user_id = g.id AND o.user_id IS NULL)
+                OR
+                EXISTS (SELECT 1 FROM shipping_addresses sa WHERE sa.guest_user_id = g.id AND sa.user_id IS NULL)
+              )
+        `);
+
+        let created = 0;
+        let orders_moved = 0;
+        let addresses_moved = 0;
+        const results = [];
+
+        for (const guest of unmatchedGuests) {
+            try {
+                // Generate a random password — user can reset via OTP login
+                const tempPassword = await bcrypt.hash(Math.random().toString(36).slice(-10), 10);
+                const username = `${(guest.first_name || 'user').toLowerCase().replace(/\s+/g, '')}_${guest.id}_${Date.now().toString().slice(-4)}`;
+
+                const newUser = await User.create({
+                    username,
+                    email: guest.email.toLowerCase(),
+                    password: tempPassword,
+                    role: 'consumer',
+                });
+
+                // Move orders
+                const [orderUpdate] = await sequelize.query(`
+                    UPDATE orders SET user_id = ${newUser.id}, guest_user_id = NULL
+                    WHERE guest_user_id = ${guest.id} AND user_id IS NULL
+                `);
+                const movedOrders = orderUpdate.affectedRows || 0;
+
+                // Move addresses
+                const [addrUpdate] = await sequelize.query(`
+                    UPDATE shipping_addresses SET user_id = ${newUser.id}, guest_user_id = NULL
+                    WHERE guest_user_id = ${guest.id} AND user_id IS NULL
+                `);
+                const movedAddresses = addrUpdate.affectedRows || 0;
+
+                // Mark guest converted
+                await GuestUser.update(
+                    { status: 'converted', convertedAt: new Date() },
+                    { where: { id: guest.id } }
+                );
+
+                orders_moved += movedOrders;
+                addresses_moved += movedAddresses;
+                created++;
+                results.push({
+                    guest_id: guest.id,
+                    email: guest.email,
+                    new_user_id: newUser.id,
+                    orders_moved: movedOrders,
+                    addresses_moved: movedAddresses,
+                });
+            } catch (err) {
+                results.push({ guest_id: guest.id, email: guest.email, error: err.message });
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `Auto-create completed`,
+            users_created: created,
+            orders_moved,
+            addresses_moved,
+            results,
+        });
+    } catch (error) {
+        console.error('Auto-create users from guests error:', error);
+        res.status(500).json({ message: 'Auto-create failed', error: error.message });
     }
 };
