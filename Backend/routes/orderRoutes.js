@@ -22,6 +22,7 @@ const {
     syncSingleOrderWithFShip,
     exportDeliveredOrders,
     updateAwbNumber,
+    initiateReturn,
     // Label management functions
     markLabelDownloaded,
     downloadLabel,
@@ -82,6 +83,7 @@ router.post('/', isAuthenticated, createOrder);
 router.get('/my-orders', isAuthenticated, getUserOrders);
 router.get('/:id', isAuthenticated, getOrder);
 router.put('/:id/cancel', isAuthenticated, cancelOrder);
+router.post('/:id/return', isAuthenticated, initiateReturn);
 router.put('/:id/status', isAuthenticated, isOrderManager, updateOrderStatus);
 router.get('/:id/fship/tracking', isAuthenticated, getFShipTrackingForOrder);
 router.get('/:id/fship/label', isAuthenticated, getFShipLabelForOrder);

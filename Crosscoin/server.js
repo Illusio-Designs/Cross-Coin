@@ -47,16 +47,10 @@ app.prepare().then(() => {
       // Add aggressive caching headers for static assets
       if (pathname.startsWith('/_next/static/') || pathname.startsWith('/assets/')) {
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-        res.setHeader('Expires', new Date(Date.now() + 31536000000).toUTCString());
-        res.setHeader('ETag', `"${Date.now()}"`);
       } else if (pathname.match(/\.(jpg|jpeg|png|gif|ico|svg|webp|avif)$/)) {
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-        res.setHeader('Expires', new Date(Date.now() + 31536000000).toUTCString());
-        res.setHeader('ETag', `"${Date.now()}"`);
       } else if (pathname.match(/\.(css|js)$/)) {
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-        res.setHeader('Expires', new Date(Date.now() + 31536000000).toUTCString());
-        res.setHeader('ETag', `"${Date.now()}"`);
       } else {
         // robots.txt and sitemap.xml — short cache so crawlers always get fresh copy
         if (pathname === '/robots.txt' || pathname === '/sitemap.xml') {

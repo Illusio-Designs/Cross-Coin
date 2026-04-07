@@ -9,16 +9,9 @@ const {
     createRazorpayOrder,
     updateOrderPayment,
     razorpayCallback,
-    createMagicCheckoutOrder,
-    verifyMagicCheckoutPayment
+    handlePaymentFailure,
+    razorpayWebhook
 } = require('../controller/paymentController.js');
-const {
-    getPromotions,
-    applyPromotion,
-    getShippingInfo,
-    createOrder,
-    verifyPayment
-} = require('../controller/magicCheckoutController.js');
 const { isAuthenticated, authorize, isOrderManager } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
@@ -34,15 +27,12 @@ router.post('/razorpay-callback', razorpayCallback);
 // Guest routes (no authentication required)
 router.post('/guest/razorpay-order', createRazorpayOrder);
 
-// Magic Checkout routes — all POST, no auth (Razorpay calls promotions/shipping directly)
-router.post('/magic-checkout/create-order', createOrder);
-router.post('/magic-checkout/verify-payment', verifyPayment);
-router.post('/magic-checkout/promotions', getPromotions);
-router.post('/magic-checkout/apply-promotion', applyPromotion);
-router.post('/magic-checkout/shipping-info', getShippingInfo);
-
 // Public routes (no authentication required for payment updates)
 router.post('/update-order-payment', updateOrderPayment);
+router.post('/payment-failed', handlePaymentFailure);
+
+// Razorpay webhook — express.raw() scoped here only so JSON parsing on other routes is unaffected
+router.post('/razorpay-webhook', express.raw({ type: 'application/json' }), razorpayWebhook);
 
 // Order Manager routes
 router.get('/', isAuthenticated, isOrderManager, getAllPayments);

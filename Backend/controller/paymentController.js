@@ -230,28 +230,37 @@ module.exports.processRefund = async (req, res) => {
             return res.status(400).json({ message: `Cannot refund ${payment.status} payments` });
         }
 
+        // Task 14: Order must be in a refundable state
+        const order = await Order.findByPk(payment.order_id, { transaction });
+        const REFUNDABLE_STATUSES = ['delivered', 'return_initiated', 'returned_rto', 'cancelled', 'order cancelled'];
+        if (order && !REFUNDABLE_STATUSES.includes(order.status)) {
+            await transaction.rollback();
+            return res.status(400).json({ message: `Refund not allowed for orders in '${order.status}' status.` });
+        }
+
+        // Task 14: Refund amount must not exceed original
+        const refundAmount = amount || payment.amount_paid;
+        if (parseFloat(refundAmount) > parseFloat(payment.amount_paid)) {
+            await transaction.rollback();
+            return res.status(400).json({ message: 'Refund amount cannot exceed the original payment amount.' });
+        }
+
         // Update payment status
         payment.status = 'refunded';
         await payment.save({ transaction });
 
         // Also update the order's payment status
-        const order = await Order.findByPk(payment.order_id, { transaction });
         if (order) {
             order.payment_status = 'refunded';
             await order.save({ transaction });
         }
 
-        // Create a refund record
-        // In a real app, you might have a separate Refund model
-        // For simplicity, we're just creating a new payment record with negative amount
-        const refundAmount = amount || payment.amount_paid;
-        
         await Payment.create({
             order_id: payment.order_id,
-            user_id: userId, // Admin who processed the refund
+            user_id: userId,
             payment_type: payment.payment_type,
             transaction_id: `REFUND-${payment.transaction_id || payment.id}`,
-            amount_paid: -refundAmount, // Negative amount to indicate refund
+            amount_paid: -refundAmount,
             status: 'successful',
             payment_gateway: payment.payment_gateway,
             notes: reason || 'Refund processed'
@@ -439,7 +448,7 @@ module.exports.refundPayment = async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
-        const { payment_id, reason } = req.body; // Assuming payment ID and reason for refund are passed in the request body
+        const { payment_id, reason } = req.body;
         const userId = req.user.id;
 
         if (!payment_id) {
@@ -447,7 +456,6 @@ module.exports.refundPayment = async (req, res) => {
             return res.status(400).json({ message: 'Payment ID is required' });
         }
 
-        // Only admin can process refunds
         if (req.user.role !== 'admin') {
             await transaction.rollback();
             return res.status(403).json({ message: 'Only admin can process refunds' });
@@ -459,32 +467,33 @@ module.exports.refundPayment = async (req, res) => {
             return res.status(404).json({ message: 'Payment not found' });
         }
 
-        // Can only refund successful payments
         if (payment.status !== 'successful') {
             await transaction.rollback();
             return res.status(400).json({ message: `Cannot refund ${payment.status} payments` });
         }
 
-        // Update payment status
+        // Task 14: Order must be in a refundable state
+        const order = await Order.findByPk(payment.order_id, { transaction });
+        const REFUNDABLE_STATUSES = ['delivered', 'return_initiated', 'returned_rto', 'cancelled', 'order cancelled'];
+        if (order && !REFUNDABLE_STATUSES.includes(order.status)) {
+            await transaction.rollback();
+            return res.status(400).json({ message: `Refund not allowed for orders in '${order.status}' status.` });
+        }
+
         payment.status = 'refunded';
         await payment.save({ transaction });
 
-        // Also update the order's payment status
-        const order = await Order.findByPk(payment.order_id, { transaction });
         if (order) {
             order.payment_status = 'refunded';
             await order.save({ transaction });
         }
 
-        // Create a refund record
-        // In a real app, you might have a separate Refund model
-        // For simplicity, we're just creating a new payment record with negative amount
         await Payment.create({
             order_id: payment.order_id,
-            user_id: userId, // Admin who processed the refund
+            user_id: userId,
             payment_type: payment.payment_type,
             transaction_id: `REFUND-${payment.transaction_id || payment.id}`,
-            amount_paid: -payment.amount_paid, // Negative amount to indicate refund
+            amount_paid: -payment.amount_paid,
             status: 'successful',
             payment_gateway: payment.payment_gateway,
             notes: reason || 'Refund processed'
@@ -510,22 +519,94 @@ module.exports.refundPayment = async (req, res) => {
 // Razorpay order creation
 module.exports.createRazorpayOrder = async (req, res) => {
     try {
-        const { amount, currency = 'INR', receipt } = req.body;
+        const { amount, currency = 'INR', receipt, brand_id, items, orderId } = req.body;
         console.log('Backend: Received amount to create Razorpay order:', amount);
         if (!amount) {
             return res.status(400).json({ message: 'Amount is required' });
         }
+
+        const brandId = brand_id || (req.brand ? req.brand.id : 1);
 
         // Create order using centralized Razorpay service
         const order = await razorpayService.createOrder({
             amount,
             currency,
             receipt,
-            brandId: 1
+            brandId
         });
 
         console.log('Backend: Razorpay order created:', { order_id: order.id, amount: order.amount });
+
+        // Store a pending payment record immediately so failed payments are tracked
+        if (orderId) {
+            try {
+                const dbOrder = await Order.findByPk(orderId);
+                if (dbOrder) {
+                    const existing = await Payment.findOne({ where: { order_id: orderId, razorpay_order_id: order.id } });
+                    if (!existing) {
+                        await Payment.create({
+                            order_id: orderId,
+                            user_id: dbOrder.user_id || null,
+                            guest_user_id: dbOrder.guest_user_id || null,
+                            payment_type: 'razorpay',
+                            razorpay_order_id: order.id,
+                            amount_paid: toSmallestUnit(parseFloat(amount) / 100, currency),
+                            status: 'pending',
+                            payment_gateway: 'Razorpay',
+                            brand_id: dbOrder.brand_id || brandId,
+                        });
+                        console.log('Stored pending payment record for Razorpay order:', order.id);
+                    }
+                }
+            } catch (paymentErr) {
+                // Non-fatal — log but don't block the response
+                console.error('Warning: Could not store pending payment record:', paymentErr.message);
+            }
+        }
+
         res.json({ order });
+
+        // Fire InitiateCheckout + AddPaymentInfo events (non-blocking)
+        setImmediate(async () => {
+            try {
+                const amountInRupees = parseFloat(amount) / 100;
+                const eventPayload = {
+                    brand_id: brandId,
+                    order_number: receipt || order.id,
+                    total_amount: amountInRupees,
+                    final_amount: amountInRupees,
+                    currency: currency || 'INR',
+                    ip_address: req.ip || null,
+                    user_agent: req.headers['user-agent'] || null,
+                    fbc: req.cookies?._fbc || req.body?.fbc || null,
+                    fbp: req.cookies?._fbp || null,
+                    items: items || [],
+                };
+
+                // If we have an orderId, enrich with user data
+                if (orderId) {
+                    const dbOrder = await Order.findByPk(orderId, { attributes: ['user_id', 'guest_user_id', 'brand_id'] });
+                    if (dbOrder) {
+                        const [orderUser, guestUser] = await Promise.all([
+                            dbOrder.user_id ? User.findByPk(dbOrder.user_id, { attributes: ['email', 'username'] }) : null,
+                            dbOrder.guest_user_id ? GuestUser.findByPk(dbOrder.guest_user_id, { attributes: ['email', 'firstName', 'lastName', 'phone'] }) : null,
+                        ]);
+                        eventPayload.email = orderUser?.email || guestUser?.email || null;
+                        eventPayload.phone = guestUser?.phone || null;
+                        const nameParts = (orderUser?.username || '').trim().split(/\s+/);
+                        eventPayload.first_name = orderUser ? (nameParts[0] || null) : (guestUser?.firstName || null);
+                        eventPayload.last_name = orderUser ? (nameParts.slice(1).join(' ') || null) : (guestUser?.lastName || null);
+                    }
+                }
+
+                await sendFacebookEvent('InitiateCheckout', eventPayload);
+                await sendGAEvent('begin_checkout', eventPayload);
+                await sendFacebookEvent('AddPaymentInfo', eventPayload);
+                await sendGAEvent('add_payment_info', eventPayload);
+            } catch (err) {
+                console.error('Analytics InitiateCheckout/AddPaymentInfo error:', err.message);
+            }
+        });
     } catch (error) {
         console.error('Error creating Razorpay order:', error);
         res.status(500).json({ message: 'Failed to create Razorpay order', error: error.message });
@@ -561,6 +642,22 @@ module.exports.updateOrderPayment = async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
+    // Task 9: Guard re-processing paid orders
+    if (order.payment_status === 'paid') {
+      return res.status(200).json({ success: true, message: 'Payment already processed', order });
+    }
+    if (['failed', 'cancelled'].includes(order.payment_status)) {
+      return res.status(400).json({ message: `Cannot process payment for a ${order.payment_status} order.` });
+    }
+
+    // Task 8: Payment ID deduplication
+    const existingSuccessful = await Payment.findOne({
+      where: { transaction_id: razorpayPaymentId, status: 'successful' }
+    });
+    if (existingSuccessful) {
+      return res.status(400).json({ message: 'Payment already processed.' });
+    }
+
     // Update order status
     order.payment_status = 'paid';
     order.status = 'processing';
@@ -570,10 +667,17 @@ module.exports.updateOrderPayment = async (req, res) => {
     // Sequelize returns DECIMAL columns as strings — parse to float first
     const amountInSmallestUnit = toSmallestUnit(parseFloat(order.final_amount), 'INR');
 
-    // Find existing payment record for this order
+    // Find existing payment record — prefer matching by razorpay_order_id (the pending record we stored at createRazorpayOrder)
     let payment = await Payment.findOne({
-      where: { order_id: order.id }
+      where: { order_id: order.id, razorpay_order_id: razorpayOrderId }
     });
+
+    // Fallback: any pending payment for this order
+    if (!payment) {
+      payment = await Payment.findOne({
+        where: { order_id: order.id, status: 'pending' }
+      });
+    }
 
     if (payment) {
       // Update existing payment
@@ -584,6 +688,7 @@ module.exports.updateOrderPayment = async (req, res) => {
         transaction_id: razorpayPaymentId,
         razorpay_order_id: razorpayOrderId,
         razorpay_signature: razorpaySignature,
+        brand_id: order.brand_id || 1,
       });
     } else {
       // Create new payment record if none exists
@@ -597,6 +702,7 @@ module.exports.updateOrderPayment = async (req, res) => {
         transaction_id: razorpayPaymentId,
         razorpay_order_id: razorpayOrderId,
         razorpay_signature: razorpaySignature,
+        brand_id: order.brand_id || 1,
       });
     }
 
@@ -693,11 +799,35 @@ module.exports.razorpayCallback = async (req, res) => {
     order.status = 'processing';
     await order.save();
 
-    // Update payment record as successful
-    await Payment.update(
-      { status: 'successful', transaction_id: razorpay_payment_id },
-      { where: { order_id: order.id } }
-    );
+    // Upsert payment record with full details
+    const existingPayment = await Payment.findOne({
+      where: { order_id: order.id, razorpay_order_id }
+    }) || await Payment.findOne({ where: { order_id: order.id, status: 'pending' } });
+
+    if (existingPayment) {
+      await existingPayment.update({
+        status: 'successful',
+        transaction_id: razorpay_payment_id,
+        razorpay_order_id,
+        razorpay_signature,
+        payment_type: 'razorpay',
+        brand_id: order.brand_id || 1,
+      });
+    } else {
+      await Payment.create({
+        order_id: order.id,
+        user_id: order.user_id || null,
+        guest_user_id: order.guest_user_id || null,
+        payment_type: 'razorpay',
+        transaction_id: razorpay_payment_id,
+        razorpay_order_id,
+        razorpay_signature,
+        amount_paid: toSmallestUnit(parseFloat(order.final_amount), 'INR'),
+        status: 'successful',
+        payment_gateway: 'Razorpay',
+        brand_id: order.brand_id || 1,
+      });
+    }
 
     return res.redirect(`/ThankYou?order_number=${order.order_number}`);
   } else {
@@ -706,172 +836,190 @@ module.exports.razorpayCallback = async (req, res) => {
     order.status = 'pending';
     await order.save();
 
-    // Update payment record as failed
-    await Payment.update(
-      { status: 'failed' },
-      { where: { order_id: order.id } }
-    );
+    // Upsert payment record as failed
+    const existingPayment = await Payment.findOne({
+      where: { order_id: order.id, razorpay_order_id }
+    }) || await Payment.findOne({ where: { order_id: order.id, status: 'pending' } });
+
+    if (existingPayment) {
+      await existingPayment.update({
+        status: 'failed',
+        razorpay_order_id,
+        brand_id: order.brand_id || 1,
+      });
+    } else {
+      await Payment.create({
+        order_id: order.id,
+        user_id: order.user_id || null,
+        guest_user_id: order.guest_user_id || null,
+        payment_type: 'razorpay',
+        razorpay_order_id,
+        amount_paid: toSmallestUnit(parseFloat(order.final_amount), 'INR'),
+        status: 'failed',
+        payment_gateway: 'Razorpay',
+        brand_id: order.brand_id || 1,
+      });
+    }
 
     return res.redirect('/UnifiedCheckout?payment=failed');
   }
 };
 
-// Create Magic Checkout order
-module.exports.createMagicCheckoutOrder = async (req, res) => {
+// Handle explicit payment failure reported by the client (Razorpay payment.failed event)
+module.exports.handlePaymentFailure = async (req, res) => {
   try {
-    const { amount, currency = 'INR', receipt, customer, items } = req.body;
-    
-    console.log('Backend: Creating Magic Checkout order with amount:', amount);
-    
-    // Validate request parameters
-    if (!amount) {
-      return res.status(400).json({ message: 'Amount is required' });
+    const { orderId, razorpayOrderId, errorCode, errorDescription } = req.body;
+
+    if (!orderId || !razorpayOrderId) {
+      return res.status(400).json({ message: 'orderId and razorpayOrderId are required' });
     }
 
-    if (!customer || !customer.email || !customer.phone) {
-      return res.status(400).json({ message: 'Customer email and phone are required' });
+    const order = await Order.findByPk(orderId);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
     }
 
-    // Create order using centralized Razorpay service
-    const order = await razorpayService.createOrder({
-      amount,
-      currency,
-      receipt: receipt || `rcpt_magic_${Date.now()}`,
-      notes: {
-        magic_checkout: 'true',
-        customer_email: customer.email,
-        customer_phone: customer.phone,
-        customer_name: customer.name || ''
-      },
-      brandId: 1
+    // Only update if not already paid (don't overwrite a successful payment)
+    if (order.payment_status !== 'paid') {
+      order.payment_status = 'failed';
+      await order.save();
+    }
+
+    // Find the pending payment record and mark it failed
+    const payment = await Payment.findOne({
+      where: { order_id: orderId, razorpay_order_id: razorpayOrderId }
+    }) || await Payment.findOne({
+      where: { order_id: orderId, status: 'pending' }
     });
 
-    console.log('Backend: Magic Checkout order created:', { order_id: order.id, amount: order.amount });
-    
-    // Return order details with Magic Checkout context
-    res.json({ 
-      order,
-      magic_checkout_context: {
-        order_id: order.id,
-        amount: order.amount,
-        currency: order.currency,
-        customer: {
-          email: customer.email,
-          phone: customer.phone,
-          name: customer.name || ''
-        },
-        items: items || []
-      }
-    });
+    if (payment) {
+      await payment.update({
+        status: 'failed',
+        razorpay_order_id: razorpayOrderId,
+        notes: errorDescription ? `${errorCode || 'PAYMENT_FAILED'}: ${errorDescription}` : 'Payment failed',
+      });
+    } else {
+      // Create a failed record if none exists (e.g. createRazorpayOrder was called without orderId)
+      await Payment.create({
+        order_id: orderId,
+        user_id: order.user_id || null,
+        guest_user_id: order.guest_user_id || null,
+        payment_type: 'razorpay',
+        razorpay_order_id: razorpayOrderId,
+        amount_paid: toSmallestUnit(parseFloat(order.final_amount), 'INR'),
+        status: 'failed',
+        payment_gateway: 'Razorpay',
+        notes: errorDescription ? `${errorCode || 'PAYMENT_FAILED'}: ${errorDescription}` : 'Payment failed',
+        brand_id: order.brand_id || 1,
+      });
+    }
+
+    console.log(`Payment failure recorded for order ${orderId}, razorpay_order_id: ${razorpayOrderId}`);
+    res.json({ success: true, message: 'Payment failure recorded' });
   } catch (error) {
-    console.error('Error creating Magic Checkout order:', error);
-    res.status(500).json({ 
-      message: 'Failed to create Magic Checkout order', 
-      error: error.message 
-    });
+    console.error('Error recording payment failure:', error);
+    res.status(500).json({ message: 'Failed to record payment failure', error: error.message });
   }
 };
 
-// Verify Magic Checkout payment
-module.exports.verifyMagicCheckoutPayment = async (req, res) => {
-  const transaction = await sequelize.transaction();
-  
+// Razorpay Webhook — server-to-server event handler (Task 13)
+// Route must be registered with express.raw() middleware, NOT express.json()
+// so req.rawBody is available for signature verification.
+module.exports.razorpayWebhook = async (req, res) => {
   try {
-    const { 
-      orderId, 
-      razorpayPaymentId, 
-      razorpayOrderId, 
-      razorpaySignature 
-    } = req.body;
-    
-    console.log('Verifying Magic Checkout payment:', { 
-      orderId, 
-      razorpayPaymentId, 
-      razorpayOrderId 
-    });
-
-    // Validate required fields
-    if (!orderId || !razorpayPaymentId || !razorpayOrderId || !razorpaySignature) {
-      await transaction.rollback();
-      return res.status(400).json({ 
-        success: false,
-        message: 'All payment fields are required' 
-      });
+    const webhookSecret = await settingsHelper.getSetting(1, 'RAZORPAY_WEBHOOK_SECRET');
+    if (!webhookSecret) {
+      console.error('RAZORPAY_WEBHOOK_SECRET not configured — rejecting webhook');
+      return res.status(400).json({ message: 'Webhook not configured' });
     }
 
-    // Verify payment signature using centralized Razorpay service
-    const isValidSignature = await razorpayService.verifySignature(
-      razorpayOrderId,
-      razorpayPaymentId,
-      razorpaySignature,
-      1
-    );
-
-    if (!isValidSignature) {
-      await transaction.rollback();
-      return res.status(400).json({ 
-        success: false,
-        message: 'Invalid payment signature' 
-      });
+    // Verify x-razorpay-signature header
+    const receivedSig = req.headers['x-razorpay-signature'];
+    if (!receivedSig) {
+      return res.status(400).json({ message: 'Missing signature header' });
     }
 
-    // Find the order
-    const order = await Order.findByPk(orderId, { transaction });
-    if (!order) {
-      await transaction.rollback();
-      return res.status(404).json({ 
-        success: false,
-        message: 'Order not found' 
-      });
+    const rawBody = req.rawBody || req.body;
+    const bodyStr = Buffer.isBuffer(rawBody) ? rawBody.toString('utf8') : JSON.stringify(rawBody);
+    const expectedSig = crypto.createHmac('sha256', webhookSecret).update(bodyStr).digest('hex');
+
+    if (expectedSig !== receivedSig) {
+      console.warn('Razorpay webhook: invalid signature');
+      return res.status(400).json({ message: 'Invalid signature' });
     }
 
-    // Validate payment amount matches order amount using standardized converter
-    const orderAmountInSmallestUnit = toSmallestUnit(parseFloat(order.final_amount), 'INR');
-    
-    // Update order status
-    order.payment_status = 'paid';
-    order.status = 'processing';
-    await order.save({ transaction });
+    const event = req.body;
+    const eventId = event.id;
+    const eventType = event.event;
 
-    // Create payment record using PaymentService with standardized amount
-    const payment = await PaymentService.createMagicCheckoutPayment({
-      order_id: order.id,
-      user_id: order.user_id,
-      guest_user_id: order.guest_user_id,
-      payment_type: 'razorpay',
-      amount_paid: order.final_amount, // Pass in rupees, service will convert
-      status: 'successful',
-      magic_checkout_order_id: razorpayOrderId,
-      magic_checkout_payment_id: razorpayPaymentId,
-      magic_checkout_signature: razorpaySignature,
-      currency: 'INR'
-    }, transaction);
-
-    await transaction.commit();
-
-    res.json({ 
-      success: true, 
-      message: 'Payment verified successfully',
-      order: {
-        id: order.id,
-        order_number: order.order_number,
-        payment_status: order.payment_status,
-        status: order.status
-      },
-      payment: {
-        id: payment.id,
-        amount_paid: fromSmallestUnit(payment.amount_paid, 'INR'), // Convert back to rupees for display
-        status: payment.status
+    // Idempotency: skip if already processed
+    if (eventId) {
+      const { sequelize: db } = require('../config/db.js');
+      try {
+        await db.query(
+          `INSERT IGNORE INTO webhooks_log (event_id, event_type, processed_at) VALUES (?, ?, NOW())`,
+          { replacements: [eventId, eventType] }
+        );
+        const [rows] = await db.query(
+          `SELECT COUNT(*) as cnt FROM webhooks_log WHERE event_id = ? AND processed_at < NOW()`,
+          { replacements: [eventId] }
+        );
+        // If more than 1 row exists, this is a duplicate
+        if (rows[0]?.cnt > 1) {
+          console.log(`Razorpay webhook: duplicate event ${eventId}, skipping`);
+          return res.status(200).json({ status: 'duplicate' });
+        }
+      } catch (dbErr) {
+        // webhooks_log table may not exist yet — non-fatal, continue processing
+        console.warn('webhooks_log insert skipped:', dbErr.message);
       }
-    });
+    }
 
+    // Handle payment.captured — mark order as paid
+    if (eventType === 'payment.captured') {
+      const payment = event.payload?.payment?.entity;
+      if (payment) {
+        const rzpOrderId = payment.order_id;
+        const rzpPaymentId = payment.id;
+        const dbOrder = await Order.findOne({ where: { } });
+
+        // Find order via payment record
+        const paymentRecord = await Payment.findOne({ where: { razorpay_order_id: rzpOrderId } });
+        if (paymentRecord) {
+          const order = await Order.findByPk(paymentRecord.order_id);
+          if (order && order.payment_status !== 'paid') {
+            order.payment_status = 'paid';
+            order.status = 'processing';
+            await order.save();
+            await paymentRecord.update({
+              status: 'successful',
+              transaction_id: rzpPaymentId,
+            });
+            console.log(`Webhook: order ${order.order_number} marked paid via payment.captured`);
+          }
+        }
+      }
+    }
+
+    // Handle payment.failed
+    if (eventType === 'payment.failed') {
+      const payment = event.payload?.payment?.entity;
+      if (payment) {
+        const paymentRecord = await Payment.findOne({ where: { razorpay_order_id: payment.order_id } });
+        if (paymentRecord && paymentRecord.status === 'pending') {
+          await paymentRecord.update({ status: 'failed', notes: payment.error_description || 'Payment failed via webhook' });
+          const order = await Order.findByPk(paymentRecord.order_id);
+          if (order && order.payment_status === 'pending') {
+            order.payment_status = 'failed';
+            await order.save();
+          }
+        }
+      }
+    }
+
+    res.status(200).json({ status: 'ok' });
   } catch (error) {
-    await transaction.rollback();
-    console.error('Error verifying Magic Checkout payment:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to verify payment', 
-      error: error.message 
-    });
+    console.error('Razorpay webhook error:', error.message);
+    res.status(500).json({ message: 'Webhook processing failed' });
   }
-}; 
+};

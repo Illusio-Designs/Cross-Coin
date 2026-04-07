@@ -9,6 +9,11 @@ import { getPublicCategories } from "../../services/publicApi";
 const Footer = () => {
   const [categories, setCategories] = useState([]);
   const [email, setEmail] = useState("");
+  const [year, setYear] = useState(null);
+
+  useEffect(() => {
+    setYear(new Date().getFullYear());
+  }, []);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -133,7 +138,7 @@ const Footer = () => {
 
       {/* Bottom bar */}
       <div className="footer__bottom">
-        <span className="footer__copyright">© {new Date().getFullYear()} CrossCoin. All rights reserved.</span>
+        <span className="footer__copyright">© {year ?? ''} CrossCoin. All rights reserved.</span>
         <span className="footer__credit">
           Crafted with <span role="img" aria-label="love">❤️</span> by&nbsp;
           <a href="https://illusiodesigns.agency/" target="_blank" rel="noopener noreferrer">Illusio Designs</a>

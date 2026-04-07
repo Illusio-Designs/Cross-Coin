@@ -410,6 +410,81 @@ async function handleAutoReply(phone, text, brandId) {
       await whatsappService.sendTextMessage(phone, `✅ You're now subscribed to Cross Coin WhatsApp updates. You'll receive order notifications and offers.`, brandId);
       return;
     }
+
+    // Task 18: Cancel window — customer replies CANCEL within 2h of COD order confirmation
+    if (lower === 'cancel' || lower === 'cancel order') {
+      try {
+        const { Order } = require('../model/orderModel.js');
+        const { OrderItem } = require('../model/orderItemModel.js');
+        const { ProductVariation } = require('../model/productVariationModel.js');
+        const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
+        const { ShippingAddress } = require('../model/shippingAddressModel.js');
+        const { Op } = require('sequelize');
+
+        const digits = phone.replace(/\D/g, '').slice(-10);
+        const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+
+        // Find most recent confirmed COD order for this phone within 2 hours
+        const addr = await ShippingAddress.findOne({
+          where: { phone: { [Op.like]: `%${digits}` } },
+          order: [['createdAt', 'DESC']],
+        });
+
+        let order = null;
+        if (addr) {
+          order = await Order.findOne({
+            where: {
+              shipping_address_id: addr.id,
+              status: 'confirmed',
+              payment_type: 'cod',
+              createdAt: { [Op.gte]: twoHoursAgo },
+            },
+            order: [['createdAt', 'DESC']],
+          });
+        }
+
+        if (!order) {
+          await whatsappService.sendTextMessage(
+            phone,
+            `Your order is already being processed and cannot be cancelled via WhatsApp.\n\nTo cancel, please contact our support team with your order number.`,
+            brandId
+          );
+          return;
+        }
+
+        // Cancel the order
+        order.status = 'cancelled';
+        order.payment_status = 'cancelled';
+        await order.save();
+
+        // Restore stock
+        const items = await OrderItem.findAll({ where: { order_id: order.id } });
+        for (const item of items) {
+          if (item.variation_id) {
+            await ProductVariation.increment('stock', { by: item.quantity, where: { id: item.variation_id } });
+          }
+        }
+
+        await OrderStatusHistory.create({
+          order_id: order.id,
+          status: 'cancelled',
+          updated_by: null,
+          notes: 'Cancelled by customer via WhatsApp',
+          created_by: 'whatsapp_bot',
+        });
+
+        await whatsappService.sendTextMessage(
+          phone,
+          `✅ Your order *#${order.order_number}* has been cancelled successfully.\n\nIf you have any questions, reply *help* to talk to our team.`,
+          brandId
+        );
+        logger.info(`Order ${order.order_number} cancelled via WhatsApp by ${phone}`);
+      } catch (cancelErr) {
+        logger.error('WA cancel order error: ' + cancelErr.message);
+        await whatsappService.sendTextMessage(phone, `Sorry, we couldn't process your cancellation right now. Please contact support.`, brandId);
+      }
+      return;
+    }
   } catch (err) {
     logger.warn('Auto-reply error: ' + err.message);
   }

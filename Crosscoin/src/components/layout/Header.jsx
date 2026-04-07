@@ -53,9 +53,12 @@ const Header = () => {
   const [showSearch, setShowSearch] = useState(false);
   const [activePage, setActivePage] = useState("/");
   const [isSticky, setIsSticky] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => { setHasMounted(true); }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -377,13 +380,13 @@ const Header = () => {
           </div>
           <Link href="/Wishlist" className="header__wishlist" aria-label="Wishlist">
             <WishlistIcon />
-            {wishlistCount > 0 && <span className="header__badge" aria-label={`${wishlistCount} items`}>{wishlistCount}</span>}
+            {hasMounted && wishlistCount > 0 && <span className="header__badge" aria-label={`${wishlistCount} items`}>{wishlistCount}</span>}
           </Link>
           <button className="header__cart" onClick={() => setIsDrawerOpen(true)} aria-label="Open cart">
             <CartIcon />
-            {cartCount > 0 && <span className="header__badge">{cartCount}</span>}
+            {hasMounted && cartCount > 0 && <span className="header__badge">{cartCount}</span>}
           </button>
-          {isAuthenticated && user ? (
+          {hasMounted && isAuthenticated && user ? (
             <Link href="/profile" className="header__account" aria-label="My account">
               <UserIcon />
             </Link>
@@ -432,7 +435,7 @@ const Header = () => {
         {/* Wishlist Icon */}
         <Link href="/Wishlist" className="header__mobile-wishlist" aria-label="Wishlist">
           <WishlistIcon />
-          {wishlistCount > 0 && (
+          {hasMounted && wishlistCount > 0 && (
             <span className="header__badge" aria-label={`${wishlistCount} items`}>{wishlistCount}</span>
           )}
         </Link>
@@ -440,16 +443,16 @@ const Header = () => {
         {/* Cart Icon */}
         <button className="header__mobile-cart" onClick={() => setIsDrawerOpen(true)} aria-label="Open cart">
           <CartIcon />
-          {cartCount > 0 && (
+          {hasMounted && cartCount > 0 && (
             <span className="header__badge">{cartCount}</span>
           )}
         </button>
 
         {/* User Icon */}
         <Link
-          href={isAuthenticated ? "/profile" : "/login"}
+          href={hasMounted && isAuthenticated ? "/profile" : "/login"}
           className="header__mobile-user"
-          aria-label={isAuthenticated ? "My account" : "Login"}
+          aria-label={hasMounted && isAuthenticated ? "My account" : "Login"}
         >
           <UserIcon />
         </Link>
