@@ -802,7 +802,7 @@ module.exports.getGuestUserMergeReport = async (req, res) => {
                 g.id          AS guest_id,
                 g.email       AS guest_email,
                 g.status      AS guest_status,
-                g.convertedAt,
+                g.converted_at AS convertedAt,
                 COUNT(DISTINCT o_u.id)  AS user_orders,
                 COUNT(DISTINCT o_g.id)  AS guest_orders,
                 COUNT(DISTINCT sa_u.id) AS user_addresses,
