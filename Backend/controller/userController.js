@@ -820,20 +820,20 @@ module.exports.getGuestUserMergeReport = async (req, res) => {
 
         // Also find orphaned orders (no user_id, no guest_user_id)
         const [orphanedOrders] = await sequelize.query(`
-            SELECT id, order_number, status, final_amount, createdAt
+            SELECT id, order_number, status, final_amount, created_at
             FROM orders
             WHERE user_id IS NULL AND guest_user_id IS NULL
-            ORDER BY createdAt DESC
+            ORDER BY created_at DESC
         `);
 
         // Orders still on guest_user_id (not yet moved to a user)
         const [pendingGuestOrders] = await sequelize.query(`
             SELECT o.id, o.order_number, o.status, o.user_id, 
-                   o.guest_user_id, o.final_amount, o.createdAt,
+                   o.guest_user_id, o.final_amount, o.created_at,
                    g.email AS guest_email, g.status AS guest_status
             FROM orders o
             JOIN guest_users g ON g.id = o.guest_user_id
-            ORDER BY o.createdAt DESC
+            ORDER BY o.created_at DESC
         `);
 
         // Shipping addresses still on guest_user_id
