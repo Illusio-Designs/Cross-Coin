@@ -28,7 +28,7 @@ const WhatsappMessage = sequelize.define('WhatsappMessage', {
   conversation_id: { type: DataTypes.INTEGER, allowNull: false },
   wa_message_id: { type: DataTypes.STRING(100), allowNull: true },
   direction: { type: DataTypes.ENUM('inbound', 'outbound'), allowNull: false },
-  type: { type: DataTypes.ENUM('text', 'template', 'image', 'document', 'audio'), defaultValue: 'text' },
+  type: { type: DataTypes.ENUM('text', 'template', 'image', 'document', 'audio', 'video', 'sticker', 'location', 'contacts'), defaultValue: 'text' },
   body: { type: DataTypes.TEXT, allowNull: true },
   status: { type: DataTypes.ENUM('sent', 'delivered', 'read', 'failed', 'received'), defaultValue: 'sent' },
   sent_at: { type: DataTypes.DATE, allowNull: true },
