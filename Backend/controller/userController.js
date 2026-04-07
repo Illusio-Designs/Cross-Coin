@@ -85,6 +85,9 @@ module.exports.register = async (req, res) => {
             await GuestUser.update({ status: 'converted', convertedAt: new Date() }, { where: { id: guestIds } });
             // Re-assign ALL guest orders (not just delivered)
             await Order.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: guestIds, user_id: null } });
+            // Re-assign guest shipping addresses
+            const { ShippingAddress } = require('../model/shippingAddressModel.js');
+            await ShippingAddress.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: guestIds, user_id: null } });
 
             // Credit loyalty for delivered orders
             const deliveredGuestOrders = await Order.findAll({ where: { user_id: user.id, status: 'delivered' } });
@@ -142,6 +145,9 @@ module.exports.login = async (req, res) => {
         if (matchedIds.length > 0) {
             await GuestUser.update({ status: 'converted', convertedAt: new Date() }, { where: { id: matchedIds } });
             await Order.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: matchedIds, user_id: null } });
+            // Also re-assign guest shipping addresses
+            const { ShippingAddress } = require('../model/shippingAddressModel.js');
+            await ShippingAddress.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: matchedIds, user_id: null } });
             const delivered = await Order.findAll({ where: { user_id: user.id, status: 'delivered' } });
             for (const o of delivered) {
                 try { await loyaltyService.creditPoints(user.id, o.id, o.final_amount, o.brand_id || 1); } catch (_) {}

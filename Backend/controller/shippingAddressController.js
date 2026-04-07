@@ -113,11 +113,23 @@ module.exports.getUserShippingAddresses = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    // Also find guest_user_ids linked to this user's orders
+    const { Order } = require('../model/orderModel.js');
+    const linkedGuestIds = await Order.findAll({
+      where: { user_id: userId, guest_user_id: { [Op.ne]: null } },
+      attributes: ['guest_user_id'],
+      raw: true,
+    }).then(rows => [...new Set(rows.map(r => r.guest_user_id).filter(Boolean))]);
+
+    const whereClause = linkedGuestIds.length > 0
+      ? { [Op.or]: [{ user_id: userId }, { guest_user_id: linkedGuestIds }] }
+      : { user_id: userId };
+
     const shippingAddresses = await ShippingAddress.findAll({
-      where: { user_id: userId },
+      where: whereClause,
       order: [
-        ["is_default", "DESC"], // Default address first
-        ["createdAt", "DESC"], // Then newest first
+        ["is_default", "DESC"],
+        ["createdAt", "DESC"],
       ],
     });
 
