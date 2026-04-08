@@ -234,7 +234,10 @@ async function sendTextMessage(phone, text, brandId = 1, contextMessageId = null
   if (!to) throw new Error('Invalid phone number: ' + phone);
 
   const payload = { messaging_product: 'whatsapp', to, type: 'text', text: { body: text } };
-  if (contextMessageId) payload.context = { message_id: contextMessageId };
+  if (contextMessageId) {
+    payload.context = { message_id: contextMessageId };
+    logger.info(`[WhatsApp] Sending reply with context message_id: ${contextMessageId}`);
+  }
 
   const res = await axios.post(
     `${GRAPH_API_URL}/${phoneNumberId}/messages`,
