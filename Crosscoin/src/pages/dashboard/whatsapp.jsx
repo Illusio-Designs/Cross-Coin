@@ -660,12 +660,7 @@ export function WhatsAppManager() {
     try {
       const data = await whatsappService.getMessages(conv.id);
       if (data.success) {
-        // Preserve _quotedMsg from existing messages when polling
-        setMessages(prev => {
-          const quotedMap = {};
-          prev.forEach(m => { if (m._quotedMsg) quotedMap[m.id] = m._quotedMsg; });
-          return (data.messages || []).map(m => quotedMap[m.id] ? { ...m, _quotedMsg: quotedMap[m.id] } : m);
-        });
+        setMessages(data.messages || []);
         setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c));
       }
     } catch { }
