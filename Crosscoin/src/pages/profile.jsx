@@ -117,6 +117,11 @@ export default function Profile() {
     }
   }, [activeTab]);
 
+  // Load addresses on mount for stats display
+  useEffect(() => {
+    getUserShippingAddresses().then(d => setAddresses(Array.isArray(d) ? d : (d ? [d] : []))).catch(() => {});
+  }, []);
+
   const handleLogout = async () => {
     try { await authLogout(); sessionStorage.removeItem("isLoggedIn"); localStorage.removeItem("user"); router.push("/"); }
     catch { showProfileUpdateErrorToast("Logout failed."); }
@@ -283,7 +288,7 @@ export default function Profile() {
                         {order.OrderItems?.map(item => (
                           <div className="pf-order-item" key={item.id}>
                             <div className="pf-order-img">
-                              <SafeImage imageData={{ image_url: item.Product?.ProductImages?.[0]?.image_url }} alt={item.Product?.name} width="72" height="72" style={{ objectFit: "cover", width: "100%", height: "100%" }} />
+                              <SafeImage imageData={{ image_url: item.ProductVariation?.VariationImages?.[0]?.image_url || item.Product?.ProductImages?.[0]?.image_url }} alt={item.Product?.name} width="72" height="72" style={{ objectFit: "cover", width: "100%", height: "100%" }} />
                             </div>
                             <div className="pf-order-item-info">
                               <div className="pf-order-item-name">{item.Product?.name}</div>
