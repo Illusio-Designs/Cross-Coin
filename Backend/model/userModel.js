@@ -31,10 +31,6 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING,
         allowNull: true
     },
-    googleId: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
     refreshToken: {
         type: DataTypes.STRING(500),
         allowNull: true
@@ -52,6 +48,11 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING(20),
         allowNull: true,
         unique: true
+    },
+    deleted_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null
     }
 }, {
     timestamps: true,

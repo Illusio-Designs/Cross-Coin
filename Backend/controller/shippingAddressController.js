@@ -381,122 +381,70 @@ module.exports.setDefaultShippingAddress = async (req, res) => {
   }
 };
 
-// Guest-specific shipping address functions (no authentication required)
+// Guest-specific shipping address — now creates/finds a consumer user instead of GuestUser
 module.exports.createGuestShippingAddress = async (req, res) => {
   const transaction = await sequelize.transaction();
-
   try {
-    const {
-      address,
-      city,
-      state,
-      postal_code,
-      country,
-      phone_number,
-      guest_info,
-    } = req.body;
+    const { address, city, state, postal_code, country, phone_number, guest_info } = req.body;
+    const { email, firstName, lastName } = guest_info || {};
 
-    // Validate required fields
-    if (
-      !address ||
-      !city ||
-      !state ||
-      !postal_code ||
-      !country ||
-      !phone_number ||
-      !guest_info
-    ) {
+    if (!address || !city || !state || !postal_code || !phone_number || !email || !firstName) {
       await transaction.rollback();
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    const { email, firstName, lastName } = guest_info;
-    if (!email || !firstName || !lastName) {
-      await transaction.rollback();
-      return res.status(400).json({
-        message: "Guest info (email, firstName, lastName) is required",
-      });
+    const bcrypt = require('bcrypt');
+    const { User } = require('../model/userModel.js');
+    const digits = String(phone_number).replace(/\D/g, '').slice(-10);
+
+    // Find or create consumer user — no GuestUser created
+    let user = await User.findOne({ where: { phone: digits }, transaction });
+    if (!user) user = await User.findOne({ where: { email: email.toLowerCase() }, transaction });
+    if (!user) {
+      const tempPassword = await bcrypt.hash(Math.random().toString(36).slice(-10), 10);
+      user = await User.create({
+        username: `${firstName} ${lastName || ''}`.trim(),
+        email: email.toLowerCase(),
+        phone: digits,
+        password: tempPassword,
+        role: 'consumer',
+      }, { transaction });
     }
 
-    // Create or find guest user
-    let guestUser = await GuestUser.findOne({
-      where: { email: email.toLowerCase() },
-      transaction,
-    });
-
-    if (!guestUser) {
-      guestUser = await GuestUser.create(
-        {
-          email: email.toLowerCase(),
-          firstName,
-          lastName,
-          phone: phone_number,
-          status: "active",
-        },
-        { transaction }
-      );
-    }
-
-    // Create the shipping address for guest
-    const shippingAddress = await ShippingAddress.create(
-      {
-        guest_user_id: guestUser.id,
-        full_name: `${firstName} ${lastName}`.trim(),
-        address,
-        city,
-        state,
-        pincode: postal_code,
-        country,
-        phone: phone_number,
-        is_default: true, // Guest addresses are always default
-      },
-      { transaction }
-    );
+    const shippingAddress = await ShippingAddress.create({
+      user_id: user.id,
+      full_name: `${firstName} ${lastName || ''}`.trim(),
+      address, city, state,
+      pincode: postal_code,
+      country: country || 'India',
+      phone: phone_number,
+      is_default: true,
+    }, { transaction });
 
     await transaction.commit();
-
-    res.status(201).json({
-      message: "Guest shipping address created successfully",
-      shippingAddress,
-    });
+    res.status(201).json({ message: "Shipping address created successfully", shippingAddress });
   } catch (error) {
     await transaction.rollback();
-    console.error("Error creating guest shipping address:", error);
-    res.status(500).json({
-      message: "Failed to create guest shipping address",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Failed to create shipping address", error: error.message });
   }
 };
 
 module.exports.getGuestShippingAddresses = async (req, res) => {
   try {
     const { guest_email } = req.query;
+    if (!guest_email) return res.json({ shippingAddresses: [] });
 
-    if (!guest_email) {
-      return res.status(400).json({ message: "Guest email is required" });
-    }
-
-    // Find guest user
-    const guestUser = await GuestUser.findOne({
-      where: { email: guest_email.toLowerCase() },
-    });
-
-    if (!guestUser) {
-      return res.json({ shippingAddresses: [] });
-    }
+    const { User } = require('../model/userModel.js');
+    const user = await User.findOne({ where: { email: guest_email.toLowerCase() } });
+    if (!user) return res.json({ shippingAddresses: [] });
 
     const shippingAddresses = await ShippingAddress.findAll({
-      where: { guest_user_id: guestUser.id },
+      where: { user_id: user.id },
       order: [["createdAt", "DESC"]],
     });
-
     res.json({ shippingAddresses });
   } catch (error) {
-    console.error("Error getting guest shipping addresses:", error);
-    res.status(500).json({
-      message: "Failed to get guest shipping addresses",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Failed to get shipping addresses", error: error.message });
   }
 };
+

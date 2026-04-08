@@ -35,7 +35,16 @@ try {
   });
 
   badgeQueue.on('failed', (job, err) => {
-    logger.warn(`⚠️ Badge job ${job.id} failed: ${err.message}`);
+    logger.warn(`⚠️ Badge job ${job.id} failed (attempt ${job.attemptsMade}/${job.opts.attempts}): ${err.message}`);
+    // Dead Letter Queue — after max attempts, log for manual review
+    if (job.attemptsMade >= job.opts.attempts) {
+      logger.error(`[DLQ] Badge job permanently failed for user ${job.data.user_id}:`, {
+        jobId: job.id,
+        data: job.data,
+        error: err.message,
+        failedAt: new Date().toISOString(),
+      });
+    }
   });
 
   // Log error once, don't spam

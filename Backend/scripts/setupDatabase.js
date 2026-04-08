@@ -858,6 +858,103 @@ const setupDatabase = async () => {
       }
       console.log("✓ Migration 005 completed");
 
+      // Migration 006: Add awaiting_confirmation to orders status ENUM
+      console.log("Running migration 006: Add awaiting_confirmation to orders status...");
+      try {
+        await sequelize.query(`
+          ALTER TABLE orders MODIFY COLUMN status ENUM(
+            'pending','awaiting_confirmation','confirmed','processing',
+            'booked','pickup initiated','manifested','in transit',
+            'shipped','out for delivery','delivered','undelivered',
+            'rto','rto delivered','return_initiated','returned_rto',
+            'cancelled','order cancelled','exception'
+          ) NOT NULL DEFAULT 'awaiting_confirmation'
+        `);
+        console.log("✓ Migration 006 completed");
+      } catch (e) {
+        console.log("⚠️ Migration 006 skipped:", e.message);
+      }
+
+      // Migration 007: Create order_audit_logs table
+      console.log("Running migration 007: Create order_audit_logs table...");
+      try {
+        await sequelize.query(`
+          CREATE TABLE IF NOT EXISTS order_audit_logs (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            order_id INT NOT NULL,
+            action VARCHAR(50) NOT NULL COMMENT 'confirm, cancel, status_change, fship_sync, payment_update',
+            performed_by INT NULL COMMENT 'User ID who performed the action',
+            role VARCHAR(50) NULL COMMENT 'admin, user, system, webhook',
+            metadata JSON NULL COMMENT 'Additional context (reason, old_status, new_status, etc.)',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_audit_order_id (order_id),
+            INDEX idx_audit_action (action),
+            INDEX idx_audit_performed_by (performed_by),
+            INDEX idx_audit_created_at (created_at),
+            CONSTRAINT fk_audit_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE ON UPDATE CASCADE
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        `);
+        console.log("✓ Migration 007 completed");
+      } catch (e) {
+        console.log("⚠️ Migration 007 skipped:", e.message);
+      }
+
+      // Migration 008: Add idempotency_key to orders
+      console.log("Running migration 008: Add idempotency_key to orders...");
+      try {
+        const [idemCol] = await sequelize.query(`
+          SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' AND COLUMN_NAME = 'idempotency_key'
+        `);
+        if (idemCol[0].count === 0) {
+          await sequelize.query(`
+            ALTER TABLE orders ADD COLUMN idempotency_key VARCHAR(100) NULL,
+            ADD UNIQUE INDEX idx_orders_idempotency (idempotency_key)
+          `);
+          console.log("✓ Migration 008 completed");
+        } else {
+          console.log("✓ Migration 008 already applied");
+        }
+      } catch (e) {
+        console.log("⚠️ Migration 008 skipped:", e.message);
+      }
+
+      // Migration 009: FULLTEXT index on products for search
+      console.log("Running migration 009: Add FULLTEXT index on products...");
+      try {
+        const [ftIdx] = await sequelize.query(`
+          SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.STATISTICS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND INDEX_NAME = 'ft_products_search'
+        `);
+        if (ftIdx[0].count === 0) {
+          await sequelize.query(`
+            ALTER TABLE products ADD FULLTEXT INDEX ft_products_search (name, description)
+          `);
+          console.log("✓ Migration 009 completed");
+        } else {
+          console.log("✓ Migration 009 already applied");
+        }
+      } catch (e) {
+        console.log("⚠️ Migration 009 skipped:", e.message);
+      }
+
+      // Migration 010: Add deleted_at column to users for soft delete
+      console.log("Running migration 010: Add deleted_at to users...");
+      try {
+        const [delCol] = await sequelize.query(`
+          SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'deleted_at'
+        `);
+        if (delCol[0].count === 0) {
+          await sequelize.query(`ALTER TABLE users ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL`);
+          console.log("✓ Migration 010 completed");
+        } else {
+          console.log("✓ Migration 010 already applied");
+        }
+      } catch (e) {
+        console.log("⚠️ Migration 010 skipped:", e.message);
+      }
+
       console.log("✓ All migrations completed successfully");
     } catch (migrationError) {
       console.log("⚠️ Magic Checkout migration warning:", migrationError.message);

@@ -1,44 +1,22 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const compression = require('compression');
 const { sequelize } = require('./config/db.js');
 const routesManager = require('./routes/routesManager.js');
-const passport = require('./config/passport.js');
-const session = require('express-session');
-const MySQLStore = require('express-mysql-session')(session);
-const dbConfig = require('./config/db');
 const { join } = require('path');
 const { initializeSeoData } = require('./utils/initializeSeoData.js');
 const fs = require('fs');
 const { setupDatabase } = require('./scripts/setupDatabase.js');
 const corsOptions = require('./config/corsConfig.js');
-const { sendFacebookEvent } = require('./integration/facebookPixel.js');
 const { logger, getLoggingConfig } = require('./config/logging.js');
-const { fork } = require('child_process');
 const path = require('path');
 
-// Import routes
-const facebookPixelRouter = require('./integration/facebookPixel.js');
-const facebookCatalogRouter = require('./integration/facebookCatalog.js');
-const dashboardAnalyticsRouter = require('./integration/dashboardAnalytics.js');
-const utmRoutes = require('./routes/utmRoutes.js');
-const brandSettingsRoutes = require('./routes/brandSettingsRoutes.js');
-const brandRoutes = require('./routes/brandRoutes.js');
-const brandAssignmentRoutes = require('./routes/brandAssignmentRoutes.js');
-const adminLookbookRoutes = require('./routes/adminLookbookRoutes.js');
-const adminReelRoutes = require('./routes/adminReelRoutes.js');
+
 
 // Initialize dotenv
 dotenv.config();
-
-// Fatal check: SESSION_SECRET must be set in production
-if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
-    logger.error('FATAL: SESSION_SECRET environment variable is not set. Refusing to start in production.');
-    process.exit(1);
-};
 
 // Debug environment variables on startup (only in development)
 if (process.env.NODE_ENV !== 'production') {
@@ -71,28 +49,50 @@ app.use(helmet({
   hsts: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false
 }));
 
-// Rate limiting
+// Rate limiting — granular per route type
 const rateLimit = require('express-rate-limit');
 
-const authRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+// Strict: auth, OTP, checkout, payments (10 req / 15 min)
+const strictLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: 'Too many requests, please try again later' }
+  message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests. Please try again later.' } },
 });
 
-const generalRateLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 100,
+// Medium: order creation, address creation (30 req / 15 min)
+const mediumLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: 'Too many requests, please try again later' }
+  message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } },
 });
 
-app.use('/api/users/login', authRateLimiter);
-app.use('/api/users/register', authRateLimiter);
-app.use('/api/', generalRateLimiter);
+// General: all other API routes (120 req / min)
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } },
+});
+
+// Strict routes
+app.use('/api/users/login', strictLimiter);
+app.use('/api/users/register', strictLimiter);
+app.use('/api/orders/checkout', strictLimiter);
+app.use('/api/checkout/send-otp', strictLimiter);
+app.use('/api/checkout/verify-otp', strictLimiter);
+app.use('/api/payments/razorpay', strictLimiter);
+
+// Medium routes
+app.use('/api/orders', mediumLimiter);
+app.use('/api/shipping-addresses', mediumLimiter);
+
+// General
+app.use('/api/', generalLimiter);
 
 // CORS middleware - MUST be before other middleware
 app.use(cors(corsOptions));
@@ -130,36 +130,11 @@ app.use((req, res, next) => {
 
 app.use(cookieParser());
 
-// HTTP request logging — disabled in production to save I/O and memory
-if (process.env.NODE_ENV !== 'production') {
-    app.use(morgan('dev'));
-}
+// Structured request logging (replaces morgan)
+const { requestLogger } = require('./config/logging.js');
+app.use(requestLogger);
 
-// MySQL session store options
-const sessionStore = new MySQLStore({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT) || 3306,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_DATABASE,
-});
-
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'dev-only-session-secret-change-in-production',
-  resave: false,
-  saveUninitialized: false,
-  store: sessionStore,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'
-  }
-}));
-
-// Initialize Passport and restore authentication state from session
-app.use(passport.initialize());
-app.use(passport.session());
+// Passport + session removed — using JWT-only auth
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = join(__dirname, process.env.UPLOAD_PATH || 'uploads');
@@ -190,43 +165,60 @@ app.use('/uploads', (req, res, next) => {
     next();
 });
 
-// Enhanced health check API endpoint
+// ── Health check endpoints ────────────────────────────────────────────────────
+
+// Main health check
 app.get('/api/health', async (req, res) => {
+    const mem = process.memoryUsage();
+    const dbOk = await sequelize.authenticate().then(() => true).catch(() => false);
+    const redisService = require('./services/redisService.js');
+    const redisOk = redisService.isReady();
+    const allOk = dbOk; // Redis is optional
+
+    res.status(allOk ? 200 : 503).json({
+        status: allOk ? 'ok' : 'degraded',
+        uptime: Math.round(process.uptime()),
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV,
+        version: process.env.npm_package_version || '1.0.0',
+        services: {
+            database: dbOk ? 'connected' : 'disconnected',
+            redis: redisOk ? 'connected' : 'disconnected',
+        },
+        memory: {
+            heapUsedMB: Math.round(mem.heapUsed / 1024 / 1024),
+            heapTotalMB: Math.round(mem.heapTotal / 1024 / 1024),
+            rssMB: Math.round(mem.rss / 1024 / 1024),
+        },
+    });
+});
+
+// DB-only health check (for deployment readiness probes)
+app.get('/api/health/db', async (req, res) => {
     try {
-        const dbStatus = await sequelize.authenticate()
-            .then(() => 'connected')
-            .catch(() => 'disconnected');
-        
-    const healthData = {
-        uptime: process.uptime(),
-        timestamp: Date.now(),
-        status: 'ok',
-            environment: process.env.NODE_ENV,
-            version: process.env.npm_package_version || '1.0.0',
-        database: {
-                status: dbStatus,
-                host: process.env.DB_HOST,
-                database: process.env.DB_DATABASE
-            },
-            memory: {
-                used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-                total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024)
-        }
-    };
-    
-    res.status(200).json(healthData);
-    } catch (error) {
-        logger.error('Health check error:', error);
-        res.status(503).json({
-            status: 'error',
-            message: 'Service unavailable',
-            timestamp: Date.now()
-        });
+        await sequelize.authenticate();
+        const [result] = await sequelize.query('SELECT 1 as ok');
+        res.json({ status: 'ok', latency: 'fast' });
+    } catch (e) {
+        res.status(503).json({ status: 'error', error: e.message });
+    }
+});
+
+// Redis-only health check
+app.get('/api/health/redis', async (req, res) => {
+    try {
+        const redisService = require('./services/redisService.js');
+        if (!redisService.isReady()) throw new Error('Redis not connected');
+        await redisService.set('health_check', 'ok', 'EX', 10);
+        const val = await redisService.get('health_check');
+        res.json({ status: val === 'ok' ? 'ok' : 'error', connected: redisService.isReady() });
+    } catch (e) {
+        res.status(503).json({ status: 'error', error: e.message });
     }
 });
 
 // CORS debug endpoint
-app.get('/api/cors-test', (req, res) => {
+app.get('/api/v1/cors-test', (req, res) => {
     res.json({
         success: true,
         message: 'CORS is working correctly',
@@ -249,38 +241,15 @@ app.get('/', (req, res) => {
     });
 });
 
-// Mount all routes under /api
-app.use('/api', routesManager);
+// All routes under /api and /api/v1 (both supported)
+app.use('/api/v1', routesManager);
+app.use('/api', routesManager);  // backward compat
 
-// Use the routes
-app.use('/api/facebook-pixel', facebookPixelRouter);
-app.use('/api/facebook-catalog', facebookCatalogRouter);
-// Dashboard analytics moved to /api/analytics to avoid conflict with /api/dashboard/stats
-app.use('/api/analytics', dashboardAnalyticsRouter);
-app.use('/api/utm', utmRoutes);
-app.use('/api/admin', brandSettingsRoutes);
-app.use('/api/admin', brandRoutes);
-app.use('/api/admin', brandAssignmentRoutes);
-app.use('/api/admin/lookbooks', adminLookbookRoutes);
-app.use('/api/admin/reels', adminReelRoutes);
-
-// Endpoint to receive Facebook Pixel events from frontend and sync server-side
-app.post('/api/facebook-pixel', async (req, res) => {
-    const { event, order } = req.body;
-    if (!event || !order) {
-        return res.status(400).json({ success: false, message: 'Event and order are required' });
-    }
-    try {
-        await sendFacebookEvent(event, order);
-        res.json({ success: true });
-    } catch (err) {
-        logger.error('Facebook Pixel error:', err);
-        res.status(500).json({ success: false, message: err.message });
-    }
-});
+// Swagger API docs at /api/docs
+require('./docs/swagger.js')(app);
 
 // 404 handler for API routes only
-app.use('/api/*', (req, res) => {
+app.use('/api/v1/*', (req, res) => {
     res.status(404).json({
         success: false,
         message: 'API endpoint not found',
@@ -293,51 +262,9 @@ app.use('*', (req, res) => {
     res.status(404).send('File not found');
 });
 
-// Enhanced error handling middleware
-app.use((err, req, res, next) => {
-    const isProd = process.env.NODE_ENV === 'production';
-
-    if (!isProd) {
-        logger.error('Error:', err);
-    } else {
-        // In production, log without stack/SQL details in response
-        logger.error('Error:', { message: err.message, url: req.url, method: req.method, ip: req.ip });
-    }
-    
-    // Handle specific error types
-    if (err.name === 'SequelizeConnectionError') {
-        return res.status(503).json({
-            success: false,
-            message: 'Database connection error',
-            error: isProd ? 'Service temporarily unavailable' : err.message
-        });
-    }
-    
-    if (err.name === 'ValidationError') {
-        return res.status(400).json({
-            success: false,
-            message: 'Validation error',
-            errors: err.errors
-        });
-    }
-
-    // Multer file size error
-    if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(413).json({ success: false, message: 'File too large' });
-    }
-
-    // Multer invalid file type
-    if (err.message && err.message.startsWith('Invalid file type')) {
-        return res.status(400).json({ success: false, message: err.message });
-    }
-    
-    // Default error response — never expose stack/SQL in production
-    res.status(err.status || 500).json({
-        success: false,
-        message: isProd ? 'Something went wrong' : (err.message || 'Something went wrong!'),
-        error: isProd ? undefined : err.stack
-    });
-});
+// Centralized error handling — catches all AppError + Sequelize + unknown errors
+const errorMiddleware = require('./middleware/errorMiddleware.js');
+app.use(errorMiddleware);
 
 const PORT = process.env.PORT || 5000;
 
@@ -415,37 +342,20 @@ const startServer = async () => {
             await initializeSeoData();
         }
 
-        // ── Spawn background worker (separate process) ──────────────────────
-        // Runs all cron jobs in its own process so they never compete with
-        // API request handling. Auto-restarts on crash with backoff.
-        const spawnWorker = () => {
-          const worker = fork(path.join(__dirname, 'worker.js'), [], {
-            env: process.env,
-            silent: false,
-            execArgv: ['--max-old-space-size=256'], // cap worker heap at 256MB
-          });
-
-          worker.on('exit', (code, signal) => {
-            if (signal === 'SIGTERM' || signal === 'SIGINT') return; // intentional shutdown
-            logger.warn(`[Worker] exited (code=${code}), restarting in 10s…`);
-            setTimeout(spawnWorker, 10_000);
-          });
-
-          worker.on('error', (err) => {
-            logger.error('[Worker] spawn error:', err.message);
-          });
-
-          logger.info(`[Worker] started (pid=${worker.pid})`);
-          return worker;
-        };
-
-        let workerProcess = spawnWorker();
+        // ── Run cron jobs in-process (saves ~80MB vs child process) ─────────
+        try {
+          const { initCronJobs } = require('./worker.js');
+          initCronJobs();
+          logger.info('✓ Cron jobs initialized in-process');
+        } catch (err) {
+          logger.error('[Worker] Failed to initialize cron jobs:', err.message);
+        }
         
         // Start server
         const server = app.listen(PORT, () => {
             logger.info(`✓ Server is running on port ${PORT}`);
-            logger.info(`✓ Health check available at: http://localhost:${PORT}/api/health`);
-            logger.info(`✓ API base URL: http://localhost:${PORT}/api`);
+            logger.info(`✓ Health check available at: http://localhost:${PORT}/api/v1/health`);
+            logger.info(`✓ API base URL: http://localhost:${PORT}/api/v1`);
             logMemoryUsage(); // Log initial memory usage
         });
         
@@ -458,11 +368,6 @@ const startServer = async () => {
                 process.exit(1);
             }, 10000);
             forceExit.unref();
-
-            // Stop worker first
-            if (workerProcess && !workerProcess.killed) {
-                workerProcess.kill('SIGTERM');
-            }
 
             server.close(async () => {
                 try {

@@ -15,17 +15,6 @@ const cron = require('node-cron');
 const { sequelize } = require('./config/db.js');
 const { logger } = require('./config/logging.js');
 
-// ─── Graceful shutdown ────────────────────────────────────────────────────────
-const shutdown = async (signal) => {
-  logger.info(`[Worker] ${signal} received — shutting down`);
-  try { await sequelize.close(); } catch (_) {}
-  process.exit(0);
-};
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT',  () => shutdown('SIGINT'));
-process.on('uncaughtException',  (err) => logger.error('[Worker] Uncaught:', err.message));
-process.on('unhandledRejection', (err) => logger.error('[Worker] Unhandled rejection:', err));
-
 // ─── Job runner — wraps each job with timing + error isolation ────────────────
 async function run(name, fn) {
   const start = Date.now();
@@ -41,15 +30,30 @@ async function run(name, fn) {
 // ─── Job definitions ──────────────────────────────────────────────────────────
 
 async function jobFshipSync() {
-  const orderController = require('./controller/orderController');
-  let result = {};
-  const mockReq = { user: { id: 'system', username: 'worker' }, query: { limit: 50 } };
-  const mockRes = {
-    json: (data) => { result = data.data || {}; },
-    status: () => ({ json: (data) => { result = data; } }),
-  };
-  await orderController.syncOrdersWithFShip(mockReq, mockRes);
-  return result;
+  // Only sync orders that are confirmed but not yet sent to FShip
+  const { Order } = require('./model/orderModel.js');
+  const { Op } = require('sequelize');
+  const orderService = require('./services/orderService.js');
+
+  const pendingOrders = await Order.findAll({
+    where: {
+      status: 'confirmed',
+      fship_sync_status: { [Op.in]: ['pending', 'failed'] },
+      fship_sync_attempts: { [Op.lt]: 3 }, // max 3 retries
+    },
+    limit: 50,
+  });
+
+  let synced = 0, failed = 0;
+  for (const order of pendingOrders) {
+    try {
+      await orderService.syncOrderToFShip(order);
+      synced++;
+    } catch (e) {
+      failed++;
+    }
+  }
+  return { synced, failed, total: pendingOrders.length };
 }
 
 async function jobLoyaltyExpiry() {
@@ -65,11 +69,8 @@ async function jobInstagramRefresh() {
 }
 
 async function jobAbandonedCart() {
-  const { Cart }                  = require('./model/cartModel.js');
-  const { CartItem }              = require('./model/cartItemModel.js');
-  const { User }                  = require('./model/userModel.js');
-  const { Order }                 = require('./model/orderModel.js');
-  const { Product }               = require('./model/productModel.js');
+  // Load via associations to ensure Cart.hasMany(CartItem) is registered
+  const { Cart, CartItem, User, Order, Product } = require('./model/associations.js');
   const { Op }                    = require('sequelize');
   const whatsappService           = require('./services/whatsappService.js');
   const { WhatsappConversation }  = require('./model/whatsappConversationModel.js');
@@ -217,11 +218,7 @@ async function jobUpsell() {
 }
 
 // ─── Schedule ─────────────────────────────────────────────────────────────────
-async function start() {
-  logger.info('[Worker] Connecting to database...');
-  await sequelize.authenticate();
-  logger.info('[Worker] ✓ Database connected');
-
+function initCronJobs() {
   // FShip sync — every 2 hours
   cron.schedule('0 */2 * * *', () => run('FShip Sync', jobFshipSync));
 
@@ -243,18 +240,15 @@ async function start() {
   // Post-purchase upsell — daily 3 PM
   cron.schedule('0 15 * * *', () => run('Upsell', jobUpsell));
 
-  logger.info('[Worker] ✓ All jobs scheduled');
-  logger.info('[Worker] Schedule:');
-  logger.info('  FShip Sync       → every 2 hours');
-  logger.info('  Loyalty Expiry   → daily 2 AM');
-  logger.info('  Instagram        → every 6 hours');
-  logger.info('  Abandoned Cart   → every hour');
-  logger.info('  Review Request   → daily 10 AM');
-  logger.info('  Win-back         → daily 11 AM');
-  logger.info('  Upsell           → daily 3 PM');
+  logger.info('[Worker] ✓ All cron jobs scheduled in-process');
 }
 
-start().catch((err) => {
-  logger.error('[Worker] Failed to start:', err.message);
-  process.exit(1);
-});
+// Support both: require('./worker.js').initCronJobs() and standalone `node worker.js`
+if (require.main === module) {
+  // Running standalone
+  sequelize.authenticate()
+    .then(() => { logger.info('[Worker] DB connected'); initCronJobs(); })
+    .catch(err => { logger.error('[Worker] Failed:', err.message); process.exit(1); });
+}
+
+module.exports = { initCronJobs };
