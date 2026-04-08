@@ -15,7 +15,8 @@ import {
   showRemoveFromCartErrorToast
 } from '../utils/toast';
 
-const CartContext = createContext();
+// Preserve context identity across React Fast Refresh (HMR)
+const CartContext = globalThis.__CART_CONTEXT__ || (globalThis.__CART_CONTEXT__ = createContext(null));
 
 function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);

@@ -288,7 +288,7 @@ export const orderService = {
   updateOrderPaymentStatus: async (id, paymentStatusData) => {
     try {
       const response = await adminApi.put(
-        `/api/orders/${id}/payment-status`,
+        `/api/orders/${id}/status`,
         paymentStatusData
       );
       return response.data;
@@ -317,7 +317,7 @@ export const orderService = {
   updateSingleOrderFromFShip: async (orderId) => {
     try {
       const response = await adminApi.put(
-        `/api/orders/${orderId}/fship/update`,
+        `/api/orders/${orderId}/fship/sync`,
         {},
         { timeout: 30000 }
       );
@@ -384,7 +384,16 @@ export const orderService = {
   // Admin cancel order
   adminCancelOrder: async (orderId, reason) => {
     try {
-      const response = await adminApi.put(`/api/orders/${orderId}/admin/cancel`, { reason });
+      const response = await adminApi.put(`/api/orders/${orderId}/admin-cancel`, { reason });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  confirmOrder: async (orderId) => {
+    try {
+      const response = await adminApi.put(`/api/orders/${orderId}/confirm`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -405,16 +414,6 @@ export const orderService = {
   trackOrderByAWB: async (awbNumber) => {
     try {
       const response = await adminApi.get(`/api/orders/track/awb?awb_number=${awbNumber}`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  // Get guest order (public)
-  getGuestOrder: async (email, orderNumber) => {
-    try {
-      const response = await adminApi.get(`/api/orders/guest/track?email=${email}&orderNumber=${orderNumber}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -472,7 +471,7 @@ export const orderService = {
   // Mark label as downloaded
   markLabelDownloaded: async (orderId) => {
     try {
-      const response = await adminApi.post(`/api/orders/labels/${orderId}/mark-downloaded`);
+      const response = await adminApi.post(`/api/orders/labels/${orderId}/downloaded`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -577,7 +576,7 @@ export const paymentService = {
 
   updatePaymentStatus: async (id, statusData) => {
     try {
-      const response = await adminApi.put(`/api/payments/${id}/status`, statusData);
+      const response = await adminApi.put(`/api/payments/${id}`, statusData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -598,7 +597,7 @@ export const paymentService = {
 export const settingsService = {
   getAllSettings: async () => {
     try {
-      const response = await adminApi.get("/api/settings");
+      const response = await adminApi.get("/api/admin/brand-settings");
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -607,7 +606,7 @@ export const settingsService = {
 
   getSettingByKey: async (key) => {
     try {
-      const response = await adminApi.get(`/api/settings/${key}`);
+      const response = await adminApi.get(`/api/admin/brand-settings/${key}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -616,7 +615,7 @@ export const settingsService = {
 
   upsertSetting: async (settingData) => {
     try {
-      const response = await adminApi.post("/api/settings", settingData);
+      const response = await adminApi.post("/api/admin/brand-settings", settingData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -625,7 +624,7 @@ export const settingsService = {
 
   deleteSetting: async (key) => {
     try {
-      const response = await adminApi.delete(`/api/settings/${key}`);
+      const response = await adminApi.delete(`/api/admin/brand-settings/${key}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1118,7 +1117,7 @@ export const reviewService = {
   updateReviewStatus: async (id, statusData) => {
     try {
       const response = await adminApi.put(
-        `/api/reviews/admin/${id}/status`,
+        `/api/reviews/admin/${id}/moderate`,
         statusData
       );
       return response.data;

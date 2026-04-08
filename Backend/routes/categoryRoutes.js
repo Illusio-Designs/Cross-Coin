@@ -11,9 +11,7 @@ const router = express.Router();
 
 // Public
 router.get('/listing',          etagMiddleware, getPublicCategories);
-router.get('/public',           etagMiddleware, getPublicCategories);  // backward compat
 router.get('/by-name/:name',    getPublicCategoryByName);
-router.get('/public/name/:name', getPublicCategoryByName);            // backward compat
 
 // Admin
 router.post('/',                isAuthenticated, isProductManager, categoryUpload.single('image'), createCategory);

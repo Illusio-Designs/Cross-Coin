@@ -112,7 +112,7 @@ const Home = () => {
           (async () => {
             try {
               const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/public?limit=15&sort=newest`,
+                `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/catalog?limit=15&sort=newest`,
                 {
                   headers: {
                     'Content-Type': 'application/json',
@@ -131,7 +131,7 @@ const Home = () => {
           (async () => {
             try {
               const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/public?sort=featured&limit=100`,
+                `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/catalog?sort=featured&limit=100`,
                 {
                   cache: 'no-store',
                   headers: {

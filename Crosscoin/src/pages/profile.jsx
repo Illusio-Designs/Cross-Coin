@@ -15,6 +15,7 @@ import {
   getUserOrders,
   cancelOrder,
   initiateReturn,
+  deleteAccount,
 } from "../services/publicApi";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -119,6 +120,25 @@ export default function Profile() {
   const handleLogout = async () => {
     try { await authLogout(); sessionStorage.removeItem("isLoggedIn"); localStorage.removeItem("user"); router.push("/"); }
     catch { showProfileUpdateErrorToast("Logout failed."); }
+  };
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (!deleteReason.trim()) { showValidationErrorToast("Please provide a reason."); return; }
+    setDeletingAccount(true);
+    try {
+      await deleteAccount(deleteReason);
+      await authLogout();
+      localStorage.clear();
+      router.push('/');
+    } catch (e) {
+      showProfileUpdateErrorToast(e.message || "Failed to delete account.");
+    } finally {
+      setDeletingAccount(false);
+    }
   };
 
   const openAddAddress = () => {
@@ -379,6 +399,35 @@ export default function Profile() {
                   </div>
                   <button type="submit" className="pf-btn-primary pf-btn-full">Update Profile</button>
                 </form>
+
+                {/* Delete Account */}
+                <div className="pf-danger-zone">
+                  <div className="pf-section-title" style={{ color: '#c62828' }}>Danger Zone</div>
+                  {!showDeleteConfirm ? (
+                    <button className="pf-btn-danger" onClick={() => setShowDeleteConfirm(true)}>
+                      Delete My Account
+                    </button>
+                  ) : (
+                    <div className="pf-delete-confirm">
+                      <p>This will permanently delete your account and anonymise your data. Your orders will remain for our records.</p>
+                      <textarea
+                        className="pf-delete-reason"
+                        placeholder="Please tell us why you're leaving..."
+                        value={deleteReason}
+                        onChange={e => setDeleteReason(e.target.value)}
+                        rows={3}
+                      />
+                      <div className="pf-delete-actions">
+                        <button className="pf-btn-danger" onClick={handleDeleteAccount} disabled={deletingAccount}>
+                          {deletingAccount ? 'Deleting...' : 'Confirm Delete'}
+                        </button>
+                        <button className="pf-btn-ghost" onClick={() => { setShowDeleteConfirm(false); setDeleteReason(''); }}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

@@ -32,7 +32,7 @@ export async function getServerSideProps({ res }) {
     const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
     // Fetch products
-    const prodRes = await fetch(`${API}/api/products?limit=500`, {
+    const prodRes = await fetch(`${API}/api/products/catalog?limit=500`, {
       headers: { 'X-Brand-Name': 'crosscoin' },
     });
     if (prodRes.ok) {
@@ -50,7 +50,7 @@ export async function getServerSideProps({ res }) {
     }
 
     // Fetch blogs
-    const blogRes = await fetch(`${API}/api/blogs?limit=200`, {
+    const blogRes = await fetch(`${API}/api/blogs/listing?limit=200`, {
       headers: { 'X-Brand-Name': 'crosscoin' },
     });
     if (blogRes.ok) {
