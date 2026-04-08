@@ -387,12 +387,12 @@ const startServer = async () => {
         
         // Handle uncaught exceptions
         process.on('uncaughtException', (error) => {
-            logger.error('Uncaught Exception:', error);
+            logger.error('Uncaught Exception:', { message: error.message, stack: error.stack });
             logMemoryUsage();
         });
         
-        process.on('unhandledRejection', (reason, promise) => {
-            logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+        process.on('unhandledRejection', (reason) => {
+            logger.error('Unhandled Rejection:', { message: reason?.message || String(reason), stack: reason?.stack });
             logMemoryUsage();
         });
         

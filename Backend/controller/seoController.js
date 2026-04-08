@@ -153,8 +153,14 @@ module.exports.getSEOData = async (req, res) => {
             });
         }
         
-        // First try to find existing SEO data using exact page_name
-        let seoData = await SeoMetadata.findOne({ where: { page_name, brand_id: req.brandId || null } });
+        // First try to find existing SEO data using exact page_name (with brand, then without)
+        let seoData = await SeoMetadata.findOne({ where: { page_name, brand_id: req.brandId || 1 } });
+        if (!seoData) {
+            seoData = await SeoMetadata.findOne({ where: { page_name, brand_id: null } });
+        }
+        if (!seoData) {
+            seoData = await SeoMetadata.findOne({ where: { page_name } });
+        }
         console.log('[SEO] SeoMetadata lookup result:', seoData);
         if (!seoData) {
             // Try to find a product by name or slug, including ProductSEO
@@ -198,8 +204,15 @@ module.exports.getSEOData = async (req, res) => {
             }
         }
         if (!seoData) {
-            console.log('[SEO] No SEO data found for page_name:', page_name);
-            return res.status(404).json({ message: 'SEO data not found' });
+            // Return sensible defaults instead of 404
+            return res.json({
+                success: true,
+                data: {
+                    meta_title: `${page_name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} - CrossCoin`,
+                    meta_description: 'Shop premium quality socks online at CrossCoin. Free shipping on prepaid orders.',
+                    meta_keywords: 'crosscoin, socks, buy online, premium socks',
+                }
+            });
         }
         console.log('[SEO] Returning SeoMetadata:', seoData);
         res.json({ success: true, data: seoData });

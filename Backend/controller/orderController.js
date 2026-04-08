@@ -558,11 +558,8 @@
       await transaction.commit();
       logger.debug("createOrder: Transaction committed successfully");
 
-      // Task 10: Set confirmed status for COD orders
-      if (payment_type === 'cod') {
-        await order.update({ status: 'confirmed' });
-        await OrderStatusHistory.create({ order_id: order.id, status: 'confirmed', updated_by: userId, notes: 'Order confirmed' });
-      }
+      // COD orders stay at awaiting_confirmation — admin reviews RTO score and confirms manually
+      // Prepaid orders get confirmed automatically after payment verification in paymentController
 
       // Idempotency is now DB-based (idempotency_key column on orders table)
 
