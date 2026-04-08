@@ -21,7 +21,7 @@ const WhatsappConversation = sequelize.define('WhatsappConversation', {
   first_response_at: { type: DataTypes.DATE, allowNull: true },
   // User ID link (if customer is a registered user)
   user_id: { type: DataTypes.INTEGER, allowNull: true },
-}, { tableName: 'whatsapp_conversations', timestamps: true });
+}, { tableName: 'whatsapp_conversations', timestamps: true, charset: 'utf8mb4', collate: 'utf8mb4_unicode_ci' });
 
 const WhatsappMessage = sequelize.define('WhatsappMessage', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -33,7 +33,7 @@ const WhatsappMessage = sequelize.define('WhatsappMessage', {
   quoted_message_id: { type: DataTypes.INTEGER, allowNull: true, comment: 'ID of the message being replied to' },
   status: { type: DataTypes.ENUM('sent', 'delivered', 'read', 'failed', 'received'), defaultValue: 'sent' },
   sent_at: { type: DataTypes.DATE, allowNull: true },
-}, { tableName: 'whatsapp_messages', timestamps: true });
+}, { tableName: 'whatsapp_messages', timestamps: true, charset: 'utf8mb4', collate: 'utf8mb4_unicode_ci' });
 
 // Associations
 WhatsappConversation.hasMany(WhatsappMessage, { foreignKey: 'conversation_id', as: 'Messages', onDelete: 'CASCADE' });
