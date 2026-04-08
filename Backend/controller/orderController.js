@@ -391,13 +391,19 @@
       logger.debug("finalAmount:", finalAmount);
 
       // ── Task 5: Server-side discount verification ─────────────────────────
-      if (appliedDiscount > 0 && !coupon_id) {
+      // Allow prepaid instant discount without coupon (configured via env)
+      const PREPAID_DISCOUNT = payment_type !== 'cod'
+        ? parseFloat(await settingsHelper.getSetting(req.brand?.id || 1, 'PREPAID_INSTANT_DISCOUNT', '50'))
+        : 0;
+
+      if (appliedDiscount > 0 && !coupon_id && appliedDiscount > PREPAID_DISCOUNT + 1) {
         await transaction.rollback();
         return res.status(400).json({ message: "Invalid discount amount." });
       }
       if (coupon_id) {
         const serverDiscount = await computeCouponDiscount(coupon_id, subTotal, validatedItems);
-        if (Math.abs(appliedDiscount - serverDiscount) > 1) {
+        const expectedTotal = serverDiscount + PREPAID_DISCOUNT;
+        if (Math.abs(appliedDiscount - expectedTotal) > 1) {
           await transaction.rollback();
           return res.status(400).json({ message: "Order total mismatch. Please refresh and try again." });
         }
