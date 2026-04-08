@@ -3,8 +3,6 @@ import SafeImage from "../components/common/SafeImage";
 import { useRouter } from "next/router";
 import SeoWrapper from "../console/SeoWrapper";
 import {
-  resetPassword,
-  getCurrentUser,
   updateUserProfile,
   updateUserPassword,
   createShippingAddress,
@@ -67,8 +65,11 @@ function getStatusLabel(status) {
 
 export default function Profile() {
   const [activeTab, setActiveTab] = useState(0);
+  const [hasMounted, setHasMounted] = useState(false);
   const router = useRouter();
-  const { user, isAuthenticated, logout: authLogout } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, logout: authLogout } = useAuth();
+
+  useEffect(() => { setHasMounted(true); }, []);
 
   // Orders
   const [orders, setOrders] = useState([]);
@@ -97,7 +98,11 @@ export default function Profile() {
   const [accountUsername, setAccountUsername] = useState("");
   const [accountEmail, setAccountEmail] = useState("");
 
-  useEffect(() => { if (!isAuthenticated) router.push("/login"); }, [isAuthenticated, router]);
+  // Only redirect to login after auth check is complete
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) router.push("/login");
+  }, [authLoading, isAuthenticated, router]);
+
   useEffect(() => {
     if (user) {
       setProfileImageUrl(user.profileImageUrl || "");
@@ -107,6 +112,7 @@ export default function Profile() {
   }, [user]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     if (activeTab === 0) {
       setLoadingOrders(true);
       getUserOrders().then(d => { setOrders(d.orders || []); setOrdersError(""); }).catch(e => setOrdersError(e.message || "Failed to load orders")).finally(() => setLoadingOrders(false));
@@ -115,12 +121,13 @@ export default function Profile() {
       setLoadingAddresses(true);
       getUserShippingAddresses().then(d => setAddresses(Array.isArray(d) ? d : (d ? [d] : []))).catch(() => {}).finally(() => setLoadingAddresses(false));
     }
-  }, [activeTab]);
+  }, [activeTab, isAuthenticated]);
 
-  // Load addresses on mount for stats display
+  // Load addresses on mount for stats display (only when authenticated)
   useEffect(() => {
+    if (!isAuthenticated) return;
     getUserShippingAddresses().then(d => setAddresses(Array.isArray(d) ? d : (d ? [d] : []))).catch(() => {});
-  }, []);
+  }, [isAuthenticated]);
 
   const handleLogout = async () => {
     try { await authLogout(); sessionStorage.removeItem("isLoggedIn"); localStorage.removeItem("user"); router.push("/"); }
@@ -213,6 +220,23 @@ export default function Profile() {
       setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
     } catch (err) { showProfileUpdateErrorToast(err.message || "Failed to update password."); }
   };
+
+  // Show loader while auth is being checked (or before client mount to avoid hydration mismatch)
+  if (!hasMounted || authLoading) {
+    return (
+      <SeoWrapper pageName="profile">
+        <div className="pf-page">
+          <div className="pf-fullpage-loader">
+            <div className="pf-spinner" />
+            <p>Loading your profile...</p>
+          </div>
+        </div>
+      </SeoWrapper>
+    );
+  }
+
+  // Don't render profile content if not authenticated (redirect is in progress)
+  if (!isAuthenticated) return null;
 
   return (
     <SeoWrapper pageName="profile">
@@ -367,10 +391,13 @@ export default function Profile() {
                         </div>
                         <div className="pf-addr-body">
                           {addr.is_default && <span className="pf-addr-default">Default</span>}
-                          <div className="pf-addr-text">{addr.address}</div>
-                          <div className="pf-addr-text">{addr.city}, {addr.state} — {addr.postal_code}</div>
-                          <div className="pf-addr-text">{addr.country}</div>
-                          <div className="pf-addr-text">📞 {addr.phone_number}</div>
+                          {addr.address && <div className="pf-addr-text">{addr.address}</div>}
+                          <div className="pf-addr-text">
+                            {[addr.city, addr.state].filter(Boolean).join(", ")}
+                            {addr.postal_code ? ` — ${addr.postal_code}` : ""}
+                          </div>
+                          {addr.country && <div className="pf-addr-text">{addr.country}</div>}
+                          {addr.phone_number && <div className="pf-addr-text">📞 {addr.phone_number}</div>}
                           <div className="pf-addr-actions">
                             {!addr.is_default && <button className="pf-addr-btn" onClick={() => handleSetDefault(addr.id)}>Set Default</button>}
                             <button className="pf-addr-btn" onClick={() => openEditAddress(addr)}>Edit</button>

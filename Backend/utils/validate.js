@@ -39,11 +39,15 @@ const validators = {
  * @param {object} schema
  * @returns {{ valid: boolean, errors: string[] }}
  */
+function getNestedValue(obj, path) {
+  return path.split('.').reduce((o, key) => (o != null ? o[key] : undefined), obj);
+}
+
 function validate(body, schema) {
   const errors = [];
 
   for (const [field, def] of Object.entries(schema)) {
-    const value = body[field];
+    const value = field.includes('.') ? getNestedValue(body, field) : body[field];
     const label = def.label || field;
 
     for (const rule of def.rules) {

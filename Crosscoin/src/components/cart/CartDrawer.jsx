@@ -204,7 +204,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
   // Order
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
-  const [paymentFailed, setPaymentFailed] = useState({ error: null, rzpOrder: null, retryCount: 0 });
+  const [paymentFailed, setPaymentFailed] = useState({ error: null, rzpOrder: null, retryCount: 0, orderResult: null });
   const [pincodeServiceability, setPincodeServiceability] = useState(null); // { serviceable, cod_allowed, city, state }
   const [isMounted, setIsMounted] = useState(false);
 
@@ -843,10 +843,23 @@ const CartDrawer = ({ isOpen, onClose }) => {
         }
         const prepaidIdempotencyKey = generateIdempotencyKey();
         const orderData = buildPrepaidOrderData(prepaidIdempotencyKey);
+
+        // Step 1: Create the order FIRST so it exists in DB before payment
+        let orderResult;
+        try {
+          orderResult = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
+          if (!orderResult?.order) throw new Error('Order creation failed.');
+        } catch (err) {
+          showOrderPlacedErrorToast(err.response?.data?.message || err.error || err.message || 'Failed to create order. Please try again.');
+          setIsProcessing(false);
+          return;
+        }
+
+        // Step 2: Create Razorpay order for payment
         const rzpOrder = await createRazorpayOrder({
           amount: prepaidPayable,
           currency: 'INR',
-          receipt: `rcpt_${Date.now()}`,
+          receipt: orderResult.order.order_number,
           isGuest: !isAuthenticated,
         });
         const options = {
@@ -863,40 +876,31 @@ const CartDrawer = ({ isOpen, onClose }) => {
           },
           theme: { color: '#CE1E36' },
           handler: async (response) => {
-            // Payment captured — now create order with retries
-            const maxRetries = 3;
-            let lastError = null;
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-              try {
-                const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
-                if (!result?.order) throw new Error('Order creation failed.');
-                await updateOrderPayment({
-                  orderId: result.order.id,
-                  razorpayPaymentId: response.razorpay_payment_id,
-                  razorpayOrderId: response.razorpay_order_id,
-                  razorpaySignature: response.razorpay_signature,
-                });
-                trackPurchase(prepaidPayable, result.order.order_number);
-                clearCart();
-                clearBuyNow();
-                showOrderPlacedSuccessToast(result.order.order_number);
-                setOrderSuccess({ orderNumber: result.order.order_number });
-                setIsProcessing(false);
-                return; // success — exit
-              } catch (err) {
-                lastError = err;
-                if (attempt < maxRetries) await new Promise(r => setTimeout(r, 2000 * attempt));
-              }
+            // Step 3: Payment captured — verify and link to order
+            try {
+              await updateOrderPayment({
+                orderId: orderResult.order.id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpaySignature: response.razorpay_signature,
+              });
+              trackPurchase(prepaidPayable, orderResult.order.order_number);
+              clearCart();
+              clearBuyNow();
+              showOrderPlacedSuccessToast(orderResult.order.order_number);
+              setOrderSuccess({ orderNumber: orderResult.order.order_number });
+            } catch (err) {
+              // Payment captured but verification failed — webhook will reconcile
+              showOrderPlacedErrorToast('Payment received successfully. Your order is being processed — you will receive confirmation shortly.');
+              clearCart();
+              clearBuyNow();
+            } finally {
+              setIsProcessing(false);
             }
-            // All retries failed — payment is captured, webhook will reconcile
-            showOrderPlacedErrorToast('Payment received successfully. Your order is being processed — you will receive confirmation shortly.');
-            clearCart();
-            clearBuyNow();
-            setIsProcessing(false);
           },
           modal: {
             ondismiss: () => {
-              setPaymentFailed(prev => ({ error: 'Payment was cancelled.', rzpOrder: rzpOrder, retryCount: prev.retryCount }));
+              setPaymentFailed(prev => ({ error: 'Payment was cancelled.', rzpOrder: rzpOrder, retryCount: prev.retryCount, orderResult }));
               setIsProcessing(false);
             },
           },
@@ -907,6 +911,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
             error: r.error?.description || 'Payment failed. Please try again.',
             rzpOrder: rzpOrder,
             retryCount: prev.retryCount,
+            orderResult,
           }));
           setIsProcessing(false);
         });
@@ -977,8 +982,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                     setIsProcessing(true);
                     try {
                       const rzpOrder = paymentFailed.rzpOrder;
-                      const prepaidIdempotencyKey = generateIdempotencyKey();
-                      const orderData = buildPrepaidOrderData(prepaidIdempotencyKey);
+                      const existingOrder = paymentFailed.orderResult;
 
                       const options = {
                         key: RAZORPAY_KEY,
@@ -994,31 +998,24 @@ const CartDrawer = ({ isOpen, onClose }) => {
                         },
                         theme: { color: '#CE1E36' },
                         handler: async (response) => {
-                          const maxRetries = 3;
-                          for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                            try {
-                              const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
-                              if (!result?.order) throw new Error('Order creation failed.');
-                              await updateOrderPayment({
-                                orderId: result.order.id,
-                                razorpayPaymentId: response.razorpay_payment_id,
-                                razorpayOrderId: response.razorpay_order_id,
-                                razorpaySignature: response.razorpay_signature,
-                              });
-                              trackPurchase(prepaidPayable, result.order.order_number);
-                              clearCart(); clearBuyNow();
-                              setPaymentFailed({ error: null, rzpOrder: null, retryCount: 0 });
-                              showOrderPlacedSuccessToast(result.order.order_number);
-                              setOrderSuccess({ orderNumber: result.order.order_number });
-                              setIsProcessing(false);
-                              return;
-                            } catch (err) {
-                              if (attempt < maxRetries) await new Promise(r => setTimeout(r, 2000 * attempt));
-                            }
+                          try {
+                            await updateOrderPayment({
+                              orderId: existingOrder.order.id,
+                              razorpayPaymentId: response.razorpay_payment_id,
+                              razorpayOrderId: response.razorpay_order_id,
+                              razorpaySignature: response.razorpay_signature,
+                            });
+                            trackPurchase(prepaidPayable, existingOrder.order.order_number);
+                            clearCart(); clearBuyNow();
+                            setPaymentFailed({ error: null, rzpOrder: null, retryCount: 0, orderResult: null });
+                            showOrderPlacedSuccessToast(existingOrder.order.order_number);
+                            setOrderSuccess({ orderNumber: existingOrder.order.order_number });
+                          } catch (err) {
+                            showOrderPlacedErrorToast('Payment received successfully. Your order is being processed — you will receive confirmation shortly.');
+                            clearCart(); clearBuyNow();
+                          } finally {
+                            setIsProcessing(false);
                           }
-                          showOrderPlacedErrorToast('Payment received successfully. Your order is being processed — you will receive confirmation shortly.');
-                          clearCart(); clearBuyNow();
-                          setIsProcessing(false);
                         },
                         modal: {
                           ondismiss: () => {
@@ -1049,7 +1046,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 className="cd-btn-ghost"
                 style={{ marginTop: 10 }}
                 onClick={() => {
-                  setPaymentFailed({ error: null, rzpOrder: null, retryCount: 0 });
+                  setPaymentFailed({ error: null, rzpOrder: null, retryCount: 0, orderResult: null });
                   // Fire-and-forget: record failure if we have a rzpOrder
                   if (paymentFailed.rzpOrder?.id) {
                     fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/payments/failed`, {
