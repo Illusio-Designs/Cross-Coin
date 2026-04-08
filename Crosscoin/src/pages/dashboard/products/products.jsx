@@ -12,7 +12,7 @@ import BrandTags from '../../../components/Dashboard/BrandTags';
 import BrandAssignment from '../../../components/Dashboard/BrandAssignment';
 import ProductFilterDrawer from '../../../components/products/ProductFilterDrawer';
 import dynamic from 'next/dynamic';
-const ReactQuill = dynamic(() => import('react-quill'), { 
+const ReactQuill = dynamic(() => import('../../components/common/QuillEditor'), { 
   ssr: false,
   loading: () => <div style={{ height: 150, border: '1px solid #e5e7eb', borderRadius: 6 }} />
 });
@@ -291,14 +291,17 @@ const ProductsPage = () => {
         images: product.images?.map(img => {
           // Get the base URL
           const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+          const imageKitEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/wp2oatzmf';
           
           // Construct the proper image URL
           let imageUrl = img.image_url;
           if (!imageUrl.startsWith('http')) {
-            if (imageUrl.startsWith('/uploads/')) {
+            if (imageUrl.startsWith('/products') || imageUrl.startsWith('/categories') || imageUrl.startsWith('/sliders')) {
+              imageUrl = `${imageKitEndpoint}${imageUrl}`;
+            } else if (imageUrl.startsWith('/uploads/')) {
               imageUrl = `${baseUrl}${imageUrl}`;
             } else {
-              imageUrl = `${baseUrl}/uploads/products/${imageUrl}`;
+              imageUrl = `${imageKitEndpoint}/products/${imageUrl}`;
             }
           }
           
@@ -365,16 +368,17 @@ const ProductsPage = () => {
         },
         variationImages: product.variations?.map((variation, vIndex) => {
           const variationImages = variation.images?.map(img => {
-            // Get the base URL
             const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+            const imageKitEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/wp2oatzmf';
             
-            // Construct the proper image URL
             let imageUrl = img.image_url;
             if (!imageUrl.startsWith('http')) {
-              if (imageUrl.startsWith('/uploads/')) {
+              if (imageUrl.startsWith('/products') || imageUrl.startsWith('/categories') || imageUrl.startsWith('/sliders')) {
+                imageUrl = `${imageKitEndpoint}${imageUrl}`;
+              } else if (imageUrl.startsWith('/uploads/')) {
                 imageUrl = `${baseUrl}${imageUrl}`;
               } else {
-                imageUrl = `${baseUrl}/uploads/products/${imageUrl}`;
+                imageUrl = `${imageKitEndpoint}/products/${imageUrl}`;
               }
             }
             

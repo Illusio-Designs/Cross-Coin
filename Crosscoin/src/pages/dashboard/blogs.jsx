@@ -8,7 +8,7 @@ import { blogService, brandService, productService } from "../../services";
 import { showSuccess, showError } from "../../utils/toastNotification";
 import { ConfirmModal } from '../../components/common/AlertModal';
 
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
+const ReactQuill = dynamic(() => import("../../components/common/QuillEditor"), { ssr: false });
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const IC = {

@@ -31,6 +31,7 @@ export default function Login() {
   const digits = phone.replace(/\D/g, "").slice(0, 10);
 
   const sendOtp = () => {
+    console.log("sendOtp called, digits:", digits, "length:", digits.length);
     setError(""); setHint("");
     if (digits.length !== 10) { setError("Enter a valid 10-digit number"); return; }
     setLoading(true);
@@ -40,15 +41,22 @@ export default function Login() {
     }
     const trySend = (n) => {
       if (typeof window.sendOtp === "function") {
+        // Add timeout — if MSG91 doesn't respond in 15s, show error
+        const timeoutId = setTimeout(() => {
+          setError("OTP service timed out. Please try again.");
+          setLoading(false);
+        }, 15000);
+
         window.sendOtp(
           "+91" + digits,
-          () => { setStep("otp"); setHint("OTP sent to +91 " + digits); setLoading(false); setTimer(30); },
-          () => { setError("Failed to send OTP. Try again."); setLoading(false); }
+          () => { clearTimeout(timeoutId); setStep("otp"); setHint("OTP sent to +91 " + digits); setLoading(false); setTimer(30); },
+          (err) => { clearTimeout(timeoutId); setError("Failed to send OTP. Try again."); setLoading(false); console.error("MSG91 sendOtp error:", err); }
         );
-      } else if (n < 10) {
+      } else if (n < 20) {
         setTimeout(() => trySend(n + 1), 500);
       } else {
-        setError("OTP service not ready. Please refresh."); setLoading(false);
+        setError("OTP service not ready. Please refresh the page."); setLoading(false);
+        console.error("MSG91 sendOtp not available after 10s. window.sendOtp:", typeof window.sendOtp, "initSendOTP:", typeof window.initSendOTP);
       }
     };
     trySend(0);
@@ -144,7 +152,7 @@ export default function Login() {
                   </div>
                 </div>
                 {error && <p className="auth-error">{error}</p>}
-                <button className="auth-submit" onClick={sendOtp} disabled={loading || digits.length !== 10}>
+                <button className="auth-submit" onClick={() => { console.log('Button clicked'); sendOtp(); }} disabled={loading || digits.length !== 10}>
                   {loading ? "Sending OTP..." : "Send OTP"}
                 </button>
               </div>
