@@ -29,17 +29,6 @@ const STATUS_OPTS = [
   { value: 'archived', label: 'Archived' },
 ];
 
-const QUILL_MODULES = {
-  toolbar: [
-    [{ header: [1, 2, 3, false] }],
-    ['bold', 'italic', 'underline', 'strike'],
-    [{ list: 'ordered' }, { list: 'bullet' }],
-    ['blockquote', 'code-block'],
-    ['link'],
-    ['clean'],
-  ],
-};
-
 const EMPTY_POST = {
   id: null, title: '', author_name: '', status: 'draft',
   blog_category_id: '', brand_ids: [], tags: [],
@@ -60,7 +49,7 @@ function StatusBadge({ status }) {
   );
 }
 
-// ─── Sections editor with ReactQuill ─────────────────────────────────────────
+// ─── Sections editor ──────────────────────────────────────────────────────────
 function SectionsEditor({ value, onChange }) {
   const addSection = () => onChange([...value, { heading: '', content: '' }]);
   const removeSection = (i) => onChange(value.filter((_, idx) => idx !== i));
@@ -88,10 +77,8 @@ function SectionsEditor({ value, onChange }) {
             <label className="dm-label">Content</label>
             <div className="dm-quill-wrap">
               <ReactQuill
-                theme="snow"
                 value={sec.content || ''}
                 onChange={val => updateSection(i, 'content', val)}
-                modules={QUILL_MODULES}
                 placeholder="Write section content..."
               />
             </div>

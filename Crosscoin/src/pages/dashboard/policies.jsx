@@ -191,7 +191,7 @@ export function Policies() {
             <div className="dm-field">
               <label className="dm-label">Content</label>
               <div className="dm-quill-wrap">
-                <ReactQuill value={formData.content} onChange={value => setFormData(prev => ({ ...prev, content: value }))} theme="snow" />
+                <ReactQuill value={formData.content} onChange={value => setFormData(prev => ({ ...prev, content: value }))} placeholder="Write policy content..." />
               </div>
             </div>
           </div>

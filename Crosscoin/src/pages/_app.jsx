@@ -18,7 +18,6 @@ import "../styles/common/globals.css";
 import "../styles/common/responsive.css";
 import "../styles/common/mobile-utilities.css";
 import "../styles/common/skeleton.css";
-import "react-quill/dist/quill.snow.css";
 import "../styles/common/critical.css";
 import "../styles/common/DonutChart.css";
 import "../styles/common/FomoElements.css";
@@ -104,8 +103,6 @@ import "../styles/dashboard/analytics.css";
 // Additional page CSS
 import "../styles/pages/Lookbook.css";
 import "../styles/pages/Reels.css";
-// Third-party
-import "react-quill/dist/quill.snow.css";
 
 import Analytics from "../components/common/Analytics";
 import UTMTracker from "../components/common/UTMTracker";
