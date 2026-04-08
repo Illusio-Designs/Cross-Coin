@@ -247,21 +247,21 @@ const setupDatabase = async () => {
     await sequelize.sync({ force: false, alter: false, hooks: false });
     console.log("✓ All tables synced");
 
-    // Ensure users.deleted_at column exists (paranoid soft-delete support)
-    console.log("Ensuring users.deleted_at column...");
+    // Ensure users.deletedAt column exists (paranoid soft-delete support)
+    console.log("Ensuring users.deletedAt column...");
     try {
       const [deletedAtCol] = await sequelize.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'deleted_at'
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'deletedAt'
       `);
       if (!deletedAtCol.length) {
-        await sequelize.query(`ALTER TABLE users ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL`);
-        console.log("✓ users.deleted_at column added");
+        await sequelize.query(`ALTER TABLE users ADD COLUMN deletedAt DATETIME NULL DEFAULT NULL`);
+        console.log("✓ users.deletedAt column added");
       } else {
-        console.log("✓ users.deleted_at already exists");
+        console.log("✓ users.deletedAt already exists");
       }
     } catch (e) {
-      console.log("⚠️ users.deleted_at fix skipped:", e.message);
+      console.log("⚠️ users.deletedAt fix skipped:", e.message);
     }
 
     // Ensure whatsapp_messages.quoted_message_id column exists
