@@ -15,7 +15,7 @@ const ALLOWED_TRANSITIONS = {
   awaiting_confirmation: ['confirmed', 'cancelled'],
   pending:               ['awaiting_confirmation', 'confirmed', 'cancelled'],
   confirmed:             ['processing', 'cancelled'],
-  processing:            ['booked', 'cancelled'],
+  processing:            ['confirmed', 'booked', 'cancelled'],
   booked:                ['pickup initiated', 'cancelled'],
   'pickup initiated':    ['manifested', 'cancelled'],
   manifested:            ['in transit'],
