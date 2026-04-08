@@ -228,14 +228,17 @@ async function seedDefaultTemplates(brandId = 1) {
 
 // ─── Send messages ────────────────────────────────────────────────────────────
 
-async function sendTextMessage(phone, text, brandId = 1) {
+async function sendTextMessage(phone, text, brandId = 1, contextMessageId = null) {
   const { token, phoneNumberId } = await getCredentials(brandId);
   const to = formatE164(phone);
   if (!to) throw new Error('Invalid phone number: ' + phone);
 
+  const payload = { messaging_product: 'whatsapp', to, type: 'text', text: { body: text } };
+  if (contextMessageId) payload.context = { message_id: contextMessageId };
+
   const res = await axios.post(
     `${GRAPH_API_URL}/${phoneNumberId}/messages`,
-    { messaging_product: 'whatsapp', to, type: 'text', text: { body: text } },
+    payload,
     { headers: authHeader(token) }
   );
   return res.data;

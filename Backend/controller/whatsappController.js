@@ -54,26 +54,26 @@ exports.receiveWebhook = async (req, res) => {
           } else if (msg.type === 'audio') {
             const mediaId = msg.audio?.id;
             msgBody = JSON.stringify({ url: mediaId, mime_type: msg.audio?.mime_type });
-            displayText = '🎤 Voice message';
+            displayText = 'Voice message';
           } else if (msg.type === 'image') {
             const mediaId = msg.image?.id;
             msgBody = JSON.stringify({ url: mediaId, caption: msg.image?.caption, mime_type: msg.image?.mime_type });
-            displayText = msg.image?.caption || '📷 Image';
+            displayText = msg.image?.caption || 'Image';
           } else if (msg.type === 'video') {
             const mediaId = msg.video?.id;
             msgBody = JSON.stringify({ url: mediaId, caption: msg.video?.caption, mime_type: msg.video?.mime_type });
-            displayText = msg.video?.caption || '🎥 Video';
+            displayText = msg.video?.caption || 'Video';
           } else if (msg.type === 'document') {
             const mediaId = msg.document?.id;
             msgBody = JSON.stringify({ url: mediaId, caption: msg.document?.filename || msg.document?.caption, mime_type: msg.document?.mime_type });
-            displayText = msg.document?.filename || '📄 Document';
+            displayText = msg.document?.filename || 'Document';
           } else if (msg.type === 'sticker') {
             const mediaId = msg.sticker?.id;
             msgBody = JSON.stringify({ url: mediaId, mime_type: msg.sticker?.mime_type });
-            displayText = '🎭 Sticker';
+            displayText = 'Sticker';
           } else if (msg.type === 'location') {
             msgBody = JSON.stringify({ lat: msg.location?.latitude, lng: msg.location?.longitude, name: msg.location?.name });
-            displayText = `📍 Location: ${msg.location?.name || `${msg.location?.latitude}, ${msg.location?.longitude}`}`;
+            displayText = `Location: ${msg.location?.name || `${msg.location?.latitude}, ${msg.location?.longitude}`}`;
           } else {
             msgBody = `[${msg.type}]`;
             displayText = `[${msg.type}]`;
@@ -246,14 +246,14 @@ exports.getMessages = async (req, res) => {
 exports.sendReply = async (req, res) => {
   try {
     const { id } = req.params;
-    const { message, brandId = 1 } = req.body;
+    const { message, brandId = 1, quotedWaMessageId } = req.body;
 
     if (!message?.trim()) return res.status(400).json({ success: false, message: 'Message is required' });
 
     const conv = await WhatsappConversation.findByPk(id);
     if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
 
-    const result = await whatsappService.sendTextMessage(conv.customer_phone, message.trim(), brandId);
+    const result = await whatsappService.sendTextMessage(conv.customer_phone, message.trim(), brandId, quotedWaMessageId || null);
 
     const saved = await WhatsappMessage.create({
       conversation_id: id,
