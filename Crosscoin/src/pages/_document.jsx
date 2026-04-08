@@ -35,7 +35,7 @@ export default function Document() {
         <meta name="color-scheme" content="light" />
         <meta name="supported-color-schemes" content="light" />
 
-        {/* MSG91 OTP Widget — loads provider then calls initSendOTP with exposeMethods:true */}
+        {/* MSG91 OTP Widget */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -44,13 +44,18 @@ export default function Document() {
                   widgetId: "366342706343383735393039",
                   tokenAuth: "426738T7QwVqDd1uX69c7fc1dP1",
                   exposeMethods: true,
+                  identifier: "",
+                  captchaType: "invisible",
                   success: function(data) { window.__msg91OtpSuccess = data; },
                   failure: function(error) { window.__msg91OtpFailure = error; }
                 };
                 var s = document.createElement('script');
                 s.type = 'text/javascript';
                 s.src = 'https://verify.msg91.com/otp-provider.js';
-                s.onload = function() { initSendOTP(configuration); };
+                s.onload = function() {
+                  if (typeof initSendOTP === 'function') initSendOTP(configuration);
+                };
+                s.onerror = function() { console.error('MSG91 OTP script failed to load'); };
                 document.head.appendChild(s);
               })();
             `,

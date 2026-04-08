@@ -16,14 +16,20 @@ export function getDirectImageUrl(imageData) {
     return imageUrl;
   }
   
-  // Use environment variable for API URL
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
+  const imageKitEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || "https://ik.imagekit.io/wp2oatzmf";
+  
+  // ImageKit paths: /products/, /categories/, /sliders/
+  if (imageUrl.startsWith("/products") || imageUrl.startsWith("/categories") || imageUrl.startsWith("/sliders")) {
+    return `${imageKitEndpoint}${imageUrl}`;
+  }
   
   if (imageUrl.startsWith("/uploads/")) {
     return `${baseUrl}${imageUrl}`;
   }
   
-  return `${baseUrl}/uploads/products/${imageUrl}`;
+  // Bare filename — assume product image
+  return `${imageKitEndpoint}/products/${imageUrl}`;
 }
 
 // Simple normalize function
