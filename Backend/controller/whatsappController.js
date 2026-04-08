@@ -234,9 +234,25 @@ exports.getMessages = async (req, res) => {
       limit: 100,
     });
 
+    // Attach quoted message data for replies
+    const msgIds = messages.map(m => m.id);
+    const quotedIds = messages.filter(m => m.quoted_message_id).map(m => m.quoted_message_id);
+    let quotedMap = {};
+    if (quotedIds.length > 0) {
+      const quotedMsgs = await WhatsappMessage.findAll({ where: { id: quotedIds } });
+      quotedMsgs.forEach(q => { quotedMap[q.id] = q; });
+    }
+    const messagesWithQuotes = messages.map(m => {
+      const plain = m.toJSON();
+      if (m.quoted_message_id && quotedMap[m.quoted_message_id]) {
+        plain._quotedMsg = quotedMap[m.quoted_message_id].toJSON();
+      }
+      return plain;
+    });
+
     await conv.update({ unread_count: 0 });
 
-    res.json({ success: true, conversation: conv, messages });
+    res.json({ success: true, conversation: conv, messages: messagesWithQuotes });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -255,14 +271,22 @@ exports.sendReply = async (req, res) => {
 
     const result = await whatsappService.sendTextMessage(conv.customer_phone, message.trim(), brandId, quotedWaMessageId || null);
 
+    // Find the DB id of the quoted message
+    let quotedMsgDbId = null;
+    if (quotedWaMessageId) {
+      const quotedMsg = await WhatsappMessage.findOne({ where: { wa_message_id: quotedWaMessageId } });
+      quotedMsgDbId = quotedMsg?.id || null;
+    }
+
     const saved = await WhatsappMessage.create({
-      conversation_id: id,
-      wa_message_id:   result?.messages?.[0]?.id || null,
-      direction:       'outbound',
-      type:            'text',
-      body:            message.trim(),
-      status:          'sent',
-      sent_at:         new Date(),
+      conversation_id:   id,
+      wa_message_id:     result?.messages?.[0]?.id || null,
+      direction:         'outbound',
+      type:              'text',
+      body:              message.trim(),
+      quoted_message_id: quotedMsgDbId,
+      status:            'sent',
+      sent_at:           new Date(),
     });
 
     await conv.update({ last_message: message.trim(), last_message_at: new Date() });

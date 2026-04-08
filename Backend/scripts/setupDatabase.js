@@ -247,6 +247,40 @@ const setupDatabase = async () => {
     await sequelize.sync({ force: false, alter: false, hooks: false });
     console.log("✓ All tables synced");
 
+    // Ensure users.deleted_at column exists (paranoid soft-delete support)
+    console.log("Ensuring users.deleted_at column...");
+    try {
+      const [deletedAtCol] = await sequelize.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'deleted_at'
+      `);
+      if (!deletedAtCol.length) {
+        await sequelize.query(`ALTER TABLE users ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL`);
+        console.log("✓ users.deleted_at column added");
+      } else {
+        console.log("✓ users.deleted_at already exists");
+      }
+    } catch (e) {
+      console.log("⚠️ users.deleted_at fix skipped:", e.message);
+    }
+
+    // Ensure whatsapp_messages.quoted_message_id column exists
+    console.log("Ensuring whatsapp_messages.quoted_message_id column...");
+    try {
+      const [quotedCol] = await sequelize.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'whatsapp_messages' AND COLUMN_NAME = 'quoted_message_id'
+      `);
+      if (!quotedCol.length) {
+        await sequelize.query(`ALTER TABLE whatsapp_messages ADD COLUMN quoted_message_id INT NULL DEFAULT NULL`);
+        console.log("✓ whatsapp_messages.quoted_message_id column added");
+      } else {
+        console.log("✓ whatsapp_messages.quoted_message_id already exists");
+      }
+    } catch (e) {
+      console.log("⚠️ whatsapp_messages.quoted_message_id fix skipped:", e.message);
+    }
+
     // Ensure loyalty_transactions table exists for loyalty program.
     console.log("Ensuring loyalty_transactions table...");
     try {
