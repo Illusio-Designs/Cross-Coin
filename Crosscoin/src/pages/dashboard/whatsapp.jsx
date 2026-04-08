@@ -361,7 +361,7 @@ function MsgContent({ msg, brandId = 1 }) {
   const proxyUrl = effectiveUrl ? getProxyUrl(effectiveUrl, brandId) : null;
 
   if (process.env.NODE_ENV !== 'production') {
-    console.log('[MsgContent]', { id: msg.id, type: msg.type, effectiveType, body: msg.body?.substring(0, 100), proxyUrl: proxyUrl?.substring(0, 80) });
+    // Debug removed
   }
 
   if (effectiveType === 'audio') {
