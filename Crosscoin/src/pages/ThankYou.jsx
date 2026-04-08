@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
-import { useState, useEffect } from "react";
-import { getGuestOrder, getUserOrders } from "../services/publicApi";
+import { useEffect } from "react";
+import { getUserOrders } from "../services/publicApi";
 import { useAuth } from "../context/AuthContext";
 import { fbqTrack } from "../utils/fbqTrack";
 
@@ -35,38 +35,13 @@ const IconMail = () => (
 
 export default function ThankYou() {
   const router = useRouter();
-  const { order_number, guest_email, is_guest } = router.query;
+  const { order_number } = router.query;
   const { isAuthenticated } = useAuth();
-  const [showGuestTracking, setShowGuestTracking] = useState(false);
-  const [guestEmail, setGuestEmail] = useState(guest_email || "");
-  const [trackingResult, setTrackingResult] = useState(null);
-  const [trackingLoading, setTrackingLoading] = useState(false);
 
   const getDeliveryDate = () => {
     const date = new Date();
     date.setDate(date.getDate() + 5);
     return date.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  };
-
-  const handleTrackOrder = () => {
-    if (is_guest === 'true') {
-      setShowGuestTracking(true);
-    } else {
-      router.push('/profile');
-    }
-  };
-
-  const handleGuestTrackOrder = async () => {
-    if (!guestEmail || !order_number) return;
-    setTrackingLoading(true);
-    try {
-      const result = await getGuestOrder(guestEmail, order_number);
-      setTrackingResult(result);
-    } catch (error) {
-      setTrackingResult({ success: false, message: error.message || 'Failed to track order' });
-    } finally {
-      setTrackingLoading(false);
-    }
   };
 
   // Facebook Purchase tracking
@@ -89,24 +64,27 @@ export default function ThankYou() {
         const fbqReady = await waitForFbq();
         if (!fbqReady) return;
 
-        let orderData = null;
-        if (is_guest === 'true' && guest_email) {
-          const result = await getGuestOrder(guest_email, order_number);
-          if (result.success && result.data) orderData = result.data;
-        } else if (isAuthenticated) {
+        if (isAuthenticated) {
           const result = await getUserOrders({ limit: 100 });
           if (result.orders) {
             const order = result.orders.find(o => String(o.order_number) === String(order_number));
-            if (order) orderData = { order: { final_amount: order.final_amount }, items: (order.OrderItems || []).map(i => ({ product: { id: i.Product?.id || i.product_id }, variation_id: i.variation_id || i.ProductVariation?.id || null, quantity: i.quantity || 1 })) };
-          }
-        }
-
-        if (orderData?.order && orderData?.items?.length > 0) {
-          const purchaseData = { value: parseFloat(orderData.order.final_amount) || 0, currency: 'INR', content_type: 'product', contents: orderData.items.filter(i => i.product?.id).map(i => ({ id: i.variation_id ? `${i.product.id}_${i.variation_id}` : String(i.product.id), quantity: i.quantity || 1 })) };
-          if (purchaseData.value > 0) {
-            // Only fire Facebook Pixel — GA4 purchase is handled server-side to avoid duplicates
-            fbqTrack('Purchase', purchaseData, { eventID: `Purchase_${order_number}` });
-            sessionStorage.setItem(trackingKey, 'true');
+            if (order) {
+              const purchaseData = {
+                value: parseFloat(order.final_amount) || 0,
+                currency: 'INR',
+                content_type: 'product',
+                contents: (order.OrderItems || []).map(i => ({
+                  id: (i.variation_id || i.ProductVariation?.id)
+                    ? `${i.Product?.id || i.product_id}_${i.variation_id || i.ProductVariation?.id}`
+                    : String(i.Product?.id || i.product_id),
+                  quantity: i.quantity || 1,
+                })),
+              };
+              if (purchaseData.value > 0) {
+                fbqTrack('Purchase', purchaseData, { eventID: `Purchase_${order_number}` });
+                sessionStorage.setItem(trackingKey, 'true');
+              }
+            }
           }
         }
       } catch (_) {}
@@ -116,16 +94,13 @@ export default function ThankYou() {
       const t = setTimeout(trackPurchaseEvent, 500);
       return () => clearTimeout(t);
     }
-  }, [router.isReady, order_number, is_guest, guest_email, isAuthenticated]);
+  }, [router.isReady, order_number, isAuthenticated]);
 
   return (
     <div className="ty-page">
       <div className="ty-card">
-        {/* Success icon */}
         <div className="ty-icon-wrap">
-          <div className="ty-icon">
-            <IconCheck />
-          </div>
+          <div className="ty-icon"><IconCheck /></div>
         </div>
 
         <h1 className="ty-title">Order Confirmed!</h1>
@@ -133,16 +108,10 @@ export default function ThankYou() {
           <p className="ty-order-num">Order <span>#{order_number}</span></p>
         )}
 
-        {/* Info strips */}
         <div className="ty-info-strips">
           <div className="ty-strip">
             <span className="ty-strip-icon"><IconMail /></span>
-            <span>
-              {is_guest === 'true'
-                ? <>Confirmation sent to <strong>{guest_email}</strong></>
-                : 'Confirmation sent to your registered email'
-              }
-            </span>
+            <span>Confirmation sent to your registered email</span>
           </div>
           <div className="ty-strip">
             <span className="ty-strip-icon"><IconPackage /></span>
@@ -150,47 +119,12 @@ export default function ThankYou() {
           </div>
         </div>
 
-        {/* Guest tracking form */}
-        {showGuestTracking && (
-          <div className="ty-tracking-form">
-            <p className="ty-tracking-title">Track Your Order</p>
-            <input
-              className="ty-input"
-              type="email"
-              value={guestEmail}
-              onChange={e => setGuestEmail(e.target.value)}
-              placeholder="Enter your email address"
-            />
-            <div className="ty-tracking-actions">
-              <button className="ty-btn-primary" onClick={handleGuestTrackOrder} disabled={trackingLoading}>
-                {trackingLoading ? 'Tracking...' : 'Track Order'}
-              </button>
-              <button className="ty-btn-ghost" onClick={() => setShowGuestTracking(false)}>Cancel</button>
-            </div>
-
-            {trackingResult && (
-              <div className={`ty-tracking-result ${trackingResult.success ? 'success' : 'error'}`}>
-                {trackingResult.success ? (
-                  <>
-                    <p><strong>Status:</strong> {trackingResult.data?.status || 'Processing'}</p>
-                    <p><strong>Order Date:</strong> {trackingResult.data?.created_at ? new Date(trackingResult.data.created_at).toLocaleDateString('en-IN') : '—'}</p>
-                    {trackingResult.data?.tracking_info && <p><strong>Tracking:</strong> {trackingResult.data.tracking_info}</p>}
-                  </>
-                ) : (
-                  <p>{trackingResult.message}</p>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* CTA buttons */}
         <div className="ty-actions">
           <button className="ty-btn-primary" onClick={() => router.push('/Products')}>
             <span className="ty-btn-icon"><IconShoppingBag /></span>
             Continue Shopping
           </button>
-          <button className="ty-btn-outline" onClick={handleTrackOrder}>
+          <button className="ty-btn-outline" onClick={() => router.push('/profile')}>
             <span className="ty-btn-icon"><IconMapPin /></span>
             Track Your Order
           </button>

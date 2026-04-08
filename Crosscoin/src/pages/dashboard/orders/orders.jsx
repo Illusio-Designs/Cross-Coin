@@ -163,6 +163,14 @@ const Orders = () => {
         setCancelPrompt({ orderId, orderNumber });
     };
 
+    const confirmOrder = async (orderId, orderNumber) => {
+        try {
+            const result = await orderService.confirmOrder(orderId);
+            if (result.success) { showSuccess('orderConfirmed', `Order ${orderNumber} confirmed — FShip sync triggered`); fetchOrders(); }
+            else { showError('saveFailed', result.message || 'Failed to confirm order'); }
+        } catch (error) { showError('saveFailed', error.message || 'Failed to confirm order'); }
+    };
+
     const handleCancelConfirm = async (reason) => {
         const { orderId, orderNumber } = cancelPrompt;
         setCancelPrompt(null);
@@ -289,12 +297,16 @@ const Orders = () => {
             cell: (row) => (
                 <div className="customer-info">
                     <div className="customer-name">
-                        {row.User?.username || (row.GuestUser ? `${row.GuestUser.firstName} ${row.GuestUser.lastName}` : row.ShippingAddress?.full_name || 'N/A')}
+                        {row.User?.username || row.ShippingAddress?.full_name || 'N/A'}
                     </div>
                     <div className="customer-email">
-                        {row.User?.email || row.GuestUser?.email || ''}
-                        {row.GuestUser && <span className="guest-badge">(Guest)</span>}
+                        {row.User?.email || ''}
                     </div>
+                    {row.rto_risk_level && (
+                        <span className={`rto-badge rto-${row.rto_risk_level.toLowerCase()}`} title={`RTO Risk: ${row.rto_risk_level} (Score: ${row.rto_risk_score || 0})`}>
+                            {row.rto_risk_level === 'HIGH' ? '🔴' : row.rto_risk_level === 'MEDIUM' ? '🟡' : '🟢'} {row.rto_risk_level}
+                        </span>
+                    )}
                 </div>
             )
         },
@@ -391,7 +403,13 @@ const Orders = () => {
                         <button className="order-action-btn order-awb-btn" title="Update AWB Number" onClick={() => handleAwbUpdate(row.id, row.fship_waybill, row.courier_name)}>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         </button>
-                        {(row.status === 'pending' || row.status === 'processing') && (
+                        {(['awaiting_confirmation', 'pending', 'confirmed', 'processing'].includes(row.status) && row.status !== 'confirmed') && (
+                            <button className="order-action-btn order-confirm-btn" title="Confirm Order" onClick={() => confirmOrder(row.id, row.order_number)}
+                                style={{ background: '#e8f5e9', color: '#2e7d32', border: '1px solid #a5d6a7' }}>
+                                ✓
+                            </button>
+                        )}
+                        {(row.status === 'pending' || row.status === 'awaiting_confirmation' || row.status === 'confirmed' || row.status === 'processing') && (
                             <button className="sl-btn-delete" title="Cancel Order" onClick={() => cancelOrder(row.id, row.order_number)}>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>

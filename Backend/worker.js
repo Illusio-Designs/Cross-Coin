@@ -1,19 +1,11 @@
 'use strict';
 
 /**
- * CrossCoin Background Worker
- * ───────────────────────────
- * Runs all scheduled jobs in a SEPARATE process from the API server.
- * Start with: node worker.js  (or  npm run worker)
- *
- * This keeps the main API server lean — no cron timers, no background
- * DB queries competing with request handling.
+ * CrossCoin Background Worker — Cron Jobs
+ * Can run in-process (via initCronJobs) or standalone (node worker.js)
  */
 
-require('dotenv').config();
 const cron = require('node-cron');
-const { sequelize } = require('./config/db.js');
-const { logger } = require('./config/logging.js');
 
 // ─── Job runner — wraps each job with timing + error isolation ────────────────
 async function run(name, fn) {

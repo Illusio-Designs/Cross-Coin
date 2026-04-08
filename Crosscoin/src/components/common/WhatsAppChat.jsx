@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 export default function WhatsAppChat() {
   const [greetVisible, setGreetVisible] = useState(true);
   const [scrolled, setScrolled] = useState(false);
-  const waUrl = `https://wa.me/917434834000?text=${encodeURIComponent('Hi! I need help with my order.')}`;
+  const waUrl = `https://wa.me/917434834000?text=${encodeURIComponent('Hi! I need help.')}`;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 200);
