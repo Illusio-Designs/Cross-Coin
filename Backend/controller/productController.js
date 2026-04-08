@@ -1351,89 +1351,38 @@ module.exports.getProductsByCategory = async (req, res) => {
   }
 };
 
-// Search products
+// Search products — uses searchService with relevance ranking + typo tolerance
 module.exports.searchProducts = async (req, res) => {
   try {
-    const { query, page = 1, limit = 20 } = req.query;
+    const { query, page = 1, limit = 20, category, minPrice, maxPrice, sort } = req.query;
 
     if (!query || query.trim() === "") {
-      return res.status(400).json({
-        success: false,
-        message: "Search query is required",
-      });
+      return res.status(400).json({ success: false, message: "Search query is required" });
     }
 
-    // Pagination
-    const offset = (page - 1) * limit;
-
-    const products = await Product.findAndCountAll({
-      where: {
-        [Op.and]: [
-          { status: "active" }, // Only search active products
-          {
-            [Op.or]: [
-              { name: { [Op.like]: `%${query.toLowerCase()}%` } },
-              { description: { [Op.like]: `%${query.toLowerCase()}%` } },
-            ],
-          },
-        ],
-      },
-      include: [
-        { model: Category },
-        { model: ProductVariation, as: "ProductVariations" },
-        { model: ProductImage, as: "ProductImages" },
-        { model: ProductSEO, as: "ProductSEO" },
-      ],
-      order: [["createdAt", "DESC"]],
+    const searchService = require('../services/searchService.js');
+    const result = await searchService.searchProducts(query, {
+      page: parseInt(page),
       limit: parseInt(limit),
-      offset: parseInt(offset),
+      category,
+      minPrice,
+      maxPrice,
+      sort,
+      brandId: req.brand?.id,
     });
-
-    // Format products with proper image URLs
-    const formattedProducts = products.rows.map((product) => {
-      const formattedProduct = formatProductResponse(product);
-      if (formattedProduct.images) {
-        formattedProduct.images = formattedProduct.images.map((image) => ({
-          ...image,
-          image_url: image.image_url.startsWith("http")
-            ? image.image_url
-            : `${process.env.BACKEND_URL || "http://localhost:5000"}${
-                image.image_url.startsWith("/uploads/")
-                  ? ""
-                  : "/uploads/products/"
-              }${image.image_url}`,
-        }));
-      }
-      return formattedProduct;
-    });
-
-    const totalPages = Math.ceil(products.count / limit);
 
     res.json({
       success: true,
-      data: {
-        products: formattedProducts,
-        total: products.count,
-      },
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages,
-        hasNextPage: page < totalPages,
-        hasPreviousPage: page > 1
-      },
-      message:
-        formattedProducts.length > 0
-          ? `Found ${products.count} products matching "${query}"`
-          : `No products found matching "${query}"`,
+      data: { products: result.products, total: result.total },
+      pagination: result.pagination,
+      suggestions: result.suggestions,
+      message: result.total > 0
+        ? `Found ${result.total} products matching "${query}"`
+        : `No products found matching "${query}"`,
     });
   } catch (error) {
-    console.error("Error searching products:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to search products",
-      error: error.message,
-    });
+    logger.error("Error searching products:", error);
+    res.status(500).json({ success: false, message: "Failed to search products", error: error.message });
   }
 };
 

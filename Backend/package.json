@@ -4,7 +4,7 @@
   "description": "Backend for CrossCoin e-commerce platform",
   "main": "index.js",
   "scripts": {
-    "start": "node --max-old-space-size=512 index.js",
+    "start": "node --max-old-space-size=384 index.js",
     "db:setup": "node scripts/setupDatabase.js"
   },
   "keywords": [

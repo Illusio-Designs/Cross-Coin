@@ -1,41 +1,29 @@
 const express = require('express');
 const {
-    createPaymentIntent,
-    confirmPayment,
-    getPaymentStatus,
-    refundPayment,
-    getAllPayments,
-    getUserPayments,
-    createRazorpayOrder,
-    updateOrderPayment,
-    razorpayCallback,
-    handlePaymentFailure,
-    razorpayWebhook
+    createRazorpayOrder, updateOrderPayment, razorpayCallback,
+    razorpayWebhook, handlePaymentFailure,
+    refundPayment, getAllPayments, getUserPayments, getPaymentStatus
 } = require('../controller/paymentController.js');
-const { isAuthenticated, authorize, isOrderManager } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, isOrderManager } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 
-// Protected routes
-router.post('/create-payment-intent', isAuthenticated, createPaymentIntent);
-router.post('/confirm/:paymentIntentId', isAuthenticated, confirmPayment);
-router.get('/status/:paymentIntentId', isAuthenticated, getPaymentStatus);
-router.get('/my-payments', isAuthenticated, getUserPayments);
-router.post('/razorpay-order', isAuthenticated, createRazorpayOrder);
-router.post('/razorpay-callback', razorpayCallback);
+// ── Razorpay ──────────────────────────────────────────────────────────────
+router.post('/razorpay/order',    isAuthenticated, createRazorpayOrder);
+router.post('/razorpay/verify',   updateOrderPayment);
+router.post('/razorpay/callback', razorpayCallback);
+router.post('/razorpay/webhook',  express.raw({ type: 'application/json' }), razorpayWebhook);
 
-// Guest routes (no authentication required)
-router.post('/guest/razorpay-order', createRazorpayOrder);
+// ── Guest Razorpay ────────────────────────────────────────────────────────
+router.post('/guest/razorpay/order', createRazorpayOrder);
 
-// Public routes (no authentication required for payment updates)
-router.post('/update-order-payment', updateOrderPayment);
-router.post('/payment-failed', handlePaymentFailure);
+// ── User ──────────────────────────────────────────────────────────────────
+router.get('/my-payments',        isAuthenticated, getUserPayments);
+router.get('/status/:paymentId',  isAuthenticated, getPaymentStatus);
+router.post('/failed',            handlePaymentFailure);
 
-// Razorpay webhook — express.raw() scoped here only so JSON parsing on other routes is unaffected
-router.post('/razorpay-webhook', express.raw({ type: 'application/json' }), razorpayWebhook);
+// ── Admin ─────────────────────────────────────────────────────────────────
+router.get('/',                   isAuthenticated, isOrderManager, getAllPayments);
+router.post('/refund',            isAuthenticated, isOrderManager, refundPayment);
 
-// Order Manager routes
-router.get('/', isAuthenticated, isOrderManager, getAllPayments);
-router.post('/refund/:paymentId', isAuthenticated, isOrderManager, refundPayment);
-
-module.exports = router; 
+module.exports = router;

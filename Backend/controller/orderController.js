@@ -236,15 +236,16 @@
         return res.status(400).json({ message: "Address must be at least 15 characters." });
       }
 
-      // ── Idempotency key dedup (Task 7) ────────────────────────────────────
+      // ── Idempotency key dedup — DB-based (survives Redis downtime) ────────
       const idempotencyKey = req.headers['x-idempotency-key'] || req.body.idempotency_key;
       if (idempotencyKey) {
-        const redisService = require('../services/redisService.js');
-        const cached = await redisService.get(`idem:${userId}:${idempotencyKey}`).catch(() => null);
-        if (cached) {
+        const existingOrder = await Order.findOne({
+          where: { idempotency_key: idempotencyKey },
+          transaction,
+        });
+        if (existingOrder) {
           await transaction.rollback();
-          const existingOrder = await Order.findByPk(JSON.parse(cached).orderId);
-          if (existingOrder) return res.status(200).json({ message: "Order already created", order: existingOrder });
+          return res.status(200).json({ message: "Order already created", order: existingOrder });
         }
       }
 
@@ -465,11 +466,12 @@
           final_amount: finalAmount,
           payment_type,
           payment_status: "pending",
-          status: "pending",
+          status: "awaiting_confirmation",
           notes: notes || null,
           utm_tracking_id: utmTrackingId,
           brand_id: req.brand ? req.brand.id : 1,
           rto_risk_score: rtoRiskScore,
+          idempotency_key: idempotencyKey || null,
         },
         { transaction }
       );
@@ -556,15 +558,14 @@
         await OrderStatusHistory.create({ order_id: order.id, status: 'confirmed', updated_by: userId, notes: 'Order confirmed' });
       }
 
-      // Task 7: Store idempotency key → order_id mapping (30min TTL)
-      if (idempotencyKey) {
-        const redisService = require('../services/redisService.js');
-        await redisService.set(`idem:${userId}:${idempotencyKey}`, JSON.stringify({ orderId: order.id }), 'EX', 86400).catch(() => {});
-      }
+      // Idempotency is now DB-based (idempotency_key column on orders table)
 
-      // Emit real-time notification
-      const notificationService = require('../services/notificationService.js');
-      notificationService.emitNewOrder(order);
+      // Emit order.created event (SSE notification + logging)
+      const orderEmitter = require('../services/orderEvents.js');
+      setImmediate(() => {
+        createdOrder._itemCount = validatedItems.length;
+        orderEmitter.emit('order.created', createdOrder);
+      });
 
       // Enqueue badge recalculation for async processing (non-blocking)
       logger.debug("createOrder: Enqueueing badge recalculation for products in order...");
@@ -599,100 +600,6 @@
         ],
       });
       logger.debug("createOrder: Order fetched successfully");
-
-      // FShip integration - moved to background to avoid blocking order creation
-      try {
-        // Get shipping address separately
-        const address = await ShippingAddress.findByPk(shipping_address_id);
-        const user = createdOrder.User;
-
-        // Validate address and phone
-        if (!address || !address.address || !address.phone) {
-          logger.error(
-            `Order ${createdOrder.order_number}: Missing address or phone, cannot sync to FShip.`
-          );
-        } else {
-          const orderItems = createdOrder.OrderItems.map((item) => ({
-            productName: item.Product.name,
-            sku: item.ProductVariation?.sku || item.Product.sku || `PROD-${item.Product.id}`,
-            quantity: item.quantity,
-            unitPrice: item.price,
-            productCategory: "Socks",
-            hsnCode: "6115",
-            taxRate: 0,
-            productDiscount: 0
-          }));
-
-          logger.debug('📦 Order items for FShip:', JSON.stringify(orderItems, null, 2));
-
-          const fshipOrderData = {
-            customer_Name: String(user.username),
-            customer_Mobile: String(address.phone),
-            customer_Emailid: String(user.email),
-            customer_Address: String(address.address),
-            landMark: "",
-            customer_Address_Type: "Home",
-            customer_PinCode: String(address.pincode),
-            customer_City: String(address.city || "Mumbai"),
-            orderId: String(createdOrder.order_number),
-            invoice_Number: String(createdOrder.order_number),
-            payment_Mode: createdOrder.payment_type === "cod" ? 1 : 2, // 1=COD, 2=PREPAID
-            express_Type: "surface",
-            is_Ndd: 0,
-            order_Amount: parseFloat(createdOrder.total_amount),
-            tax_Amount: 0,
-            extra_Charges: 0,
-            total_Amount: parseFloat(createdOrder.final_amount),
-            shipment_Weight: validatedItems.reduce((sum, item) => sum + item.quantity, 0) * 0.07, // 70g per item in kg
-            shipment_Length: 14,
-            shipment_Width: 3,
-            shipment_Height: 10,
-            pick_Address_ID: parseInt(await settingsHelper.getSetting(1, 'FSHIP_DEFAULT_WAREHOUSE_ID', '12191')),
-            return_Address_ID: parseInt(await settingsHelper.getSetting(1, 'FSHIP_DEFAULT_WAREHOUSE_ID', '12191')),
-            products: orderItems
-          };
-
-          // Mark order as syncing before background FShip call
-          await createdOrder.update({ fship_sync_status: 'syncing', fship_sync_attempts: 1 });
-
-          // Run FShip integration in background with error handling
-          setImmediate(async () => {
-            try {
-              logger.debug(`🔄 Creating FShip order for ${createdOrder.order_number}`);
-              
-              // Use createOrUpdateForwardOrder to prevent duplicates
-              const fshipResponse = await fshipService.createOrUpdateForwardOrder(fshipOrderData);
-              
-              if (fshipResponse.success) {
-                await createdOrder.update({
-                  fship_order_id: fshipResponse.orderId,
-                  fship_waybill: fshipResponse.waybill,
-                  fship_route_code: fshipResponse.routeCode,
-                  fship_label_url: fshipResponse.labelUrl,
-                  tracking_number: fshipResponse.waybill,
-                  status: "processing",
-                  fship_sync_status: 'synced'
-                });
-                
-                logger.debug("✅ FShip Order Created:", fshipResponse.orderId);
-                
-                // Register pickup automatically
-                try {
-                  await fshipService.registerPickup([fshipResponse.waybill]);
-                  logger.debug("📦 FShip Pickup Registered:", fshipResponse.waybill);
-                } catch (pickupError) {
-                  logger.error("❌ Failed to register FShip pickup:", pickupError.message);
-                }
-              }
-            } catch (err) {
-              logger.error("❌ Failed to create FShip order:", err.message);
-              await createdOrder.update({ fship_sync_status: 'failed' }).catch(() => {});
-            }
-          });
-        }
-      } catch (err) {
-        logger.error("❌ Failed to prepare FShip order:", err.message);
-      }
 
       logger.debug("createOrder: Sending success response...");
       res.status(201).json({
@@ -852,836 +759,104 @@
     }
   };
 
-  // Create guest checkout order
+  // Create order — auto-creates a consumer account if not authenticated
+  // Replaces the old guest checkout flow. Guest info (phone, email, name) is used
+  // to find-or-create a user, then the order is placed under that user.
   module.exports.createGuestOrder = async (req, res) => {
-    logger.debug("createGuestOrder: Starting guest order creation...");
-    const transaction = await sequelize.transaction();
-
+    logger.debug("createGuestOrder: Auto-user order creation...");
     try {
-      const {
-        guest_info,
-        shipping_address,
-        items,
-        payment_type,
-        notes,
-        coupon_id,
-        discount_amount,
-        session_id,
-        ip_address,
-        user_agent,
-      } = req.body;
+      const { guest_info, shipping_address, items, payment_type, notes, coupon_id, discount_amount, session_id, idempotency_key } = req.body;
 
-      logger.debug("createGuestOrder: Request data:", {
-        guest_info,
-        shipping_address,
-        items,
-        payment_type,
-        notes,
-        coupon_id,
-        discount_amount,
-      });
-
-      // Validate required fields
       if (!guest_info || !shipping_address || !items || !payment_type) {
-        await transaction.rollback();
-        return res.status(400).json({
-          success: false,
-          message:
-            "Guest info, shipping address, items, and payment type are required",
-        });
+        return res.status(400).json({ success: false, message: "Guest info, shipping address, items, and payment type are required" });
       }
 
-      // Validate guest info
-      let { email, firstName, lastName, phone } = guest_info;
-      if (!email || !firstName) {
-        await transaction.rollback();
-        return res.status(400).json({
-          success: false,
-          message: "Email and first name are required",
-        });
+      const { email, firstName, lastName, phone } = guest_info;
+      if (!email || !firstName || !phone) {
+        return res.status(400).json({ success: false, message: "Email, first name, and phone are required" });
       }
 
-      // If lastName is not provided, try to extract from fullName or default to empty string
-      if (!lastName && shipping_address.fullName) {
-        const nameParts = shipping_address.fullName.trim().split(/\s+/);
-        if (nameParts.length > 1) {
-          lastName = nameParts.slice(1).join(' ');
-        } else {
-          lastName = ''; // Single name provided
-        }
-      } else if (!lastName) {
-        lastName = ''; // Default to empty string
-      }
-
-      // Validate shipping address
-      const {
-        fullName,
-        address,
-        city,
-        state,
-        pincode,
-        phone: shippingPhone,
-      } = shipping_address;
-
-      if (!fullName || !address || !city || !state || !pincode) {
-        await transaction.rollback();
-        return res.status(400).json({
-          success: false,
-          message: "Complete shipping address is required",
-        });
-      }
-
-      if (!/^\d{6}$/.test(String(pincode).trim())) {
-        await transaction.rollback();
-        return res.status(400).json({
-          success: false,
-          message: "Please enter a valid 6-digit pincode",
-        });
-      }
-
-      // ── Task 4: Input validation ──────────────────────────────────────────
-      const guestPhone = String(guest_info.phone || '').replace(/\D/g, '').slice(-10);
-      if (!PHONE_REGEX.test(guestPhone)) {
-        await transaction.rollback();
+      const digits = String(phone).replace(/\D/g, '').slice(-10);
+      if (!PHONE_REGEX.test(digits)) {
         return res.status(400).json({ success: false, message: "Please enter a valid 10-digit mobile number." });
       }
       if (!EMAIL_REGEX.test(String(email).trim())) {
-        await transaction.rollback();
         return res.status(400).json({ success: false, message: "Please enter a valid email address." });
       }
-      if (String(firstName).trim().length < 2 || /\d/.test(firstName)) {
-        await transaction.rollback();
-        return res.status(400).json({ success: false, message: "Please enter a valid first name (min 2 characters, no digits)." });
+
+      const bcrypt = require('bcrypt');
+      const jwt = require('jsonwebtoken');
+
+      // Find or create user by phone (primary) or email (fallback)
+      let user = await User.findOne({ where: { phone: digits } });
+      if (!user) {
+        user = await User.findOne({ where: { email: email.toLowerCase() } });
       }
-      if (String(address).trim().length < 15) {
-        await transaction.rollback();
-        return res.status(400).json({ success: false, message: "Address must be at least 15 characters." });
-      }
-
-      // ── Task 7: Idempotency key dedup ─────────────────────────────────────
-      const idempotencyKey = req.headers['x-idempotency-key'] || req.body.idempotency_key;
-      if (idempotencyKey) {
-        const redisService = require('../services/redisService.js');
-        const idemKey = `idem:guest:${guestPhone}:${idempotencyKey}`;
-        const cached = await redisService.get(idemKey).catch(() => null);
-        if (cached) {
-          await transaction.rollback();
-          const existingOrder = await Order.findByPk(JSON.parse(cached).orderId);
-          if (existingOrder) return res.status(200).json({ success: true, message: "Order already created", order: existingOrder });
-        }
-      }
-
-      logger.debug("createGuestOrder: Creating guest user...");
-      // Create or find guest user
-      let guestUser = await GuestUser.findOne({
-        where: { email: email.toLowerCase() },
-        transaction,
-      });
-
-      if (!guestUser) {
-        guestUser = await GuestUser.create(
-          {
-            email: email.toLowerCase(),
-            firstName,
-            lastName,
-            phone,
-            sessionId: session_id,
-            ipAddress: ip_address,
-            userAgent: user_agent,
-            status: "active",
-          },
-          { transaction }
-        );
-      } else {
-        // Update existing guest user info
-        await guestUser.update(
-          {
-            firstName,
-            lastName,
-            phone,
-            sessionId: session_id,
-            ipAddress: ip_address,
-            userAgent: user_agent,
-          },
-          { transaction }
-        );
-      }
-
-      logger.debug("createGuestOrder: Guest user created/found:", guestUser.id);
-
-      // Calculate total amount and validate items
-      let totalAmount = 0;
-      const validatedItems = [];
-
-      logger.debug(
-        "createGuestOrder: Starting item validation for",
-        items.length,
-        "items"
-      );
-      for (const item of items) {
-        const { product_id, quantity } = item;
-        let { variation_id } = item;
-
-        if (!product_id || !quantity) {
-          await transaction.rollback();
-          return res.status(400).json({
-            success: false,
-            message: "Product ID and quantity are required for each item",
-          });
-        }
-
-        // Task 4: qty >= 1 guard
-        if (quantity < 1) {
-          await transaction.rollback();
-          return res.status(400).json({ success: false, message: "Quantity must be at least 1 for each item." });
-        }
-
-        const product = await Product.findByPk(product_id, {
-          include: [
-            { model: ProductVariation, as: "ProductVariations" },
-            { model: ProductImage, as: "ProductImages" },
-          ],
-          transaction,
+      if (!user) {
+        const tempPassword = await bcrypt.hash(Math.random().toString(36).slice(-10), 10);
+        const fullName = `${firstName} ${lastName || ''}`.trim();
+        user = await User.create({
+          username: fullName,
+          email: email.toLowerCase(),
+          phone: digits,
+          password: tempPassword,
+          role: 'consumer',
         });
-
-        if (!product) {
-          await transaction.rollback();
-          return res.status(404).json({
-            success: false,
-            message: `Product with ID ${product_id} not found`,
-          });
-        }
-
-        // If no variation_id provided, use the first available variation
-        if (
-          !variation_id &&
-          product.ProductVariations &&
-          product.ProductVariations.length > 0
-        ) {
-          variation_id = product.ProductVariations[0].id;
-        }
-
-        let variation = null;
-        if (variation_id) {
-          variation = await ProductVariation.findByPk(variation_id, {
-            transaction,
-          });
-          if (!variation || variation.productId !== product_id) {
-            await transaction.rollback();
-            return res.status(404).json({
-              success: false,
-              message: `Product variation with ID ${variation_id} not found for product ${product_id}`,
-            });
-          }
-        }
-
-        const price = variation ? variation.price : product.price;
-        const itemTotal = price * quantity;
-        totalAmount += itemTotal;
-
-        validatedItems.push({
-          product,
-          variation,
-          quantity,
-          price,
-          itemTotal,
-        });
-      }
-
-      logger.debug(
-        "createGuestOrder: Items validated. Total amount:",
-        totalAmount
-      );
-
-      // Calculate shipping fee
-      const shippingFee = await calculateShippingFee(payment_type);
-      logger.debug("createGuestOrder: Shipping fee calculated:", shippingFee);
-
-      // Apply discount if provided
-      let finalDiscountAmount = 0;
-      if (discount_amount && discount_amount > 0) {
-        finalDiscountAmount = Math.min(discount_amount, totalAmount);
-      }
-
-      const finalAmount = Number(totalAmount) + Number(shippingFee) - Number(finalDiscountAmount);
-      logger.debug("createGuestOrder: Final amount calculated:", finalAmount);
-
-      // ── Task 5: Server-side discount verification ─────────────────────────
-      if (finalDiscountAmount > 0 && !coupon_id) {
-        await transaction.rollback();
-        return res.status(400).json({ success: false, message: "Invalid discount amount." });
-      }
-      if (coupon_id) {
-        const serverDiscount = await computeCouponDiscount(coupon_id, Number(totalAmount), validatedItems);
-        if (Math.abs(finalDiscountAmount - serverDiscount) > 1) {
-          await transaction.rollback();
-          return res.status(400).json({ success: false, message: "Order total mismatch. Please refresh and try again." });
-        }
-        finalDiscountAmount = serverDiscount; // use server value
-      }
-
-      // ── Task 6: COD max order value cap ───────────────────────────────────
-      let rtoRiskScore = 0;
-      if (payment_type === 'cod') {
-        const codMax = parseFloat(await settingsHelper.getSetting(req.brand?.id || 1, 'COD_MAX_ORDER_VALUE', '1500'));
-        if (finalAmount > codMax) {
-          await transaction.rollback();
-          return res.status(400).json({ success: false, message: `COD is not available for orders above ₹${codMax}. Please pay online.` });
-        }
-        const rtoCount = await getRtoCount(String(guest_info.phone || '').replace(/\D/g, '').slice(-10));
-        if (rtoCount >= 2) {
-          await transaction.rollback();
-          return res.status(400).json({ success: false, message: "COD is not available for your account. Please pay online." });
-        }
-        if (rtoCount === 1) rtoRiskScore += 20;
-        if (!shipping_address.landmark) rtoRiskScore += 10;
-      }
-
-      // Generate order number
-      const orderNumber = await generateUniqueOrderNumber(transaction);
-      logger.debug("createGuestOrder: Order number generated:", orderNumber);
-
-      // Handle UTM tracking
-      const UTMTracking = require("../model/utmModel.js");
-      let utmTrackingId = null;
-      
-      logger.debug('🍪 createGuestOrder - Cookies received:', req.cookies);
-      logger.debug('📦 createGuestOrder - Request body utm_session_id:', req.body.utm_session_id);
-      
-      // Try to get session_id from request body first, then cookies
-      const sessionId = req.body.utm_session_id || req.cookies?.session_id;
-      logger.debug('🔑 createGuestOrder - Session ID (body or cookie):', sessionId);
-      
-      if (sessionId) {
-        try {
-          logger.debug('🔍 createGuestOrder - Looking for UTM record with session_id:', sessionId);
-          
-          const utmRecord = await UTMTracking.findOne({
-            where: { session_id: sessionId },
-            order: [['created_at', 'DESC']]
-          });
-          
-          if (utmRecord) {
-            utmTrackingId = utmRecord.id;
-            logger.debug("✅ createGuestOrder: Associated with UTM tracking ID:", utmTrackingId);
-            logger.debug("📊 createGuestOrder: UTM Campaign:", utmRecord.utm_campaign);
-          } else {
-            logger.debug("❌ createGuestOrder: No UTM record found for session_id:", sessionId);
-          }
-        } catch (utmError) {
-          logger.error("❌ createGuestOrder: Error fetching UTM data:", utmError);
-          // Continue with order creation even if UTM fails
-        }
+        logger.debug(`createGuestOrder: Created new consumer user ${user.id} for ${email}`);
       } else {
-        logger.debug("⚠️ createGuestOrder: No session_id provided in body or cookies");
-      }
-
-      // Create order
-      const order = await Order.create(
-        {
-          guest_user_id: guestUser.id,
-          order_number: orderNumber,
-          total_amount: totalAmount,
-          discount_amount: finalDiscountAmount,
-          shipping_fee: shippingFee,
-          final_amount: finalAmount,
-          payment_type: payment_type,
-          coupon_id: coupon_id || null,
-          status: "pending",
-          payment_status: payment_type === "cod" ? "pending" : "pending",
-          notes: notes || null,
-          utm_tracking_id: utmTrackingId,
-          brand_id: req.brand ? req.brand.id : 1, // ✅ Multi-brand support
-        },
-        { transaction }
-      );
-
-      logger.debug("createGuestOrder: Order created with ID:", order.id);
-
-      // Create order items
-      for (const item of validatedItems) {
-        await OrderItem.create(
-          {
-            order_id: order.id,
-            product_id: item.product.id,
-            variation_id: item.variation ? item.variation.id : null,
-            quantity: item.quantity,
-            price: item.price,
-            discount: 0.0, // Default discount for guest orders
-            subtotal: item.itemTotal, // Add the required subtotal field
-            status: "pending",
-          },
-          { transaction }
-        );
-      }
-
-      logger.debug("createGuestOrder: Order items created");
-
-      // Create shipping address for guest
-      const guestShippingAddress = await ShippingAddress.create(
-        {
-          guest_user_id: guestUser.id,
-          full_name: fullName,
-          address: address,
-          city: city,
-          state: state,
-          pincode: pincode,
-          phone: shippingPhone,
-          is_default: true,
-        },
-        { transaction }
-      );
-
-      // Update order with shipping address
-      await order.update(
-        {
-          shipping_address_id: guestShippingAddress.id,
-        },
-        { transaction }
-      );
-
-      logger.debug(
-        "createGuestOrder: Shipping address created and linked to order"
-      );
-
-      // Create initial order status history
-      await OrderStatusHistory.create(
-        {
-          order_id: order.id,
-          status: "pending",
-          notes: "Order created via guest checkout",
-          updated_by: null, // No user ID for guest orders
-          created_by: "system",
-        },
-        { transaction }
-      );
-
-      logger.debug("createGuestOrder: Order status history created");
-
-      // Create payment record
-      await Payment.create(
-        {
-          order_id: order.id,
-          guest_user_id: guestUser.id, // Use guest_user_id instead of user_id
-          payment_type: payment_type, // Use payment_type instead of payment_method
-          amount_paid: finalAmount, // Use amount_paid instead of amount
-          status: payment_type === "cod" ? "pending" : "pending",
-          transaction_id: null,
-          brand_id: req.brand ? req.brand.id : 1, // ✅ Store brand context in payment record
-        },
-        { transaction }
-      );
-
-      logger.debug("createGuestOrder: Payment record created");
-
-      // Record coupon usage atomically
-      if (coupon_id && finalDiscountAmount > 0) {
-        const { Coupon, CouponUsage } = require('../model/associations.js');
-        const coupon = await Coupon.findByPk(coupon_id, { transaction });
-        if (coupon) {
-          await CouponUsage.create({
-            couponId: coupon_id,
-            userId: null,
-            guestUserId: guestUser.id,
-            orderId: order.id,
-            discountAmount: finalDiscountAmount
-          }, { transaction });
-          await coupon.increment('usageCount', { by: 1, transaction });
+        // Update name if user has a generated username
+        if (user.username && user.username.startsWith('user_')) {
+          const fullName = `${firstName} ${lastName || ''}`.trim();
+          await user.update({ username: fullName });
         }
+        logger.debug(`createGuestOrder: Found existing user ${user.id} for ${email}`);
       }
 
-      // Commit transaction
-      await transaction.commit();
-      logger.debug("createGuestOrder: Transaction committed successfully");
-
-      // Task 10: Set confirmed status for COD orders
-      if (payment_type === 'cod') {
-        await order.update({ status: 'confirmed' });
-        await OrderStatusHistory.create({ order_id: order.id, status: 'confirmed', updated_by: null, notes: 'Order confirmed' });
-      }
-
-      // Task 7: Store idempotency key
-      if (idempotencyKey) {
-        const redisService = require('../services/redisService.js');
-        const idemKey = `idem:guest:${String(guest_info.phone || '').replace(/\D/g, '').slice(-10)}:${idempotencyKey}`;
-        await redisService.set(idemKey, JSON.stringify({ orderId: order.id }), 'EX', 86400).catch(() => {});
-      }
-
-      // Emit real-time notification
-      const notificationService = require('../services/notificationService.js');
-      notificationService.emitNewOrder(order);
-
-      // Fire Purchase analytics ONLY for COD guest orders — prepaid fires in updateOrderPayment
-      // AddShippingInfo fires for all guest orders
-      setImmediate(async () => {
-        try {
-          const basePayload = {
-            brand_id: req.brand ? req.brand.id : 1,
-            order_number: order.order_number,
-            total_amount: finalAmount,
-            final_amount: finalAmount,
-            currency: "INR",
-            ip_address: req.ip || null,
-            user_agent: req.headers["user-agent"] || null,
-            email: guestUser.email || null,
-            phone: shipping_address.phone || guestUser.phone || null,
-            first_name: guestUser.firstName || null,
-            last_name: guestUser.lastName || null,
-            zip_code: shipping_address.pincode || null,
-            city: shipping_address.city || null,
-            state: shipping_address.state || null,
-            country: 'in',
-            fbc: req.cookies?._fbc || req.body?.fbc || null,
-            fbp: req.cookies?._fbp || null,
-            items: validatedItems.map((item) => ({
-              product_id: item.product.id,
-              quantity: item.quantity,
-              price: parseFloat(item.price || 0),
-              name: item.product.name || '',
-            })),
-          };
-
-          // AddShippingInfo fires for all guest orders
-          await sendFacebookEvent("AddShippingInfo", basePayload);
-          await sendGAEvent("add_shipping_info", basePayload);
-
-          // COD: also fire InitiateCheckout + AddPaymentInfo (prepaid fires these in createRazorpayOrder)
-          if (payment_type === 'cod') {
-            await sendFacebookEvent("InitiateCheckout", basePayload);
-            await sendGAEvent("begin_checkout", basePayload);
-            await sendFacebookEvent("AddPaymentInfo", basePayload);
-            await sendGAEvent("add_payment_info", basePayload);
-            await sendFacebookEvent("Purchase", basePayload);
-            await sendGAEvent("purchase", basePayload);
-          }
-        } catch (fbError) {
-          logger.error("createGuestOrder: analytics event error:", fbError.message);
-        }
+      // Create shipping address under this user
+      const newAddress = await ShippingAddress.create({
+        user_id: user.id,
+        full_name: shipping_address.fullName,
+        address: shipping_address.address,
+        city: shipping_address.city,
+        state: shipping_address.state,
+        pincode: shipping_address.pincode,
+        phone: shipping_address.phone || digits,
+        country: shipping_address.country || 'India',
+        is_default: false,
       });
 
-      // Create FShip order automatically for guest orders
-      await order.update({ fship_sync_status: 'syncing', fship_sync_attempts: 1 });
-      setImmediate(async () => {
-        try {
-          logger.debug(
-            "createGuestOrder: Creating FShip order for guest order:",
-            order.order_number
-          );
+      // Issue a short-lived token so the order can be placed as this user
+      const token = jwt.sign(
+        { id: user.id, email: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' }
+      );
 
-          const fshipOrderData = {
-            customer_Name: `${guestUser.firstName} ${guestUser.lastName}`.trim(),
-            customer_Mobile: String(guestShippingAddress.phone || guestUser.phone),
-            customer_Emailid: String(guestUser.email),
-            customer_Address: String(guestShippingAddress.address),
-            landMark: "",
-            customer_Address_Type: "Home",
-            customer_PinCode: String(guestShippingAddress.pincode).replace(/\D/g, '').slice(0, 6),
-            customer_City: String(guestShippingAddress.city || "Mumbai"),
-            orderId: String(order.order_number),
-            invoice_Number: String(order.order_number),
-            payment_Mode: payment_type === "cod" ? 1 : 2, // 1=COD, 2=PREPAID
-            express_Type: "surface",
-            is_Ndd: 0,
-            order_Amount: parseFloat(totalAmount),
-            tax_Amount: 0,
-            extra_Charges: 0,
-            total_Amount: parseFloat(finalAmount),
-            shipment_Weight: validatedItems.reduce((sum, item) => sum + item.quantity, 0) * 0.07, // 70g per item in kg
-            shipment_Length: 14,
-            shipment_Width: 3,
-            shipment_Height: 10,
-            pick_Address_ID: parseInt(await settingsHelper.getSetting(1, 'FSHIP_DEFAULT_WAREHOUSE_ID', '12191')),
-            return_Address_ID: parseInt(await settingsHelper.getSetting(1, 'FSHIP_DEFAULT_WAREHOUSE_ID', '12191')),
-            products: validatedItems.map((item) => ({
-              productName: item.product.name,
-              sku: item.variation?.sku || item.product.sku || `PROD-${item.product.id}`,
-              quantity: item.quantity,
-              unitPrice: item.price,
-              productCategory: "Socks",
-              hsnCode: "6115",
-              taxRate: 0,
-              productDiscount: 0
-            }))
-          };
+      // Inject user into req and call createOrder internally
+      req.user = user;
+      req.body = {
+        shipping_address_id: newAddress.id,
+        items,
+        payment_type,
+        notes,
+        coupon_id,
+        discount_amount,
+        idempotency_key,
+        utm_session_id: req.body.utm_session_id,
+      };
 
-          logger.debug(
-            "createGuestOrder: FShip payload prepared:",
-            fshipOrderData
-          );
+      // Add token to response header so frontend can store it
+      res.setHeader('X-Auth-Token', token);
+      res.setHeader('X-User-Id', user.id);
 
-          // Use createOrUpdateForwardOrder to prevent duplicates
-          const fshipResponse = await fshipService.createOrUpdateForwardOrder(fshipOrderData);
-
-          if (fshipResponse.success) {
-            await order.update({
-              fship_order_id: fshipResponse.orderId,
-              fship_waybill: fshipResponse.waybill,
-              fship_route_code: fshipResponse.routeCode,
-              fship_label_url: fshipResponse.labelUrl,
-              tracking_number: fshipResponse.waybill,
-              status: "processing",
-              fship_sync_status: 'synced'
-            });
-
-            logger.debug(
-              "createGuestOrder: ✅ FShip Order Created for guest:",
-              {
-                order_number: order.order_number,
-                fship_order_id: fshipResponse.orderId,
-                waybill: fshipResponse.waybill,
-              }
-            );
-
-            // Register pickup
-            try {
-              await fshipService.registerPickup([fshipResponse.waybill]);
-              logger.debug(
-                "createGuestOrder: ✅ FShip Pickup Requested:",
-                fshipResponse.waybill
-              );
-            } catch (pickupError) {
-              logger.error(
-                "createGuestOrder: ❌ Failed to request FShip pickup:",
-                pickupError.message
-              );
-            }
-          }
-        } catch (fshipError) {
-          logger.error(
-            "createGuestOrder: ❌ Failed to create FShip order for guest:",
-            {
-              order_number: order.order_number,
-              error: fshipError.message,
-            }
-          );
-          await order.update({ fship_sync_status: 'failed' }).catch(() => {});
-        }
-      });
-
-      // Return success response (matching authenticated order format)
-      res.status(201).json({
-        success: true,
-        message: "Guest order created successfully",
-        order: {
-          id: order.id,
-          order_number: order.order_number,
-          total_amount: order.total_amount,
-          shipping_fee: order.shipping_fee,
-          discount_amount: order.discount_amount,
-          final_amount: order.final_amount,
-          payment_type: order.payment_type,
-          status: order.status,
-          payment_status: order.payment_status,
-          created_at: order.created_at,
-        },
-        guest_user: {
-          id: guestUser.id,
-          email: guestUser.email,
-          firstName: guestUser.firstName,
-          lastName: guestUser.lastName,
-          phone: guestUser.phone,
-        },
-        shipping_address: {
-          id: guestShippingAddress.id,
-          full_name: guestShippingAddress.full_name,
-          address: guestShippingAddress.address,
-          city: guestShippingAddress.city,
-          state: guestShippingAddress.state,
-          pincode: guestShippingAddress.pincode,
-          phone: guestShippingAddress.phone,
-        },
-        items: validatedItems.map((item) => ({
-          product_id: item.product.id,
-          product_name: item.product.name,
-          variation_id: item.variation ? item.variation.id : null,
-          quantity: item.quantity,
-          price: item.price,
-          total_price: item.itemTotal,
-        })),
-      });
-
-      // Send WhatsApp order confirmation for guest (fire-and-forget)
-      setImmediate(async () => {
-        try {
-          const whatsappService = require('../services/whatsappService.js');
-          const phone = guestShippingAddress.phone || guestUser.phone;
-          if (phone) {
-            await whatsappService.sendOrderConfirmation(phone, {
-              orderNumber: order.order_number,
-              itemCount: validatedItems.length,
-              total: finalAmount
-            });
-          }
-        } catch (waErr) {
-          logger.warn('WhatsApp guest order confirmation failed:', waErr.message);
-        }
-      });
+      // Call createOrder directly
+      return module.exports.createOrder(req, res);
     } catch (error) {
-      logger.error("createGuestOrder: Error caught:", error.message);
-      logger.error("createGuestOrder: Error stack:", error.stack);
-      await transaction.rollback();
-      logger.error("Error creating guest order:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to create guest order",
-        error: error.message,
-      });
+      logger.error("createGuestOrder error:", error.message);
+      res.status(500).json({ success: false, message: "Failed to create order", error: error.message });
     }
   };
 
-  // Get guest order by email and order number
-  module.exports.getGuestOrder = async (req, res) => {
-    try {
-      const { email, orderNumber } = req.query;
-
-      if (!email || !orderNumber) {
-        return res.status(400).json({
-          success: false,
-          message: "Email and order number are required",
-        });
-      }
-
-      // Find guest user by email
-      const guestUser = await GuestUser.findOne({
-        where: { email: email.toLowerCase() },
-      });
-
-      if (!guestUser) {
-        return res.status(404).json({
-          success: false,
-          message: "Guest order not found",
-        });
-      }
-
-      // Find order by order number and guest user
-      const order = await Order.findOne({
-        where: {
-          order_number: orderNumber,
-          guest_user_id: guestUser.id,
-        },
-        include: [
-          {
-            model: GuestUser,
-            as: "GuestUser",
-            attributes: ["id", "email", "firstName", "lastName", "phone"],
-          },
-          {
-            model: ShippingAddress,
-            as: "ShippingAddress",
-            attributes: [
-              "id",
-              "full_name",
-              "address",
-              "city",
-              "state",
-              "pincode",
-              "phone",
-            ],
-          },
-          {
-            model: OrderItem,
-            as: "OrderItems",
-            include: [
-              {
-                model: Product,
-                as: "Product",
-                attributes: ["id", "name", "slug"],
-                include: [
-                  {
-                    model: ProductImage,
-                    as: "ProductImages",
-                    attributes: ["image_url"],
-                    separate: true,
-                  },
-                ],
-              },
-              {
-                model: ProductVariation,
-                as: "ProductVariation",
-                attributes: ["id", "sku", "price", "attributes"],
-                required: false,
-                include: [
-                  {
-                    model: ProductImage,
-                    as: "VariationImages",
-                    attributes: ["image_url"],
-                    separate: true,
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            model: OrderStatusHistory,
-            as: "OrderStatusHistories",
-            order: [["created_at", "DESC"]],
-          },
-        ],
-      });
-
-      if (!order) {
-        return res.status(404).json({
-          success: false,
-          message: "Guest order not found",
-        });
-      }
-
-      res.json({
-        success: true,
-        data: {
-          order: {
-            id: order.id,
-            order_number: order.order_number,
-            total_amount: order.total_amount,
-            shipping_fee: order.shipping_fee,
-            discount_amount: order.discount_amount,
-            final_amount: order.final_amount,
-            payment_type: order.payment_type,
-            status: order.status,
-            payment_status: order.payment_status,
-            created_at: order.created_at,
-            updated_at: order.updated_at,
-          },
-          guest_user: order.GuestUser,
-          shipping_address: order.ShippingAddress,
-          items: order.OrderItems.map((item) => ({
-            id: item.id,
-            product: {
-              id: item.Product.id,
-              name: item.Product.name,
-              slug: item.Product.slug,
-              image: item.ProductVariation?.VariationImages?.[0]?.image_url || item.Product.ProductImages?.[0]?.image_url || null,
-            },
-            variation: item.ProductVariation
-              ? {
-                  id: item.ProductVariation.id,
-                  sku: item.ProductVariation.sku,
-                  price: item.ProductVariation.price,
-                  attributes: item.ProductVariation.attributes,
-                }
-              : null,
-            quantity: item.quantity,
-            price: item.price,
-            total_price: item.subtotal,
-          })),
-          status_history: order.OrderStatusHistories.map((history) => ({
-            id: history.id,
-            status: history.status,
-            notes: history.notes,
-            created_at: history.created_at,
-            created_by: history.created_by,
-          })),
-        },
-      });
-    } catch (error) {
-      logger.error("Error fetching guest order:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to fetch guest order",
-        error: error.message,
-      });
-    }
-  };
 
   // Track order by AWB number (works for both registered and guest orders)
   module.exports.trackOrderByAWB = async (req, res) => {
@@ -2385,8 +1560,13 @@
         }
       });
 
+      const { getRtoRiskLevel } = require('../services/orderService.js');
+
       res.json({
-        orders: orders.rows,
+        orders: orders.rows.map(o => ({
+          ...o.toJSON(),
+          rto_risk_level: getRtoRiskLevel(o.rto_risk_score || 0),
+        })),
         total: orders.count,
         totalPages: totalPages,
         pagination: {
@@ -2458,9 +1638,13 @@
       });
 
       const totalPages = Math.ceil(orders.count / limit);
+      const { getRtoRiskLevel } = require('../services/orderService.js');
 
       res.json({
-        orders: orders.rows,
+        orders: orders.rows.map(o => ({
+          ...o.toJSON(),
+          rto_risk_level: getRtoRiskLevel(o.rto_risk_score || 0),
+        })),
         pagination: {
           total: orders.count,
           page: parseInt(page),
@@ -2550,156 +1734,64 @@
     }
   };
 
-  // Update order status - DEPRECATED: Use FShip sync instead
+  // Update order status — uses state machine validation + emits events
   module.exports.updateOrderStatus = async (req, res) => {
     try {
-      // Manual status updates are now disabled to maintain FShip sync integrity
-      return res.status(400).json({
-        success: false,
-        message: "Manual status updates are disabled. Order statuses are automatically synchronized with FShip.",
-        recommendation: "Use the comprehensive FShip sync feature to update order statuses automatically.",
-        endpoint: "POST /api/orders/fship/sync"
+      const { status, notes } = req.body;
+      if (!status) return res.status(400).json({ message: 'Status is required' });
+
+      const orderService = require('../services/orderService.js');
+      const orderEmitter = require('../services/orderEvents.js');
+      const order = await Order.findByPk(req.params.id);
+      if (!order) return res.status(404).json({ message: 'Order not found' });
+
+      // Validate transition
+      orderService.assertTransition(order.status, status);
+
+      await order.update({ status });
+      await OrderStatusHistory.create({
+        order_id: order.id,
+        status,
+        updated_by: req.user.id,
+        notes: notes || `Status updated to ${status}`,
       });
+
+      // Emit lifecycle events
+      if (status === 'shipped') setImmediate(() => orderEmitter.emit('order.shipped', order));
+      if (status === 'delivered') setImmediate(() => orderEmitter.emit('order.delivered', order));
+
+      res.json({ success: true, message: `Order status updated to ${status}`, order });
     } catch (error) {
-      logger.error("Error in updateOrderStatus:", error);
-      res.status(500).json({ 
-        success: false,
-        message: "Failed to process status update request", 
-        error: error.message 
-      });
+      const status = error.message.includes('Cannot transition') ? 400 : 500;
+      res.status(status).json({ success: false, message: error.message });
     }
   };
 
-  // Cancel order (by user)
+  // Cancel order (by user) — delegates to orderService
   module.exports.cancelOrder = async (req, res) => {
-    const transaction = await sequelize.transaction();
-
     try {
-      const orderId = req.params.id;
       const { reason } = req.body;
-      const userId = req.user.id;
-
-      const order = await Order.findByPk(orderId);
-      if (!order) {
-        await transaction.rollback();
-        return res.status(404).json({ message: "Order not found" });
+      if (!reason || !reason.trim()) {
+        return res.status(400).json({ message: 'Cancellation reason is required' });
       }
-
-      // Verify order belongs to user
-      if (order.user_id !== userId) {
-        await transaction.rollback();
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      // Cannot cancel if already delivered or cancelled
-      if (order.status === "delivered" || order.status === "cancelled") {
-        await transaction.rollback();
-        return res
-          .status(400)
-          .json({ message: `Cannot cancel ${order.status} orders` });
-      }
-
-      // Block cancellation once dispatched (Task 12)
-      if (DISPATCHED_STATUSES.includes(order.status)) {
-        await transaction.rollback();
-        return res.status(400).json({ message: `Order cannot be cancelled after it has been dispatched. Contact support.` });
-      }
-
-      // Allow cancel for pending, confirmed, processing only
-      if (!['pending', 'confirmed', 'processing'].includes(order.status)) {
-        await transaction.rollback();
-        return res
-          .status(400)
-          .json({ message: `Cannot cancel orders in ${order.status} status` });
-      }
-
-      // Update order status
-      order.status = "cancelled";
-      await order.save({ transaction });
-
-      // Restore stock for all order items
-      const orderItems = await OrderItem.findAll({ where: { order_id: order.id }, transaction });
-      for (const item of orderItems) {
-        if (item.variation_id) {
-          await ProductVariation.increment('stock', { by: item.quantity, where: { id: item.variation_id }, transaction });
-        }
-      }
-
-      // Decrement coupon usage if order had a coupon
-      if (order.coupon_id) {
-        const { Coupon, CouponUsage } = require('../model/associations.js');
-        await Coupon.decrement('usageCount', { by: 1, where: { id: order.coupon_id }, transaction });
-        await CouponUsage.destroy({ where: { orderId: order.id }, transaction });
-      }
-
-      // Refund redeemed loyalty points (if any) for authenticated users.
-      if (order.user_id) {
-        await loyaltyService.refundPoints(order.user_id, order.id, order.brand_id || 1, { transaction });
-      }
-
-      // Update payment status based on payment type
-      if (order.payment_type === 'cod') {
-        order.payment_status = 'cancelled';
-        await order.save({ transaction });
-      } else if (order.payment_status === 'paid') {
-        order.payment_status = 'refund_pending';
-        await order.save({ transaction });
-        
-        // Update payment record
-        const payment = await Payment.findOne({
-          where: { order_id: order.id }
-        });
-
-        if (payment) {
-          payment.status = 'refund_pending';
-          payment.notes = 'Refund pending - Order cancelled by customer';
-          await payment.save({ transaction });
-        }
-      } else {
-        order.payment_status = 'cancelled';
-        await order.save({ transaction });
-      }
-
-      // Create status history entry with user's reason
-      await OrderStatusHistory.create(
-        {
-          order_id: order.id,
-          status: "cancelled",
-          updated_by: userId,
-          notes: `${reason}. Payment status: ${order.payment_status}`,
-        },
-        { transaction }
-      );
-
-      // Cancel order in FShip if it exists
-      if (order.fship_waybill) {
-        try {
-          const cancelRes = await fshipService.cancelOrder(
-            order.fship_waybill,
-            reason || "Order cancelled by customer"
-          );
-          logger.debug("FShip order cancelled successfully:", cancelRes);
-        } catch (err) {
-          logger.error(
-            "Failed to cancel FShip order:",
-            err.message
-          );
-        }
-      }
-
-      await transaction.commit();
-
-      res.json({
-        message: "Order cancelled successfully",
+      const orderService = require('../services/orderService.js');
+      const order = await orderService.cancelOrder(req.params.id, {
+        reason,
+        cancelledBy: req.user.id,
+        isAdmin: false,
       });
+      // Verify ownership
+      const found = await Order.findByPk(req.params.id);
+      if (found && found.user_id !== req.user.id) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      res.json({ success: true, message: 'Order cancelled successfully', order });
     } catch (error) {
-      await transaction.rollback();
-      logger.error("Error cancelling order:", error);
-      res
-        .status(500)
-        .json({ message: "Failed to cancel order", error: error.message });
+      const status = error.message.includes('Cannot cancel') ? 400 : 500;
+      res.status(status).json({ message: error.message });
     }
   };
+
 
   // Initiate return (Task 11) — transitions delivered → return_initiated
   module.exports.initiateReturn = async (req, res) => {
@@ -2727,88 +1819,6 @@
     } catch (error) {
       logger.error("Error initiating return:", error);
       res.status(500).json({ message: "Failed to initiate return", error: error.message });
-    }
-  };
-
-  // Cancel guest order (by email + order_number)
-  module.exports.cancelGuestOrder = async (req, res) => {    const transaction = await sequelize.transaction();
-    try {
-      const { email, order_number, reason } = req.body;
-      if (!email || !order_number) {
-        await transaction.rollback();
-        return res.status(400).json({ message: 'Email and order_number are required' });
-      }
-
-      const { GuestUser } = require('../model/guestUserModel.js');
-      const guestUser = await GuestUser.findOne({ where: { email: email.toLowerCase() } });
-      if (!guestUser) {
-        await transaction.rollback();
-        return res.status(404).json({ message: 'Guest order not found' });
-      }
-
-      const order = await Order.findOne({
-        where: { order_number, guest_user_id: guestUser.id },
-        transaction
-      });
-      if (!order) {
-        await transaction.rollback();
-        return res.status(404).json({ message: 'Order not found' });
-      }
-
-      if (order.status !== 'pending' && order.status !== 'processing') {
-        await transaction.rollback();
-        return res.status(400).json({ message: `Cannot cancel orders in ${order.status} status` });
-      }
-
-      order.status = 'cancelled';
-      await order.save({ transaction });
-
-      // Restore stock
-      const orderItems = await OrderItem.findAll({ where: { order_id: order.id }, transaction });
-      for (const item of orderItems) {
-        if (item.variation_id) {
-          await ProductVariation.increment('stock', { by: item.quantity, where: { id: item.variation_id }, transaction });
-        }
-      }
-
-      // Decrement coupon usage
-      if (order.coupon_id) {
-        const { Coupon, CouponUsage } = require('../model/associations.js');
-        await Coupon.decrement('usageCount', { by: 1, where: { id: order.coupon_id }, transaction });
-        await CouponUsage.destroy({ where: { orderId: order.id }, transaction });
-      }
-
-      // Refund redeemed loyalty points (if any) when the guest order belongs to a user account.
-      if (order.user_id) {
-        await loyaltyService.refundPoints(order.user_id, order.id, order.brand_id || 1, { transaction });
-      }
-
-      // Update payment status
-      if (order.payment_status === 'paid') {
-        order.payment_status = 'refund_pending';
-      } else {
-        order.payment_status = 'cancelled';
-      }
-      await order.save({ transaction });
-
-      await OrderStatusHistory.create({
-        order_id: order.id,
-        status: 'cancelled',
-        notes: reason || 'Cancelled by guest customer'
-      }, { transaction });
-
-      if (order.fship_waybill) {
-        fshipService.cancelOrder(order.fship_waybill, reason || 'Guest order cancelled').catch(err =>
-          logger.warn('FShip guest cancel failed:', err.message)
-        );
-      }
-
-      await transaction.commit();
-      res.json({ message: 'Order cancelled successfully' });
-    } catch (error) {
-      await transaction.rollback();
-      logger.error('Error cancelling guest order:', error);
-      res.status(500).json({ message: 'Failed to cancel order', error: error.message });
     }
   };
 
@@ -3705,111 +2715,35 @@
     }
   };
 
-  // Admin cancel order (by admin)
+  // Admin cancel order — delegates to orderService
   module.exports.adminCancelOrder = async (req, res) => {
-    const transaction = await sequelize.transaction();
-
     try {
-      const orderId = req.params.id;
       const { reason } = req.body;
-      const adminId = req.user.id;
-
-      const order = await Order.findByPk(orderId);
-      if (!order) {
-        await transaction.rollback();
-        return res.status(404).json({ 
-          success: false,
-          message: "Order not found" 
-        });
+      if (!reason || !reason.trim()) {
+        return res.status(400).json({ message: 'Cancellation reason is required' });
       }
-
-      // Cannot cancel if already delivered or cancelled
-      if (order.status === "delivered" || order.status === "cancelled") {
-        await transaction.rollback();
-        return res.status(400).json({ 
-          success: false,
-          message: `Cannot cancel ${order.status} orders` 
-        });
-      }
-
-      // Update order status
-      order.status = "cancelled";
-      await order.save({ transaction });
-
-      // Update payment status based on payment type
-      if (order.payment_type === 'cod') {
-        order.payment_status = 'cancelled';
-        await order.save({ transaction });
-      } else if (order.payment_status === 'paid') {
-        order.payment_status = 'refund_pending';
-        await order.save({ transaction });
-        
-        // Update payment record
-        const payment = await Payment.findOne({
-          where: { order_id: order.id }
-        });
-
-        if (payment) {
-          payment.status = 'refund_pending';
-          payment.notes = `Refund pending - Admin cancelled: ${reason || 'No reason provided'}`;
-          await payment.save({ transaction });
-        }
-      } else {
-        order.payment_status = 'cancelled';
-        await order.save({ transaction });
-      }
-
-      // Create status history entry with admin's reason
-      await OrderStatusHistory.create(
-        {
-          order_id: order.id,
-          status: "cancelled",
-          updated_by: adminId,
-          notes: `Admin cancelled: ${reason || 'No reason provided'}. Payment status: ${order.payment_status}`,
-          created_by: "admin"
-        },
-        { transaction }
-      );
-
-      // Cancel order in FShip if it exists
-      if (order.fship_waybill) {
-        try {
-          const cancelRes = await fshipService.cancelOrder(
-            order.fship_waybill,
-            reason || "Order cancelled by admin"
-          );
-          logger.debug("FShip order cancelled successfully:", cancelRes);
-        } catch (err) {
-          logger.error(
-            "Failed to cancel FShip order:",
-            err.message
-          );
-          // Don't fail the entire operation if FShip cancel fails
-        }
-      }
-
-      await transaction.commit();
-
-      res.json({
-        success: true,
-        message: "Order cancelled successfully by admin",
-        data: {
-          order: {
-            id: order.id,
-            order_number: order.order_number,
-            status: order.status,
-            payment_status: order.payment_status
-          }
-        }
+      const orderService = require('../services/orderService.js');
+      const order = await orderService.cancelOrder(req.params.id, {
+        reason,
+        cancelledBy: req.user.id,
+        isAdmin: true,
       });
+      res.json({ success: true, message: 'Order cancelled successfully', order });
     } catch (error) {
-      await transaction.rollback();
-      logger.error("Error cancelling order (admin):", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to cancel order", 
-        error: error.message 
-      });
+      const status = error.message.includes('Cannot cancel') ? 400 : 500;
+      res.status(status).json({ success: false, message: error.message });
+    }
+  };
+
+  // Confirm order (admin) — triggers FShip sync
+  module.exports.confirmOrder = async (req, res) => {
+    try {
+      const orderService = require('../services/orderService.js');
+      const order = await orderService.confirmOrder(req.params.id, req.user.id);
+      res.json({ success: true, message: 'Order confirmed', order });
+    } catch (error) {
+      const status = error.message.includes('Cannot transition') ? 400 : 500;
+      res.status(status).json({ success: false, message: error.message });
     }
   };
 
@@ -5509,3 +4443,4 @@
       });
     }
   };
+  

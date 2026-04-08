@@ -70,6 +70,7 @@ const Order = sequelize.define('Order', {
     status: {
         type: DataTypes.ENUM(
             'pending',
+            'awaiting_confirmation',
             'confirmed',
             'processing', 
             'booked', 
@@ -88,7 +89,7 @@ const Order = sequelize.define('Order', {
             'order cancelled', 
             'exception'
         ),
-        defaultValue: 'pending'
+        defaultValue: 'awaiting_confirmation'
     },
     notes: {
         type: DataTypes.TEXT,
@@ -199,6 +200,12 @@ const Order = sequelize.define('Order', {
         allowNull: true,
         defaultValue: 0,
         comment: 'RTO risk score: landmark missing +10, repeat RTO customer +20'
+    },
+    idempotency_key: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        unique: true,
+        comment: 'Prevents duplicate order creation from retries'
     }
 }, {
     tableName: 'orders',

@@ -443,76 +443,33 @@ module.exports.getUserPayments = async (req, res) => {
     }
 };
 
-// Process a refund
+// Process a refund — delegates to refundService (supports full + partial)
 module.exports.refundPayment = async (req, res) => {
-    const transaction = await sequelize.transaction();
-    
     try {
-        const { payment_id, reason } = req.body;
-        const userId = req.user.id;
+        const { payment_id, amount, reason } = req.body;
 
-        if (!payment_id) {
-            await transaction.rollback();
-            return res.status(400).json({ message: 'Payment ID is required' });
+        if (!payment_id) return res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'Payment ID is required' } });
+        if (!reason || reason.trim().length < 5) return res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'Refund reason is required (min 5 chars)' } });
+
+        if (!['admin', 'order_manager'].includes(req.user.role)) {
+            return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Only admin/order manager can process refunds' } });
         }
 
-        if (req.user.role !== 'admin') {
-            await transaction.rollback();
-            return res.status(403).json({ message: 'Only admin can process refunds' });
-        }
-
-        const payment = await Payment.findByPk(payment_id, { transaction });
-        if (!payment) {
-            await transaction.rollback();
-            return res.status(404).json({ message: 'Payment not found' });
-        }
-
-        if (payment.status !== 'successful') {
-            await transaction.rollback();
-            return res.status(400).json({ message: `Cannot refund ${payment.status} payments` });
-        }
-
-        // Task 14: Order must be in a refundable state
-        const order = await Order.findByPk(payment.order_id, { transaction });
-        const REFUNDABLE_STATUSES = ['delivered', 'return_initiated', 'returned_rto', 'cancelled', 'order cancelled'];
-        if (order && !REFUNDABLE_STATUSES.includes(order.status)) {
-            await transaction.rollback();
-            return res.status(400).json({ message: `Refund not allowed for orders in '${order.status}' status.` });
-        }
-
-        payment.status = 'refunded';
-        await payment.save({ transaction });
-
-        if (order) {
-            order.payment_status = 'refunded';
-            await order.save({ transaction });
-        }
-
-        await Payment.create({
-            order_id: payment.order_id,
-            user_id: userId,
-            payment_type: payment.payment_type,
-            transaction_id: `REFUND-${payment.transaction_id || payment.id}`,
-            amount_paid: -payment.amount_paid,
-            status: 'successful',
-            payment_gateway: payment.payment_gateway,
-            notes: reason || 'Refund processed'
-        }, { transaction });
-
-        await transaction.commit();
-
-        res.json({
-            message: 'Refund processed successfully',
-            payment: {
-                id: payment.id,
-                status: payment.status,
-                reason: reason || 'Refund processed'
-            }
+        const { processRefund } = require('../services/refundService.js');
+        const result = await processRefund({
+            paymentId: payment_id,
+            amount: amount || null,
+            reason,
+            adminId: req.user.id,
+            brandId: req.brand?.id || 1,
         });
+
+        res.json(result);
     } catch (error) {
-        await transaction.rollback();
-        console.error('Error processing refund:', error);
-        res.status(500).json({ message: 'Failed to process refund', error: error.message });
+        const status = error.message.includes('not found') ? 404
+            : error.message.includes('Cannot refund') || error.message.includes('not allowed') ? 400
+            : 500;
+        res.status(status).json({ success: false, error: { code: 'REFUND_FAILED', message: error.message } });
     }
 };
 
