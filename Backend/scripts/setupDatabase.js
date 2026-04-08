@@ -264,6 +264,16 @@ const setupDatabase = async () => {
       console.log("⚠️ users.deletedAt fix skipped:", e.message);
     }
 
+    // Ensure whatsapp tables use utf8mb4 for emoji support
+    console.log("Ensuring whatsapp tables use utf8mb4...");
+    try {
+      await sequelize.query(`ALTER TABLE whatsapp_messages CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+      await sequelize.query(`ALTER TABLE whatsapp_conversations CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+      console.log("✓ whatsapp tables charset updated");
+    } catch (e) {
+      console.log("⚠️ whatsapp charset fix skipped:", e.message);
+    }
+
     // Ensure whatsapp_messages.quoted_message_id column exists
     console.log("Ensuring whatsapp_messages.quoted_message_id column...");
     try {
