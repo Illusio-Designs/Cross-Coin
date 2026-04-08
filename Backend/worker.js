@@ -6,6 +6,8 @@
  */
 
 const cron = require('node-cron');
+const { logger } = require('./config/logging.js');
+const { sequelize } = require('./config/db.js');
 
 // ─── Job runner — wraps each job with timing + error isolation ────────────────
 async function run(name, fn) {

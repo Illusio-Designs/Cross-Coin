@@ -312,7 +312,14 @@ export default function Profile() {
                         {order.OrderItems?.map(item => (
                           <div className="pf-order-item" key={item.id}>
                             <div className="pf-order-img">
-                              <SafeImage imageData={{ image_url: item.ProductVariation?.VariationImages?.[0]?.image_url || item.Product?.ProductImages?.[0]?.image_url }} alt={item.Product?.name} width="72" height="72" style={{ objectFit: "cover", width: "100%", height: "100%" }} />
+                              {(() => {
+                                const imgUrl = item.ProductVariation?.VariationImages?.[0]?.image_url
+                                  || item.Product?.ProductImages?.[0]?.image_url
+                                  || null;
+                                return imgUrl
+                                  ? <SafeImage imageData={{ image_url: imgUrl }} alt={item.Product?.name} width={72} height={72} quality={70} style={{ objectFit: "cover", width: "100%", height: "100%" }} isProductCard />
+                                  : <div style={{ width: 72, height: 72, background: '#f5f5f5', borderRadius: 6 }} />;
+                              })()}
                             </div>
                             <div className="pf-order-item-info">
                               <div className="pf-order-item-name">{item.Product?.name}</div>
@@ -391,13 +398,14 @@ export default function Profile() {
                         </div>
                         <div className="pf-addr-body">
                           {addr.is_default && <span className="pf-addr-default">Default</span>}
-                          {addr.address && <div className="pf-addr-text">{addr.address}</div>}
+                          {addr.full_name && <div className="pf-addr-text" style={{fontWeight:600}}>{addr.full_name}</div>}
+                          {(addr.address || addr.street) && <div className="pf-addr-text">{addr.address || addr.street}</div>}
                           <div className="pf-addr-text">
                             {[addr.city, addr.state].filter(Boolean).join(", ")}
-                            {addr.postal_code ? ` — ${addr.postal_code}` : ""}
+                            {(addr.postal_code || addr.pincode) ? ` — ${addr.postal_code || addr.pincode}` : ""}
                           </div>
                           {addr.country && <div className="pf-addr-text">{addr.country}</div>}
-                          {addr.phone_number && <div className="pf-addr-text">📞 {addr.phone_number}</div>}
+                          {(addr.phone_number || addr.phone) && <div className="pf-addr-text">📞 {addr.phone_number || addr.phone}</div>}
                           <div className="pf-addr-actions">
                             {!addr.is_default && <button className="pf-addr-btn" onClick={() => handleSetDefault(addr.id)}>Set Default</button>}
                             <button className="pf-addr-btn" onClick={() => openEditAddress(addr)}>Edit</button>

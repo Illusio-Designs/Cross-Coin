@@ -615,10 +615,27 @@ module.exports.updateOrderPayment = async (req, res) => {
       return res.status(400).json({ message: 'Payment already processed.' });
     }
 
-    // Update order status
+    // Update order status — prepaid auto-confirmed after payment (money received)
     order.payment_status = 'paid';
-    order.status = 'processing';
+    order.status = 'confirmed';
     await order.save();
+
+    // Record status history for auto-confirmation
+    const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
+    await OrderStatusHistory.create({
+      order_id: order.id,
+      status: 'confirmed',
+      updated_by: null,
+      notes: 'Auto-confirmed: prepaid payment verified',
+    });
+
+    // Emit confirmed event — triggers WhatsApp + FShip sync
+    const orderEmitter = require('../services/orderEvents.js');
+    const orderService = require('../services/orderService.js');
+    setImmediate(() => {
+      orderEmitter.emit('order.confirmed', order);
+      orderService.syncOrderToFShip(order);
+    });
 
     // Convert order amount to smallest unit for consistent storage
     // Sequelize returns DECIMAL columns as strings — parse to float first
@@ -751,10 +768,17 @@ module.exports.razorpayCallback = async (req, res) => {
     .digest('hex');
 
   if (generated_signature === razorpay_signature) {
-    // Mark order as paid
+    // Mark order as paid — prepaid auto-confirmed
     order.payment_status = 'paid';
-    order.status = 'processing';
+    order.status = 'confirmed';
     await order.save();
+
+    // Status history + events
+    const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
+    await OrderStatusHistory.create({ order_id: order.id, status: 'confirmed', updated_by: null, notes: 'Auto-confirmed: prepaid callback verified' });
+    const orderEmitter = require('../services/orderEvents.js');
+    const orderService = require('../services/orderService.js');
+    setImmediate(() => { orderEmitter.emit('order.confirmed', order); orderService.syncOrderToFShip(order); });
 
     // Upsert payment record with full details
     const existingPayment = await Payment.findOne({
@@ -946,8 +970,17 @@ module.exports.razorpayWebhook = async (req, res) => {
           const order = await Order.findByPk(paymentRecord.order_id);
           if (order && order.payment_status !== 'paid') {
             order.payment_status = 'paid';
-            order.status = 'processing';
+            order.status = 'confirmed';
             await order.save();
+            // Auto-confirm events
+            const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
+            await OrderStatusHistory.create({ order_id: order.id, status: 'confirmed', updated_by: null, notes: 'Auto-confirmed: webhook payment.captured' });
+            setImmediate(() => {
+              const orderEmitter = require('../services/orderEvents.js');
+              const orderService = require('../services/orderService.js');
+              orderEmitter.emit('order.confirmed', order);
+              orderService.syncOrderToFShip(order);
+            });
             await paymentRecord.update({
               status: 'successful',
               transaction_id: rzpPaymentId,
