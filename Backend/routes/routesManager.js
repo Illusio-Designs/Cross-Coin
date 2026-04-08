@@ -1,138 +1,75 @@
-// routes/routesManager.js
 const express = require('express');
 const router = express.Router();
 const { optionalBrand } = require('../middleware/brandMiddleware.js');
 
-// Import all route modules
-const userRoutes = require('./userRoutes.js');
-const categoryRoutes = require('./categoryRoutes.js');
-const productRoutes = require('./productRoutes.js');
-const orderRoutes = require('./orderRoutes.js');
-const sliderRoutes = require('./sliderRoutes.js');
-const couponRoutes = require('./couponRoutes.js');
-const wishlistRoutes = require('./wishlistRoutes.js');
-const shippingAddressRoutes = require('./shippingAddressRoutes.js');
-const paymentRoutes = require('./paymentRoutes.js');
-const shippingFeeRoutes = require('./shippingFeeRoutes.js');
-const orderStatusHistoryRoutes = require('./orderStatusHistoryRoutes.js');
-const seoRoutes = require('./seoRoutes.js');
-const attributeRoutes = require('./attributeRoutes.js');
-const reviewRoutes = require('./reviewRoutes.js');
-const cartRoutes = require('./cartRoutes.js');
-const policyRoutes = require('./policyRoutes.js');
-const dashboardRoutes = require('./dashboardRoutes.js');
-const blogRoutes = require('./blogRoutes.js');
-const loyaltyRoutes = require('./loyaltyRoutes.js');
-const adminLoyaltyRoutes = require('./adminLoyaltyRoutes.js');
-const lookbookRoutes = require('./lookbookRoutes.js');
-const reelRoutes = require('./reelRoutes.js');
-const instagramRoutes = require('./instagramRoutes.js');
-const whatsappRoutes = require('./whatsappRoutes.js');
-const brandSettingsRoutes = require('./brandSettingsRoutes.js');
-const leadRoutes = require('./leadRoutes.js');
-const notificationRoutes = require('./notificationRoutes.js');
-const checkoutRoutes = require('./checkoutRoutes.js');
+// ── Core resources ────────────────────────────────────────────────────────
+router.use('/users',              optionalBrand, require('./userRoutes.js'));
+router.use('/products',           optionalBrand, require('./productRoutes.js'));
+router.use('/categories',         optionalBrand, require('./categoryRoutes.js'));
+router.use('/orders',             optionalBrand, require('./orderRoutes.js'));
+router.use('/payments',           optionalBrand, require('./paymentRoutes.js'));
+router.use('/cart',               optionalBrand, require('./cartRoutes.js'));
+router.use('/wishlist',           optionalBrand, require('./wishlistRoutes.js'));
+router.use('/shipping-addresses', optionalBrand, require('./shippingAddressRoutes.js'));
+router.use('/shipping-fees',      optionalBrand, require('./shippingFeeRoutes.js'));
+router.use('/coupons',            optionalBrand, require('./couponRoutes.js'));
+router.use('/reviews',            optionalBrand, require('./reviewRoutes.js'));
+router.use('/attributes',         optionalBrand, require('./attributeRoutes.js'));
+router.use('/sliders',            optionalBrand, require('./sliderRoutes.js'));
 
-// User routes - shared across brands (optional brand)
-router.use('/users', optionalBrand, userRoutes);
+// ── Content ───────────────────────────────────────────────────────────────
+router.use('/blogs',              optionalBrand, require('./blogRoutes.js'));
+router.use('/policies',           optionalBrand, require('./policyRoutes.js'));
+router.use('/seo',                optionalBrand, require('./seoRoutes.js'));
+router.use('/lookbooks',          optionalBrand, require('./lookbookRoutes.js'));
+router.use('/reels',              optionalBrand, require('./reelRoutes.js'));
+router.use('/instagram',          optionalBrand, require('./instagramRoutes.js'));
 
-// Brand-specific routes — use optionalBrand so admin endpoints work without X-Brand-Name header.
-// Controllers handle brand filtering internally: public endpoints check req.brandId/req.brand,
-// admin endpoints see all brands when no header is present.
-router.use('/categories', optionalBrand, categoryRoutes);
-router.use('/products', optionalBrand, productRoutes);
-router.use('/orders', optionalBrand, orderRoutes);
-router.use('/sliders', optionalBrand, sliderRoutes);
-router.use('/coupons', optionalBrand, couponRoutes);
-router.use('/policies', optionalBrand, policyRoutes);
-router.use('/seo', optionalBrand, seoRoutes);
-router.use('/reviews', optionalBrand, reviewRoutes);
-router.use('/attributes', optionalBrand, attributeRoutes);
+// ── User features ─────────────────────────────────────────────────────────
+router.use('/loyalty',            optionalBrand, require('./loyaltyRoutes.js'));
+router.use('/notifications',      require('./notificationRoutes.js'));
+router.use('/utm',                require('./utmRoutes.js'));
+router.use('/leads',              require('./leadRoutes.js'));
 
-// User-specific routes (optional brand for cross-brand features)
-router.use('/wishlist', optionalBrand, wishlistRoutes);
-router.use('/cart', optionalBrand, cartRoutes);
-router.use('/shipping-addresses', optionalBrand, shippingAddressRoutes);
-router.use('/payments', optionalBrand, paymentRoutes);
-router.use('/shipping-fees', optionalBrand, shippingFeeRoutes);
-router.use('/order-status-history', optionalBrand, orderStatusHistoryRoutes);
+// ── Auth (OTP) ────────────────────────────────────────────────────────────
+router.use('/auth',               optionalBrand, require('./checkoutRoutes.js'));
 
-// Dashboard routes (admin, can filter by brand)
-router.use('/dashboard', optionalBrand, dashboardRoutes);
+// ── WhatsApp ──────────────────────────────────────────────────────────────
+router.use('/whatsapp',           require('./whatsappRoutes.js'));
 
-// Blog routes (public routes use req.brandId for scoping; admin routes ignore it)
-router.use('/blogs', optionalBrand, blogRoutes);
-router.use('/loyalty', optionalBrand, loyaltyRoutes);
-router.use('/admin/loyalty', optionalBrand, adminLoyaltyRoutes);
-router.use('/lookbooks', optionalBrand, lookbookRoutes);
-router.use('/reels', optionalBrand, reelRoutes);
-router.use('/instagram', optionalBrand, instagramRoutes);
-router.use('/whatsapp', whatsappRoutes);
-router.use('/leads', leadRoutes);
-router.use('/admin', brandSettingsRoutes);
-router.use('/notifications', notificationRoutes);
-router.use('/checkout', optionalBrand, checkoutRoutes);
+// ── Admin ─────────────────────────────────────────────────────────────────
+router.use('/admin/loyalty',      optionalBrand, require('./adminLoyaltyRoutes.js'));
+router.use('/admin/lookbooks',    optionalBrand, require('./adminLookbookRoutes.js'));
+router.use('/admin/reels',        optionalBrand, require('./adminReelRoutes.js'));
+router.use('/admin',              optionalBrand, require('./brandSettingsRoutes.js'));
+router.use('/admin',              require('./brandRoutes.js'));
+router.use('/admin',              require('./brandAssignmentRoutes.js'));
+router.use('/dashboard',          optionalBrand, require('./dashboardRoutes.js'));
+router.use('/order-status-history', optionalBrand, require('./orderStatusHistoryRoutes.js'));
 
-// Public serviceability check (no auth required)
+// ── Integrations ──────────────────────────────────────────────────────────
+router.use('/facebook-pixel',     require('../integration/facebookPixel.js'));
+router.use('/facebook-catalog',   require('../integration/facebookCatalog.js'));
+router.use('/analytics',          require('../integration/dashboardAnalytics.js'));
+
+// ── Serviceability ────────────────────────────────────────────────────────
 router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
     try {
         const { pincode } = req.params;
-        if (!/^\d{6}$/.test(pincode)) {
-            return res.status(400).json({ success: false, message: 'Invalid pincode. Must be 6 digits.' });
-        }
+        if (!/^\d{6}$/.test(pincode)) return res.status(400).json({ success: false, message: 'Invalid pincode' });
         const fshipService = require('../services/fshipService');
         const settingsHelper = require('../services/settingsHelper');
-        const sourcePincode = await settingsHelper.getSetting(req.brandId || 1, 'DEFAULT_WAREHOUSE_PINCODE', '363641');
-        const result = await fshipService.checkServiceability(sourcePincode, pincode);
-        console.log('Serviceability raw result:', JSON.stringify(result, null, 2));
+        const src = await settingsHelper.getSetting(req.brandId || 1, 'DEFAULT_WAREHOUSE_PINCODE', '363641');
+        const result = await fshipService.checkServiceability(src, pincode);
         if (result && Array.isArray(result) && result.length > 0) {
-            const firstCourier = result[0];
-
-            // FShip returns a single object with "delivery": "Yes"/"No" and "cod": "Yes"/"No"
-            const isDeliverable = result.some(c =>
-                (c.delivery || '').toString().toLowerCase() === 'yes' || c.status === true
-            );
-
-            if (!isDeliverable) {
-                return res.json({ success: true, serviceable: false, message: 'Delivery not available to this pincode.' });
-            }
-
-            const codSupported = result.some(c =>
-                (c.cod || '').toString().toLowerCase() === 'yes'
-            );
-
-            const edd = firstCourier.estimated_delivery_days || firstCourier.edd ||
-                firstCourier.tat || firstCourier.TAT || firstCourier.delivery_days || 5;
-
-            return res.json({
-                success: true,
-                serviceable: true,
-                estimated_delivery_days: typeof edd === 'string' ? parseInt(edd) || 5 : edd,
-                cod_available: codSupported,
-                couriers_available: result.length,
-            });
+            const deliverable = result.some(c => (c.delivery || '').toLowerCase() === 'yes' || c.status === true);
+            if (!deliverable) return res.json({ success: true, serviceable: false, message: 'Delivery not available' });
+            const cod = result.some(c => (c.cod || '').toLowerCase() === 'yes');
+            const edd = result[0].estimated_delivery_days || result[0].edd || result[0].tat || 5;
+            return res.json({ success: true, serviceable: true, estimated_delivery_days: parseInt(edd) || 5, cod_available: cod });
         }
-        // Non-array truthy response — log it so we can debug further
-        if (result && !Array.isArray(result)) {
-            console.warn('Unexpected serviceability response shape:', JSON.stringify(result));
-        }
-        return res.json({ success: true, serviceable: false, message: 'Delivery not available to this pincode.' });
-    } catch (error) {
-        console.error('Serviceability check error:', error.message);
-        return res.status(500).json({ success: false, message: 'Unable to check serviceability. Please try again.' });
-    }
+        return res.json({ success: true, serviceable: false, message: 'Delivery not available' });
+    } catch (e) { return res.status(500).json({ success: false, message: 'Serviceability check failed' }); }
 });
-
-// Health Check Route
-router.get('/health', (req, res) => {
-    res.status(200).json({
-        status: 'OK',
-        uptime: process.uptime(),
-        message: 'Server is running',
-        timestamp: new Date()
-    });
-});
-
-// WhatsApp routes are handled by whatsappRoutes.js (mounted at /whatsapp above)
 
 module.exports = router;

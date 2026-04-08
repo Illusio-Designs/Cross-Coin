@@ -1,107 +1,131 @@
-/**
- * Logging Configuration
- * 
- * Environment-based logging configuration to reduce production logging verbosity
- * and improve I/O performance.
- * 
- * Production: 'warn' level - only warnings and errors
- * Development: 'debug' level - all logs including debug messages
- */
+'use strict';
 
-const getLogLevel = () => {
-    const env = process.env.NODE_ENV || 'development';
-    
-    if (env === 'production') {
-        return 'warn';
-    } else if (env === 'test') {
-        return 'error';
-    } else {
-        return 'debug';
-    }
-};
-
-const loggingConfig = {
-    // Current environment log level
-    level: getLogLevel(),
-    
-    // Environment-specific settings
-    production: {
-        level: 'warn',
-        // Only log warnings and errors in production
-        // Disable verbose query logging
-        // Disable HTTP request logging
-        disableQueryLogging: true,
-        disableHttpLogging: true
-    },
-    
-    development: {
-        level: 'debug',
-        // Log everything in development for debugging
-        disableQueryLogging: false,
-        disableHttpLogging: false
-    },
-    
-    test: {
-        level: 'error',
-        // Only log errors in test environment
-        disableQueryLogging: true,
-        disableHttpLogging: true
-    }
-};
+const fs = require('fs');
+const path = require('path');
 
 /**
- * Get logging configuration for current environment
- * @returns {Object} Logging configuration
+ * Structured Logger — production-grade logging.
+ *
+ * Features:
+ * - JSON structured output in production
+ * - Human-readable in development
+ * - File logging (logs/app.log, logs/error.log)
+ * - Log levels: debug, info, warn, error
+ * - Request context (requestId, userId, url)
+ * - Auto-creates logs directory
  */
-const getLoggingConfig = () => {
-    const env = process.env.NODE_ENV || 'development';
-    return loggingConfig[env] || loggingConfig.development;
-};
 
-/**
- * Check if logging is enabled for a specific level
- * @param {string} level - Log level to check ('debug', 'info', 'warn', 'error')
- * @returns {boolean} True if logging is enabled for this level
- */
-const isLogLevelEnabled = (level) => {
-    const levels = { debug: 0, info: 1, warn: 2, error: 3 };
-    const currentLevel = levels[getLogLevel()] || 0;
-    const checkLevel = levels[level] || 0;
-    return checkLevel >= currentLevel;
-};
+const LOG_DIR = path.join(__dirname, '..', 'logs');
+if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
 
-/**
- * Logger utility with environment-aware logging
- */
+const LEVELS = { debug: 0, info: 1, warn: 2, error: 3 };
+const ENV = process.env.NODE_ENV || 'development';
+const MIN_LEVEL = ENV === 'production' ? 'warn' : ENV === 'test' ? 'error' : 'debug';
+const IS_PROD = ENV === 'production';
+
+// File streams — append mode, auto-flush
+let appStream, errorStream;
+try {
+  appStream = fs.createWriteStream(path.join(LOG_DIR, 'app.log'), { flags: 'a' });
+  errorStream = fs.createWriteStream(path.join(LOG_DIR, 'error.log'), { flags: 'a' });
+} catch (_) {
+  // Fallback: no file logging if directory isn't writable
+}
+
+function shouldLog(level) {
+  return LEVELS[level] >= LEVELS[MIN_LEVEL];
+}
+
+function formatEntry(level, message, data) {
+  const entry = {
+    timestamp: new Date().toISOString(),
+    level: level.toUpperCase(),
+    message,
+    ...(data && typeof data === 'object' && !(data instanceof Error) ? data : {}),
+  };
+
+  if (data instanceof Error) {
+    entry.error = data.message;
+    if (!IS_PROD) entry.stack = data.stack;
+  }
+
+  return entry;
+}
+
+function writeToFile(stream, entry) {
+  if (stream && !stream.destroyed) {
+    try { stream.write(JSON.stringify(entry) + '\n'); } catch (_) {}
+  }
+}
+
+function log(level, message, data) {
+  if (!shouldLog(level)) return;
+
+  const entry = formatEntry(level, message, data);
+
+  // Console output
+  if (IS_PROD) {
+    // JSON in production for log aggregators
+    const line = JSON.stringify(entry);
+    if (level === 'error') console.error(line);
+    else if (level === 'warn') console.warn(line);
+    else console.log(line);
+  } else {
+    // Human-readable in dev
+    const prefix = `[${entry.level}]`;
+    const dataStr = data instanceof Error ? data.message : (data ? JSON.stringify(data) : '');
+    if (level === 'error') console.error(prefix, message, dataStr);
+    else if (level === 'warn') console.warn(prefix, message, dataStr);
+    else console.log(prefix, message, dataStr);
+  }
+
+  // File output
+  writeToFile(appStream, entry);
+  if (level === 'error' || level === 'warn') writeToFile(errorStream, entry);
+}
+
 const logger = {
-    debug: (message, data = null) => {
-        if (isLogLevelEnabled('debug')) {
-            console.log(`[DEBUG] ${message}`, data || '');
-        }
-    },
-    
-    info: (message, data = null) => {
-        if (isLogLevelEnabled('info')) {
-            console.log(`[INFO] ${message}`, data || '');
-        }
-    },
-    
-    warn: (message, data = null) => {
-        if (isLogLevelEnabled('warn')) {
-            console.warn(`[WARN] ${message}`, data || '');
-        }
-    },
-    
-    error: (message, error = null) => {
-        if (isLogLevelEnabled('error')) {
-            console.error(`[ERROR] ${message}`, error || '');
-        }
-    }
+  debug: (msg, data) => log('debug', msg, data),
+  info:  (msg, data) => log('info', msg, data),
+  warn:  (msg, data) => log('warn', msg, data),
+  error: (msg, data) => log('error', msg, data),
 };
 
-module.exports = {
-    loggingConfig,
-    getLoggingConfig,
-    isLogLevelEnabled,
-    logger
-};
+/**
+ * Express middleware — logs every request with timing.
+ * Adds req.requestId for tracing.
+ */
+function requestLogger(req, res, next) {
+  if (IS_PROD && req.path === '/api/health') return next(); // skip health checks
+
+  req.requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const start = Date.now();
+
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const entry = {
+      requestId: req.requestId,
+      method: req.method,
+      url: req.originalUrl,
+      status: res.statusCode,
+      duration: `${duration}ms`,
+      ip: req.ip,
+      userId: req.user?.id || null,
+    };
+
+    if (res.statusCode >= 500) logger.error('Request failed', entry);
+    else if (res.statusCode >= 400) logger.warn('Request error', entry);
+    else if (!IS_PROD) logger.info('Request', entry);
+  });
+
+  next();
+}
+
+const getLoggingConfig = () => ({
+  level: MIN_LEVEL,
+  environment: ENV,
+  logDir: LOG_DIR,
+  fileLogging: !!appStream,
+});
+
+module.exports = { logger, requestLogger, getLoggingConfig };
