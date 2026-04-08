@@ -12,7 +12,7 @@ import BrandTags from '../../../components/Dashboard/BrandTags';
 import BrandAssignment from '../../../components/Dashboard/BrandAssignment';
 import ProductFilterDrawer from '../../../components/products/ProductFilterDrawer';
 import dynamic from 'next/dynamic';
-const ReactQuill = dynamic(() => import('../../components/common/QuillEditor'), { 
+const ReactQuill = dynamic(() => import('../../../components/common/QuillEditor'), { 
   ssr: false,
   loading: () => <div style={{ height: 150, border: '1px solid #e5e7eb', borderRadius: 6 }} />
 });
@@ -943,10 +943,9 @@ const ProductsPage = () => {
             <div className="dm-field">
               <label className="dm-label">Description</label>
               <ReactQuill
-                theme="snow"
                 value={formData.description}
                 onChange={val => setFormData(prev => ({ ...prev, description: val }))}
-                style={{ minHeight: 150, marginBottom: 16 }}
+                placeholder="Write product description..."
               />
             </div>
             <div className="dm-field">
