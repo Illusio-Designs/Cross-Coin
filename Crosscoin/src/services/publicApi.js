@@ -84,7 +84,7 @@ export const resetPassword = async (resetData) => {
 
 // ============ CATEGORY APIs ============
 export const getPublicCategories = async () => {
-  const cacheKey = apiCache.getCacheKey(`${API_URL}/api/categories/public`);
+  const cacheKey = apiCache.getCacheKey(`${API_URL}/api/categories/listing`);
   
   if (apiCache.isPending(cacheKey)) {
     const pendingPromise = apiCache.getPending(cacheKey);
@@ -97,7 +97,7 @@ export const getPublicCategories = async () => {
   }
 
   try {
-    const promise = axios.get(`${API_URL}/api/categories/public`, addBrandHeader());
+    const promise = axios.get(`${API_URL}/api/categories/listing`, addBrandHeader());
     apiCache.addPending(cacheKey, promise);
     const response = await promise;
     const data = response.data;
@@ -111,7 +111,7 @@ export const getPublicCategories = async () => {
 export const getPublicCategoryByName = async (categoryName) => {
   try {
     const response = await axios.get(
-      `${API_URL}/api/categories/public/name/${categoryName}`,
+      `${API_URL}/api/categories/by-name/${categoryName}`,
       addBrandHeader()
     );
     return response.data;
@@ -122,7 +122,7 @@ export const getPublicCategoryByName = async (categoryName) => {
 
 // ============ SLIDER APIs ============
 export const getPublicSliders = async () => {
-  const cacheKey = apiCache.getCacheKey(`${API_URL}/api/sliders/public`);
+  const cacheKey = apiCache.getCacheKey(`${API_URL}/api/sliders/listing`);
   
   if (apiCache.isPending(cacheKey)) {
     const pendingPromise = apiCache.getPending(cacheKey);
@@ -136,7 +136,7 @@ export const getPublicSliders = async () => {
   }
 
   try {
-    const promise = axios.get(`${API_URL}/api/sliders/public`, addBrandHeader());
+    const promise = axios.get(`${API_URL}/api/sliders/listing`, addBrandHeader());
     apiCache.addPending(cacheKey, promise);
     const response = await promise;
     const data = response.data.sliders || response.data;
@@ -203,7 +203,7 @@ export const getInstagramFeed = async () => {
 // ============ PRODUCT APIs ============
 export const getPublicProductBySlug = async (slug) => {
   try {
-    const response = await axios.get(`${API_URL}/api/products/public/${slug}`, addBrandHeader());
+    const response = await axios.get(`${API_URL}/api/products/by-slug/${slug}`, addBrandHeader());
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -218,7 +218,7 @@ export const getAllPublicProducts = async (params = {}) => {
   if (params.page) queryParams.append("page", params.page);
   if (params.limit) queryParams.append("limit", params.limit);
 
-  const url = `${API_URL}/api/products/public?${queryParams.toString()}`;
+  const url = `${API_URL}/api/products/catalog?${queryParams.toString()}`;
   const cacheKey = apiCache.getCacheKey(url, params);
 
   if (apiCache.isPending(cacheKey)) {
@@ -268,7 +268,7 @@ export const searchProducts = async (query, params = {}) => {
 // ============ COUPON APIs ============
 export const getPublicCoupons = async () => {
   try {
-    const response = await axios.get(`${API_URL}/api/coupons/public`, addBrandHeader());
+    const response = await axios.get(`${API_URL}/api/coupons/listing`, addBrandHeader());
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -313,7 +313,7 @@ export const getPublicProductReviews = async (productId, params = {}) => {
     if (params.sort) queryParams.append("sort", params.sort);
 
     const response = await axios.get(
-      `${API_URL}/api/reviews/public/${productId}?${queryParams.toString()}`,
+      `${API_URL}/api/reviews/product/${productId}?${queryParams.toString()}`,
       addBrandHeader()
     );
     return response.data;
@@ -339,7 +339,7 @@ export const createPublicReview = async (reviewData) => {
     }
 
     const response = await axios.post(
-      `${API_URL}/api/reviews/public`,
+      `${API_URL}/api/reviews/submit`,
       formData,
       {
         headers: {
@@ -361,7 +361,7 @@ export const getAllPublicReviews = async (params = {}) => {
     if (params.limit) queryParams.append("limit", params.limit);
     if (params.sort) queryParams.append("sort", params.sort);
     const response = await axios.get(
-      `${API_URL}/api/reviews/public/all?${queryParams.toString()}`,
+      `${API_URL}/api/reviews/all?${queryParams.toString()}`,
       addBrandHeader()
     );
     return response.data;
@@ -437,6 +437,19 @@ export const logout = async () => {
         },
       }
     );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const deleteAccount = async (reason = '') => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.delete(`${API_URL}/api/users/delete`, {
+      headers: { Authorization: `Bearer ${token}`, "X-Brand-Name": "crosscoin" },
+      data: { reason },
+    });
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -685,27 +698,21 @@ export const createOrder = async (orderData) => {
 export const createGuestOrder = async (orderData) => {
   try {
     const utmSessionId = localStorage.getItem('utm_session_id');
-    if (utmSessionId) {
-      orderData.utm_session_id = utmSessionId;
-    }
-    
-    const response = await axios.post(`${API_URL}/api/orders/guest`, orderData, {
-      headers: {
-        "X-Brand-Name": "crosscoin"
-      },
+    if (utmSessionId) orderData.utm_session_id = utmSessionId;
+
+    const response = await axios.post(`${API_URL}/api/orders/guest-checkout`, orderData, {
+      headers: { "X-Brand-Name": "crosscoin" },
       withCredentials: true,
     });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
 
-export const getGuestOrder = async (email, orderNumber) => {
-  try {
-    const response = await axios.get(
-      `${API_URL}/api/orders/guest/track?email=${encodeURIComponent(email)}&orderNumber=${encodeURIComponent(orderNumber)}`
-    );
+    // If backend auto-created a user, store the token so user is now logged in
+    const newToken = response.headers['x-auth-token'];
+    if (newToken) {
+      localStorage.setItem('token', newToken);
+      // Trigger storage event so CartContext picks up the new auth state
+      window.dispatchEvent(new Event('storage'));
+    }
+
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -768,8 +775,8 @@ export const initiateReturn = async (orderId, reason = '') => {
 export const createRazorpayOrder = async ({ amount, currency = "INR", receipt, isGuest = false }) => {
   try {
     const endpoint = isGuest 
-      ? `${API_URL}/api/payments/guest/razorpay-order`
-      : `${API_URL}/api/payments/razorpay-order`;
+      ? `${API_URL}/api/payments/guest/razorpay/order`
+      : `${API_URL}/api/payments/razorpay/order`;
     
     const headers = {
       "X-Brand-Name": "crosscoin"
@@ -796,7 +803,7 @@ export const createRazorpayOrder = async ({ amount, currency = "INR", receipt, i
 export const updateOrderPayment = async ({ orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature }) => {
   try {
     const response = await axios.post(
-      `${API_URL}/api/payments/update-order-payment`,
+      `${API_URL}/api/payments/razorpay/verify`,
       {
         orderId,
         razorpayPaymentId,
@@ -817,12 +824,12 @@ export const updateOrderPayment = async ({ orderId, razorpayPaymentId, razorpayO
 
 /**
  * COD checkout — request OTP to the delivery phone (Msg91 / Twilio / custom SMS on backend).
- * Backend should implement: POST /api/checkout/phone-otp/send
+ * Backend should implement: POST /api/auth/otp/send
  */
 export const sendCheckoutPhoneOtp = async (phone) => {
   try {
     const response = await axios.post(
-      `${API_URL}/api/checkout/phone-otp/send`,
+      `${API_URL}/api/auth/otp/send`,
       { phone },
       addBrandHeader()
     );
@@ -834,12 +841,12 @@ export const sendCheckoutPhoneOtp = async (phone) => {
 
 /**
  * COD checkout — verify OTP. On success, backend may return { success: true, token?: string }.
- * Backend should implement: POST /api/checkout/phone-otp/verify
+ * Backend should implement: POST /api/auth/otp/verify
  */
 export const verifyCheckoutPhoneOtp = async (phone, code) => {
   try {
     const response = await axios.post(
-      `${API_URL}/api/checkout/phone-otp/verify`,
+      `${API_URL}/api/auth/otp/verify`,
       { phone, code },
       addBrandHeader()
     );
@@ -937,7 +944,7 @@ export const addToWishlist = async (productId) => {
   try {
     const token = localStorage.getItem("token");
     const response = await axios.post(
-      `${API_URL}/api/wishlist/add/${productId}`,
+      `${API_URL}/api/wishlist/${productId}`,
       {},
       {
         headers: { 
@@ -956,7 +963,7 @@ export const removeFromWishlist = async (productId) => {
   try {
     const token = localStorage.getItem("token");
     const response = await axios.delete(
-      `${API_URL}/api/wishlist/remove/${productId}`,
+      `${API_URL}/api/wishlist/${productId}`,
       {
         headers: { 
           Authorization: `Bearer ${token}`,
@@ -973,7 +980,7 @@ export const removeFromWishlist = async (productId) => {
 export const clearWishlist = async () => {
   try {
     const token = localStorage.getItem("token");
-    const response = await axios.delete(`${API_URL}/api/wishlist/clear`, {
+    const response = await axios.delete(`${API_URL}/api/wishlist`, {
       headers: { 
         Authorization: `Bearer ${token}`,
         "X-Brand-Name": "crosscoin"
@@ -1005,7 +1012,7 @@ export const addToCart = async ({ productId, variationId, quantity, size }) => {
   try {
     const token = localStorage.getItem("token");
     const payload = { productId, variationId, quantity, size };
-    const response = await axios.post(`${API_URL}/api/cart/add`, payload, {
+    const response = await axios.post(`${API_URL}/api/cart/items`, payload, {
       headers: { 
         Authorization: `Bearer ${token}`,
         "X-Brand-Name": "crosscoin"
@@ -1022,7 +1029,7 @@ export const updateCartItem = async (productId, quantity, variationId) => {
     const token = localStorage.getItem("token");
     const payload = { quantity, variationId };
     const response = await axios.put(
-      `${API_URL}/api/cart/item/${productId}`,
+      `${API_URL}/api/cart/items/${productId}`,
       payload,
       {
         headers: { 
@@ -1040,7 +1047,7 @@ export const updateCartItem = async (productId, quantity, variationId) => {
 export const removeFromCart = async (productId, variationId) => {
   try {
     const token = localStorage.getItem("token");
-    let url = `${API_URL}/api/cart/item/${productId}`;
+    let url = `${API_URL}/api/cart/items/${productId}`;
     if (variationId !== null && variationId !== undefined) {
       url += `/${variationId}`;
     }
@@ -1059,7 +1066,7 @@ export const removeFromCart = async (productId, variationId) => {
 export const clearCart = async () => {
   try {
     const token = localStorage.getItem("token");
-    const response = await axios.delete(`${API_URL}/api/cart/clear`, {
+    const response = await axios.delete(`${API_URL}/api/cart`, {
       headers: { 
         Authorization: `Bearer ${token}`,
         "X-Brand-Name": "crosscoin"
@@ -1498,7 +1505,7 @@ export const getPublicBlogs = async (params = {}) => {
     if (params.page) queryParams.append("page", params.page);
     if (params.limit) queryParams.append("limit", params.limit);
     const response = await axios.get(
-      `${API_URL}/api/blogs/public?${queryParams.toString()}`,
+      `${API_URL}/api/blogs/listing?${queryParams.toString()}`,
       addBrandHeader()
     );
     return response.data;
@@ -1510,7 +1517,7 @@ export const getPublicBlogs = async (params = {}) => {
 export const getPublicBlogBySlug = async (slug) => {
   try {
     const response = await axios.get(
-      `${API_URL}/api/blogs/public/${slug}`,
+      `${API_URL}/api/blogs/by-slug/${slug}`,
       addBrandHeader()
     );
     return response.data;

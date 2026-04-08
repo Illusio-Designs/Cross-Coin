@@ -2,11 +2,30 @@ const redisService = require('./redisService');
 
 /**
  * Cache Manager with TTL Support
- * Provides high-level cache operations with automatic expiration
- * Supports pattern-based invalidation and data serialization
- * 
- * Requirements: 2.1, 2.2
+ *
+ * ── Caching Strategy ──────────────────────────────────────────────────────────
+ * Key                    TTL        Invalidated on
+ * ─────────────────────────────────────────────────
+ * products:public:*      5 min      product create/update/delete
+ * categories:public      10 min     category create/update/delete
+ * sliders:public         10 min     slider create/update/delete
+ * dashboard:*            1 min      order create/update
+ * seo:*                  30 min     seo update
+ * cart:user:{id}         5 min      cart add/remove/update
+ * ─────────────────────────────────────────────────
  */
+
+// TTL constants (seconds) — single source of truth
+const TTL = {
+  PRODUCTS:    5  * 60,   // 5 min
+  CATEGORIES:  10 * 60,   // 10 min
+  SLIDERS:     10 * 60,   // 10 min
+  DASHBOARD:   1  * 60,   // 1 min
+  SEO:         30 * 60,   // 30 min
+  CART:        5  * 60,   // 5 min
+  DEFAULT:     60 * 60,   // 1 hour
+};
+
 class CacheManager {
   /**
    * Set a value in cache with TTL
@@ -228,5 +247,7 @@ class CacheManager {
   }
 }
 
-// Export singleton instance
-module.exports = new CacheManager();
+// Export singleton instance + TTL constants
+const instance = new CacheManager();
+instance.TTL = TTL;
+module.exports = instance;

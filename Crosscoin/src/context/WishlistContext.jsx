@@ -8,7 +8,7 @@ import {
   showClearWishlistSuccessToast 
 } from '../utils/toast';
 
-const WishlistContext = createContext();
+const WishlistContext = globalThis.__WISHLIST_CONTEXT__ || (globalThis.__WISHLIST_CONTEXT__ = createContext());
 
 function useWishlist() {
   const context = useContext(WishlistContext);

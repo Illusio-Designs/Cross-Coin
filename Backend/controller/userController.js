@@ -1,7 +1,6 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const passport = require('passport');
 const path = require('path');
 const fs = require('fs');
 const { User } = require('../model/userModel.js');
@@ -211,31 +210,6 @@ module.exports.adminLogin = async (req, res) => {
     } catch (error) {
         console.error('Admin login error:', error);
         res.status(500).json({ message: 'Admin login failed', error: error.message });
-    }
-};
-
-// **Google Authentication**
-module.exports.googleAuth = passport.authenticate('google', {
-    scope: ['profile', 'email']
-});
-
-// **Google Auth Callback**
-module.exports.googleAuthCallback = (req, res) => {
-    try {
-        const token = jwt.sign(
-            { id: req.user.id, email: req.user.email, role: req.user.role }, 
-            process.env.JWT_SECRET, 
-            { expiresIn: '1d' }
-        );
-        
-        // Remove password from response
-        const userResponse = req.user.toJSON();
-        delete userResponse.password;
-        
-        res.json({ message: 'Google authentication successful', token, user: userResponse });
-    } catch (error) {
-        console.error('Google auth callback error:', error);
-        res.status(500).json({ message: 'Authentication failed', error: error.message });
     }
 };
 
@@ -481,36 +455,31 @@ module.exports.updatePassword = async (req, res) => {
     }
 };
 
-// **Delete User**
+// **Delete Account (soft delete — consumer self-service)**
 module.exports.deleteUser = async (req, res) => {
     try {
-        const { id } = req.params;
+        const userId = req.user?.id || req.params.id;
+        const { reason } = req.body;
 
-        const user = await User.findByPk(id);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
+        const user = await User.findByPk(userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
 
-        // Delete profile image
-        if (user.profileImage && user.profileImage.startsWith('/profiles/')) {
-            await imagekitService.deleteImage(user.profileImage).catch(err =>
-                console.error('Failed to delete profile image from ImageKit:', err.message)
-            );
-        }
-
-        await user.destroy();
-
-        res.json({ 
-            success: true, 
-            message: 'User deleted successfully' 
+        // Soft delete — anonymise PII and mark deleted_at
+        const timestamp = Date.now();
+        await user.update({
+            deleted_at: new Date(),
+            email: `deleted_${timestamp}@deleted.crosscoin.in`,
+            phone: null,
+            username: `deleted_${timestamp}`,
+            password: null,
+            refreshToken: null,
+            profileImage: null,
         });
+
+        res.json({ success: true, message: 'Account deleted successfully' });
     } catch (error) {
         console.error('Error deleting user:', error);
-        res.status(500).json({ 
-            success: false,
-            message: 'Failed to delete user', 
-            error: error.message 
-        });
+        res.status(500).json({ success: false, message: 'Failed to delete account', error: error.message });
     }
 };
 
@@ -786,214 +755,4 @@ module.exports.createStaffUser = async (req, res) => {
     }
 };
 
-// **Guest-User Merge Report + Bulk Merge (admin only)**
-module.exports.getGuestUserMergeReport = async (req, res) => {
-    try {
-        const { sequelize } = require('../config/db.js');
 
-        // Find all users that have matching guest records by email
-        const [matches] = await sequelize.query(`
-            SELECT 
-                u.id          AS user_id,
-                u.username,
-                u.email       AS user_email,
-                u.phone       AS user_phone,
-                u.createdAt   AS user_created,
-                g.id          AS guest_id,
-                g.email       AS guest_email,
-                g.status      AS guest_status,
-                g.converted_at AS convertedAt,
-                COUNT(DISTINCT o_u.id)  AS user_orders,
-                COUNT(DISTINCT o_g.id)  AS guest_orders,
-                COUNT(DISTINCT sa_u.id) AS user_addresses,
-                COUNT(DISTINCT sa_g.id) AS guest_addresses
-            FROM users u
-            JOIN guest_users g ON LOWER(g.email) = LOWER(u.email)
-            LEFT JOIN orders o_u  ON o_u.user_id       = u.id
-            LEFT JOIN orders o_g  ON o_g.guest_user_id = g.id
-            LEFT JOIN shipping_addresses sa_u ON sa_u.user_id       = u.id
-            LEFT JOIN shipping_addresses sa_g ON sa_g.guest_user_id = g.id
-            WHERE u.role = 'consumer'
-            GROUP BY u.id, g.id
-            ORDER BY (COUNT(DISTINCT o_g.id) + COUNT(DISTINCT sa_g.id)) DESC, u.createdAt DESC
-        `);
-
-        // Also find orphaned orders (no user_id, no guest_user_id)
-        const [orphanedOrders] = await sequelize.query(`
-            SELECT id, order_number, status, final_amount, created_at
-            FROM orders
-            WHERE user_id IS NULL AND guest_user_id IS NULL
-            ORDER BY created_at DESC
-        `);
-
-        // Orders still on guest_user_id (not yet moved to a user)
-        const [pendingGuestOrders] = await sequelize.query(`
-            SELECT o.id, o.order_number, o.status, o.user_id, 
-                   o.guest_user_id, o.final_amount, o.created_at,
-                   g.email AS guest_email, g.status AS guest_status
-            FROM orders o
-            JOIN guest_users g ON g.id = o.guest_user_id
-            ORDER BY o.created_at DESC
-        `);
-
-        // Shipping addresses still on guest_user_id
-        const [pendingGuestAddresses] = await sequelize.query(`
-            SELECT sa.id, sa.user_id, sa.guest_user_id, 
-                   sa.city, sa.state, sa.createdAt,
-                   g.email AS guest_email
-            FROM shipping_addresses sa
-            JOIN guest_users g ON g.id = sa.guest_user_id
-            ORDER BY sa.createdAt DESC
-        `);
-
-        res.json({
-            success: true,
-            summary: {
-                total_matches: matches.length,
-                pending_guest_orders: pendingGuestOrders.length,
-                pending_guest_addresses: pendingGuestAddresses.length,
-                orphaned_orders: orphanedOrders.length,
-            },
-            matches,
-            pendingGuestOrders,
-            pendingGuestAddresses,
-            orphanedOrders,
-        });
-    } catch (error) {
-        console.error('Guest merge report error:', error);
-        res.status(500).json({ message: 'Failed to generate report', error: error.message });
-    }
-};
-
-// **Bulk merge all guest data to matched users by email (admin only)**
-module.exports.bulkMergeGuestUsers = async (req, res) => {
-    try {
-        const { sequelize } = require('../config/db.js');
-
-        // Move orders from guest to matched user
-        const [orderResult] = await sequelize.query(`
-            UPDATE orders o
-            JOIN guest_users g ON g.id = o.guest_user_id
-            JOIN users u ON LOWER(u.email) = LOWER(g.email)
-            SET o.user_id = u.id, o.guest_user_id = NULL
-            WHERE o.user_id IS NULL
-        `);
-
-        // Move shipping addresses
-        const [addressResult] = await sequelize.query(`
-            UPDATE shipping_addresses sa
-            JOIN guest_users g ON g.id = sa.guest_user_id
-            JOIN users u ON LOWER(u.email) = LOWER(g.email)
-            SET sa.user_id = u.id, sa.guest_user_id = NULL
-            WHERE sa.user_id IS NULL
-        `);
-
-        // Mark matched guests as converted
-        const [guestResult] = await sequelize.query(`
-            UPDATE guest_users g
-            JOIN users u ON LOWER(u.email) = LOWER(g.email)
-            SET g.status = 'converted', g.converted_at = NOW()
-            WHERE g.status = 'active'
-        `);
-
-        res.json({
-            success: true,
-            message: 'Bulk merge completed',
-            orders_moved: orderResult.affectedRows || 0,
-            addresses_moved: addressResult.affectedRows || 0,
-            guests_converted: guestResult.affectedRows || 0,
-        });
-    } catch (error) {
-        console.error('Bulk merge error:', error);
-        res.status(500).json({ message: 'Bulk merge failed', error: error.message });
-    }
-};
-
-// **Auto-create users for unmatched guests and merge their orders/addresses (admin only)**
-module.exports.autoCreateUsersFromGuests = async (req, res) => {
-    try {
-        const { sequelize } = require('../config/db.js');
-        const { Op } = require('sequelize');
-        const { ShippingAddress } = require('../model/shippingAddressModel.js');
-        const bcrypt = require('bcrypt');
-
-        // Find all guest users that have orders/addresses but no matching user account
-        const [unmatchedGuests] = await sequelize.query(`
-            SELECT DISTINCT g.id, g.email, g.first_name, g.last_name
-            FROM guest_users g
-            LEFT JOIN users u ON LOWER(u.email) = LOWER(g.email)
-            WHERE u.id IS NULL
-              AND g.status = 'active'
-              AND (
-                EXISTS (SELECT 1 FROM orders o WHERE o.guest_user_id = g.id AND o.user_id IS NULL)
-                OR
-                EXISTS (SELECT 1 FROM shipping_addresses sa WHERE sa.guest_user_id = g.id AND sa.user_id IS NULL)
-              )
-        `);
-
-        let created = 0;
-        let orders_moved = 0;
-        let addresses_moved = 0;
-        const results = [];
-
-        for (const guest of unmatchedGuests) {
-            try {
-                // Generate a random password — user can reset via OTP login
-                const tempPassword = await bcrypt.hash(Math.random().toString(36).slice(-10), 10);
-                const username = `${(guest.first_name || 'user').toLowerCase().replace(/\s+/g, '')}_${guest.id}_${Date.now().toString().slice(-4)}`;
-
-                const newUser = await User.create({
-                    username,
-                    email: guest.email.toLowerCase(),
-                    password: tempPassword,
-                    role: 'consumer',
-                });
-
-                // Move orders
-                const [orderUpdate] = await sequelize.query(`
-                    UPDATE orders SET user_id = ${newUser.id}, guest_user_id = NULL
-                    WHERE guest_user_id = ${guest.id} AND user_id IS NULL
-                `);
-                const movedOrders = orderUpdate.affectedRows || 0;
-
-                // Move addresses
-                const [addrUpdate] = await sequelize.query(`
-                    UPDATE shipping_addresses SET user_id = ${newUser.id}, guest_user_id = NULL
-                    WHERE guest_user_id = ${guest.id} AND user_id IS NULL
-                `);
-                const movedAddresses = addrUpdate.affectedRows || 0;
-
-                // Mark guest converted
-                await GuestUser.update(
-                    { status: 'converted', convertedAt: new Date() },
-                    { where: { id: guest.id } }
-                );
-
-                orders_moved += movedOrders;
-                addresses_moved += movedAddresses;
-                created++;
-                results.push({
-                    guest_id: guest.id,
-                    email: guest.email,
-                    new_user_id: newUser.id,
-                    orders_moved: movedOrders,
-                    addresses_moved: movedAddresses,
-                });
-            } catch (err) {
-                results.push({ guest_id: guest.id, email: guest.email, error: err.message });
-            }
-        }
-
-        res.json({
-            success: true,
-            message: `Auto-create completed`,
-            users_created: created,
-            orders_moved,
-            addresses_moved,
-            results,
-        });
-    } catch (error) {
-        console.error('Auto-create users from guests error:', error);
-        res.status(500).json({ message: 'Auto-create failed', error: error.message });
-    }
-};

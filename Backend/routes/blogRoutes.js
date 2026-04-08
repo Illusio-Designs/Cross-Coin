@@ -20,8 +20,8 @@ const {
 } = require('../controller/blogController.js');
 
 // Public routes (no auth required)
-router.get('/public', getPublicPosts);
-router.get('/public/:slug', getPublicPostBySlug);
+router.get('/listing', getPublicPosts);
+router.get('/by-slug/:slug', getPublicPostBySlug);
 router.get('/tags', getAllTags);
 
 // Product Manager routes

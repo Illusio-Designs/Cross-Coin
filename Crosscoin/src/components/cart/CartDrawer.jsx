@@ -158,7 +158,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-    fetch(`${API}/api/reviews/public/all?limit=1`, {
+    fetch(`${API}/api/reviews/all?limit=1`, {
       headers: { 'X-Brand-Name': 'crosscoin' }
     })
       .then(r => r.json())
@@ -863,25 +863,36 @@ const CartDrawer = ({ isOpen, onClose }) => {
           },
           theme: { color: '#CE1E36' },
           handler: async (response) => {
-            try {
-              const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
-              if (!result?.order) throw new Error('Order creation failed.');
-              await updateOrderPayment({
-                orderId: result.order.id,
-                razorpayPaymentId: response.razorpay_payment_id,
-                razorpayOrderId: response.razorpay_order_id,
-                razorpaySignature: response.razorpay_signature,
-              });
-              trackPurchase(prepaidPayable, result.order.order_number);
-              clearCart();
-              clearBuyNow();
-              showOrderPlacedSuccessToast(result.order.order_number);
-              setOrderSuccess({ orderNumber: result.order.order_number });
-            } catch {
-              showOrderPlacedErrorToast('Payment successful but order creation failed. Please contact support.');
-            } finally {
-              setIsProcessing(false);
+            // Payment captured — now create order with retries
+            const maxRetries = 3;
+            let lastError = null;
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+              try {
+                const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
+                if (!result?.order) throw new Error('Order creation failed.');
+                await updateOrderPayment({
+                  orderId: result.order.id,
+                  razorpayPaymentId: response.razorpay_payment_id,
+                  razorpayOrderId: response.razorpay_order_id,
+                  razorpaySignature: response.razorpay_signature,
+                });
+                trackPurchase(prepaidPayable, result.order.order_number);
+                clearCart();
+                clearBuyNow();
+                showOrderPlacedSuccessToast(result.order.order_number);
+                setOrderSuccess({ orderNumber: result.order.order_number });
+                setIsProcessing(false);
+                return; // success — exit
+              } catch (err) {
+                lastError = err;
+                if (attempt < maxRetries) await new Promise(r => setTimeout(r, 2000 * attempt));
+              }
             }
+            // All retries failed — payment is captured, webhook will reconcile
+            showOrderPlacedErrorToast('Payment received successfully. Your order is being processed — you will receive confirmation shortly.');
+            clearCart();
+            clearBuyNow();
+            setIsProcessing(false);
           },
           modal: {
             ondismiss: () => {
@@ -968,6 +979,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                       const rzpOrder = paymentFailed.rzpOrder;
                       const prepaidIdempotencyKey = generateIdempotencyKey();
                       const orderData = buildPrepaidOrderData(prepaidIdempotencyKey);
+
                       const options = {
                         key: RAZORPAY_KEY,
                         amount: rzpOrder.amount,
@@ -982,23 +994,31 @@ const CartDrawer = ({ isOpen, onClose }) => {
                         },
                         theme: { color: '#CE1E36' },
                         handler: async (response) => {
-                          try {
-                            const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
-                            if (!result?.order) throw new Error('Order creation failed.');
-                            await updateOrderPayment({
-                              orderId: result.order.id,
-                              razorpayPaymentId: response.razorpay_payment_id,
-                              razorpayOrderId: response.razorpay_order_id,
-                              razorpaySignature: response.razorpay_signature,
-                            });
-                            trackPurchase(prepaidPayable, result.order.order_number);
-                            clearCart(); clearBuyNow();
-                            setPaymentFailed({ error: null, rzpOrder: null, retryCount: 0 });
-                            showOrderPlacedSuccessToast(result.order.order_number);
-                            setOrderSuccess({ orderNumber: result.order.order_number });
-                          } catch {
-                            showOrderPlacedErrorToast('Payment successful but order creation failed. Please contact support.');
-                          } finally { setIsProcessing(false); }
+                          const maxRetries = 3;
+                          for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                            try {
+                              const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
+                              if (!result?.order) throw new Error('Order creation failed.');
+                              await updateOrderPayment({
+                                orderId: result.order.id,
+                                razorpayPaymentId: response.razorpay_payment_id,
+                                razorpayOrderId: response.razorpay_order_id,
+                                razorpaySignature: response.razorpay_signature,
+                              });
+                              trackPurchase(prepaidPayable, result.order.order_number);
+                              clearCart(); clearBuyNow();
+                              setPaymentFailed({ error: null, rzpOrder: null, retryCount: 0 });
+                              showOrderPlacedSuccessToast(result.order.order_number);
+                              setOrderSuccess({ orderNumber: result.order.order_number });
+                              setIsProcessing(false);
+                              return;
+                            } catch (err) {
+                              if (attempt < maxRetries) await new Promise(r => setTimeout(r, 2000 * attempt));
+                            }
+                          }
+                          showOrderPlacedErrorToast('Payment received successfully. Your order is being processed — you will receive confirmation shortly.');
+                          clearCart(); clearBuyNow();
+                          setIsProcessing(false);
                         },
                         modal: {
                           ondismiss: () => {
@@ -1032,7 +1052,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                   setPaymentFailed({ error: null, rzpOrder: null, retryCount: 0 });
                   // Fire-and-forget: record failure if we have a rzpOrder
                   if (paymentFailed.rzpOrder?.id) {
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/payments/payment-failed`, {
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/payments/failed`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json', 'X-Brand-Name': 'crosscoin' },
                       body: JSON.stringify({ razorpayOrderId: paymentFailed.rzpOrder.id, errorDescription: paymentFailed.error }),

@@ -1,0 +1,765 @@
+# CrossCoin Backend — Technical Documentation
+
+## Overview
+
+Node.js + Express REST API for the CrossCoin e-commerce platform. Handles products, orders, payments, users, shipping, loyalty, WhatsApp, and admin dashboard.
+
+- **Runtime:** Node.js (Express 5)
+- **Database:** MySQL via Sequelize ORM
+- **Cache:** Redis (ioredis)
+- **Queue:** Bull (Redis-backed job queue)
+- **Auth:** JWT + Passport (Google OAuth)
+- **Payments:** Razorpay
+- **Shipping:** FShip API
+- **Media:** ImageKit CDN
+- **Entry point:** `index.js` → `worker.js` (spawned as child process)
+
+---
+
+## Architecture
+
+```
+index.js          — Express app, middleware, server startup
+worker.js         — Background process: cron jobs, badge queue
+routes/           — Route definitions (mounted under /api and /api/v1)
+controller/       — Thin handlers, delegate to services
+model/            — Sequelize models + associations
+services/         — Business logic, event emitters, external integrations
+middleware/       — Auth, brand, upload, etag, validation
+config/           — DB, CORS, logging, passport, cron
+integration/      — Facebook Pixel, Google Analytics, Facebook Catalog
+queue/            — Bull queue setup + processors + dead letter queue
+utils/            — Helpers: encryption, validation, batch ops, circuit breaker
+scripts/          — DB setup, migrations, data scripts
+```
+
+### Startup Sequence
+
+1. Connect Redis (non-fatal if unavailable)
+2. Authenticate MySQL connection
+3. Run `setupDatabase()` only if schema version changed (includes migration 006: `awaiting_confirmation` status)
+4. Initialize SEO data (first boot only)
+5. Spawn `worker.js` as child process (auto-restarts on crash)
+6. Start HTTP server on `PORT` (default 5000)
+
+---
+
+## Environment Variables
+
+| Variable | Description |
+|---|---|
+| `PORT` | Server port (default 5000) |
+| `NODE_ENV` | `development` / `production` |
+| `DB_HOST` | MySQL host |
+| `DB_USER` | MySQL user |
+| `DB_PASSWORD` | MySQL password |
+| `DB_DATABASE` | MySQL database name |
+| `DB_DIALECT` | `mysql` |
+| `JWT_SECRET` | JWT signing secret |
+| `SESSION_SECRET` | Express session secret (required in production) |
+| `REDIS_HOST` | Redis host |
+| `REDIS_PORT` | Redis port |
+| `REDIS_PASSWORD` | Redis password |
+| `IMAGEKIT_PUBLIC_KEY` | ImageKit public key |
+| `IMAGEKIT_PRIVATE_KEY` | ImageKit private key |
+| `IMAGEKIT_URL_ENDPOINT` | ImageKit URL endpoint |
+| `RAZORPAY_KEY_ID` | Razorpay key ID |
+| `RAZORPAY_KEY_SECRET` | Razorpay key secret |
+| `FSHIP_API_KEY` | FShip API key |
+| `FB_PIXEL_ID` | Facebook Pixel ID |
+| `FB_ACCESS_TOKEN` | Facebook Conversions API token |
+| `GA_MEASUREMENT_ID` | Google Analytics 4 ID |
+| `GA_API_SECRET` | GA4 Measurement Protocol secret |
+| `UPLOAD_PATH` | Local upload directory (default `uploads`) |
+
+---
+
+## User & Auth System
+
+- **No guest users.** Every order creates a `consumer` account automatically.
+- OTP-based phone login (MSG91). Auto-creates user if phone not found.
+- On login/register, any historical guest orders are linked by email match.
+- Soft delete: `DELETE /api/users/delete` anonymises PII, sets `deleted_at`.
+- Roles: `admin`, `product_manager`, `order_manager`, `whatsapp_manager`, `consumer`.
+- JWT: 7-day access + 7-day refresh tokens (hashed in DB).
+
+---
+
+## Order System
+
+### Status Flow (State Machine)
+
+```
+awaiting_confirmation → confirmed → processing → booked
+  → pickup initiated → manifested → in transit
+  → shipped → out for delivery → delivered
+  → [return_initiated → returned_rto]
+  → [rto → rto delivered]
+  Any pre-dispatch state → cancelled
+```
+
+Transitions are validated by `orderService.assertTransition()`. Invalid transitions return 400.
+
+### Default Status
+
+All new orders start as `awaiting_confirmation`. Admin must confirm before FShip sync.
+
+### Order Creation — Authenticated (`POST /api/orders`)
+
+1. Validates shipping address ownership
+2. Batch-fetches products + variations (avoids N+1)
+3. Server-side coupon discount verification
+4. COD max value cap + RTO risk scoring
+5. Batch-inserts order items, decrements stock atomically
+6. Sets status to `awaiting_confirmation`, payment to `pending`
+7. Emits `order.created` event (SSE notification to admin)
+8. FShip sync does NOT happen — waits for admin confirmation
+
+### Order Creation — Unauthenticated (`POST /api/orders/checkout`)
+
+1. Validates `guest_info` (phone, email, name) via schema validator
+2. Finds existing `consumer` by phone → email → creates new one if not found
+3. Creates `ShippingAddress` under that user
+4. Delegates to `createOrder` internally
+5. Returns `X-Auth-Token` header — frontend stores it, user is auto-logged in
+6. **No `GuestUser` record is ever created.** All orders belong to a `consumer` user.
+
+### Admin Confirmation (`PUT /api/orders/:id/confirm`)
+
+1. Validates state transition (`awaiting_confirmation` → `confirmed`)
+2. Creates status history entry
+3. Emits `order.confirmed` event → WhatsApp confirmation sent
+4. Triggers FShip sync via `orderService.syncOrderToFShip()` (uses circuit breaker)
+
+### Cancellation
+
+| Who | Allowed statuses |
+|---|---|
+| User | `awaiting_confirmation`, `pending`, `confirmed`, `processing` |
+| Admin | Above + `booked` |
+| Blocked | `shipped`, `in transit`, `out for delivery`, `delivered` |
+
+- Reason is **required** (min 5 chars, validated by schema)
+- Restores stock, decrements coupon usage, refunds loyalty points
+- Cancels FShip order if already synced
+- Emits `order.cancelled` event → WhatsApp cancellation sent
+
+### RTO Risk Scoring
+
+| Score | Level | Meaning |
+|---|---|---|
+| 0-10 | 🟢 LOW | Normal |
+| 11-20 | 🟡 MEDIUM | Caution |
+| 21-30 | 🔴 HIGH | Block COD |
+
+Factors: repeat RTO customer (+20), missing landmark (+10). Shown in admin dashboard.
+
+---
+
+## Payment System (Razorpay)
+
+### Prepaid Flow (Frontend → Backend)
+
+1. Frontend creates Razorpay order via `POST /api/payments/razorpay/create`
+2. Razorpay payment modal opens (managed by Razorpay SDK, 15-min window)
+3. User completes payment → Razorpay handler fires
+4. Handler creates backend order with **3 retries** (2s, 4s, 6s exponential backoff)
+5. Then verifies payment via `POST /api/payments/razorpay/verify`
+6. If all retries fail: cart cleared, user shown "Payment received, order being processed"
+7. Razorpay webhook (`POST /api/orders/fship/webhook`) reconciles any missed orders
+
+### COD Flow
+
+1. OTP verification required before placing COD order
+2. Order created directly → status `awaiting_confirmation`
+3. COD max value cap enforced server-side (configurable per brand)
+4. RTO risk check: COD blocked for repeat RTO customers (2+ RTOs in 6 months)
+
+---
+
+## Event-Driven Architecture
+
+`orderEvents.js` — decoupled order lifecycle events via Node.js EventEmitter.
+
+| Event | Trigger | Actions |
+|---|---|---|
+| `order.created` | Order placed | SSE notification to admin dashboard |
+| `order.confirmed` | Admin confirms | WhatsApp confirmation, FShip sync |
+| `order.shipped` | Status → shipped | WhatsApp tracking notification |
+| `order.delivered` | Status → delivered | Review request scheduled (via cron) |
+| `order.cancelled` | Order cancelled | WhatsApp cancellation message |
+| `order.analytics` | Any event | Facebook Pixel + GA4 server-side events |
+
+Benefits: controllers stay thin, integrations are decoupled, easy to add new listeners.
+
+---
+
+## Circuit Breaker
+
+`utils/circuitBreaker.js` — protects against cascading failures from external services.
+
+| Service | Threshold | Timeout | Reset |
+|---|---|---|---|
+| FShip | 3 failures | 60s open | Auto half-open |
+| Razorpay | 3 failures | 30s open | Auto half-open |
+| WhatsApp | 5 failures | 60s open | Auto half-open |
+
+States: `CLOSED` (normal) → `OPEN` (failing, rejects calls) → `HALF_OPEN` (testing recovery).
+
+---
+
+## Schema Validation
+
+`utils/validate.js` — lightweight request body validation (no external deps).
+
+Pre-built schemas wired as middleware:
+- `schemas.checkout` — phone, email, firstName, items, payment_type
+- `schemas.cancelOrder` — reason (min 5 chars)
+- `schemas.createAddress` — address (min 15 chars), city, state, pincode, phone
+- `schemas.register` — username, email, password (min 8 chars)
+
+Usage: `router.post('/checkout', validateBody(schemas.checkout), handler)`
+
+---
+
+## Caching Strategy
+
+`services/cacheManager.js` — Redis-backed with defined TTLs.
+
+| Key pattern | TTL | Invalidated on |
+|---|---|---|
+| `products:public:*` | 5 min | Product create/update/delete |
+| `categories:public` | 10 min | Category change |
+| `sliders:public` | 10 min | Slider change |
+| `dashboard:*` | 1 min | Order create/update |
+| `seo:*` | 30 min | SEO update |
+| `cart:user:{id}` | 5 min | Cart add/remove/update |
+
+---
+
+## Models
+
+### User (`users`)
+
+| Field | Type | Notes |
+|---|---|---|
+| id | INT PK | Auto increment |
+| username | STRING | Unique |
+| email | STRING | Unique |
+| password | STRING | Bcrypt hashed, nullable (Google login) |
+| role | ENUM | `admin`, `product_manager`, `order_manager`, `whatsapp_manager`, `consumer` |
+| phone | STRING(20) | Unique, nullable |
+| profileImage | STRING | ImageKit path |
+| loyalty_points | INT | Default 0 |
+| deleted_at | DATE | Soft delete timestamp |
+
+### Order (`orders`, underscored)
+
+| Field | Type | Notes |
+|---|---|---|
+| id | INT PK | |
+| user_id | INT FK | |
+| order_number | STRING | Unique `ORD-YYYYMMDD-XXXX` |
+| total_amount | DECIMAL(10,2) | Before discount |
+| discount_amount | DECIMAL(10,2) | |
+| shipping_fee | DECIMAL(10,2) | |
+| final_amount | DECIMAL(10,2) | |
+| payment_type | ENUM | `cod`, `razorpay`, `upi`, etc. |
+| payment_status | ENUM | `pending`, `paid`, `failed`, `refunded`, `cancelled`, `refund_pending` |
+| status | ENUM | See state machine above |
+| shipping_address_id | INT FK | |
+| coupon_id | INT FK | Nullable |
+| brand_id | INT FK | Default 1 |
+| fship_order_id | STRING | FShip reference |
+| fship_waybill | STRING | Tracking waybill |
+| fship_sync_status | ENUM | `pending`, `syncing`, `synced`, `failed` |
+| rto_risk_score | INT | 0-30 |
+| guest_user_id | INT FK | Legacy only, not written to anymore |
+
+### Other Models
+
+| Model | Table | Purpose |
+|---|---|---|
+| Product | `products` | Products with slug, badge, category |
+| ProductVariation | `product_variations` | SKU, price, stock, attributes (JSON) |
+| ProductImage | `product_images` | Product/variation images |
+| ProductSEO | `product_seo` | SEO + structured data |
+| Category | `categories` | Self-referential tree |
+| Brand | `brands` | Multi-brand support |
+| BrandSetting | `brand_settings` | Per-brand config (encrypted) |
+| Payment | `payments` | Razorpay transactions |
+| ShippingAddress | `shipping_addresses` | Encrypted phone + address |
+| Cart / CartItem | `carts`, `cart_items` | User cart |
+| Coupon / CouponUsage | `coupons`, `coupon_usages` | Percentage, fixed, tiered, quantity-based |
+| LoyaltyTransaction | `loyalty_transactions` | Earned, redeemed, expired, refunded |
+| Review / ReviewImage | `reviews`, `review_images` | Product reviews |
+| Wishlist | `wishlists` | User wishlists |
+| OrderItem | `order_items` | Order line items |
+| OrderStatusHistory | `order_status_histories` | Audit trail |
+| Slider / SliderBrand | `sliders`, `slider_brands` | Hero banners |
+| Lookbook / LookbookImage / LookbookHotspot | lookbook tables | Shoppable lookbooks |
+| Reel / ReelProduct | `reels`, `reel_products` | Video reels |
+| InstagramPostProduct | `instagram_post_products` | Instagram tagging |
+| WhatsappConversation / WhatsappMessage | whatsapp tables | WhatsApp CRM |
+| BlogPost / BlogCategory / BlogTag / BlogSEO | blog tables | Blog system |
+| UTMTracking | `utm_tracking` | UTM capture |
+| LeadCapture | `lead_captures` | Phone popup leads |
+| FShipLabelDownload | `fship_label_downloads` | Label audit |
+| GuestUser | `guest_users` | **Legacy only** — not written to anymore |
+
+---
+
+## Controllers & Routes
+
+> **Base URL:** `/api/` or `/api/v1/` (both supported)
+
+### Route Naming Convention
+
+All routes follow: `/api/v1/{resource}`, `/api/v1/{resource}/{id}`, `/api/v1/{resource}/{id}/{action}`
+
+No `/public`, `/guest`, or `/admin` prefixes in URLs — handled by middleware.
+
+### Auth — `/api/v1/auth`
+
+| Method | Route | Auth | Function |
+|---|---|---|---|
+| POST | `/otp/send` | Public | Send OTP to phone |
+| POST | `/otp/verify` | Public | Verify OTP |
+
+### Users — `/api/v1/users`
+
+| Method | Route | Auth | Function |
+|---|---|---|---|
+| POST | `/register` | Public | Create consumer |
+| POST | `/login` | Public | OTP phone login |
+| POST | `/admin-login` | Public | Staff login |
+| POST | `/logout` | Public | Invalidate token |
+| GET | `/me` | Auth | Current user |
+| PUT | `/profile` | Auth | Update profile |
+| DELETE | `/` | Auth | Soft delete account |
+| GET | `/all` | Admin | List all users |
+| GET | `/guest-merge-report` | Admin | Unlinked guest data |
+| POST | `/bulk-merge-guests` | Admin | Merge by email |
+
+### Orders — `/api/v1/orders`
+
+| Method | Route | Auth | Function |
+|---|---|---|---|
+| POST | `/` | Auth | Create order |
+| POST | `/guest-checkout` | Public | Auto-create user + order |
+| GET | `/my-orders` | Auth | User orders |
+| GET | `/:id` | Auth | Single order |
+| PUT | `/:id/confirm` | OrderManager | Confirm → FShip |
+| PUT | `/:id/cancel` | Auth | User cancel |
+| PUT | `/:id/admin-cancel` | OrderManager | Admin cancel |
+| PUT | `/:id/status` | OrderManager | State machine update |
+| POST | `/:id/return` | Auth | Initiate return |
+| GET | `/` | OrderManager | All orders |
+| GET | `/stats` | OrderManager | Statistics |
+| GET | `/track/awb` | Public | Track by AWB |
+| GET | `/track/:order_number` | Public | Track by order number |
+
+### Payments — `/api/v1/payments`
+
+| Method | Route | Auth | Function |
+|---|---|---|---|
+| POST | `/razorpay/order` | Auth | Create Razorpay order |
+| POST | `/razorpay/verify` | Public | Verify signature |
+| POST | `/razorpay/webhook` | Public | Razorpay webhook |
+| POST | `/guest/razorpay/order` | Public | Guest Razorpay order |
+| GET | `/my-payments` | Auth | User payments |
+| POST | `/refund` | OrderManager | Full/partial refund |
+| GET | `/` | OrderManager | All payments |
+
+### Products — `/api/v1/products`
+
+| Method | Route | Auth | Function |
+|---|---|---|---|
+| GET | `/catalog` | Public | Product listing |
+| GET | `/by-slug/:slug` | Public | Product by slug |
+| GET | `/search` | Public | Search with relevance |
+| GET | `/featured` | Public | Featured products |
+| GET | `/new-arrivals` | Public | New arrivals |
+| GET | `/best-sellers` | Public | Best sellers |
+| GET | `/category/:id` | Public | By category |
+
+### Cart — `/api/v1/cart`
+
+| Method | Route | Auth | Function |
+|---|---|---|---|
+| GET | `/` | Auth | Get cart |
+| POST | `/items` | Auth | Add item |
+| PUT | `/items/:productId` | Auth | Update quantity |
+| DELETE | `/items/:productId` | Auth | Remove item |
+| DELETE | `/` | Auth | Clear cart |
+
+### Wishlist — `/api/v1/wishlist`
+
+| Method | Route | Auth | Function |
+|---|---|---|---|
+| GET | `/` | Auth | Get wishlist |
+| POST | `/:productId` | Auth | Add to wishlist |
+| DELETE | `/:productId` | Auth | Remove |
+| DELETE | `/` | Auth | Clear |
+
+### Users — `/api/v1/users`
+
+| Method | Route | Auth | Validation | Function |
+|---|---|---|---|---|
+| POST | `/register` | Public | `schemas.register` | Create consumer |
+| POST | `/login` | Public | — | OTP phone login |
+| POST | `/admin/login` | Public | — | Staff login |
+| DELETE | `/delete` | Auth | — | Soft delete account |
+| GET | `/admin/guest-merge-report` | Admin | — | Unlinked guest data report |
+| POST | `/admin/bulk-merge-guests` | Admin | — | Merge guests by email |
+| POST | `/admin/auto-create-from-guests` | Admin | — | Auto-create users for orphan guests |
+
+### Orders — `/api/v1/orders`
+
+| Method | Route | Auth | Validation | Function |
+|---|---|---|---|---|
+| POST | `/` | Auth | — | Create order (awaiting_confirmation) |
+| POST | `/checkout` | Public | `schemas.checkout` | Auto-create user + order |
+| PUT | `/:id/confirm` | OrderManager | — | Confirm → FShip sync |
+| PUT | `/:id/cancel` | Auth | `schemas.cancelOrder` | User cancel (reason required) |
+| PUT | `/:id/admin/cancel` | OrderManager | `schemas.cancelOrder` | Admin cancel |
+| PUT | `/:id/status` | OrderManager | — | State machine update |
+| GET | `/my-orders` | Auth | — | User orders + rto_risk_level |
+| GET | `/` | OrderManager | — | All orders + rto_risk_level |
+
+### Payments — `/api/v1/payments`
+
+| Method | Route | Auth | Function |
+|---|---|---|---|
+| POST | `/razorpay/create` | Auth | Create Razorpay order |
+| POST | `/razorpay/verify` | Public | Verify payment signature |
+| POST | `/razorpay/webhook` | Public | Razorpay webhook |
+| POST | `/guest/razorpay/create` | Public | Razorpay order (unauthenticated) |
+| GET | `/my-payments` | Auth | User payment history |
+| GET | `/` | OrderManager | All payments |
+| POST | `/refund` | OrderManager | Full or partial refund |
+
+### Refund System
+
+- Full + partial refund via Razorpay API
+- Auto-refund on prepaid order cancellation
+- Status: `paid` → `refund_pending` → `refunded` / `partial_refund`
+- WhatsApp notification on refund processed
+- Audit log for every refund
+- Refundable statuses: `cancelled`, `return_initiated`, `returned_rto`, `rto delivered`
+
+### Shipping Addresses — `/api/v1/shipping-addresses`
+
+| Method | Route | Auth | Function |
+|---|---|---|---|
+| GET | `/` | Auth | User addresses |
+| POST | `/` | Auth | Create address |
+| PUT | `/:id` | Auth | Update address |
+| DELETE | `/:id` | Auth | Delete address |
+| PUT | `/:id/default` | Auth | Set as default |
+| POST | `/guest` | Public | Auto-create user + address |
+| GET | `/guest` | Public | Get addresses by email |
+
+### All Other Routes
+
+| Prefix | Purpose | Key Endpoints |
+|---|---|---|
+| `/api/categories` | Categories | `GET /listing`, `GET /by-name/:name`, CRUD `/:id` |
+| `/api/sliders` | Hero banners | `GET /listing`, admin CRUD |
+| `/api/coupons` | Coupons | `GET /listing`, `POST /validate`, CRUD `/:id` |
+| `/api/reviews` | Reviews | `GET /all`, `GET /product/:id`, `POST /submit` |
+| `/api/attributes` | Attributes | `GET /mega-menu`, CRUD `/:id` |
+| `/api/attributes` | Product attributes | `GET /mega-menu`, CRUD `/:id`, `POST /:id/values` |
+| `/api/coupons` | Coupon management | `GET /public`, `POST /validate`, `POST /apply`, CRUD `/:id` |
+| `/api/reviews` | Product reviews | `GET /public/all`, `GET /public/:productId`, `POST /public`, admin `PUT /:id/moderate` |
+| `/api/wishlist` | User wishlist | `GET /`, `POST /add/:productId`, `DELETE /remove/:productId`, `DELETE /clear` |
+| `/api/cart` | Shopping cart | `GET /`, `POST /add`, `PUT /item/:productId`, `DELETE /clear` |
+| `/api/sliders` | Hero banners | `GET /public`, admin CRUD, `POST /:id/brands` |
+| `/api/lookbooks` | Shoppable lookbooks | `GET /`, `GET /:slug` |
+| `/api/reels` | Video reels | `GET /`, `POST /:id/view` |
+| `/api/instagram` | Instagram feed | `GET /feed`, `POST /refresh`, `POST /tag` |
+| `/api/blogs` | Blog system | `GET /public`, `GET /public/:slug`, admin CRUD under `/admin/` |
+| `/api/seo` | SEO metadata | `GET /`, admin `GET /all`, `POST /create`, `PUT /update` |
+| `/api/policies` | Policy pages | `GET /`, `GET /name/:name`, CRUD `/:id` |
+| `/api/shipping-fees` | Shipping fee config | `GET /`, `GET /:type`, CRUD |
+| `/api/loyalty` | Loyalty points | `GET /balance`, `GET /history`, `POST /redeem` |
+| `/api/whatsapp` | WhatsApp CRM | Conversations, messages, templates, broadcasts, canned responses |
+| `/api/dashboard` | Admin stats | `GET /stats` |
+| `/api/leads` | Lead capture | `POST /phone` |
+| `/api/utm` | UTM tracking | `POST /track`, `GET /session`, `GET /analytics` |
+| `/api/checkout` | OTP verification | `POST /phone-otp/send`, `POST /phone-otp/verify` |
+| `/api/notifications` | SSE notifications | `GET /poll` |
+| `/api/order-status-history` | Order audit | `GET /order/:orderId`, `POST /order/:orderId` |
+| `/api/serviceability/:pincode` | Delivery check | Pincode serviceability + COD availability |
+| `/api/admin/brands` | Brand management | CRUD, `PATCH /:id/toggle-status` |
+| `/api/admin/brand-settings` | Per-brand config | CRUD by key, filter by category |
+| `/api/admin/loyalty` | Admin loyalty | `POST /adjust`, `GET /transactions` |
+| `/api/admin/lookbooks` | Admin lookbooks | CRUD, image upload, hotspot management |
+| `/api/admin/reels` | Admin reels | CRUD, product assignment |
+| `/api/analytics` | Dashboard analytics | Aggregated analytics |
+| `/api/facebook-pixel` | Server-side pixel | FB Conversions API |
+| `/api/facebook-catalog` | Product catalog | FB product feed |
+| `/api/health` | System health | DB + Redis + memory |
+| `/api/health/db` | DB readiness | MySQL ping |
+| `/api/health/redis` | Redis readiness | Set/get test |
+| `/api/docs` | API documentation | Swagger UI |
+
+---
+
+## Services
+
+| Service | Purpose |
+|---|---|
+| `orderService` | Business logic: `confirmOrder`, `cancelOrder`, `syncOrderToFShip`, state machine, RTO risk |
+| `orderEvents` | EventEmitter: `order.created/confirmed/shipped/delivered/cancelled/analytics` |
+| `redisService` | Redis connection + `get`/`set`/`del` proxy methods |
+| `cacheManager` | TTL-based cache with defined strategy |
+| `fshipService` | FShip API (protected by circuit breaker) |
+| `razorpayService` | Razorpay order + signature verification + refund API |
+| `loyaltyService` | Credit/redeem/expire/refund points |
+| `whatsappService` | WhatsApp templates (order, OTP, abandoned cart, review, win-back, upsell, refund) |
+| `notificationService` | SSE real-time notifications |
+| `dashboardService` | Admin stats + cache invalidation |
+| `imagekitService` | CDN upload/delete/optimize |
+| `instagramService` | Feed refresh + token management |
+| `badgeService` | Badge recalculation queue |
+| `addressQualityService` | Delivery address scoring |
+| `settingsHelper` | Per-brand settings with defaults |
+| `searchService` | Product search with relevance ranking, typo tolerance, caching |
+| `refundService` | Full/partial Razorpay refunds, auto-refund on cancel, WhatsApp notification |
+
+---
+
+## Utilities
+
+| Utility | Purpose |
+|---|---|
+| `validate.js` | Schema validation middleware (no deps) |
+| `circuitBreaker.js` | Circuit breaker for FShip/Razorpay/WhatsApp |
+| `apiResponse.js` | Standardized `{ success, data, error }` helpers |
+| `encryption.js` | AES-256-GCM for PII fields |
+| `batchFetch.js` | Batch product/variation fetch (avoids N+1) |
+| `batchInsert.js` | Bulk insert order items |
+| `pagination.js` | Pagination helper |
+| `passwordValidation.js` | Password strength rules |
+
+---
+
+## Background Worker (`worker.js`)
+
+Separate child process. Auto-restarts on crash.
+
+| Job | Schedule | Purpose |
+|---|---|---|
+| FShip Sync | Every 2h | Sync `confirmed` orders only (max 3 retries) |
+| Loyalty Expiry | Daily 2 AM | Expire old points |
+| Instagram Refresh | Every 6h | Refresh feed cache |
+| Abandoned Cart | Every hour | WhatsApp to users with stale carts |
+| Review Request | Daily 10 AM | WhatsApp 3 days post-delivery |
+| Win-back | Daily 11 AM | WhatsApp to 30-60 day inactive users |
+| Upsell | Daily 3 PM | WhatsApp 1 day post-delivery |
+| Badge Recalc | On-demand (Bull) | Product badges from order history |
+
+Failed Bull jobs are logged to DLQ after max attempts for manual review.
+
+---
+
+## Security
+
+- **Helmet** — security headers, HSTS in production
+- **Rate limiting** — 3-tier: Strict (10/15min), Medium (30/15min), General (120/min)
+  - Strict: login, register, checkout, OTP, payments
+  - Medium: order creation, address creation
+  - General: all other routes
+  - Key: IP + userId (prevents both anonymous and authenticated abuse)
+- **JWT** — 7-day access + refresh tokens
+- **Bcrypt** — password hashing
+- **AES-256-GCM** — phone/address encryption at rest
+- **CORS** — whitelist-based
+- **Soft delete** — accounts anonymised, not hard-deleted
+- **Schema validation** — request bodies validated before processing
+- **Circuit breaker** — external service failures don't cascade
+- **Idempotency** — DB-based duplicate order prevention
+
+---
+
+## Logging System
+
+`config/logging.js` — structured logger with file output.
+
+- **JSON output** in production (for log aggregators like CloudWatch/ELK)
+- **Human-readable** in development
+- **File logging:** `logs/app.log` (all), `logs/error.log` (warn + error)
+- **Request logger middleware:** logs every request with timing, status, requestId, userId
+- **Log levels:** `debug` (dev), `warn` (prod), `error` (test)
+- **Request tracing:** each request gets `req.requestId` for correlation
+
+---
+
+## Health Check & Monitoring
+
+| Endpoint | Purpose | Response |
+|---|---|---|
+| `GET /api/health` | Full system health | DB + Redis + memory + uptime |
+| `GET /api/health/db` | Database readiness | MySQL ping |
+| `GET /api/health/redis` | Redis readiness | Set/get test |
+
+Returns 200 if healthy, 503 if degraded. Use for deployment readiness probes.
+
+---
+
+## Error Handling
+
+`utils/AppError.js` + `middleware/errorMiddleware.js`
+
+All errors follow this format:
+```json
+{
+  "success": false,
+  "error": {
+    "code": "ORDER_INVALID_STATE",
+    "message": "Cannot cancel shipped order",
+    "details": { "currentStatus": "shipped", "targetStatus": "cancelled" }
+  }
+}
+```
+
+Error codes:
+| Code | Status | Meaning |
+|---|---|---|
+| `BAD_REQUEST` | 400 | Invalid input |
+| `UNAUTHORIZED` | 401 | Missing/invalid token |
+| `FORBIDDEN` | 403 | Insufficient permissions |
+| `NOT_FOUND` | 404 | Resource not found |
+| `CONFLICT` | 409 | Duplicate entry |
+| `RATE_LIMITED` | 429 | Too many requests |
+| `ORDER_INVALID_STATE` | 400 | Invalid status transition |
+| `ORDER_NOT_CANCELLABLE` | 400 | Order past cancellation window |
+| `COD_BLOCKED` | 400 | COD not available (RTO risk) |
+| `OUT_OF_STOCK` | 400 | Insufficient stock |
+| `DUPLICATE_ORDER` | 200 | Idempotency key match |
+| `PAYMENT_FAILED` | 402 | Payment processing error |
+| `DB_UNAVAILABLE` | 503 | Database connection error |
+| `INTERNAL_ERROR` | 500 | Unexpected server error |
+
+Auto-maps: Sequelize validation/unique errors, JWT errors, Multer file errors.
+
+---
+
+## API Documentation
+
+Interactive Swagger UI available at `/api/docs`.
+JSON spec at `/api/docs/spec.json`.
+
+Covers all endpoints with request/response schemas, auth headers, error codes.
+
+---
+
+## Search System
+
+`services/searchService.js` — production-grade product search.
+
+**Features:**
+- Relevance scoring: exact name (100) > partial name (50) > description (20) > per-word (10)
+- Typo tolerance via MySQL SOUNDEX (phonetic matching)
+- Multi-word search: each word scored independently
+- Filters: category, price range, brand
+- Sort: relevance, price_asc, price_desc, newest, name_asc
+- Cached results (60s TTL)
+- "Did you mean" suggestions when no results found
+- FULLTEXT index on `products(name, description)` — migration 009
+
+**API:** `GET /api/products/search?query=sock&category=Men&sort=price_asc&page=1&limit=20`
+
+**Response includes:**
+- `products[]` — with images, variations, relevance score
+- `total` — total matches
+- `suggestions[]` — alternative search terms (when 0 results)
+- `pagination` — page, limit, totalPages, hasNextPage
+
+**Upgrade path:** swap `searchService.js` internals to Meilisearch/Elasticsearch without changing the API contract.
+
+---
+
+## Database Migrations
+
+`scripts/setupDatabase.js` — runs automatically on schema version change.
+
+| Migration | Purpose |
+|---|---|
+| 001 | Base tables + constraints |
+| 002 | Address quality scores |
+| 003 | Coupon usage table |
+| 004 | Webhooks log (Razorpay/FShip dedup) |
+| 005 | RTO risk score column |
+| 006 | `awaiting_confirmation` added to order status ENUM |
+| 007 | `order_audit_logs` table (who did what, when) |
+| 008 | `idempotency_key` column on orders (unique, prevents duplicates) |
+| 009 | FULLTEXT index on `products(name, description)` for search |
+
+---
+
+## Idempotency
+
+- `idempotency_key` column on `orders` table (UNIQUE constraint)
+- Frontend sends `idempotency_key` in request body or `X-Idempotency-Key` header
+- If key already exists → returns existing order (200), no duplicate created
+- DB-based — survives Redis downtime, no TTL expiry issues
+- Covers: payment retries, network retries, frontend double-clicks
+
+---
+
+## Concurrency & Locking
+
+- `confirmOrder` and `cancelOrder` use `SELECT ... FOR UPDATE` row locks
+- Prevents race conditions: admin confirm + user cancel at same time
+- FShip sync uses atomic `UPDATE ... WHERE fship_sync_status IN ('pending', 'failed')` — prevents double sync
+- All stock decrements happen inside DB transactions with auto-rollback on failure
+
+---
+
+## Audit Logs
+
+`order_audit_logs` table tracks all admin/user actions on orders:
+
+| Field | Type | Notes |
+|---|---|---|
+| order_id | INT FK | |
+| action | VARCHAR | `confirm`, `cancel`, `status_change`, `fship_sync`, `payment_update` |
+| performed_by | INT | User ID |
+| role | VARCHAR | `admin`, `user`, `system`, `webhook` |
+| metadata | JSON | Reason, old/new status, etc. |
+| created_at | DATETIME | |
+
+---
+
+## Webhook Deduplication
+
+- `webhooks_log` table stores processed event IDs
+- Before processing any Razorpay/FShip webhook: check if `event_id` exists
+- If exists → skip (idempotent)
+- If not → process + insert into `webhooks_log`
+- Prevents duplicate payment confirmations and status updates
+
+---
+
+## COD Fraud Prevention
+
+`orderService.checkCodEligibility(phone, brandId)` checks:
+- RTO count in last 6 months (from shipping addresses with same phone)
+- 2+ RTOs → COD blocked entirely
+- 1 RTO → score +20 (shown as 🟡 MEDIUM in admin)
+- Missing landmark → score +10
+- COD max order value enforced per brand (configurable via brand settings)
+- Score > 20 → HIGH risk badge in admin dashboard
+
+---
+
+## Frontend Integration Notes
+
+- `/api/orders/checkout` returns `X-Auth-Token` header → frontend stores in localStorage
+- `AuthContext` listens to `storage` events → auto-logs in user after checkout
+- Prepaid: payment first → order creation with 3 retries → webhook safety net
+- COD: OTP verification → order creation → admin confirms → FShip sync
+- Admin dashboard shows RTO badges (🟢/🟡/🔴) and Confirm button for `awaiting_confirmation` orders
+- Profile page: soft delete with reason, orders/addresses always under user (no guest)

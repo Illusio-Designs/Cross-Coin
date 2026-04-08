@@ -9,7 +9,7 @@ import {
   showLogoutSuccessToast 
 } from '../utils/toast';
 
-const AuthContext = createContext(null);
+const AuthContext = globalThis.__AUTH_CONTEXT__ || (globalThis.__AUTH_CONTEXT__ = createContext(null));
 
 // All non-consumer staff roles
 export const STAFF_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager'];
@@ -74,6 +74,17 @@ function AuthProvider({ children }) {
         apiCalledRef.current = true;
         checkAuth();
     }, [checkAuth]);
+
+    // Re-check auth when token is set externally (e.g. after guest checkout auto-creates user)
+    useEffect(() => {
+        const handleStorage = () => {
+            const token = localStorage.getItem('token');
+            if (token && !user) checkAuth();
+            if (!token && user) setUser(null);
+        };
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
+    }, [user, checkAuth]);
 
     const login = useCallback(async (credentials) => {
         try {
