@@ -117,6 +117,20 @@ function PhonePreview({ tpl }) {
 // ─── Message Content Renderer ─────────────────────────────────────────────────
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
+// Module-level cache: proxyUrl → blobUrl
+// Persists across re-renders and polling so media never disappears
+const mediaBlobCache = new Map();
+
+async function fetchMediaBlob(src) {
+  if (mediaBlobCache.has(src)) return mediaBlobCache.get(src);
+  const res = await fetch(src);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  mediaBlobCache.set(src, url);
+  return url;
+}
+
 function getProxyUrl(mediaId, brandId = 1) {
   if (!mediaId) return null;
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : '';
@@ -235,12 +249,12 @@ function ImageMsg({ src, caption }) {
 
   useEffect(() => {
     if (!src) return;
-    let url;
-    fetch(src)
-      .then(r => r.ok ? r.blob() : null)
-      .then(blob => { if (blob) { url = URL.createObjectURL(blob); setBlobUrl(url); } })
+    if (mediaBlobCache.has(src)) { setBlobUrl(mediaBlobCache.get(src)); return; }
+    let cancelled = false;
+    fetchMediaBlob(src)
+      .then(url => { if (!cancelled) setBlobUrl(url); })
       .catch(() => {});
-    return () => { if (url) URL.revokeObjectURL(url); };
+    return () => { cancelled = true; };
   }, [src]);
 
   if (!blobUrl) return <div style={{width:120,height:80,background:'#f3f4f6',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',color:'#9ca3af',fontSize:11}}>Loading…</div>;
@@ -273,40 +287,25 @@ function ImageMsg({ src, caption }) {
 }
 
 function VideoMsg({ src, caption }) {
-  const [blobUrl, setBlobUrl] = useState(null);
-  const [loadState, setLoadState] = useState('loading');
+  const [blobUrl, setBlobUrl] = useState(() => mediaBlobCache.get(src) || null);
+  const [loadState, setLoadState] = useState(() => mediaBlobCache.has(src) ? 'ready' : 'loading');
   const blobRef = useRef(null);
 
   useEffect(() => {
     if (!src) return;
+    if (mediaBlobCache.has(src)) { setBlobUrl(mediaBlobCache.get(src)); setLoadState('ready'); return; }
     let cancelled = false;
     setLoadState('loading');
-    fetch(src)
-      .then(r => {
-        if (!r.ok) {
-          return r.text().then(t => { console.error('VideoMsg fetch failed:', r.status, t); return Promise.reject(); });
-        }
-        return r.blob();
-      })
-      .then(blob => {
-        if (cancelled) return;
-        const url = URL.createObjectURL(blob);
-        blobRef.current = url;
-        setBlobUrl(url);
-        setLoadState('ready');
-      })
+    fetchMediaBlob(src)
+      .then(url => { if (!cancelled) { blobRef.current = url; setBlobUrl(url); setLoadState('ready'); } })
       .catch(() => { if (!cancelled) setLoadState('error'); });
     return () => { cancelled = true; };
   }, [src]);
 
-  useEffect(() => {
-    return () => { if (blobRef.current) URL.revokeObjectURL(blobRef.current); };
-  }, []);
-
   if (!blobUrl) return (
     <div style={{width:220,height:80,background:'#f3f4f6',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',color:'#9ca3af',fontSize:12,gap:6}}>
       {loadState === 'error'
-        ? <><span>🎥</span> Video unavailable</>
+        ? <><span>🎥</span> Video expired</>
         : <><span style={{animation:'spin 1s linear infinite',display:'inline-block'}}>⏳</span> Loading…</>
       }
     </div>
@@ -331,15 +330,15 @@ function MsgContent({ msg, brandId = 1 }) {
       if (parsed && typeof parsed === 'object' && parsed.url) {
         media = parsed;
         // If type is 'text' but body is JSON media, detect real type from mime or text field
-        if (msg.type === 'text') {
+        if (msg.type === 'text' || msg.type === '' || !msg.type) {
           const mime = parsed.mime_type || parsed.mime || '';
           const txt = (parsed.text || parsed.caption || '').toLowerCase();
           if (mime.startsWith('video') || txt.includes('video')) effectiveType = 'video';
           else if (mime.startsWith('audio') || txt.includes('voice') || txt.includes('audio')) effectiveType = 'audio';
           else if (mime.startsWith('image') || txt.includes('image') || txt.includes('photo')) effectiveType = 'image';
           else if (mime.includes('pdf') || mime.includes('document') || txt.includes('document')) effectiveType = 'document';
-          // If body has a url field pointing to Facebook CDN, it's definitely media
-          else if (parsed.url && (parsed.url.includes('fbsbx') || parsed.url.includes('facebook'))) effectiveType = 'document';
+          // Has a Facebook CDN URL but no mime — treat as video (most common)
+          else if (parsed.url && (parsed.url.includes('fbsbx') || parsed.url.includes('facebook'))) effectiveType = 'video';
         }      }
     } catch (_) {
       if (msg.type !== 'text') media = { url: msg.body };
@@ -350,6 +349,10 @@ function MsgContent({ msg, brandId = 1 }) {
   const rawUrl = media?.url;
   const effectiveUrl = rawUrl || (msg.body?.startsWith('http') ? msg.body : null);
   const proxyUrl = effectiveUrl ? getProxyUrl(effectiveUrl, brandId) : null;
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[MsgContent]', { id: msg.id, type: msg.type, effectiveType, body: msg.body?.substring(0, 100), proxyUrl: proxyUrl?.substring(0, 80) });
+  }
 
   if (effectiveType === 'audio') {
     return proxyUrl
