@@ -1001,14 +1001,37 @@ exports.proxyMedia = async (req, res) => {
     let downloadUrl, mimeType;
 
     if (decoded.startsWith('http')) {
-      // Already a full URL (old messages stored full Facebook CDN URL)
-      downloadUrl = decoded;
-      mimeType = 'application/octet-stream';
+      // Full Facebook CDN URL — extract the media ID from the `mid` query param
+      // Facebook CDN URLs expire but the mid can be used to re-fetch via Meta API
+      try {
+        const urlObj = new URL(decoded);
+        const mid = urlObj.searchParams.get('mid');
+        if (mid) {
+          logger.info(`[MediaProxy] Extracted mid from expired URL: ${mid}`);
+          const result = await whatsappService.getMediaUrl(mid, brandId);
+          downloadUrl = result.url;
+          mimeType = result.mimeType;
+        } else {
+          // No mid param — try direct fetch with auth
+          downloadUrl = decoded;
+          mimeType = 'application/octet-stream';
+        }
+      } catch (urlErr) {
+        downloadUrl = decoded;
+        mimeType = 'application/octet-stream';
+      }
     } else {
       // Meta media ID — resolve to download URL first
-      const result = await whatsappService.getMediaUrl(decoded, brandId);
-      downloadUrl = result.url;
-      mimeType = result.mimeType;
+      logger.info(`[MediaProxy] Calling Meta API for media ID: "${decoded}"`);
+      try {
+        const result = await whatsappService.getMediaUrl(decoded, brandId);
+        downloadUrl = result.url;
+        mimeType = result.mimeType;
+        logger.info(`[MediaProxy] Got download URL: ${downloadUrl?.substring(0, 80)}`);
+      } catch (metaErr) {
+        logger.error(`[MediaProxy] Meta API error for ID "${decoded}": ${metaErr?.response?.data ? JSON.stringify(metaErr.response.data) : metaErr.message}`);
+        throw metaErr;
+      }
     }
 
     // Stream the bytes back to the browser
