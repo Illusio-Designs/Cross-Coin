@@ -321,11 +321,11 @@ function VideoMsg({ src, caption }) {
 
 function msgPreview(msg) {
   if (!msg) return '';
-  if (msg.type === 'audio') return '🎤 Voice message';
-  if (msg.type === 'image') return '📷 Photo';
-  if (msg.type === 'video') return '🎥 Video';
-  if (msg.type === 'document') return '📄 Document';
-  if (msg.body?.startsWith('{')) return '📎 Media';
+  if (msg.type === 'audio') return 'Voice message';
+  if (msg.type === 'image') return 'Photo';
+  if (msg.type === 'video') return 'Video';
+  if (msg.type === 'document') return 'Document';
+  if (msg.body?.startsWith('{')) return 'Media';
   return msg.body || '';
 }
 
@@ -1229,7 +1229,25 @@ export function WhatsAppManager() {
                               </div>
                               <div className="was-msg-meta">
                                 {formatTime(msg.sent_at||msg.createdAt)}
-                                {msg.direction==='outbound' && <span style={{color:msg.status==='read'?'#53bdeb':'#9ca3af'}}>{msg.status==='read'||msg.status==='delivered'?' ✓✓':' ✓'}</span>}
+                                {msg.direction==='outbound' && (
+                                  <span style={{marginLeft:3}}>
+                                    {msg.status === 'read' ? (
+                                      <svg width="16" height="11" viewBox="0 0 16 11" fill="none">
+                                        <path d="M1 5.5L4.5 9L10 3" stroke="#53bdeb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                        <path d="M6 5.5L9.5 9L15 3" stroke="#53bdeb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                      </svg>
+                                    ) : msg.status === 'delivered' ? (
+                                      <svg width="16" height="11" viewBox="0 0 16 11" fill="none">
+                                        <path d="M1 5.5L4.5 9L10 3" stroke="#9ca3af" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                        <path d="M6 5.5L9.5 9L15 3" stroke="#9ca3af" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                      </svg>
+                                    ) : (
+                                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                        <path d="M1 4L3.5 6.5L9 1" stroke="#9ca3af" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                      </svg>
+                                    )}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           );
