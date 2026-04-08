@@ -312,11 +312,21 @@ function VideoMsg({ src, caption }) {
   );
 
   return (
-    <div>
-      <video controls style={{maxWidth:220,maxHeight:180,borderRadius:8,display:'block',background:'#000'}} src={blobUrl}/>
+    <div style={{width:220}}>
+      <video controls style={{width:'100%', maxHeight:160, borderRadius:8, display:'block', background:'#000', objectFit:'contain'}} src={blobUrl}/>
       {caption && <div style={{fontSize:12,marginTop:4,color:'#374151'}}>{caption}</div>}
     </div>
   );
+}
+
+function msgPreview(msg) {
+  if (!msg) return '';
+  if (msg.type === 'audio') return '🎤 Voice message';
+  if (msg.type === 'image') return '📷 Photo';
+  if (msg.type === 'video') return '🎥 Video';
+  if (msg.type === 'document') return '📄 Document';
+  if (msg.body?.startsWith('{')) return '📎 Media';
+  return msg.body || '';
 }
 
 function MsgContent({ msg, brandId = 1 }) {
@@ -463,6 +473,7 @@ export function WhatsAppManager() {
   const [activeConv, setActiveConv] = useState(null);
   const [messages, setMessages] = useState([]);
   const [reply, setReply] = useState('');
+  const [replyTo, setReplyTo] = useState(null); // { id, body, direction, type }
   const [convLoading, setConvLoading] = useState(false);
   const [msgLoading, setMsgLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -596,8 +607,19 @@ export function WhatsAppManager() {
     if (!reply.trim() || !activeConv) return;
     setSending(true);
     try {
-      const data = await whatsappService.sendReply(activeConv.id, reply.trim(), brandId);
-      if (data.success) { setMessages(prev => [...prev, data.message]); setReply(''); }
+      // Include quoted context in the message body as a prefix marker
+      const quotedPrefix = replyTo
+        ? `[quoted:${replyTo.id}:${msgPreview(replyTo).substring(0, 60)}]\n`
+        : '';
+      const fullMessage = reply.trim();
+      const quotedWaId = replyTo?.wa_message_id || null;
+      const data = await whatsappService.sendReply(activeConv.id, fullMessage, brandId, quotedWaId);
+      if (data.success) {
+        // Attach quoted context to the saved message for display
+        const savedMsg = { ...data.message, _quotedMsg: replyTo || null };
+        setMessages(prev => [...prev, savedMsg]);
+        setReply(''); setReplyTo(null); isNearBottomRef.current = true;
+      }
       else showError('sendFailed', data.message);
     } catch (err) { showError('sendFailed', err.message); }
     setSending(false);
@@ -638,7 +660,12 @@ export function WhatsAppManager() {
     try {
       const data = await whatsappService.getMessages(conv.id);
       if (data.success) {
-        setMessages(data.messages || []);
+        // Preserve _quotedMsg from existing messages when polling
+        setMessages(prev => {
+          const quotedMap = {};
+          prev.forEach(m => { if (m._quotedMsg) quotedMap[m.id] = m._quotedMsg; });
+          return (data.messages || []).map(m => quotedMap[m.id] ? { ...m, _quotedMsg: quotedMap[m.id] } : m);
+        });
         setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c));
       }
     } catch { }
@@ -1132,23 +1159,89 @@ export function WhatsAppManager() {
                   <div className="was-messages" ref={messagesContainerRef} onScroll={handleMessagesScroll}>
                     {msgLoading ? <div style={{textAlign:'center',padding:20}}><Loader /></div>
                     : messages.length === 0 ? <div className="was-no-msgs">No messages yet</div>
-                    : messages.map(msg => (
-                      <div key={msg.id} className={`was-msg was-msg--${msg.direction}`}>
-                        <div className="was-msg-bubble">
-                          <MsgContent msg={msg} brandId={brandId} />
-                        </div>
-                        <div className="was-msg-meta">
-                          {formatTime(msg.sent_at||msg.createdAt)}
-                          {msg.direction==='outbound' && <span style={{color:msg.status==='read'?'#53bdeb':'#9ca3af'}}>{msg.status==='read'||msg.status==='delivered'?' ✓✓':' ✓'}</span>}
-                        </div>
-                      </div>
-                    ))}
+                    : (() => {
+                        const items = [];
+                        let lastDateStr = null;
+                        messages.forEach(msg => {
+                          const d = new Date(msg.sent_at || msg.createdAt);
+                          const today = new Date();
+                          const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
+                          const isToday = d.toDateString() === today.toDateString();
+                          const isYesterday = d.toDateString() === yesterday.toDateString();
+                          const dateStr = isToday ? 'Today' : isYesterday ? 'Yesterday'
+                            : d.toLocaleDateString('en-IN', { day:'numeric', month:'long', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
+                          if (dateStr !== lastDateStr) {
+                            lastDateStr = dateStr;
+                            items.push(
+                              <div key={`date-${dateStr}`} style={{
+                                display:'flex', alignItems:'center', justifyContent:'center',
+                                margin:'12px 0 8px',
+                              }}>
+                                <span style={{
+                                  background:'rgba(0,0,0,0.06)', color:'#6b7280',
+                                  fontSize:11, fontWeight:600, padding:'3px 12px',
+                                  borderRadius:999, letterSpacing:0.3,
+                                }}>{dateStr}</span>
+                              </div>
+                            );
+                          }
+                          items.push(
+                            <div key={msg.id} className={`was-msg was-msg--${msg.direction}`}
+                              style={{position:'relative'}}
+                              onMouseEnter={e => { const btn = e.currentTarget.querySelector('.was-reply-hover'); if (btn) btn.style.opacity='1'; }}
+                              onMouseLeave={e => { const btn = e.currentTarget.querySelector('.was-reply-hover'); if (btn) btn.style.opacity='0'; }}
+                            >
+                              {/* Reply button on hover */}
+                              <button className="was-reply-hover" onClick={() => setReplyTo(msg)} style={{
+                                position:'absolute', top:'50%', transform:'translateY(-50%)',
+                                [msg.direction === 'outbound' ? 'left' : 'right']: -28,
+                                opacity:0, transition:'opacity 0.15s',
+                                background:'rgba(0,0,0,0.08)', border:'none', borderRadius:'50%',
+                                width:22, height:22, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+                                color:'#6b7280', padding:0,
+                              }}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>
+                                </svg>
+                              </button>
+                              <div className="was-msg-bubble">
+                                {msg._quotedMsg && (
+                                  <div style={{
+                                    background: msg.direction === 'outbound' ? 'rgba(206,30,54,0.1)' : 'rgba(0,0,0,0.06)',
+                                    borderLeft: '3px solid #CE1E36',
+                                    borderRadius: '4px 4px 0 0',
+                                    padding: '5px 8px',
+                                    marginBottom: 6,
+                                    fontSize: 12,
+                                    color: '#6b7280',
+                                    maxWidth: '100%',
+                                    overflow: 'hidden',
+                                  }}>
+                                    <div style={{color:'#CE1E36', fontWeight:700, fontSize:11, marginBottom:2}}>
+                                      {msg._quotedMsg.direction === 'inbound' ? (activeConv?.customer_name || 'Customer') : 'You'}
+                                    </div>
+                                    <div style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+                                      {msgPreview(msg._quotedMsg)}
+                                    </div>
+                                  </div>
+                                )}
+                                <MsgContent msg={msg} brandId={brandId} />
+                              </div>
+                              <div className="was-msg-meta">
+                                {formatTime(msg.sent_at||msg.createdAt)}
+                                {msg.direction==='outbound' && <span style={{color:msg.status==='read'?'#53bdeb':'#9ca3af'}}>{msg.status==='read'||msg.status==='delivered'?' ✓✓':' ✓'}</span>}
+                              </div>
+                            </div>
+                          );
+                        });
+                        return items;
+                      })()
+                    }
                     <div ref={messagesEndRef} />
                   </div>
                   {activeConv.status === 'open' ? (
                     <div>
-                      {/* Action bar — product/catalogue send */}
-                      <div style={{ display:'flex', gap:6, padding:'6px 12px', borderTop:'1px solid #f3f4f6', background:'#fafafa' }}>
+                      {/* Action bar — product/catalogue send */}                      <div style={{ display:'flex', gap:6, padding:'6px 12px', borderTop:'1px solid #f3f4f6', background:'#fafafa' }}>
                         <button
                           className="was-btn-secondary"
                           style={{ fontSize:11, padding:'3px 10px', display:'flex', alignItems:'center', gap:4 }}
@@ -1166,7 +1259,25 @@ export function WhatsAppManager() {
                           📦 Send Catalogue
                         </button>
                       </div>
-                      <form className="was-reply-box" onSubmit={sendReply}>
+                      <form className="was-reply-box" onSubmit={sendReply} style={{position:'relative'}}>
+                        {replyTo && (
+                          <div style={{
+                            position:'absolute', bottom:'100%', left:0, right:0,
+                            background:'#f0f4ff', borderTop:'3px solid #CE1E36',
+                            padding:'8px 12px', display:'flex', alignItems:'center', justifyContent:'space-between',
+                            fontSize:12,
+                          }}>
+                            <div style={{display:'flex', flexDirection:'column', gap:2, minWidth:0}}>
+                              <span style={{color:'#CE1E36', fontWeight:700, fontSize:11}}>
+                                {replyTo.direction === 'inbound' ? 'Customer' : 'You'}
+                              </span>
+                              <span style={{color:'#6b7280', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:300}}>
+                                {msgPreview(replyTo)}
+                              </span>
+                            </div>
+                            <button type="button" onClick={() => setReplyTo(null)} style={{background:'none',border:'none',cursor:'pointer',color:'#9ca3af',fontSize:16,padding:'0 4px',flexShrink:0}}>×</button>
+                          </div>
+                        )}
                         <textarea className="was-reply-input" placeholder="Type a message… (type /shortcut for canned responses)" value={reply}
                           onChange={e => handleReplyChange(e.target.value)}
                           onKeyDown={e => { if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); sendReply(e); } }}

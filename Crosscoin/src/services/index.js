@@ -1798,9 +1798,9 @@ export const whatsappService = {
     return response.data;
   },
 
-  sendReply: async (conversationId, message, brandId = 1) => {
+  sendReply: async (conversationId, message, brandId = 1, quotedWaMessageId = null) => {
     const response = await adminApi.post(`/api/whatsapp/conversations/${conversationId}/reply`, {
-      message, brandId
+      message, brandId, ...(quotedWaMessageId ? { quotedWaMessageId } : {})
     });
     return response.data;
   },
