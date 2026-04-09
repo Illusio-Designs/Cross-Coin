@@ -637,7 +637,19 @@ module.exports.updateOrderPayment = async (req, res) => {
     }
 
     // ── OLD FLOW: Legacy (order already exists) ───────────────────────────
-    if (!orderId) {
+    // Try to find orderId from payment record if not provided
+    let resolvedOrderId = orderId;
+    if (!resolvedOrderId) {
+      // Fallback: find order via payment record linked to this razorpay_order_id
+      const paymentRecord = await Payment.findOne({ where: { razorpay_order_id: razorpayOrderId } });
+      if (paymentRecord && paymentRecord.order_id) {
+        resolvedOrderId = paymentRecord.order_id;
+        console.log(`Resolved orderId ${resolvedOrderId} from payment record for rzp_order ${razorpayOrderId}`);
+      }
+    }
+
+    if (!resolvedOrderId) {
+      console.error(`No order found for razorpay_order_id: ${razorpayOrderId}, no session, no orderId`);
       return res.status(400).json({ message: 'orderId is required (no checkout session found for this payment)' });
     }
 
@@ -647,7 +659,7 @@ module.exports.updateOrderPayment = async (req, res) => {
       // Lock the order row
       const [lockedRows] = await db.query(
         'SELECT id, payment_status, status, final_amount, brand_id, user_id, guest_user_id, order_number FROM orders WHERE id = ? FOR UPDATE',
-        { replacements: [orderId], transaction: t }
+        { replacements: [resolvedOrderId], transaction: t }
       );
       const lockedOrder = lockedRows?.[0];
       if (!lockedOrder) {
@@ -665,13 +677,13 @@ module.exports.updateOrderPayment = async (req, res) => {
       // Update order status — prepaid auto-confirmed
       await db.query(
         `UPDATE orders SET payment_status = 'paid', status = 'confirmed', updated_at = NOW() WHERE id = ?`,
-        { replacements: [orderId], transaction: t }
+        { replacements: [resolvedOrderId], transaction: t }
       );
 
       // Record status history
       const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
       await OrderStatusHistory.create({
-        order_id: orderId,
+        order_id: resolvedOrderId,
         status: 'confirmed',
         updated_by: null,
         notes: 'Auto-confirmed: prepaid payment verified',
@@ -681,12 +693,12 @@ module.exports.updateOrderPayment = async (req, res) => {
       const amountInSmallestUnit = toSmallestUnit(parseFloat(lockedOrder.final_amount), 'INR');
 
       let payment = await Payment.findOne({
-        where: { order_id: orderId, razorpay_order_id: razorpayOrderId },
+        where: { order_id: resolvedOrderId, razorpay_order_id: razorpayOrderId },
         transaction: t,
       });
       if (!payment) {
         payment = await Payment.findOne({
-          where: { order_id: orderId, status: 'pending' },
+          where: { order_id: resolvedOrderId, status: 'pending' },
           transaction: t,
         });
       }
@@ -703,7 +715,7 @@ module.exports.updateOrderPayment = async (req, res) => {
         }, { transaction: t });
       } else {
         await Payment.create({
-          order_id: orderId,
+          order_id: resolvedOrderId,
           user_id: lockedOrder.user_id || null,
           guest_user_id: lockedOrder.guest_user_id || null,
           payment_type: 'razorpay',
@@ -720,11 +732,11 @@ module.exports.updateOrderPayment = async (req, res) => {
     });
 
     if (result.alreadyPaid) {
-      const order = await Order.findByPk(orderId);
+      const order = await Order.findByPk(resolvedOrderId);
       return res.status(200).json({ success: true, message: 'Payment already processed', order });
     }
 
-    const order = await Order.findByPk(orderId);
+    const order = await Order.findByPk(resolvedOrderId);
 
     // Emit confirmed event — triggers WhatsApp + FShip sync (outside transaction)
     const orderEmitter = require('../services/orderEvents.js');

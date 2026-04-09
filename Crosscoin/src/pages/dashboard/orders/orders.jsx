@@ -6,7 +6,7 @@ import SafeImage from "../../../components/common/SafeImage";
 import Loader from "../../../components/common/Loader";
 import BrandTags from "../../../components/Dashboard/BrandTags";
 import { showSuccess, showError } from '../../../utils/toastNotification';
-import { PromptModal } from '../../../components/common/AlertModal';
+import { PromptModal, ConfirmModal } from '../../../components/common/AlertModal';
 import { getProductImageSrc } from '../../../utils/imageUtils';
 import { getAttributeComponents } from '../../../utils/productAttributeFormatter';
 import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusUtils';
@@ -31,6 +31,7 @@ const Orders = () => {
     const [sortBy, setSortBy] = useState("createdAt");
     const [sortOrder, setSortOrder] = useState("desc");
     const [cancelPrompt, setCancelPrompt] = useState(null);
+    const [confirmPrompt, setConfirmPrompt] = useState(null);
     const [allOrdersStats, setAllOrdersStats] = useState({
         total: 0, prepaid: 0, cod: 0, paid: 0, pending: 0,
         totalRevenue: 0, averageOrderValue: 0, deliveredOrders: 0, cancelledOrders: 0,
@@ -259,7 +260,9 @@ const Orders = () => {
 
     const formatDate = (dateString) => {
         const d = new Date(dateString);
-        return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const date = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        return <span className="date-time-cell"><span className="date-part">{date}</span><span className="time-part">{time}</span></span>;
     };
     const formatCurrency = (amount) => `₹${parseFloat(amount || 0).toFixed(2)}`;
     const calculateOrderSubtotal = (orderItems) => orderItems.reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
@@ -293,8 +296,8 @@ const Orders = () => {
                     checked={selectedOrders.has(row.id)} onChange={() => toggleOrderSelection(row.id)} />
             ) : null
         },
-        { header: "Sr. No", accessor: "serial_number" },
-        { header: "Order ID", accessor: "order_number" },
+        { header: "Sr. No", accessor: "serial_number", width: "60px" },
+        { header: "Order ID", accessor: "order_number", width: "130px" },
         {
             header: "Customer",
             cell: (row) => (
@@ -306,8 +309,10 @@ const Orders = () => {
                         {row.User?.email || ''}
                     </div>
                     {row.rto_risk_level && (
-                        <span className={`rto-badge rto-${row.rto_risk_level.toLowerCase()}`} title={`RTO Risk: ${row.rto_risk_level} (Score: ${row.rto_risk_score || 0})`}>
-                            {row.rto_risk_level === 'HIGH' ? '🔴' : row.rto_risk_level === 'MEDIUM' ? '🟡' : '🟢'} {row.rto_risk_level}
+                        <span className={`rto-badge rto-${row.rto_risk_level.toLowerCase()}`}>
+                            <span className="rto-indicator">{row.rto_risk_level === 'HIGH' ? '🔴' : row.rto_risk_level === 'MEDIUM' ? '🟡' : '🟢'}</span>
+                            <span className="rto-level">{row.rto_risk_level}</span>
+                            {row.rto_risk_score != null && <span className="rto-score">{row.rto_risk_score}</span>}
                         </span>
                     )}
                 </div>
@@ -326,11 +331,11 @@ const Orders = () => {
                 return <BrandTags brands={brands} />;
             }
         },
-        { header: "Date", cell: (row) => formatDate(row.createdAt) },
-        { header: "Payment Type", cell: (row) => formatPaymentType(row.payment_type) },
-        { header: "Payment Status", cell: (row) => <span className={`status-badge status-${getPaymentStatusClass(row)}`}>{getPaymentStatusDisplay(row)}</span> },
-        { header: "Total", cell: (row) => formatCurrency(getOrderTotal(row)) },
-        { header: "Order Status", cell: (row) => <span className={`status-badge status-${getStatusClassName(row.status)}`}>{getStatusDisplayText(row.status)}</span> },
+        { header: "Date", cell: (row) => formatDate(row.createdAt), width: "130px" },
+        { header: "Payment Type", cell: (row) => formatPaymentType(row.payment_type), width: "100px" },
+        { header: "Payment Status", cell: (row) => <span className={`status-badge status-${getPaymentStatusClass(row)}`}>{getPaymentStatusDisplay(row)}</span>, width: "120px" },
+        { header: "Total", cell: (row) => formatCurrency(getOrderTotal(row)), width: "90px" },
+        { header: "Order Status", cell: (row) => <span className={`status-badge status-${getStatusClassName(row.status)}`}>{getStatusDisplayText(row.status)}</span>, width: "160px" },
         {
             header: "FShip Sync",
             cell: (row) => row.fship_order_id || row.fship_waybill
