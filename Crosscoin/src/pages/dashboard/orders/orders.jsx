@@ -165,6 +165,12 @@ const Orders = () => {
     };
 
     const confirmOrder = async (orderId, orderNumber) => {
+        setConfirmPrompt({ orderId, orderNumber });
+    };
+
+    const handleConfirmOrder = async () => {
+        const { orderId, orderNumber } = confirmPrompt;
+        setConfirmPrompt(null);
         try {
             const result = await orderService.confirmOrder(orderId);
             if (result.success) { showSuccess('orderConfirmed', `Order ${orderNumber} confirmed — FShip sync triggered`); fetchOrders(); }
@@ -441,6 +447,11 @@ const Orders = () => {
                 placeholder="Cancellation reason..."
                 onConfirm={handleCancelConfirm}
                 onCancel={() => setCancelPrompt(null)}
+            />
+            <ConfirmModal
+                message={confirmPrompt ? `Are you sure you want to confirm order ${confirmPrompt.orderNumber}? This will trigger FShip sync.` : null}
+                onConfirm={handleConfirmOrder}
+                onCancel={() => setConfirmPrompt(null)}
             />
             <div className="dashboard-page">
                 <div className="orders-header-container">
