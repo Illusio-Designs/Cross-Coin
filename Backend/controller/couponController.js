@@ -181,7 +181,12 @@ module.exports.getCouponById = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const coupon = await Coupon.findByPk(id, {
+        const whereClause = { id };
+        if (req.brandId) whereClause.brand_id = req.brandId;
+        else if (req.brand && req.brand.id) whereClause.brand_id = req.brand.id;
+
+        const coupon = await Coupon.findOne({
+            where: whereClause,
             include: [{
                 model: CouponUsage,
                 as: 'CouponUsages',
@@ -282,7 +287,6 @@ module.exports.validateCoupon = async (req, res) => {
 
         // Check per-user usage limit (only for authenticated users)
         if (userId) {
-            const { CouponUsage } = require('../model/associations.js');
             const userUsageCount = await CouponUsage.count({
                 where: { couponId: coupon.id, userId: userId }
             });
@@ -302,8 +306,68 @@ module.exports.validateCoupon = async (req, res) => {
             }
         }
 
-        // Check minimum purchase requirement
-        const applicableAmount = parseFloat(cartTotal);
+        // Check per-user usage limit for guest users via email
+        if (!userId && (req.body.email || req.body.guest_email)) {
+            const guestEmail = (req.body.email || req.body.guest_email).toLowerCase().trim();
+            const { GuestUser } = require('../model/associations.js');
+            // Find guest users with this email
+            const guestUsers = await GuestUser.findAll({
+                where: { email: guestEmail },
+                attributes: ['id']
+            });
+            if (guestUsers.length > 0) {
+                const guestUserIds = guestUsers.map(g => g.id);
+                // Check CouponUsage records linked to these guest users
+                const guestUsageCount = await CouponUsage.count({
+                    where: {
+                        couponId: coupon.id,
+                        guestUserId: { [Op.in]: guestUserIds }
+                    }
+                });
+                if (coupon.perUserLimit && guestUsageCount >= coupon.perUserLimit) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'You have already used this coupon the maximum number of times.'
+                    });
+                }
+                if (!coupon.perUserLimit && guestUsageCount > 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'You have already used this coupon.'
+                    });
+                }
+            }
+        }
+
+        // Check minimum purchase requirement — server-side calculation for authenticated users
+        let applicableAmount;
+        if (userId) {
+            // Task 12.4: Calculate cart total server-side from actual cart items
+            const cart = await Cart.findOne({
+                where: { user_id: userId, status: 'active' },
+                include: [{
+                    model: CartItem,
+                    as: 'CartItems',
+                    include: [
+                        { model: Product, attributes: ['id', 'name', 'price'] },
+                        { model: ProductVariation, attributes: ['id', 'price'] }
+                    ]
+                }]
+            });
+            if (cart && cart.CartItems && cart.CartItems.length > 0) {
+                applicableAmount = cart.CartItems.reduce((sum, item) => {
+                    const itemPrice = item.ProductVariation
+                        ? parseFloat(item.ProductVariation.price || item.price)
+                        : parseFloat(item.price);
+                    return sum + (itemPrice * item.quantity);
+                }, 0);
+            } else {
+                applicableAmount = parseFloat(cartTotal);
+            }
+        } else {
+            // For guests, use provided cartTotal (will be re-verified at checkout)
+            applicableAmount = parseFloat(cartTotal);
+        }
         
         if (coupon.minPurchase && applicableAmount < coupon.minPurchase) {
             return res.status(400).json({
@@ -453,35 +517,34 @@ module.exports.validateCoupon = async (req, res) => {
 
 // Apply a coupon (increment used count)
 module.exports.applyCoupon = async (req, res) => {
+    const { sequelize } = require('../config/db.js');
+    const transaction = await sequelize.transaction();
     try {
-        const { code, orderId, discountAmount } = req.body;
+        const { code, orderId } = req.body;
         const userId = req.user.id;
 
         if (!code) {
+            await transaction.rollback();
             return res.status(400).json({ 
                 success: false,
                 message: 'Coupon code is required' 
             });
         }
 
-        if (!discountAmount || discountAmount <= 0) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'Valid discount amount is required' 
-            });
-        }
-
-        // Find the coupon
+        // Lock the coupon row for atomic update
         const coupon = await Coupon.findOne({
             where: { 
                 code: code.toUpperCase(),
                 status: 'active',
                 startDate: { [Op.lte]: new Date() },
                 endDate: { [Op.gte]: new Date() }
-            }
+            },
+            transaction,
+            lock: transaction.LOCK.UPDATE
         });
 
         if (!coupon) {
+            await transaction.rollback();
             return res.status(404).json({ 
                 success: false,
                 message: 'Invalid or expired coupon code' 
@@ -490,41 +553,131 @@ module.exports.applyCoupon = async (req, res) => {
 
         // Check per-user usage limit
         const userUsageCount = await CouponUsage.count({
-            where: { couponId: coupon.id, userId: userId }
+            where: { couponId: coupon.id, userId: userId },
+            transaction
         });
 
         if (coupon.perUserLimit && userUsageCount >= coupon.perUserLimit) {
+            await transaction.rollback();
             return res.status(400).json({ 
                 success: false,
                 message: 'You have already used this coupon the maximum number of times.' 
             });
         }
         if (!coupon.perUserLimit && userUsageCount > 0) {
+            await transaction.rollback();
             return res.status(400).json({ 
                 success: false,
                 message: 'You have already used this coupon.' 
             });
         }
 
-        // Check if coupon is already used to its maximum
-        if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
+        // Task 12.3: Re-calculate discount server-side instead of trusting req.body.discountAmount
+        // Fetch the user's cart to get the real cart total
+        const cart = await Cart.findOne({
+            where: { user_id: userId, status: 'active' },
+            include: [{
+                model: CartItem,
+                as: 'CartItems',
+                include: [
+                    { model: Product, attributes: ['id', 'name', 'price'] },
+                    { model: ProductVariation, attributes: ['id', 'price'] }
+                ]
+            }],
+            transaction
+        });
+
+        if (!cart || !cart.CartItems || cart.CartItems.length === 0) {
+            await transaction.rollback();
+            return res.status(400).json({
+                success: false,
+                message: 'Your cart is empty'
+            });
+        }
+
+        const cartTotal = cart.CartItems.reduce((sum, item) => {
+            const itemPrice = item.ProductVariation
+                ? parseFloat(item.ProductVariation.price || item.price)
+                : parseFloat(item.price);
+            return sum + (itemPrice * item.quantity);
+        }, 0);
+
+        // Check minimum purchase requirement
+        if (coupon.minPurchase && cartTotal < parseFloat(coupon.minPurchase)) {
+            await transaction.rollback();
+            return res.status(400).json({
+                success: false,
+                message: `You must spend at least ₹${coupon.minPurchase} to use this coupon.`
+            });
+        }
+
+        // Calculate discount based on coupon type (same logic as validateCoupon)
+        let discountAmount = 0;
+        if (coupon.type === 'percentage') {
+            discountAmount = (cartTotal * parseFloat(coupon.value)) / 100;
+            if (coupon.maxDiscount && discountAmount > parseFloat(coupon.maxDiscount)) {
+                discountAmount = parseFloat(coupon.maxDiscount);
+            }
+        } else if (coupon.type === 'fixed') {
+            discountAmount = parseFloat(coupon.value);
+        } else if (coupon.type === 'tiered') {
+            let tiers = coupon.tieredDiscounts;
+            if (typeof tiers === 'string') { try { tiers = JSON.parse(tiers); } catch (e) { tiers = []; } }
+            if (!Array.isArray(tiers)) tiers = [];
+            for (const tier of tiers.sort((a, b) => b.minAmount - a.minAmount)) {
+                if (cartTotal >= tier.minAmount) {
+                    discountAmount = parseFloat(tier.discount);
+                    break;
+                }
+            }
+        } else if (coupon.type === 'quantity_based') {
+            const totalQuantity = cart.CartItems.reduce((sum, item) => sum + item.quantity, 0);
+            let quantityTiers = coupon.quantityBasedDiscounts;
+            if (typeof quantityTiers === 'string') { try { quantityTiers = JSON.parse(quantityTiers); } catch (e) { quantityTiers = []; } }
+            if (!Array.isArray(quantityTiers)) quantityTiers = [];
+            for (const tier of quantityTiers.sort((a, b) => b.minQuantity - a.minQuantity)) {
+                if (totalQuantity >= tier.minQuantity) {
+                    discountAmount = parseFloat(tier.discount);
+                    break;
+                }
+            }
+        }
+
+        // Ensure discount doesn't exceed cart total
+        if (discountAmount > cartTotal) {
+            discountAmount = cartTotal;
+        }
+
+        // Task 12.2: Atomic increment with row lock — only increment if under limit
+        const [affectedRows] = await Coupon.update(
+            { usageCount: sequelize.literal('usageCount + 1') },
+            {
+                where: {
+                    id: coupon.id,
+                    ...(coupon.usageLimit ? { usageCount: { [Op.lt]: coupon.usageLimit } } : {})
+                },
+                transaction
+            }
+        );
+
+        if (affectedRows === 0) {
+            await transaction.rollback();
             return res.status(400).json({ 
                 success: false,
                 message: 'Coupon has reached maximum usage limit' 
             });
         }
 
-        // Record the usage with discount amount and order association
+        // Record the usage with server-calculated discount amount
         await CouponUsage.create({
             couponId: coupon.id,
             userId: userId,
             orderId: orderId || null,
-            discountAmount: parseFloat(discountAmount),
+            discountAmount: parseFloat(discountAmount.toFixed(2)),
             usedAt: new Date()
-        });
+        }, { transaction });
 
-        // Increment usage count on the coupon itself
-        await coupon.increment('usageCount');
+        await transaction.commit();
 
         res.status(200).json({
             success: true,
@@ -532,10 +685,11 @@ module.exports.applyCoupon = async (req, res) => {
             coupon: {
                 id: coupon.id,
                 code: coupon.code,
-                discountAmount: parseFloat(discountAmount)
+                discountAmount: parseFloat(discountAmount.toFixed(2))
             }
         });
     } catch (error) {
+        await transaction.rollback();
         console.error('Error applying coupon:', error);
         res.status(500).json({
             success: false,
@@ -548,7 +702,7 @@ module.exports.applyCoupon = async (req, res) => {
 // Get coupon usage history for a user
 module.exports.getUserCouponHistory = async (req, res) => {
     try {
-        const { userId } = req.params;
+        const userId = req.user.id; // Always use authenticated user's ID
 
         const usageHistory = await CouponUsage.findAll({
             where: { userId },

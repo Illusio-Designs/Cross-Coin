@@ -23,6 +23,77 @@ async function run(name, fn) {
 
 // ─── Job definitions ──────────────────────────────────────────────────────────
 
+async function jobReservationCleanup() {
+  const stockReservation = require('./services/stockReservationService.js');
+  return stockReservation.cleanupLeakedReservations();
+}
+
+async function jobOrphanedPaymentRecovery() {
+  // Find pending payments with no order_id older than 15 minutes
+  const { Payment } = require('./model/paymentModel.js');
+  const { Op } = require('sequelize');
+  const stockReservation = require('./services/stockReservationService.js');
+  const orderCreationService = require('./services/orderCreationService.js');
+  const razorpayService = require('./services/razorpayService.js');
+
+  const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000);
+
+  const orphaned = await Payment.findAll({
+    where: {
+      order_id: null,
+      reservation_id: { [Op.ne]: null },
+      status: 'pending',
+      created_at: { [Op.lt]: fifteenMinAgo },
+    },
+    limit: 20,
+  });
+
+  let recovered = 0, failed = 0, expired = 0;
+  for (const payment of orphaned) {
+    try {
+      // Check Razorpay order status
+      const rzpOrder = await razorpayService.getOrder(payment.razorpay_order_id, payment.brand_id || 1);
+
+      if (rzpOrder.status === 'paid') {
+        // Payment was captured but order never created — recover
+        const session = await stockReservation.getReservation(payment.reservation_id)
+          || await stockReservation.getReservationByRazorpayOrder(payment.razorpay_order_id);
+
+        if (session) {
+          // Get the payment ID from Razorpay
+          const rzpPayments = await razorpayService.getInstance(payment.brand_id || 1)
+            .then(rz => rz.orders.fetchPayments(payment.razorpay_order_id));
+          const successfulPayment = rzpPayments.items?.find(p => p.status === 'captured');
+
+          if (successfulPayment) {
+            await orderCreationService.handlePaymentSuccess({
+              session,
+              razorpayPaymentId: successfulPayment.id,
+              razorpayOrderId: payment.razorpay_order_id,
+              source: 'recovery_cron',
+            });
+            recovered++;
+            logger.info(`[Recovery] Recovered order for payment ${payment.id}`);
+          }
+        } else {
+          logger.warn(`[Recovery] No session found for paid payment ${payment.id} — manual intervention needed`);
+          failed++;
+        }
+      } else if (['expired', 'attempted'].includes(rzpOrder.status)) {
+        // Razorpay order expired — mark payment as failed
+        await payment.update({ status: 'failed', notes: `Razorpay order ${rzpOrder.status}` });
+        expired++;
+      }
+      // 'created' status = still waiting, skip for now
+    } catch (e) {
+      logger.warn(`[Recovery] Failed for payment ${payment.id}: ${e.message}`);
+      failed++;
+    }
+  }
+
+  return { recovered, failed, expired, total: orphaned.length };
+}
+
 async function jobFshipSync() {
   // Only sync orders that are confirmed but not yet sent to FShip
   const { Order } = require('./model/orderModel.js');
@@ -213,6 +284,12 @@ async function jobUpsell() {
 
 // ─── Schedule ─────────────────────────────────────────────────────────────────
 function initCronJobs() {
+  // Stock reservation cleanup — every 2 minutes
+  cron.schedule('*/2 * * * *', () => run('Reservation Cleanup', jobReservationCleanup));
+
+  // Orphaned payment recovery — every 30 minutes
+  cron.schedule('*/30 * * * *', () => run('Orphaned Payment Recovery', jobOrphanedPaymentRecovery));
+
   // FShip sync — every 2 hours
   cron.schedule('0 */2 * * *', () => run('FShip Sync', jobFshipSync));
 

@@ -274,6 +274,96 @@ function initializeCronJobs() {
     }
   });
 
+  // ── Stale Prepaid Order Cleanup — every 30 minutes ─────────────────────
+  // Cancels prepaid orders where payment_status is still 'pending' or 'failed'
+  // after 30 minutes (customer abandoned or payment failed)
+  cron.schedule('*/30 * * * *', async () => {
+    console.log('\n⏰ [CRON] Stale prepaid cleanup started at:', new Date().toISOString());
+    try {
+      const { Order, OrderItem, ProductVariation } = require('../model/associations.js');
+      const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
+      const { Coupon } = require('../model/couponModel.js');
+      const { CouponUsage } = require('../model/couponUsageModel.js');
+      const { Op } = require('sequelize');
+      const { sequelize } = require('../config/db.js');
+
+      const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000);
+
+      // Find prepaid orders older than 30 min that are still pending/failed
+      const staleOrders = await Order.findAll({
+        where: {
+          payment_type: { [Op.notIn]: ['cod'] },
+          payment_status: { [Op.in]: ['pending', 'failed'] },
+          status: { [Op.notIn]: ['cancelled', 'order cancelled'] },
+          createdAt: { [Op.lt]: thirtyMinAgo },
+        },
+        include: [
+          { model: OrderItem, as: 'OrderItems', attributes: ['id', 'product_id', 'variation_id', 'quantity'] },
+        ],
+      });
+
+      if (staleOrders.length === 0) {
+        console.log('✅ [CRON] Stale prepaid: no stale orders found');
+        return;
+      }
+
+      let cancelled = 0;
+      for (const order of staleOrders) {
+        const transaction = await sequelize.transaction();
+        try {
+          // Cancel the order
+          await order.update({
+            status: 'cancelled',
+            payment_status: order.payment_status === 'failed' ? 'failed' : 'cancelled',
+          }, { transaction });
+
+          // Restore stock for each item
+          for (const item of order.OrderItems) {
+            if (item.variation_id) {
+              await ProductVariation.increment('stock', {
+                by: item.quantity,
+                where: { id: item.variation_id },
+                transaction,
+              });
+            }
+          }
+
+          // Restore coupon usage if applicable
+          if (order.coupon_id) {
+            await Coupon.decrement('usageCount', {
+              by: 1,
+              where: { id: order.coupon_id },
+              transaction,
+            });
+            await CouponUsage.destroy({
+              where: { orderId: order.id },
+              transaction,
+            });
+          }
+
+          // Log status change
+          await OrderStatusHistory.create({
+            order_id: order.id,
+            status: 'cancelled',
+            updated_by: null,
+            notes: 'Auto-cancelled: prepaid payment not completed within 30 minutes',
+          }, { transaction });
+
+          await transaction.commit();
+          cancelled++;
+          console.log(`  ✓ Cancelled stale order #${order.order_number} (id=${order.id})`);
+        } catch (err) {
+          await transaction.rollback();
+          console.error(`  ✗ Failed to cancel order ${order.id}:`, err.message);
+        }
+      }
+
+      console.log(`✅ [CRON] Stale prepaid: ${cancelled}/${staleOrders.length} orders cancelled`);
+    } catch (error) {
+      console.error('❌ [CRON] Stale prepaid cleanup error:', error.message);
+    }
+  });
+
   console.log('✅ Cron jobs initialized successfully');
   console.log('📋 Active jobs:');
   console.log('   - FShip Order Sync: Every 2 hours');
@@ -283,6 +373,7 @@ function initializeCronJobs() {
   console.log('   - Review Request: Daily at 10 AM');
   console.log('   - Win-back Campaign: Daily at 11 AM');
   console.log('   - Post-purchase Upsell: Daily at 3 PM');
+  console.log('   - Stale Prepaid Cleanup: Every 30 minutes');
 }
 
 module.exports = { initializeCronJobs };

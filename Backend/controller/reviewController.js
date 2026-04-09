@@ -78,6 +78,9 @@ module.exports.createReview = async (req, res) => {
         const userId = req.user.id; // Authenticated user
         const files = req.files;
 
+        // Sanitize review text to prevent XSS
+        const sanitizedReview = (review || '').replace(/<[^>]*>/g, '').trim();
+
         const productId = parseInt(product_id);
         const parsedRating = parseInt(rating);
 
@@ -151,13 +154,27 @@ module.exports.createReview = async (req, res) => {
             productId: productId,
             // order_id: userOrderId, // Assuming order_id is not a direct field in Review model anymore
             rating: parsedRating,
-            review: review || null,
+            review: sanitizedReview || null,
             status: 'pending',
             verified_purchase: verifiedPurchase,
             is_featured: false
         }, { transaction });
 
         if (files && files.length > 0) {
+            // Validate file types and sizes
+            const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm'];
+            const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+            for (const file of files) {
+                if (!ALLOWED_TYPES.includes(file.mimetype)) {
+                    await transaction.rollback();
+                    return res.status(400).json({ message: `Invalid file type: ${file.mimetype}. Only images and videos are allowed.` });
+                }
+                if (file.size > MAX_FILE_SIZE) {
+                    await transaction.rollback();
+                    return res.status(400).json({ message: `File too large: ${file.originalname}. Maximum size is 10MB.` });
+                }
+            }
+
             const reviewImages = [];
             for (const file of files) {
                 try {
@@ -214,13 +231,30 @@ module.exports.createReview = async (req, res) => {
 module.exports.createPublicReview = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
+        // Simple rate limiting for public reviews
+        const ip = req.ip || req.connection.remoteAddress;
+        if (!global._reviewRateLimiter) global._reviewRateLimiter = {};
+        const now = Date.now();
+        const windowMs = 15 * 60 * 1000; // 15 minutes
+        const maxReviews = 5;
+        if (!global._reviewRateLimiter[ip]) global._reviewRateLimiter[ip] = [];
+        global._reviewRateLimiter[ip] = global._reviewRateLimiter[ip].filter(t => now - t < windowMs);
+        if (global._reviewRateLimiter[ip].length >= maxReviews) {
+            await transaction.rollback();
+            return res.status(429).json({ success: false, message: 'Too many reviews. Please try again later.' });
+        }
+        global._reviewRateLimiter[ip].push(now);
+
         const { productId: productIdBody, rating: ratingBody, comment, name, email } = req.body;
         const files = req.files;
+
+        // Sanitize review text to prevent XSS
+        const sanitizedComment = (comment || '').replace(/<[^>]*>/g, '').trim();
 
         const productId = parseInt(productIdBody);
         const parsedRating = parseInt(ratingBody);
 
-        if (!productId || isNaN(productId) || !parsedRating || isNaN(parsedRating) || !comment || !name || !email) {
+        if (!productId || isNaN(productId) || !parsedRating || isNaN(parsedRating) || !sanitizedComment || !name || !email) {
             await transaction.rollback();
             return res.status(400).json({
                 success: false,
@@ -254,7 +288,7 @@ module.exports.createPublicReview = async (req, res) => {
         const newReview = await Review.create({
             productId: productId,
             rating: parsedRating,
-            review: comment,
+            review: sanitizedComment,
             guestName: name,
             guestEmail: email,
             status: 'pending' // All public reviews start as pending
@@ -262,6 +296,20 @@ module.exports.createPublicReview = async (req, res) => {
 
         // Handle review images
         if (files && files.length > 0) {
+            // Validate file types and sizes
+            const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm'];
+            const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+            for (const file of files) {
+                if (!ALLOWED_TYPES.includes(file.mimetype)) {
+                    await transaction.rollback();
+                    return res.status(400).json({ success: false, message: `Invalid file type: ${file.mimetype}. Only images and videos are allowed.` });
+                }
+                if (file.size > MAX_FILE_SIZE) {
+                    await transaction.rollback();
+                    return res.status(400).json({ success: false, message: `File too large: ${file.originalname}. Maximum size is 10MB.` });
+                }
+            }
+
             const reviewImages = [];
             for (const file of files) {
                 try {
@@ -319,8 +367,12 @@ module.exports.getPublicProductReviews = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid Product ID' });
         }
 
+        // Validate sort param against allowlist
+        const allowedSorts = ['recent', 'highest', 'lowest'];
+        const validSort = allowedSorts.includes(sort) ? sort : 'recent';
+
         // Check cache first
-        const cacheKey = `reviews:${pId}:${page}:${limit}:${sort}`;
+        const cacheKey = `reviews:${pId}:${page}:${limit}:${validSort}`;
         const cached = await cacheManager.get(cacheKey);
         if (cached) {
             return res.json(cached);
@@ -332,8 +384,8 @@ module.exports.getPublicProductReviews = async (req, res) => {
         };
         
         let order = [['createdAt', 'DESC']]; 
-        if (sort === 'highest') order = [['rating', 'DESC'], ['createdAt', 'DESC']];
-        if (sort === 'lowest') order = [['rating', 'ASC'], ['createdAt', 'DESC']];
+        if (validSort === 'highest') order = [['rating', 'DESC'], ['createdAt', 'DESC']];
+        if (validSort === 'lowest') order = [['rating', 'ASC'], ['createdAt', 'DESC']];
         
         const offset = (parseInt(page) - 1) * parseInt(limit);
         
@@ -594,10 +646,11 @@ module.exports.deleteReview = async (req, res) => {
             return res.status(404).json({ message: 'Review not found' });
         }
 
-        // Permissions: Admin can delete any. User can delete their own IF NOT APPROVED (or specific policy)
-        // Current route setup implies admin for /admin/:reviewId and user for /:reviewId
-        // This generic deleteReview is likely called by admin routes based on reviewRoutes.js structure
-        // If also for users, add permission check: (req.user.id !== reviewToDelete.userId && req.user.role !== 'admin')
+        // Authorization check: only owner or admin can delete
+        if (req.user.id !== reviewToDelete.userId && req.user.role !== 'admin') {
+            await transaction.rollback();
+            return res.status(403).json({ message: 'Access denied. You can only delete your own reviews.' });
+        }
 
         const productId = reviewToDelete.productId;
         const oldStatus = reviewToDelete.status;
@@ -722,10 +775,14 @@ module.exports.getReview = async (req, res) => {
             return res.status(404).json({ message: 'Review not found' });
         }
 
-        // Add permission check if this route is also for non-admins
-        // e.g. if (review.userId !== req.user.id && req.user.role !== 'admin' && review.status !== 'approved') ...
+        // Strip moderation fields for non-admin users
+        const reviewData = review.toJSON();
+        if (!req.user || req.user.role !== 'admin') {
+            delete reviewData.status;
+            delete reviewData.admin_notes;
+        }
 
-        res.json(review);
+        res.json(reviewData);
     } catch (error) {
         console.error('Error fetching review:', error);
         res.status(500).json({ message: 'Failed to fetch review', error: error.message });

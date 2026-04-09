@@ -2,7 +2,6 @@ const { ShippingAddress } = require("../model/shippingAddressModel.js");
 const { GuestUser } = require("../model/guestUserModel.js");
 const { Op } = require("sequelize");
 const { sequelize } = require("../config/db.js");
-const { encrypt, decrypt } = require("../utils/encryption.js");
 
 // Create a new shipping address
 module.exports.createShippingAddress = async (req, res) => {
@@ -57,6 +56,7 @@ module.exports.createShippingAddress = async (req, res) => {
     const makeDefault = addressCount === 0 ? true : is_default || false;
 
     // Create the shipping address
+    // Pass raw phone_number — the Sequelize setter encrypts automatically
     const shippingAddress = await ShippingAddress.create(
       {
         user_id: userId,
@@ -68,7 +68,7 @@ module.exports.createShippingAddress = async (req, res) => {
         state,
         pincode: postal_code,
         country,
-        phone: encrypt(phone_number),
+        phone: phone_number,
         is_default: makeDefault,
       },
       { transaction }
@@ -77,6 +77,7 @@ module.exports.createShippingAddress = async (req, res) => {
     await transaction.commit();
 
     // Transform response to match frontend expectations
+    // Access shippingAddress.phone which triggers the Sequelize getter (decrypts)
     const responseAddress = {
       id: shippingAddress.id,
       user_id: shippingAddress.user_id,
@@ -87,8 +88,8 @@ module.exports.createShippingAddress = async (req, res) => {
       postal_code: shippingAddress.pincode, // Transform pincode to postal_code
       pincode: shippingAddress.pincode, // Keep both for compatibility
       country: shippingAddress.country,
-      phone_number: decrypt(shippingAddress.phone), // Transform phone to phone_number
-      phone: decrypt(shippingAddress.phone), // Keep both for compatibility
+      phone_number: shippingAddress.phone, // Getter decrypts automatically
+      phone: shippingAddress.phone, // Getter decrypts automatically
       is_default: shippingAddress.is_default,
       createdAt: shippingAddress.createdAt,
       updatedAt: shippingAddress.updatedAt
@@ -245,10 +246,10 @@ module.exports.updateShippingAddress = async (req, res) => {
         is_default !== undefined ? is_default : shippingAddress.is_default,
     };
 
-    // Only update phone when explicitly provided; avoids re-encrypting an
-    // unchanged phone value on every update request.
+    // Only update phone when explicitly provided; use instance setter
+    // to ensure the Sequelize setter encrypts the value properly.
     if (phone_number !== undefined) {
-      updatePayload.phone = phone_number;
+      shippingAddress.phone = phone_number; // Triggers Sequelize setter (encrypts)
     }
 
     await shippingAddress.update(updatePayload, { transaction });
@@ -434,9 +435,19 @@ module.exports.getGuestShippingAddresses = async (req, res) => {
     const { guest_email } = req.query;
     if (!guest_email) return res.json({ shippingAddresses: [] });
 
+    // Require authentication — prevent unauthenticated data leaks
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     const { User } = require('../model/userModel.js');
     const user = await User.findOne({ where: { email: guest_email.toLowerCase() } });
     if (!user) return res.json({ shippingAddresses: [] });
+
+    // Verify the authenticated user matches the email lookup
+    if (user.id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
 
     const shippingAddresses = await ShippingAddress.findAll({
       where: { user_id: user.id },

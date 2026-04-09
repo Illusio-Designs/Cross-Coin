@@ -797,6 +797,57 @@ const setupDatabase = async () => {
       );
     }
 
+    // Payment-first checkout: make order_id nullable + add reservation_id
+    console.log("Ensuring payments table supports payment-first checkout...");
+    try {
+      // Make order_id nullable (order created AFTER payment in new flow)
+      await sequelize.query(`
+        ALTER TABLE payments
+        MODIFY COLUMN order_id INT NULL
+      `);
+      console.log("  ✓ payments.order_id set to nullable");
+    } catch (e) {
+      console.log("  ⚠️ payments.order_id nullable skipped:", e.message);
+    }
+
+    try {
+      const [resCol] = await sequelize.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payments' AND COLUMN_NAME = 'reservation_id'
+      `);
+      if (!resCol.length) {
+        await sequelize.query(`
+          ALTER TABLE payments
+          ADD COLUMN reservation_id VARCHAR(100) NULL COMMENT 'Stock reservation ID for payment-first checkout'
+        `);
+        await sequelize.query(`
+          ALTER TABLE payments
+          ADD INDEX idx_payments_reservation_id (reservation_id)
+        `);
+        console.log("  ✓ payments.reservation_id column + index added");
+      } else {
+        console.log("  ✓ payments.reservation_id already exists");
+      }
+    } catch (e) {
+      console.log("  ⚠️ payments.reservation_id skipped:", e.message);
+    }
+
+    try {
+      const [rzpIdx] = await sequelize.query(`
+        SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payments' AND INDEX_NAME = 'idx_payments_razorpay_order_id'
+      `);
+      if (!rzpIdx.length) {
+        await sequelize.query(`
+          ALTER TABLE payments
+          ADD INDEX idx_payments_razorpay_order_id (razorpay_order_id)
+        `);
+        console.log("  ✓ payments razorpay_order_id index added");
+      }
+    } catch (e) {
+      console.log("  ⚠️ payments razorpay_order_id index skipped:", e.message);
+    }
+
     try {
       console.log("✓ Migration 001 completed");
       

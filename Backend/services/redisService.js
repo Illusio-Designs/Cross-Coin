@@ -150,6 +150,46 @@ class RedisService {
     if (!this.client || !this.isConnected) return null;
     return this.client.del(key);
   }
+
+  async incr(key) {
+    if (!this.client || !this.isConnected) return null;
+    return this.client.incr(key);
+  }
+
+  async incrby(key, amount) {
+    if (!this.client || !this.isConnected) return null;
+    return this.client.incrby(key, amount);
+  }
+
+  async decrby(key, amount) {
+    if (!this.client || !this.isConnected) return null;
+    return this.client.decrby(key, amount);
+  }
+
+  async ttl(key) {
+    if (!this.client || !this.isConnected) return -2;
+    return this.client.ttl(key);
+  }
+
+  async exists(key) {
+    if (!this.client || !this.isConnected) return 0;
+    return this.client.exists(key);
+  }
+
+  async expire(key, seconds) {
+    if (!this.client || !this.isConnected) return null;
+    return this.client.expire(key, seconds);
+  }
+
+  async scan(cursor, ...args) {
+    if (!this.client || !this.isConnected) return ['0', []];
+    return this.client.scan(cursor, ...args);
+  }
+
+  async eval(script, numKeys, ...args) {
+    if (!this.client || !this.isConnected) return null;
+    return this.client.eval(script, numKeys, ...args);
+  }
 }
 
 // Export singleton instance

@@ -19,8 +19,9 @@ const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/users'));
 
 // Generate a refresh token, hash it, store in DB, return raw token
 const issueRefreshToken = async (user) => {
-    const rawToken = crypto.randomBytes(40).toString('hex');
-    const hashed = await bcrypt.hash(rawToken, 10);
+    const rawTokenPart = crypto.randomBytes(40).toString('hex');
+    const rawToken = `${user.id}:${rawTokenPart}`;
+    const hashed = await bcrypt.hash(rawTokenPart, 10);
     const expiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
     await user.update({ refreshToken: hashed, refreshTokenExpiry: expiry });
     return rawToken;
@@ -113,14 +114,42 @@ module.exports.register = async (req, res) => {
     }
 };
 
-// **Mobile OTP Login (consumer) — OTP verified on frontend via MSG91**
+// **Mobile OTP Login (consumer) — OTP verified server-side via MSG91**
 module.exports.login = async (req, res) => {
     try {
-        const { phone } = req.body;
+        const { phone, access_token } = req.body;
         if (!phone) return res.status(400).json({ message: 'Phone number is required' });
+        if (!access_token) return res.status(400).json({ message: 'OTP verification token is required' });
 
         const digits = String(phone).replace(/\D/g, '').slice(-10);
         if (digits.length !== 10) return res.status(400).json({ message: 'Invalid phone number' });
+
+        // Verify MSG91 access token server-side
+        // In development (NODE_ENV !== 'production'), skip verification for localhost testing
+        if (process.env.NODE_ENV === 'production') {
+            const axios = require('axios');
+            const MSG91_AUTH_KEY = process.env.MSG91_AUTH_KEY;
+            if (!MSG91_AUTH_KEY) {
+                console.error('MSG91_AUTH_KEY not configured');
+                return res.status(500).json({ message: 'OTP service not configured' });
+            }
+            try {
+                const verifyResponse = await axios.post(
+                    'https://control.msg91.com/api/v5/widget/verifyAccessToken',
+                    { authkey: MSG91_AUTH_KEY, 'access-token': access_token },
+                    { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
+                );
+                if (!verifyResponse.data || verifyResponse.data.type === 'error') {
+                    return res.status(401).json({ message: 'OTP verification failed. Please try again.' });
+                }
+            } catch (verifyErr) {
+                console.error('MSG91 token verification error:', verifyErr.message);
+                return res.status(401).json({ message: 'OTP verification failed. Please try again.' });
+            }
+        } else {
+            // Development: log and skip MSG91 verification (hCaptcha blocks on localhost)
+            console.log(`[DEV] Skipping MSG91 token verification for ${digits}`);
+        }
 
         // Find or create user by phone
         let user = await User.findOne({ where: { phone: digits } });
@@ -234,8 +263,7 @@ module.exports.forgotPassword = async (req, res) => {
         if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
             console.error('Email credentials not properly configured in .env file');
             return res.json({ 
-                message: 'Reset token generated. Email not sent due to configuration.',
-                resetToken: resetToken
+                message: 'Reset token generated. Email not sent due to configuration.'
             });
         }
 
@@ -269,14 +297,12 @@ module.exports.forgotPassword = async (req, res) => {
         try {
             await transporter.sendMail(mailOptions);
             res.json({ 
-                message: 'Reset link sent to your email',
-                resetToken: resetToken // Include token in response for testing
+                message: 'Reset link sent to your email'
             });
         } catch (emailError) {
             console.error('Email sending error:', emailError);
             res.json({ 
                 message: 'Reset token generated. Email delivery failed.',
-                resetToken: resetToken,
                 error: emailError.message
             });
         }
@@ -326,7 +352,7 @@ module.exports.resetPassword = async (req, res) => {
 module.exports.getCurrentUser = async (req, res) => {
     try {
         const user = await User.findByPk(req.user.id, {
-            attributes: { exclude: ['password', 'resetToken', 'resetTokenExpiry'] }
+            attributes: { exclude: ['password', 'resetToken', 'resetTokenExpiry', 'refreshToken', 'refreshTokenExpiry'] }
         });
         
         if (!user) {
@@ -458,7 +484,10 @@ module.exports.updatePassword = async (req, res) => {
 // **Delete Account (soft delete — consumer self-service)**
 module.exports.deleteUser = async (req, res) => {
     try {
-        const userId = req.user?.id || req.params.id;
+        const userId = req.user?.id;
+        if (!userId) {
+            return res.status(401).json({ message: 'Authentication required' });
+        }
         const { reason } = req.body;
 
         const user = await User.findByPk(userId);
@@ -486,10 +515,26 @@ module.exports.deleteUser = async (req, res) => {
 // **Get All Users**
 module.exports.getAllUsers = async (req, res) => {
     try {
-        const users = await User.findAll({
-            attributes: { exclude: ['password'] }
+        const { page = 1, limit = 20 } = req.query;
+        const cappedLimit = Math.min(parseInt(limit) || 20, 100);
+        const offset = (parseInt(page) - 1) * cappedLimit;
+
+        const { count, rows } = await User.findAndCountAll({
+            attributes: { exclude: ['password', 'resetToken', 'resetTokenExpiry', 'refreshToken', 'refreshTokenExpiry'] },
+            limit: cappedLimit,
+            offset,
+            order: [['createdAt', 'DESC']]
         });
-        res.json(users);
+
+        res.json({
+            users: rows,
+            pagination: {
+                total: count,
+                page: parseInt(page),
+                limit: cappedLimit,
+                totalPages: Math.ceil(count / cappedLimit)
+            }
+        });
     } catch (error) {
         console.error('Get all users error:', error);
         res.status(500).json({ message: 'Error getting users' });
@@ -518,8 +563,17 @@ module.exports.getProfile = async (req, res) => {
 // Update user profile
 module.exports.updateProfile = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = req.user.id;
         const updateData = req.body;
+
+        // Whitelist allowed fields — strip role, password, deleted_at, etc.
+        const allowedFields = ['username', 'email', 'profileImage'];
+        const sanitizedData = {};
+        for (const key of allowedFields) {
+            if (updateData[key] !== undefined) {
+                sanitizedData[key] = updateData[key];
+            }
+        }
 
         const user = await User.findByPk(id);
         if (!user) {
@@ -541,7 +595,7 @@ module.exports.updateProfile = async (req, res) => {
                     );
                 }
 
-                updateData.profileImage = uploadResult.filePath;
+                sanitizedData.profileImage = uploadResult.filePath;
 
                 // Clean up local temp file
                 fs.unlink(req.file.path, err => {
@@ -557,7 +611,7 @@ module.exports.updateProfile = async (req, res) => {
             }
         }
 
-        await user.update(updateData);
+        await user.update(sanitizedData);
         
         res.json({ 
             success: true, 
@@ -577,6 +631,12 @@ module.exports.updateProfile = async (req, res) => {
 // Add the missing logout function
 module.exports.logout = async (req, res) => {
     try {
+        // Blacklist the current JWT so it can't be reused
+        if (req._token) {
+            const { blacklistToken } = require('../middleware/authMiddleware.js');
+            await blacklistToken(req._token);
+        }
+
         // Invalidate refresh token in DB
         if (req.user) {
             await req.user.update({ refreshToken: null, refreshTokenExpiry: null });
@@ -656,32 +716,31 @@ module.exports.refreshToken = async (req, res) => {
             return res.status(401).json({ success: false, message: 'Refresh token is required' });
         }
 
-        // Find users with a non-expired refresh token
-        const users = await User.findAll({
-            where: {
-                refreshToken: { [require('sequelize').Op.not]: null },
-                refreshTokenExpiry: { [require('sequelize').Op.gt]: new Date() }
-            }
-        });
+        // Parse userId from token format "userId:tokenPart"
+        const parts = refreshToken.split(':');
+        if (parts.length !== 2) {
+            return res.status(401).json({ success: false, message: 'Invalid refresh token format' });
+        }
+        const [userId, tokenPart] = parts;
 
-        // Find the user whose hashed token matches
-        let matchedUser = null;
-        for (const u of users) {
-            const match = await bcrypt.compare(refreshToken, u.refreshToken);
-            if (match) { matchedUser = u; break; }
+        // O(1) lookup by user ID
+        const user = await User.findByPk(userId);
+        if (!user || !user.refreshToken || !user.refreshTokenExpiry || user.refreshTokenExpiry < new Date()) {
+            return res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
         }
 
-        if (!matchedUser) {
+        const match = await bcrypt.compare(tokenPart, user.refreshToken);
+        if (!match) {
             return res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
         }
 
         // Rotate: issue new access token + new refresh token
         const accessToken = jwt.sign(
-            { id: matchedUser.id, email: matchedUser.email, role: matchedUser.role },
+            { id: user.id, email: user.email, role: user.role },
             process.env.JWT_SECRET,
             { expiresIn: '1d' }
         );
-        const newRefreshToken = await issueRefreshToken(matchedUser);
+        const newRefreshToken = await issueRefreshToken(user);
 
         res.json({ success: true, token: accessToken, refreshToken: newRefreshToken });
     } catch (error) {

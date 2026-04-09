@@ -1,5 +1,7 @@
 // import { ThemeProvider } from 'next-themes'; // Disabled dark mode
 import Head from "next/head";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "../lib/queryClient";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AuthProvider, useAuth } from "../context/AuthContext";
@@ -195,19 +197,21 @@ function AppContent({ Component, pageProps, progressRef }) {
 
 function AppWrapper({ Component, pageProps, progressRef }) {
   return (
-    <AuthProvider>
-      <CartProvider>
-        <WishlistProvider>
-          <BreadcrumbProvider>
-            <AppContent 
-              Component={Component} 
-              pageProps={pageProps}
-              progressRef={progressRef}
-            />
-          </BreadcrumbProvider>
-        </WishlistProvider>
-      </CartProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <CartProvider>
+          <WishlistProvider>
+            <BreadcrumbProvider>
+              <AppContent 
+                Component={Component} 
+                pageProps={pageProps}
+                progressRef={progressRef}
+              />
+            </BreadcrumbProvider>
+          </WishlistProvider>
+        </CartProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

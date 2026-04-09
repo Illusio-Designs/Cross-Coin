@@ -34,6 +34,9 @@ router.use('/leads',              require('./leadRoutes.js'));
 // ── Auth (OTP) ────────────────────────────────────────────────────────────
 router.use('/auth',               optionalBrand, require('./checkoutRoutes.js'));
 
+// ── Checkout (payment-first flow) ─────────────────────────────────────────
+router.use('/checkout',           optionalBrand, require('./checkoutRoutes.js'));
+
 // ── WhatsApp ──────────────────────────────────────────────────────────────
 router.use('/whatsapp',           require('./whatsappRoutes.js'));
 
