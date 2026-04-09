@@ -77,11 +77,15 @@ scripts/          — DB setup, migrations, data scripts
 ## User & Auth System
 
 - **No guest users.** Every order creates a `consumer` account automatically.
-- OTP-based phone login (MSG91). Auto-creates user if phone not found.
+- OTP-based phone login (MSG91). Server-side OTP verification via Redis before JWT issuance.
 - On login/register, any historical guest orders are linked by email match.
-- Soft delete: `DELETE /api/users/delete` anonymises PII, sets `deleted_at`.
+- Soft delete: `DELETE /api/users/delete` anonymises PII, sets `deleted_at`. Soft-deleted users cannot authenticate.
 - Roles: `admin`, `product_manager`, `order_manager`, `whatsapp_manager`, `consumer`.
-- JWT: 7-day access + 7-day refresh tokens (hashed in DB).
+- JWT: 7-day access + 7-day refresh tokens (hashed in DB). Refresh token format: `userId:tokenPart` for O(1) lookup.
+- Token revocation: Redis-based blacklist. On logout/soft-delete, JWT is blacklisted for its remaining lifetime.
+- Profile updates: users can only update their own profile. `role` field is stripped from update requests.
+- `forgotPassword` does NOT return the reset token in the response — token is only sent via email link.
+- `getCurrentUser` excludes `password`, `resetToken`, `refreshToken` from response.
 
 ---
 
@@ -152,7 +156,13 @@ All new orders start as `awaiting_confirmation`. Admin must confirm before FShip
 | 11-20 | 🟡 MEDIUM | Caution |
 | 21-30 | 🔴 HIGH | Block COD |
 
-Factors: repeat RTO customer (+20), missing landmark (+10). Shown in admin dashboard.
+Scoring runs for ALL payment types (COD and prepaid), not just COD.
+
+Factors:
+- Repeat RTO customer: +20 (1+ RTO orders in last 6 months, queried by `user_id`)
+- Short/low-quality address: +10 (address < 30 characters)
+
+COD-specific: orders blocked entirely if 2+ prior RTOs. COD max value cap enforced per brand.
 
 ---
 
@@ -166,7 +176,21 @@ Factors: repeat RTO customer (+20), missing landmark (+10). Shown in admin dashb
 4. Handler creates backend order with **3 retries** (2s, 4s, 6s exponential backoff)
 5. Then verifies payment via `POST /api/payments/razorpay/verify`
 6. If all retries fail: cart cleared, user shown "Payment received, order being processed"
-7. Razorpay webhook (`POST /api/orders/fship/webhook`) reconciles any missed orders
+7. Razorpay webhook (`POST /api/payments/razorpay/webhook`) reconciles any missed orders
+
+### Payment Verification (3 parallel paths, race-condition protected)
+
+All three paths use `SELECT ... FOR UPDATE` row locking to prevent double-processing:
+
+1. **Client verify** (`POST /api/payments/razorpay/verify`) — frontend calls after Razorpay success
+2. **Server callback** (`POST /api/payments/razorpay/callback`) — Razorpay redirects after payment
+3. **Webhook** (`POST /api/payments/razorpay/webhook`) — server-to-server event handler
+
+Webhook includes a fallback: if no payment record is found by `razorpay_order_id`, it matches the order by customer email/phone + amount + time window and creates the missing payment link.
+
+### Stale Prepaid Order Cleanup
+
+Cron job runs every 30 minutes. Cancels prepaid orders where `payment_status` is still `pending` or `failed` after 30 minutes. Restores stock and coupon usage atomically.
 
 ### COD Flow
 
@@ -224,7 +248,11 @@ Usage: `router.post('/checkout', validateBody(schemas.checkout), handler)`
 
 ## Caching Strategy
 
-`services/cacheManager.js` — Redis-backed with defined TTLs.
+`services/cacheManager.js` — Redis-backed with namespace isolation and defined TTLs.
+
+All cache keys are prefixed with `crosscoin:cache:` to prevent collisions with sessions, queues, and other Redis data. `clear()` uses pattern-based deletion (SCAN + DEL) instead of `flushdb()`.
+
+Max value size: 1MB. Oversized payloads are logged and skipped.
 
 | Key pattern | TTL | Invalidated on |
 |---|---|---|
@@ -387,10 +415,10 @@ No `/public`, `/guest`, or `/admin` prefixes in URLs — handled by middleware.
 
 | Method | Route | Auth | Function |
 |---|---|---|---|
-| GET | `/` | Auth | Get cart |
-| POST | `/items` | Auth | Add item |
-| PUT | `/items/:productId` | Auth | Update quantity |
-| DELETE | `/items/:productId` | Auth | Remove item |
+| GET | `/` | Auth | Get cart (no coupon preview discount) |
+| POST | `/items` | Auth | Add item (validates product active, stock, quantity >= 1, uses transaction + row lock) |
+| PUT | `/items/:productId` | Auth | Update quantity (re-validates stock, refreshes price if changed) |
+| DELETE | `/items/:productId` | Auth | Remove item (exact product+variation match only, no fallback) |
 | DELETE | `/` | Auth | Clear cart |
 
 ### Wishlist — `/api/v1/wishlist`
@@ -439,6 +467,15 @@ No `/public`, `/guest`, or `/admin` prefixes in URLs — handled by middleware.
 | GET | `/` | OrderManager | All payments |
 | POST | `/refund` | OrderManager | Full or partial refund |
 
+### Coupon System
+
+- `validateCoupon`: server-side cart total calculation for authenticated users (ignores client `cartTotal`)
+- `applyCoupon`: server-side discount recalculation (ignores client `discountAmount`), atomic usage increment with row lock
+- Guest coupon usage tracked via email through GuestUser records
+- `getCouponById` scoped to current brand
+- `getUserCouponHistory` restricted to authenticated user's own history
+- Product slugs enforced unique (auto-appends `-2`, `-3` on collision)
+
 ### Refund System
 
 - Full + partial refund via Razorpay API
@@ -458,7 +495,7 @@ No `/public`, `/guest`, or `/admin` prefixes in URLs — handled by middleware.
 | DELETE | `/:id` | Auth | Delete address |
 | PUT | `/:id/default` | Auth | Set as default |
 | POST | `/guest` | Public | Auto-create user + address |
-| GET | `/guest` | Public | Get addresses by email |
+| GET | `/guest` | Auth | Get addresses by email (requires auth + ownership check) |
 
 ### All Other Routes
 
@@ -513,11 +550,11 @@ No `/public`, `/guest`, or `/admin` prefixes in URLs — handled by middleware.
 | `orderService` | Business logic: `confirmOrder`, `cancelOrder`, `syncOrderToFShip`, state machine, RTO risk |
 | `orderEvents` | EventEmitter: `order.created/confirmed/shipped/delivered/cancelled/analytics` |
 | `redisService` | Redis connection + `get`/`set`/`del` proxy methods |
-| `cacheManager` | TTL-based cache with defined strategy |
-| `fshipService` | FShip API (protected by circuit breaker) |
+| `cacheManager` | TTL-based cache with namespace isolation (`crosscoin:cache:` prefix), max value size, pattern-based clear |
+| `fshipService` | FShip API (protected by circuit breaker, singleton init guard, PII redaction in logs, throws on invalid phone) |
 | `razorpayService` | Razorpay order + signature verification + refund API |
-| `loyaltyService` | Credit/redeem/expire/refund points |
-| `whatsappService` | WhatsApp templates (order, OTP, abandoned cart, review, win-back, upsell, refund) |
+| `loyaltyService` | Credit/redeem/expire/refund points. Expiry runs in batches of 100 with separate transactions. |
+| `whatsappService` | WhatsApp templates (order, OTP, abandoned cart, review, win-back, upsell, refund). Rate limited (10/phone/hour). Input sanitized. Credentials cached 5min. |
 | `notificationService` | SSE real-time notifications |
 | `dashboardService` | Admin stats + cache invalidation |
 | `imagekitService` | CDN upload/delete/optimize |
@@ -558,6 +595,7 @@ Separate child process. Auto-restarts on crash.
 | Review Request | Daily 10 AM | WhatsApp 3 days post-delivery |
 | Win-back | Daily 11 AM | WhatsApp to 30-60 day inactive users |
 | Upsell | Daily 3 PM | WhatsApp 1 day post-delivery |
+| Stale Prepaid Cleanup | Every 30 min | Cancel unpaid prepaid orders older than 30 min, restore stock + coupon usage |
 | Badge Recalc | On-demand (Bull) | Product badges from order history |
 
 Failed Bull jobs are logged to DLQ after max attempts for manual review.
@@ -572,14 +610,20 @@ Failed Bull jobs are logged to DLQ after max attempts for manual review.
   - Medium: order creation, address creation
   - General: all other routes
   - Key: IP + userId (prevents both anonymous and authenticated abuse)
-- **JWT** — 7-day access + refresh tokens
+  - Public review endpoint: 5 reviews per IP per 15 minutes
+  - WhatsApp messages: 10 per phone per hour via Redis
+- **JWT** — 7-day access + refresh tokens. Token blacklist via Redis on logout/soft-delete.
 - **Bcrypt** — password hashing
-- **AES-256-GCM** — phone/address encryption at rest
-- **CORS** — whitelist-based
-- **Soft delete** — accounts anonymised, not hard-deleted
+- **AES-256-GCM** — phone/address encryption at rest (Sequelize getter/setter handles encrypt/decrypt)
+- **CORS** — strict whitelist-based. Vercel preview deployments use suffix match (`.vercel.app`). HTTP origins only in non-production.
+- **Soft delete** — accounts anonymised, not hard-deleted. Soft-deleted users blocked from auth.
 - **Schema validation** — request bodies validated before processing
 - **Circuit breaker** — external service failures don't cascade
 - **Idempotency** — DB-based duplicate order prevention
+- **Brand isolation** — write operations check user-brand access. Consumers scoped to their brand. Staff/admin bypass.
+- **Input sanitization** — review text stripped of HTML tags. WhatsApp messages sanitized. SQL wildcards escaped in search.
+- **Authorization** — review deletion requires ownership or admin. Profile updates restricted to own profile. Coupon history restricted to own user. Guest address lookup requires auth.
+- **File upload validation** — review media: images/videos only, 10MB max. Directory traversal prevented in image endpoints.
 
 ---
 

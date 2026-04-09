@@ -571,14 +571,17 @@ module.exports.createRazorpayOrder = async (req, res) => {
 };
 
 // Update order with payment details after successful payment
+// Supports BOTH flows:
+//   - NEW (payment-first): reservation_id on payment record → create order from session
+//   - OLD (legacy): orderId in request → confirm existing order
 module.exports.updateOrderPayment = async (req, res) => {
   try {
-    const { orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
+    const { orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature, reservation_id } = req.body;
     
-    console.log('Updating order payment:', { orderId, razorpayPaymentId, razorpayOrderId });
+    console.log('Updating order payment:', { orderId, razorpayPaymentId, razorpayOrderId, reservation_id });
 
-    if (!orderId || !razorpayPaymentId || !razorpayOrderId || !razorpaySignature) {
-      return res.status(400).json({ message: 'All payment fields are required' });
+    if (!razorpayPaymentId || !razorpayOrderId || !razorpaySignature) {
+      return res.status(400).json({ message: 'razorpayPaymentId, razorpayOrderId, and razorpaySignature are required' });
     }
 
     // Verify signature using centralized Razorpay service
@@ -593,43 +596,137 @@ module.exports.updateOrderPayment = async (req, res) => {
       return res.status(400).json({ message: 'Invalid payment signature' });
     }
 
-    // Find the order
-    const order = await Order.findByPk(orderId);
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
-
-    // Task 9: Guard re-processing paid orders
-    if (order.payment_status === 'paid') {
-      return res.status(200).json({ success: true, message: 'Payment already processed', order });
-    }
-    if (['failed', 'cancelled'].includes(order.payment_status)) {
-      return res.status(400).json({ message: `Cannot process payment for a ${order.payment_status} order.` });
-    }
-
-    // Task 8: Payment ID deduplication
+    // Payment ID deduplication
     const existingSuccessful = await Payment.findOne({
       where: { transaction_id: razorpayPaymentId, status: 'successful' }
     });
     if (existingSuccessful) {
+      // Already processed — return the order
+      if (existingSuccessful.order_id) {
+        const existingOrder = await Order.findByPk(existingSuccessful.order_id);
+        if (existingOrder) {
+          return res.status(200).json({ success: true, message: 'Payment already processed', order: existingOrder });
+        }
+      }
       return res.status(400).json({ message: 'Payment already processed.' });
     }
 
-    // Update order status — prepaid auto-confirmed after payment (money received)
-    order.payment_status = 'paid';
-    order.status = 'confirmed';
-    await order.save();
+    // ── NEW FLOW: Payment-first (reservation exists) ──────────────────────
+    // Check if this razorpay order has a checkout session (new flow)
+    const stockReservation = require('../services/stockReservationService.js');
+    const orderCreationService = require('../services/orderCreationService.js');
+    const session = await stockReservation.getReservationByRazorpayOrder(razorpayOrderId);
 
-    // Record status history for auto-confirmation
-    const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
-    await OrderStatusHistory.create({
-      order_id: order.id,
-      status: 'confirmed',
-      updated_by: null,
-      notes: 'Auto-confirmed: prepaid payment verified',
+    if (session) {
+      console.log('Payment-first flow: creating order from session', session.reservation_id);
+
+      const { order, created } = await orderCreationService.handlePaymentSuccess({
+        session,
+        razorpayPaymentId,
+        razorpayOrderId,
+        razorpaySignature,
+        source: 'verify',
+        req,
+      });
+
+      return res.json({
+        success: true,
+        message: created ? 'Payment verified, order created' : 'Payment already processed',
+        order,
+      });
+    }
+
+    // ── OLD FLOW: Legacy (order already exists) ───────────────────────────
+    if (!orderId) {
+      return res.status(400).json({ message: 'orderId is required (no checkout session found for this payment)' });
+    }
+
+    // Use row-level lock to prevent race condition between verify/callback/webhook
+    const { sequelize: db } = require('../config/db.js');
+    const result = await db.transaction(async (t) => {
+      // Lock the order row
+      const [lockedRows] = await db.query(
+        'SELECT id, payment_status, status, final_amount, brand_id, user_id, guest_user_id, order_number FROM orders WHERE id = ? FOR UPDATE',
+        { replacements: [orderId], transaction: t }
+      );
+      const lockedOrder = lockedRows?.[0];
+      if (!lockedOrder) {
+        throw Object.assign(new Error('Order not found'), { statusCode: 404 });
+      }
+
+      // Guard re-processing (now under lock — no race)
+      if (lockedOrder.payment_status === 'paid') {
+        return { alreadyPaid: true };
+      }
+      if (['failed', 'cancelled'].includes(lockedOrder.payment_status)) {
+        throw Object.assign(new Error(`Cannot process payment for a ${lockedOrder.payment_status} order.`), { statusCode: 400 });
+      }
+
+      // Update order status — prepaid auto-confirmed
+      await db.query(
+        `UPDATE orders SET payment_status = 'paid', status = 'confirmed', updated_at = NOW() WHERE id = ?`,
+        { replacements: [orderId], transaction: t }
+      );
+
+      // Record status history
+      const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
+      await OrderStatusHistory.create({
+        order_id: orderId,
+        status: 'confirmed',
+        updated_by: null,
+        notes: 'Auto-confirmed: prepaid payment verified',
+      }, { transaction: t });
+
+      // Upsert payment record
+      const amountInSmallestUnit = toSmallestUnit(parseFloat(lockedOrder.final_amount), 'INR');
+
+      let payment = await Payment.findOne({
+        where: { order_id: orderId, razorpay_order_id: razorpayOrderId },
+        transaction: t,
+      });
+      if (!payment) {
+        payment = await Payment.findOne({
+          where: { order_id: orderId, status: 'pending' },
+          transaction: t,
+        });
+      }
+
+      if (payment) {
+        await payment.update({
+          payment_type: 'razorpay',
+          amount_paid: amountInSmallestUnit,
+          status: 'successful',
+          transaction_id: razorpayPaymentId,
+          razorpay_order_id: razorpayOrderId,
+          razorpay_signature: razorpaySignature,
+          brand_id: lockedOrder.brand_id || 1,
+        }, { transaction: t });
+      } else {
+        await Payment.create({
+          order_id: orderId,
+          user_id: lockedOrder.user_id || null,
+          guest_user_id: lockedOrder.guest_user_id || null,
+          payment_type: 'razorpay',
+          amount_paid: amountInSmallestUnit,
+          status: 'successful',
+          transaction_id: razorpayPaymentId,
+          razorpay_order_id: razorpayOrderId,
+          razorpay_signature: razorpaySignature,
+          brand_id: lockedOrder.brand_id || 1,
+        }, { transaction: t });
+      }
+
+      return { alreadyPaid: false, lockedOrder };
     });
 
-    // Emit confirmed event — triggers WhatsApp + FShip sync
+    if (result.alreadyPaid) {
+      const order = await Order.findByPk(orderId);
+      return res.status(200).json({ success: true, message: 'Payment already processed', order });
+    }
+
+    const order = await Order.findByPk(orderId);
+
+    // Emit confirmed event — triggers WhatsApp + FShip sync (outside transaction)
     const orderEmitter = require('../services/orderEvents.js');
     const orderService = require('../services/orderService.js');
     setImmediate(() => {
@@ -637,61 +734,17 @@ module.exports.updateOrderPayment = async (req, res) => {
       orderService.syncOrderToFShip(order);
     });
 
-    // Convert order amount to smallest unit for consistent storage
-    // Sequelize returns DECIMAL columns as strings — parse to float first
-    const amountInSmallestUnit = toSmallestUnit(parseFloat(order.final_amount), 'INR');
-
-    // Find existing payment record — prefer matching by razorpay_order_id (the pending record we stored at createRazorpayOrder)
-    let payment = await Payment.findOne({
-      where: { order_id: order.id, razorpay_order_id: razorpayOrderId }
-    });
-
-    // Fallback: any pending payment for this order
-    if (!payment) {
-      payment = await Payment.findOne({
-        where: { order_id: order.id, status: 'pending' }
-      });
-    }
-
-    if (payment) {
-      // Update existing payment
-      await payment.update({
-        payment_type: 'razorpay',
-        amount_paid: amountInSmallestUnit,
-        status: 'successful',
-        transaction_id: razorpayPaymentId,
-        razorpay_order_id: razorpayOrderId,
-        razorpay_signature: razorpaySignature,
-        brand_id: order.brand_id || 1,
-      });
-    } else {
-      // Create new payment record if none exists
-      await Payment.create({
-        order_id: order.id,
-        user_id: order.user_id || null,
-        guest_user_id: order.guest_user_id || null,
-        payment_type: 'razorpay',
-        amount_paid: amountInSmallestUnit,
-        status: 'successful',
-        transaction_id: razorpayPaymentId,
-        razorpay_order_id: razorpayOrderId,
-        razorpay_signature: razorpaySignature,
-        brand_id: order.brand_id || 1,
-      });
-    }
-
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: 'Order payment updated successfully',
-      order: order 
+      order,
     });
 
-    // Fire Purchase event to Facebook + Google Analytics (non-blocking)
-    // This is the SINGLE source of truth for prepaid orders — createOrder skips analytics for non-COD
+    // Analytics (non-blocking)
     setImmediate(async () => {
       try {
         const [items, orderUser, guestUser, shippingAddr] = await Promise.all([
-          OrderItem.findAll({ 
+          OrderItem.findAll({
             where: { order_id: order.id },
             include: [{ model: require('../model/productModel.js').Product, as: 'Product', attributes: ['id', 'name'] }]
           }),
@@ -699,50 +752,30 @@ module.exports.updateOrderPayment = async (req, res) => {
           order.guest_user_id ? GuestUser.findByPk(order.guest_user_id, { attributes: ['email', 'firstName', 'lastName', 'phone'] }) : null,
           order.shipping_address_id ? require('../model/shippingAddressModel.js').ShippingAddress.findByPk(order.shipping_address_id) : null,
         ]);
-
-        // Resolve email/name from registered user or guest user
         const email = orderUser?.email || guestUser?.email || null;
         const phone = shippingAddr?.phone || guestUser?.phone || null;
         let firstName, lastName;
         if (orderUser) {
-          const nameParts = (orderUser.username || '').trim().split(/\s+/);
-          firstName = nameParts[0] || null;
-          lastName = nameParts.slice(1).join(' ') || null;
+          const parts = (orderUser.username || '').trim().split(/\s+/);
+          firstName = parts[0] || null;
+          lastName = parts.slice(1).join(' ') || null;
         } else {
           firstName = guestUser?.firstName || null;
           lastName = guestUser?.lastName || null;
         }
-
         const eventPayload = {
-          brand_id: order.brand_id || 1,
-          order_number: order.order_number,
-          total_amount: parseFloat(order.final_amount),
-          final_amount: parseFloat(order.final_amount),
-          currency: 'INR',
-          ip_address: req.ip || null,
-          user_agent: req.headers['user-agent'] || null,
-          email,
-          phone,
-          first_name: firstName,
-          last_name: lastName,
-          zip_code: shippingAddr?.pincode || null,
-          city: shippingAddr?.city || null,
-          state: shippingAddr?.state || null,
-          country: 'in',
-          fbc: req.cookies?._fbc || req.body?.fbc || null,
-          fbp: req.cookies?._fbp || null,
-          items: items.map(i => ({ 
-            product_id: i.product_id, 
-            quantity: i.quantity,
-            price: parseFloat(i.price || 0),
-            name: i.Product?.name || '',
-          })),
+          brand_id: order.brand_id || 1, order_number: order.order_number,
+          total_amount: parseFloat(order.final_amount), final_amount: parseFloat(order.final_amount),
+          currency: 'INR', ip_address: req.ip || null, user_agent: req.headers['user-agent'] || null,
+          email, phone, first_name: firstName, last_name: lastName,
+          zip_code: shippingAddr?.pincode || null, city: shippingAddr?.city || null,
+          state: shippingAddr?.state || null, country: 'in',
+          fbc: req.cookies?._fbc || req.body?.fbc || null, fbp: req.cookies?._fbp || null,
+          items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity, price: parseFloat(i.price || 0), name: i.Product?.name || '' })),
         };
         await sendFacebookEvent('Purchase', eventPayload);
         await sendGAEvent('purchase', eventPayload);
-      } catch (err) {
-        console.error('Analytics Purchase event error:', err.message);
-      }
+      } catch (err) { console.error('Analytics Purchase event error:', err.message); }
     });
 
   } catch (error) {
@@ -752,12 +785,18 @@ module.exports.updateOrderPayment = async (req, res) => {
 };
 
 module.exports.razorpayCallback = async (req, res) => {
+  try {
   const { razorpay_payment_id, razorpay_order_id, razorpay_signature, order_number } = req.body;
 
   // Find the order by order_number
   const order = await Order.findOne({ where: { order_number } });
   if (!order) {
     return res.redirect('/UnifiedCheckout?payment=failed');
+  }
+
+  // Guard: if already paid (updateOrderPayment or webhook already processed this), skip
+  if (order.payment_status === 'paid') {
+    return res.redirect(`/ThankYou?order_number=${order.order_number}`);
   }
 
   // Verify signature
@@ -768,6 +807,25 @@ module.exports.razorpayCallback = async (req, res) => {
     .digest('hex');
 
   if (generated_signature === razorpay_signature) {
+    // ── NEW FLOW: Check for checkout session ──────────────────────────────
+    const stockReservation = require('../services/stockReservationService.js');
+    const orderCreationService = require('../services/orderCreationService.js');
+    const session = await stockReservation.getReservationByRazorpayOrder(razorpay_order_id);
+
+    if (session) {
+      // Payment-first flow: create order from session
+      const { order: newOrder } = await orderCreationService.handlePaymentSuccess({
+        session,
+        razorpayPaymentId: razorpay_payment_id,
+        razorpayOrderId: razorpay_order_id,
+        razorpaySignature: razorpay_signature,
+        source: 'callback',
+        req,
+      });
+      return res.redirect(`/ThankYou?order_number=${newOrder.order_number}`);
+    }
+
+    // ── OLD FLOW: Order already exists ────────────────────────────────────
     // Mark order as paid — prepaid auto-confirmed
     order.payment_status = 'paid';
     order.status = 'confirmed';
@@ -812,10 +870,11 @@ module.exports.razorpayCallback = async (req, res) => {
 
     return res.redirect(`/ThankYou?order_number=${order.order_number}`);
   } else {
-    // Mark order as failed
-    order.payment_status = 'failed';
-    order.status = 'pending';
-    await order.save();
+    // Mark payment as failed — but only if order hasn't already been confirmed by another path
+    if (order.payment_status !== 'paid') {
+      order.payment_status = 'failed';
+      await order.save();
+    }
 
     // Upsert payment record as failed
     const existingPayment = await Payment.findOne({
@@ -844,6 +903,10 @@ module.exports.razorpayCallback = async (req, res) => {
 
     return res.redirect('/UnifiedCheckout?payment=failed');
   }
+  } catch (error) {
+    console.error('razorpayCallback error:', error.message);
+    return res.redirect('/UnifiedCheckout?payment=failed');
+  }
 };
 
 // Handle explicit payment failure reported by the client (Razorpay payment.failed event)
@@ -853,6 +916,14 @@ module.exports.handlePaymentFailure = async (req, res) => {
 
     if (!orderId || !razorpayOrderId) {
       return res.status(400).json({ message: 'orderId and razorpayOrderId are required' });
+    }
+
+    // Validate that this razorpay order was actually created by us
+    const existingPayment = await Payment.findOne({
+      where: { razorpay_order_id: razorpayOrderId }
+    });
+    if (!existingPayment) {
+      return res.status(403).json({ message: 'Unknown razorpay order' });
     }
 
     const order = await Order.findByPk(orderId);
@@ -937,19 +1008,20 @@ module.exports.razorpayWebhook = async (req, res) => {
     if (eventId) {
       const { sequelize: db } = require('../config/db.js');
       try {
+        // Check if already processed BEFORE inserting
+        const [existing] = await db.query(
+          `SELECT id FROM webhooks_log WHERE event_id = ? LIMIT 1`,
+          { replacements: [eventId] }
+        );
+        if (existing && existing.length > 0) {
+          console.log(`Razorpay webhook: duplicate event ${eventId}, skipping`);
+          return res.status(200).json({ status: 'duplicate' });
+        }
+        // Mark as processed
         await db.query(
           `INSERT IGNORE INTO webhooks_log (event_id, event_type, processed_at) VALUES (?, ?, NOW())`,
           { replacements: [eventId, eventType] }
         );
-        const [rows] = await db.query(
-          `SELECT COUNT(*) as cnt FROM webhooks_log WHERE event_id = ? AND processed_at < NOW()`,
-          { replacements: [eventId] }
-        );
-        // If more than 1 row exists, this is a duplicate
-        if (rows[0]?.cnt > 1) {
-          console.log(`Razorpay webhook: duplicate event ${eventId}, skipping`);
-          return res.status(200).json({ status: 'duplicate' });
-        }
       } catch (dbErr) {
         // webhooks_log table may not exist yet — non-fatal, continue processing
         console.warn('webhooks_log insert skipped:', dbErr.message);
@@ -962,30 +1034,103 @@ module.exports.razorpayWebhook = async (req, res) => {
       if (payment) {
         const rzpOrderId = payment.order_id;
         const rzpPaymentId = payment.id;
-        const dbOrder = await Order.findOne({ where: { } });
 
-        // Find order via payment record
-        const paymentRecord = await Payment.findOne({ where: { razorpay_order_id: rzpOrderId } });
-        if (paymentRecord) {
-          const order = await Order.findByPk(paymentRecord.order_id);
-          if (order && order.payment_status !== 'paid') {
-            order.payment_status = 'paid';
-            order.status = 'confirmed';
-            await order.save();
-            // Auto-confirm events
-            const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
-            await OrderStatusHistory.create({ order_id: order.id, status: 'confirmed', updated_by: null, notes: 'Auto-confirmed: webhook payment.captured' });
-            setImmediate(() => {
-              const orderEmitter = require('../services/orderEvents.js');
-              const orderService = require('../services/orderService.js');
-              orderEmitter.emit('order.confirmed', order);
-              orderService.syncOrderToFShip(order);
+        // ── NEW FLOW: Check for checkout session (payment-first) ──────────
+        const stockReservation = require('../services/stockReservationService.js');
+        const orderCreationService = require('../services/orderCreationService.js');
+        const session = await stockReservation.getReservationByRazorpayOrder(rzpOrderId);
+
+        if (session) {
+          try {
+            await orderCreationService.handlePaymentSuccess({
+              session,
+              razorpayPaymentId: rzpPaymentId,
+              razorpayOrderId: rzpOrderId,
+              source: 'webhook',
             });
-            await paymentRecord.update({
-              status: 'successful',
-              transaction_id: rzpPaymentId,
-            });
-            console.log(`Webhook: order ${order.order_number} marked paid via payment.captured`);
+            console.log(`Webhook: order created from session via payment.captured (reservation: ${session.reservation_id})`);
+          } catch (e) {
+            console.error(`Webhook: failed to create order from session: ${e.message}`);
+          }
+        } else {
+          // ── OLD FLOW: Find order via payment record ─────────────────────
+          let paymentRecord = await Payment.findOne({ where: { razorpay_order_id: rzpOrderId } });
+
+          // ── FALLBACK: If no payment record, find order by amount + time ──
+          // This handles cases where createRazorpayOrder was called without orderId
+          if (!paymentRecord) {
+            const rzpPayment = event.payload?.payment?.entity;
+            const amountInRupees = rzpPayment ? parseFloat(rzpPayment.amount) / 100 : null;
+            const email = (rzpPayment?.email || '').toLowerCase().trim();
+            const phone = (rzpPayment?.contact || '').replace(/\D/g, '').slice(-10);
+
+            if (amountInRupees && (email || phone)) {
+              // Find a pending prepaid order matching this customer + amount within last 2 hours
+              const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+              const { User: UserModel } = require('../model/userModel.js');
+              const { GuestUser: GuestModel } = require('../model/guestUserModel.js');
+
+              // Search by email in users
+              let matchedUser = null;
+              if (email) matchedUser = await UserModel.findOne({ where: { email } });
+              if (!matchedUser && phone) matchedUser = await UserModel.findOne({ where: { phone: { [Op.like]: `%${phone}` } } });
+
+              let matchedGuest = null;
+              if (!matchedUser && email) matchedGuest = await GuestModel.findOne({ where: { email } });
+              if (!matchedUser && !matchedGuest && phone) matchedGuest = await GuestModel.findOne({ where: { phone: { [Op.like]: `%${phone}` } } });
+
+              const ownerFilter = matchedUser ? { user_id: matchedUser.id }
+                : matchedGuest ? { guest_user_id: matchedGuest.id }
+                : null;
+
+              if (ownerFilter) {
+                const candidateOrder = await Order.findOne({
+                  where: {
+                    ...ownerFilter,
+                    payment_type: { [Op.notIn]: ['cod'] },
+                    payment_status: { [Op.in]: ['pending', 'failed'] },
+                    final_amount: { [Op.between]: [amountInRupees - 1, amountInRupees + 1] },
+                    createdAt: { [Op.gte]: twoHoursAgo },
+                  },
+                  order: [['createdAt', 'DESC']],
+                });
+
+                if (candidateOrder) {
+                  // Create the missing payment record and link it
+                  paymentRecord = await Payment.create({
+                    order_id: candidateOrder.id,
+                    user_id: candidateOrder.user_id || null,
+                    guest_user_id: candidateOrder.guest_user_id || null,
+                    payment_type: 'razorpay',
+                    razorpay_order_id: rzpOrderId,
+                    amount_paid: amountInRupees,
+                    status: 'pending',
+                    payment_gateway: 'Razorpay',
+                    brand_id: candidateOrder.brand_id || 1,
+                  });
+                  console.log(`Webhook: created missing payment record for order ${candidateOrder.order_number} via fallback match`);
+                }
+              }
+            }
+          }
+
+          if (paymentRecord && paymentRecord.order_id) {
+            const order = await Order.findByPk(paymentRecord.order_id);
+            if (order && order.payment_status !== 'paid') {
+              order.payment_status = 'paid';
+              order.status = 'confirmed';
+              await order.save();
+              const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
+              await OrderStatusHistory.create({ order_id: order.id, status: 'confirmed', updated_by: null, notes: 'Auto-confirmed: webhook payment.captured (legacy)' });
+              setImmediate(() => {
+                const orderEmitter = require('../services/orderEvents.js');
+                const orderService = require('../services/orderService.js');
+                orderEmitter.emit('order.confirmed', order);
+                orderService.syncOrderToFShip(order);
+              });
+              await paymentRecord.update({ status: 'successful', transaction_id: rzpPaymentId });
+              console.log(`Webhook: order ${order.order_number} marked paid via payment.captured (legacy)`);
+            }
           }
         }
       }

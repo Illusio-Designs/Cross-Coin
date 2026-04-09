@@ -35,6 +35,28 @@ module.exports.identifyBrand = async (req, res, next) => {
         // Attach brand to request object
         req.brand = brand;
         req.brandId = brand.id;
+
+        // Cross-tenant access check for write operations
+        const writeMethods = ['POST', 'PUT', 'DELETE', 'PATCH'];
+        if (writeMethods.includes(req.method) && req.user) {
+            const STAFF_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager'];
+            if (STAFF_ROLES.includes(req.user.role)) {
+                // Staff/admin users can access all brands
+            } else if (req.user.role === 'consumer') {
+                // Consumers: verify they have orders associated with this brand
+                const { Order } = require('../model/orderModel.js');
+                const hasAccess = await Order.findOne({
+                    where: { user_id: req.user.id, brand_id: brand.id }
+                });
+                if (!hasAccess) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Access denied. You do not have access to this brand.'
+                    });
+                }
+            }
+        }
+        // For read operations or unauthenticated (public) requests, allow — brand identification is just for scoping
         
         console.log(`✅ Brand identified: ${brand.name} (ID: ${brand.id})`);
         next();
@@ -70,7 +92,8 @@ module.exports.optionalBrand = async (req, res, next) => {
         
         next();
     } catch (error) {
-        console.error('Optional brand middleware error:', error);
+        const { logger } = require('../config/logging.js');
+        logger.warn('Optional brand middleware error:', error.message);
         next(); // Continue even if brand identification fails
     }
 };

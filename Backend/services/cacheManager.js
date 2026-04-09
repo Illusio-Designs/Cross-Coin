@@ -1,7 +1,7 @@
 const redisService = require('./redisService');
 
 /**
- * Cache Manager with TTL Support
+ * Cache Manager with TTL Support + Namespace Isolation
  *
  * ── Caching Strategy ──────────────────────────────────────────────────────────
  * Key                    TTL        Invalidated on
@@ -26,45 +26,55 @@ const TTL = {
   DEFAULT:     60 * 60,   // 1 hour
 };
 
+// Namespace prefix to prevent key collisions with other Redis data (sessions, queues, etc.)
+const NAMESPACE = 'crosscoin:cache:';
+
+// Max value size (1MB) to prevent Redis memory exhaustion
+const MAX_VALUE_SIZE = 1 * 1024 * 1024;
+
 class CacheManager {
   /**
+   * Add namespace prefix to a key
+   */
+  _prefixKey(key) {
+    return key.startsWith(NAMESPACE) ? key : `${NAMESPACE}${key}`;
+  }
+
+  /**
    * Set a value in cache with TTL
-   * @param {string} key - Cache key
-   * @param {*} value - Value to cache (will be JSON serialized)
-   * @param {number} ttl - Time to live in seconds
-   * @returns {Promise<void>}
    */
   async set(key, value, ttl = 3600) {
     try {
       const client = redisService.getClient();
       const serialized = JSON.stringify(value);
-      
+
+      // Enforce max value size
+      if (serialized.length > MAX_VALUE_SIZE) {
+        const { logger } = require('../config/logging.js');
+        logger.warn(`Cache SET skipped for key ${key}: value size ${serialized.length} exceeds max ${MAX_VALUE_SIZE}`);
+        return;
+      }
+
+      const prefixedKey = this._prefixKey(key);
       if (ttl > 0) {
-        await client.setex(key, ttl, serialized);
+        await client.setex(prefixedKey, ttl, serialized);
       } else {
-        await client.set(key, serialized);
+        await client.set(prefixedKey, serialized);
       }
     } catch (error) {
-      // Requirement 7.3: cache errors must not propagate to callers
       const { logger } = require('../config/logging.js');
       logger.warn(`Cache SET error for key ${key}: ${error.message}`);
     }
   }
 
   /**
-   * Get a value from cache with expiration check
-   * @param {string} key - Cache key
-   * @returns {Promise<*|null>} Cached value or null if not found/expired
+   * Get a value from cache
    */
   async get(key) {
     try {
       const client = redisService.getClient();
-      const data = await client.get(key);
-      
-      if (data === null) {
-        return null;
-      }
-      
+      const data = await client.get(this._prefixKey(key));
+      if (data === null) return null;
       try {
         return JSON.parse(data);
       } catch {
@@ -72,20 +82,19 @@ class CacheManager {
         return null;
       }
     } catch (error) {
-      console.error(`❌ Cache GET error for key ${key}:`, error.message);
+      const { logger } = require('../config/logging.js');
+      logger.warn(`Cache GET error for key ${key}: ${error.message}`);
       return null;
     }
   }
 
   /**
    * Delete a specific cache key
-   * @param {string} key - Cache key
-   * @returns {Promise<number>} Number of keys deleted
    */
   async delete(key) {
     try {
       const client = redisService.getClient();
-      return await client.del(key);
+      return await client.del(this._prefixKey(key));
     } catch (error) {
       return 0;
     }
@@ -93,9 +102,6 @@ class CacheManager {
 
   /**
    * Invalidate cache entries matching a pattern
-   * Uses Redis SCAN to find matching keys and delete them
-   * @param {string|RegExp} pattern - Pattern to match (e.g., 'product:*', 'user:123:*')
-   * @returns {Promise<number>} Number of keys deleted
    */
   async invalidate(pattern) {
     try {
@@ -104,29 +110,19 @@ class CacheManager {
       let deletedCount = 0;
       const keysToDelete = [];
 
-      // Convert pattern to glob pattern if it's a regex
       let globPattern = pattern;
       if (pattern instanceof RegExp) {
         globPattern = pattern.source.replace(/\^/, '').replace(/\$/, '').replace(/\./g, '*');
       }
+      // Prefix the pattern for namespace isolation
+      const prefixedPattern = globPattern.startsWith(NAMESPACE) ? globPattern : `${NAMESPACE}${globPattern}`;
 
-      // Use SCAN to find all matching keys
       do {
-        const [newCursor, keys] = await client.scan(
-          cursor,
-          'MATCH',
-          globPattern,
-          'COUNT',
-          100
-        );
+        const [newCursor, keys] = await client.scan(cursor, 'MATCH', prefixedPattern, 'COUNT', 100);
         cursor = newCursor;
-
-        if (keys.length > 0) {
-          keysToDelete.push(...keys);
-        }
+        if (keys.length > 0) keysToDelete.push(...keys);
       } while (cursor !== '0');
 
-      // Delete all matching keys in batches
       if (keysToDelete.length > 0) {
         const batchSize = 100;
         for (let i = 0; i < keysToDelete.length; i += batchSize) {
@@ -134,10 +130,8 @@ class CacheManager {
           deletedCount += await client.del(...batch);
         }
       }
-
       return deletedCount;
     } catch (error) {
-      // Requirement 7.3: cache errors must not propagate to callers
       const { logger } = require('../config/logging.js');
       logger.warn(`Cache INVALIDATE error for pattern ${pattern}: ${error.message}`);
       return 0;
@@ -146,46 +140,35 @@ class CacheManager {
 
   /**
    * Check if a key exists in cache
-   * @param {string} key - Cache key
-   * @returns {Promise<boolean>} True if key exists
    */
   async exists(key) {
     try {
       const client = redisService.getClient();
-      const exists = await client.exists(key);
-      return exists === 1;
+      return (await client.exists(this._prefixKey(key))) === 1;
     } catch (error) {
-      console.error(`❌ Cache EXISTS error for key ${key}:`, error.message);
       return false;
     }
   }
 
   /**
    * Get TTL of a cache key
-   * @param {string} key - Cache key
-   * @returns {Promise<number>} TTL in seconds (-1 if no expiry, -2 if not exists)
    */
   async getTTL(key) {
     try {
       const client = redisService.getClient();
-      const ttl = await client.ttl(key);
-      return ttl;
+      return await client.ttl(this._prefixKey(key));
     } catch (error) {
-      console.error(`❌ Cache TTL error for key ${key}:`, error.message);
       return -2;
     }
   }
 
   /**
    * Set expiration on an existing key
-   * @param {string} key - Cache key
-   * @param {number} ttl - Time to live in seconds
-   * @returns {Promise<number>} 1 if timeout was set, 0 if key does not exist
    */
   async expire(key, ttl) {
     try {
       const client = redisService.getClient();
-      return await client.expire(key, ttl);
+      return await client.expire(this._prefixKey(key), ttl);
     } catch (error) {
       return 0;
     }
@@ -193,21 +176,20 @@ class CacheManager {
 
   /**
    * Get all keys matching a pattern
-   * @param {string} pattern - Pattern to match
-   * @returns {Promise<string[]>} Array of matching keys
    */
   async getKeys(pattern) {
     try {
       const client = redisService.getClient();
-      // Requirement 5.7: use SCAN instead of KEYS to avoid blocking Redis event loop
+      const prefixedPattern = pattern.startsWith(NAMESPACE) ? pattern : `${NAMESPACE}${pattern}`;
       let cursor = '0';
       const keys = [];
       do {
-        const [newCursor, batch] = await client.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        const [newCursor, batch] = await client.scan(cursor, 'MATCH', prefixedPattern, 'COUNT', 100);
         cursor = newCursor;
         keys.push(...batch);
       } while (cursor !== '0');
-      return keys;
+      // Strip namespace prefix from returned keys for caller transparency
+      return keys.map(k => k.startsWith(NAMESPACE) ? k.slice(NAMESPACE.length) : k);
     } catch (error) {
       const { logger } = require('../config/logging.js');
       logger.warn(`Cache KEYS error for pattern ${pattern}: ${error.message}`);
@@ -217,32 +199,25 @@ class CacheManager {
 
   /**
    * Get cache statistics
-   * @returns {Promise<Object>} Cache statistics
    */
   async getStats() {
     try {
       const client = redisService.getClient();
       const info = await client.info('stats');
       const dbSize = await client.dbsize();
-      
-      return {
-        dbSize,
-        info
-      };
+      return { dbSize, info };
     } catch (error) {
-      console.error('❌ Cache STATS error:', error.message);
       return null;
     }
   }
 
   /**
-   * Clear all cache
-   * @returns {Promise<void>}
+   * Clear all cache keys (only namespaced keys, not sessions/queues)
    */
   async clear() {
     try {
-      const client = redisService.getClient();
-      await client.flushdb();
+      // Use pattern-based deletion instead of flushdb to preserve non-cache data
+      await this.invalidate('*');
     } catch (_) {}
   }
 }

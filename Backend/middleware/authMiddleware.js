@@ -4,6 +4,34 @@ const { User } = require('../model/userModel.js');
 // All non-consumer staff roles
 const STAFF_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager'];
 
+// Token blacklist check via Redis
+async function isTokenBlacklisted(token) {
+    try {
+        const redisService = require('../services/redisService.js');
+        const decoded = jwt.decode(token);
+        if (!decoded?.iat) return false;
+        const blacklistKey = `blacklist:${decoded.id}:${decoded.iat}`;
+        const result = await redisService.get(blacklistKey);
+        return result !== null;
+    } catch (e) {
+        return false; // Redis down — allow request
+    }
+}
+
+// Blacklist a token (called on logout/soft-delete)
+async function blacklistToken(token) {
+    try {
+        const redisService = require('../services/redisService.js');
+        const decoded = jwt.decode(token);
+        if (!decoded?.iat || !decoded?.exp) return;
+        const blacklistKey = `blacklist:${decoded.id}:${decoded.iat}`;
+        const ttl = decoded.exp - Math.floor(Date.now() / 1000);
+        if (ttl > 0) {
+            await redisService.set(blacklistKey, '1', 'EX', ttl);
+        }
+    } catch (e) { /* Redis down — non-fatal */ }
+}
+
 // Authentication middleware
 module.exports.authenticate = async (req, res, next) => {
     try {
@@ -13,14 +41,20 @@ module.exports.authenticate = async (req, res, next) => {
             return res.status(401).json({ message: 'No token, authorization denied' });
         }
 
+        // Check token blacklist
+        if (await isTokenBlacklisted(token)) {
+            return res.status(401).json({ message: 'Token has been revoked', code: 'TOKEN_REVOKED' });
+        }
+
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findByPk(decoded.id);
 
-        if (!user) {
+        if (!user || user.deleted_at) {
             return res.status(401).json({ message: 'User not found' });
         }
 
         req.user = user;
+        req._token = token; // Store for blacklisting on logout
         next();
     } catch (error) {
         if (error.name === 'TokenExpiredError') {
@@ -103,3 +137,6 @@ module.exports.isWhatsappManager = (req, res, next) => {
     }
     next();
 };
+
+// Export blacklistToken for use in logout/deleteUser
+module.exports.blacklistToken = blacklistToken;

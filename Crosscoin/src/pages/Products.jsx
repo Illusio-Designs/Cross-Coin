@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../lib/queryClient";
 import ProductCard from "../components/products/ProductCard";
 import Skeleton from "../components/common/Skeleton";
 import ProductFilterDrawer from "../components/products/ProductFilterDrawer";
@@ -13,7 +15,6 @@ import {
 import { useRouter } from "next/router";
 import { useCart } from "../context/CartContext";
 import { useBreadcrumb } from "../components/common/Breadcrumb";
-import { getCachedData, setCachedData } from '../utils/apiCache';
 import {
   getAllPublicProducts,
   getPublicCategories,
@@ -25,7 +26,6 @@ import { fbqTrack } from "../utils/fbqTrack";
 import { gtagTrack } from "../utils/gtagTrack";
 import colorMap from "../components/products/colorMap";
 import { Pagination } from "../components/ui";
-import cacheManager from "../services/cacheManager";
 import { showSuccess } from "../utils/toastNotification";
 
 // Load page-specific CSS - moved to _app.jsx
@@ -60,14 +60,22 @@ const Products = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [categories, setCategories] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   const [totalProducts, setTotalProducts] = useState(0);
-  const [cacheHit, setCacheHit] = useState(false);
   
   // Safety guard: Ensure products is always an array
   const safeProducts = Array.isArray(products) ? products : [];
+
+  // ── React Query: categories (1 hour stale) ──
+  const { data: categories = [] } = useQuery({
+    queryKey: queryKeys.categories,
+    queryFn: async () => {
+      const data = await getPublicCategories();
+      return Array.isArray(data) ? data : [];
+    },
+    staleTime: 60 * 60 * 1000,
+  });
 
   // Dynamic Filter Options - Initialize with safe defaults
   const [filterOptionsDynamic, setFilterOptionsDynamic] = useState({
@@ -89,61 +97,13 @@ const Products = () => {
   // Refs to prevent multiple API calls and infinite loops
   const isLoadingRef = useRef(false);
   const initialLoadRef = useRef(true);
-  const categoriesLoadedRef = useRef(false);
   const productsLoadedRef = useRef(false);
-
-  // Fetch categories on mount (only once)
-  useEffect(() => {
-    const fetchCategories = async () => {
-      if (categoriesLoadedRef.current) return; // Prevent multiple calls
-
-      // Check cache first using new cache manager (1 hour TTL)
-      const cachedCategories = cacheManager.getByType('categories');
-      if (cachedCategories) {
-        setCategories(cachedCategories);
-        categoriesLoadedRef.current = true;
-        return;
-      }
-
-      // Fallback to old cache system if new cache misses
-      const cacheKey = 'public_categories';
-      const cached = getCachedData(cacheKey, 10 * 60 * 1000); // 10 minutes cache
-      if (cached) {
-        setCategories(cached);
-        categoriesLoadedRef.current = true;
-        return;
-      }
-
-      try {
-        const data = await getPublicCategories();
-        // Ensure data is an array
-        if (Array.isArray(data)) {
-          setCategories(data);
-          // Cache using new cache manager (1 hour TTL)
-          cacheManager.setByType('categories', data);
-          setCachedData(cacheKey, data); // Also cache in legacy system
-          categoriesLoadedRef.current = true;
-          } else {
-          setCategories([]);
-          categoriesLoadedRef.current = true;
-        }
-      } catch (error) {
-        // Don't show error for categories - just set empty array and continue
-        // Categories are optional for browsing products
-        setCategories([]);
-        categoriesLoadedRef.current = true;
-        }
-    };
-    fetchCategories();
-  }, []); // Empty dependency array - only run once on mount
 
   // Main data fetching function - optimized to prevent multiple calls
   const fetchProductsData = useCallback(
     async (categoryName = null, isCategorySpecific = false) => {
-      console.log('[fetchProductsData] called:', { categoryName, isCategorySpecific, isLoadingRef: isLoadingRef.current });
       // Prevent multiple simultaneous API calls
       if (isLoadingRef.current) {
-        console.log('[fetchProductsData] BLOCKED by isLoadingRef');
         return;
       }
 
@@ -151,30 +111,13 @@ const Products = () => {
         isLoadingRef.current = true;
         setLoading(true);
         setError(null);
-        setCacheHit(false);
 
         let response;
-        let cacheKey = null;
 
         if (isCategorySpecific && categoryName) {
-          // Check cache for category-specific products (30 minute TTL)
-          cacheKey = `products_category_${categoryName}`;
-          const cachedProducts = cacheManager.get(cacheKey);
-          if (cachedProducts) {
-            setProducts(cachedProducts.products);
-            setTotalProducts(cachedProducts.total);
-            setCacheHit(true);
-            setLoading(false);
-            if (isCategorySpecific) {
-              productsLoadedRef.current = false;
-            }
-            return;
-          }
-
-          // Cache miss - fetch from API
+          // Fetch from API (React Query handles caching at the hook level for other consumers)
           response = await getPublicCategoryByName(categoryName);
           if (response && response.products) {
-            // Backend already returns correctly formatted images and variations — use them directly
             const transformedProducts = (response.products || []).map((p) => ({
               ...p,
               category_id: response.id,
@@ -182,33 +125,19 @@ const Products = () => {
             }));
             setProducts(transformedProducts);
             setTotalProducts(transformedProducts.length);
-            cacheManager.set(cacheKey, { products: transformedProducts, total: transformedProducts.length }, 30 * 60 * 1000);
             setLoading(false);
             productsLoadedRef.current = false;
           } else {
             throw new Error(response?.message || "Failed to fetch category products");
           }
         } else {
-          // Check cache for all products (30 minute TTL)
-          cacheKey = 'products_all';
-          const cachedProducts = cacheManager.getByType('products');
-          if (cachedProducts) {
-            setProducts(cachedProducts.products);
-            setTotalProducts(cachedProducts.total);
-            setCacheHit(true);
-            setLoading(false);
-            productsLoadedRef.current = true;
-            return;
-          }
-
-          // Cache miss - fetch from API
+          // Fetch all products
           const params = {
             page: 1,
-            limit: 100, // Reduced from 1000 to 100 for better performance
+            limit: 100,
           };
           response = await getAllPublicProducts(params);
           if (response?.success) {
-            // Transform products to ensure price fields are populated
             const transformedProducts = (response.data?.products || []).map(p => ({
               ...p,
               price: p.price || p.variations?.[0]?.price || 0,
@@ -219,16 +148,9 @@ const Products = () => {
             setTotalProducts(
               response.data?.total || response.data?.totalProducts || 0
             );
-            
-            // Cache the products (30 minute TTL)
-            cacheManager.setByType('products', {
-              products: transformedProducts,
-              total: response.data?.total || response.data?.totalProducts || 0
-            });
-            setLoading(false); // Ensure loading is set to false
-            productsLoadedRef.current = true; // Mark as loaded
+            setLoading(false);
+            productsLoadedRef.current = true;
           } else if (response?.data?.products) {
-            // Handle case where response structure is different
             const transformedProducts = (response.data.products || []).map(p => ({
               ...p,
               price: p.price || p.variations?.[0]?.price || 0,
@@ -239,15 +161,8 @@ const Products = () => {
             setTotalProducts(
               response.data.total || response.data.totalProducts || 0
             );
-            
-            // Cache the products
-            cacheManager.setByType('products', {
-              products: transformedProducts,
-              total: response.data.total || response.data.totalProducts || 0
-            });
-            
-            setLoading(false); // Ensure loading is set to false
-            productsLoadedRef.current = true; // Mark as loaded
+            setLoading(false);
+            productsLoadedRef.current = true;
           } else {
             throw new Error(response?.message || "Failed to fetch products");
           }
@@ -265,17 +180,15 @@ const Products = () => {
         isLoadingRef.current = false;
       }
     },
-    [] // No dependencies to prevent recreation
+    []
   );
 
   // Handle category from URL query
   useEffect(() => {
     // Don't run until categories are loaded
-    if (categories.length === 0 && !categoriesLoadedRef.current) return;
+    if (categories.length === 0) return;
 
     const categoryFromQuery = router.query.category;
-
-    console.log('[Products] URL effect fired:', { categoryFromQuery, categoriesLen: categories.length, isLoading: isLoadingRef.current });
 
     // Always reset so navigation triggers a fresh fetch
     isLoadingRef.current = false;

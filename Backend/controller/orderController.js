@@ -83,18 +83,13 @@
   /**
    * Get count of RTO orders for a phone number in the last 6 months.
    */
-  async function getRtoCount(phone) {
-    if (!phone) return 0;
+  async function getRtoCount(phone, userId) {
+    if (!userId) return 0;
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    const { ShippingAddress: SA } = require('../model/shippingAddressModel.js');
-    // Find all shipping address IDs with this phone
-    const addresses = await SA.findAll({ where: { phone }, attributes: ['id'] });
-    if (!addresses.length) return 0;
-    const addressIds = addresses.map(a => a.id);
     return Order.count({
       where: {
-        shipping_address_id: { [Op.in]: addressIds },
+        user_id: userId,
         status: 'returned_rto',
         createdAt: { [Op.gte]: sixMonthsAgo },
       },
@@ -348,14 +343,21 @@
           }
         }
 
-        // STOCK CHECK
+        // STOCK CHECK — account for Redis reservations (prepaid checkouts in progress)
+        const stockReservationService = require('../services/stockReservationService.js');
+        const reservedQty = await stockReservationService.getReservedQty(variation_id);
+        const effectiveStock = (typeof stockAvailable === 'number' ? stockAvailable : 0) - reservedQty;
         logger.debug(
-          "createOrder: Stock check - available:",
+          "createOrder: Stock check - dbStock:",
           stockAvailable,
+          "reserved:",
+          reservedQty,
+          "effective:",
+          effectiveStock,
           "requested:",
           quantity
         );
-        if (typeof stockAvailable !== "number" || stockAvailable < quantity) {
+        if (effectiveStock < quantity) {
           await transaction.rollback();
           return res.status(400).json({
             message: `Product is out of stock or insufficient quantity for product ${product_id}`,
@@ -409,21 +411,22 @@
         }
       }
 
-      // ── Task 6: COD max order value cap ───────────────────────────────────
+      // ── Task 6: RTO risk scoring for ALL payment types ────────────────────
       let rtoRiskScore = 0;
+      const rtoCount = await getRtoCount(shippingAddress.phone, userId);
+      if (rtoCount >= 1) rtoRiskScore += 20;
+      if (String(shippingAddress.address || '').trim().length < 30) rtoRiskScore += 10;
+
       if (payment_type === 'cod') {
         const codMax = parseFloat(await settingsHelper.getSetting(req.brand?.id || 1, 'COD_MAX_ORDER_VALUE', '1500'));
         if (finalAmount > codMax) {
           await transaction.rollback();
           return res.status(400).json({ message: `COD is not available for orders above ₹${codMax}. Please pay online.` });
         }
-        const rtoCount = await getRtoCount(shippingAddress.phone);
         if (rtoCount >= 2) {
           await transaction.rollback();
           return res.status(400).json({ message: "COD is not available for your account. Please pay online." });
         }
-        if (rtoCount === 1) rtoRiskScore += 20;
-        if (!shippingAddress.landmark) rtoRiskScore += 10;
       }
       // Handle UTM tracking
       const UTMTracking = require("../model/utmModel.js");
@@ -465,6 +468,7 @@
         {
           order_number: await generateUniqueOrderNumber(transaction),
           user_id: userId,
+          shipping_address_id: shipping_address_id,
           total_amount: subTotal,
           discount_amount: appliedDiscount,
           coupon_id: coupon_id || null,
@@ -2034,7 +2038,7 @@
       // Prioritize orders that haven't been synced or have failed, within attempt limit
       const ordersToSync = await Order.findAll({
         where: {
-          status: { [Op.notIn]: ['cancelled', 'delivered', 'rto delivered'] }, // Skip final states
+          status: { [Op.notIn]: ['awaiting_confirmation', 'pending', 'cancelled', 'delivered', 'rto delivered'] }, // Only sync confirmed+ orders, skip unconfirmed and final states
           order_number: { [Op.notLike]: '%TEST%' }, // Exclude test orders
           fship_sync_status: { [Op.in]: ['pending', 'failed'] },
           fship_sync_attempts: { [Op.lt]: 5 }

@@ -3,8 +3,6 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { useAuth } from "../context/AuthContext";
 
-const OTP_SKIP = process.env.NEXT_PUBLIC_OTP_VERIFY_SKIP === 'true';
-
 export default function Login() {
   const [phone, setPhone] = useState("");
   const [step, setStep] = useState("phone");
@@ -31,24 +29,18 @@ export default function Login() {
   const digits = phone.replace(/\D/g, "").slice(0, 10);
 
   const sendOtp = () => {
-    console.log("sendOtp called, digits:", digits, "length:", digits.length);
     setError(""); setHint("");
     if (digits.length !== 10) { setError("Enter a valid 10-digit number"); return; }
     setLoading(true);
-    if (OTP_SKIP) {
-      setStep("otp"); setHint("Dev mode: enter any 4 digits");
-      setLoading(false); setTimer(30); return;
-    }
     const trySend = (n) => {
       if (typeof window.sendOtp === "function") {
-        // Add timeout — if MSG91 doesn't respond in 15s, show error
         const timeoutId = setTimeout(() => {
           setError("OTP service timed out. Please try again.");
           setLoading(false);
         }, 15000);
 
         window.sendOtp(
-          "+91" + digits,
+          "91" + digits,
           () => { clearTimeout(timeoutId); setStep("otp"); setHint("OTP sent to +91 " + digits); setLoading(false); setTimer(30); },
           (err) => { clearTimeout(timeoutId); setError("Failed to send OTP. Try again."); setLoading(false); console.error("MSG91 sendOtp error:", err); }
         );
@@ -56,7 +48,6 @@ export default function Login() {
         setTimeout(() => trySend(n + 1), 500);
       } else {
         setError("OTP service not ready. Please refresh the page."); setLoading(false);
-        console.error("MSG91 sendOtp not available after 10s. window.sendOtp:", typeof window.sendOtp, "initSendOTP:", typeof window.initSendOTP);
       }
     };
     trySend(0);
@@ -66,19 +57,23 @@ export default function Login() {
     const code = otp.join("");
     if (code.length < 4) { setError("Enter the 4-digit OTP"); return; }
     setError(""); setLoading(true);
-    if (OTP_SKIP) { doLogin(); return; }
     if (typeof window.verifyOtp !== "function") {
       setError("OTP service not ready. Please refresh."); setLoading(false); return;
     }
-    window.verifyOtp("+91" + digits, code,
-      () => doLogin(),
-      () => { setError("Invalid OTP. Please try again."); setLoading(false); }
+    // MSG91 verifies OTP → returns access token on success
+    window.verifyOtp(
+      code,
+      (data) => {
+        const accessToken = data?.message || data?.token || data;
+        doLogin(accessToken);
+      },
+      (err) => { setError("Invalid OTP. Please try again."); setLoading(false); }
     );
   };
 
-  const doLogin = async () => {
+  const doLogin = async (accessToken) => {
     try {
-      await login({ phone: digits });
+      await login({ phone: digits, access_token: accessToken });
       router.push("/profile");
     } catch {
       setError("Login failed. Please try again.");
@@ -152,7 +147,7 @@ export default function Login() {
                   </div>
                 </div>
                 {error && <p className="auth-error">{error}</p>}
-                <button className="auth-submit" onClick={() => { console.log('Button clicked'); sendOtp(); }} disabled={loading || digits.length !== 10}>
+                <button className="auth-submit" onClick={sendOtp} disabled={loading || digits.length !== 10}>
                   {loading ? "Sending OTP..." : "Send OTP"}
                 </button>
               </div>

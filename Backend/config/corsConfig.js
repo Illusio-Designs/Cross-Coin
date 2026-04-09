@@ -20,11 +20,14 @@ const fetchBrandDomains = async () => {
         const domains = [];
         brands.forEach(brand => {
             if (brand.domain) {
-                // Add both with and without www
+                // Always add HTTPS
                 domains.push(`https://${brand.domain}`);
                 domains.push(`https://www.${brand.domain}`);
-                domains.push(`http://${brand.domain}`); // For development
-                domains.push(`http://www.${brand.domain}`);
+                // Only add HTTP origins in non-production (development/staging)
+                if (process.env.NODE_ENV !== 'production') {
+                    domains.push(`http://${brand.domain}`);
+                    domains.push(`http://www.${brand.domain}`);
+                }
             }
         });
         
@@ -88,8 +91,8 @@ const corsOptions = {
             return callback(null, true);
         }
         
-        // Allow Vercel preview deployments
-        if (origin.includes('vercel.app')) {
+        // Allow Vercel preview deployments (strict suffix check)
+        if (origin.endsWith('.vercel.app') || origin === 'https://vercel.app') {
             return callback(null, true);
         }
         
@@ -109,7 +112,8 @@ const corsOptions = {
                   logger.warn(`CORS blocked request from: ${origin}`);
                   return callback(new Error('Not allowed by CORS'));
                 } else {
-                  return callback(null, true);
+                  logger.warn(`CORS blocked non-production request from: ${origin}`);
+                  return callback(new Error('Not allowed by CORS'));
                 }
             })
             .catch(error => {
@@ -118,7 +122,7 @@ const corsOptions = {
                 if (staticAllowedOrigins.includes(origin)) {
                     return callback(null, true);
                 }
-                return callback(null, process.env.NODE_ENV !== 'production');
+                return callback(new Error('Not allowed by CORS'));
             });
     },
     credentials: true,

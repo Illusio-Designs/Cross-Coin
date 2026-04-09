@@ -296,6 +296,15 @@ module.exports.createProduct = async (req, res) => {
       throw new Error("Invalid category");
     }
 
+    // Ensure slug uniqueness
+    let baseSlug = slugify(name, { lower: true });
+    let slug = baseSlug;
+    let slugSuffix = 2;
+    while (await Product.findOne({ where: { slug } })) {
+      slug = `${baseSlug}-${slugSuffix}`;
+      slugSuffix++;
+    }
+
     // Create product with basic info
     const product = await Product.create(
       {
@@ -303,7 +312,7 @@ module.exports.createProduct = async (req, res) => {
         description,
         categoryId,
         status,
-        slug: slugify(name, { lower: true }),
+        slug,
         weight: req.body.weight ? Number(req.body.weight) : null,
         weightUnit: req.body.weightUnit || "g",
         dimensions: req.body.dimensions
@@ -549,9 +558,11 @@ module.exports.getAllProducts = async (req, res) => {
     // If no brand header, admin sees all products with their brand assignments
     
     if (search) {
+      // Escape SQL wildcards to prevent search manipulation
+      const escapedSearch = search.toLowerCase().replace(/[%_]/g, '\\$&');
       whereOptions[Op.or] = [
-        { name: { [Op.like]: `%${search.toLowerCase()}%` } },
-        { description: { [Op.like]: `%${search.toLowerCase()}%` } },
+        { name: { [Op.like]: `%${escapedSearch}%` } },
+        { description: { [Op.like]: `%${escapedSearch}%` } },
       ];
     }
 
@@ -756,13 +767,22 @@ module.exports.updateProduct = async (req, res) => {
     }
 
     // Update basic product info
+    // Ensure slug uniqueness for update
+    let baseSlug = slugify(name, { lower: true });
+    let slug = baseSlug;
+    let slugSuffix = 2;
+    while (await Product.findOne({ where: { slug, id: { [Op.ne]: product.id } } })) {
+      slug = `${baseSlug}-${slugSuffix}`;
+      slugSuffix++;
+    }
+
     await product.update(
       {
         name,
         description,
         categoryId,
         status,
-        slug: slugify(name, { lower: true }),
+        slug,
         weight: req.body.weight ? Number(req.body.weight) : null,
         weightUnit: req.body.weightUnit || "g",
         dimensions: req.body.dimensions
@@ -1559,9 +1579,11 @@ module.exports.getAllPublicProducts = async (req, res) => {
     });
 
     // Set caching headers
+    const crypto = require('crypto');
+    const etagHash = crypto.createHash('md5').update(JSON.stringify({ page, limit, total: result.pagination.total })).digest('hex').slice(0, 16);
     res.set({
       "Cache-Control": "public, max-age=300", // 5 minutes cache
-      ETag: `"products-${page}-${limit}-${Date.now()}"`,
+      ETag: `"products-${etagHash}"`,
     });
 
     res.json({
@@ -1596,6 +1618,11 @@ const isProductOutOfStock = async (productId, transaction) => {
 module.exports.getExistingImages = async (req, res) => {
   try {
     const { source = 'products', productId } = req.query;
+
+    // Validate source parameter
+    if (source && !['products', 'uploads'].includes(source)) {
+      return res.status(400).json({ success: false, message: 'Invalid source parameter' });
+    }
     
     // If productId is provided, get images from database for that specific product
     if (productId) {
@@ -1659,6 +1686,7 @@ module.exports.getExistingImages = async (req, res) => {
               await scanDirectory(fullPath, relativeFilePath);
             }
           } else if (file.isFile()) {
+            if (file.name.includes('..') || relativeFilePath.includes('..')) continue;
             const ext = path.extname(file.name).toLowerCase();
             if (imageExtensions.includes(ext)) {
               // Use forward slashes for web URLs
@@ -1809,10 +1837,41 @@ module.exports.deleteImages = async (req, res) => {
           include: [
             {
               model: require('../model/associations.js').Product,
-              attributes: ['id', 'name']
+              attributes: ['id', 'name', 'brand_id'],
+              ...(req.brandId ? { where: { brand_id: req.brandId } } : {})
             }
           ]
         });
+
+        // Check if image belongs to a product in a different brand
+        if (usedInProducts.length > 0 && req.brandId) {
+          const otherBrandImages = await ProductImage.findAll({
+            where: {
+              image_url: {
+                [Op.or]: [
+                  imagePath,
+                  `/uploads/products/${filename}`,
+                  filename
+                ]
+              }
+            },
+            include: [
+              {
+                model: require('../model/associations.js').Product,
+                attributes: ['id', 'name', 'brand_id'],
+                where: { brand_id: { [Op.ne]: req.brandId } }
+              }
+            ]
+          });
+          if (otherBrandImages.length > 0) {
+            protectedImages.push({
+              path: imagePath,
+              reason: 'Image belongs to another brand',
+              productCount: otherBrandImages.length
+            });
+            continue;
+          }
+        }
 
         if (usedInProducts.length > 0) {
           const productNames = usedInProducts.map(img => img.Product?.name || `Product ID: ${img.Product?.id}`).join(', ');
