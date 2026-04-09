@@ -28,10 +28,12 @@ export default function Login() {
 
   const digits = phone.replace(/\D/g, "").slice(0, 10);
 
+  // Send OTP via MSG91 widget
   const sendOtp = () => {
     setError(""); setHint("");
     if (digits.length !== 10) { setError("Enter a valid 10-digit number"); return; }
     setLoading(true);
+
     const trySend = (n) => {
       if (typeof window.sendOtp === "function") {
         const timeoutId = setTimeout(() => {
@@ -41,36 +43,58 @@ export default function Login() {
 
         window.sendOtp(
           "91" + digits,
-          () => { clearTimeout(timeoutId); setStep("otp"); setHint("OTP sent to +91 " + digits); setLoading(false); setTimer(30); },
-          (err) => { clearTimeout(timeoutId); setError("Failed to send OTP. Try again."); setLoading(false); console.error("MSG91 sendOtp error:", err); }
+          () => {
+            clearTimeout(timeoutId);
+            setStep("otp");
+            setHint("OTP sent to +91 " + digits);
+            setLoading(false);
+            setTimer(30);
+          },
+          (err) => {
+            clearTimeout(timeoutId);
+            setError("Failed to send OTP. Try again.");
+            setLoading(false);
+            console.error("MSG91 sendOtp error:", err);
+          }
         );
       } else if (n < 20) {
         setTimeout(() => trySend(n + 1), 500);
       } else {
-        setError("OTP service not ready. Please refresh the page."); setLoading(false);
+        setError("OTP service not ready. Please refresh the page.");
+        setLoading(false);
       }
     };
     trySend(0);
   };
 
+  // Verify OTP via MSG91 widget, then send access token to backend
   const verifyOtp = () => {
     const code = otp.join("");
     if (code.length < 4) { setError("Enter the 4-digit OTP"); return; }
     setError(""); setLoading(true);
+
     if (typeof window.verifyOtp !== "function") {
-      setError("OTP service not ready. Please refresh."); setLoading(false); return;
+      setError("OTP service not ready. Please refresh.");
+      setLoading(false);
+      return;
     }
-    // MSG91 verifies OTP → returns access token on success
+
     window.verifyOtp(
       code,
       (data) => {
+        // MSG91 verified successfully — data contains the access token
         const accessToken = data?.message || data?.token || data;
         doLogin(accessToken);
       },
-      (err) => { setError("Invalid OTP. Please try again."); setLoading(false); }
+      (err) => {
+        setError("Invalid OTP. Please try again.");
+        setLoading(false);
+        console.error("MSG91 verifyOtp error:", err);
+      }
     );
   };
 
+  // Send phone + MSG91 access token to backend for server-side verification
   const doLogin = async (accessToken) => {
     try {
       await login({ phone: digits, access_token: accessToken });
