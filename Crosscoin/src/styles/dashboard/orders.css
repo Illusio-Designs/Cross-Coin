@@ -1189,6 +1189,73 @@
   font-style: italic;
 }
 
+/* RTO Risk Badge */
+.rto-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.rto-badge .rto-indicator {
+  font-size: 0.6rem;
+  line-height: 1;
+}
+
+.rto-badge .rto-level {
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.rto-badge .rto-score {
+  font-size: 0.65rem;
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+.rto-badge.rto-high {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.rto-badge.rto-medium {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.rto-badge.rto-low {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+/* Date Time Cell */
+.date-time-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  white-space: nowrap;
+}
+
+.date-time-cell .date-part {
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.85rem;
+}
+
+.date-time-cell .time-part {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
 /* Checkboxes */
 .bulk-select-checkbox,
 .order-select-checkbox {

@@ -2311,6 +2311,8 @@
           fship_waybill: result.waybill,
           fship_route_code: result.routeCode,
           fship_label_url: labelUrl,
+          fship_courier_id: result.courierId || null,
+          courier_name: result.courierName || null,
           tracking_number: result.waybill,
           status: 'processing', // Update status to processing when synced
           fship_last_synced_at: new Date() // Track last sync time
@@ -2320,11 +2322,25 @@
         await OrderStatusHistory.create({
           order_id: order.id,
           status: 'processing',
-          notes: `Order synced with FShip. AWB: ${result.waybill}`,
+          notes: `Order synced with FShip. AWB: ${result.waybill}${result.courierName ? ` - Courier: ${result.courierName}` : ''}`,
           created_by: 'fship_sync_system'
         }, { transaction });
 
-        logger.debug(`✅ Order ${order.order_number} created in FShip with AWB: ${result.waybill}`);
+        logger.debug(`✅ Order ${order.order_number} created in FShip with AWB: ${result.waybill}${result.courierName ? `, Courier: ${result.courierName}` : ''}`);
+        
+        // If courier name not in create response, try to get from shipment summary
+        if (!result.courierName && result.waybill) {
+          try {
+            const shipmentStatus = await fshipService.getShipmentStatus(result.waybill);
+            const courierFromSummary = shipmentStatus?.courier_name || shipmentStatus?.courierName || shipmentStatus?.summary?.courier_name || null;
+            if (courierFromSummary) {
+              await order.update({ courier_name: courierFromSummary }, { transaction });
+              logger.debug(`📦 Courier name fetched from shipment summary: ${courierFromSummary}`);
+            }
+          } catch (courierErr) {
+            logger.debug(`⚠️ Could not fetch courier name from shipment summary: ${courierErr.message}`);
+          }
+        }
         
         return {
           success: true,
@@ -2395,6 +2411,13 @@
       if (trackingResult && trackingResult.summary) {
         const fshipStatus = trackingResult.summary.status;
         const newStatus = fshipService.mapFShipStatusToCrossCoin(fshipStatus);
+        
+        // Extract courier name from tracking data
+        const courierFromTracking = trackingResult.summary.courier_name || trackingResult.summary.courierName || trackingResult.courier_name || trackingResult.courierName || null;
+        if (courierFromTracking && !order.courier_name) {
+          await order.update({ courier_name: courierFromTracking }, { transaction });
+          logger.debug(`📦 Courier name set from tracking: ${courierFromTracking}`);
+        }
         
         logger.debug(`📊 FShip status: "${fshipStatus}" → CrossCoin status: "${newStatus}"`);
         

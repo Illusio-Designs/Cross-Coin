@@ -194,6 +194,8 @@ class FShipService {
                 routeCode: response.data.route_code,
                 status: response.data.order_status,
                 labelUrl: response.data.labelurl,
+                courierName: response.data.courier_name || response.data.courierName || null,
+                courierId: response.data.courier_id || response.data.courierId || null,
                 response: response.data.response
             };
         } catch (error) {
@@ -233,6 +235,8 @@ class FShipService {
                         waybill: existingOrder.data.waybill || existingOrder.data.awb_number,
                         labelUrl: existingOrder.data.labelurl || existingOrder.data.label_url || null,
                         routeCode: existingOrder.data.route_code || null,
+                        courierName: existingOrder.data.courier_name || existingOrder.data.courierName || null,
+                        courierId: existingOrder.data.courier_id || existingOrder.data.courierId || null,
                         status: currentStatus,
                         message: `Order already exists with status: ${currentStatus}`,
                         existingData: existingOrder.data
