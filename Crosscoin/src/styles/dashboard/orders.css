@@ -2453,6 +2453,13 @@
   display: block;
 }
 
+.sync-tag-courier {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.8;
+  display: block;
+}
+
 .sync-tag--synced {
   background: #e8f5e9;
   color: #1a7a4a;

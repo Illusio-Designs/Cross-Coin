@@ -257,7 +257,10 @@ const Orders = () => {
 
     const handleSearchChange = (e) => { setFilterValue(e.target.value); debouncedFetchOrders(); };
 
-    const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const formatDate = (dateString) => {
+        const d = new Date(dateString);
+        return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    };
     const formatCurrency = (amount) => `₹${parseFloat(amount || 0).toFixed(2)}`;
     const calculateOrderSubtotal = (orderItems) => orderItems.reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
     const calculateOrderTotal = (subtotal, shippingFee, discountAmount) => Math.max(0, subtotal - parseFloat(discountAmount || 0) + parseFloat(shippingFee || 0));
@@ -337,6 +340,7 @@ const Orders = () => {
                         <span className="sync-tag-text">
                             Synced
                             {row.fship_waybill && <small className="sync-tag-awb">AWB: {row.fship_waybill}</small>}
+                            {row.courier_name && <small className="sync-tag-courier">{row.courier_name}</small>}
                         </span>
                     </span>
                 )
