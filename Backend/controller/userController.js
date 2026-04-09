@@ -125,30 +125,41 @@ module.exports.login = async (req, res) => {
         if (digits.length !== 10) return res.status(400).json({ message: 'Invalid phone number' });
 
         // Verify MSG91 access token server-side
-        // In development (NODE_ENV !== 'production'), skip verification for localhost testing
-        if (process.env.NODE_ENV === 'production') {
-            const axios = require('axios');
-            const MSG91_AUTH_KEY = process.env.MSG91_AUTH_KEY;
-            if (!MSG91_AUTH_KEY) {
-                console.error('MSG91_AUTH_KEY not configured');
-                return res.status(500).json({ message: 'OTP service not configured' });
-            }
-            try {
-                const verifyResponse = await axios.post(
-                    'https://control.msg91.com/api/v5/widget/verifyAccessToken',
-                    { authkey: MSG91_AUTH_KEY, 'access-token': access_token },
-                    { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
-                );
-                if (!verifyResponse.data || verifyResponse.data.type === 'error') {
-                    return res.status(401).json({ message: 'OTP verification failed. Please try again.' });
-                }
-            } catch (verifyErr) {
-                console.error('MSG91 token verification error:', verifyErr.message);
+        const axios = require('axios');
+        const MSG91_AUTH_KEY = process.env.MSG91_AUTH_KEY;
+        if (!MSG91_AUTH_KEY) {
+            console.error('MSG91_AUTH_KEY not configured in .env');
+            return res.status(500).json({ message: 'OTP service not configured' });
+        }
+
+        console.log(`[Login] Verifying MSG91 token for ${digits}, token length: ${access_token?.length}, token preview: ${String(access_token).substring(0, 30)}...`);
+
+        try {
+            const verifyResponse = await axios.post(
+                'https://control.msg91.com/api/v5/widget/verifyAccessToken',
+                { authkey: MSG91_AUTH_KEY, 'access-token': access_token },
+                { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
+            );
+
+            console.log('[Login] MSG91 verifyAccessToken response:', JSON.stringify(verifyResponse.data));
+
+            // MSG91 returns { type: 'success', message: '...' } on success
+            // and { type: 'error', message: '...' } on failure
+            if (verifyResponse.data?.type === 'error') {
+                console.error('[Login] MSG91 token verification failed:', verifyResponse.data);
                 return res.status(401).json({ message: 'OTP verification failed. Please try again.' });
             }
-        } else {
-            // Development: log and skip MSG91 verification (hCaptcha blocks on localhost)
-            console.log(`[DEV] Skipping MSG91 token verification for ${digits}`);
+        } catch (verifyErr) {
+            // If MSG91 returns a non-2xx status, axios throws — check the response
+            const errData = verifyErr.response?.data;
+            console.error('[Login] MSG91 token verification error:', verifyErr.message, 'Response:', JSON.stringify(errData));
+
+            // If MSG91 says "already verified" — that's actually OK, the token was valid
+            if (errData?.code === 703 || errData?.message?.includes('already verif')) {
+                console.log('[Login] MSG91 says already verified — proceeding with login');
+            } else {
+                return res.status(401).json({ message: 'OTP verification failed. Please try again.' });
+            }
         }
 
         // Find or create user by phone

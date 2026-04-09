@@ -567,13 +567,6 @@
 
       // Idempotency is now DB-based (idempotency_key column on orders table)
 
-      // Emit order.created event (SSE notification + logging)
-      const orderEmitter = require('../services/orderEvents.js');
-      setImmediate(() => {
-        createdOrder._itemCount = validatedItems.length;
-        orderEmitter.emit('order.created', createdOrder);
-      });
-
       // Enqueue badge recalculation for async processing (non-blocking)
       logger.debug("createOrder: Enqueueing badge recalculation for products in order...");
       try {
@@ -607,6 +600,13 @@
         ],
       });
       logger.debug("createOrder: Order fetched successfully");
+
+      // Emit order.created event (SSE notification + logging)
+      const orderEmitter = require('../services/orderEvents.js');
+      setImmediate(() => {
+        createdOrder._itemCount = validatedItems.length;
+        orderEmitter.emit('order.created', createdOrder);
+      });
 
       logger.debug("createOrder: Sending success response...");
       res.status(201).json({
