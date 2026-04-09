@@ -27,6 +27,8 @@ export default function Login() {
   }, [timer]);
 
   const digits = phone.replace(/\D/g, "").slice(0, 10);
+  // MSG91 expects country code without + prefix
+  const identifier = "91" + digits;
 
   // Send OTP via MSG91 widget
   const sendOtp = () => {
@@ -39,12 +41,14 @@ export default function Login() {
         const timeoutId = setTimeout(() => {
           setError("OTP service timed out. Please try again.");
           setLoading(false);
-        }, 15000);
+        }, 20000);
 
+        // MSG91 sendOtp(identifier, successCb, failureCb)
         window.sendOtp(
-          "91" + digits,
-          () => {
+          identifier,
+          (data) => {
             clearTimeout(timeoutId);
+            console.log("MSG91 sendOtp success:", data);
             setStep("otp");
             setHint("OTP sent to +91 " + digits);
             setLoading(false);
@@ -52,12 +56,13 @@ export default function Login() {
           },
           (err) => {
             clearTimeout(timeoutId);
+            console.error("MSG91 sendOtp error:", err);
             setError("Failed to send OTP. Try again.");
             setLoading(false);
-            console.error("MSG91 sendOtp error:", err);
           }
         );
-      } else if (n < 20) {
+      } else if (n < 30) {
+        // Wait for MSG91 script to load (up to 15 seconds)
         setTimeout(() => trySend(n + 1), 500);
       } else {
         setError("OTP service not ready. Please refresh the page.");
@@ -79,17 +84,19 @@ export default function Login() {
       return;
     }
 
+    // MSG91 verifyOtp(otp, successCb, failureCb)
     window.verifyOtp(
       code,
       (data) => {
-        // MSG91 verified successfully — data contains the access token
+        console.log("MSG91 verifyOtp success:", data);
+        // data contains the verified access token from MSG91
         const accessToken = data?.message || data?.token || data;
         doLogin(accessToken);
       },
       (err) => {
+        console.error("MSG91 verifyOtp error:", err);
         setError("Invalid OTP. Please try again.");
         setLoading(false);
-        console.error("MSG91 verifyOtp error:", err);
       }
     );
   };
@@ -102,6 +109,24 @@ export default function Login() {
     } catch {
       setError("Login failed. Please try again.");
     } finally {
+      setLoading(false);
+    }
+  };
+
+  // Resend OTP via MSG91 retry
+  const resendOtp = () => {
+    setError(""); setHint("");
+    setLoading(true);
+    if (typeof window.retryOtp === "function") {
+      window.retryOtp(
+        null, // use default channel
+        (data) => { console.log("MSG91 retryOtp success:", data); setHint("OTP resent to +91 " + digits); setLoading(false); setTimer(30); },
+        (err) => { console.error("MSG91 retryOtp error:", err); setError("Failed to resend OTP."); setLoading(false); }
+      );
+    } else {
+      // Fallback: go back to phone step and re-send
+      setStep("phone");
+      setOtp(["","","",""]);
       setLoading(false);
     }
   };
@@ -208,8 +233,8 @@ export default function Login() {
                   {timer > 0 ? (
                     <span className="auth-resend-timer">Resend in {timer}s</span>
                   ) : (
-                    <button className="auth-resend-btn" onClick={() => { setStep("phone"); setOtp(["","","",""]); setError(""); }}>
-                      Change number / Resend
+                    <button className="auth-resend-btn" onClick={resendOtp}>
+                      Resend OTP
                     </button>
                   )}
                 </div>
