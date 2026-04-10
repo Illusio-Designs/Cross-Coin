@@ -16,7 +16,7 @@ apiClient.post('/auth/register', data);
 export const logout = () => apiClient.post('/auth/logout', {});
 
 export const getMe = async () => {
-  const res = await fetch(`${API_URL}/auth/me`, { next: { revalidate: 0 } });
+  const res = await fetch(`${API_URL}/auth/me`);
   if (!res.ok) return null;
   return res.json();
 };

@@ -23,7 +23,6 @@ export async function getPublicCategories() {
   try {
     const res = await fetch(`${API_URL}/api/categories/listing`, {
       headers: { 'X-Brand-Name': BRAND_NAME },
-      next: { revalidate: 300 }
     });
     if (!res.ok) return [];
     const data = await res.json();
