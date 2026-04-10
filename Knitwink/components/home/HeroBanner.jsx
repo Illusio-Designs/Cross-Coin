@@ -19,12 +19,12 @@ export function HeroBanner({ slides = [] }) {
   useEffect(() => { setCurrent(0); setProgress(0) }, [slides.length])
 
   useEffect(() => {
-    if (paused || slides.length <= 1) return
+    if (paused) return
     progressRef.current = setInterval(() => {
       setProgress((p) => Math.min(p + 100 / (SLIDE_DURATION / 50), 100))
     }, 50)
     return () => { if (progressRef.current) clearInterval(progressRef.current) }
-  }, [current, paused, slides.length])
+  }, [current, paused])
 
   useEffect(() => {
     if (paused || slides.length <= 1) return
@@ -95,33 +95,31 @@ export function HeroBanner({ slides = [] }) {
           </AnimatePresence>
         </div>
 
-        {slides.length > 1 && (
-          <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center gap-4 px-8 pb-6 md:px-14 lg:px-20">
-            <div className="flex gap-2">
-              {slides.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => goTo(i)}
-                  aria-label={`Go to slide ${i + 1}`}
-                  className={`h-1 rounded-full transition-all duration-300 ${i === current ? 'w-6 bg-white' : 'w-2 bg-white/40 hover:bg-white/70'}`}
-                />
-              ))}
-            </div>
-            <div className="flex-1 h-[2px] rounded-full bg-white/20">
-              <div className="h-full rounded-full bg-white" style={{ width: `${progress}%` }} />
-            </div>
-            <button
-              onClick={() => setPaused((p) => !p)}
-              aria-label={paused ? 'Play' : 'Pause'}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/40 text-white hover:border-white"
-            >
-              {paused
-                ? <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><path d="M0 0l10 6-10 6V0z" /></svg>
-                : <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><rect x="0" y="0" width="3" height="12" /><rect x="7" y="0" width="3" height="12" /></svg>
-              }
-            </button>
+        <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center gap-4 px-8 pb-6 md:px-14 lg:px-20">
+          <div className="flex gap-2">
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => goTo(i)}
+                aria-label={`Go to slide ${i + 1}`}
+                className={`h-1 rounded-full transition-all duration-300 ${i === current ? 'w-6 bg-white' : 'w-2 bg-white/40 hover:bg-white/70'}`}
+              />
+            ))}
           </div>
-        )}
+          <div className="flex-1 h-[2px] rounded-full bg-white/20">
+            <div className="h-full rounded-full bg-white transition-none" style={{ width: `${progress}%` }} />
+          </div>
+          <button
+            onClick={() => setPaused((p) => !p)}
+            aria-label={paused ? 'Play' : 'Pause'}
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/40 text-white hover:border-white"
+          >
+            {paused
+              ? <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><path d="M0 0l10 6-10 6V0z" /></svg>
+              : <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><rect x="0" y="0" width="3" height="12" /><rect x="7" y="0" width="3" height="12" /></svg>
+            }
+          </button>
+        </div>
       </div>
     </section>
   )
