@@ -1,7 +1,7 @@
 
 import { getColorHex } from '@/lib/colorMap';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? process.env.API_URL ?? 'http://localhost:4000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
 const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'knitwink';
 
 function cleanUrl(url) {

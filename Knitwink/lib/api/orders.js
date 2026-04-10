@@ -2,7 +2,7 @@ import { apiClient } from './client';
 
 
 
-const API_URL = process.env.API_URL ?? 'http://localhost:4000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
 
 export const getOrders = async () => {
   const res = await fetch(`${API_URL}/orders`, {});
