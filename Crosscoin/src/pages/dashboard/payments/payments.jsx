@@ -92,7 +92,7 @@ export default function Payments() {
     { header: "Sr. No", accessor: "serial_number" },
     { header: "Order", accessor: "orderNumber", cell: ({ orderNumber }) => <span className="cat-name-cell">{orderNumber}</span> },
     { header: "Customer", accessor: "customerName" },
-    { header: "Amount", accessor: "amount_paid", cell: (row) => `₹${parseFloat(row.amount_paid || 0).toFixed(2)}` },
+    { header: "Amount", accessor: "amount_paid", cell: (row) => `₹${(parseFloat(row.amount_paid || 0) / 100).toFixed(2)}` },
     { header: "Method", accessor: "displayPaymentMethod", cell: (row) => getMethodLabel(row.displayPaymentMethod) },
     { header: "Status", accessor: "status", cell: (row) => <StatusBadge status={row.status} /> },
     { header: "Date", accessor: "createdAt", cell: (row) => new Date(row.createdAt).toLocaleDateString('en-IN') },
@@ -107,7 +107,7 @@ export default function Payments() {
     }
   ];
 
-  const totalAmount = filteredData.reduce((sum, p) => sum + parseFloat(p.amount_paid || 0), 0);
+  const totalAmount = filteredData.reduce((sum, p) => sum + parseFloat(p.amount_paid || 0), 0) / 100;
   const successCount = payments.filter(p => p.status === 'successful').length;
   const pendingCount = payments.filter(p => p.status === 'pending').length;
   const refundedCount = payments.filter(p => p.status === 'refunded').length;
@@ -239,7 +239,7 @@ export default function Payments() {
               <div className="con-detail-grid">
                 <div className="con-detail-item"><span className="con-detail-label">Order Number</span><span className="con-detail-value">{selectedPayment.orderNumber}</span></div>
                 <div className="con-detail-item"><span className="con-detail-label">Customer</span><span className="con-detail-value">{selectedPayment.customerName}</span></div>
-                <div className="con-detail-item"><span className="con-detail-label">Amount</span><span className="con-detail-value">₹{parseFloat(selectedPayment.amount_paid || 0).toFixed(2)}</span></div>
+                <div className="con-detail-item"><span className="con-detail-label">Amount</span><span className="con-detail-value">₹{(parseFloat(selectedPayment.amount_paid || 0) / 100).toFixed(2)}</span></div>
                 <div className="con-detail-item"><span className="con-detail-label">Method</span><span className="con-detail-value">{getMethodLabel(selectedPayment.displayPaymentMethod)}</span></div>
                 <div className="con-detail-item"><span className="con-detail-label">Status</span><span className="con-detail-value"><StatusBadge status={selectedPayment.status} /></span></div>
                 <div className="con-detail-item"><span className="con-detail-label">Date</span><span className="con-detail-value">{new Date(selectedPayment.createdAt).toLocaleString('en-IN')}</span></div>
