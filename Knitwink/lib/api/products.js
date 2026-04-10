@@ -12,10 +12,9 @@ function cleanUrl(url) {
   return url;
 }
 
-async function brandFetch(path, revalidate = 60) {
+async function brandFetch(path) {
   const res = await fetch(`${API_URL}${path}`, {
     headers: { 'X-Brand-Name': BRAND_NAME },
-    next: { revalidate }
   });
   if (!res.ok) throw new Error(`Failed to fetch ${path}`);
   return res.json();
