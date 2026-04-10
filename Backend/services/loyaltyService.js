@@ -208,66 +208,70 @@ async function refundPoints(userId, orderId, brandId = 1, options = {}) {
 }
 
 async function expirePoints(options = {}) {
-  const tx = options.transaction || (await sequelize.transaction());
-  const ownTx = !options.transaction;
   const now = new Date();
   let expiredCount = 0;
+  const BATCH_SIZE = 100;
+  let offset = 0;
 
   try {
-    const earnedTransactions = await LoyaltyTransaction.findAll({
-      where: {
-        type: 'earned',
-        points: { [Op.gt]: 0 },
-        expires_at: { [Op.lte]: now },
-      },
-      order: [['id', 'ASC']],
-      transaction: tx,
-    });
-
-    for (const earned of earnedTransactions) {
-      const marker = `Expired from loyalty txn #${earned.id}`;
-      const alreadyExpired = await LoyaltyTransaction.findOne({
+    // Process in batches with separate transactions to avoid long-held locks
+    while (true) {
+      const batch = await LoyaltyTransaction.findAll({
         where: {
-          user_id: earned.user_id,
-          type: 'expired',
-          description: marker,
+          type: 'earned',
+          points: { [Op.gt]: 0 },
+          expires_at: { [Op.lte]: now },
         },
-        transaction: tx,
+        order: [['id', 'ASC']],
+        limit: BATCH_SIZE,
+        offset,
       });
-      if (alreadyExpired) continue;
 
-      const user = await User.findByPk(earned.user_id, {
-        transaction: tx,
-        lock: tx.LOCK.UPDATE,
-      });
-      if (!user) continue;
+      if (batch.length === 0) break;
 
-      const pointsToExpire = Math.min(earned.points, Math.max(user.loyalty_points || 0, 0));
-      if (pointsToExpire <= 0) continue;
+      // Process each batch in its own transaction
+      const tx = await sequelize.transaction();
+      try {
+        for (const earned of batch) {
+          const marker = `Expired from loyalty txn #${earned.id}`;
+          const alreadyExpired = await LoyaltyTransaction.findOne({
+            where: { user_id: earned.user_id, type: 'expired', description: marker },
+            transaction: tx,
+          });
+          if (alreadyExpired) continue;
 
-      const balanceAfter = user.loyalty_points - pointsToExpire;
-      await LoyaltyTransaction.create(
-        {
-          user_id: earned.user_id,
-          order_id: earned.order_id || null,
-          type: 'expired',
-          points: -pointsToExpire,
-          balance_after: balanceAfter,
-          description: marker,
-          expires_at: null,
-          brand_id: earned.brand_id || 1,
-        },
-        { transaction: tx }
-      );
+          const user = await User.findByPk(earned.user_id, { transaction: tx, lock: tx.LOCK.UPDATE });
+          if (!user) continue;
 
-      await user.update({ loyalty_points: balanceAfter }, { transaction: tx });
-      expiredCount += 1;
+          const pointsToExpire = Math.min(earned.points, Math.max(user.loyalty_points || 0, 0));
+          if (pointsToExpire <= 0) continue;
+
+          const balanceAfter = user.loyalty_points - pointsToExpire;
+          await LoyaltyTransaction.create({
+            user_id: earned.user_id,
+            order_id: earned.order_id || null,
+            type: 'expired',
+            points: -pointsToExpire,
+            balance_after: balanceAfter,
+            description: marker,
+            expires_at: null,
+            brand_id: earned.brand_id || 1,
+          }, { transaction: tx });
+
+          await user.update({ loyalty_points: balanceAfter }, { transaction: tx });
+          expiredCount += 1;
+        }
+        await tx.commit();
+      } catch (batchError) {
+        await tx.rollback();
+        logger.error('Error in expirePoints batch:', batchError);
+      }
+
+      offset += BATCH_SIZE;
     }
 
-    if (ownTx) await tx.commit();
     return { expiredCount };
   } catch (error) {
-    if (ownTx) await tx.rollback();
     logger.error('Error expiring loyalty points:', error);
     throw error;
   }

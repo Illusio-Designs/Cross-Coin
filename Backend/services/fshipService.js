@@ -19,21 +19,30 @@ class FShipService {
      */
     async initialize() {
         if (this.initialized) return;
+        if (this._initPromise) return this._initPromise;
         
-        const FSHIP_ENVIRONMENT = await settingsHelper.getSetting(this.brandId, 'FSHIP_ENVIRONMENT', 'staging');
-        const FSHIP_PRODUCTION_URL = await settingsHelper.getSetting(this.brandId, 'FSHIP_PRODUCTION_URL', 'https://capi.fship.in');
-        this.apiKey = await settingsHelper.getSetting(this.brandId, 'FSHIP_API_KEY');
-        this.baseURL = FSHIP_ENVIRONMENT === 'production' ? FSHIP_PRODUCTION_URL : FSHIP_STAGING_URL;
+        this._initPromise = (async () => {
+            const FSHIP_ENVIRONMENT = await settingsHelper.getSetting(this.brandId, 'FSHIP_ENVIRONMENT', 'staging');
+            const FSHIP_PRODUCTION_URL = await settingsHelper.getSetting(this.brandId, 'FSHIP_PRODUCTION_URL', 'https://capi.fship.in');
+            this.apiKey = await settingsHelper.getSetting(this.brandId, 'FSHIP_API_KEY');
+            this.baseURL = FSHIP_ENVIRONMENT === 'production' ? FSHIP_PRODUCTION_URL : FSHIP_STAGING_URL;
+            
+            console.log('FShip Configuration:', {
+                brandId: this.brandId,
+                environment: FSHIP_ENVIRONMENT,
+                baseUrl: this.baseURL,
+                apiKey: this.apiKey ? 'Present' : 'Missing'
+            });
+            
+            this.axiosInstance = this.createAxiosInstance();
+            this.initialized = true;
+        })();
         
-        console.log('FShip Configuration:', {
-            brandId: this.brandId,
-            environment: FSHIP_ENVIRONMENT,
-            baseUrl: this.baseURL,
-            apiKey: this.apiKey ? 'Present' : 'Missing'
-        });
-        
-        this.axiosInstance = this.createAxiosInstance();
-        this.initialized = true;
+        try {
+            await this._initPromise;
+        } finally {
+            this._initPromise = null;
+        }
     }
 
     /**
@@ -51,13 +60,23 @@ class FShipService {
     }
 
     /**
+     * Redact PII from data before logging
+     */
+    _redactPII(data) {
+        if (!data) return data;
+        const str = JSON.stringify(data);
+        // Mask phone numbers (keep last 4 digits)
+        return str.replace(/(\d{6,})/g, (match) => '****' + match.slice(-4));
+    }
+
+    /**
      * Handle API errors consistently
      */
     handleApiError(error, operation) {
         console.error(`=== FShip ${operation} Error ===`);
         console.error('Status:', error.response?.status);
         console.error('Status Text:', error.response?.statusText);
-        console.error('Error Data:', JSON.stringify(error.response?.data, null, 2));
+        console.error('Error Data:', this._redactPII(error.response?.data));
         console.error('Error Message:', error.message);
 
         if (error.response?.status === 401) {
@@ -111,7 +130,7 @@ class FShipService {
         await this.initialize();
         try {
             console.log('=== FShip Add Warehouse ===');
-            console.log('Warehouse Data:', JSON.stringify(warehouseData, null, 2));
+            console.log('Warehouse Data:', this._redactPII(warehouseData));
 
             const payload = {
                 warehouseId: 0,
@@ -157,7 +176,7 @@ class FShipService {
         await this.initialize();
         try {
             console.log('=== FShip Create Forward Order ===');
-            console.log('Order Data:', JSON.stringify(orderData, null, 2));
+            console.log('Order Data:', this._redactPII(orderData));
 
             // Validate required fields
             this.validateOrderData(orderData);
@@ -175,6 +194,8 @@ class FShipService {
                 routeCode: response.data.route_code,
                 status: response.data.order_status,
                 labelUrl: response.data.labelurl,
+                courierName: response.data.courier_name || response.data.courierName || null,
+                courierId: response.data.courier_id || response.data.courierId || null,
                 response: response.data.response
             };
         } catch (error) {
@@ -214,6 +235,8 @@ class FShipService {
                         waybill: existingOrder.data.waybill || existingOrder.data.awb_number,
                         labelUrl: existingOrder.data.labelurl || existingOrder.data.label_url || null,
                         routeCode: existingOrder.data.route_code || null,
+                        courierName: existingOrder.data.courier_name || existingOrder.data.courierName || null,
+                        courierId: existingOrder.data.courier_id || existingOrder.data.courierId || null,
                         status: currentStatus,
                         message: `Order already exists with status: ${currentStatus}`,
                         existingData: existingOrder.data
@@ -408,6 +431,7 @@ class FShipService {
             customer_Address_Type: orderData.customer_Address_Type || 'Home',
             customer_PinCode: orderData.customer_PinCode,
             customer_City: orderData.customer_City,
+            customer_State: orderData.customer_State || '',
             orderId: orderData.orderId,
             invoice_Number: orderData.invoice_Number || '',
             payment_Mode: orderData.payment_Mode, // 1=COD, 2=PREPAID
@@ -446,7 +470,7 @@ class FShipService {
      * Format phone number to 10 digits
      */
     formatPhoneNumber(phone) {
-        if (!phone) return '9876543210';
+        if (!phone) throw new Error('Phone number is required for shipping');
         
         const digits = phone.toString().replace(/\D/g, '');
         
@@ -466,7 +490,7 @@ class FShipService {
             return digits.slice(-10);
         }
         
-        return '9876543210';
+        throw new Error(`Invalid phone number: ${phone}`);
     }
 
     /**
@@ -784,12 +808,8 @@ class FShipService {
                 return { exists: false };
             }
             
-            // Alternative method disabled due to 404 error on /api/getallorders endpoint
-            console.log('Alternative method disabled - endpoint not available');
-            
-            // For other errors, we can't determine if it exists, so we'll assume it doesn't
-            console.error('Error checking order existence:', error.message);
-            return { exists: false, error: error.message };
+            // For other errors, throw instead of assuming order doesn't exist
+            throw new Error(`FShip order check failed: ${error.message}`);
         }
     }
 

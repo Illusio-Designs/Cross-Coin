@@ -155,9 +155,9 @@ async function searchProducts(query, options = {}) {
   let imageMap = {};
   if (productIds.length > 0) {
     const [images] = await sequelize.query(`
-      SELECT productId as product_id, image_url, is_primary
+      SELECT product_id, image_url, is_primary
       FROM product_images
-      WHERE productId IN (:productIds)
+      WHERE product_id IN (:productIds)
       ORDER BY is_primary DESC
     `, { replacements: { productIds } });
 

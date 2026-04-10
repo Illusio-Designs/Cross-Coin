@@ -11,7 +11,7 @@ const Payment = sequelize.define(
     },
     order_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true, // Nullable for payment-first flow (order created after payment)
       references: {
         model: "orders",
         key: "id",
@@ -74,6 +74,11 @@ const Payment = sequelize.define(
         key: "id",
       },
     },
+    reservation_id: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: 'Stock reservation ID for payment-first checkout flow',
+    },
   },
   {
     tableName: "payments",
@@ -88,6 +93,12 @@ const Payment = sequelize.define(
       },
       {
         fields: ["status"],
+      },
+      {
+        fields: ["reservation_id"],
+      },
+      {
+        fields: ["razorpay_order_id"],
       },
     ],
   }

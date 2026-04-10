@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { dashboardService } from '../../services';
+import React from 'react';
 import Loader from '../common/Loader';
 import DonutChart from '../common/DonutChart';
-import cacheManager from '../../services/cacheManager';
+import { useDashboardStats } from '../../hooks/queries/useDashboard';
 
 const IC = {
   rupee: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12M6 8h12M6 13l8 8M6 13h3a4 4 0 0 0 0-8H6"/></svg>,
@@ -54,23 +53,8 @@ function SectionTitle({ icon, children }) {
 }
 
 function CardGrid() {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => { fetchDashboardStats(); }, []);
-
-  const fetchDashboardStats = async () => {
-    try {
-      setLoading(true);
-      const cached = cacheManager.getByType('dashboard');
-      if (cached) { setStats(cached); setError(null); setLoading(false); return; }
-      const res = await dashboardService.getDashboardStats();
-      if (res.success) { setStats(res.stats); cacheManager.setByType('dashboard', res.stats); }
-      setError(null);
-    } catch { setError('Failed to load dashboard statistics'); }
-    finally { setLoading(false); }
-  };
+  const { data: stats, isLoading: loading, error: queryError } = useDashboardStats();
+  const error = queryError ? 'Failed to load dashboard statistics' : null;
 
   if (loading) return (
     <div className="dashboard-sections">

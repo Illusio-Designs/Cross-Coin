@@ -85,6 +85,9 @@ app.use('/api/users/register', strictLimiter);
 app.use('/api/orders/checkout', strictLimiter);
 app.use('/api/checkout/send-otp', strictLimiter);
 app.use('/api/checkout/verify-otp', strictLimiter);
+app.use('/api/checkout/initiate', strictLimiter);
+app.use('/api/checkout/retry', strictLimiter);
+app.use('/api/checkout/guest/initiate', strictLimiter);
 app.use('/api/payments/razorpay', strictLimiter);
 
 // Medium routes
@@ -307,7 +310,7 @@ const startServer = async () => {
         logger.info('✓ Database connection successful');
         
         // Create all tables — only runs when schema version changes
-        const SCHEMA_VERSION = 'v1.4-whatsapp-features';
+        const SCHEMA_VERSION = 'v1.6-fship-sync-error';
         let needsSetup = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS schema_version (version VARCHAR(50) PRIMARY KEY, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
