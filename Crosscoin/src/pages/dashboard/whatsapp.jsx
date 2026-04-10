@@ -8,7 +8,7 @@ import Loader from '../../components/common/Loader';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService, whatsappService } from '../../services';
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Icons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const IC = {
   wa:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>,
   send:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
@@ -27,7 +27,7 @@ const IC = {
   filter:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
 };
 
-// ─── Template data ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Template data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TPL_ICONS = {
   order_confirm:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
   order_shipped:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
@@ -61,7 +61,7 @@ const SIDEBAR_GROUPS = [
 const SAMPLES = ['CC-20240601-0042','3 items','1,299','BlueDart','BD9812345678','SAVE10','Surat, Gujarat - 395006','https://crosscoin.in/track','CrossCoin Ankle Socks'];
 const EMPTY_FORM = { name:'', category:'UTILITY', language:'en', body:'', footer:'', btn1Type:'', btn1Text:'', btn1Val:'', btn2Text:'' };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const AVATAR_COLORS = ['#7c3aed','#0284c7','#059669','#b45309','#db2777','#dc2626','#0891b2'];
 function avatarColor(str) { let h = 0; for (const c of (str||'')) h = (h*31 + c.charCodeAt(0)) & 0xffffffff; return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]; }
 function initials(name) { return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
@@ -79,7 +79,7 @@ function formatTime(date) {
 }
 function catLabel(c) { return { MARKETING:'Marketing', UTILITY:'Utility', marketing:'Marketing', utility:'Utility', otp:'OTP/Auth' }[c] || c; }
 
-// ─── Phone Preview ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Phone Preview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function PhonePreview({ tpl }) {
   if (!tpl) return (
     <div className="was-pp-empty">
@@ -88,7 +88,7 @@ function PhonePreview({ tpl }) {
     </div>
   );
   const html = (tpl.body||'')
-    .replace(/\{\{(\d+)\}\}/g, (_, n) => `<strong style="color:#075e54">${SAMPLES[n-1]||`{{${n}}}`}</strong>`)
+    .replace(/\{\{(\d+)\}\}/g, (_, n) => `<strong style="color:#180D3E">${SAMPLES[n-1]||`{{${n}}}`}</strong>`)
     .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
     .replace(/\n/g, '<br>');
   return (
@@ -114,10 +114,10 @@ function PhonePreview({ tpl }) {
   );
 }
 
-// ─── Message Content Renderer ─────────────────────────────────────────────────
+// â”€â”€â”€ Message Content Renderer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
-// Module-level cache: proxyUrl → blobUrl
+// Module-level cache: proxyUrl â†’ blobUrl
 // Persists across re-renders and polling so media never disappears
 const mediaBlobCache = new Map();
 
@@ -134,13 +134,13 @@ async function fetchMediaBlob(src) {
 function getProxyUrl(mediaId, brandId = 1) {
   if (!mediaId) return null;
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : '';
-  // Always proxy through backend — whether it's a media ID or a full Facebook URL
+  // Always proxy through backend â€” whether it's a media ID or a full Facebook URL
   // The backend media proxy handles both cases
   const encoded = encodeURIComponent(mediaId);
   return `${API_BASE}/api/whatsapp/media/${encoded}?brandId=${brandId}&token=${encodeURIComponent(token)}`;
 }
 
-// WhatsApp-style audio player � fetches as blob so auth token works, plays inline
+// WhatsApp-style audio player ï¿½ fetches as blob so auth token works, plays inline
 function AudioPlayer({ src }) {
   const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
@@ -169,7 +169,7 @@ function AudioPlayer({ src }) {
       .catch(() => { if (!cancelled) setLoadState('error'); });
     return () => {
       cancelled = true;
-      // Don't revoke here — let the audio keep playing if it started
+      // Don't revoke here â€” let the audio keep playing if it started
     };
   }, [src]);
 
@@ -242,7 +242,7 @@ function AudioPlayer({ src }) {
     </div>
   );
 }
-// Lightbox for images — fetches as blob to handle auth
+// Lightbox for images â€” fetches as blob to handle auth
 function ImageMsg({ src, caption }) {
   const [open, setOpen] = useState(false);
   const [blobUrl, setBlobUrl] = useState(null);
@@ -257,7 +257,7 @@ function ImageMsg({ src, caption }) {
     return () => { cancelled = true; };
   }, [src]);
 
-  if (!blobUrl) return <div style={{width:120,height:80,background:'#f3f4f6',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',color:'#9ca3af',fontSize:11}}>Loading…</div>;
+  if (!blobUrl) return <div style={{width:120,height:80,background:'#f3f4f6',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',color:'#9ca3af',fontSize:11}}>Loading...</div>;
 
   return (
     <>
@@ -306,7 +306,7 @@ function VideoMsg({ src, caption }) {
     <div style={{width:220,height:80,background:'#f3f4f6',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',color:'#9ca3af',fontSize:12,gap:6}}>
       {loadState === 'error'
         ? <><span>🎥</span> Video expired</>
-        : <><span style={{animation:'spin 1s linear infinite',display:'inline-block'}}>⏳</span> Loading…</>
+        : <><span style={{animation:'spin 1s linear infinite',display:'inline-block'}}>â³</span> Loading...</>
       }
     </div>
   );
@@ -347,7 +347,7 @@ function MsgContent({ msg, brandId = 1 }) {
           else if (mime.startsWith('audio') || txt.includes('voice') || txt.includes('audio')) effectiveType = 'audio';
           else if (mime.startsWith('image') || txt.includes('image') || txt.includes('photo')) effectiveType = 'image';
           else if (mime.includes('pdf') || mime.includes('document') || txt.includes('document')) effectiveType = 'document';
-          // Has a Facebook CDN URL but no mime — treat as video (most common)
+          // Has a Facebook CDN URL but no mime â€” treat as video (most common)
           else if (parsed.url && (parsed.url.includes('fbsbx') || parsed.url.includes('facebook'))) effectiveType = 'video';
         }      }
     } catch (_) {
@@ -380,7 +380,7 @@ function MsgContent({ msg, brandId = 1 }) {
   if (effectiveType === 'image') {
     return proxyUrl
       ? <ImageMsg src={proxyUrl} caption={media?.caption} />
-      : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>📷 Image</span>;
+      : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>ðŸ“· Image</span>;
   }
 
   if (effectiveType === 'video') {
@@ -432,12 +432,12 @@ function MsgContent({ msg, brandId = 1 }) {
     );
   }
 
-  // Default: plain text — but first check if it looks like raw JSON media (old format)
+  // Default: plain text â€” but first check if it looks like raw JSON media (old format)
   if (msg.body) {
     const trimmed = msg.body.trim();
     if (trimmed.startsWith('{')) {
-      // It's JSON that wasn't detected as a known media type — show generic media unavailable
-      return <span style={{ fontSize:13, color:'#9ca3af', fontStyle:'italic' }}>📎 Media (unavailable)</span>;
+      // It's JSON that wasn't detected as a known media type â€” show generic media unavailable
+      return <span style={{ fontSize:13, color:'#9ca3af', fontStyle:'italic' }}>ðŸ“Ž Media (unavailable)</span>;
     }
   }
   const formatted = (msg.body || '')
@@ -448,7 +448,7 @@ function MsgContent({ msg, brandId = 1 }) {
   return <span style={{ fontSize:14, lineHeight:1.5 }} dangerouslySetInnerHTML={{ __html: formatted }} />;
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function WhatsAppManager() {
   const [page, setPage] = useState('dashboard');
   const [brands, setBrands] = useState([]);
@@ -474,6 +474,8 @@ export function WhatsAppManager() {
   const [messages, setMessages] = useState([]);
   const [reply, setReply] = useState('');
   const [replyTo, setReplyTo] = useState(null); // { id, body, direction, type }
+  const [rightPanelTab, setRightPanelTab] = useState('customer'); // 'customer' | 'notes'
+  const [convNote, setConvNote] = useState('');
   const [convLoading, setConvLoading] = useState(false);
   const [msgLoading, setMsgLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -540,7 +542,7 @@ export function WhatsAppManager() {
       const data = await whatsappService.seedTemplates(brandId);
       if (data.success) {
         const { created, skipped, failed } = data.summary;
-        showSuccess('templateCreated', `Created: ${created} · Skipped: ${skipped} · Failed: ${failed}`);
+        showSuccess('templateCreated', `Created: ${created} Â· Skipped: ${skipped} Â· Failed: ${failed}`);
         fetchTemplates();
       } else {
         showError('loadingFailed', data.message);
@@ -655,7 +657,7 @@ export function WhatsAppManager() {
     isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
   };
 
-  // Silent poll — does NOT reset scroll position
+  // Silent poll â€” does NOT reset scroll position
   const pollMessages = async (conv) => {
     try {
       const data = await whatsappService.getMessages(conv.id);
@@ -812,14 +814,14 @@ export function WhatsAppManager() {
     setSendingProduct(true);
     try {
       if (sendMode === 'single') {
-        // Pass productId — backend auto-resolves to {productId}_{variationId} matching catalogue
+        // Pass productId â€” backend auto-resolves to {productId}_{variationId} matching catalogue
         await whatsappService.sendProduct(activeConv.id, selectedProducts[0].id, brandId);
         showSuccess('messageSent');
       } else {
-        // Pass productIds array — backend resolves each to first variation retailer ID
+        // Pass productIds array â€” backend resolves each to first variation retailer ID
         await whatsappService.sendCatalogue(
           activeConv.id,
-          null,                                    // retailerIds — let backend resolve
+          null,                                    // retailerIds â€” let backend resolve
           selectedProducts.map(p => p.id),         // productIds
           null, null, brandId
         );
@@ -835,7 +837,7 @@ export function WhatsAppManager() {
   const seedCannedResponses = async () => {
     try {
       const data = await whatsappService.seedCannedResponses(brandId);
-      showSuccess('saved', `Created: ${data.summary?.created} · Skipped: ${data.summary?.skipped}`);
+      showSuccess('saved', `Created: ${data.summary?.created} Â· Skipped: ${data.summary?.skipped}`);
       fetchCannedResponses();
     } catch (err) { showError('loadingFailed', err.message); }
   };
@@ -867,7 +869,7 @@ export function WhatsAppManager() {
   return (
     <div className="was-studio">
 
-      {/* ══ LEFT SIDEBAR ══ */}
+      {/* â•â• LEFT SIDEBAR â•â• */}
       <aside className="was-nav">
         <div className="was-nav-logo">
           <div className="was-nav-logo-icon">{IC.wa}</div>
@@ -902,29 +904,29 @@ export function WhatsAppManager() {
         </div>
       </aside>
 
-      {/* ══ MAIN CONTENT ══ */}
+      {/* â•â• MAIN CONTENT â•â• */}
       <div className="was-main">
 
-        {/* ── DASHBOARD ── */}
+        {/* â”€â”€ DASHBOARD â”€â”€ */}
         {page === 'dashboard' && (
           <div className="was-scroll">
             <div className="was-content-pad">
               <div className="was-page-head">
                 <h2 className="was-page-title">Dashboard</h2>
-                <span className="was-page-sub">CrossCoin · WhatsApp Overview</span>
+                <span className="was-page-sub">CrossCoin Â· WhatsApp Overview</span>
                 <button className="was-btn-secondary" onClick={seedTemplates} disabled={seedLoading}>
                   <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>
-                  {seedLoading ? 'Seeding…' : 'Seed Templates'}
+                  {seedLoading ? 'Seeding...' : 'Seed Templates'}
                 </button>
               </div>
 
               {/* Stats */}
               <div className="was-stats-grid">
                 {statsLoading ? <div style={{padding:20}}><Loader /></div> : [
-                  { label:'Messages Sent',    val: stats ? String(stats.sentMessages) : '—',      change: stats ? `${stats.deliveryRate}% delivery rate` : '',  color:'#25D366', icon: IC.send },
-                  { label:'Delivered',        val: stats ? String(stats.deliveredMessages) : '—', change: stats ? `${stats.deliveryRate}% rate` : '',            color:'#3b82f6', icon: IC.check },
-                  { label:'Read Rate',        val: stats ? `${stats.readRate}%` : '—',            change: stats ? `${stats.readMessages} messages read` : '',    color:'#f59e0b', icon: IC.eye },
-                  { label:'Open Convs',       val: stats ? String(stats.openConversations) : '—', change: stats ? `${stats.unreadCount} need reply` : '',        color:'#8b5cf6', icon: IC.msg },
+                  { label:'Messages Sent',    val: stats ? String(stats.sentMessages) : 'â€”',      change: stats ? `${stats.deliveryRate}% delivery rate` : '',  color:'#CE1E36', icon: IC.send },
+                  { label:'Delivered',        val: stats ? String(stats.deliveredMessages) : 'â€”', change: stats ? `${stats.deliveryRate}% rate` : '',            color:'#3b82f6', icon: IC.check },
+                  { label:'Read Rate',        val: stats ? `${stats.readRate}%` : 'â€”',            change: stats ? `${stats.readMessages} messages read` : '',    color:'#f59e0b', icon: IC.eye },
+                  { label:'Open Convs',       val: stats ? String(stats.openConversations) : 'â€”', change: stats ? `${stats.unreadCount} need reply` : '',        color:'#8b5cf6', icon: IC.msg },
                 ].map(s => (
                   <div key={s.label} className="was-stat-card">
                     <div className="was-stat-top">
@@ -942,7 +944,7 @@ export function WhatsAppManager() {
                 {/* Bar chart */}
                 <div className="was-dash-card">
                   <div className="was-dash-card-head">
-                    <span className="was-dash-card-title">Messages — Last 7 Days</span>
+                    <span className="was-dash-card-title">Messages â€” Last 7 Days</span>
                   </div>
                   <div className="was-bar-chart">
                     {statsLoading ? <Loader /> : (() => {
@@ -991,9 +993,9 @@ export function WhatsAppManager() {
               {/* Quick cards */}
               <div className="was-quick-row">
                 {[
-                  { label:'Approved Templates', val: String(templateList.filter(t => (t.status||'').toLowerCase() === 'approved').length), sub:`${templateList.filter(t => (t.status||'').toLowerCase() === 'pending').length} pending · ${templateList.filter(t => (t.status||'').toLowerCase() === 'rejected').length} rejected`, color:'#25D366', icon: IC.tpl },
+                  { label:'Approved Templates', val: String(templateList.filter(t => (t.status||'').toLowerCase() === 'approved').length), sub:`${templateList.filter(t => (t.status||'').toLowerCase() === 'pending').length} pending Â· ${templateList.filter(t => (t.status||'').toLowerCase() === 'rejected').length} rejected`, color:'#CE1E36', icon: IC.tpl },
                   { label:'Open Conversations', val: String(stats?.openConversations ?? 0), sub:'Live chats', color:'#3b82f6', icon: IC.msg },
-                  { label:'Total Messages',     val: String(stats?.totalMessages ?? 0),     sub:`${stats?.sentMessages ?? 0} sent · ${stats?.deliveredMessages ?? 0} delivered`, color:'#f59e0b', icon: IC.phone },
+                  { label:'Total Messages',     val: String(stats?.totalMessages ?? 0),     sub:`${stats?.sentMessages ?? 0} sent Â· ${stats?.deliveredMessages ?? 0} delivered`, color:'#f59e0b', icon: IC.phone },
                 ].map(q => (
                   <div key={q.label} className="was-quick-card">
                     <div className="was-quick-icon" style={{ background: q.color + '20', color: q.color }}>{q.icon}</div>
@@ -1009,7 +1011,7 @@ export function WhatsAppManager() {
           </div>
         )}
 
-        {/* ── TEMPLATES ── */}
+        {/* â”€â”€ TEMPLATES â”€â”€ */}
         {page === 'templates' && (
           <div className="was-scroll">
             <div className="was-content-pad">
@@ -1073,7 +1075,7 @@ export function WhatsAppManager() {
                 {/* Phone preview */}
                 <div className="was-tpl-preview">
                   <div className="was-detail-card" style={{position:'sticky',top:0}}>
-                    <div className="was-detail-title" style={{marginBottom:14}}>📱 Live Preview</div>
+                    <div className="was-detail-title" style={{marginBottom:14}}>Live Preview</div>
                     <div style={{display:'flex',justifyContent:'center'}}>
                       <PhonePreview tpl={TEMPLATES[activeKey]} />
                     </div>
@@ -1084,13 +1086,13 @@ export function WhatsAppManager() {
           </div>
         )}
 
-        {/* ── INBOX ── */}
+        {/* â”€â”€ INBOX â”€â”€ */}
         {page === 'inbox' && (
           <div className="was-inbox-wrap">
             {/* Thread list */}
             <div className="was-thread-list">
               <div className="was-thread-top-bar">
-                <input className="was-thread-search" placeholder="Search chats…" value={convSearch} onChange={e => setConvSearch(e.target.value)} />
+                <input className="was-thread-search" placeholder="Search chats..." value={convSearch} onChange={e => setConvSearch(e.target.value)} />
               </div>
               <div className="was-thread-tabs">
                 {['open','resolved','all'].map(s => (
@@ -1254,14 +1256,14 @@ export function WhatsAppManager() {
                   </div>
                   {activeConv.status === 'open' ? (
                     <div>
-                      {/* Action bar — product/catalogue send */}                      <div style={{ display:'flex', gap:6, padding:'6px 12px', borderTop:'1px solid #f3f4f6', background:'#fafafa' }}>
+                      {/* Action bar â€” product/catalogue send */}                      <div style={{ display:'flex', gap:6, padding:'6px 12px', borderTop:'1px solid #f3f4f6', background:'#fafafa' }}>
                         <button
                           className="was-btn-secondary"
                           style={{ fontSize:11, padding:'3px 10px', display:'flex', alignItems:'center', gap:4 }}
                           onClick={() => openProductModal('single')}
                           title="Send a single product card"
                         >
-                          🛍️ Send Product
+                          🛍️ï¸ Send Product
                         </button>
                         <button
                           className="was-btn-secondary"
@@ -1269,7 +1271,7 @@ export function WhatsAppManager() {
                           onClick={() => openProductModal('catalogue')}
                           title="Send multiple products as catalogue"
                         >
-                          📦 Send Catalogue
+                          ðŸ“¦ Send Catalogue
                         </button>
                       </div>
                       <form className="was-reply-box" onSubmit={sendReply} style={{position:'relative'}}>
@@ -1288,10 +1290,10 @@ export function WhatsAppManager() {
                                 {msgPreview(replyTo)}
                               </span>
                             </div>
-                            <button type="button" onClick={() => setReplyTo(null)} style={{background:'none',border:'none',cursor:'pointer',color:'#9ca3af',fontSize:16,padding:'0 4px',flexShrink:0}}>×</button>
+                            <button type="button" onClick={() => setReplyTo(null)} style={{background:'none',border:'none',cursor:'pointer',color:'#9ca3af',fontSize:16,padding:'0 4px',flexShrink:0}}>Ã—</button>
                           </div>
                         )}
-                        <textarea className="was-reply-input" placeholder="Type a message… (type /shortcut for canned responses)" value={reply}
+                        <textarea className="was-reply-input" placeholder="Type a message... (type /shortcut for canned responses)" value={reply}
                           onChange={e => handleReplyChange(e.target.value)}
                           onKeyDown={e => { if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); sendReply(e); } }}
                           rows={2} />
@@ -1304,10 +1306,99 @@ export function WhatsAppManager() {
                 </>
               )}
             </div>
+
+            {/* â”€â”€ RIGHT PANEL â”€â”€ */}
+            {activeConv && (
+              <div className="was-right-panel">
+                <div className="was-rp-tabs">
+                  {['customer','notes'].map(t => (
+                    <button key={t} className={`was-rp-tab${rightPanelTab===t?' active':''}`} onClick={() => setRightPanelTab(t)}>
+                      {t.charAt(0).toUpperCase()+t.slice(1)}
+                    </button>
+                  ))}
+                </div>
+                <div className="was-rp-body">
+                  {rightPanelTab === 'customer' && (
+                    <>
+                      {/* Stats strip */}
+                      <div className="was-rp-stats">
+                        <div className="was-rp-stat"><div className="was-rp-stat-num">{activeConv.unread_count||0}</div><div className="was-rp-stat-lbl">Unread</div></div>
+                        <div className="was-rp-stat"><div className="was-rp-stat-num">{activeConv.status==='open'?'Open':'Done'}</div><div className="was-rp-stat-lbl">Status</div></div>
+                        <div className="was-rp-stat"><div className="was-rp-stat-num">{messages.length}</div><div className="was-rp-stat-lbl">Messages</div></div>
+                      </div>
+                      {/* Contact info */}
+                      <div className="was-rp-section">
+                        <div className="was-rp-section-title">Contact</div>
+                        <div className="was-rp-row"><span className="was-rp-label">Name</span><span className="was-rp-value">{activeConv.customer_name||'â€”'}</span></div>
+                        <div className="was-rp-row"><span className="was-rp-label">Phone</span><span className="was-rp-value" style={{color:'#CE1E36'}}>+{activeConv.customer_phone}</span></div>
+                        <div className="was-rp-row"><span className="was-rp-label">Status</span>
+                          <span className={`was-rp-pill ${activeConv.status==='open'?'was-rp-pill--open':'was-rp-pill--done'}`}>
+                            {activeConv.status==='open'?'Open':'Resolved'}
+                          </span>
+                        </div>
+                        <div className="was-rp-row"><span className="was-rp-label">Opt-out</span>
+                          <span className="was-rp-value" style={{fontSize:11,color:activeConv.opted_out?'#dc2626':'#16a34a'}}>
+                            {activeConv.opted_out?'Yes':'No'}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Tags */}
+                      {activeConv.tags && (
+                        <div className="was-rp-section">
+                          <div className="was-rp-section-title">Tags</div>
+                          <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
+                            {activeConv.tags.split(',').filter(Boolean).map(tag => (
+                              <span key={tag} className="was-rp-tag">{tag.trim()}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {/* Quick actions */}
+                      <div className="was-rp-section">
+                        <div className="was-rp-section-title">Quick Actions</div>
+                        <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                          <button className="was-btn-secondary" style={{fontSize:12,padding:'6px 10px',justifyContent:'center'}}
+                            onClick={() => openProductModal('single')}>
+                            Send Product Card
+                          </button>
+                          <button className="was-btn-secondary" style={{fontSize:12,padding:'6px 10px',justifyContent:'center'}}
+                            onClick={() => openProductModal('catalogue')}>
+                            Send Catalogue
+                          </button>
+                          {activeConv.status === 'open' && (
+                            <button className="was-btn-primary" style={{fontSize:12,padding:'6px 10px',justifyContent:'center'}}
+                              onClick={() => resolveConv(activeConv.id)}>
+                              Mark Resolved
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  {rightPanelTab === 'notes' && (
+                    <div className="was-rp-section">
+                      <div className="was-rp-section-title">Private Notes</div>
+                      <p style={{fontSize:11,color:'#9ca3af',marginBottom:8}}>Not visible to customer</p>
+                      <textarea
+                        className="was-rp-notes"
+                        placeholder="Add a note about this customer..."
+                        value={convNote}
+                        onChange={e => setConvNote(e.target.value)}
+                        rows={6}
+                      />
+                      <button className="was-btn-primary" style={{width:'100%',marginTop:8,justifyContent:'center',fontSize:12}}
+                        onClick={() => showSuccess('saved', 'Note saved')}>
+                        Save Note
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* ── LIBRARY ── */}
+        {/* â”€â”€ LIBRARY â”€â”€ */}
         {page === 'library' && (
           <div className="was-scroll">
             <div className="was-content-pad">
@@ -1318,17 +1409,17 @@ export function WhatsAppManager() {
                 </div>
                 <div style={{display:'flex',gap:8}}>
                   <button className="was-btn-secondary" onClick={seedTemplates} disabled={seedLoading}>
-                    {seedLoading ? 'Seeding…' : 'Seed Default Templates'}
+                    {seedLoading ? 'Seeding...' : 'Seed Default Templates'}
                   </button>
                   <button className="was-btn-primary" onClick={fetchTemplates} disabled={listLoading}>
-                    <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>{listLoading?'Loading…':'Refresh'}
+                    <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>{listLoading?'Loading...':'Refresh'}
                   </button>
                 </div>
               </div>
               <div className="was-lib-toolbar">
                 <div className="was-search-wrap">
                   <span className="was-search-icon">{IC.eye}</span>
-                  <input className="was-search-input" placeholder="Search…" value={tplSearch} onChange={e => setTplSearch(e.target.value)} />
+                  <input className="was-search-input" placeholder="Search..." value={tplSearch} onChange={e => setTplSearch(e.target.value)} />
                 </div>
                 <div className="was-filter-pills">
                   {['all','approved','pending','rejected'].map(f => (
@@ -1360,7 +1451,7 @@ export function WhatsAppManager() {
                           </span>
                         </div>
                         <div className="was-tpl-name">{t.name}</div>
-                        <div className="was-tpl-body">{body || '—'}</div>
+                        <div className="was-tpl-body">{body || 'â€”'}</div>
                         <div className="was-tpl-foot">
                           <span className="was-tpl-meta-item">{IC.info}{t.language || 'en'}</span>
                           <span className="was-tpl-meta-item">{IC.tag}{vars} vars</span>
@@ -1374,7 +1465,7 @@ export function WhatsAppManager() {
           </div>
         )}
 
-        {/* ── TEST ── */}
+        {/* â”€â”€ TEST â”€â”€ */}
         {page === 'test' && (
           <div className="was-scroll">
             <div className="was-content-pad">
@@ -1394,7 +1485,7 @@ export function WhatsAppManager() {
                     </div>
                     <button type="submit" className="was-test-btn" disabled={testLoading||testPhone.length<10}>
                       <span style={{width:16,height:16,display:'flex'}}>{IC.send}</span>
-                      {testLoading?'Sending…':'Send Test Message'}
+                      {testLoading?'Sending...':'Send Test Message'}
                     </button>
                   </form>
                 </div>
@@ -1405,7 +1496,7 @@ export function WhatsAppManager() {
                       <li>Sends a plain text message to the number you enter</li>
                       <li>Confirms your WhatsApp API token is valid</li>
                       <li>Confirms your Phone Number ID is configured</li>
-                      <li>Does not use any template — just a direct message</li>
+                      <li>Does not use any template â€” just a direct message</li>
                     </ul>
                   </div>
                   <div className="was-info-card was-info-card--tip">
@@ -1418,7 +1509,7 @@ export function WhatsAppManager() {
           </div>
         )}
 
-        {/* ── CANNED RESPONSES ── */}
+        {/* â”€â”€ CANNED RESPONSES â”€â”€ */}
         {page === 'canned' && (
           <div className="was-scroll">
             <div className="was-content-pad">
@@ -1460,7 +1551,7 @@ export function WhatsAppManager() {
           </div>
         )}
 
-        {/* ── BROADCAST ── */}
+        {/* â”€â”€ BROADCAST â”€â”€ */}
         {page === 'broadcast' && (
           <div className="was-scroll">
             <div className="was-content-pad">
@@ -1490,12 +1581,12 @@ export function WhatsAppManager() {
                         </div>
                         <div className="was-tpl-name">{b.name}</div>
                         <div className="was-tpl-body" style={{fontSize:12}}>
-                          Recipients: {b.total_recipients} · Sent: {b.sent_count} · Failed: {b.failed_count}
+                          Recipients: {b.total_recipients} Â· Sent: {b.sent_count} Â· Failed: {b.failed_count}
                         </div>
                         <div className="was-tpl-foot">
                           {(b.status === 'draft' || b.status === 'failed') && (
                             <button className="was-btn-primary" style={{fontSize:11,padding:'4px 12px'}} disabled={broadcastRunning === b.id} onClick={() => runBroadcast(b.id)}>
-                              {broadcastRunning === b.id ? 'Starting…' : '▶ Run'}
+                              {broadcastRunning === b.id ? 'Starting...' : 'â–¶ Run'}
                             </button>
                           )}
                           {b.completed_at && <span style={{fontSize:11,color:'#9ca3af'}}>Done {new Date(b.completed_at).toLocaleDateString('en-IN')}</span>}
@@ -1509,7 +1600,7 @@ export function WhatsAppManager() {
           </div>
         )}
 
-        {/* ── ANALYTICS ── */}
+        {/* â”€â”€ ANALYTICS â”€â”€ */}
         {page === 'analytics' && (
           <div className="was-scroll">
             <div className="was-content-pad">
@@ -1521,10 +1612,10 @@ export function WhatsAppManager() {
               {/* Stats row */}
               <div className="was-stats-grid">
                 {statsLoading ? <div style={{padding:20}}><Loader /></div> : [
-                  { label:'Messages Sent',    val: stats ? String(stats.sentMessages) : '—',      color:'#25D366', icon: IC.send },
-                  { label:'Delivery Rate',    val: stats ? `${stats.deliveryRate}%` : '—',        color:'#3b82f6', icon: IC.check },
-                  { label:'Read Rate',        val: stats ? `${stats.readRate}%` : '—',            color:'#f59e0b', icon: IC.eye },
-                  { label:'Avg Response',     val: slaStats?.avgFirstResponseMinutes ? `${slaStats.avgFirstResponseMinutes}m` : '—', color:'#8b5cf6', icon: IC.phone },
+                  { label:'Messages Sent',    val: stats ? String(stats.sentMessages) : 'â€”',      color:'#CE1E36', icon: IC.send },
+                  { label:'Delivery Rate',    val: stats ? `${stats.deliveryRate}%` : 'â€”',        color:'#3b82f6', icon: IC.check },
+                  { label:'Read Rate',        val: stats ? `${stats.readRate}%` : 'â€”',            color:'#f59e0b', icon: IC.eye },
+                  { label:'Avg Response',     val: slaStats?.avgFirstResponseMinutes ? `${slaStats.avgFirstResponseMinutes}m` : 'â€”', color:'#8b5cf6', icon: IC.phone },
                 ].map(s => (
                   <div key={s.label} className="was-stat-card">
                     <div className="was-stat-top">
@@ -1538,7 +1629,7 @@ export function WhatsAppManager() {
 
               {/* 7-day chart */}
               <div className="was-dash-card" style={{marginTop:20}}>
-                <div className="was-dash-card-head"><span className="was-dash-card-title">Messages — Last 7 Days</span></div>
+                <div className="was-dash-card-head"><span className="was-dash-card-title">Messages â€” Last 7 Days</span></div>
                 <div className="was-bar-chart">
                   {statsLoading ? <Loader /> : (() => {
                     const days = stats?.last7Days || [];
@@ -1580,11 +1671,11 @@ export function WhatsAppManager() {
         )}
       </div>
 
-      {/* ── Create Template Modal ── */}
+      {/* â”€â”€ Create Template Modal â”€â”€ */}
       <Modal isOpen={createModal} onClose={() => setCreateModal(false)} title="Submit Template to Meta" closeOnOverlayClick={false}>
         <form onSubmit={createTemplate} className="seo-form">
           <div className="modal-body">
-            <div className="was-modal-notice">Template name must be lowercase with underscores only. Approval takes 5 min – a few hours.</div>
+            <div className="was-modal-notice">Template name must be lowercase with underscores only. Approval takes 5 min â€“ a few hours.</div>
             <div className="dm-2col">
               <div className="dm-field">
                 <label className="dm-label">Template Name *</label>
@@ -1615,12 +1706,12 @@ export function WhatsAppManager() {
           </div>
           <div className="modal-footer">
             <Button variant="secondary" type="button" onClick={() => setCreateModal(false)} disabled={formLoading}>Cancel</Button>
-            <Button variant="primary" type="submit" disabled={formLoading}>{formLoading?'Submitting…':'Submit to Meta'}</Button>
+            <Button variant="primary" type="submit" disabled={formLoading}>{formLoading?'Submitting...':'Submit to Meta'}</Button>
           </div>
         </form>
       </Modal>
 
-      {/* ── Canned Response Modal ── */}
+      {/* â”€â”€ Canned Response Modal â”€â”€ */}
       <Modal isOpen={cannedModal} onClose={() => setCannedModal(false)} title={cannedEditId ? 'Edit Canned Response' : 'New Canned Response'} closeOnOverlayClick={false}>
         <form onSubmit={saveCannedResponse} className="seo-form">
           <div className="modal-body">
@@ -1646,7 +1737,7 @@ export function WhatsAppManager() {
         </form>
       </Modal>
 
-      {/* ── Broadcast Modal ── */}
+      {/* â”€â”€ Broadcast Modal â”€â”€ */}
       <Modal isOpen={broadcastModal} onClose={() => setBroadcastModal(false)} title="New Broadcast Campaign" closeOnOverlayClick={false}>
         <form onSubmit={createBroadcast} className="seo-form">
           <div className="modal-body">
@@ -1671,7 +1762,7 @@ export function WhatsAppManager() {
         </form>
       </Modal>
 
-      {/* ── Product / Catalogue Send Modal ── */}
+      {/* â”€â”€ Product / Catalogue Send Modal â”€â”€ */}
       <Modal isOpen={productModal} onClose={() => setProductModal(false)} title={sendMode === 'single' ? 'Send Product Card' : 'Send Catalogue'} closeOnOverlayClick={false}>
         <div className="modal-body">
           <p style={{ fontSize:13, color:'#6b7280', marginBottom:12 }}>
@@ -1681,7 +1772,7 @@ export function WhatsAppManager() {
           </p>
           <input
             className="dm-input"
-            placeholder="Search products…"
+            placeholder="Search products..."
             value={productSearch}
             onChange={e => setProductSearch(e.target.value)}
             style={{ marginBottom:12 }}
@@ -1693,27 +1784,27 @@ export function WhatsAppManager() {
                 ? <div style={{ textAlign:'center', color:'#9ca3af', fontSize:13, padding:20 }}>No products found</div>
                 : productList.map(p => {
                   const selected = !!selectedProducts.find(x => x.id === p.id);
-                  const price = p.ProductVariations?.[0]?.price || p.price || '—';
+                  const price = p.ProductVariations?.[0]?.price || p.price || 'â€”';
                   return (
                     <div
                       key={p.id}
                       onClick={() => toggleProduct(p)}
                       style={{
                         display:'flex', alignItems:'center', gap:10, padding:'8px 10px',
-                        borderRadius:8, cursor:'pointer', border:`1.5px solid ${selected ? '#25D366' : '#e5e7eb'}`,
-                        background: selected ? '#f0fdf4' : '#fff', transition:'all 0.15s'
+                        borderRadius:8, cursor:'pointer', border:`1.5px solid ${selected ? '#CE1E36' : '#e5e7eb'}`,
+                        background: selected ? '#fff5f5' : '#fff', transition:'all 0.15s'
                       }}
                     >
                       <div style={{
-                        width:18, height:18, borderRadius:4, border:`2px solid ${selected ? '#25D366' : '#d1d5db'}`,
-                        background: selected ? '#25D366' : 'transparent', flexShrink:0,
+                        width:18, height:18, borderRadius:4, border:`2px solid ${selected ? '#CE1E36' : '#d1d5db'}`,
+                        background: selected ? '#CE1E36' : 'transparent', flexShrink:0,
                         display:'flex', alignItems:'center', justifyContent:'center'
                       }}>
                         {selected && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:13, fontWeight:500, color:'#111827', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</div>
-                        <div style={{ fontSize:11, color:'#6b7280' }}>₹{price} · ID: {p.id}</div>
+                        <div style={{ fontSize:11, color:'#6b7280' }}>â‚¹{price} Â· ID: {p.id}</div>
                       </div>
                     </div>
                   );
@@ -1721,7 +1812,7 @@ export function WhatsAppManager() {
             }
           </div>
           {selectedProducts.length > 0 && (
-            <div style={{ marginTop:10, fontSize:12, color:'#25D366', fontWeight:500 }}>
+            <div style={{ marginTop:10, fontSize:12, color:'#CE1E36', fontWeight:500 }}>
               {selectedProducts.length} product{selectedProducts.length > 1 ? 's' : ''} selected
             </div>
           )}
@@ -1733,7 +1824,7 @@ export function WhatsAppManager() {
             disabled={!selectedProducts.length || sendingProduct}
             onClick={confirmSendProduct}
           >
-            {sendingProduct ? 'Sending…' : `Send ${sendMode === 'single' ? 'Product' : 'Catalogue'}`}
+            {sendingProduct ? 'Sending...' : `Send ${sendMode === 'single' ? 'Product' : 'Catalogue'}`}
           </button>
         </div>
       </Modal>

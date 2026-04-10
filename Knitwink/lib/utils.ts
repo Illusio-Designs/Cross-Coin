@@ -11,7 +11,7 @@ export function formatPrice(amount: number, currency = 'INR'): string {
     currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount / 100)
+  }).format(amount)
 }
 
 export function truncate(str: string, length: number): string {

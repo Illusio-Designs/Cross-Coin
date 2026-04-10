@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { Collection } from '@/types'
+import type { Category } from '@/lib/api/categories'
 
 const FALLBACK_TILES = [
   { name: "Men's", handle: 'mens', image: 'https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=800&q=80' },
@@ -11,13 +12,26 @@ const FALLBACK_TILES = [
 
 interface CollectionGridProps {
   collections?: Collection[]
+  categories?: Category[]
 }
 
-export function CollectionGrid({ collections }: CollectionGridProps) {
+export function CollectionGrid({ collections, categories = [] }: CollectionGridProps) {
+  // Prefer API categories, then collections, then fallback
   const tiles =
-    collections && collections.length > 0
-      ? collections.slice(0, 4).map((c) => ({ name: c.name, handle: c.handle, image: c.imageUrl }))
-      : FALLBACK_TILES
+    categories.length > 0
+      ? categories.slice(0, 4).map((c) => {
+          // Clean double-encoded ImageKit URLs
+          let img = c.image || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80'
+          // If URL contains another https:// inside it, extract the real URL
+          const match = img.match(/https?:\/\/ik\.imagekit\.io\/.+/)
+          if (match && img.indexOf('https://') !== img.lastIndexOf('https://')) {
+            img = img.substring(img.lastIndexOf('https://'))
+          }
+          return { name: c.name, handle: c.slug || String(c.id), image: img }
+        })
+      : collections && collections.length > 0
+        ? collections.slice(0, 4).map((c) => ({ name: c.name, handle: c.handle, image: c.imageUrl }))
+        : FALLBACK_TILES
 
   return (
     <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-4 py-10 md:px-6 md:py-14">
@@ -28,7 +42,7 @@ export function CollectionGrid({ collections }: CollectionGridProps) {
         {tiles.map((tile) => (
           <Link
             key={tile.handle}
-            href={`/collections/${tile.handle}`}
+            href={`/Products?category=${encodeURIComponent(tile.name)}`}
             className="group relative overflow-hidden rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2"
           >
             <div className="relative aspect-[3/4]">

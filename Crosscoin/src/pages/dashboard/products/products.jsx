@@ -285,7 +285,7 @@ const ProductsPage = () => {
         status: product.status,
         badge: product.badge || 'none',
         total_sold: product.total_sold || 0,
-        brandIds: product.brands?.map(b => b.id) || [], // Extract brand IDs
+        brandIds: product.brands?.map(b => Number(b.id)).filter(Boolean) || [], // Extract brand IDs as numbers
         imagesToDelete: [], // Reset deletion tracking
         variationImagesToDelete: [], // Reset deletion tracking
         images: product.images?.map(img => {

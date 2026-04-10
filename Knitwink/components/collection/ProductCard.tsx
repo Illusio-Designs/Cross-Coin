@@ -65,21 +65,19 @@ export function ProductCard({ product }: ProductCardProps) {
         <p className="truncate text-xs font-semibold uppercase tracking-wide text-brand-black">
           {product.name}
         </p>
-        {/* Active color name */}
-        <p className="mt-0.5 text-sm text-gray-600">{activeColor.name}</p>
 
         {/* Bottom row: swatch + price */}
         <div
           className="mt-3 flex items-center justify-between"
           onClick={(e) => e.preventDefault()}
         >
-          {/* Swatches */}
+          {/* Swatches — show up to 5, then +N badge */}
           <div
             role="radiogroup"
             aria-label={`Color options for ${product.name}`}
-            className="flex gap-1.5"
+            className="flex items-center gap-1.5"
           >
-            {product.colors.slice(0, 4).map((color) => (
+            {product.colors.slice(0, 5).map((color) => (
               <ColorSwatch
                 key={color.name}
                 color={color}
@@ -87,6 +85,11 @@ export function ProductCard({ product }: ProductCardProps) {
                 onSelect={setActiveColor}
               />
             ))}
+            {product.colors.length > 5 && (
+              <span className="text-[11px] font-medium text-gray-500">
+                +{product.colors.length - 5}
+              </span>
+            )}
           </div>
 
           {/* Price */}

@@ -355,6 +355,22 @@ const updateCategory = async (req, res) => {
 
         await category.update(updateData);
         
+        // Update brand assignments if provided
+        if (req.body.brandIds) {
+            try {
+                const brandIds = JSON.parse(req.body.brandIds);
+                const { CategoryBrand } = require('../model/categoryBrandModel.js');
+                // Remove existing brand assignments
+                await CategoryBrand.destroy({ where: { category_id: id } });
+                // Add new brand assignments
+                for (const brandId of brandIds) {
+                    await CategoryBrand.create({ category_id: id, brand_id: brandId, status: 'active' });
+                }
+            } catch (e) {
+                console.error('Error updating category brands:', e.message);
+            }
+        }
+        
         // Invalidate category cache (Requirement 2.2)
         await CategoryService.invalidateCache(id);
         

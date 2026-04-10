@@ -194,3 +194,62 @@
         flex: 1;
     }
 }
+
+/* ── New dropdown-style BrandAssignment ── */
+.ba-trigger {
+  display: flex; align-items: center; justify-content: space-between;
+  min-height: 40px; padding: 6px 10px 6px 8px;
+  border: 1.5px solid #e5e7eb; border-radius: 8px;
+  background: #fff; cursor: pointer; transition: border-color .15s;
+  gap: 8px;
+}
+.ba-trigger:hover, .ba-trigger--open { border-color: #CE1E36; }
+.ba-trigger--disabled { opacity: .6; cursor: not-allowed; background: #f9fafb; }
+
+.ba-selected-tags { display: flex; flex-wrap: wrap; gap: 5px; flex: 1; min-width: 0; }
+.ba-placeholder { font-size: 13px; color: #9ca3af; }
+
+.ba-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #fff5f5; border: 1px solid rgba(206,30,54,.2);
+  color: #CE1E36; border-radius: 5px; padding: 2px 6px;
+  font-size: 12px; font-weight: 500;
+}
+.ba-tag-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.ba-tag-remove {
+  background: none; border: none; cursor: pointer; color: #CE1E36;
+  font-size: 14px; line-height: 1; padding: 0; margin-left: 2px; opacity: .7;
+}
+.ba-tag-remove:hover { opacity: 1; }
+
+.ba-chevron { width: 14px; height: 14px; flex-shrink: 0; color: #9ca3af; transition: transform .15s; }
+.ba-trigger--open .ba-chevron { transform: rotate(180deg); }
+
+.ba-dropdown {
+  position: absolute; z-index: 200; left: 0; right: 0; top: calc(100% + 4px);
+  background: #fff; border: 1.5px solid #e5e7eb; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.1); max-height: 240px; overflow-y: auto;
+}
+.ba-option {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  cursor: pointer; transition: background .1s;
+}
+.ba-option:hover { background: #f9fafb; }
+.ba-option--checked { background: #fff5f5; }
+
+.ba-checkbox {
+  width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid #d1d5db;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.ba-checkbox--checked { background: #CE1E36; border-color: #CE1E36; }
+.ba-checkbox svg { width: 10px; height: 10px; }
+
+.ba-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ba-option-info { display: flex; flex-direction: column; }
+.ba-option-name { font-size: 13px; font-weight: 500; color: #111827; }
+.ba-option-slug { font-size: 11px; color: #9ca3af; }
+.ba-empty { padding: 12px; font-size: 13px; color: #9ca3af; text-align: center; }
+
+/* Make parent relative for dropdown positioning */
+.dm-field { position: relative; }

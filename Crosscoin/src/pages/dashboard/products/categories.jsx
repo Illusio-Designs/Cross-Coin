@@ -58,7 +58,7 @@ export default function Categories() {
     try {
       setLoading(true);
       const data = await categoryService.getCategoryById(id);
-      setFormData({ id: data.id, name: data.name || "", description: data.description || "", status: data.status || "active", metaKeywords: data.metaKeywords || "", image: data.image || null, brandIds: data.brands?.map(b => b.id) || [1] });
+      setFormData({ id: data.id, name: data.name || "", description: data.description || "", status: data.status || "active", metaKeywords: data.metaKeywords || "", image: data.image || null, brandIds: data.brands?.map(b => Number(b.id)).filter(Boolean) || [] });
       setIsModalOpen(true);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
@@ -89,9 +89,14 @@ export default function Categories() {
       setLoading(true);
       const fd = new FormData();
       Object.keys(formData).forEach(key => {
-        if (key === 'image' && formData[key] instanceof File) fd.append('image', formData[key]);
-        else if (key === 'brandIds') fd.append('brandIds', JSON.stringify(formData[key] || [1]));
-        else if (key !== 'id' && formData[key] !== null && formData[key] !== undefined) fd.append(key, formData[key]);
+        if (key === 'image') {
+          // Only append image if it's a new file upload — skip string URLs (existing image)
+          if (formData[key] instanceof File) fd.append('image', formData[key]);
+        } else if (key === 'brandIds') {
+          fd.append('brandIds', JSON.stringify(formData[key] || []));
+        } else if (key !== 'id' && formData[key] !== null && formData[key] !== undefined) {
+          fd.append(key, formData[key]);
+        }
       });
       if (formData.id) await categoryService.updateCategory(formData.id, fd);
       else await categoryService.createCategory(fd);
