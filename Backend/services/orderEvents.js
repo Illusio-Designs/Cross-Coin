@@ -32,6 +32,37 @@ orderEmitter.on('order.confirmed', async (order) => {
         estimatedDelivery: '3-5 working days',
       }, order.brand_id || 1).catch(e => logger.warn('[Event] WA confirm failed:', e.message));
     }
+
+    // Trigger immediate FShip sync for this order (don't wait for 2hr cron)
+    try {
+      const { Order } = require('../model/orderModel.js');
+      const { OrderItem } = require('../model/orderItemModel.js');
+      const { Product } = require('../model/productModel.js');
+      const { ProductVariation } = require('../model/productVariationModel.js');
+      const { User } = require('../model/userModel.js');
+      const { GuestUser } = require('../model/guestUserModel.js');
+
+      const fullOrder = await Order.findByPk(order.id, {
+        include: [
+          { model: OrderItem, as: 'OrderItems', include: [{ model: Product, as: 'Product' }, { model: ProductVariation, as: 'ProductVariation' }] },
+          { model: User, as: 'User', attributes: ['id', 'username', 'email'], required: false },
+          { model: GuestUser, as: 'GuestUser', attributes: ['id', 'email', 'firstName', 'lastName', 'phone'], required: false },
+          { model: ShippingAddress, as: 'ShippingAddress' },
+        ],
+      });
+
+      if (fullOrder && fullOrder.fship_sync_status !== 'synced') {
+        const orderController = require('../controller/orderController.js');
+        const syncResult = await orderController.enhancedSyncSingleOrder(fullOrder);
+        if (syncResult.success) {
+          logger.info(`[Event] FShip sync triggered for ${order.order_number}: ${syncResult.action} — AWB: ${syncResult.waybill || 'N/A'}`);
+        } else {
+          logger.warn(`[Event] FShip sync failed for ${order.order_number}: ${syncResult.error} — will retry via cron`);
+        }
+      }
+    } catch (syncErr) {
+      logger.warn(`[Event] FShip immediate sync failed for ${order.order_number}: ${syncErr.message} — will retry via cron`);
+    }
   } catch (e) { logger.error('[Event] order.confirmed error:', e.message); }
 });
 

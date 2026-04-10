@@ -231,6 +231,21 @@
         return res.status(400).json({ message: "Address must be at least 15 characters." });
       }
 
+      // Validate pincode serviceability before proceeding
+      if (shippingAddress.pincode) {
+        try {
+          const warehousePincode = await settingsHelper.getSetting(1, 'FSHIP_WAREHOUSE_PINCODE', '395006');
+          const serviceability = await fshipService.checkServiceability(warehousePincode, shippingAddress.pincode.trim());
+          if (!serviceability || (Array.isArray(serviceability) && serviceability.length === 0)) {
+            await transaction.rollback();
+            return res.status(400).json({ message: 'Sorry, delivery is not available for this pincode. Please use a different address.' });
+          }
+        } catch (svcErr) {
+          logger.warn('Pincode serviceability check failed (allowing order):', svcErr.message);
+          // Allow order to proceed if serviceability API is down — FShip sync will catch it later
+        }
+      }
+
       // ── Idempotency key dedup — DB-based (survives Redis downtime) ────────
       const idempotencyKey = req.headers['x-idempotency-key'] || req.body.idempotency_key;
       if (idempotencyKey) {
@@ -2009,8 +2024,6 @@
 
   // Enhanced sync functions with comprehensive order management
   module.exports.syncOrdersWithFShip = async (req, res) => {
-    const transaction = await sequelize.transaction();
-
     try {
       logger.debug("=== ENHANCED FSHIP SYNC PROCESS START ===");
       logger.debug("Flow: Check sync status → Create if needed → Update status → Handle COD payments");
@@ -2025,7 +2038,6 @@
         logger.debug("✅ FSHIP CONNECTION SUCCESS");
       } catch (authError) {
         logger.error("❌ FSHIP CONNECTION FAILED");
-        await transaction.rollback();
         return res.status(400).json({
           success: false,
           message: "FShip connection failed",
@@ -2080,8 +2092,9 @@
         errors_list: []
       };
 
-      // STEP 3: Process each order with enhanced sync logic
+      // STEP 3: Process each order with its OWN transaction (one failure won't roll back others)
       for (const order of ordersToSync) {
+        const orderTransaction = await sequelize.transaction();
         try {
           logger.debug(`\n🔄 Processing order: ${order.order_number} (Status: ${order.status})`);
           
@@ -2089,12 +2102,12 @@
           await order.update({
             fship_sync_status: 'syncing',
             fship_sync_attempts: sequelize.literal('fship_sync_attempts + 1')
-          });
+          }, { transaction: orderTransaction });
 
-          const syncResult = await this.enhancedSyncSingleOrder(order, transaction);
+          const syncResult = await this.enhancedSyncSingleOrder(order, orderTransaction);
           
           if (syncResult.success) {
-            await order.update({ fship_sync_status: 'synced' });
+            await order.update({ fship_sync_status: 'synced' }, { transaction: orderTransaction });
 
             if (syncResult.action === 'synced') {
               results.synced++;
@@ -2113,7 +2126,7 @@
               message: syncResult.message
             });
           } else {
-            await order.update({ fship_sync_status: 'failed' });
+            await order.update({ fship_sync_status: 'failed' }, { transaction: orderTransaction });
             results.errors++;
             results.errors_list.push({
               order_number: order.order_number,
@@ -2121,7 +2134,9 @@
             });
           }
           
+          await orderTransaction.commit();
         } catch (error) {
+          await orderTransaction.rollback();
           logger.error(`❌ Error processing order ${order.order_number}:`, error.message);
           await order.update({ fship_sync_status: 'failed' }).catch(() => {});
           results.errors++;
@@ -2147,8 +2162,6 @@
         );
       }
 
-      await transaction.commit();
-
       logger.debug("\n=== SYNC SUMMARY ===");
       logger.debug(`📦 Total: ${results.total}`);
       logger.debug(`✅ Synced: ${results.synced}`);
@@ -2164,7 +2177,6 @@
 
     } catch (error) {
       logger.error("❌ SYNC PROCESS FAILED:", error);
-      await transaction.rollback();
       return res.status(500).json({
         success: false,
         message: "Sync process failed",
@@ -2254,8 +2266,19 @@
     if (!addr.address || !addr.address.trim()) issues.push('Shipping address: address is missing');
     if (!addr.city || !addr.city.trim()) issues.push('Shipping address: city is missing');
     if (!addr.state || !addr.state.trim()) issues.push('Shipping address: state is missing');
-    if (!addr.pincode || !addr.pincode.trim()) issues.push('Shipping address: pincode is missing');
-    if (!addr.phone) issues.push('Shipping address: phone is missing');
+    if (!addr.pincode || !addr.pincode.trim()) {
+      issues.push('Shipping address: pincode is missing');
+    } else if (!/^\d{6}$/.test(addr.pincode.trim())) {
+      issues.push('Shipping address: pincode must be exactly 6 digits');
+    }
+    if (!addr.phone) {
+      issues.push('Shipping address: phone is missing');
+    } else {
+      const digits = String(addr.phone).replace(/\D/g, '').slice(-10);
+      if (!/^[6-9]\d{9}$/.test(digits)) {
+        issues.push('Shipping address: phone must be a valid 10-digit Indian mobile number');
+      }
+    }
 
     if (!order.OrderItems || order.OrderItems.length === 0) {
       issues.push('Order has no items');
@@ -2634,7 +2657,10 @@
             : customer?.username || customer?.email)
         || 'Customer';
 
-      const customerMobile = shippingAddress?.phone || customer?.phone || '9876543210';
+      const customerMobile = shippingAddress?.phone || customer?.phone;
+      if (!customerMobile) {
+        throw new Error(`Order ${order.order_number}: No phone number found for shipping`);
+      }
       const customerEmail = customer?.email || '';
 
       // Prepare products array
@@ -2649,6 +2675,9 @@
         taxRate: 0,
         productDiscount: 0
       }));
+
+      // Calculate shipment dimensions based on item quantities
+      const dims = fshipService.calculateShipmentDimensions(order.OrderItems);
 
       // Prepare FShip order data
       const fshipOrderData = {
@@ -2669,10 +2698,10 @@
         tax_Amount: 0,
         extra_Charges: parseFloat(order.shipping_fee) || 0,
         total_Amount: parseFloat(order.final_amount) || 0,
-        shipment_Weight: (order.OrderItems?.reduce((sum, item) => sum + item.quantity, 0) || 1) * 0.07, // 70g per item in kg
-        shipment_Length: 14,
-        shipment_Width: 3,
-        shipment_Height: 10,
+        shipment_Weight: dims.shipment_Weight,
+        shipment_Length: dims.shipment_Length,
+        shipment_Width: dims.shipment_Width,
+        shipment_Height: dims.shipment_Height,
         latitude: 0,
         longitude: 0,
         pick_Address_ID: parseInt(await settingsHelper.getSetting(1, 'FSHIP_DEFAULT_WAREHOUSE_ID', '227729')),
@@ -4530,3 +4559,138 @@
     }
   };
   
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // Bulk Status Refresh — fetch latest FShip status for old/synced orders
+  // POST /api/orders/fship/refresh-status
+  // Query params: ?limit=50&status=processing,booked,shipped&older_than_days=0
+  // ══════════════════════════════════════════════════════════════════════════════
+  module.exports.bulkRefreshFShipStatus = async (req, res) => {
+    try {
+      logger.debug("=== BULK FSHIP STATUS REFRESH START ===");
+
+      // STEP 1: Test FShip connection
+      const testResult = await fshipService.testConnection();
+      if (!testResult.success) {
+        return res.status(400).json({ success: false, message: 'FShip connection failed', error: testResult.message });
+      }
+
+      // STEP 2: Parse filters
+      const limit = Math.min(parseInt(req.query.limit) || 50, 300);
+      const olderThanDays = parseInt(req.query.older_than_days) || 0;
+      const statusFilter = req.query.status
+        ? req.query.status.split(',').map(s => s.trim())
+        : ['processing', 'booked', 'pickup initiated', 'manifested', 'in transit', 'shipped', 'out for delivery'];
+
+      const dateFilter = olderThanDays > 0
+        ? { [Op.lt]: new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000) }
+        : { [Op.ne]: null };
+
+      // STEP 3: Fetch orders that have a waybill and are in active statuses
+      const orders = await Order.findAll({
+        where: {
+          fship_waybill: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] },
+          status: { [Op.in]: statusFilter },
+          order_number: { [Op.notLike]: '%TEST%' },
+          createdAt: dateFilter,
+        },
+        include: [
+          { model: OrderItem, as: 'OrderItems', include: [{ model: Product, as: 'Product' }, { model: ProductVariation, as: 'ProductVariation' }] },
+          { model: User, as: 'User', attributes: ['id', 'username', 'email'], required: false },
+          { model: GuestUser, as: 'GuestUser', attributes: ['id', 'email', 'firstName', 'lastName', 'phone'], required: false },
+          { model: ShippingAddress, as: 'ShippingAddress' },
+          { model: Payment, as: 'Payments' },
+        ],
+        order: [['createdAt', 'ASC']],
+        limit,
+      });
+
+      logger.debug(`📦 Found ${orders.length} synced orders to refresh (limit: ${limit}, statuses: ${statusFilter.join(',')})`);
+
+      const results = {
+        total: orders.length,
+        updated: 0,
+        unchanged: 0,
+        validation_failed: 0,
+        errors: 0,
+        details: [],
+        validation_issues: [],
+        errors_list: [],
+      };
+
+      // STEP 4: Process each order with its own transaction, in batches of 10
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < orders.length; i += BATCH_SIZE) {
+        const batch = orders.slice(i, i + BATCH_SIZE);
+
+        const batchPromises = batch.map(async (order) => {
+          // ── Pre-refresh validation ──────────────────────────────────────
+          const issues = module.exports.validateOrderForFShip(order);
+          if (issues.length > 0) {
+            results.validation_failed++;
+            results.validation_issues.push({
+              order_number: order.order_number,
+              order_id: order.id,
+              status: order.status,
+              waybill: order.fship_waybill,
+              issues,
+            });
+            // Still attempt refresh — validation issues don't block status reads
+            logger.warn(`⚠️ Order ${order.order_number} has validation issues: ${issues.join('; ')}`);
+          }
+
+          const orderTx = await sequelize.transaction();
+          try {
+            const refreshResult = await module.exports.updateOrderStatusFromFShip(order, orderTx);
+
+            if (refreshResult.success) {
+              await orderTx.commit();
+
+              if (refreshResult.statusChanged) {
+                results.updated++;
+                results.details.push({
+                  order_number: order.order_number,
+                  order_id: order.id,
+                  previous_status: order.status,
+                  new_status: refreshResult.newStatus,
+                  waybill: order.fship_waybill,
+                  payment_status_changed: refreshResult.newStatus === 'delivered' || refreshResult.newStatus === 'rto',
+                  message: refreshResult.message,
+                });
+              } else {
+                results.unchanged++;
+              }
+            } else {
+              await orderTx.rollback();
+              results.errors++;
+              results.errors_list.push({ order_number: order.order_number, error: refreshResult.error });
+            }
+          } catch (err) {
+            await orderTx.rollback();
+            results.errors++;
+            results.errors_list.push({ order_number: order.order_number, error: err.message });
+          }
+        });
+
+        await Promise.all(batchPromises);
+
+        // Rate-limit between batches
+        if (i + BATCH_SIZE < orders.length) {
+          await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+
+      logger.debug("\n=== BULK REFRESH SUMMARY ===");
+      logger.debug(`📦 Total: ${results.total} | ✅ Updated: ${results.updated} | ➖ Unchanged: ${results.unchanged} | ⚠️ Validation issues: ${results.validation_failed} | ❌ Errors: ${results.errors}`);
+
+      return res.json({
+        success: true,
+        message: `Bulk status refresh completed: ${results.updated} updated, ${results.unchanged} unchanged, ${results.errors} errors`,
+        data: results,
+      });
+
+    } catch (error) {
+      logger.error("❌ BULK REFRESH FAILED:", error);
+      return res.status(500).json({ success: false, message: 'Bulk status refresh failed', error: error.message });
+    }
+  };
