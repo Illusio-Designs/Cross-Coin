@@ -31,7 +31,9 @@ export interface Product {
   collectionName: string
   price: number
   compareAtPrice?: number
+  sku?: string
   images: ProductImage[]
+  colorImages?: Record<string, ProductImage[]>
   variants: ProductVariant[]
   colors: ProductColor[]
   features: Feature[]

@@ -3,23 +3,26 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ColorSwatch } from './ColorSwatch'
 import { formatPrice } from '@/lib/utils'
-import type { Product, ProductColor } from '@/types'
+import type { Product } from '@/types'
+
+const MAX_DOTS = 5
 
 interface ProductCardProps {
   product: Product
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const [activeColor, setActiveColor] = useState<ProductColor>(
-    product.colors[0] ?? { name: 'Default', hex: '#f2f0eb', imageIndex: 0 }
-  )
   const [hovered, setHovered] = useState(false)
+  const [expanded, setExpanded] = useState(false)
 
-  const primaryImage = product.images[activeColor.imageIndex] ?? product.images[0]
+  const primaryImage = product.images[0]
   const hoverImage = product.images[1] ?? primaryImage
+
+  const overflow = product.colors.length - MAX_DOTS
+  const visibleColors = expanded ? product.colors : product.colors.slice(0, MAX_DOTS)
 
   return (
     <Link
@@ -28,11 +31,11 @@ export function ProductCard({ product }: ProductCardProps) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Image area */}
-      <div className="relative aspect-square overflow-hidden rounded-xl bg-gray-100 p-4">
+      {/* Image */}
+      <div className="relative aspect-square overflow-hidden rounded-xl bg-gray-100">
         <AnimatePresence initial={false}>
           <motion.div
-            key={hovered ? 'hover' : 'primary'}
+            key={hovered ? 'h' : 'p'}
             className="absolute inset-0 p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -49,59 +52,65 @@ export function ProductCard({ product }: ProductCardProps) {
           </motion.div>
         </AnimatePresence>
 
-        {/* Badge top-left */}
         {product.badge && (
           <div className="absolute left-3 top-3">
             <span className="rounded-full bg-brand-black px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-white">
-              {product.badge === 'New' ? 'New Color' : product.badge}
+              {product.badge}
             </span>
           </div>
         )}
       </div>
 
-      {/* Info row */}
+      {/* Info */}
       <div className="mt-3 px-1">
-        {/* Product name — uppercase bold */}
         <p className="truncate text-xs font-semibold uppercase tracking-wide text-brand-black">
           {product.name}
         </p>
 
-        {/* Bottom row: swatch + price */}
+        {/* Dots + price row */}
         <div
-          className="mt-3 flex items-center justify-between"
+          className="mt-2 flex items-start justify-between gap-2"
           onClick={(e) => e.preventDefault()}
         >
-          {/* Swatches — show up to 5, then +N badge */}
-          <div
-            role="radiogroup"
-            aria-label={`Color options for ${product.name}`}
-            className="flex items-center gap-1.5"
-          >
-            {product.colors.slice(0, 5).map((color) => (
-              <ColorSwatch
+          {/* Dots — wrap inline, +N continues in same flow */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {visibleColors.map((color) => (
+              <span
                 key={color.name}
-                color={color}
-                active={activeColor.name === color.name}
-                onSelect={setActiveColor}
+                title={color.name}
+                className="h-4 w-4 shrink-0 rounded-full border border-gray-300"
+                style={{ backgroundColor: color.hex }}
               />
             ))}
-            {product.colors.length > 5 && (
-              <span className="text-[11px] font-medium text-gray-500">
-                +{product.colors.length - 5}
-              </span>
+            {!expanded && overflow > 0 && (
+              <button
+                aria-label={`Show ${overflow} more colors`}
+                onClick={(e) => { e.preventDefault(); setExpanded(true) }}
+                className="text-[11px] font-medium text-gray-500 hover:text-brand-black transition-colors leading-none"
+              >
+                +{overflow}
+              </button>
             )}
           </div>
 
-          {/* Price */}
-          <div className="flex items-center gap-1.5">
+          {/* Price — anchored to the right, never wraps */}
+          <div className="flex shrink-0 items-center gap-1.5">
             {product.compareAtPrice && (
-              <p className="text-xs text-gray-400 line-through">
-                {formatPrice(product.compareAtPrice)}
-              </p>
+              <p className="text-xs text-gray-400 line-through">{formatPrice(product.compareAtPrice)}</p>
             )}
             <p className="text-sm font-medium text-brand-black">{formatPrice(product.price)}</p>
           </div>
         </div>
+
+        {/* Add to Bag */}
+        <button
+          aria-label="Add to bag"
+          onClick={(e) => e.preventDefault()}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 py-2 text-xs font-medium text-brand-black transition-colors duration-150 hover:border-brand-black hover:bg-brand-black hover:text-white"
+        >
+          <ShoppingBag size={13} />
+          Add to Bag
+        </button>
       </div>
     </Link>
   )

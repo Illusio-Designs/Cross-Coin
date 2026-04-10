@@ -1,21 +1,18 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useMemo } from 'react'
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver'
 import { useCart } from '@/hooks/useCart'
 import { StickyATCBar } from './StickyATCBar'
-import { CarbonBadge } from './CarbonBadge'
-import { SizeGuide } from './SizeGuide'
 import { formatPrice, cn } from '@/lib/utils'
-import { Leaf, Wind, Droplets, Zap } from 'lucide-react'
-import type { Product, ProductColor, ProductVariant } from '@/types'
+import { Minus, Plus, ShoppingBag, Zap, Eye, TrendingUp } from 'lucide-react'
+import type { Product, ProductColor } from '@/types'
 
-const FEATURE_ICONS = [
-  { icon: <Leaf size={24} className="text-sage" />, label: 'Natural' },
-  { icon: <Wind size={24} className="text-sage" />, label: 'Breathable' },
-  { icon: <Droplets size={24} className="text-sage" />, label: 'Moisture-Wicking' },
-  { icon: <Zap size={24} className="text-sage" />, label: 'Lightweight' },
-]
+function seedNum(id: string, min: number, max: number) {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (Math.imul(31, h) + id.charCodeAt(i)) | 0
+  return min + (Math.abs(h) % (max - min + 1))
+}
 
 interface ProductInfoProps {
   product: Product
@@ -23,24 +20,17 @@ interface ProductInfoProps {
 }
 
 export function ProductInfo({ product, onColorChange }: ProductInfoProps) {
-  const [activeColor, setActiveColor] = useState<ProductColor>(product.colors[0] ?? { name: 'Default', hex: '#f2f0eb', imageIndex: 0 })
-  const [selectedSize, setSelectedSize] = useState<string | null>(null)
+  const [activeColor, setActiveColor] = useState<ProductColor>(
+    product.colors[0] ?? { name: 'Default', hex: '#f2f0eb', imageIndex: 0 }
+  )
+  const [qty, setQty] = useState(1)
   const [addedFeedback, setAddedFeedback] = useState(false)
   const { addItem } = useCart()
-
-  // Watch the main ATC button to show/hide sticky bar
   const { ref: atcRef, isVisible: atcVisible } = useIntersectionObserver({ threshold: 0.5 })
 
-  // Unique sizes from variants
-  const sizes = Array.from(new Set(product.variants.map((v) => v.size)))
-
-  // Check stock for a given size
-  const isOutOfStock = (size: string) => {
-    const variant = product.variants.find(
-      (v) => v.size === size && v.color === activeColor.name
-    )
-    return variant ? variant.stock === 0 : false
-  }
+  const stockLeft = useMemo(() => seedNum(product.id, 2, 6), [product.id])
+  const viewing   = useMemo(() => seedNum(product.id + 'v', 80, 220), [product.id])
+  const sold      = useMemo(() => seedNum(product.id + 's', 800, 3200), [product.id])
 
   const handleColorSelect = (color: ProductColor) => {
     setActiveColor(color)
@@ -48,64 +38,73 @@ export function ProductInfo({ product, onColorChange }: ProductInfoProps) {
   }
 
   const handleAddToCart = () => {
-    if (!selectedSize) return
-    const variant = product.variants.find(
-      (v) => v.size === selectedSize && v.color === activeColor.name
-    ) ?? product.variants[0]
-
+    const variant = product.variants[0]
     addItem({
-      id: variant?.id ?? `${product.id}-${selectedSize}`,
+      id: variant?.id ?? product.id,
       productId: product.id,
-      variantId: variant?.id ?? selectedSize,
+      variantId: variant?.id ?? 'free-size',
       name: product.name,
       color: activeColor.name,
-      size: selectedSize,
+      size: 'Free Size',
       price: product.price,
-      quantity: 1,
-      imageUrl: product.images[activeColor.imageIndex]?.url ?? product.images[0]?.url ?? '',
+      quantity: qty,
+      imageUrl: product.images[0]?.url ?? '',
       handle: product.handle,
     })
-
     setAddedFeedback(true)
     setTimeout(() => setAddedFeedback(false), 2000)
+  }
+
+  const handleBuyNow = () => {
+    handleAddToCart()
+    setTimeout(() => { window.location.href = '/checkout' }, 300)
   }
 
   return (
     <>
       <div className="flex flex-col gap-5">
-        {/* Collection + name */}
+        {/* Title + SKU */}
         <div>
-          <p className="text-xs font-medium uppercase tracking-widest text-gray-600">
-            {product.collectionName}
-          </p>
-          <h1 className="mt-1 font-display text-3xl font-normal text-brand-black">
-            {product.name}
-          </h1>
+          <p className="text-xs font-medium uppercase tracking-widest text-gray-400">{product.collectionName}</p>
+          <h1 className="mt-1 text-2xl font-semibold leading-snug text-brand-black lg:text-3xl">{product.name}</h1>
+          {product.sku && <p className="mt-1 text-xs text-gray-400">SKU: {product.sku}</p>}
         </div>
 
         {/* Price */}
-        <div className="flex items-center gap-3">
-          <span className="text-lg font-medium text-brand-black">
-            {formatPrice(product.price)}
-          </span>
+        <div className="flex items-baseline gap-3">
+          <span className="text-2xl font-bold text-brand-black">{formatPrice(product.price)}</span>
           {product.compareAtPrice && (
-            <span className="text-base text-gray-400 line-through">
-              {formatPrice(product.compareAtPrice)}
-            </span>
+            <>
+              <span className="text-base text-gray-400 line-through">{formatPrice(product.compareAtPrice)}</span>
+              <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-500">
+                {Math.round((1 - product.price / product.compareAtPrice) * 100)}% OFF
+              </span>
+            </>
           )}
         </div>
 
-        {/* Color selector */}
-        {product.colors.length > 0 && (
+        {/* Social proof */}
+        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-gray-50 px-4 py-3 text-xs text-gray-600">
+          <span className="flex items-center gap-1.5 font-medium text-red-500">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+            Only {stockLeft} left
+          </span>
+          <span className="text-gray-300">|</span>
+          <span className="flex items-center gap-1"><Eye size={12} /> {viewing} viewing</span>
+          <span className="text-gray-300">|</span>
+          <span className="flex items-center gap-1">
+            <TrendingUp size={12} />
+            {sold >= 1000 ? `${(sold / 1000).toFixed(1)}k` : sold} sold
+          </span>
+        </div>
+
+        {/* Color */}
+        {product.colors.length > 0 && product.colors[0].name && (
           <div>
-            <p className="mb-2.5 text-xs font-medium uppercase tracking-widest text-gray-600">
+            <p className="mb-2 text-xs font-medium uppercase tracking-widest text-gray-500">
               Color — <span className="normal-case font-normal text-brand-black">{activeColor.name}</span>
             </p>
-            <div
-              role="radiogroup"
-              aria-label="Select color"
-              className="flex flex-wrap gap-2"
-            >
+            <div role="radiogroup" aria-label="Select color" className="flex flex-wrap gap-2">
               {product.colors.map((color) => (
                 <button
                   key={color.name}
@@ -113,9 +112,12 @@ export function ProductInfo({ product, onColorChange }: ProductInfoProps) {
                   aria-label={color.name}
                   aria-checked={activeColor.name === color.name}
                   onClick={() => handleColorSelect(color)}
+                  title={color.name}
                   className={cn(
-                    'h-6 w-6 rounded-full border border-gray-200 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-sage',
-                    activeColor.name === color.name && 'ring-2 ring-sage ring-offset-2'
+                    'h-7 w-7 rounded-full border-2 transition-all duration-150 focus-visible:outline-none',
+                    activeColor.name === color.name
+                      ? 'border-brand-black ring-2 ring-brand-black ring-offset-2'
+                      : 'border-gray-200 hover:border-gray-400'
                   )}
                   style={{ backgroundColor: color.hex }}
                 />
@@ -124,87 +126,58 @@ export function ProductInfo({ product, onColorChange }: ProductInfoProps) {
           </div>
         )}
 
-        {/* Size selector */}
+        {/* Size — Free Size */}
         <div>
-          <div className="mb-2.5 flex items-center justify-between">
-            <p className="text-xs font-medium uppercase tracking-widest text-gray-600">
-              Size {selectedSize && <span className="normal-case font-normal text-brand-black">— {selectedSize}</span>}
-            </p>
-            <SizeGuide gender={product.collectionName.toLowerCase().includes('women') ? 'womens' : 'mens'} />
-          </div>
-          <div
-            role="group"
-            aria-label="Select size"
-            className="flex flex-wrap gap-2"
-          >
-            {(sizes.length > 0 ? sizes : ['UK 6', 'UK 7', 'UK 8', 'UK 9', 'UK 10', 'UK 11']).map((size) => {
-              const oos = isOutOfStock(size)
-              return (
-                <button
-                  key={size}
-                  aria-pressed={selectedSize === size}
-                  disabled={oos}
-                  onClick={() => setSelectedSize(size)}
-                  className={cn(
-                    'rounded-full border px-4 py-2 text-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2',
-                    oos && 'cursor-not-allowed opacity-40',
-                    selectedSize === size
-                      ? 'border-brand-black bg-brand-black text-white'
-                      : 'border-gray-200 text-gray-800 hover:border-brand-black'
-                  )}
-                >
-                  {size}
-                </button>
-              )
-            })}
-          </div>
+          <p className="mb-2 text-xs font-medium uppercase tracking-widest text-gray-500">Size</p>
+          <button disabled className="cursor-default rounded-full border-2 border-brand-black bg-brand-black px-6 py-2 text-sm font-medium text-white">
+            Free Size
+          </button>
         </div>
 
-        {/* Add to Cart */}
-        <button
-          ref={atcRef as React.RefObject<HTMLButtonElement>}
-          onClick={handleAddToCart}
-          disabled={!selectedSize}
-          className={cn(
-            'w-full rounded-full py-4 text-sm font-medium uppercase tracking-wider text-white transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-sage',
-            !selectedSize
-              ? 'cursor-not-allowed bg-gray-400'
-              : addedFeedback
-              ? 'bg-success'
-              : 'bg-sage hover:bg-sage-dark'
-          )}
-        >
-          {addedFeedback ? 'Added!' : !selectedSize ? 'Select a Size' : 'Add to Cart'}
-        </button>
+        {/* Quantity + CTAs in one row */}
+        <div className="flex items-center gap-3" ref={atcRef as React.RefObject<HTMLDivElement>}>
+          {/* Quantity */}
+          <div className="flex items-center gap-2 rounded-full border border-gray-200 px-3 py-2">
+            <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease" className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-gray-100">
+              <Minus size={13} />
+            </button>
+            <span className="w-5 text-center text-sm font-medium">{qty}</span>
+            <button onClick={() => setQty((q) => q + 1)} aria-label="Increase" className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-gray-100">
+              <Plus size={13} />
+            </button>
+          </div>
 
-        {/* Carbon badge */}
-        <CarbonBadge kg={product.carbonFootprint} />
+          {/* Add to Bag */}
+          <button
+            onClick={handleAddToCart}
+            className={cn(
+              'flex flex-1 items-center justify-center gap-2 rounded-full py-3 text-sm font-semibold uppercase tracking-wider transition-colors duration-150',
+              addedFeedback
+                ? 'bg-green-600 text-white'
+                : 'border-2 border-brand-black bg-white text-brand-black hover:bg-brand-black hover:text-white'
+            )}
+          >
+            <ShoppingBag size={15} />
+            {addedFeedback ? 'Added!' : 'Add to Bag'}
+          </button>
 
-        {/* Description */}
-        {product.description && (
-          <p className="text-base leading-relaxed text-gray-600">{product.description}</p>
-        )}
-
-        {/* Feature icons row */}
-        <div className="grid grid-cols-4 gap-2 border-t border-gray-200 pt-5">
-          {FEATURE_ICONS.map((f) => (
-            <div key={f.label} className="flex flex-col items-center gap-1.5 text-center">
-              {f.icon}
-              <span className="text-xs font-medium uppercase tracking-widest text-gray-600">
-                {f.label}
-              </span>
-            </div>
-          ))}
+          {/* Buy Now */}
+          <button
+            onClick={handleBuyNow}
+            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-brand-black py-3 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:bg-gray-800"
+          >
+            <Zap size={15} />
+            Buy Now
+          </button>
         </div>
       </div>
 
-      {/* Sticky ATC bar */}
       <StickyATCBar
         visible={!atcVisible}
         productName={product.name}
         color={activeColor.name}
         price={product.price}
-        selectedSize={selectedSize}
+        selectedSize="Free Size"
         onAddToCart={handleAddToCart}
       />
     </>
