@@ -2235,6 +2235,32 @@
     }
   };
 
+  // Validate order data before FShip sync — returns array of issues
+  module.exports.validateOrderForFShip = (order) => {
+    const issues = [];
+    const addr = order.ShippingAddress;
+
+    if (!addr) {
+      issues.push('Shipping address is missing');
+      return issues; // no point checking further
+    }
+    if (!addr.full_name || !addr.full_name.trim()) issues.push('Shipping address: full name is missing');
+    if (!addr.address || !addr.address.trim()) issues.push('Shipping address: address is missing');
+    if (!addr.city || !addr.city.trim()) issues.push('Shipping address: city is missing');
+    if (!addr.state || !addr.state.trim()) issues.push('Shipping address: state is missing');
+    if (!addr.pincode || !addr.pincode.trim()) issues.push('Shipping address: pincode is missing');
+    if (!addr.phone) issues.push('Shipping address: phone is missing');
+
+    if (!order.OrderItems || order.OrderItems.length === 0) {
+      issues.push('Order has no items');
+    }
+
+    const customer = order.User || order.GuestUser;
+    if (!customer) issues.push('No customer (user or guest) linked to order');
+
+    return issues;
+  };
+
   // Create order in FShip
   module.exports.createOrderInFShip = async (order, transaction) => {
     try {
@@ -2253,6 +2279,26 @@
           route_code: order.fship_route_code,
           already_synced: true
         };
+      }
+
+      // Validate order data before sending to FShip
+      const validationIssues = this.validateOrderForFShip(order);
+      if (validationIssues.length > 0) {
+        const errorMsg = validationIssues.join('; ');
+        logger.error(`❌ Order ${order.order_number} failed FShip validation: ${errorMsg}`);
+        await order.update({
+          fship_sync_status: 'failed',
+          fship_sync_error: errorMsg,
+        }, { transaction });
+        return {
+          success: false,
+          error: errorMsg
+        };
+      }
+
+      // Clear any previous sync error on retry
+      if (order.fship_sync_error) {
+        await order.update({ fship_sync_error: null }, { transaction });
       }
 
       // Prepare order data for FShip
@@ -2573,13 +2619,16 @@
     try {
       // Get customer details
       const customer = order.User || order.GuestUser;
-      const customerName = customer 
-        ? (customer.firstName && customer.lastName 
-            ? `${customer.firstName} ${customer.lastName}` 
-            : customer.username || customer.email)
-        : 'Customer';
+      const shippingAddress = order.ShippingAddress;
 
-      const customerMobile = customer?.phone || order.ShippingAddress?.phone || '9876543210';
+      // Use shipping address full_name first, then fall back to customer info
+      const customerName = shippingAddress?.full_name
+        || (customer?.firstName && customer?.lastName
+            ? `${customer.firstName} ${customer.lastName}`
+            : customer?.username || customer?.email)
+        || 'Customer';
+
+      const customerMobile = shippingAddress?.phone || customer?.phone || '9876543210';
       const customerEmail = customer?.email || '';
 
       // Prepare products array
@@ -2601,11 +2650,12 @@
         customer_Name: customerName,
         customer_Mobile: customerMobile,
         customer_Emailid: customerEmail,
-        customer_Address: order.ShippingAddress?.address_line_1 || 'Address not provided',
-        landMark: order.ShippingAddress?.address_line_2 || '',
+        customer_Address: shippingAddress?.address || '',
+        landMark: '',
         customer_Address_Type: 'Home',
-        customer_PinCode: order.ShippingAddress?.postal_code || '400001',
-        customer_City: order.ShippingAddress?.city || 'Mumbai',
+        customer_PinCode: shippingAddress?.pincode || '',
+        customer_City: shippingAddress?.city || '',
+        customer_State: shippingAddress?.state || '',
         payment_Mode: order.payment_type === 'cod' ? 1 : 2, // 1=COD, 2=PREPAID
         express_Type: 'surface',
         is_Ndd: 0,

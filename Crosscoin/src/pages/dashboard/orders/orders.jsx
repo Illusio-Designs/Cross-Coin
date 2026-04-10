@@ -355,6 +355,15 @@ const Orders = () => {
                         </span>
                     </span>
                 )
+                : row.fship_sync_error ? (
+                    <span className="sync-tag sync-tag--error" title={row.fship_sync_error}>
+                        <span className="sync-tag-dot" />
+                        <span className="sync-tag-text">
+                            Sync Failed
+                            <small className="sync-tag-error">{row.fship_sync_error.length > 40 ? row.fship_sync_error.slice(0, 40) + '…' : row.fship_sync_error}</small>
+                        </span>
+                    </span>
+                )
                 : (
                     <span className="sync-tag sync-tag--unsynced">
                         <span className="sync-tag-dot" />
@@ -777,6 +786,21 @@ const Orders = () => {
                                             </div>
                                         )}
                                     </div>
+                                </div>
+                            )}
+
+                            {/* FShip Sync Error */}
+                            {selectedOrder.fship_sync_error && (
+                                <div className="odm-sync-error">
+                                    <div className="odm-sync-error-title">
+                                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M10.29 3.86l-8.6 14.86A1 1 0 002.56 20h18.88a1 1 0 00.87-1.28l-8.6-14.86a1 1 0 00-1.72 0z"/></svg>
+                                        FShip Sync Issues
+                                    </div>
+                                    <ul className="odm-sync-error-list">
+                                        {selectedOrder.fship_sync_error.split('; ').map((issue, i) => (
+                                            <li key={i}>{issue}</li>
+                                        ))}
+                                    </ul>
                                 </div>
                             )}
                         </div>
