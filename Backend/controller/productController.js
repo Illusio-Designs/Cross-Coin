@@ -1401,6 +1401,7 @@ module.exports.searchProducts = async (req, res) => {
         : `No products found matching "${query}"`,
     });
   } catch (error) {
+    const { logger } = require('../config/logging.js');
     logger.error("Error searching products:", error);
     res.status(500).json({ success: false, message: "Failed to search products", error: error.message });
   }
