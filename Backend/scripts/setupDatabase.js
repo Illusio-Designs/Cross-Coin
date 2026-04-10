@@ -1125,6 +1125,10 @@ const setupDatabase = async () => {
     // Create blog tables
     console.log("\nCreating blog tables...");
     await createBlogTables();
+
+    // Add COD address confirmation columns
+    console.log("\nAdding COD address confirmation columns to orders table...");
+    await addCodAddressConfirmedColumns();
     
     return true;
   } catch (error) {
@@ -1930,6 +1934,55 @@ const createBlogTables = async () => {
     console.log('✓ Blog tables created successfully');
   } catch (error) {
     console.log('⚠️ Blog tables creation skipped (tables may already exist):', error.message);
+  }
+};
+
+// Add COD address confirmation columns to orders table
+const addCodAddressConfirmedColumns = async () => {
+  try {
+    console.log('Checking if cod_address_confirmed columns exist in orders table...');
+
+    const [col1] = await sequelize.query(`
+      SELECT COUNT(*) as count
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_SCHEMA = DATABASE() 
+      AND TABLE_NAME = 'orders' 
+      AND COLUMN_NAME = 'cod_address_confirmed'
+    `);
+
+    if (col1[0].count === 0) {
+      await sequelize.query(`
+        ALTER TABLE orders 
+        ADD COLUMN cod_address_confirmed TINYINT(1) NULL DEFAULT NULL 
+        COMMENT 'COD address confirmation via WhatsApp: null=not sent, 0=sent/pending, 1=confirmed by customer'
+        AFTER idempotency_key
+      `);
+      console.log('✓ cod_address_confirmed column added');
+    } else {
+      console.log('✓ cod_address_confirmed column already exists');
+    }
+
+    const [col2] = await sequelize.query(`
+      SELECT COUNT(*) as count
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_SCHEMA = DATABASE() 
+      AND TABLE_NAME = 'orders' 
+      AND COLUMN_NAME = 'cod_address_confirmed_at'
+    `);
+
+    if (col2[0].count === 0) {
+      await sequelize.query(`
+        ALTER TABLE orders 
+        ADD COLUMN cod_address_confirmed_at DATETIME NULL 
+        COMMENT 'Timestamp when customer confirmed address via WhatsApp'
+        AFTER cod_address_confirmed
+      `);
+      console.log('✓ cod_address_confirmed_at column added');
+    } else {
+      console.log('✓ cod_address_confirmed_at column already exists');
+    }
+  } catch (error) {
+    console.log('⚠️ Error adding COD address confirmed columns:', error.message);
   }
 };
 

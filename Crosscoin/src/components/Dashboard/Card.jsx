@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Loader from '../common/Loader';
 import DonutChart from '../common/DonutChart';
 import { useDashboardStats } from '../../hooks/queries/useDashboard';
@@ -53,8 +53,21 @@ function SectionTitle({ icon, children }) {
 }
 
 function CardGrid() {
-  const { data: stats, isLoading: loading, error: queryError } = useDashboardStats();
+  const [dateFilter, setDateFilter] = useState({});
+  const { data: stats, isLoading: loading, error: queryError } = useDashboardStats(dateFilter);
   const error = queryError ? 'Failed to load dashboard statistics' : null;
+
+  const handleDateChange = (field, value) => {
+    setDateFilter(prev => {
+      const next = { ...prev, [field]: value || undefined };
+      if (!next.start_date) delete next.start_date;
+      if (!next.end_date) delete next.end_date;
+      return next;
+    });
+  };
+
+  const clearDateFilter = () => setDateFilter({});
+  const hasDateFilter = !!(dateFilter.start_date || dateFilter.end_date);
 
   if (loading) return (
     <div className="dashboard-sections">
@@ -81,6 +94,17 @@ function CardGrid() {
   return (
     <div className="dashboard-sections">
 
+      {/* ── Date Filter ── */}
+      <div className="dc-date-filter" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 4px', marginBottom: 16, flexWrap: 'wrap' }}>
+        <label style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>Filter by date:</label>
+        <input type="date" value={dateFilter.start_date || ''} onChange={e => handleDateChange('start_date', e.target.value)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }} />
+        <span style={{ color: '#9ca3af' }}>to</span>
+        <input type="date" value={dateFilter.end_date || ''} onChange={e => handleDateChange('end_date', e.target.value)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }} />
+        {hasDateFilter && (
+          <button onClick={clearDateFilter} style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #d1d5db', background: '#f3f4f6', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>Clear</button>
+        )}
+      </div>
+
       {/* ── Hero Revenue Card ── */}
       <div className="dc-hero-card">
         <div className="dc-hero-bg-orb dc-hero-orb1" aria-hidden="true" />
@@ -92,7 +116,7 @@ function CardGrid() {
             <div className="dc-hero-amount">
               ₹{stats.revenue.total.toLocaleString('en-IN', { minimumFractionDigits:2, maximumFractionDigits:2 })}
             </div>
-            <span className="dc-hero-sub">All time earnings</span>
+            <span className="dc-hero-sub">{hasDateFilter ? 'Filtered period' : 'All time'} — all orders</span>
           </div>
           <div className="dc-hero-badge">
             <span className="dc-hero-badge-icon">{IC.trend}</span>
@@ -100,6 +124,21 @@ function CardGrid() {
           </div>
         </div>
         <div className="dc-hero-pills">
+          <div className="dc-hero-pill">
+            <span className="dc-hero-pill-label">Earned</span>
+            <span className="dc-hero-pill-value" style={{ color: '#059669' }}>₹{(stats.revenue.earned || 0).toLocaleString('en-IN', { minimumFractionDigits:2, maximumFractionDigits:2 })}</span>
+          </div>
+          <div className="dc-hero-pill-sep" />
+          <div className="dc-hero-pill">
+            <span className="dc-hero-pill-label">Active</span>
+            <span className="dc-hero-pill-value" style={{ color: '#2563eb' }}>₹{(stats.revenue.active || 0).toLocaleString('en-IN', { minimumFractionDigits:2, maximumFractionDigits:2 })}</span>
+          </div>
+          <div className="dc-hero-pill-sep" />
+          <div className="dc-hero-pill">
+            <span className="dc-hero-pill-label">Lost</span>
+            <span className="dc-hero-pill-value" style={{ color: '#dc2626' }}>₹{(stats.revenue.lost || 0).toLocaleString('en-IN', { minimumFractionDigits:2, maximumFractionDigits:2 })}</span>
+          </div>
+          <div className="dc-hero-pill-sep" />
           <div className="dc-hero-pill">
             <span className="dc-hero-pill-label">Monthly</span>
             <span className="dc-hero-pill-value">₹{stats.revenue.monthly.toLocaleString('en-IN', { minimumFractionDigits:2, maximumFractionDigits:2 })}</span>
