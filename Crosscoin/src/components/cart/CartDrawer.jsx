@@ -16,6 +16,7 @@ import {
   initiateCheckout,
   initiateGuestCheckout,
   retryCheckout,
+  verifyCheckoutPhoneOtp,
 } from '../../services/publicApi';
 import {
   showOrderPlacedSuccessToast,
@@ -778,11 +779,22 @@ const CartDrawer = ({ isOpen, onClose }) => {
     window.verifyOtp(
       otpCode,
       async (data) => {
-        setPhoneVerifiedForCod(true);
-        setShowOtpModal(false);
-        setOtpDigits(['', '', '', '']);
-        setOtpHint('');
-        await placeCodOrder();
+        // MSG91 widget verified — data is the access token
+        const accessToken = typeof data === 'string' ? data : (data?.message || data?.token || JSON.stringify(data));
+        const phone = getDeliveryPhone();
+        try {
+          // Verify access token on backend for server-side validation
+          await verifyCheckoutPhoneOtp(phone, accessToken);
+          setPhoneVerifiedForCod(true);
+          setShowOtpModal(false);
+          setOtpDigits(['', '', '', '']);
+          setOtpHint('');
+          await placeCodOrder();
+        } catch (err) {
+          const msg = typeof err === 'string' ? err : (err?.message || 'Server verification failed.');
+          showOrderPlacedErrorToast(msg);
+          setIsProcessing(false);
+        }
       },
       (error) => {
         const msg = typeof error === 'string' ? error : (error?.message || 'Verification failed.');

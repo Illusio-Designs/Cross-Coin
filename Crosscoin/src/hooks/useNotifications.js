@@ -58,6 +58,10 @@ export function useNotifications() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      if (res.status === 401) {
+        clearInterval(timerRef.current);
+        return;
+      }
       if (!res.ok) return;
       const data = await res.json();
 
