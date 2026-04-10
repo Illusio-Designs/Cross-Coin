@@ -117,6 +117,66 @@ exports.receiveWebhook = async (req, res) => {
           notificationService.emitNewWhatsApp(phone, displayText);
 
           logger.info(`WhatsApp inbound [${phone}] [${msgType}]: ${displayText}`);
+
+          // ── COD Address Confirmation — auto-detect "YES" replies ──
+          if (msgType === 'text' && msgBody) {
+            const normalised = msgBody.trim().toLowerCase();
+            const confirmKeywords = ['yes', 'confirm', 'confirmed', 'haan', 'ha', 'ok', 'correct', 'sahi hai', 'theek hai', 'right'];
+            const isConfirmation = confirmKeywords.includes(normalised);
+
+            if (isConfirmation) {
+              try {
+                const { Order } = require('../model/orderModel.js');
+                const { ShippingAddress } = require('../model/shippingAddressModel.js');
+                const { Op } = require('sequelize');
+
+                // Find the customer's latest COD order that's awaiting address confirmation
+                // Match by phone number (last 10 digits)
+                const phoneDigits = phone.replace(/\D/g, '').slice(-10);
+                const pendingOrder = await Order.findOne({
+                  where: {
+                    status: 'awaiting_confirmation',
+                    payment_type: 'cod',
+                    cod_address_confirmed: false,
+                  },
+                  include: [{
+                    model: ShippingAddress,
+                    as: 'ShippingAddress',
+                    where: {
+                      phone: { [Op.like]: `%${phoneDigits}` },
+                    },
+                    required: true,
+                  }],
+                  order: [['created_at', 'DESC']],
+                });
+
+                if (pendingOrder) {
+                  await pendingOrder.update({
+                    cod_address_confirmed: true,
+                    cod_address_confirmed_at: new Date(),
+                  });
+
+                  // Send confirmation reply to customer
+                  const whatsappService = require('../services/whatsappService.js');
+                  await whatsappService.sendTextMessage(
+                    phone,
+                    `✅ Thank you! Your address for order *#${pendingOrder.order_number}* has been confirmed.\n\nWe'll process and ship it shortly. You'll receive a tracking update once it's on the way!`,
+                    brandId
+                  );
+
+                  // Notify admin via SSE
+                  notificationService.emitNewOrder({
+                    ...pendingOrder.toJSON(),
+                    _event: 'cod_address_confirmed',
+                  });
+
+                  logger.info(`[WhatsApp] COD address confirmed for order ${pendingOrder.order_number} by ${phone}`);
+                }
+              } catch (confirmErr) {
+                logger.error('[WhatsApp] COD address confirmation error:', confirmErr.message);
+              }
+            }
+          }
         }
 
         // ── Status updates (sent → delivered → read) ──

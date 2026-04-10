@@ -1318,9 +1318,9 @@ export const policyService = {
 
 // Dashboard Services
 export const dashboardService = {
-  getDashboardStats: async () => {
+  getDashboardStats: async (params = {}) => {
     try {
-      const response = await adminApi.get("/api/dashboard/stats");
+      const response = await adminApi.get("/api/dashboard/stats", { params });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

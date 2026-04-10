@@ -636,19 +636,27 @@
           const whatsappService = require('../services/whatsappService.js');
           const addr = await ShippingAddress.findByPk(shipping_address_id);
           if (addr && addr.phone) {
-            await whatsappService.sendOrderConfirmation(addr.phone, {
-              orderNumber: createdOrder.order_number,
-              itemCount: validatedItems.length,
-              total: parseFloat(createdOrder.final_amount).toFixed(2),
-              estimatedDelivery: '3-5 working days'
-            }, createdOrder.brand_id || 1);
-            // Extra: COD confirmation with address summary
             if (payment_type === 'cod') {
-              const addrSummary = `${addr.city}, ${addr.state} - ${addr.pincode}`;
+              // COD: send address confirmation request (customer must reply YES)
+              const fullAddress = [addr.full_name, addr.address, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
               await whatsappService.sendCodConfirmation(addr.phone, {
                 orderNumber: createdOrder.order_number,
                 amount: parseFloat(createdOrder.final_amount).toFixed(2),
-                address: addrSummary
+                fullAddress,
+              }, createdOrder.brand_id || 1);
+              // Mark order as awaiting address confirmation
+              await Order.update(
+                { cod_address_confirmed: false },
+                { where: { id: createdOrder.id } }
+              );
+              logger.debug(`createOrder: COD address confirmation WhatsApp sent for ${createdOrder.order_number}`);
+            } else {
+              // Prepaid: send standard confirmation
+              await whatsappService.sendOrderConfirmation(addr.phone, {
+                orderNumber: createdOrder.order_number,
+                itemCount: validatedItems.length,
+                total: parseFloat(createdOrder.final_amount).toFixed(2),
+                estimatedDelivery: '3-5 working days'
               }, createdOrder.brand_id || 1);
             }
           }
@@ -1853,46 +1861,88 @@
   // Get order statistics
   module.exports.getOrderStats = async (req, res) => {
     try {
-      const totalOrders = await Order.count();
+      // Date filter support
+      const { start_date, end_date } = req.query;
+      const dateWhere = {};
+      if (start_date) dateWhere[Op.gte] = new Date(start_date);
+      if (end_date) {
+        const endDate = new Date(end_date);
+        endDate.setHours(23, 59, 59, 999);
+        dateWhere[Op.lte] = endDate;
+      }
+      const hasDateFilter = Object.keys(dateWhere).length > 0;
+      const orderWhere = hasDateFilter ? { createdAt: dateWhere } : {};
+
+      const totalOrders = await Order.count({ where: orderWhere });
       
-      // Calculate total revenue excluding cancelled orders
-      const totalRevenue = await Order.sum("final_amount", {
-        where: {
-          status: {
-            [Op.ne]: 'cancelled'
-          }
-        }
-      });
+      // Total revenue = ALL orders (full picture)
+      const totalRevenue = await Order.sum("final_amount", { where: orderWhere }) || 0;
       
-      const totalPendingOrders = await Order.count({
-        where: { status: "pending" },
+      // Count each status
+      const [statusRows] = await sequelize.query(`
+        SELECT status, COUNT(*) as count, COALESCE(SUM(final_amount), 0) as revenue
+        FROM orders 
+        ${hasDateFilter ? `WHERE created_at >= :startDate AND created_at <= :endDate` : ''}
+        GROUP BY status
+      `, {
+        replacements: hasDateFilter ? { startDate: start_date, endDate: end_date ? new Date(new Date(end_date).setHours(23, 59, 59, 999)) : new Date() } : {},
       });
-      const totalProcessingOrders = await Order.count({
-        where: { status: "processing" },
-      });
-      const totalShippedOrders = await Order.count({
-        where: { status: "shipped" },
-      });
-      const totalDeliveredOrders = await Order.count({
-        where: { status: "delivered" },
-      });
-      const totalCancelledOrders = await Order.count({
-        where: { status: "cancelled" },
+      const sc = {};
+      const sr = {};
+      statusRows.forEach(r => {
+        sc[r.status] = parseInt(r.count);
+        sr[r.status] = parseFloat(r.revenue || 0);
       });
 
-      // Calculate average order value (excluding cancelled orders)
-      const nonCancelledOrdersCount = totalOrders - totalCancelledOrders;
-      const averageOrderValue = nonCancelledOrdersCount > 0 ? (totalRevenue || 0) / nonCancelledOrdersCount : 0;
+      const totalCancelledOrders = (sc['cancelled'] || 0) + (sc['order cancelled'] || 0);
+      const totalRtoOrders = (sc['rto'] || 0) + (sc['rto delivered'] || 0) + (sc['returned_rto'] || 0);
+      const deliveredRevenue = (sr['delivered'] || 0);
+      const cancelledRevenue = (sr['cancelled'] || 0) + (sr['order cancelled'] || 0);
+      const rtoRevenue = (sr['rto'] || 0) + (sr['rto delivered'] || 0) + (sr['return_initiated'] || 0) + (sr['returned_rto'] || 0);
+      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
       res.json({
         totalOrders,
-        totalRevenue: totalRevenue || 0,
+        totalRevenue,
+        earnedRevenue: deliveredRevenue,
+        lostRevenue: cancelledRevenue + rtoRevenue,
         averageOrderValue,
-        totalPendingOrders,
-        totalProcessingOrders,
-        totalShippedOrders,
-        totalDeliveredOrders,
+        statusBreakdown: {
+          awaiting_confirmation: sc['awaiting_confirmation'] || 0,
+          pending: sc['pending'] || 0,
+          confirmed: sc['confirmed'] || 0,
+          processing: sc['processing'] || 0,
+          booked: sc['booked'] || 0,
+          pickup_initiated: sc['pickup initiated'] || 0,
+          manifested: sc['manifested'] || 0,
+          in_transit: sc['in transit'] || 0,
+          shipped: sc['shipped'] || 0,
+          out_for_delivery: sc['out for delivery'] || 0,
+          delivered: sc['delivered'] || 0,
+          undelivered: sc['undelivered'] || 0,
+          rto: sc['rto'] || 0,
+          rto_delivered: sc['rto delivered'] || 0,
+          return_initiated: sc['return_initiated'] || 0,
+          returned_rto: sc['returned_rto'] || 0,
+          cancelled: totalCancelledOrders,
+          exception: sc['exception'] || 0,
+        },
+        revenueBreakdown: {
+          delivered: deliveredRevenue,
+          shipped: (sr['shipped'] || 0) + (sr['in transit'] || 0) + (sr['out for delivery'] || 0) + (sr['booked'] || 0) + (sr['pickup initiated'] || 0) + (sr['manifested'] || 0),
+          processing: (sr['processing'] || 0) + (sr['confirmed'] || 0),
+          pending: (sr['pending'] || 0) + (sr['awaiting_confirmation'] || 0),
+          rto: rtoRevenue,
+          cancelled: cancelledRevenue,
+        },
+        // Legacy fields for backward compatibility
+        totalPendingOrders: (sc['pending'] || 0) + (sc['awaiting_confirmation'] || 0),
+        totalProcessingOrders: (sc['processing'] || 0) + (sc['confirmed'] || 0),
+        totalShippedOrders: (sc['shipped'] || 0) + (sc['in transit'] || 0) + (sc['out for delivery'] || 0),
+        totalDeliveredOrders: sc['delivered'] || 0,
         totalCancelledOrders,
+        totalRtoOrders,
+        ...(hasDateFilter ? { dateFilter: { start_date, end_date } } : {}),
       });
     } catch (error) {
       logger.error("Error fetching order statistics:", error);

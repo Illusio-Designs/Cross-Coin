@@ -2,12 +2,15 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/queryClient';
 import { dashboardService } from '../../services';
 
-/** Dashboard stats — 5 min stale */
-export const useDashboardStats = () =>
+/** Dashboard stats — 5 min stale, supports date filter */
+export const useDashboardStats = (dateFilter = {}) =>
   useQuery({
-    queryKey: queryKeys.dashboard,
+    queryKey: [...queryKeys.dashboard, dateFilter.start_date || '', dateFilter.end_date || ''],
     queryFn: async () => {
-      const res = await dashboardService.getDashboardStats();
+      const params = {};
+      if (dateFilter.start_date) params.start_date = dateFilter.start_date;
+      if (dateFilter.end_date) params.end_date = dateFilter.end_date;
+      const res = await dashboardService.getDashboardStats(params);
       if (res.success) return res.stats;
       throw new Error('Failed to load dashboard statistics');
     },

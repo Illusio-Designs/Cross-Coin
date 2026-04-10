@@ -74,18 +74,44 @@ orderEmitter.on('order.shipped', async (order) => {
     const { ShippingAddress } = require('../model/shippingAddressModel.js');
     const addr = await ShippingAddress.findByPk(order.shipping_address_id);
     if (addr?.phone && order.tracking_number) {
-      await whatsappService.sendShippingUpdate(addr.phone, {
+      await whatsappService.sendOrderShipped(addr.phone, {
         orderNumber: order.order_number,
-        waybill: order.tracking_number,
-        courierName: order.courier_name || 'our courier',
+        awbNumber: order.tracking_number,
+        trackingUrl: `https://crosscoin.in/OrderTracking?order=${order.order_number}`,
       }, order.brand_id || 1).catch(e => logger.warn('[Event] WA shipped failed:', e.message));
     }
   } catch (e) { logger.error('[Event] order.shipped error:', e.message); }
 });
 
-// order.delivered — review request (after 3 days, handled by cron)
-orderEmitter.on('order.delivered', (order) => {
-  logger.info(`[Event] order.delivered: ${order.order_number} — review request scheduled via cron`);
+// order.delivered — delivery confirmation + review request scheduled via cron (3 days later)
+orderEmitter.on('order.delivered', async (order) => {
+  try {
+    logger.info(`[Event] order.delivered: ${order.order_number}`);
+    const whatsappService = require('./whatsappService.js');
+    const { ShippingAddress } = require('../model/shippingAddressModel.js');
+    const addr = await ShippingAddress.findByPk(order.shipping_address_id);
+    if (addr?.phone) {
+      await whatsappService.sendOrderDelivered(addr.phone, {
+        orderNumber: order.order_number,
+      }, order.brand_id || 1).catch(e => logger.warn('[Event] WA delivered failed:', e.message));
+    }
+  } catch (e) { logger.error('[Event] order.delivered error:', e.message); }
+});
+
+// order.out_for_delivery — last-mile notification
+orderEmitter.on('order.out_for_delivery', async (order) => {
+  try {
+    logger.info(`[Event] order.out_for_delivery: ${order.order_number}`);
+    const whatsappService = require('./whatsappService.js');
+    const { ShippingAddress } = require('../model/shippingAddressModel.js');
+    const addr = await ShippingAddress.findByPk(order.shipping_address_id);
+    if (addr?.phone) {
+      await whatsappService.sendOutForDelivery(addr.phone, {
+        orderNumber: order.order_number,
+        courierName: order.courier_name || 'Our courier partner',
+      }, order.brand_id || 1).catch(e => logger.warn('[Event] WA out-for-delivery failed:', e.message));
+    }
+  } catch (e) { logger.error('[Event] order.out_for_delivery error:', e.message); }
 });
 
 // order.cancelled — cancellation message
@@ -96,9 +122,9 @@ orderEmitter.on('order.cancelled', async (order) => {
     const { ShippingAddress } = require('../model/shippingAddressModel.js');
     const addr = await ShippingAddress.findByPk(order.shipping_address_id);
     if (addr?.phone) {
-      await whatsappService.sendOrderCancellation(addr.phone, {
+      await whatsappService.sendOrderCancelled(addr.phone, {
         orderNumber: order.order_number,
-        reason: order._cancelReason || 'Cancelled',
+        refundInfo: order._cancelReason || 'Order has been cancelled',
       }, order.brand_id || 1).catch(e => logger.warn('[Event] WA cancel failed:', e.message));
     }
   } catch (e) { logger.error('[Event] order.cancelled error:', e.message); }

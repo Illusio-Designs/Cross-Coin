@@ -211,6 +211,17 @@ const Order = sequelize.define('Order', {
         allowNull: true,
         unique: true,
         comment: 'Prevents duplicate order creation from retries'
+    },
+    cod_address_confirmed: {
+        type: DataTypes.BOOLEAN,
+        allowNull: true,
+        defaultValue: null,
+        comment: 'COD address confirmation via WhatsApp: null=not sent, false=sent/pending, true=confirmed by customer'
+    },
+    cod_address_confirmed_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'Timestamp when customer confirmed address via WhatsApp'
     }
 }, {
     tableName: 'orders',
