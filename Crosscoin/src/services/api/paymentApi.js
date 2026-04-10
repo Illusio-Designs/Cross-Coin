@@ -61,15 +61,13 @@ export const retryCheckout = async (reservationId) => {
 };
 
 export const sendCheckoutPhoneOtp = async (phone) => {
-  try {
-    const response = await axios.post(`${API_URL}/api/auth/otp/send`, { phone }, addBrandHeader());
-    return response.data;
-  } catch (error) { throw error.response?.data || error.message; }
+  // MSG91 widget handles sending — this is a no-op kept for compatibility
+  return { success: true, message: 'OTP sent via MSG91 widget.' };
 };
 
-export const verifyCheckoutPhoneOtp = async (phone, code) => {
+export const verifyCheckoutPhoneOtp = async (phone, access_token) => {
   try {
-    const response = await axios.post(`${API_URL}/api/auth/otp/verify`, { phone, code }, addBrandHeader());
+    const response = await axios.post(`${API_URL}/api/auth/otp/verify`, { phone, access_token }, addBrandHeader());
     return response.data;
   } catch (error) { throw error.response?.data || error.message; }
 };
