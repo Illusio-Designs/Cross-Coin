@@ -1222,8 +1222,8 @@ module.exports.getBestSellers = async (req, res) => {
     const offset = (page - 1) * limit;
     
     const bestSellers = await Product.findAndCountAll({
-      where: { soldCount: { [Op.gt]: 0 } }, // Assuming you have a soldCount field
-      order: [["soldCount", "DESC"]],
+      where: { total_sold: { [Op.gt]: 0 } },
+      order: [["total_sold", "DESC"]],
       limit: parseInt(limit),
       offset: parseInt(offset),
     });
