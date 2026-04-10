@@ -117,6 +117,7 @@ const colorMap = {
   "ocean blue": "#006994", // Ocean Blue
   "ice blue": "#D6EAF8", // Ice Blue
   "dusty blue": "#7393B3", // Dusty Blue
+  "dark gray": "#404040", // Dark Gray
   // Add more as needed
 };
 

@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
 import type { Product } from '@/types'
 import { getProduct } from '@/lib/api/products'
-import { ProductGallery } from '@/components/product/ProductGallery'
-import { ProductInfo } from '@/components/product/ProductInfo'
+import { ProductPageClient } from '@/components/product/ProductPageClient'
 import { FeatureBreakdown } from '@/components/product/FeatureBreakdown'
 import { CrossSell } from '@/components/product/CrossSell'
 import { ReviewsSection } from '@/components/product/ReviewsSection'
@@ -85,20 +84,27 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <>
-      {/* Main PDP — gallery + info */}
+      {/* Gallery + Info */}
       <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-5 py-10 lg:px-8">
-        <div className="mx-auto max-w-site grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-16">
-          <ProductGallery images={product.images} productName={product.name} />
-          <ProductInfo product={product} />
-        </div>
+        <ProductPageClient product={product} />
       </section>
 
-      {/* Feature breakdown */}
+      {/* Description — full width below gallery+info */}
+      {product.description && (
+        <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-5 py-10 lg:px-8">
+          <div className="mx-auto max-w-site">
+            <h2 className="mb-4 text-xl font-semibold text-brand-black">Product Description</h2>
+            <p className="text-base leading-relaxed text-gray-600">{product.description}</p>
+          </div>
+        </section>
+      )}
+
+      {/* Built different */}
       <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-off-white">
         <FeatureBreakdown features={product.features} />
       </section>
 
-      {/* Reviews */}
+      {/* Reviews — infinite slider */}
       <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white">
         <ReviewsSection />
       </section>

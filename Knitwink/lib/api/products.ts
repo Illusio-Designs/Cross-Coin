@@ -1,4 +1,5 @@
 import type { Product, Collection, Material } from '@/types'
+import { getColorHex } from '@/lib/colorMap'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? process.env.API_URL ?? 'http://localhost:4000'
 const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'knitwink'
@@ -30,41 +31,48 @@ function mapProduct(p: any): Product {
   const price = Number(firstVar?.price || p.price || 0)
   const compareAtPrice = firstVar?.comparePrice ? Number(firstVar.comparePrice) : undefined
 
-  // Map images — backend uses image_url field
+  // Map images — backend uses image_url field, prefer large for quality
   const productImages = images.map((img: any) => ({
-    url: cleanUrl(img.image_url || img.medium || img.url || '') || '',
+    url: cleanUrl(img.large || img.image_url || img.medium || img.url || '') || '',
     alt: img.alt_text || p.name,
+    variationId: img.product_variation_id ?? null,
   }))
 
-  // CSS color name → hex fallback map
-  const colorNameToHex: Record<string, string> = {
-    white: '#ffffff', black: '#000000', red: '#ef4444', blue: '#3b82f6',
-    navy: '#1e3a5f', green: '#22c55e', yellow: '#eab308', orange: '#f97316',
-    pink: '#ec4899', purple: '#a855f7', grey: '#9ca3af', gray: '#9ca3af',
-    brown: '#92400e', beige: '#d4b896', cream: '#fffdd0', maroon: '#800000',
-    teal: '#14b8a6', cyan: '#06b6d4', lime: '#84cc16', indigo: '#6366f1',
-    violet: '#7c3aed', magenta: '#d946ef', coral: '#f87171', peach: '#fbbf24',
-    mint: '#6ee7b7', lavender: '#c4b5fd', charcoal: '#374151', ivory: '#fffff0',
-    khaki: '#c3b091', mustard: '#d4a017', rust: '#b45309', olive: '#6b7280',
-  }
-
-  // Extract colors from variation attributes
+  // Extract colors from variation attributes, track variation id per color
   const colors: { name: string; hex: string; imageIndex: number }[] = []
   const seen = new Set<string>()
+  // map variationId → color name
+  const varIdToColor: Record<number, string> = {}
   variations.forEach((v: any) => {
     const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes || '{}') : (v.attributes || {})
     const colorArr = Array.isArray(attrs.color) ? attrs.color : (attrs.color ? [attrs.color] : [])
     colorArr.forEach((c: string) => {
+      varIdToColor[v.id] = c
       if (!seen.has(c)) {
         seen.add(c)
-        const key = c.toLowerCase().trim()
-        // Use hex if it looks like a hex code, else look up by name, else derive via CSS
-        const hex = /^#[0-9a-f]{3,6}$/i.test(key)
-          ? key
-          : colorNameToHex[key] ?? null
-        colors.push({ name: c, hex: hex || c, imageIndex: 0 })
+        colors.push({ name: c, hex: getColorHex(c), imageIndex: 0 })
       }
     })
+  })
+
+  // Group images by color name using variationId linkage
+  const colorImages: Record<string, { url: string; alt: string }[]> = {}
+  const unlinkedImages: { url: string; alt: string }[] = []
+  productImages.forEach((img: any) => {
+    const colorName = img.variationId != null ? varIdToColor[img.variationId] : undefined
+    if (colorName) {
+      if (!colorImages[colorName]) colorImages[colorName] = []
+      colorImages[colorName].push({ url: img.url, alt: img.alt })
+    } else {
+      unlinkedImages.push({ url: img.url, alt: img.alt })
+    }
+  })
+
+  // For colors with no linked images, fall back to unlinked images
+  colors.forEach((c) => {
+    if (!colorImages[c.name] || colorImages[c.name].length === 0) {
+      colorImages[c.name] = unlinkedImages
+    }
   })
 
   // Badge from product badge field
@@ -78,10 +86,12 @@ function mapProduct(p: any): Product {
     id: String(p.id),
     handle: p.slug || String(p.id),
     name: p.name,
+    sku: variations[0]?.sku || p.sku || undefined,
     collectionName: p.category?.name || p.Category?.name || '',
     price,
     compareAtPrice,
-    images: productImages.length > 0 ? productImages : [{ url: '', alt: p.name }],
+    images: productImages.length > 0 ? productImages.map((i: any) => ({ url: i.url, alt: i.alt })) : [{ url: '', alt: p.name }],
+    colorImages: Object.keys(colorImages).length > 0 ? colorImages : undefined,
     variants: variations.map((v: any) => ({
       id: String(v.id),
       size: '',
