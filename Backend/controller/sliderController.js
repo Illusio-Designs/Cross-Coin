@@ -162,19 +162,28 @@ const getAllSliders = async (req, res) => {
 const getSliderById = async (req, res) => {
     try {
         const slider = await Slider.findByPk(req.params.id, {
-            include: [{
-                model: Category,
-                as: 'category',
-                attributes: ['id', 'name']
-            }]
+            include: [
+                {
+                    model: Category,
+                    as: 'category',
+                    attributes: ['id', 'name']
+                },
+                {
+                    model: Brand,
+                    as: 'Brands',
+                    through: { attributes: [] },
+                    attributes: ['id', 'name', 'display_name', 'slug']
+                }
+            ]
         });
 
         if (!slider) {
             return res.status(404).json({ message: 'Slider not found' });
         }
 
-        // Format response
         const sliderResponse = formatSliderResponse(slider);
+        // Include brands in response
+        sliderResponse.brands = slider.Brands || [];
 
         res.status(200).json(sliderResponse);
     } catch (error) {
@@ -401,10 +410,10 @@ async function assignSliderToBrands(req, res) {
         const { id } = req.params;
         const { brand_ids } = req.body; // Array of brand IDs
 
-        if (!Array.isArray(brand_ids) || brand_ids.length === 0) {
+        if (!Array.isArray(brand_ids)) {
             return res.status(400).json({ 
                 success: false,
-                message: 'brand_ids must be a non-empty array' 
+                message: 'brand_ids must be an array' 
             });
         }
 
@@ -414,6 +423,13 @@ async function assignSliderToBrands(req, res) {
                 success: false,
                 message: 'Slider not found' 
             });
+        }
+
+        // Replace all brand assignments
+        await SliderBrand.destroy({ where: { slider_id: id } });
+
+        if (brand_ids.length === 0) {
+            return res.status(200).json({ success: true, message: 'All brand assignments removed', data: { slider_id: id, assignments: [] } });
         }
 
         // Verify all brands exist
@@ -428,28 +444,14 @@ async function assignSliderToBrands(req, res) {
             });
         }
 
-        // Create slider-brand relationships
+        // Create new slider-brand relationships
         const assignments = [];
         for (const brandId of brand_ids) {
-            const [sliderBrand, created] = await SliderBrand.findOrCreate({
-                where: {
-                    slider_id: id,
-                    brand_id: brandId
-                },
-                defaults: {
-                    status: 'active'
-                }
-            });
-
-            if (!created && sliderBrand.status === 'inactive') {
-                // Reactivate if it was inactive
-                await sliderBrand.update({ status: 'active' });
-            }
-
+            await SliderBrand.create({ slider_id: id, brand_id: brandId, status: 'active' });
             assignments.push({
                 brand_id: brandId,
-                brand_name: brands.find(b => b.id === brandId).name,
-                status: sliderBrand.status
+                brand_name: brands.find(b => b.id === brandId)?.name,
+                status: 'active'
             });
         }
 

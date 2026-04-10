@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button, Modal, Table, Pagination, Input, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { sliderService, categoryService, brandService } from "../../../services";
+import BrandAssignment from '../../../components/Dashboard/BrandAssignment';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../../context/AuthContext';
 import { showSuccess, showError } from "../../../utils/toastNotification";
@@ -100,7 +101,7 @@ export default function Slider() {
       setLoading(true);
       const res = await sliderService.getSliderById(id);
       const data = res.slider || res;
-      const brandIds = data.brands?.map(b => typeof b === 'object' ? b.id : b) || (data.brand_id ? [data.brand_id] : []);
+      const brandIds = data.brands?.map(b => Number(typeof b === 'object' ? b.id : b)).filter(Boolean) || (data.brand_id ? [Number(data.brand_id)] : []);
       setFormData({ id: data.id, title: data.title || "", description: data.description || "",
         status: data.status || "active", categoryId: data.categoryId || "",
         image: data.image || null, buttonText: data.buttonText || "",
@@ -155,12 +156,13 @@ export default function Slider() {
 
       if (formData.id) {
         await sliderService.updateSlider(formData.id, fd);
-        if (formData.brand_ids?.length > 0) await sliderService.assignSliderToBrands(formData.id, formData.brand_ids);
+        // Always update brand assignments (even if empty — to remove all)
+        await sliderService.assignSliderToBrands(formData.id, formData.brand_ids || []);
         showSuccess('updateSuccess');
       } else {
         const res = await sliderService.createSlider(fd);
         const sliderId = res.data?.id || res.id;
-        if (sliderId && formData.brand_ids?.length > 0) await sliderService.assignSliderToBrands(sliderId, formData.brand_ids);
+        if (sliderId) await sliderService.assignSliderToBrands(sliderId, formData.brand_ids || []);
         showSuccess('createSuccess');
       }
       handleModalClose();
@@ -330,15 +332,13 @@ export default function Slider() {
               onChange={handleInputChange}
               placeholder="e.g., Shop Now"
             />
-            <Select
-              label="Brands"
-              required
-              options={brands.map(b => ({ value: b.id, label: b.display_name || b.name }))}
-              value={formData.brand_ids}
-              onChange={v => setFormData(p => ({ ...p, brand_ids: v }))}
-              multiple
-              searchable
-            />
+            <div className="dm-field">
+              <BrandAssignment
+                selectedBrands={formData.brand_ids || []}
+                onChange={brandIds => setFormData(p => ({ ...p, brand_ids: brandIds }))}
+                disabled={loading}
+              />
+            </div>
             <div className="dm-field">
               <label className="dm-label">Slider Image {!formData.id && <span className="dm-required">*</span>}</label>
               <div className="dm-file-upload">

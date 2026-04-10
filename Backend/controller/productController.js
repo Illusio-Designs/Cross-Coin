@@ -773,6 +773,22 @@ module.exports.updateProduct = async (req, res) => {
       { transaction }
     );
 
+    // Update brand assignments
+    const brandIds = JSON.parse(req.body.brandIds || "[]");
+    if (brandIds.length > 0) {
+      const { ProductBrand } = require('../model/productBrandModel.js');
+      // Remove existing brand assignments
+      await ProductBrand.destroy({ where: { product_id: id }, transaction });
+      // Add new brand assignments
+      for (const brandId of brandIds) {
+        await ProductBrand.create({
+          product_id: id,
+          brand_id: Number(brandId),
+          status: 'active'
+        }, { transaction });
+      }
+    }
+
     // Update or create SEO data
     const seoData = {
       metaTitle: seo.metaTitle || seo.meta_title || name,

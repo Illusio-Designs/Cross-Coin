@@ -2,9 +2,7 @@
 
 import useEmblaCarousel from 'embla-carousel-react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import Image from 'next/image'
-import Link from 'next/link'
-import { formatPrice } from '@/lib/utils'
+import { ProductCard } from '@/components/collection/ProductCard'
 import type { Product } from '@/types'
 
 const FALLBACK_PRODUCTS: Product[] = [
@@ -50,33 +48,9 @@ export function BestsellerRow({ products }: BestsellerRowProps) {
       <div ref={emblaRef} className="overflow-hidden">
         <div className="flex gap-3 px-6 md:px-8">
           {items.map((product) => (
-            <Link
-              key={product.id}
-              href={`/products/${product.handle}`}
-              className="group w-[220px] shrink-0 rounded-2xl border border-gray-200 bg-white p-3 transition-transform duration-150 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-black focus-visible:ring-offset-2 md:w-[260px]"
-            >
-              <div className="relative aspect-square overflow-hidden rounded-xl bg-gray-100 p-4">
-                <Image
-                  src={product.images[0]?.url ?? ''}
-                  alt={product.images[0]?.alt ?? product.name}
-                  fill
-                  sizes="260px"
-                  className="object-contain object-center"
-                />
-              </div>
-              <div className="mt-3 px-1">
-                <p className="truncate text-xs font-semibold uppercase tracking-wide text-brand-black">{product.name}</p>
-                <p className="mt-0.5 text-sm text-gray-600">{product.colors[0]?.name ?? ''}</p>
-                <div className="mt-2 flex items-center justify-between">
-                  <div className="flex gap-1.5">
-                    {product.colors.slice(0, 3).map((c) => (
-                      <span key={c.name} className="h-4 w-4 rounded-full border border-gray-200" style={{ backgroundColor: c.hex }} />
-                    ))}
-                  </div>
-                  <p className="text-sm font-medium text-brand-black">{formatPrice(product.price)}</p>
-                </div>
-              </div>
-            </Link>
+            <div key={product.id} className="w-[220px] shrink-0 md:w-[260px]">
+              <ProductCard product={product} />
+            </div>
           ))}
         </div>
       </div>

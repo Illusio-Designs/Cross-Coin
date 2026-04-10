@@ -8,6 +8,8 @@ import { BlogStrip } from '@/components/home/BlogStrip'
 import { ReviewBand } from '@/components/home/ReviewBand'
 import { InstagramStrip } from '@/components/home/InstagramStrip'
 import { getFeaturedCollections, getBestsellers } from '@/lib/api/products'
+import { getPublicSliders } from '@/lib/api/sliders'
+import { getPublicCategories } from '@/lib/api/categories'
 import { SITE_NAME } from '@/lib/constants'
 
 export const metadata: Metadata = {
@@ -21,16 +23,19 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  const [collections, bestsellers] = await Promise.allSettled([
+  const [collections, bestsellers, slides, categories] = await Promise.allSettled([
     getFeaturedCollections(),
     getBestsellers(),
+    getPublicSliders(),
+    getPublicCategories(),
   ])
 
   return (
     <>
-      <HeroBanner />
+      <HeroBanner slides={slides.status === 'fulfilled' ? slides.value : []} />
       <CollectionGrid
         collections={collections.status === 'fulfilled' ? collections.value : undefined}
+        categories={categories.status === 'fulfilled' ? categories.value : []}
       />
       <SustainabilityStrip />
       <BestsellerRow

@@ -67,8 +67,16 @@ class ImageKitService {
 
     console.log('🔧 Clean path:', cleanPath);
 
+    // If path contains a full URL (even with leading slash), extract and use it directly
+    if (cleanPath.includes('https://') || cleanPath.includes('http://')) {
+      const urlMatch = cleanPath.match(/(https?:\/\/.+)/);
+      if (urlMatch) {
+        cleanPath = urlMatch[1];
+      }
+    }
+
     // If already a full URL, just replace the transform and return directly
-    if (cleanPath.startsWith('http')) {
+    if (cleanPath.startsWith('http') || cleanPath.includes('ik.imagekit.io')) {
       try {
         const baseWithoutTr = cleanPath.split('?tr=')[0].split('&tr=')[0];
         const result = `${baseWithoutTr}?tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
