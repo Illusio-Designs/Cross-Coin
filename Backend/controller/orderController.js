@@ -1395,6 +1395,12 @@
         col: "id",
         include: [
           {
+            model: Brand,
+            as: "Brand",
+            attributes: ["id", "name", "display_name", "primary_color"],
+            required: false,
+          },
+          {
             model: User,
             as: "User",
             attributes: ["id", "username", "email"],

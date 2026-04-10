@@ -264,8 +264,33 @@ async function syncOrderToFShip(order) {
       }),
     ]);
 
-    if (!addr?.address || !addr?.phone) {
-      throw new Error('Missing shipping address or phone for FShip sync');
+    // Validate required shipping data before calling FShip
+    const issues = [];
+    if (!addr) {
+      issues.push('Shipping address is missing');
+    } else {
+      if (!addr.full_name || !String(addr.full_name).trim()) issues.push('Shipping address: full name is missing');
+      if (!addr.address || !String(addr.address).trim()) issues.push('Shipping address: address is missing');
+      if (!addr.city || !String(addr.city).trim()) issues.push('Shipping address: city is missing');
+      if (!addr.state || !String(addr.state).trim()) issues.push('Shipping address: state is missing');
+      if (!addr.pincode || !String(addr.pincode).trim()) issues.push('Shipping address: pincode is missing');
+      if (!addr.phone) issues.push('Shipping address: phone is missing');
+    }
+    if (!items || items.length === 0) issues.push('Order has no items');
+
+    if (issues.length > 0) {
+      const errorMsg = issues.join('; ');
+      logger.error(`[FShip] Validation failed for ${order.order_number}: ${errorMsg}`);
+      await Order.update(
+        { fship_sync_status: 'failed', fship_sync_error: errorMsg },
+        { where: { id: order.id } }
+      );
+      return;
+    }
+
+    // Clear previous sync error on successful validation
+    if (order.fship_sync_error) {
+      await Order.update({ fship_sync_error: null }, { where: { id: order.id } });
     }
 
     const warehouseId = parseInt(await settingsHelper.getSetting(order.brand_id || 1, 'FSHIP_DEFAULT_WAREHOUSE_ID', '12191'));
@@ -278,7 +303,8 @@ async function syncOrderToFShip(order) {
       landMark: '',
       customer_Address_Type: 'Home',
       customer_PinCode: String(addr.pincode),
-      customer_City: String(addr.city || 'Mumbai'),
+      customer_City: String(addr.city),
+      customer_State: String(addr.state || ''),
       orderId: String(order.order_number),
       invoice_Number: String(order.order_number),
       payment_Mode: order.payment_type === 'cod' ? 1 : 2,
@@ -329,7 +355,10 @@ async function syncOrderToFShip(order) {
     }
   } catch (e) {
     logger.error(`[FShip] Sync failed for ${order.order_number}:`, e.message);
-    await Order.update({ fship_sync_status: 'failed' }, { where: { id: order.id } }).catch(() => {});
+    await Order.update(
+      { fship_sync_status: 'failed', fship_sync_error: e.message },
+      { where: { id: order.id } }
+    ).catch(() => {});
   }
 }
 

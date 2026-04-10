@@ -2,19 +2,14 @@
 
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
 const { logger } = require('../config/logging.js');
 
-const OTP_TTL_SECONDS = 600; // 10 minutes
-const OTP_KEY = (phone) => `otp:checkout:${phone}`;
-
-// Generate a 6-digit OTP
-function generateOtp() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
-
 /**
- * POST /api/checkout/phone-otp/send
- * Generates a 6-digit OTP, stores it in Redis, and sends via WhatsApp.
+ * POST /api/auth/otp/send
+ * MSG91 widget handles OTP sending on the frontend.
+ * This endpoint is a no-op placeholder kept for route compatibility.
+ * The frontend uses window.sendOtp() from the MSG91 widget directly.
  */
 exports.sendPhoneOtp = async (req, res) => {
   try {
@@ -22,64 +17,64 @@ exports.sendPhoneOtp = async (req, res) => {
     if (!phone || !/^[6-9]\d{9}$/.test(String(phone).replace(/\D/g, '').slice(-10))) {
       return res.status(400).json({ success: false, message: 'Please provide a valid 10-digit Indian mobile number.' });
     }
-
-    const normalised = String(phone).replace(/\D/g, '').slice(-10);
-    const otp = generateOtp();
-
-    // Store in Redis with TTL
-    const redisService = require('../services/redisService.js');
-    await redisService.set(OTP_KEY(normalised), otp, 'EX', OTP_TTL_SECONDS);
-
-    // Send via WhatsApp (fire-and-forget — don't block response on delivery)
-    setImmediate(async () => {
-      try {
-        const whatsappService = require('../services/whatsappService.js');
-        const e164 = `91${normalised}`;
-        await whatsappService.sendTextMessage(
-          e164,
-          `Your Cross Coin verification code is *${otp}*. Valid for 10 minutes. Do not share this with anyone.`,
-          1
-        );
-        logger.info(`OTP sent to ${normalised}`);
-      } catch (err) {
-        logger.warn(`OTP WhatsApp send failed for ${normalised}: ${err.message}`);
-      }
-    });
-
-    res.json({ success: true, message: 'OTP sent to your WhatsApp number.' });
+    // OTP is sent by MSG91 widget on the frontend — nothing to do here
+    res.json({ success: true, message: 'Use the MSG91 widget to send OTP.' });
   } catch (error) {
     logger.error('sendPhoneOtp error:', error.message);
-    res.status(500).json({ success: false, message: 'Failed to send OTP. Please try again.' });
+    res.status(500).json({ success: false, message: 'Failed to process request.' });
   }
 };
 
 /**
- * POST /api/checkout/phone-otp/verify
- * Verifies the OTP and returns a short-lived signed token on success.
+ * POST /api/auth/otp/verify
+ * Verifies the MSG91 access token server-side and returns a short-lived JWT.
+ * Frontend sends { phone, access_token } after MSG91 widget verifyOtp succeeds.
  */
 exports.verifyPhoneOtp = async (req, res) => {
   try {
-    const { phone, code } = req.body;
-    if (!phone || !code) {
-      return res.status(400).json({ success: false, message: 'Phone and code are required.' });
+    const { phone, access_token } = req.body;
+    if (!phone || !access_token) {
+      return res.status(400).json({ success: false, message: 'Phone and access_token are required.' });
     }
 
     const normalised = String(phone).replace(/\D/g, '').slice(-10);
-    const redisService = require('../services/redisService.js');
-    const stored = await redisService.get(OTP_KEY(normalised));
-
-    if (!stored) {
-      return res.status(400).json({ success: false, message: 'OTP expired or not found. Please request a new one.' });
+    if (!/^[6-9]\d{9}$/.test(normalised)) {
+      return res.status(400).json({ success: false, message: 'Invalid phone number.' });
     }
 
-    if (String(code).trim() !== stored) {
-      return res.status(400).json({ success: false, message: 'Incorrect OTP. Please try again.' });
+    const MSG91_AUTH_KEY = process.env.MSG91_AUTH_KEY;
+    if (!MSG91_AUTH_KEY) {
+      logger.error('MSG91_AUTH_KEY not configured in .env');
+      return res.status(500).json({ success: false, message: 'OTP service not configured.' });
     }
 
-    // Delete OTP after successful verification (one-time use)
-    await redisService.del(OTP_KEY(normalised));
+    // Verify MSG91 access token server-side
+    try {
+      const verifyResponse = await axios.post(
+        'https://control.msg91.com/api/v5/widget/verifyAccessToken',
+        { authkey: MSG91_AUTH_KEY, 'access-token': access_token },
+        { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
+      );
 
-    // Issue a short-lived token (10 min) so the backend can optionally validate it on order creation
+      logger.info(`[Checkout OTP] MSG91 verifyAccessToken response: ${JSON.stringify(verifyResponse.data)}`);
+
+      if (verifyResponse.data?.type === 'error') {
+        logger.error('[Checkout OTP] MSG91 token verification failed:', verifyResponse.data);
+        return res.status(401).json({ success: false, message: 'OTP verification failed. Please try again.' });
+      }
+    } catch (verifyErr) {
+      const errData = verifyErr.response?.data;
+      logger.error(`[Checkout OTP] MSG91 verify error: ${verifyErr.message}, Response: ${JSON.stringify(errData)}`);
+
+      // "already verified" is OK — the token was valid
+      if (errData?.code === 703 || errData?.message?.includes('already verif')) {
+        logger.info('[Checkout OTP] MSG91 says already verified — proceeding');
+      } else {
+        return res.status(401).json({ success: false, message: 'OTP verification failed. Please try again.' });
+      }
+    }
+
+    // Issue a short-lived token (10 min) so the backend can validate it on COD order creation
     const secret = process.env.JWT_SECRET || 'crosscoin-otp-secret';
     const otp_token = jwt.sign({ phone: normalised, purpose: 'cod_checkout' }, secret, { expiresIn: '10m' });
 
