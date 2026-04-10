@@ -431,6 +431,7 @@ class FShipService {
             customer_Address_Type: orderData.customer_Address_Type || 'Home',
             customer_PinCode: orderData.customer_PinCode,
             customer_City: orderData.customer_City,
+            customer_State: orderData.customer_State || '',
             orderId: orderData.orderId,
             invoice_Number: orderData.invoice_Number || '',
             payment_Mode: orderData.payment_Mode, // 1=COD, 2=PREPAID

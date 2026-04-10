@@ -1115,6 +1115,10 @@ const setupDatabase = async () => {
     console.log("\nAdding fship_last_synced_at column to orders table...");
     await addFshipLastSyncedAtColumn();
     
+    // Add fship_sync_error column to orders table
+    console.log("\nAdding fship_sync_error column to orders table...");
+    await addFshipSyncErrorColumn();
+    
     // Create performance optimization indexes
     await createPerformanceIndexes();
 
@@ -1678,6 +1682,38 @@ const addFshipLastSyncedAtColumn = async () => {
     }
   } catch (error) {
     console.log('⚠️ Error adding fship_last_synced_at column:', error.message);
+  }
+};
+
+// Add fship_sync_error column to orders table
+const addFshipSyncErrorColumn = async () => {
+  try {
+    console.log('Checking if fship_sync_error column exists in orders table...');
+
+    const [columnExists] = await sequelize.query(`
+      SELECT COUNT(*) as count
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_SCHEMA = DATABASE() 
+      AND TABLE_NAME = 'orders' 
+      AND COLUMN_NAME = 'fship_sync_error'
+    `);
+
+    if (columnExists[0].count === 0) {
+      console.log('Adding fship_sync_error column to orders table...');
+      
+      await sequelize.query(`
+        ALTER TABLE orders 
+        ADD COLUMN fship_sync_error TEXT NULL 
+        COMMENT 'Validation or sync error details shown on order page' 
+        AFTER fship_sync_attempts
+      `);
+      
+      console.log('✓ fship_sync_error column added successfully');
+    } else {
+      console.log('✓ fship_sync_error column already exists');
+    }
+  } catch (error) {
+    console.log('⚠️ Error adding fship_sync_error column:', error.message);
   }
 };
 
