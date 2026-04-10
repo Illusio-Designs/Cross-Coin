@@ -3,8 +3,8 @@ import Cookies from 'js-cookie';
 
 const getBaseUrl = () =>
 typeof window === 'undefined' ?
-process.env.API_URL ?? 'http://localhost:4000' :
-process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in' :
+process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
 
 async function apiFetch(path, init) {
   const token = typeof window !== 'undefined' ? Cookies.get('auth_token') : undefined;
