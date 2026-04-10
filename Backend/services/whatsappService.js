@@ -23,7 +23,16 @@ function metaError(err) {
 }
 
 // ─── Load credentials from brand settings ────────────────────────────────────
+const _credentialsCache = new Map();
+const CREDENTIALS_TTL = 5 * 60 * 1000; // 5 minutes
+
 async function getCredentials(brandId = 1) {
+  const cacheKey = `wa_creds_${brandId}`;
+  const cached = _credentialsCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CREDENTIALS_TTL) {
+    return cached.data;
+  }
+
   const [token, phoneNumberId, businessAccountId] = await Promise.all([
     settingsHelper.getSetting(brandId, 'WHATSAPP_API_TOKEN'),
     settingsHelper.getSetting(brandId, 'WHATSAPP_PHONE_NUMBER_ID'),
@@ -34,7 +43,9 @@ async function getCredentials(brandId = 1) {
   if (!phoneNumberId)       throw new Error('WHATSAPP_PHONE_NUMBER_ID not configured for brand ' + brandId);
   if (!businessAccountId)   throw new Error('WHATSAPP_BUSINESS_ACCOUNT_ID not configured for brand ' + brandId);
 
-  return { token, phoneNumberId, businessAccountId };
+  const data = { token, phoneNumberId, businessAccountId };
+  _credentialsCache.set(cacheKey, { data, timestamp: Date.now() });
+  return data;
 }
 
 function authHeader(token) {
@@ -226,6 +237,21 @@ async function seedDefaultTemplates(brandId = 1) {
   return results.map(r => r.value);
 }
 
+// ─── Rate limiting helper ──────────────────────────────────────────────────────
+async function checkRateLimit(to) {
+  const rateLimitKey = `wa:ratelimit:${to}`;
+  try {
+    const redisService = require('./redisService.js');
+    const count = await redisService.get(rateLimitKey);
+    if (count && parseInt(count) >= 10) {
+      logger.warn(`[WhatsApp] Rate limit exceeded for ${to}`);
+      return { rate_limited: true };
+    }
+    await redisService.set(rateLimitKey, String((parseInt(count || 0) + 1)), 'EX', 3600);
+  } catch (e) { /* Redis down — allow message */ }
+  return null;
+}
+
 // ─── Send messages ────────────────────────────────────────────────────────────
 
 async function sendTextMessage(phone, text, brandId = 1, contextMessageId = null) {
@@ -233,7 +259,14 @@ async function sendTextMessage(phone, text, brandId = 1, contextMessageId = null
   const to = formatE164(phone);
   if (!to) throw new Error('Invalid phone number: ' + phone);
 
-  const payload = { messaging_product: 'whatsapp', to, type: 'text', text: { body: text } };
+  // Rate limit: max 10 messages per phone per hour
+  const rateLimited = await checkRateLimit(to);
+  if (rateLimited) return rateLimited;
+
+  // Sanitize user input in message text
+  const sanitizedText = text.replace(/<[^>]*>/g, '').replace(/javascript:/gi, '');
+
+  const payload = { messaging_product: 'whatsapp', to, type: 'text', text: { body: sanitizedText } };
   if (contextMessageId) {
     payload.context = { message_id: contextMessageId };
     logger.info(`[WhatsApp] Sending reply with context message_id: ${contextMessageId}`);
@@ -252,6 +285,10 @@ async function sendTemplate(phone, templateName, bodyParams, brandId = 1) {
   const { token, phoneNumberId } = await getCredentials(brandId);
   const to = formatE164(phone);
   if (!to) throw new Error('Invalid phone number: ' + phone);
+
+  // Rate limit: max 10 messages per phone per hour
+  const rateLimited = await checkRateLimit(to);
+  if (rateLimited) return rateLimited;
 
   const components = bodyParams?.length
     ? [{ type: 'BODY', parameters: bodyParams.map(p => ({ type: 'text', text: String(p) })) }]

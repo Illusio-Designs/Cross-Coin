@@ -83,18 +83,13 @@
   /**
    * Get count of RTO orders for a phone number in the last 6 months.
    */
-  async function getRtoCount(phone) {
-    if (!phone) return 0;
+  async function getRtoCount(phone, userId) {
+    if (!userId) return 0;
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    const { ShippingAddress: SA } = require('../model/shippingAddressModel.js');
-    // Find all shipping address IDs with this phone
-    const addresses = await SA.findAll({ where: { phone }, attributes: ['id'] });
-    if (!addresses.length) return 0;
-    const addressIds = addresses.map(a => a.id);
     return Order.count({
       where: {
-        shipping_address_id: { [Op.in]: addressIds },
+        user_id: userId,
         status: 'returned_rto',
         createdAt: { [Op.gte]: sixMonthsAgo },
       },
@@ -348,14 +343,21 @@
           }
         }
 
-        // STOCK CHECK
+        // STOCK CHECK — account for Redis reservations (prepaid checkouts in progress)
+        const stockReservationService = require('../services/stockReservationService.js');
+        const reservedQty = await stockReservationService.getReservedQty(variation_id);
+        const effectiveStock = (typeof stockAvailable === 'number' ? stockAvailable : 0) - reservedQty;
         logger.debug(
-          "createOrder: Stock check - available:",
+          "createOrder: Stock check - dbStock:",
           stockAvailable,
+          "reserved:",
+          reservedQty,
+          "effective:",
+          effectiveStock,
           "requested:",
           quantity
         );
-        if (typeof stockAvailable !== "number" || stockAvailable < quantity) {
+        if (effectiveStock < quantity) {
           await transaction.rollback();
           return res.status(400).json({
             message: `Product is out of stock or insufficient quantity for product ${product_id}`,
@@ -409,21 +411,22 @@
         }
       }
 
-      // ── Task 6: COD max order value cap ───────────────────────────────────
+      // ── Task 6: RTO risk scoring for ALL payment types ────────────────────
       let rtoRiskScore = 0;
+      const rtoCount = await getRtoCount(shippingAddress.phone, userId);
+      if (rtoCount >= 1) rtoRiskScore += 20;
+      if (String(shippingAddress.address || '').trim().length < 30) rtoRiskScore += 10;
+
       if (payment_type === 'cod') {
         const codMax = parseFloat(await settingsHelper.getSetting(req.brand?.id || 1, 'COD_MAX_ORDER_VALUE', '1500'));
         if (finalAmount > codMax) {
           await transaction.rollback();
           return res.status(400).json({ message: `COD is not available for orders above ₹${codMax}. Please pay online.` });
         }
-        const rtoCount = await getRtoCount(shippingAddress.phone);
         if (rtoCount >= 2) {
           await transaction.rollback();
           return res.status(400).json({ message: "COD is not available for your account. Please pay online." });
         }
-        if (rtoCount === 1) rtoRiskScore += 20;
-        if (!shippingAddress.landmark) rtoRiskScore += 10;
       }
       // Handle UTM tracking
       const UTMTracking = require("../model/utmModel.js");
@@ -465,6 +468,7 @@
         {
           order_number: await generateUniqueOrderNumber(transaction),
           user_id: userId,
+          shipping_address_id: shipping_address_id,
           total_amount: subTotal,
           discount_amount: appliedDiscount,
           coupon_id: coupon_id || null,
@@ -563,13 +567,6 @@
 
       // Idempotency is now DB-based (idempotency_key column on orders table)
 
-      // Emit order.created event (SSE notification + logging)
-      const orderEmitter = require('../services/orderEvents.js');
-      setImmediate(() => {
-        createdOrder._itemCount = validatedItems.length;
-        orderEmitter.emit('order.created', createdOrder);
-      });
-
       // Enqueue badge recalculation for async processing (non-blocking)
       logger.debug("createOrder: Enqueueing badge recalculation for products in order...");
       try {
@@ -603,6 +600,13 @@
         ],
       });
       logger.debug("createOrder: Order fetched successfully");
+
+      // Emit order.created event (SSE notification + logging)
+      const orderEmitter = require('../services/orderEvents.js');
+      setImmediate(() => {
+        createdOrder._itemCount = validatedItems.length;
+        orderEmitter.emit('order.created', createdOrder);
+      });
 
       logger.debug("createOrder: Sending success response...");
       res.status(201).json({
@@ -2034,7 +2038,7 @@
       // Prioritize orders that haven't been synced or have failed, within attempt limit
       const ordersToSync = await Order.findAll({
         where: {
-          status: { [Op.notIn]: ['cancelled', 'delivered', 'rto delivered'] }, // Skip final states
+          status: { [Op.notIn]: ['awaiting_confirmation', 'pending', 'cancelled', 'delivered', 'rto delivered'] }, // Only sync confirmed+ orders, skip unconfirmed and final states
           order_number: { [Op.notLike]: '%TEST%' }, // Exclude test orders
           fship_sync_status: { [Op.in]: ['pending', 'failed'] },
           fship_sync_attempts: { [Op.lt]: 5 }
@@ -2231,6 +2235,32 @@
     }
   };
 
+  // Validate order data before FShip sync — returns array of issues
+  module.exports.validateOrderForFShip = (order) => {
+    const issues = [];
+    const addr = order.ShippingAddress;
+
+    if (!addr) {
+      issues.push('Shipping address is missing');
+      return issues; // no point checking further
+    }
+    if (!addr.full_name || !addr.full_name.trim()) issues.push('Shipping address: full name is missing');
+    if (!addr.address || !addr.address.trim()) issues.push('Shipping address: address is missing');
+    if (!addr.city || !addr.city.trim()) issues.push('Shipping address: city is missing');
+    if (!addr.state || !addr.state.trim()) issues.push('Shipping address: state is missing');
+    if (!addr.pincode || !addr.pincode.trim()) issues.push('Shipping address: pincode is missing');
+    if (!addr.phone) issues.push('Shipping address: phone is missing');
+
+    if (!order.OrderItems || order.OrderItems.length === 0) {
+      issues.push('Order has no items');
+    }
+
+    const customer = order.User || order.GuestUser;
+    if (!customer) issues.push('No customer (user or guest) linked to order');
+
+    return issues;
+  };
+
   // Create order in FShip
   module.exports.createOrderInFShip = async (order, transaction) => {
     try {
@@ -2249,6 +2279,26 @@
           route_code: order.fship_route_code,
           already_synced: true
         };
+      }
+
+      // Validate order data before sending to FShip
+      const validationIssues = this.validateOrderForFShip(order);
+      if (validationIssues.length > 0) {
+        const errorMsg = validationIssues.join('; ');
+        logger.error(`❌ Order ${order.order_number} failed FShip validation: ${errorMsg}`);
+        await order.update({
+          fship_sync_status: 'failed',
+          fship_sync_error: errorMsg,
+        }, { transaction });
+        return {
+          success: false,
+          error: errorMsg
+        };
+      }
+
+      // Clear any previous sync error on retry
+      if (order.fship_sync_error) {
+        await order.update({ fship_sync_error: null }, { transaction });
       }
 
       // Prepare order data for FShip
@@ -2307,6 +2357,8 @@
           fship_waybill: result.waybill,
           fship_route_code: result.routeCode,
           fship_label_url: labelUrl,
+          fship_courier_id: result.courierId || null,
+          courier_name: result.courierName || null,
           tracking_number: result.waybill,
           status: 'processing', // Update status to processing when synced
           fship_last_synced_at: new Date() // Track last sync time
@@ -2316,11 +2368,25 @@
         await OrderStatusHistory.create({
           order_id: order.id,
           status: 'processing',
-          notes: `Order synced with FShip. AWB: ${result.waybill}`,
+          notes: `Order synced with FShip. AWB: ${result.waybill}${result.courierName ? ` - Courier: ${result.courierName}` : ''}`,
           created_by: 'fship_sync_system'
         }, { transaction });
 
-        logger.debug(`✅ Order ${order.order_number} created in FShip with AWB: ${result.waybill}`);
+        logger.debug(`✅ Order ${order.order_number} created in FShip with AWB: ${result.waybill}${result.courierName ? `, Courier: ${result.courierName}` : ''}`);
+        
+        // If courier name not in create response, try to get from shipment summary
+        if (!result.courierName && result.waybill) {
+          try {
+            const shipmentStatus = await fshipService.getShipmentStatus(result.waybill);
+            const courierFromSummary = shipmentStatus?.courier_name || shipmentStatus?.courierName || shipmentStatus?.summary?.courier_name || null;
+            if (courierFromSummary) {
+              await order.update({ courier_name: courierFromSummary }, { transaction });
+              logger.debug(`📦 Courier name fetched from shipment summary: ${courierFromSummary}`);
+            }
+          } catch (courierErr) {
+            logger.debug(`⚠️ Could not fetch courier name from shipment summary: ${courierErr.message}`);
+          }
+        }
         
         return {
           success: true,
@@ -2391,6 +2457,13 @@
       if (trackingResult && trackingResult.summary) {
         const fshipStatus = trackingResult.summary.status;
         const newStatus = fshipService.mapFShipStatusToCrossCoin(fshipStatus);
+        
+        // Extract courier name from tracking data
+        const courierFromTracking = trackingResult.summary.courier_name || trackingResult.summary.courierName || trackingResult.courier_name || trackingResult.courierName || null;
+        if (courierFromTracking && !order.courier_name) {
+          await order.update({ courier_name: courierFromTracking }, { transaction });
+          logger.debug(`📦 Courier name set from tracking: ${courierFromTracking}`);
+        }
         
         logger.debug(`📊 FShip status: "${fshipStatus}" → CrossCoin status: "${newStatus}"`);
         
@@ -2546,13 +2619,16 @@
     try {
       // Get customer details
       const customer = order.User || order.GuestUser;
-      const customerName = customer 
-        ? (customer.firstName && customer.lastName 
-            ? `${customer.firstName} ${customer.lastName}` 
-            : customer.username || customer.email)
-        : 'Customer';
+      const shippingAddress = order.ShippingAddress;
 
-      const customerMobile = customer?.phone || order.ShippingAddress?.phone || '9876543210';
+      // Use shipping address full_name first, then fall back to customer info
+      const customerName = shippingAddress?.full_name
+        || (customer?.firstName && customer?.lastName
+            ? `${customer.firstName} ${customer.lastName}`
+            : customer?.username || customer?.email)
+        || 'Customer';
+
+      const customerMobile = shippingAddress?.phone || customer?.phone || '9876543210';
       const customerEmail = customer?.email || '';
 
       // Prepare products array
@@ -2574,11 +2650,12 @@
         customer_Name: customerName,
         customer_Mobile: customerMobile,
         customer_Emailid: customerEmail,
-        customer_Address: order.ShippingAddress?.address_line_1 || 'Address not provided',
-        landMark: order.ShippingAddress?.address_line_2 || '',
+        customer_Address: shippingAddress?.address || '',
+        landMark: '',
         customer_Address_Type: 'Home',
-        customer_PinCode: order.ShippingAddress?.postal_code || '400001',
-        customer_City: order.ShippingAddress?.city || 'Mumbai',
+        customer_PinCode: shippingAddress?.pincode || '',
+        customer_City: shippingAddress?.city || '',
+        customer_State: shippingAddress?.state || '',
         payment_Mode: order.payment_type === 'cod' ? 1 : 2, // 1=COD, 2=PREPAID
         express_Type: 'surface',
         is_Ndd: 0,

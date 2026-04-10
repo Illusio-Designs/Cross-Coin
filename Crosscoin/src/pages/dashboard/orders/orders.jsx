@@ -6,7 +6,7 @@ import SafeImage from "../../../components/common/SafeImage";
 import Loader from "../../../components/common/Loader";
 import BrandTags from "../../../components/Dashboard/BrandTags";
 import { showSuccess, showError } from '../../../utils/toastNotification';
-import { PromptModal } from '../../../components/common/AlertModal';
+import { PromptModal, ConfirmModal } from '../../../components/common/AlertModal';
 import { getProductImageSrc } from '../../../utils/imageUtils';
 import { getAttributeComponents } from '../../../utils/productAttributeFormatter';
 import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusUtils';
@@ -31,6 +31,7 @@ const Orders = () => {
     const [sortBy, setSortBy] = useState("createdAt");
     const [sortOrder, setSortOrder] = useState("desc");
     const [cancelPrompt, setCancelPrompt] = useState(null);
+    const [confirmPrompt, setConfirmPrompt] = useState(null);
     const [allOrdersStats, setAllOrdersStats] = useState({
         total: 0, prepaid: 0, cod: 0, paid: 0, pending: 0,
         totalRevenue: 0, averageOrderValue: 0, deliveredOrders: 0, cancelledOrders: 0,
@@ -164,6 +165,12 @@ const Orders = () => {
     };
 
     const confirmOrder = async (orderId, orderNumber) => {
+        setConfirmPrompt({ orderId, orderNumber });
+    };
+
+    const handleConfirmOrder = async () => {
+        const { orderId, orderNumber } = confirmPrompt;
+        setConfirmPrompt(null);
         try {
             const result = await orderService.confirmOrder(orderId);
             if (result.success) { showSuccess('orderConfirmed', `Order ${orderNumber} confirmed — FShip sync triggered`); fetchOrders(); }
@@ -257,7 +264,12 @@ const Orders = () => {
 
     const handleSearchChange = (e) => { setFilterValue(e.target.value); debouncedFetchOrders(); };
 
-    const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const formatDate = (dateString) => {
+        const d = new Date(dateString);
+        const date = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        return <span className="date-time-cell"><span className="date-part">{date}</span><span className="time-part">{time}</span></span>;
+    };
     const formatCurrency = (amount) => `₹${parseFloat(amount || 0).toFixed(2)}`;
     const calculateOrderSubtotal = (orderItems) => orderItems.reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
     const calculateOrderTotal = (subtotal, shippingFee, discountAmount) => Math.max(0, subtotal - parseFloat(discountAmount || 0) + parseFloat(shippingFee || 0));
@@ -290,8 +302,8 @@ const Orders = () => {
                     checked={selectedOrders.has(row.id)} onChange={() => toggleOrderSelection(row.id)} />
             ) : null
         },
-        { header: "Sr. No", accessor: "serial_number" },
-        { header: "Order ID", accessor: "order_number" },
+        { header: "Sr. No", accessor: "serial_number", width: "60px" },
+        { header: "Order ID", accessor: "order_number", width: "130px" },
         {
             header: "Customer",
             cell: (row) => (
@@ -303,8 +315,10 @@ const Orders = () => {
                         {row.User?.email || ''}
                     </div>
                     {row.rto_risk_level && (
-                        <span className={`rto-badge rto-${row.rto_risk_level.toLowerCase()}`} title={`RTO Risk: ${row.rto_risk_level} (Score: ${row.rto_risk_score || 0})`}>
-                            {row.rto_risk_level === 'HIGH' ? '🔴' : row.rto_risk_level === 'MEDIUM' ? '🟡' : '🟢'} {row.rto_risk_level}
+                        <span className={`rto-badge rto-${row.rto_risk_level.toLowerCase()}`}>
+                            <span className="rto-indicator">{row.rto_risk_level === 'HIGH' ? '🔴' : row.rto_risk_level === 'MEDIUM' ? '🟡' : '🟢'}</span>
+                            <span className="rto-level">{row.rto_risk_level}</span>
+                            {row.rto_risk_score != null && <span className="rto-score">{row.rto_risk_score}</span>}
                         </span>
                     )}
                 </div>
@@ -323,11 +337,11 @@ const Orders = () => {
                 return <BrandTags brands={brands} />;
             }
         },
-        { header: "Date", cell: (row) => formatDate(row.createdAt) },
-        { header: "Payment Type", cell: (row) => formatPaymentType(row.payment_type) },
-        { header: "Payment Status", cell: (row) => <span className={`status-badge status-${getPaymentStatusClass(row)}`}>{getPaymentStatusDisplay(row)}</span> },
-        { header: "Total", cell: (row) => formatCurrency(getOrderTotal(row)) },
-        { header: "Order Status", cell: (row) => <span className={`status-badge status-${getStatusClassName(row.status)}`}>{getStatusDisplayText(row.status)}</span> },
+        { header: "Date", cell: (row) => formatDate(row.createdAt), width: "130px" },
+        { header: "Payment Type", cell: (row) => formatPaymentType(row.payment_type), width: "100px" },
+        { header: "Payment Status", cell: (row) => <span className={`status-badge status-${getPaymentStatusClass(row)}`}>{getPaymentStatusDisplay(row)}</span>, width: "120px" },
+        { header: "Total", cell: (row) => formatCurrency(getOrderTotal(row)), width: "90px" },
+        { header: "Order Status", cell: (row) => <span className={`status-badge status-${getStatusClassName(row.status)}`}>{getStatusDisplayText(row.status)}</span>, width: "160px" },
         {
             header: "FShip Sync",
             cell: (row) => row.fship_order_id || row.fship_waybill
@@ -337,6 +351,16 @@ const Orders = () => {
                         <span className="sync-tag-text">
                             Synced
                             {row.fship_waybill && <small className="sync-tag-awb">AWB: {row.fship_waybill}</small>}
+                            {row.courier_name && <small className="sync-tag-courier">{row.courier_name}</small>}
+                        </span>
+                    </span>
+                )
+                : row.fship_sync_error ? (
+                    <span className="sync-tag sync-tag--error" title={row.fship_sync_error}>
+                        <span className="sync-tag-dot" />
+                        <span className="sync-tag-text">
+                            Sync Failed
+                            <small className="sync-tag-error">{row.fship_sync_error.length > 40 ? row.fship_sync_error.slice(0, 40) + '…' : row.fship_sync_error}</small>
                         </span>
                     </span>
                 )
@@ -432,6 +456,11 @@ const Orders = () => {
                 placeholder="Cancellation reason..."
                 onConfirm={handleCancelConfirm}
                 onCancel={() => setCancelPrompt(null)}
+            />
+            <ConfirmModal
+                message={confirmPrompt ? `Are you sure you want to confirm order ${confirmPrompt.orderNumber}? This will trigger FShip sync.` : null}
+                onConfirm={handleConfirmOrder}
+                onCancel={() => setConfirmPrompt(null)}
             />
             <div className="dashboard-page">
                 <div className="orders-header-container">
@@ -757,6 +786,21 @@ const Orders = () => {
                                             </div>
                                         )}
                                     </div>
+                                </div>
+                            )}
+
+                            {/* FShip Sync Error */}
+                            {selectedOrder.fship_sync_error && (
+                                <div className="odm-sync-error">
+                                    <div className="odm-sync-error-title">
+                                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M10.29 3.86l-8.6 14.86A1 1 0 002.56 20h18.88a1 1 0 00.87-1.28l-8.6-14.86a1 1 0 00-1.72 0z"/></svg>
+                                        FShip Sync Issues
+                                    </div>
+                                    <ul className="odm-sync-error-list">
+                                        {selectedOrder.fship_sync_error.split('; ').map((issue, i) => (
+                                            <li key={i}>{issue}</li>
+                                        ))}
+                                    </ul>
                                 </div>
                             )}
                         </div>

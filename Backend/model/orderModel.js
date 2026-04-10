@@ -195,6 +195,11 @@ const Order = sequelize.define('Order', {
         defaultValue: 0,
         comment: 'Number of FShip sync attempts made'
     },
+    fship_sync_error: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Validation or sync error details shown on order page'
+    },
     rto_risk_score: {
         type: DataTypes.INTEGER,
         allowNull: true,

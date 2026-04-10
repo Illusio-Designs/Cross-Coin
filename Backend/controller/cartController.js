@@ -44,14 +44,9 @@ module.exports.getCart = async (req, res) => {
             shipping = 0; // Free shipping logic, or set your fee
         }
 
-        // Calculate discount if coupon is provided
+        // Coupon discount is calculated at checkout, not in cart preview
+        // Remove placeholder to prevent incorrect discount display
         let discount = 0;
-        let couponCode = req.query.coupon || req.body?.coupon || null;
-        if (couponCode) {
-            // You may want to use your coupon validation logic here
-            // For now, just a placeholder: 10% off for any coupon
-            discount = subtotal * 0.1;
-        }
 
         // Final total
         const total = Math.max(0, subtotal - discount + shipping);
@@ -161,59 +156,79 @@ module.exports.addToCart = async (req, res) => {
   try {
     const userId = req.user.id;
     const { productId, variationId, quantity, size } = req.body;
-    let cart = await Cart.findOne({ where: { user_id: userId } });
-    if (!cart) {
-      cart = await Cart.create({ user_id: userId });
+
+    // Task 11.4: Validate quantity is a positive integer
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      return res.status(400).json({ message: 'Quantity must be a positive integer' });
     }
-    // Check if item already exists (by product and variation)
-    let where = { cartId: cart.id, productId: productId, variationId: variationId || null, selected_size: size || null };
-    console.log('[Cart] addToCart where:', where);
-    let item = await CartItem.findOne({ where });
-    console.log('[Cart] addToCart found item:', item);
-    let stockAvailable = 0;
-    if (variationId) {
-      const variation = await ProductVariation.findByPk(variationId);
-      stockAvailable = variation ? variation.stock : 0;
-    } else {
-      const variation = await ProductVariation.findOne({ where: { productId } });
-      stockAvailable = variation ? variation.stock : 0;
-    }
-    const requestedQuantity = item ? item.quantity + quantity : quantity;
-    if (typeof stockAvailable !== 'number' || stockAvailable < requestedQuantity) {
-      return res.status(400).json({ message: 'Product is out of stock or insufficient quantity' });
-    }
-    if (item) {
-      item.quantity += quantity;
-      await item.save();
-      console.log('[Cart] Updated existing CartItem:', item.id, 'quantity:', item.quantity);
-    } else {
-      // Get price from variation or product
-      let price = 0;
-      if (variationId) {
-        const variation = await ProductVariation.findByPk(variationId);
-        price = variation ? variation.price : 0;
-      } else {
-        const variation = await ProductVariation.findOne({ where: { productId } });
-        price = variation ? variation.price : 0;
+
+    // Task 11.1: Wrap entire logic in a Sequelize transaction
+    const transaction = await sequelize.transaction();
+    try {
+      let cart = await Cart.findOne({ where: { user_id: userId }, transaction });
+      if (!cart) {
+        cart = await Cart.create({ user_id: userId }, { transaction });
       }
-      item = await CartItem.create({
-        cartId: cart.id,
-        productId: productId,
-        variationId: variationId || null,
-        quantity,
-        price,
-        selected_size: size || null
-      });
-      console.log('[Cart] Created new CartItem:', {
-        id: item.id, 
-        productId: productId, 
-        variationId: variationId || null, 
-        quantity: quantity,
-        price: price,
-        size: size || null
-      });
+
+      // Task 11.2: Validate product exists and is active
+      const product = await Product.findByPk(productId, { transaction });
+      if (!product || product.status !== 'active') {
+        await transaction.rollback();
+        return res.status(404).json({ message: 'Product not found or inactive' });
+      }
+
+      // Check if item already exists (by product and variation)
+      let where = { cartId: cart.id, productId: productId, variationId: variationId || null, selected_size: size || null };
+      console.log('[Cart] addToCart where:', where);
+      let item = await CartItem.findOne({ where, transaction });
+      console.log('[Cart] addToCart found item:', item);
+
+      // Task 11.1: Use SELECT ... FOR UPDATE to lock the variation row during stock check
+      let stockAvailable = 0;
+      let variation = null;
+      if (variationId) {
+        variation = await ProductVariation.findByPk(variationId, { transaction, lock: transaction.LOCK.UPDATE });
+        stockAvailable = variation ? variation.stock : 0;
+      } else {
+        variation = await ProductVariation.findOne({ where: { productId }, transaction, lock: transaction.LOCK.UPDATE });
+        stockAvailable = variation ? variation.stock : 0;
+      }
+      const requestedQuantity = item ? item.quantity + quantity : quantity;
+      if (typeof stockAvailable !== 'number' || stockAvailable < requestedQuantity) {
+        await transaction.rollback();
+        return res.status(400).json({ message: 'Product is out of stock or insufficient quantity' });
+      }
+      if (item) {
+        item.quantity += quantity;
+        await item.save({ transaction });
+        console.log('[Cart] Updated existing CartItem:', item.id, 'quantity:', item.quantity);
+      } else {
+        // Get price from the already-fetched variation
+        let price = variation ? variation.price : 0;
+        item = await CartItem.create({
+          cartId: cart.id,
+          productId: productId,
+          variationId: variationId || null,
+          quantity,
+          price,
+          selected_size: size || null
+        }, { transaction });
+        console.log('[Cart] Created new CartItem:', {
+          id: item.id,
+          productId: productId,
+          variationId: variationId || null,
+          quantity: quantity,
+          price: price,
+          size: size || null
+        });
+      }
+
+      await transaction.commit();
+      res.json({ success: true, item });
+    } catch (innerError) {
+      await transaction.rollback();
+      throw innerError;
     }
-    res.json({ success: true, item });
   } catch (error) {
     console.error('[Cart] Error in addToCart:', error);
     res.status(500).json({ message: 'Failed to add to cart', error: error.message });
@@ -255,6 +270,26 @@ module.exports.updateCartItem = async (req, res) => {
             cartItem = fallbackCartItem;
         }
 
+        // Re-check stock availability before updating quantity
+        let stockAvailable = 0;
+        if (cartItem.variationId) {
+            const variation = await ProductVariation.findByPk(cartItem.variationId);
+            stockAvailable = variation ? variation.stock : 0;
+            // Refresh price if it changed since item was added
+            if (variation && parseFloat(variation.price) !== parseFloat(cartItem.price)) {
+                cartItem.price = variation.price;
+            }
+        } else {
+            const variation = await ProductVariation.findOne({ where: { productId } });
+            stockAvailable = variation ? variation.stock : 0;
+            if (variation && parseFloat(variation.price) !== parseFloat(cartItem.price)) {
+                cartItem.price = variation.price;
+            }
+        }
+        if (quantity > stockAvailable) {
+            return res.status(400).json({ success: false, message: `Only ${stockAvailable} items available in stock.` });
+        }
+
         cartItem.quantity = quantity;
         await cartItem.save();
 
@@ -286,28 +321,14 @@ module.exports.removeFromCart = async (req, res) => {
     
     console.log('Remove from cart whereClause:', whereClause);
     
-    // First, try to find the exact item to make sure it exists
+    // Find the exact item — no fallback to avoid deleting wrong variation
     const cartItem = await CartItem.findOne({ where: whereClause });
     if (!cartItem) {
-      console.log('Cart item not found with exact criteria, trying alternative search');
-      
-      // If not found with exact criteria, try to find by productId only
-      const alternativeItem = await CartItem.findOne({ 
-        where: { cartId: cart.id, productId: productId } 
-      });
-      
-      if (!alternativeItem) {
-        return res.status(404).json({ message: 'Cart item not found' });
-      }
-      
-      // Delete the alternative item
-      await alternativeItem.destroy();
-      console.log('Deleted alternative cart item:', alternativeItem.id);
-    } else {
-      // Delete the exact item
-      await cartItem.destroy();
-      console.log('Deleted exact cart item:', cartItem.id);
+      return res.status(404).json({ message: 'Cart item not found' });
     }
+    
+    await cartItem.destroy();
+    console.log('Deleted cart item:', cartItem.id);
     
     res.json({ success: true, deleted: 1 });
   } catch (error) {

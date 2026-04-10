@@ -13,6 +13,9 @@ import {
   createRazorpayOrder,
   updateOrderPayment,
   checkPincodeServiceability,
+  initiateCheckout,
+  initiateGuestCheckout,
+  retryCheckout,
 } from '../../services/publicApi';
 import {
   showOrderPlacedSuccessToast,
@@ -204,7 +207,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
   // Order
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
-  const [paymentFailed, setPaymentFailed] = useState({ error: null, rzpOrder: null, retryCount: 0, orderResult: null });
+  const [paymentFailed, setPaymentFailed] = useState({ error: null, rzpOrder: null, retryCount: 0, orderResult: null, reservationId: null });
   const [pincodeServiceability, setPincodeServiceability] = useState(null); // { serviceable, cod_allowed, city, state }
   const [isMounted, setIsMounted] = useState(false);
 
@@ -842,26 +845,51 @@ const CartDrawer = ({ isOpen, onClose }) => {
           return;
         }
         const prepaidIdempotencyKey = generateIdempotencyKey();
-        const orderData = buildPrepaidOrderData(prepaidIdempotencyKey);
 
-        // Step 1: Create the order FIRST so it exists in DB before payment
-        let orderResult;
+        // Step 1: Initiate checkout — reserve stock + create Razorpay order (NO DB order yet)
+        let checkoutResult;
         try {
-          orderResult = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
-          if (!orderResult?.order) throw new Error('Order creation failed.');
+          const checkoutData = {
+            shipping_address_id: selectedAddress.id,
+            items: buildItemsPayload(),
+            payment_type: 'razorpay',
+            notes: '',
+            discount_amount: prepaidInstantDiscount + couponDiscount,
+            coupon_id: appliedCoupon?.id || null,
+            idempotency_key: prepaidIdempotencyKey,
+          };
+
+          checkoutResult = isAuthenticated
+            ? await initiateCheckout(checkoutData)
+            : await initiateGuestCheckout({
+                ...checkoutData,
+                phone: selectedAddress.phone_number || selectedAddress.phoneNumber,
+                email: guestInfo.email,
+                firstName: guestInfo.firstName,
+                lastName: guestInfo.lastName,
+                shipping_address: {
+                  fullName: selectedAddress.full_name || selectedAddress.fullName,
+                  address: selectedAddress.address,
+                  city: selectedAddress.city,
+                  state: selectedAddress.state,
+                  pincode: selectedAddress.postal_code || selectedAddress.postalCode,
+                  phone: selectedAddress.phone_number || selectedAddress.phoneNumber,
+                },
+              });
+
+          if (!checkoutResult?.success || !checkoutResult?.razorpay_order) {
+            throw new Error('Checkout initiation failed.');
+          }
         } catch (err) {
-          showOrderPlacedErrorToast(err.response?.data?.message || err.error || err.message || 'Failed to create order. Please try again.');
+          showOrderPlacedErrorToast(err.message || err.error || 'Failed to start checkout. Please try again.');
           setIsProcessing(false);
           return;
         }
 
-        // Step 2: Create Razorpay order for payment
-        const rzpOrder = await createRazorpayOrder({
-          amount: prepaidPayable,
-          currency: 'INR',
-          receipt: orderResult.order.order_number,
-          isGuest: !isAuthenticated,
-        });
+        const rzpOrder = checkoutResult.razorpay_order;
+        const reservationId = checkoutResult.reservation_id;
+
+        // Step 2: Open Razorpay checkout
         const options = {
           key: RAZORPAY_KEY,
           amount: rzpOrder.amount,
@@ -876,21 +904,22 @@ const CartDrawer = ({ isOpen, onClose }) => {
           },
           theme: { color: '#CE1E36' },
           handler: async (response) => {
-            // Step 3: Payment captured — verify and link to order
+            // Step 3: Payment captured — verify + create order in one call
             try {
-              await updateOrderPayment({
-                orderId: orderResult.order.id,
+              const result = await updateOrderPayment({
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpayOrderId: response.razorpay_order_id,
                 razorpaySignature: response.razorpay_signature,
+                reservation_id: reservationId,
               });
-              trackPurchase(prepaidPayable, orderResult.order.order_number);
+              const orderNumber = result.order?.order_number;
+              trackPurchase(prepaidPayable, orderNumber);
               clearCart();
               clearBuyNow();
-              showOrderPlacedSuccessToast(orderResult.order.order_number);
-              setOrderSuccess({ orderNumber: orderResult.order.order_number });
+              showOrderPlacedSuccessToast(orderNumber);
+              setOrderSuccess({ orderNumber });
             } catch (err) {
-              // Payment captured but verification failed — webhook will reconcile
+              // Payment captured but order creation failed — webhook will recover
               showOrderPlacedErrorToast('Payment received successfully. Your order is being processed — you will receive confirmation shortly.');
               clearCart();
               clearBuyNow();
@@ -900,7 +929,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
           },
           modal: {
             ondismiss: () => {
-              setPaymentFailed(prev => ({ error: 'Payment was cancelled.', rzpOrder: rzpOrder, retryCount: prev.retryCount, orderResult }));
+              setPaymentFailed(prev => ({ error: 'Payment was cancelled.', rzpOrder, retryCount: prev.retryCount, orderResult: null, reservationId }));
               setIsProcessing(false);
             },
           },
@@ -909,9 +938,10 @@ const CartDrawer = ({ isOpen, onClose }) => {
         rzp.on('payment.failed', (r) => {
           setPaymentFailed(prev => ({
             error: r.error?.description || 'Payment failed. Please try again.',
-            rzpOrder: rzpOrder,
+            rzpOrder,
             retryCount: prev.retryCount,
-            orderResult,
+            orderResult: null,
+            reservationId,
           }));
           setIsProcessing(false);
         });
@@ -981,8 +1011,14 @@ const CartDrawer = ({ isOpen, onClose }) => {
                     setPaymentFailed(prev => ({ ...prev, retryCount: prev.retryCount + 1, error: null }));
                     setIsProcessing(true);
                     try {
-                      const rzpOrder = paymentFailed.rzpOrder;
-                      const existingOrder = paymentFailed.orderResult;
+                      // Call backend retry — gets new Razorpay order, extends stock reservation
+                      const retryResult = await retryCheckout(paymentFailed.reservationId);
+                      if (!retryResult?.success || !retryResult?.razorpay_order) {
+                        throw new Error(retryResult?.message || 'Retry failed.');
+                      }
+
+                      const rzpOrder = retryResult.razorpay_order;
+                      const reservationId = retryResult.reservation_id;
 
                       const options = {
                         key: RAZORPAY_KEY,
@@ -999,17 +1035,18 @@ const CartDrawer = ({ isOpen, onClose }) => {
                         theme: { color: '#CE1E36' },
                         handler: async (response) => {
                           try {
-                            await updateOrderPayment({
-                              orderId: existingOrder.order.id,
+                            const result = await updateOrderPayment({
                               razorpayPaymentId: response.razorpay_payment_id,
                               razorpayOrderId: response.razorpay_order_id,
                               razorpaySignature: response.razorpay_signature,
+                              reservation_id: reservationId,
                             });
-                            trackPurchase(prepaidPayable, existingOrder.order.order_number);
+                            const orderNumber = result.order?.order_number;
+                            trackPurchase(prepaidPayable, orderNumber);
                             clearCart(); clearBuyNow();
-                            setPaymentFailed({ error: null, rzpOrder: null, retryCount: 0, orderResult: null });
-                            showOrderPlacedSuccessToast(existingOrder.order.order_number);
-                            setOrderSuccess({ orderNumber: existingOrder.order.order_number });
+                            setPaymentFailed({ error: null, rzpOrder: null, retryCount: 0, orderResult: null, reservationId: null });
+                            showOrderPlacedSuccessToast(orderNumber);
+                            setOrderSuccess({ orderNumber });
                           } catch (err) {
                             showOrderPlacedErrorToast('Payment received successfully. Your order is being processed — you will receive confirmation shortly.');
                             clearCart(); clearBuyNow();
@@ -1019,19 +1056,24 @@ const CartDrawer = ({ isOpen, onClose }) => {
                         },
                         modal: {
                           ondismiss: () => {
-                            setPaymentFailed(prev => ({ ...prev, error: 'Payment was cancelled.' }));
+                            setPaymentFailed(prev => ({ ...prev, error: 'Payment was cancelled.', rzpOrder, reservationId }));
                             setIsProcessing(false);
                           },
                         },
                       };
                       const rzp = new window.Razorpay(options);
                       rzp.on('payment.failed', (r) => {
-                        setPaymentFailed(prev => ({ ...prev, error: r.error?.description || 'Payment failed. Please try again.' }));
+                        setPaymentFailed(prev => ({ ...prev, error: r.error?.description || 'Payment failed. Please try again.', rzpOrder, reservationId }));
                         setIsProcessing(false);
                       });
                       rzp.open();
                     } catch (err) {
-                      showOrderPlacedErrorToast(err.message || 'Could not retry payment.');
+                      // If session expired, reset so user can start fresh
+                      if (err.code === 'SESSION_EXPIRED' || err.message?.includes('expired')) {
+                        setPaymentFailed({ error: 'Checkout session expired. Please start a new order.', rzpOrder: null, retryCount: 3, orderResult: null, reservationId: null });
+                      } else {
+                        showOrderPlacedErrorToast(err.message || 'Could not retry payment.');
+                      }
                       setIsProcessing(false);
                     }
                   }}
@@ -1046,7 +1088,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 className="cd-btn-ghost"
                 style={{ marginTop: 10 }}
                 onClick={() => {
-                  setPaymentFailed({ error: null, rzpOrder: null, retryCount: 0, orderResult: null });
+                  setPaymentFailed({ error: null, rzpOrder: null, retryCount: 0, orderResult: null, reservationId: null });
                   // Fire-and-forget: record failure if we have a rzpOrder
                   if (paymentFailed.rzpOrder?.id) {
                     fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/payments/failed`, {
