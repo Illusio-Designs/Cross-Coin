@@ -26,6 +26,8 @@ export const getStatusDisplayText = (status) => {
     
     const statusMap = {
         'pending': 'Order Pending',
+        'awaiting_confirmation': 'Awaiting Confirmation',
+        'awaiting confirmation': 'Awaiting Confirmation',
         'confirmed': 'Order Confirmed',
         'processing': 'Processing',
         'booked': 'Booked',
@@ -46,6 +48,10 @@ export const getStatusDisplayText = (status) => {
         'order_cancelled': 'Order Cancelled',
         'order cancelled': 'Order Cancelled',
         'exception': 'Exception',
+        'return_initiated': 'Return Initiated',
+        'return initiated': 'Return Initiated',
+        'returned_rto': 'Returned (RTO)',
+        'returned rto': 'Returned (RTO)',
         'returned': 'Returned'
     };
     
@@ -66,27 +72,33 @@ export const getStatusColor = (status) => {
     
     const colorMap = {
         'pending': '#F59E0B',
+        'awaiting_confirmation': '#F97316',
+        'awaiting confirmation': '#F97316',
         'confirmed': '#3B82F6',
-        'processing': '#180D3E',
-        'booked': '#3B82F6',
+        'processing': '#3B82F6',
+        'booked': '#6366F1',
         'pickup_initiated': '#8B5CF6',
         'pickup initiated': '#8B5CF6',
-        'manifested': '#06B6D4',
+        'manifested': '#0891B2',
         'in_transit': '#F97316',
         'in transit': '#F97316',
-        'shipped': '#CE1E36',
-        'out_for_delivery': '#EF4444',
-        'out for delivery': '#EF4444',
+        'shipped': '#EA580C',
+        'out_for_delivery': '#65A30D',
+        'out for delivery': '#65A30D',
         'delivered': '#10B981',
         'undelivered': '#DC2626',
         'rto': '#F59E0B',
-        'rto_delivered': '#8B5CF6',
-        'rto delivered': '#8B5CF6',
+        'rto_delivered': '#64748B',
+        'rto delivered': '#64748B',
         'cancelled': '#EF4444',
         'order_cancelled': '#EF4444',
         'order cancelled': '#EF4444',
         'exception': '#DC2626',
-        'returned': '#6B7280'
+        'return_initiated': '#F59E0B',
+        'return initiated': '#F59E0B',
+        'returned_rto': '#64748B',
+        'returned rto': '#64748B',
+        'returned': '#64748B'
     };
     
     const lowerStatus = status.toLowerCase().replace(/\s+/g, '_');
@@ -129,20 +141,25 @@ export const getStatusPriority = (status) => {
     
     const priorityMap = {
         'pending': 1,
-        'processing': 2,
-        'booked': 3,
-        'pickup initiated': 4,
-        'manifested': 5,
-        'in transit': 6,
-        'shipped': 7,
-        'out for delivery': 8,
-        'delivered': 9,
-        'rto': 10,
-        'rto delivered': 11,
-        'cancelled': 12,
-        'order cancelled': 13,
-        'exception': 14,
-        'returned': 15
+        'awaiting confirmation': 2,
+        'confirmed': 3,
+        'processing': 4,
+        'booked': 5,
+        'pickup initiated': 6,
+        'manifested': 7,
+        'in transit': 8,
+        'shipped': 9,
+        'out for delivery': 10,
+        'delivered': 11,
+        'undelivered': 12,
+        'return initiated': 13,
+        'rto': 14,
+        'rto delivered': 15,
+        'returned rto': 16,
+        'cancelled': 17,
+        'order cancelled': 18,
+        'exception': 19,
+        'returned': 20
     };
     
     const lowerStatus = status.toLowerCase();

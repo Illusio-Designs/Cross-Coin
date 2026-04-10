@@ -270,9 +270,9 @@
 }
 
 .status-badge.status-shipped {
-  background: linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%);
-  color: #3730a3;
-  border: 1px solid #818cf8;
+  background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+  color: #7c2d12;
+  border: 1px solid #f97316;
 }
 
 .status-badge.status-delivered {
@@ -307,9 +307,9 @@
 
 /* New FShip Status Badges */
 .status-badge.status-booked {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  color: #1e40af;
-  border: 1px solid #93c5fd;
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #3730a3;
+  border: 1px solid #818cf8;
 }
 
 .status-badge.status-pickup-initiated {
@@ -319,9 +319,9 @@
 }
 
 .status-badge.status-manifested {
-  background: linear-gradient(135deg, #cffafe 0%, #a7f3d0 100%);
-  color: #065f46;
-  border: 1px solid #6ee7b7;
+  background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);
+  color: #155e75;
+  border: 1px solid #22d3ee;
 }
 
 .status-badge.status-in-transit {
@@ -331,9 +331,9 @@
 }
 
 .status-badge.status-out-for-delivery {
-  background: linear-gradient(135deg, #fecaca 0%, #f87171 100%);
-  color: #7f1d1d;
-  border: 1px solid #ef4444;
+  background: linear-gradient(135deg, #d9f99d 0%, #bef264 100%);
+  color: #365314;
+  border: 1px solid #84cc16;
 }
 
 .status-badge.status-undelivered {
@@ -349,9 +349,9 @@
 }
 
 .status-badge.status-rto-delivered {
-  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-  color: #065f46;
-  border: 1px solid #34d399;
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  color: #475569;
+  border: 1px solid #94a3b8;
 }
 
 .status-badge.status-order-cancelled {
@@ -364,6 +364,30 @@
   background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
   color: #7f1d1d;
   border: 1px solid #dc2626;
+}
+
+.status-badge.status-awaiting-confirmation {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  color: #9a3412;
+  border: 1px solid #fb923c;
+}
+
+.status-badge.status-confirmed {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  border: 1px solid #60a5fa;
+}
+
+.status-badge.status-return-initiated {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+
+.status-badge.status-returned-rto {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  color: #475569;
+  border: 1px solid #94a3b8;
 }
 
 /* Clear search button */
@@ -937,9 +961,9 @@
 }
 
 .status-badge.status-shipped {
-  background: linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%);
-  color: #3730a3;
-  border: 1px solid #818cf8;
+  background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+  color: #7c2d12;
+  border: 1px solid #f97316;
 }
 
 .status-badge.status-delivered {
