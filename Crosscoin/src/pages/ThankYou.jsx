@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { getUserOrders } from "../services/publicApi";
 import { useAuth } from "../context/AuthContext";
 import { fbqTrack } from "../utils/fbqTrack";
+import { gtagTrack } from "../utils/gtagTrack";
 
 const IconCheck = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -82,6 +83,17 @@ export default function ThankYou() {
               };
               if (purchaseData.value > 0) {
                 fbqTrack('Purchase', purchaseData, { eventID: `Purchase_${order_number}` });
+                gtagTrack('purchase', {
+                  transaction_id: order_number,
+                  value: purchaseData.value,
+                  currency: 'INR',
+                  items: (order.OrderItems || []).map(i => ({
+                    item_id: String(i.Product?.id || i.product_id),
+                    item_name: i.Product?.name || '',
+                    quantity: i.quantity || 1,
+                    price: parseFloat(i.price || 0),
+                  })),
+                });
                 sessionStorage.setItem(trackingKey, 'true');
               }
             }
