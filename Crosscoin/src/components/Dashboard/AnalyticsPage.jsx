@@ -231,7 +231,7 @@ export default function AnalyticsPage() {
               <p className="sl-page-sub">{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : "Google Analytics · Today"}</p>
             </div>
           </div>
-          <div className="sl-header-right">
+          <div className="sl-header-right" style={{ flexWrap: "wrap" }}>
             {brands.length > 1 && (
               <Dropdown
                 value={brandId}
@@ -286,7 +286,7 @@ export default function AnalyticsPage() {
 
         {/* Stat cards */}
         {(stats || realtimeUsers !== null) && (
-          <div className="an-stats-row" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+          <div className="an-stats-row">
             <StatCard label="Active Now"     value={realtimeUsers ?? "—"}                                                                                              accent="#CE1E36" />
             <StatCard label="Sessions Today" value={stats ? fmt(stats.sessions) : "—"}                                                                                delta={stats?.sessionsDelta} />
             <StatCard label="Orders Today"   value={stats ? stats.orders : "—"}                                                                                       accent="#180D3E" />
@@ -403,6 +403,12 @@ export default function AnalyticsPage() {
           letter-spacing: .6px;
           border-bottom: 1px solid #f0f0f5;
         }
+        .an-no-data {
+          padding: 16px;
+          text-align: center;
+          color: #9ca3af;
+          font-size: 13px;
+        }
 
         /* Empty state */
         .an-empty-state {
@@ -442,9 +448,34 @@ export default function AnalyticsPage() {
           to { transform: rotate(360deg); }
         }
 
+        /* ── Mobile: 900px ── */
         @media (max-width: 900px) {
           .an-globe-canvas-wrap { height: 320px; }
           .an-bottom-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ── Mobile: 600px ── */
+        @media (max-width: 600px) {
+          .an-globe-wrap { border-radius: 10px; margin-bottom: 10px; }
+          .an-globe-canvas-wrap { height: 260px; }
+          .an-globe-header { padding: 10px 12px; font-size: 11px; }
+          .an-active-badge { font-size: 11px; padding: 2px 8px; }
+          .an-bottom-grid { gap: 10px; }
+          .an-panel-header { padding: 10px 12px; font-size: 11px; }
+          .an-list-rows { padding: 8px 10px; }
+          .an-bar-row { grid-template-columns: 1fr 60px 36px; gap: 6px; }
+          .an-bar-label { font-size: 11.5px; }
+          .an-bar-val { font-size: 10px; }
+          .an-empty-state { padding: 32px 16px; }
+          .an-empty-title { font-size: 16px; }
+          .an-data-loader { padding: 48px 16px; }
+        }
+
+        /* ── Mobile: 400px ── */
+        @media (max-width: 400px) {
+          .an-globe-canvas-wrap { height: 220px; }
+          .an-bar-row { grid-template-columns: 1fr 50px 32px; }
+          .an-bar-label { font-size: 11px; }
         }
       `}</style>
     </>
