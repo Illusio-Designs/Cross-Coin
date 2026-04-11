@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { Modal, Button, Table, Pagination, Input, Select, Switch } from "../../components/ui";
 import Loader from "../../components/common/Loader";
-import { blogService, brandService, productService } from "../../services";
+import { blogService, productService } from "../../services";
+import BrandAssignment from '../../components/Dashboard/BrandAssignment';
 import { showSuccess, showError } from "../../utils/toastNotification";
 import { ConfirmModal } from '../../components/common/AlertModal';
 
@@ -99,7 +100,6 @@ export function Blogs() {
   const [loading, setLoading] = useState(false);
   const [posts, setPosts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [brands, setBrands] = useState([]);
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -119,14 +119,12 @@ export function Blogs() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [postsRes, catsRes, brandsRes] = await Promise.all([
+      const [postsRes, catsRes] = await Promise.all([
         blogService.getAllPosts(),
         blogService.getAllCategories(),
-        brandService.getAllBrands(),
       ]);
       setPosts(postsRes?.data || []);
       setCategories(catsRes?.data || []);
-      setBrands(brandsRes?.data || []);
     } catch { showError('loadingFailed'); }
     finally { setLoading(false); }
   }, []);
@@ -142,7 +140,6 @@ export function Blogs() {
   useEffect(() => { setCurrentPage(1); }, [search, tab]);
 
   // ── Derived option arrays ──────────────────────────────────────────────────
-  const brandOpts = brands.map(b => ({ value: b.id, label: b.display_name || b.name }));
   const categoryOpts = [{ value: '', label: '— None —' }, ...categories.map(c => ({ value: String(c.id), label: c.name }))];
   const productOpts = [{ value: '', label: '— Select product —' }, ...products.map(p => ({ value: String(p.id), label: p.name }))];
   const catStatusOpts = [{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }];
@@ -314,7 +311,11 @@ export function Blogs() {
     { header: 'Author', accessor: 'author_name', cell: ({ author_name }) => <span>{author_name || '—'}</span> },
     { header: 'Category', accessor: 'blog_category_id', cell: ({ BlogCategory }) => <span>{BlogCategory?.name || '—'}</span> },
     { header: 'Status', accessor: 'status', cell: ({ status }) => <StatusBadge status={status} /> },
-    { header: 'Brands', accessor: 'brands', cell: ({ Brands }) => <span>{(Brands || []).map(b => b.name).join(', ') || '—'}</span> },
+    { header: 'Brands', accessor: 'brands', cell: ({ Brands }) => (
+      Brands?.length > 0
+        ? <div className="sl-brands-wrap">{Brands.map((b, i) => <span key={i} className="sl-brand-tag">{b.display_name || b.name}</span>)}</div>
+        : <span className="sl-na">—</span>
+    )},
     { header: 'Actions', accessor: 'actions', cell: ({ id }) => (
       <div className="sl-actions">
         <button className="sl-btn-edit" title="Hero Image" onClick={() => openHeroModal(id)}>{IC.image}</button>
@@ -432,17 +433,14 @@ export function Blogs() {
               />
             </div>
 
-            {/* Brands — multi-select */}
-            <Select
-              label="Brands"
-              required
-              options={brandOpts}
-              value={postForm.brand_ids}
-              onChange={v => handlePostField('brand_ids', v)}
-              multiple
-              searchable
-              helperText="Select one or more brands"
-            />
+            {/* Brands — same as slider */}
+            <div className="dm-field">
+              <BrandAssignment
+                selectedBrands={postForm.brand_ids || []}
+                onChange={v => handlePostField('brand_ids', v)}
+                disabled={loading}
+              />
+            </div>
 
             {/* Tags */}
             <div className="dm-field" style={{ marginTop: 4 }}>
