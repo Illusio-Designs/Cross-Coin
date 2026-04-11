@@ -1,4 +1,4 @@
-/* ── DateRangePicker ── */
+/* ── DateRangePicker Container ── */
 .drp {
   display: flex;
   align-items: center;
@@ -8,6 +8,7 @@
   border: 1.5px solid #ebebf0;
   border-radius: 12px;
   flex-wrap: wrap;
+  position: relative;
 }
 
 .drp--inline {
@@ -32,72 +33,59 @@
   flex-shrink: 0;
 }
 
-.drp-inputs {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.drp-field {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.drp-field-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: #6b7280;
-  white-space: nowrap;
-}
-
-.drp-input {
-  height: 36px;
-  padding: 0 10px;
-  border: 1.5px solid #ebebf0;
-  border-radius: 8px;
-  font-size: 13px;
-  font-family: inherit;
-  color: #1a1a2e;
-  background: #fafafb;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  outline: none;
-  min-width: 140px;
-}
-
-.drp-input:hover {
-  border-color: #180D3E;
-}
-
-.drp-input:focus {
-  border-color: #180D3E;
-  box-shadow: 0 0 0 3px rgba(24, 13, 62, 0.08);
-}
-
-.drp-input::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  opacity: 0.5;
-  transition: opacity 0.2s;
-}
-
-.drp-input:hover::-webkit-calendar-picker-indicator {
-  opacity: 1;
-}
-
-.drp-actions {
+/* ── Trigger Row ── */
+.drp-trigger-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
+.drp-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
+  background: #fafafb;
+  border: 1.5px solid #ebebf0;
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1a1a2e;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  white-space: nowrap;
+}
+
+.drp-trigger svg {
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.drp-trigger:hover {
+  border-color: #180D3E;
+  background: #fff;
+}
+
+.drp-trigger--active {
+  border-color: #180D3E;
+  box-shadow: 0 0 0 3px rgba(24, 13, 62, 0.08);
+  background: #fff;
+}
+
+.drp-trigger-text {
+  color: #1a1a2e;
+}
+
+/* ── Action Buttons ── */
 .drp-apply-btn {
-  height: 36px;
+  height: 38px;
   padding: 0 18px;
   background: #180D3E;
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -117,12 +105,12 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  height: 36px;
+  height: 38px;
   padding: 0 12px;
   background: #f3f4f6;
   color: #374151;
   border: 1px solid #d1d5db;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -135,6 +123,194 @@
   border-color: #9ca3af;
 }
 
+/* ── Dropdown ── */
+.drp-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 1000;
+  background: #fff;
+  border: 1.5px solid #ebebf0;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  animation: drpFadeIn 0.15s ease-out;
+}
+
+@keyframes drpFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.drp-dropdown-body {
+  display: flex;
+}
+
+/* ── Presets Sidebar ── */
+.drp-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  border-right: 1px solid #f0f0f5;
+  min-width: 140px;
+  background: #fafafb;
+}
+
+.drp-presets-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+  padding: 4px 8px 8px;
+}
+
+.drp-preset-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #374151;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.drp-preset-btn:hover {
+  background: #180D3E;
+  color: #fff;
+}
+
+/* ── Calendar Wrapper ── */
+.drp-cal-wrap {
+  padding: 12px 16px 16px;
+  min-width: 280px;
+}
+
+.drp-selecting-hint {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-align: center;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Calendar ── */
+.drp-calendar {
+  user-select: none;
+}
+
+.drp-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.drp-cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1.5px solid #ebebf0;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #374151;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.drp-cal-nav:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.drp-cal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.drp-cal-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+
+.drp-cal-day-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-align: center;
+  padding: 4px 0;
+}
+
+.drp-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.drp-cal-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 34px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #374151;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.drp-cal-empty {
+  cursor: default;
+}
+
+.drp-cal-cell:not(.drp-cal-empty):hover {
+  background: #f3f4f6;
+}
+
+.drp-cal-today {
+  font-weight: 700;
+  color: #180D3E;
+  background: #f0edf7;
+}
+
+.drp-cal-today:hover {
+  background: #e4dff0;
+}
+
+.drp-cal-start,
+.drp-cal-end {
+  background: #180D3E !important;
+  color: #fff !important;
+  font-weight: 700;
+  border-radius: 8px;
+}
+
+.drp-cal-in-range {
+  background: #ede9f7;
+  color: #180D3E;
+  border-radius: 4px;
+}
+
+.drp-cal-in-range:hover {
+  background: #ddd6f0;
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .drp {
@@ -144,27 +320,61 @@
     padding: 12px;
   }
 
-  .drp-inputs {
+  .drp-trigger-row {
     flex-direction: column;
-    gap: 8px;
+    align-items: stretch;
   }
 
-  .drp-field {
+  .drp-trigger {
     width: 100%;
+    justify-content: center;
   }
 
-  .drp-input {
-    width: 100%;
+  .drp-dropdown {
+    left: 0;
+    right: 0;
+    width: auto;
+  }
+
+  .drp-dropdown-body {
+    flex-direction: column;
+  }
+
+  .drp-presets {
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-right: none;
+    border-bottom: 1px solid #f0f0f5;
     min-width: unset;
+    padding: 10px;
+    gap: 4px;
   }
 
-  .drp-actions {
+  .drp-presets-title {
+    width: 100%;
+    padding: 2px 4px 6px;
+  }
+
+  .drp-preset-btn {
+    width: auto;
+    padding: 6px 12px;
+    font-size: 12px;
+    border: 1px solid #ebebf0;
+    border-radius: 20px;
+  }
+
+  .drp-cal-wrap {
+    min-width: unset;
+    padding: 12px;
+  }
+
+  .drp-cal-cell {
     width: 100%;
   }
 
   .drp-apply-btn,
   .drp-clear-btn {
-    flex: 1;
+    width: 100%;
     justify-content: center;
   }
 }
@@ -174,14 +384,19 @@
     font-size: 12px;
   }
 
-  .drp-input {
-    height: 34px;
+  .drp-trigger {
+    height: 36px;
+    font-size: 12px;
+    padding: 0 10px;
+  }
+
+  .drp-cal-cell {
+    width: 100%;
+    height: 32px;
     font-size: 12px;
   }
 
-  .drp-apply-btn,
-  .drp-clear-btn {
-    height: 34px;
-    font-size: 12px;
+  .drp-cal-title {
+    font-size: 13px;
   }
 }
