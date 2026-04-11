@@ -2396,6 +2396,42 @@
   background: #6c757d !important;
 }
 
+/* Main FShip Sync button */
+.order-sync-main-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1.5px solid #180D3E;
+  background: #fff;
+  color: #180D3E;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.order-sync-main-btn svg {
+  width: 16px;
+  height: 16px;
+}
+.order-sync-main-btn:hover:not(:disabled) {
+  background: #180D3E;
+  color: #fff;
+}
+.order-sync-main-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.order-sync-main-btn.syncing {
+  background: #6c757d;
+  border-color: #6c757d;
+  color: #fff;
+}
+
 /* Filters section */
 .orders-filters-section {
   display: flex;
