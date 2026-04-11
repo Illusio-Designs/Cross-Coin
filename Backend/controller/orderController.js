@@ -14,6 +14,7 @@
   const UTMTracking = require("../model/utmModel.js");
   const { Op, Transaction } = require("sequelize");
   const XLSX = require("xlsx");
+  const { OrderShipment } = require("../model/orderShipmentModel.js");
   const { sequelize } = require("../config/db.js");
   const axios = require('axios');
   const { logger } = require("../config/logging.js");
@@ -23,6 +24,42 @@
   const { sendFacebookEvent } = require("../integration/facebookPixel.js");
   const { sendGAEvent } = require("../integration/googleAnalytics.js");
   const settingsHelper = require("../services/settingsHelper");
+
+  // ── Dual-write helper: sync shipment data to order_shipments table ──────
+  async function upsertShipment(orderId, data, transaction = null) {
+    try {
+      const opts = transaction ? { transaction } : {};
+      const existing = await OrderShipment.findOne({ where: { order_id: orderId }, ...opts });
+      const payload = {
+        order_id: orderId,
+        provider: data.provider || 'fship',
+        provider_order_id: data.provider_order_id || data.fship_order_id || null,
+        waybill: data.waybill || data.fship_waybill || null,
+        tracking_number: data.tracking_number || null,
+        tracking_url: data.tracking_url || null,
+        route_code: data.route_code || data.fship_route_code || null,
+        courier_id: data.courier_id || data.fship_courier_id || null,
+        courier_name: data.courier_name || null,
+        label_url: data.label_url || data.fship_label_url || null,
+        label_downloaded: data.label_downloaded ?? data.fship_label_downloaded ?? false,
+        label_downloaded_at: data.label_downloaded_at || data.fship_label_downloaded_at || null,
+        label_downloaded_by: data.label_downloaded_by || data.fship_label_downloaded_by || null,
+        sync_status: data.sync_status || data.fship_sync_status || 'pending',
+        sync_attempts: data.sync_attempts ?? data.fship_sync_attempts ?? 0,
+        sync_error: data.sync_error || data.fship_sync_error || null,
+        last_synced_at: data.last_synced_at || data.fship_last_synced_at || null,
+      };
+      // Remove undefined values
+      Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
+      if (existing) {
+        await existing.update(payload, opts);
+      } else {
+        await OrderShipment.create(payload, opts);
+      }
+    } catch (err) {
+      logger.warn(`upsertShipment failed for order ${orderId}: ${err.message}`);
+    }
+  }
   // Import batch fetch utilities for performance optimization
   const { batchFetchProducts, batchFetchVariations, batchFetchVariationsByProductIds } = require("../utils/batchFetch.js");
   // Import batch insert utility for efficient bulk operations
@@ -1216,6 +1253,15 @@
       if (Object.keys(updateData).length > 0) {
         await order.update(updateData, { transaction });
 
+        // Dual-write to order_shipments
+        await upsertShipment(order.id, {
+          waybill: waybill || order.fship_waybill,
+          tracking_number: waybill || order.tracking_number,
+          courier_name: courier_name || order.courier_name,
+          sync_status: 'synced',
+          last_synced_at: new Date(),
+        }, transaction);
+
         // Credit loyalty points when an authenticated user's order is delivered.
         if (orderStatus === "delivered" && order.user_id) {
           try {
@@ -2159,6 +2205,7 @@
           
           if (syncResult.success) {
             await order.update({ fship_sync_status: 'synced' }, { transaction: orderTransaction });
+            await upsertShipment(order.id, { sync_status: 'synced' }, orderTransaction);
 
             if (syncResult.action === 'synced') {
               results.synced++;
@@ -2444,6 +2491,20 @@
           fship_last_synced_at: new Date() // Track last sync time
         }, { transaction });
 
+        // Dual-write to order_shipments table
+        await upsertShipment(order.id, {
+          provider: 'fship',
+          provider_order_id: result.orderId,
+          waybill: result.waybill,
+          tracking_number: result.waybill,
+          route_code: result.routeCode,
+          courier_id: result.courierId || null,
+          courier_name: result.courierName || null,
+          label_url: labelUrl,
+          sync_status: 'synced',
+          last_synced_at: new Date(),
+        }, transaction);
+
         // Create status history
         await OrderStatusHistory.create({
           order_id: order.id,
@@ -2454,17 +2515,33 @@
 
         logger.debug(`✅ Order ${order.order_number} created in FShip with AWB: ${result.waybill}${result.courierName ? `, Courier: ${result.courierName}` : ''}`);
         
-        // If courier name not in create response, try to get from shipment summary
-        if (!result.courierName && result.waybill) {
+        // If courier name or tracking URL not in create response, try shipment summary
+        if ((!result.courierName || !order.tracking_url) && result.waybill) {
           try {
             const shipmentStatus = await fshipService.getShipmentStatus(result.waybill);
-            const courierFromSummary = shipmentStatus?.courier_name || shipmentStatus?.courierName || shipmentStatus?.summary?.courier_name || null;
-            if (courierFromSummary) {
-              await order.update({ courier_name: courierFromSummary }, { transaction });
-              logger.debug(`📦 Courier name fetched from shipment summary: ${courierFromSummary}`);
+            logger.debug('📡 Shipment summary after create:', JSON.stringify(shipmentStatus, null, 2));
+            const summaryUpdates = {};
+
+            if (!result.courierName) {
+              const courierFromSummary = shipmentStatus?.courier_name || shipmentStatus?.courierName || shipmentStatus?.summary?.courier_name || shipmentStatus?.data?.courier_name || null;
+              if (courierFromSummary) {
+                summaryUpdates.courier_name = courierFromSummary;
+                logger.debug(`📦 Courier name from shipment summary: ${courierFromSummary}`);
+              }
+            }
+
+            const trackingUrlFromSummary = shipmentStatus?.tracking_url || shipmentStatus?.trackingUrl || shipmentStatus?.summary?.tracking_url || shipmentStatus?.data?.tracking_url || null;
+            if (trackingUrlFromSummary) {
+              summaryUpdates.tracking_url = trackingUrlFromSummary;
+              logger.debug(`🔗 Tracking URL from shipment summary: ${trackingUrlFromSummary}`);
+            }
+
+            if (Object.keys(summaryUpdates).length > 0) {
+              await order.update(summaryUpdates, { transaction });
+              await upsertShipment(order.id, summaryUpdates, transaction);
             }
           } catch (courierErr) {
-            logger.debug(`⚠️ Could not fetch courier name from shipment summary: ${courierErr.message}`);
+            logger.debug(`⚠️ Could not fetch shipment summary: ${courierErr.message}`);
           }
         }
         
@@ -2519,6 +2596,7 @@
               fship_label_url: labelUrl,
               notes: order.notes ? `${order.notes}\nLabel URL constructed from waybill and FShip order ID` : 'Label URL constructed from waybill and FShip order ID'
             }, { transaction });
+            await upsertShipment(order.id, { label_url: labelUrl }, transaction);
             await order.reload({ transaction });
             logger.debug(`💾 Label URL saved to database`);
           } catch (updateError) {
@@ -2533,16 +2611,37 @@
 
       // Get tracking history from FShip
       const trackingResult = await fshipService.getTrackingHistory(waybill);
+      logger.debug('📡 FShip tracking response:', JSON.stringify(trackingResult, null, 2));
       
       if (trackingResult && trackingResult.summary) {
         const fshipStatus = trackingResult.summary.status;
         const newStatus = fshipService.mapFShipStatusToCrossCoin(fshipStatus);
         
-        // Extract courier name from tracking data
-        const courierFromTracking = trackingResult.summary.courier_name || trackingResult.summary.courierName || trackingResult.courier_name || trackingResult.courierName || trackingResult.summary.courier || null;
+        // Extract courier name from tracking data (try every possible field)
+        const courierFromTracking = trackingResult.summary.courier_name
+          || trackingResult.summary.courierName
+          || trackingResult.summary.courier
+          || trackingResult.summary.Courier
+          || trackingResult.courier_name
+          || trackingResult.courierName
+          || null;
         if (courierFromTracking && courierFromTracking !== order.courier_name) {
           await order.update({ courier_name: courierFromTracking }, { transaction });
+          await upsertShipment(order.id, { courier_name: courierFromTracking }, transaction);
           logger.debug(`📦 Courier name updated from tracking: ${courierFromTracking}`);
+        }
+
+        // Extract tracking URL from tracking data
+        const trackingUrl = trackingResult.summary.tracking_url
+          || trackingResult.summary.trackingUrl
+          || trackingResult.summary.tracking_link
+          || trackingResult.tracking_url
+          || trackingResult.trackingUrl
+          || null;
+        if (trackingUrl && trackingUrl !== order.tracking_url) {
+          await order.update({ tracking_url: trackingUrl }, { transaction });
+          await upsertShipment(order.id, { tracking_url: trackingUrl }, transaction);
+          logger.debug(`🔗 Tracking URL updated: ${trackingUrl}`);
         }
         
         logger.debug(`📊 FShip status: "${fshipStatus}" → CrossCoin status: "${newStatus}"`);
@@ -2678,6 +2777,37 @@
             message: 'Status unchanged'
           };
         }
+
+        // Fallback: if courier name or tracking URL still missing, try shipment summary
+        await order.reload({ transaction });
+        if (!order.courier_name || !order.tracking_url) {
+          try {
+            const summary = await fshipService.getShipmentStatus(waybill);
+            logger.debug('📡 FShip shipment summary fallback:', JSON.stringify(summary, null, 2));
+            const updates = {};
+            const shipmentUpdates = {};
+
+            if (!order.courier_name) {
+              const cn = summary?.courier_name || summary?.courierName || summary?.data?.courier_name
+                || summary?.summary?.courier_name || null;
+              if (cn) { updates.courier_name = cn; shipmentUpdates.courier_name = cn; }
+            }
+            if (!order.tracking_url) {
+              const tu = summary?.tracking_url || summary?.trackingUrl || summary?.data?.tracking_url
+                || summary?.summary?.tracking_url || null;
+              if (tu) { updates.tracking_url = tu; shipmentUpdates.tracking_url = tu; }
+            }
+
+            if (Object.keys(updates).length > 0) {
+              await order.update(updates, { transaction });
+              await upsertShipment(order.id, shipmentUpdates, transaction);
+              logger.debug(`📦 Shipment summary fallback filled: ${JSON.stringify(updates)}`);
+            }
+          } catch (summaryErr) {
+            logger.debug(`⚠️ Shipment summary fallback failed: ${summaryErr.message}`);
+          }
+        }
+
       } else {
         return {
           success: false,
