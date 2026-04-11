@@ -2538,10 +2538,10 @@
         const newStatus = fshipService.mapFShipStatusToCrossCoin(fshipStatus);
         
         // Extract courier name from tracking data
-        const courierFromTracking = trackingResult.summary.courier_name || trackingResult.summary.courierName || trackingResult.courier_name || trackingResult.courierName || null;
-        if (courierFromTracking && !order.courier_name) {
+        const courierFromTracking = trackingResult.summary.courier_name || trackingResult.summary.courierName || trackingResult.courier_name || trackingResult.courierName || trackingResult.summary.courier || null;
+        if (courierFromTracking && courierFromTracking !== order.courier_name) {
           await order.update({ courier_name: courierFromTracking }, { transaction });
-          logger.debug(`📦 Courier name set from tracking: ${courierFromTracking}`);
+          logger.debug(`📦 Courier name updated from tracking: ${courierFromTracking}`);
         }
         
         logger.debug(`📊 FShip status: "${fshipStatus}" → CrossCoin status: "${newStatus}"`);

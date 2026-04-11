@@ -185,7 +185,7 @@ class FShipService {
             const fshipOrderData = this.formatOrderDataForFShip(orderData);
 
             const response = await this.axiosInstance.post('/api/createforwardorder', fshipOrderData);
-            console.log('Order created successfully:', response.data);
+            console.log('Order created successfully:', JSON.stringify(response.data, null, 2));
             
             return {
                 success: true,
@@ -194,7 +194,7 @@ class FShipService {
                 routeCode: response.data.route_code,
                 status: response.data.order_status,
                 labelUrl: response.data.labelurl,
-                courierName: response.data.courier_name || response.data.courierName || null,
+                courierName: response.data.courier_name || response.data.courierName || response.data.courier || response.data.Courier || null,
                 courierId: response.data.courier_id || response.data.courierId || null,
                 response: response.data.response
             };
