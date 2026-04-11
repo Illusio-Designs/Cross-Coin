@@ -325,6 +325,7 @@ function msgPreview(msg) {
   if (msg.type === 'image') return 'Photo';
   if (msg.type === 'video') return 'Video';
   if (msg.type === 'document') return 'Document';
+  if (msg.type === 'reaction') return msg.body || '👍';
   if (msg.body?.startsWith('{')) return 'Media';
   return msg.body || '';
 }
@@ -389,6 +390,11 @@ function MsgContent({ msg, brandId = 1 }) {
       : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>🎥 Video</span>;
   }
 
+  if (effectiveType === 'reaction') {
+    const emoji = msg.body || '👍';
+    return <span style={{ fontSize: 32, lineHeight: 1.2 }}>{emoji}</span>;
+  }
+
   if (effectiveType === 'document') {
     const filename = media?.caption || 'Document';
     const isPdf = (media?.mime_type || '').includes('pdf') || filename.endsWith('.pdf');
@@ -435,6 +441,9 @@ function MsgContent({ msg, brandId = 1 }) {
   // Default: plain text â€” but first check if it looks like raw JSON media (old format)
   if (msg.body) {
     const trimmed = msg.body.trim();
+    if (trimmed === '[reaction]') {
+      return <span style={{ fontSize: 32, lineHeight: 1.2 }}>👍</span>;
+    }
     if (trimmed.startsWith('{')) {
       // It's JSON that wasn't detected as a known media type â€” show generic media unavailable
       return <span style={{ fontSize:13, color:'#9ca3af', fontStyle:'italic' }}>ðŸ“Ž Media (unavailable)</span>;

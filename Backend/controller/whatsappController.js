@@ -74,6 +74,10 @@ exports.receiveWebhook = async (req, res) => {
           } else if (msg.type === 'location') {
             msgBody = JSON.stringify({ lat: msg.location?.latitude, lng: msg.location?.longitude, name: msg.location?.name });
             displayText = `Location: ${msg.location?.name || `${msg.location?.latitude}, ${msg.location?.longitude}`}`;
+          } else if (msg.type === 'reaction') {
+            msgType = 'reaction';
+            msgBody = msg.reaction?.emoji || '👍';
+            displayText = msg.reaction?.emoji || '👍';
           } else {
             msgBody = `[${msg.type}]`;
             displayText = `[${msg.type}]`;
@@ -679,6 +683,10 @@ exports.receiveWebhook = async (req, res) => {
             case 'contacts':
               msgType = 'text';
               text    = `👤 Contact: ${msg.contacts?.[0]?.name?.formatted_name || 'Shared contact'}`;
+              break;
+            case 'reaction':
+              msgType = 'reaction';
+              text    = msg.reaction?.emoji || '👍';
               break;
             default:
               msgType = 'text';

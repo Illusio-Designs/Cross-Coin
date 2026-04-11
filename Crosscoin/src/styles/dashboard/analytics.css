@@ -75,7 +75,18 @@
 
 @media (max-width: 1200px) { .an-stats-row { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 900px)  { .an-stats-row { grid-template-columns: repeat(2, 1fr); } .an-bottom-grid { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 600px)  { .an-stats-row { grid-template-columns: 1fr 1fr; } .an-bottom-grid { grid-template-columns: 1fr; } }
+@media (max-width: 600px)  {
+  .an-stats-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .an-stat-card { padding: 12px 14px; }
+  .an-stat-value { font-size: 18px; }
+  .an-stat-label { font-size: 10px; }
+  .an-bottom-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 400px) {
+  .an-stats-row { grid-template-columns: 1fr; gap: 8px; }
+  .an-stat-card { padding: 10px 12px; }
+  .an-stat-value { font-size: 20px; }
+}
 
 .an-globe-loading {
   height: 400px; display: flex; align-items: center; justify-content: center;
