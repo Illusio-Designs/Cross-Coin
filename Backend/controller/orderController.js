@@ -134,16 +134,12 @@
     });
   }
 
-  // Generate unique order number with collision retry (Requirement 5.3)
+  // Generate unique order number with collision retry
   const generateOrderNumber = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const random = Math.floor(Math.random() * 10000)
-      .toString()
-      .padStart(4, "0");
-    return `ORD-${year}${month}${day}-${random}`;
+    const crypto = require('crypto');
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = crypto.randomBytes(3).toString('hex').toUpperCase();
+    return `CC-${timestamp}-${random}`;
   };
 
   // Generate a unique order number, retrying up to 3 times on collision
