@@ -13,6 +13,7 @@
   const FShipLabelDownload = require("../model/fshipLabelDownloadModel.js");
   const UTMTracking = require("../model/utmModel.js");
   const { Op, Transaction } = require("sequelize");
+  const XLSX = require("xlsx");
   const { sequelize } = require("../config/db.js");
   const axios = require('axios');
   const { logger } = require("../config/logging.js");
