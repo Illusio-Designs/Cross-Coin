@@ -80,6 +80,7 @@ import "../styles/dashboard/ui-pagination.css";
 import "../styles/dashboard/ui-badge.css";
 import "../styles/dashboard/ui-select.css";
 import "../styles/dashboard/ui-switch.css";
+import "../styles/dashboard/dateRangePicker.css";
 
 // Additional dashboard CSS
 import "../styles/dashboard/layout.css";
