@@ -9,8 +9,8 @@ const instagramService = require('../services/instagramService');
 function initializeCronJobs() {
   console.log('🕐 Initializing cron jobs...');
 
-  // FShip Order Sync - Runs every 2 hours (reduced frequency)
-  cron.schedule('0 */2 * * *', async () => {
+  // FShip Order Sync - Runs every 2 hours at :05 (offset to avoid collision)
+  cron.schedule('5 */2 * * *', async () => {
     console.log('\n⏰ [CRON] FShip sync started at:', new Date().toISOString());
     try {
       const mockReq = { user: { id: 'system', username: 'cron_job' }, query: { limit: 50 } };
@@ -24,8 +24,8 @@ function initializeCronJobs() {
     }
   });
 
-  // FShip Status Refresh - Runs every hour (pulls status updates from FShip)
-  cron.schedule('0 * * * *', async () => {
+  // FShip Status Refresh - Runs every hour at :30 (offset from sync)
+  cron.schedule('30 * * * *', async () => {
     console.log('\n⏰ [CRON] FShip status refresh started at:', new Date().toISOString());
     try {
       const mockReq = { user: { id: 'system', username: 'cron_job' }, query: { limit: 100 } };
@@ -63,9 +63,9 @@ function initializeCronJobs() {
     }
   });
 
-  // ── Abandoned Cart Recovery — every hour ──────────────────────────────────
+  // ── Abandoned Cart Recovery — every hour at :15 ──────────────────────────
   // Finds carts with items that haven't converted to an order in 1 hour
-  cron.schedule('0 * * * *', async () => {
+  cron.schedule('15 * * * *', async () => {
     console.log('\n⏰ [CRON] Abandoned cart check started at:', new Date().toISOString());
     try {
       // Load via associations to ensure all relationships are registered
@@ -289,10 +289,10 @@ function initializeCronJobs() {
     }
   });
 
-  // ── Stale Prepaid Order Cleanup — every 30 minutes ─────────────────────
+  // ── Stale Prepaid Order Cleanup — every 30 minutes at :10 and :40 ────────
   // Cancels prepaid orders where payment_status is still 'pending' or 'failed'
   // after 30 minutes (customer abandoned or payment failed)
-  cron.schedule('*/30 * * * *', async () => {
+  cron.schedule('10,40 * * * *', async () => {
     console.log('\n⏰ [CRON] Stale prepaid cleanup started at:', new Date().toISOString());
     try {
       const { Order, OrderItem, ProductVariation } = require('../model/associations.js');
@@ -381,15 +381,15 @@ function initializeCronJobs() {
 
   console.log('✅ Cron jobs initialized successfully');
   console.log('📋 Active jobs:');
-  console.log('   - FShip Order Sync: Every 2 hours');
-  console.log('   - FShip Status Refresh: Every hour');
+  console.log('   - FShip Order Sync: Every 2 hours at :05');
+  console.log('   - FShip Status Refresh: Every hour at :30');
   console.log('   - Loyalty Expiry: Daily at 2 AM');
   console.log('   - Instagram Feed Refresh: Every 6 hours');
-  console.log('   - Abandoned Cart Recovery: Every hour');
+  console.log('   - Abandoned Cart Recovery: Every hour at :15');
   console.log('   - Review Request: Daily at 10 AM');
   console.log('   - Win-back Campaign: Daily at 11 AM');
   console.log('   - Post-purchase Upsell: Daily at 3 PM');
-  console.log('   - Stale Prepaid Cleanup: Every 30 minutes');
+  console.log('   - Stale Prepaid Cleanup: Every 30 min at :10/:40');
 }
 
 module.exports = { initializeCronJobs };
