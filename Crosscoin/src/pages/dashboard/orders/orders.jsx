@@ -119,15 +119,19 @@ const Orders = () => {
         setSyncingAll(true);
         try {
             const result = await orderService.syncOrdersWithFShip();
-            const { results } = result;
+            const data = result.data || result.results || {};
             let message = `FShip sync completed! `;
-            if (results.total_orders_processed > 0) message += `Processed ${results.total_orders_processed} orders. `;
-            if (results.new_orders_synced > 0) message += `${results.new_orders_synced} new orders synced. `;
-            if (results.existing_orders_updated > 0) message += `${results.existing_orders_updated} existing orders updated. `;
-            if (results.status_updates > 0) message += `${results.status_updates} status updates. `;
-            if (results.tracking_updates > 0) message += `${results.tracking_updates} tracking updates. `;
-            if (results.skipped_final_state > 0) message += `${results.skipped_final_state} orders skipped. `;
-            if (results.failed > 0) message += `${results.failed} orders failed. `;
+            if (data.total > 0) message += `Processed ${data.total} orders. `;
+            else if (data.total_orders_processed > 0) message += `Processed ${data.total_orders_processed} orders. `;
+            if (data.synced > 0) message += `${data.synced} new orders synced. `;
+            else if (data.new_orders_synced > 0) message += `${data.new_orders_synced} new orders synced. `;
+            if (data.updated > 0) message += `${data.updated} orders updated. `;
+            else if (data.existing_orders_updated > 0) message += `${data.existing_orders_updated} existing orders updated. `;
+            if (data.skipped > 0) message += `${data.skipped} orders skipped. `;
+            else if (data.skipped_final_state > 0) message += `${data.skipped_final_state} orders skipped. `;
+            if (data.errors > 0) message += `${data.errors} orders failed. `;
+            else if (data.failed > 0) message += `${data.failed} orders failed. `;
+            if ((data.total || data.total_orders_processed || 0) === 0) message += 'No orders pending sync.';
             showSuccess('orderSynced', message);
             fetchOrders(); fetchAllOrdersForStats();
         } catch (error) {
