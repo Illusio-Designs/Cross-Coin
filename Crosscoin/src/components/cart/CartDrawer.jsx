@@ -167,6 +167,13 @@ const EMPTY_ADDR = {
   city: '', state: '', postalCode: '', country: 'India', isDefault: false,
 };
 
+// Dynamic delivery date: today + 5 days
+function getDeliveryDateStr() {
+  const d = new Date();
+  d.setDate(d.getDate() + 5);
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 
 const IconX = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>;
@@ -244,16 +251,9 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const [shippingFees, setShippingFees] = useState([]);
   const [selectedFee, setSelectedFee] = useState(null);
 
-  // COD: OTP
-  const [showOtpModal, setShowOtpModal] = useState(false);
-  const [otpDigits, setOtpDigits] = useState(['', '', '', '']);
-  const otpRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
-  const otpPollTimerRef = useRef(null); // FIX 4 — cancel poll on modal close
-  const otpCode = otpDigits.join('');
-  const [otpSending, setOtpSending] = useState(false);
-  const [otpHint, setOtpHint] = useState('');
-  const [phoneVerifiedForCod, setPhoneVerifiedForCod] = useState(false);
-  const [resendCountdown, setResendCountdown] = useState(0); // FIX 5/10 — 30s resend timer
+  // COD: direct (no OTP)
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [otpSending] = useState(false);
 
   // Order
   const [isProcessing, setIsProcessing] = useState(false);
@@ -387,6 +387,12 @@ const CartDrawer = ({ isOpen, onClose }) => {
     }).catch(() => { }).finally(() => setAddressLoading(false));
   }, [isOpen, isAuthenticated]);
 
+  // Auto-open address form for guests (no separate contact section anymore)
+  useEffect(() => {
+    if (!isOpen || isAuthenticated) return;
+    if (!selectedAddress) setShowAddressForm(true);
+  }, [isOpen, isAuthenticated, selectedAddress]);
+
   // Live email validation (guest) — debounced while typing
   useEffect(() => {
     if (!isOpen || isAuthenticated) return;
@@ -410,6 +416,34 @@ const CartDrawer = ({ isOpen, onClose }) => {
       setAddressPhoneError('Enter a valid 10-digit Indian mobile (starts with 6–9).');
     } else setAddressPhoneError('');
   }, [addressForm.phoneNumber, isAuthenticated, showAddressForm]);
+
+  // ── Real-time field validation (runs on every keystroke, debounced) ─────
+  useEffect(() => {
+    if (!showAddressForm) { setFieldErrors({}); return; }
+    const t = setTimeout(() => {
+      const formToValidate = isAuthenticated
+        ? { full_name: addressForm.fullName, address: addressForm.address, city: addressForm.city, state: addressForm.state, postal_code: addressForm.postalCode, phone_number: addressForm.phoneNumber }
+        : { full_name: `${guestInfo.firstName} ${guestInfo.lastName}`.trim(), address: addressForm.address, city: addressForm.city, state: addressForm.state, postal_code: addressForm.postalCode, phone_number: guestInfo.phone };
+      const result = validateShippingAddress(formToValidate);
+      const errs = {};
+      for (const err of result.errors) {
+        const lower = err.toLowerCase();
+        if (lower.includes('name') && !errs.name) errs.name = err;
+        else if ((lower.includes('address') || lower.includes('street')) && !errs.address) errs.address = err;
+        else if (lower.includes('city') && !errs.city) errs.city = err;
+        else if (lower.includes('state') && !errs.state) errs.state = err;
+        else if ((lower.includes('pin') || lower.includes('postal')) && !errs.pincode) errs.pincode = err;
+        else if (lower.includes('phone') || lower.includes('mobile')) errs.phone = err;
+        else if (lower.includes('email')) errs.email = err;
+      }
+      // Also validate email for guests
+      if (!isAuthenticated && guestInfo.email.trim() && !isValidEmail(guestInfo.email)) {
+        errs.email = 'Enter a valid email (e.g. name@example.com).';
+      }
+      setFieldErrors(errs);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [showAddressForm, addressForm, guestInfo, isAuthenticated]);
 
   // ── Body class for back-to-top hiding ──────────────────────────────────
   useEffect(() => {
@@ -477,34 +511,10 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const isCodDelivery = selectedFee?.orderType === 'cod';
   const isPrepaidDelivery = selectedFee?.orderType === 'prepaid';
 
+  // Reset on delivery/address change
   useEffect(() => {
-    setPhoneVerifiedForCod(false);
-    setOtpDigits(['', '', '', '']);
-    setOtpHint('');
+    setFieldErrors({});
   }, [selectedFee?.id, selectedAddress?.id, guestInfo.phone]);
-
-  // FIX 4/7 — cancel poll timer on close; validate phone before auto-sending OTP
-  useEffect(() => {
-    if (!showOtpModal) {
-      if (otpPollTimerRef.current) {
-        clearTimeout(otpPollTimerRef.current);
-        otpPollTimerRef.current = null;
-      }
-      return;
-    }
-    const phone = getDeliveryPhone();
-    if (!isValidIndianMobileDigits(phone)) {
-      setShowOtpModal(false);
-      showValidationErrorToast(
-        isAuthenticated
-          ? 'Please add a valid 10-digit mobile number on your delivery address.'
-          : 'Please check your phone number in contact info.'
-      );
-      return;
-    }
-    handleSendCheckoutOtp();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showOtpModal]);
 
   // ── Delivery fee ────────────────────────────────────────────────────────
   const handleSelectFee = (fee) => {
@@ -808,105 +818,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
     }
   };
 
-  // FIX 4/5/10 — OTP poll timer stored in ref; cancelled on modal close; 30s resend countdown
-  const handleSendCheckoutOtp = () => {
-    const phone = getDeliveryPhone();
-    if (phone.length < 10) {
-      showValidationErrorToast('Enter a valid 10-digit mobile number.');
-      return;
-    }
-    if (OTP_VERIFY_SKIP) {
-      if (process.env.NODE_ENV !== 'production') {
-        setOtpHint('Dev mode: OTP skipped. Enter any 4+ digit code.');
-      }
-      return;
-    }
-
-    setOtpSending(true);
-    setOtpHint('');
-
-    const identifier = phone.length === 10 ? '91' + phone : phone;
-
-    let attempts = 0;
-    const trySend = () => {
-      if (typeof window.sendOtp === 'function') {
-        window.sendOtp(
-          identifier,
-          () => {
-            setOtpHint('OTP sent. Enter the code below.');
-            setOtpSending(false);
-            // Start 30s resend countdown
-            setResendCountdown(30);
-            const interval = setInterval(() => {
-              setResendCountdown(prev => {
-                if (prev <= 1) { clearInterval(interval); return 0; }
-                return prev - 1;
-              });
-            }, 1000);
-          },
-          (error) => {
-            const msg = typeof error === 'string' ? error : (error?.message || 'Could not send OTP.');
-            showOrderPlacedErrorToast(msg);
-            setOtpSending(false);
-          }
-        );
-      } else if (attempts < 10) {
-        attempts++;
-        otpPollTimerRef.current = setTimeout(trySend, 500);
-      } else {
-        showOrderPlacedErrorToast('OTP service not ready. Please refresh and try again.');
-        setOtpSending(false);
-      }
-    };
-    trySend();
-  };
-
-  const handleVerifyOtpAndContinue = async () => {
-    if (otpCode.length < 4) {
-      showValidationErrorToast('Enter the OTP you received.');
-      return;
-    }
-    // Dev mode: skip verification entirely
-    if (OTP_VERIFY_SKIP) {
-      setPhoneVerifiedForCod(true);
-      setShowOtpModal(false);
-      setOtpDigits(['', '', '', '']);
-      setOtpHint('');
-      await placeCodOrder();
-      return;
-    }
-    if (typeof window === 'undefined' || typeof window.verifyOtp !== 'function') {
-      showOrderPlacedErrorToast('OTP service not ready. Please refresh and try again.');
-      return;
-    }
-    setIsProcessing(true);
-    window.verifyOtp(
-      otpCode,
-      async (data) => {
-        // MSG91 widget verified — data is the access token
-        const accessToken = typeof data === 'string' ? data : (data?.message || data?.token || JSON.stringify(data));
-        const phone = getDeliveryPhone();
-        try {
-          // Verify access token on backend for server-side validation
-          await verifyCheckoutPhoneOtp(phone, accessToken);
-          setPhoneVerifiedForCod(true);
-          setShowOtpModal(false);
-          setOtpDigits(['', '', '', '']);
-          setOtpHint('');
-          await placeCodOrder();
-        } catch (err) {
-          const msg = typeof err === 'string' ? err : (err?.message || 'Server verification failed.');
-          showOrderPlacedErrorToast(msg);
-          setIsProcessing(false);
-        }
-      },
-      (error) => {
-        const msg = typeof error === 'string' ? error : (error?.message || 'Verification failed.');
-        showOrderPlacedErrorToast(msg);
-        setIsProcessing(false);
-      }
-    );
-  };
+  // OTP removed — COD orders go directly to placeCodOrder()
 
   const handlePlaceOrder = async () => {
     // ── Comprehensive address validation before placing order ──────────────
@@ -924,23 +836,19 @@ const CartDrawer = ({ isOpen, onClose }) => {
     if (!isAuthenticated) {
       if (!String(guestInfo.firstName || '').trim()) {
         showValidationErrorToast('Please enter your first name.');
-        scrollDrawerTo('cd-section-contact');
+        scrollDrawerTo('cd-section-address');
         return;
       }
       if (guestEmailError || guestPhoneError || !isValidEmail(guestInfo.email) || !isValidIndianMobileDigits(guestInfo.phone)) {
-        showValidationErrorToast('Please fix the errors in Contact Info (email and phone).');
-        scrollDrawerTo('cd-section-contact');
+        showValidationErrorToast('Please fix the errors in your delivery details (email and phone).');
+        scrollDrawerTo('cd-section-address');
         return;
       }
     }
     const phone = getDeliveryPhone();
     if (!isValidIndianMobileDigits(phone)) {
-      showValidationErrorToast(
-        isAuthenticated
-          ? 'Please add a valid 10-digit mobile number on your delivery address.'
-          : 'Please check your phone number in contact info.'
-      );
-      scrollDrawerTo(isAuthenticated ? 'cd-section-address' : 'cd-section-contact');
+      showValidationErrorToast('Please add a valid 10-digit mobile number.');
+      scrollDrawerTo('cd-section-address');
       return;
     }
 
@@ -1099,11 +1007,6 @@ const CartDrawer = ({ isOpen, onClose }) => {
     }
 
     if (isCodDelivery) {
-      if (!phoneVerifiedForCod) {
-        setShowOtpModal(true);
-        setOtpHint('');
-        return;
-      }
       await placeCodOrder();
       return;
     }
@@ -1313,135 +1216,17 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 })}
               </div>
 
-              {/* ── 2. Order Summary ── */}
-              <div className="cd-sv-section">
-                <div className="cd-summary">
-                  <div className="cd-summary-row"><span>Subtotal ({totalQty} item{totalQty !== 1 ? 's' : ''})</span><span>₹{activeTotal.toFixed(2)}</span></div>
-                  <div className="cd-summary-row"><span>Shipping</span><span>{shippingFeeAmount === 0 ? 'Free' : `₹${shippingFeeAmount.toFixed(2)}`}</span></div>
-                  {couponDiscount > 0 && (
-                    <div className="cd-summary-row cd-summary-discount">
-                      <span className="cd-coupon-row-label">
-                        Coupon ({appliedCoupon.code})
-                        <button onClick={handleRemoveCoupon} className="cd-coupon-inline-remove">✕ Remove</button>
-                      </span>
-                      <span>-₹{couponDiscount.toFixed(2)}</span>
-                    </div>
-                  )}
-                  {isPrepaidDelivery && prepaidInstantDiscount > 0 && (
-                    <div className="cd-summary-row cd-summary-discount">
-                      <span className="cd-coupon-row-label">
-                        Prepaid discount
-                        <span className="cd-saved-badge">₹{Math.round(prepaidInstantDiscount)} saved!</span>
-                      </span>
-                      <span>-₹{prepaidInstantDiscount.toFixed(2)}</span>
-                    </div>
-                  )}
-                  {isPrepaidDelivery && (
-                    <div className="cd-summary-row cd-summary-total">
-                      <span>Pay now</span>
-                      <span>₹{prepaidPayable.toFixed(2)}</span>
-                    </div>
-                  )}
-                  {isCodDelivery && (
-                    <div className="cd-summary-row cd-summary-total">
-                      <span>Total (pay on delivery)</span>
-                      <span>₹{finalTotal.toFixed(2)}</span>
-                    </div>
-                  )}
-                  {!isPrepaidDelivery && !isCodDelivery && (
-                    <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{finalTotal.toFixed(2)}</span></div>
-                  )}
-                </div>
-                {/* Secure checkout line */}
-                <div className="cd-secure-line">
-                  <span className="cd-secure-item">
-                    <IconShield /> Secure checkout
-                  </span>
-                  <span className="cd-secure-sep" />
-                  <span className="cd-secure-item cd-secure-plain">
-                    Easy returns
-                  </span>
-                </div>
-              </div>
-
-              {/* ── 3. Contact (guest only) ── */}
-              {!isAuthenticated && (
-                <div className="cd-sv-section" id="cd-section-contact">
-                  <div className="cd-section-title">Contact Info</div>
-                  <div className="cd-form-grid">
-                    <div className="cd-form-group">
-                      <label className="cd-label">First Name *</label>
-                      <input className="cd-input" type="text" value={guestInfo.firstName} onChange={e => setGuestInfo(p => ({ ...p, firstName: e.target.value }))} placeholder="First name" autoComplete="given-name" />
-                    </div>
-                    <div className="cd-form-group">
-                      <label className="cd-label">Last Name</label>
-                      <input className="cd-input" type="text" value={guestInfo.lastName} onChange={e => setGuestInfo(p => ({ ...p, lastName: e.target.value }))} placeholder="Last name" autoComplete="family-name" />
-                    </div>
-                    <div className="cd-form-group cd-form-full">
-                      <label className="cd-label">Email *</label>
-                      <input
-                        className={`cd-input ${guestEmailError ? 'cd-input-error' : ''}`}
-                        type="email"
-                        inputMode="email"
-                        value={guestInfo.email}
-                        onChange={e => setGuestInfo(p => ({ ...p, email: e.target.value }))}
-                        placeholder="name@example.com"
-                        autoComplete="email"
-                        aria-invalid={!!guestEmailError}
-                      />
-                      {guestEmailError && <p className="cd-field-error" role="alert">{guestEmailError}</p>}
-                    </div>
-                    <div className="cd-form-group cd-form-full">
-                      <label className="cd-label">Phone *</label>
-                      <input
-                        className={`cd-input ${guestPhoneError ? 'cd-input-error' : ''}`}
-                        type="tel"
-                        inputMode="numeric"
-                        maxLength={10}
-                        value={guestInfo.phone}
-                        onChange={handleGuestPhoneChange}
-                        placeholder="10-digit mobile (starts with 6–9)"
-                        autoComplete="tel"
-                        aria-invalid={!!guestPhoneError}
-                      />
-                      {guestPhoneError && <p className="cd-field-error" role="alert">{guestPhoneError}</p>}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ── 4. Delivery Address ── */}
+              {/* ── 3. Delivery Details (combined contact + address for guests) ── */}
               <div className="cd-sv-section" id="cd-section-address">
-                <div className="cd-section-title">Delivery Address</div>
+                <div className="cd-section-title">{isAuthenticated ? 'Delivery Address' : 'Delivery Details'}</div>
 
-                {/* Delivery info strip */}
-                <div className="cd-delivery-info-strip">
-                  <div className="cd-dinfo-row">
-                    <IconShield />
-                    <span>Delivery by 6 April&nbsp;·&nbsp;Ships from India</span>
-                  </div>
-                  <div className="cd-dinfo-row">
-                    <span className="cd-dinfo-stars">
-                      <IconStarFilled /><IconStarFilled /><IconStarFilled /><IconStarFilled /><IconStarFilled />
-                    </span>
-                    <span>
-                      <strong>{reviewStats.avg}</strong> rating from&nbsp;
-                      <strong>{reviewStats.total > 0 ? `${reviewStats.total.toLocaleString('en-IN')}+` : '1,200+'}</strong> reviews
-                    </span>
-                  </div>
-                </div>
-                <div className="cd-orders-delivered">
-                  <IconShield />
-                  <span>Over <strong>10,000+</strong> Orders Delivered</span>
-                  <span className="cd-orders-arrow">›</span>
-                </div>
                 {addressLoading ? <p className="cd-loading">Loading addresses...</p> : (
                   <>
                     {isAuthenticated && addresses.length === 0 && !showAddressForm && (
                       <p className="cd-address-empty-hint">Add a delivery address below to place your order.</p>
                     )}
                     {!isAuthenticated && !selectedAddress && !showAddressForm && (
-                      <p className="cd-address-empty-hint">Add your delivery address below (use the same phone as in Contact Info).</p>
+                      <p className="cd-address-empty-hint">Fill in your details below to place your order.</p>
                     )}
                     {isAuthenticated && addresses.length > 1 ? (
                       /* Multiple addresses - show dropdown */
@@ -1544,13 +1329,42 @@ const CartDrawer = ({ isOpen, onClose }) => {
                     {showAddressForm && (
                       <form className="cd-address-form" onSubmit={handleSaveAddress}>
                         <div className="cd-form-grid">
+                          {/* Guest: contact fields merged into address form */}
+                          {!isAuthenticated && (
+                            <>
+                              <div className="cd-form-group">
+                                <label className="cd-label">First Name *</label>
+                                <input className={`cd-input ${fieldErrors.name ? 'cd-input-error' : ''}`} type="text" value={guestInfo.firstName} onChange={e => setGuestInfo(p => ({ ...p, firstName: e.target.value }))} placeholder="First name" autoComplete="given-name" />
+                                {fieldErrors.name && <p className="cd-field-error" role="alert">{fieldErrors.name}</p>}
+                              </div>
+                              <div className="cd-form-group">
+                                <label className="cd-label">Last Name</label>
+                                <input className="cd-input" type="text" value={guestInfo.lastName} onChange={e => setGuestInfo(p => ({ ...p, lastName: e.target.value }))} placeholder="Last name" autoComplete="family-name" />
+                              </div>
+                              <div className="cd-form-group">
+                                <label className="cd-label">Email *</label>
+                                <input className={`cd-input ${fieldErrors.email ? 'cd-input-error' : ''}`} type="email" inputMode="email" value={guestInfo.email} onChange={e => setGuestInfo(p => ({ ...p, email: e.target.value }))} placeholder="name@example.com" autoComplete="email" aria-invalid={!!fieldErrors.email} />
+                                {fieldErrors.email && <p className="cd-field-error" role="alert">{fieldErrors.email}</p>}
+                              </div>
+                              <div className="cd-form-group">
+                                <label className="cd-label">Phone *</label>
+                                <input className={`cd-input ${fieldErrors.phone ? 'cd-input-error' : ''}`} type="tel" inputMode="numeric" maxLength={10} value={guestInfo.phone} onChange={handleGuestPhoneChange} placeholder="10-digit mobile" autoComplete="tel" aria-invalid={!!fieldErrors.phone} />
+                                {fieldErrors.phone && <p className="cd-field-error" role="alert">{fieldErrors.phone}</p>}
+                              </div>
+                            </>
+                          )}
+                          {/* Authenticated: name + phone in address form */}
                           {isAuthenticated && (
                             <>
-                              <div className="cd-form-group"><label className="cd-label">Full Name *</label><input className="cd-input" name="fullName" value={addressForm.fullName} onChange={handleAddrChange} required placeholder="Full name" autoComplete="name" /></div>
+                              <div className="cd-form-group">
+                                <label className="cd-label">Full Name *</label>
+                                <input className={`cd-input ${fieldErrors.name ? 'cd-input-error' : ''}`} name="fullName" value={addressForm.fullName} onChange={handleAddrChange} required placeholder="Full name" autoComplete="name" />
+                                {fieldErrors.name && <p className="cd-field-error" role="alert">{fieldErrors.name}</p>}
+                              </div>
                               <div className="cd-form-group">
                                 <label className="cd-label">Phone *</label>
                                 <input
-                                  className={`cd-input ${addressPhoneError ? 'cd-input-error' : ''}`}
+                                  className={`cd-input ${fieldErrors.phone || addressPhoneError ? 'cd-input-error' : ''}`}
                                   name="phoneNumber"
                                   type="tel"
                                   inputMode="numeric"
@@ -1560,24 +1374,43 @@ const CartDrawer = ({ isOpen, onClose }) => {
                                   required
                                   placeholder="10-digit mobile"
                                   autoComplete="tel-national"
-                                  aria-invalid={!!addressPhoneError}
+                                  aria-invalid={!!(fieldErrors.phone || addressPhoneError)}
                                 />
-                                {addressPhoneError && <p className="cd-field-error" role="alert">{addressPhoneError}</p>}
+                                {(fieldErrors.phone || addressPhoneError) && <p className="cd-field-error" role="alert">{fieldErrors.phone || addressPhoneError}</p>}
                               </div>
                             </>
                           )}
-                          <div className="cd-form-group cd-form-full"><label className="cd-label">Address *</label><input className="cd-input" name="address" value={addressForm.address} onChange={handleAddrChange} required placeholder="Street address, flat, area" autoComplete="street-address" /></div>
-                          <div className="cd-form-group"><label className="cd-label">City *</label><input className="cd-input" name="city" value={addressForm.city} onChange={handleAddrChange} required placeholder="City" autoComplete="address-level2" /></div>
-                          <div className="cd-form-group"><label className="cd-label">State *</label><input className="cd-input" name="state" value={addressForm.state} onChange={handleAddrChange} required placeholder="State" autoComplete="address-level1" /></div>
-                          <div className="cd-form-group"><label className="cd-label">Postal Code *</label><input className="cd-input" name="postalCode" value={addressForm.postalCode} onChange={handleAddrChange} onBlur={handlePincodeBlur} required placeholder="PIN code" autoComplete="postal-code" /></div>
-                          <div className="cd-form-group"><label className="cd-label">Country</label><input className="cd-input" name="country" value={addressForm.country} onChange={handleAddrChange} placeholder="Country" autoComplete="country-name" /></div>
+                          <div className="cd-form-group cd-form-full">
+                            <label className="cd-label">Address *</label>
+                            <input className={`cd-input ${fieldErrors.address ? 'cd-input-error' : ''}`} name="address" value={addressForm.address} onChange={handleAddrChange} required placeholder="House/flat no., street, area, landmark" autoComplete="street-address" />
+                            {fieldErrors.address && <p className="cd-field-error" role="alert">{fieldErrors.address}</p>}
+                          </div>
+                          <div className="cd-form-group">
+                            <label className="cd-label">City *</label>
+                            <input className={`cd-input ${fieldErrors.city ? 'cd-input-error' : ''}`} name="city" value={addressForm.city} onChange={handleAddrChange} required placeholder="City" autoComplete="address-level2" />
+                            {fieldErrors.city && <p className="cd-field-error" role="alert">{fieldErrors.city}</p>}
+                          </div>
+                          <div className="cd-form-group">
+                            <label className="cd-label">State *</label>
+                            <input className={`cd-input ${fieldErrors.state ? 'cd-input-error' : ''}`} name="state" value={addressForm.state} onChange={handleAddrChange} required placeholder="State" autoComplete="address-level1" />
+                            {fieldErrors.state && <p className="cd-field-error" role="alert">{fieldErrors.state}</p>}
+                          </div>
+                          <div className="cd-form-group">
+                            <label className="cd-label">PIN Code *</label>
+                            <input className={`cd-input ${fieldErrors.pincode ? 'cd-input-error' : ''}`} name="postalCode" value={addressForm.postalCode} onChange={handleAddrChange} onBlur={handlePincodeBlur} required placeholder="6-digit PIN" autoComplete="postal-code" />
+                            {fieldErrors.pincode && <p className="cd-field-error" role="alert">{fieldErrors.pincode}</p>}
+                          </div>
+                          <div className="cd-form-group">
+                            <label className="cd-label">Country</label>
+                            <input className="cd-input" name="country" value={addressForm.country} onChange={handleAddrChange} placeholder="Country" autoComplete="country-name" />
+                          </div>
                           {isAuthenticated && (
                             <div className="cd-form-group cd-form-full"><label className="cd-checkbox-label"><input type="checkbox" name="isDefault" checked={addressForm.isDefault} onChange={handleAddrChange} /> Set as default address</label></div>
                           )}
                         </div>
                         <div className="cd-form-actions">
-                          <button type="submit" className="cd-btn-primary" disabled={addressSaving}>{addressSaving ? 'Saving...' : editingAddressId ? 'Update Address' : 'Save Address'}</button>
-                          <button type="button" className="cd-btn-ghost" onClick={() => { setShowAddressForm(false); setEditingAddressId(null); }}>Cancel</button>
+                          <button type="submit" className="cd-btn-primary" disabled={addressSaving || Object.keys(fieldErrors).length > 0}>{addressSaving ? 'Saving...' : editingAddressId ? 'Update Address' : 'Save Address'}</button>
+                          <button type="button" className="cd-btn-ghost" onClick={() => { setShowAddressForm(false); setEditingAddressId(null); setFieldErrors({}); }}>Cancel</button>
                         </div>
                       </form>
                     )}
@@ -1598,29 +1431,38 @@ const CartDrawer = ({ isOpen, onClose }) => {
                           className={`cd-delivery-card ${fee.orderType === 'prepaid' ? 'cd-delivery-prepaid' : 'cd-delivery-cod'} ${selectedFee?.id === fee.id ? 'cd-delivery-selected' : ''} ${isCodBlocked ? 'cd-delivery-disabled' : ''}`}
                           style={isCodBlocked ? { opacity: 0.5, pointerEvents: 'none' } : {}}
                         >
-                          <input type="radio" name="delivery" checked={selectedFee?.id === fee.id} onChange={() => !isCodBlocked && handleSelectFee(fee)} disabled={isCodBlocked} />
+                          <input type="radio" name="delivery" className="cd-radio-hidden" checked={selectedFee?.id === fee.id} onChange={() => !isCodBlocked && handleSelectFee(fee)} disabled={isCodBlocked} />
                           <span className="cd-delivery-icon">
                             {fee.orderType === 'cod' ? <IconMoneyBag /> : <IconTruck />}
                           </span>
                           <div className="cd-delivery-info">
                             <p className="cd-delivery-name">
-                              {fee.orderType === 'cod'
-                                ? <span>Cash on Delivery <span className="cd-delivery-popular">Most Popular ⭐</span></span>
-                                : fee.orderType === 'prepaid'
-                                  ? 'UPI / Card (Prepaid)'
-                                  : fee.orderType}
+                              {fee.orderType === 'cod' ? 'Cash on Delivery' : 'UPI / Card (Prepaid)'}
                             </p>
+                            {fee.orderType === 'cod' && !isCodBlocked && (
+                              <span className="cd-delivery-popular">⭐ Most Popular</span>
+                            )}
+                            {fee.orderType === 'prepaid' && (
+                              <p className="cd-delivery-subdesc">Pay securely via UPI, Credit or Debit Card</p>
+                            )}
+                            {fee.orderType === 'cod' && !isCodBlocked && (
+                              <p className="cd-delivery-subdesc">Pay when you receive your order</p>
+                            )}
+                            {isCodBlocked && (
+                              <p className="cd-delivery-subdesc" style={{ color: '#dc2626' }}>COD not available for this location</p>
+                            )}
                             <p className="cd-delivery-desc">
-                              {isCodBlocked
-                                ? 'COD not available for this location. Please pay online.'
-                                : fee.orderType === 'cod'
-                                  ? 'Pay after delivery · Delivery by 5–7 Apr'
-                                  : '₹50 OFF applied | Limited Offer'}
+                              {fee.orderType === 'prepaid'
+                                ? `₹${Math.round(Math.min(PREPAID_INSTANT_DISCOUNT_INR, finalTotal))} less · Delivery by ${getDeliveryDateStr()}`
+                                : `Delivery by ${getDeliveryDateStr()}`}
                             </p>
                           </div>
-                          <span className={`cd-delivery-fee ${parseFloat(fee.fee || 0) === 0 ? 'free' : ''}`}>
-                            {parseFloat(fee.fee || 0) === 0 ? 'Free' : `₹${parseFloat(fee.fee || 0).toFixed(2)}`}
-                          </span>
+                          <div className="cd-delivery-fee-wrap">
+                            <span className="cd-delivery-sparkle">✦</span>
+                            <span className={`cd-delivery-fee ${parseFloat(fee.fee || 0) === 0 ? 'free' : ''}`}>
+                              {parseFloat(fee.fee || 0) === 0 ? 'FREE' : `₹${parseFloat(fee.fee || 0).toFixed(0)}`}
+                            </span>
+                          </div>
                         </label>
                       );
                     })}
@@ -1700,125 +1542,6 @@ const CartDrawer = ({ isOpen, onClose }) => {
         )}
 
       </div>
-      {showOtpModal && (
-        <div className="cd-modal-overlay" role="presentation" onClick={() => !isProcessing && setShowOtpModal(false)}>
-          <div
-            className="cd-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="cd-otp-modal-title"
-            onClick={e => e.stopPropagation()}
-            style={{ textAlign: 'center' }}
-          >
-            <h3 id="cd-otp-modal-title" className="cd-modal-title">Verify your number</h3>
-            {/* FIX 15 — explain why we verify */}
-            <p className="cd-modal-subtext" style={{ color: '#888', fontSize: 12, marginBottom: 4 }}>
-              We verify to prevent fake COD orders.
-            </p>
-            <p className="cd-modal-text" style={{ color: '#666' }}>
-              Code sent to <strong>+91 {getDeliveryPhone() || 'your number'}</strong>
-            </p>
-            {otpHint && <p className="cd-modal-hint">{otpHint}</p>}
-
-            {/* 4-box OTP input */}
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', margin: '20px 0' }}>
-              {otpDigits.map((digit, i) => (
-                <input
-                  key={i}
-                  ref={otpRefs[i]}
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete={i === 0 ? 'one-time-code' : 'off'}
-                  maxLength={1}
-                  value={digit}
-                  autoFocus={i === 0}
-                  style={{
-                    width: 52, height: 56,
-                    textAlign: 'center',
-                    fontSize: 22, fontWeight: 700,
-                    border: '1.5px solid ' + (digit ? '#180D3E' : '#ddd'),
-                    borderRadius: 10,
-                    outline: 'none',
-                    fontFamily: 'DM Sans, sans-serif',
-                    color: '#180D3E',
-                    background: '#fff',
-                    transition: 'border-color 0.15s',
-                    caretColor: 'transparent',
-                  }}
-                  onChange={e => {
-                    // Handle browser autofill / SMS autofill pasting full code into first box
-                    const raw = e.target.value.replace(/\D/g, '');
-                    if (raw.length > 1) {
-                      const next = ['', '', '', ''];
-                      raw.slice(0, 4).split('').forEach((ch, idx) => { next[idx] = ch; });
-                      setOtpDigits(next);
-                      const focusIdx = Math.min(raw.length, 3);
-                      otpRefs[focusIdx].current?.focus();
-                      if (next.every(d => d)) setTimeout(() => document.getElementById('cd-otp-verify-btn')?.click(), 50);
-                      return;
-                    }
-                    const val = raw.slice(-1);
-                    const next = [...otpDigits];
-                    next[i] = val;
-                    setOtpDigits(next);
-                    if (val && i < 3) otpRefs[i + 1].current?.focus();
-                    if (next.every(d => d) && next.join('').length === 4) {
-                      setTimeout(() => document.getElementById('cd-otp-verify-btn')?.click(), 50);
-                    }
-                  }}
-                  onKeyDown={e => {
-                    if (e.key === 'Backspace' && !otpDigits[i] && i > 0) {
-                      otpRefs[i - 1].current?.focus();
-                    }
-                  }}
-                  onPaste={e => {
-                    e.preventDefault();
-                    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
-                    const next = ['', '', '', ''];
-                    pasted.split('').forEach((ch, idx) => { next[idx] = ch; });
-                    setOtpDigits(next);
-                    const focusIdx = Math.min(pasted.length, 3);
-                    otpRefs[focusIdx].current?.focus();
-                  }}
-                />
-              ))}
-            </div>
-
-            <button
-              id="cd-otp-verify-btn"
-              type="button"
-              className="cd-btn-primary cd-btn-full"
-              onClick={handleVerifyOtpAndContinue}
-              disabled={isProcessing || otpCode.length < 4}
-              style={{ borderRadius: 10, height: 48, fontSize: 15 }}
-            >
-              {isProcessing ? 'Verifying…' : 'Confirm order'}
-            </button>
-
-            <p className="cd-modal-muted" style={{ marginTop: 14 }}>
-              Didn&apos;t receive code?{' '}
-              {resendCountdown > 0 ? (
-                <span style={{ color: '#999', fontSize: 13 }}>Resend in {resendCountdown}s</span>
-              ) : (
-                <button
-                  type="button"
-                  style={{ background: 'none', border: 'none', color: '#CE1E36', fontWeight: 600, cursor: 'pointer', padding: 0, fontSize: 13, textDecoration: 'underline' }}
-                  onClick={() => { setOtpDigits(['', '', '', '']); setResendCountdown(0); handleSendCheckoutOtp(); otpRefs[0].current?.focus(); }}
-                  disabled={otpSending || isProcessing}
-                >
-                  {otpSending ? 'Sending…' : 'Request again'}
-                </button>
-              )}
-            </p>
-
-            {OTP_VERIFY_SKIP && process.env.NODE_ENV !== 'production' && (
-              <p className="cd-modal-muted" style={{ marginTop: 6, fontSize: 11 }}>
-                Dev mode: enter any 4 digits to skip real verification.
-              </p>
-            )}
-          </div>
-        </div>
-      )}
     </>
   );
 };
