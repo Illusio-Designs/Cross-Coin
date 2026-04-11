@@ -903,6 +903,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
             ? await initiateCheckout(checkoutData)
             : await initiateGuestCheckout({
                 ...checkoutData,
+                shipping_address_id: undefined,
                 phone: selectedAddress.phone_number || selectedAddress.phoneNumber,
                 email: guestInfo.email,
                 firstName: guestInfo.firstName,
