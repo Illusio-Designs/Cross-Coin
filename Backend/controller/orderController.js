@@ -4629,8 +4629,8 @@
       const limit = Math.min(parseInt(req.query.limit) || 50, 300);
       const olderThanDays = parseInt(req.query.older_than_days) || 0;
       const statusFilter = req.query.status
-        ? req.query.status.split(',').map(s => s.trim())
-        : ['processing', 'booked', 'pickup initiated', 'manifested', 'in transit', 'shipped', 'out for delivery'];
+        ? req.query.status.split(',').map(s => s.trim()).filter(s => !['delivered', 'rto delivered', 'cancelled', 'order cancelled'].includes(s))
+        : ['confirmed', 'processing', 'booked', 'pickup initiated', 'manifested', 'in transit', 'shipped', 'out for delivery', 'undelivered', 'rto', 'exception'];
 
       const dateFilter = olderThanDays > 0
         ? { [Op.lt]: new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000) }
