@@ -13,6 +13,7 @@
   const FShipLabelDownload = require("../model/fshipLabelDownloadModel.js");
   const UTMTracking = require("../model/utmModel.js");
   const { Op, Transaction } = require("sequelize");
+  const XLSX = require("xlsx");
   const { sequelize } = require("../config/db.js");
   const axios = require('axios');
   const { logger } = require("../config/logging.js");
@@ -229,6 +230,21 @@
       if (shippingAddress.address && String(shippingAddress.address).trim().length < 15) {
         await transaction.rollback();
         return res.status(400).json({ message: "Address must be at least 15 characters." });
+      }
+
+      // Validate pincode serviceability before proceeding
+      if (shippingAddress.pincode) {
+        try {
+          const warehousePincode = await settingsHelper.getSetting(1, 'FSHIP_WAREHOUSE_PINCODE', '395006');
+          const serviceability = await fshipService.checkServiceability(warehousePincode, shippingAddress.pincode.trim());
+          if (!serviceability || (Array.isArray(serviceability) && serviceability.length === 0)) {
+            await transaction.rollback();
+            return res.status(400).json({ message: 'Sorry, delivery is not available for this pincode. Please use a different address.' });
+          }
+        } catch (svcErr) {
+          logger.warn('Pincode serviceability check failed (allowing order):', svcErr.message);
+          // Allow order to proceed if serviceability API is down — FShip sync will catch it later
+        }
       }
 
       // ── Idempotency key dedup — DB-based (survives Redis downtime) ────────
@@ -621,19 +637,27 @@
           const whatsappService = require('../services/whatsappService.js');
           const addr = await ShippingAddress.findByPk(shipping_address_id);
           if (addr && addr.phone) {
-            await whatsappService.sendOrderConfirmation(addr.phone, {
-              orderNumber: createdOrder.order_number,
-              itemCount: validatedItems.length,
-              total: parseFloat(createdOrder.final_amount).toFixed(2),
-              estimatedDelivery: '3-5 working days'
-            }, createdOrder.brand_id || 1);
-            // Extra: COD confirmation with address summary
             if (payment_type === 'cod') {
-              const addrSummary = `${addr.city}, ${addr.state} - ${addr.pincode}`;
+              // COD: send address confirmation request (customer must reply YES)
+              const fullAddress = [addr.full_name, addr.address, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
               await whatsappService.sendCodConfirmation(addr.phone, {
                 orderNumber: createdOrder.order_number,
                 amount: parseFloat(createdOrder.final_amount).toFixed(2),
-                address: addrSummary
+                fullAddress,
+              }, createdOrder.brand_id || 1);
+              // Mark order as awaiting address confirmation
+              await Order.update(
+                { cod_address_confirmed: false },
+                { where: { id: createdOrder.id } }
+              );
+              logger.debug(`createOrder: COD address confirmation WhatsApp sent for ${createdOrder.order_number}`);
+            } else {
+              // Prepaid: send standard confirmation
+              await whatsappService.sendOrderConfirmation(addr.phone, {
+                orderNumber: createdOrder.order_number,
+                itemCount: validatedItems.length,
+                total: parseFloat(createdOrder.final_amount).toFixed(2),
+                estimatedDelivery: '3-5 working days'
               }, createdOrder.brand_id || 1);
             }
           }
@@ -1071,7 +1095,7 @@
           },
           {
             model: Payment,
-            as: "Payments"
+            as: "Payment"
           }
         ],
         transaction
@@ -1119,7 +1143,7 @@
           updateData.payment_status = 'refunded';
           
           // Update payment record
-          const payment = order.Payments && order.Payments.length > 0 ? order.Payments[0] : null;
+          const payment = order.Payment || null;
           if (payment) {
             await payment.update({
               status: 'refunded',
@@ -1838,46 +1862,88 @@
   // Get order statistics
   module.exports.getOrderStats = async (req, res) => {
     try {
-      const totalOrders = await Order.count();
+      // Date filter support
+      const { start_date, end_date } = req.query;
+      const dateWhere = {};
+      if (start_date) dateWhere[Op.gte] = new Date(start_date);
+      if (end_date) {
+        const endDate = new Date(end_date);
+        endDate.setHours(23, 59, 59, 999);
+        dateWhere[Op.lte] = endDate;
+      }
+      const hasDateFilter = Object.keys(dateWhere).length > 0;
+      const orderWhere = hasDateFilter ? { createdAt: dateWhere } : {};
+
+      const totalOrders = await Order.count({ where: orderWhere });
       
-      // Calculate total revenue excluding cancelled orders
-      const totalRevenue = await Order.sum("final_amount", {
-        where: {
-          status: {
-            [Op.ne]: 'cancelled'
-          }
-        }
-      });
+      // Total revenue = ALL orders (full picture)
+      const totalRevenue = await Order.sum("final_amount", { where: orderWhere }) || 0;
       
-      const totalPendingOrders = await Order.count({
-        where: { status: "pending" },
+      // Count each status
+      const [statusRows] = await sequelize.query(`
+        SELECT status, COUNT(*) as count, COALESCE(SUM(final_amount), 0) as revenue
+        FROM orders 
+        ${hasDateFilter ? `WHERE created_at >= :startDate AND created_at <= :endDate` : ''}
+        GROUP BY status
+      `, {
+        replacements: hasDateFilter ? { startDate: start_date, endDate: end_date ? new Date(new Date(end_date).setHours(23, 59, 59, 999)) : new Date() } : {},
       });
-      const totalProcessingOrders = await Order.count({
-        where: { status: "processing" },
-      });
-      const totalShippedOrders = await Order.count({
-        where: { status: "shipped" },
-      });
-      const totalDeliveredOrders = await Order.count({
-        where: { status: "delivered" },
-      });
-      const totalCancelledOrders = await Order.count({
-        where: { status: "cancelled" },
+      const sc = {};
+      const sr = {};
+      statusRows.forEach(r => {
+        sc[r.status] = parseInt(r.count);
+        sr[r.status] = parseFloat(r.revenue || 0);
       });
 
-      // Calculate average order value (excluding cancelled orders)
-      const nonCancelledOrdersCount = totalOrders - totalCancelledOrders;
-      const averageOrderValue = nonCancelledOrdersCount > 0 ? (totalRevenue || 0) / nonCancelledOrdersCount : 0;
+      const totalCancelledOrders = (sc['cancelled'] || 0) + (sc['order cancelled'] || 0);
+      const totalRtoOrders = (sc['rto'] || 0) + (sc['rto delivered'] || 0) + (sc['returned_rto'] || 0);
+      const deliveredRevenue = (sr['delivered'] || 0);
+      const cancelledRevenue = (sr['cancelled'] || 0) + (sr['order cancelled'] || 0);
+      const rtoRevenue = (sr['rto'] || 0) + (sr['rto delivered'] || 0) + (sr['return_initiated'] || 0) + (sr['returned_rto'] || 0);
+      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
       res.json({
         totalOrders,
-        totalRevenue: totalRevenue || 0,
+        totalRevenue,
+        earnedRevenue: deliveredRevenue,
+        lostRevenue: cancelledRevenue + rtoRevenue,
         averageOrderValue,
-        totalPendingOrders,
-        totalProcessingOrders,
-        totalShippedOrders,
-        totalDeliveredOrders,
+        statusBreakdown: {
+          awaiting_confirmation: sc['awaiting_confirmation'] || 0,
+          pending: sc['pending'] || 0,
+          confirmed: sc['confirmed'] || 0,
+          processing: sc['processing'] || 0,
+          booked: sc['booked'] || 0,
+          pickup_initiated: sc['pickup initiated'] || 0,
+          manifested: sc['manifested'] || 0,
+          in_transit: sc['in transit'] || 0,
+          shipped: sc['shipped'] || 0,
+          out_for_delivery: sc['out for delivery'] || 0,
+          delivered: sc['delivered'] || 0,
+          undelivered: sc['undelivered'] || 0,
+          rto: sc['rto'] || 0,
+          rto_delivered: sc['rto delivered'] || 0,
+          return_initiated: sc['return_initiated'] || 0,
+          returned_rto: sc['returned_rto'] || 0,
+          cancelled: totalCancelledOrders,
+          exception: sc['exception'] || 0,
+        },
+        revenueBreakdown: {
+          delivered: deliveredRevenue,
+          shipped: (sr['shipped'] || 0) + (sr['in transit'] || 0) + (sr['out for delivery'] || 0) + (sr['booked'] || 0) + (sr['pickup initiated'] || 0) + (sr['manifested'] || 0),
+          processing: (sr['processing'] || 0) + (sr['confirmed'] || 0),
+          pending: (sr['pending'] || 0) + (sr['awaiting_confirmation'] || 0),
+          rto: rtoRevenue,
+          cancelled: cancelledRevenue,
+        },
+        // Legacy fields for backward compatibility
+        totalPendingOrders: (sc['pending'] || 0) + (sc['awaiting_confirmation'] || 0),
+        totalProcessingOrders: (sc['processing'] || 0) + (sc['confirmed'] || 0),
+        totalShippedOrders: (sc['shipped'] || 0) + (sc['in transit'] || 0) + (sc['out for delivery'] || 0),
+        totalDeliveredOrders: sc['delivered'] || 0,
         totalCancelledOrders,
+        totalRtoOrders,
+        ...(hasDateFilter ? { dateFilter: { start_date, end_date } } : {}),
       });
     } catch (error) {
       logger.error("Error fetching order statistics:", error);
@@ -2009,8 +2075,6 @@
 
   // Enhanced sync functions with comprehensive order management
   module.exports.syncOrdersWithFShip = async (req, res) => {
-    const transaction = await sequelize.transaction();
-
     try {
       logger.debug("=== ENHANCED FSHIP SYNC PROCESS START ===");
       logger.debug("Flow: Check sync status → Create if needed → Update status → Handle COD payments");
@@ -2025,7 +2089,6 @@
         logger.debug("✅ FSHIP CONNECTION SUCCESS");
       } catch (authError) {
         logger.error("❌ FSHIP CONNECTION FAILED");
-        await transaction.rollback();
         return res.status(400).json({
           success: false,
           message: "FShip connection failed",
@@ -2080,8 +2143,9 @@
         errors_list: []
       };
 
-      // STEP 3: Process each order with enhanced sync logic
+      // STEP 3: Process each order with its OWN transaction (one failure won't roll back others)
       for (const order of ordersToSync) {
+        const orderTransaction = await sequelize.transaction();
         try {
           logger.debug(`\n🔄 Processing order: ${order.order_number} (Status: ${order.status})`);
           
@@ -2089,12 +2153,12 @@
           await order.update({
             fship_sync_status: 'syncing',
             fship_sync_attempts: sequelize.literal('fship_sync_attempts + 1')
-          });
+          }, { transaction: orderTransaction });
 
-          const syncResult = await this.enhancedSyncSingleOrder(order, transaction);
+          const syncResult = await this.enhancedSyncSingleOrder(order, orderTransaction);
           
           if (syncResult.success) {
-            await order.update({ fship_sync_status: 'synced' });
+            await order.update({ fship_sync_status: 'synced' }, { transaction: orderTransaction });
 
             if (syncResult.action === 'synced') {
               results.synced++;
@@ -2113,7 +2177,7 @@
               message: syncResult.message
             });
           } else {
-            await order.update({ fship_sync_status: 'failed' });
+            await order.update({ fship_sync_status: 'failed' }, { transaction: orderTransaction });
             results.errors++;
             results.errors_list.push({
               order_number: order.order_number,
@@ -2121,7 +2185,9 @@
             });
           }
           
+          await orderTransaction.commit();
         } catch (error) {
+          await orderTransaction.rollback();
           logger.error(`❌ Error processing order ${order.order_number}:`, error.message);
           await order.update({ fship_sync_status: 'failed' }).catch(() => {});
           results.errors++;
@@ -2147,8 +2213,6 @@
         );
       }
 
-      await transaction.commit();
-
       logger.debug("\n=== SYNC SUMMARY ===");
       logger.debug(`📦 Total: ${results.total}`);
       logger.debug(`✅ Synced: ${results.synced}`);
@@ -2164,7 +2228,6 @@
 
     } catch (error) {
       logger.error("❌ SYNC PROCESS FAILED:", error);
-      await transaction.rollback();
       return res.status(500).json({
         success: false,
         message: "Sync process failed",
@@ -2254,8 +2317,19 @@
     if (!addr.address || !addr.address.trim()) issues.push('Shipping address: address is missing');
     if (!addr.city || !addr.city.trim()) issues.push('Shipping address: city is missing');
     if (!addr.state || !addr.state.trim()) issues.push('Shipping address: state is missing');
-    if (!addr.pincode || !addr.pincode.trim()) issues.push('Shipping address: pincode is missing');
-    if (!addr.phone) issues.push('Shipping address: phone is missing');
+    if (!addr.pincode || !addr.pincode.trim()) {
+      issues.push('Shipping address: pincode is missing');
+    } else if (!/^\d{6}$/.test(addr.pincode.trim())) {
+      issues.push('Shipping address: pincode must be exactly 6 digits');
+    }
+    if (!addr.phone) {
+      issues.push('Shipping address: phone is missing');
+    } else {
+      const digits = String(addr.phone).replace(/\D/g, '').slice(-10);
+      if (!/^[6-9]\d{9}$/.test(digits)) {
+        issues.push('Shipping address: phone must be a valid 10-digit Indian mobile number');
+      }
+    }
 
     if (!order.OrderItems || order.OrderItems.length === 0) {
       issues.push('Order has no items');
@@ -2465,10 +2539,10 @@
         const newStatus = fshipService.mapFShipStatusToCrossCoin(fshipStatus);
         
         // Extract courier name from tracking data
-        const courierFromTracking = trackingResult.summary.courier_name || trackingResult.summary.courierName || trackingResult.courier_name || trackingResult.courierName || null;
-        if (courierFromTracking && !order.courier_name) {
+        const courierFromTracking = trackingResult.summary.courier_name || trackingResult.summary.courierName || trackingResult.courier_name || trackingResult.courierName || trackingResult.summary.courier || null;
+        if (courierFromTracking && courierFromTracking !== order.courier_name) {
           await order.update({ courier_name: courierFromTracking }, { transaction });
-          logger.debug(`📦 Courier name set from tracking: ${courierFromTracking}`);
+          logger.debug(`📦 Courier name updated from tracking: ${courierFromTracking}`);
         }
         
         logger.debug(`📊 FShip status: "${fshipStatus}" → CrossCoin status: "${newStatus}"`);
@@ -2634,7 +2708,10 @@
             : customer?.username || customer?.email)
         || 'Customer';
 
-      const customerMobile = shippingAddress?.phone || customer?.phone || '9876543210';
+      const customerMobile = shippingAddress?.phone || customer?.phone;
+      if (!customerMobile) {
+        throw new Error(`Order ${order.order_number}: No phone number found for shipping`);
+      }
       const customerEmail = customer?.email || '';
 
       // Prepare products array
@@ -2649,6 +2726,9 @@
         taxRate: 0,
         productDiscount: 0
       }));
+
+      // Calculate shipment dimensions based on item quantities
+      const dims = fshipService.calculateShipmentDimensions(order.OrderItems);
 
       // Prepare FShip order data
       const fshipOrderData = {
@@ -2669,10 +2749,10 @@
         tax_Amount: 0,
         extra_Charges: parseFloat(order.shipping_fee) || 0,
         total_Amount: parseFloat(order.final_amount) || 0,
-        shipment_Weight: (order.OrderItems?.reduce((sum, item) => sum + item.quantity, 0) || 1) * 0.07, // 70g per item in kg
-        shipment_Length: 14,
-        shipment_Width: 3,
-        shipment_Height: 10,
+        shipment_Weight: dims.shipment_Weight,
+        shipment_Length: dims.shipment_Length,
+        shipment_Width: dims.shipment_Width,
+        shipment_Height: dims.shipment_Height,
         latitude: 0,
         longitude: 0,
         pick_Address_ID: parseInt(await settingsHelper.getSetting(1, 'FSHIP_DEFAULT_WAREHOUSE_ID', '227729')),
@@ -3085,7 +3165,7 @@
           },
           {
             model: Payment,
-            as: "Payments"
+            as: "Payment"
           }
         ],
         transaction
@@ -3135,7 +3215,7 @@
         updateData.payment_status = 'refunded';
         
         // Update payment record
-        const payment = order.Payments && order.Payments.length > 0 ? order.Payments[0] : null;
+        const payment = order.Payment || null;
         if (payment) {
           await payment.update({
             status: 'refunded',
@@ -4530,3 +4610,138 @@
     }
   };
   
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // Bulk Status Refresh — fetch latest FShip status for old/synced orders
+  // POST /api/orders/fship/refresh-status
+  // Query params: ?limit=50&status=processing,booked,shipped&older_than_days=0
+  // ══════════════════════════════════════════════════════════════════════════════
+  module.exports.bulkRefreshFShipStatus = async (req, res) => {
+    try {
+      logger.debug("=== BULK FSHIP STATUS REFRESH START ===");
+
+      // STEP 1: Test FShip connection
+      const testResult = await fshipService.testConnection();
+      if (!testResult.success) {
+        return res.status(400).json({ success: false, message: 'FShip connection failed', error: testResult.message });
+      }
+
+      // STEP 2: Parse filters
+      const limit = Math.min(parseInt(req.query.limit) || 50, 300);
+      const olderThanDays = parseInt(req.query.older_than_days) || 0;
+      const statusFilter = req.query.status
+        ? req.query.status.split(',').map(s => s.trim()).filter(s => !['delivered', 'rto delivered', 'cancelled', 'order cancelled'].includes(s))
+        : ['confirmed', 'processing', 'booked', 'pickup initiated', 'manifested', 'in transit', 'shipped', 'out for delivery', 'undelivered', 'rto', 'exception'];
+
+      const dateFilter = olderThanDays > 0
+        ? { [Op.lt]: new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000) }
+        : { [Op.ne]: null };
+
+      // STEP 3: Fetch orders that have a waybill and are in active statuses
+      const orders = await Order.findAll({
+        where: {
+          fship_waybill: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] },
+          status: { [Op.in]: statusFilter },
+          order_number: { [Op.notLike]: '%TEST%' },
+          createdAt: dateFilter,
+        },
+        include: [
+          { model: OrderItem, as: 'OrderItems', include: [{ model: Product, as: 'Product' }, { model: ProductVariation, as: 'ProductVariation' }] },
+          { model: User, as: 'User', attributes: ['id', 'username', 'email'], required: false },
+          { model: GuestUser, as: 'GuestUser', attributes: ['id', 'email', 'firstName', 'lastName', 'phone'], required: false },
+          { model: ShippingAddress, as: 'ShippingAddress' },
+          { model: Payment, as: 'Payment' },
+        ],
+        order: [['createdAt', 'ASC']],
+        limit,
+      });
+
+      logger.debug(`📦 Found ${orders.length} synced orders to refresh (limit: ${limit}, statuses: ${statusFilter.join(',')})`);
+
+      const results = {
+        total: orders.length,
+        updated: 0,
+        unchanged: 0,
+        validation_failed: 0,
+        errors: 0,
+        details: [],
+        validation_issues: [],
+        errors_list: [],
+      };
+
+      // STEP 4: Process each order with its own transaction, in batches of 10
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < orders.length; i += BATCH_SIZE) {
+        const batch = orders.slice(i, i + BATCH_SIZE);
+
+        const batchPromises = batch.map(async (order) => {
+          // ── Pre-refresh validation ──────────────────────────────────────
+          const issues = module.exports.validateOrderForFShip(order);
+          if (issues.length > 0) {
+            results.validation_failed++;
+            results.validation_issues.push({
+              order_number: order.order_number,
+              order_id: order.id,
+              status: order.status,
+              waybill: order.fship_waybill,
+              issues,
+            });
+            // Still attempt refresh — validation issues don't block status reads
+            logger.warn(`⚠️ Order ${order.order_number} has validation issues: ${issues.join('; ')}`);
+          }
+
+          const orderTx = await sequelize.transaction();
+          try {
+            const refreshResult = await module.exports.updateOrderStatusFromFShip(order, orderTx);
+
+            if (refreshResult.success) {
+              await orderTx.commit();
+
+              if (refreshResult.statusChanged) {
+                results.updated++;
+                results.details.push({
+                  order_number: order.order_number,
+                  order_id: order.id,
+                  previous_status: order.status,
+                  new_status: refreshResult.newStatus,
+                  waybill: order.fship_waybill,
+                  payment_status_changed: refreshResult.newStatus === 'delivered' || refreshResult.newStatus === 'rto',
+                  message: refreshResult.message,
+                });
+              } else {
+                results.unchanged++;
+              }
+            } else {
+              await orderTx.rollback();
+              results.errors++;
+              results.errors_list.push({ order_number: order.order_number, error: refreshResult.error });
+            }
+          } catch (err) {
+            await orderTx.rollback();
+            results.errors++;
+            results.errors_list.push({ order_number: order.order_number, error: err.message });
+          }
+        });
+
+        await Promise.all(batchPromises);
+
+        // Rate-limit between batches
+        if (i + BATCH_SIZE < orders.length) {
+          await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+
+      logger.debug("\n=== BULK REFRESH SUMMARY ===");
+      logger.debug(`📦 Total: ${results.total} | ✅ Updated: ${results.updated} | ➖ Unchanged: ${results.unchanged} | ⚠️ Validation issues: ${results.validation_failed} | ❌ Errors: ${results.errors}`);
+
+      return res.json({
+        success: true,
+        message: `Bulk status refresh completed: ${results.updated} updated, ${results.unchanged} unchanged, ${results.errors} errors`,
+        data: results,
+      });
+
+    } catch (error) {
+      logger.error("❌ BULK REFRESH FAILED:", error);
+      return res.status(500).json({ success: false, message: 'Bulk status refresh failed', error: error.message });
+    }
+  };

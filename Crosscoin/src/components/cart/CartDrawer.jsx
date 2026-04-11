@@ -24,6 +24,7 @@ import {
   showValidationErrorToast,
 } from '../../utils/toast';
 import { fbqTrack } from '../../utils/fbqTrack';
+import { gtagTrack } from '../../utils/gtagTrack';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(
@@ -269,6 +270,16 @@ const CartDrawer = ({ isOpen, onClose }) => {
       num_items: activeItems.reduce((s, i) => s + (i.quantity || 1), 0),
       value: activeTotal,
       currency: 'INR',
+    });
+    gtagTrack('begin_checkout', {
+      currency: 'INR',
+      value: activeTotal,
+      items: activeItems.map(i => ({
+        item_id: String(i.productId || i.id),
+        item_name: i.name || i.title || '',
+        quantity: i.quantity || 1,
+        price: parseFloat(getPrice(i) || 0),
+      })),
     });
     // Intentionally only when isOpen flips; cart snapshot is current at open time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -682,12 +693,46 @@ const CartDrawer = ({ isOpen, onClose }) => {
           quantity: i.quantity,
         })),
       }, { eventID: `Purchase_${orderNumber}` });
+      gtagTrack('purchase', {
+        transaction_id: orderNumber,
+        value: Number(value.toFixed(2)),
+        currency: 'INR',
+        items: activeItems.map(i => ({
+          item_id: String(i.productId || i.id),
+          item_name: i.name || i.title || '',
+          quantity: i.quantity || 1,
+          price: parseFloat(getPrice(i) || 0),
+        })),
+      });
       sessionStorage.setItem(trackingKey, 'true');
     } catch (_) { }
   };
 
   const placeCodOrder = async () => {
     setIsProcessing(true);
+    // GA4: add_shipping_info + add_payment_info for COD flow
+    gtagTrack('add_shipping_info', {
+      currency: 'INR',
+      value: finalTotal,
+      shipping_tier: selectedFee?.orderType || 'cod',
+      items: activeItems.map(i => ({
+        item_id: String(i.productId || i.id),
+        item_name: i.name || i.title || '',
+        quantity: i.quantity || 1,
+        price: parseFloat(getPrice(i) || 0),
+      })),
+    });
+    gtagTrack('add_payment_info', {
+      currency: 'INR',
+      value: finalTotal,
+      payment_type: 'cod',
+      items: activeItems.map(i => ({
+        item_id: String(i.productId || i.id),
+        item_name: i.name || i.title || '',
+        quantity: i.quantity || 1,
+        price: parseFloat(getPrice(i) || 0),
+      })),
+    });
     try {
       const orderData = buildCodOrderData(generateIdempotencyKey());
       const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
@@ -849,6 +894,20 @@ const CartDrawer = ({ isOpen, onClose }) => {
         return;
       }
       setIsProcessing(true);
+
+      // GA4: add_shipping_info — user confirmed a valid address and delivery method
+      gtagTrack('add_shipping_info', {
+        currency: 'INR',
+        value: prepaidPayable,
+        shipping_tier: selectedFee?.orderType || 'prepaid',
+        items: activeItems.map(i => ({
+          item_id: String(i.productId || i.id),
+          item_name: i.name || i.title || '',
+          quantity: i.quantity || 1,
+          price: parseFloat(getPrice(i) || 0),
+        })),
+      });
+
       try {
         const scriptLoaded = await loadRazorpay();
         if (!scriptLoaded || !window.Razorpay) {
@@ -900,6 +959,19 @@ const CartDrawer = ({ isOpen, onClose }) => {
 
         const rzpOrder = checkoutResult.razorpay_order;
         const reservationId = checkoutResult.reservation_id;
+
+        // GA4: add_payment_info — user is about to pay via Razorpay
+        gtagTrack('add_payment_info', {
+          currency: 'INR',
+          value: prepaidPayable,
+          payment_type: 'razorpay',
+          items: activeItems.map(i => ({
+            item_id: String(i.productId || i.id),
+            item_name: i.name || i.title || '',
+            quantity: i.quantity || 1,
+            price: parseFloat(getPrice(i) || 0),
+          })),
+        });
 
         // Step 2: Open Razorpay checkout
         const options = {
@@ -1031,6 +1103,19 @@ const CartDrawer = ({ isOpen, onClose }) => {
 
                       const rzpOrder = retryResult.razorpay_order;
                       const reservationId = retryResult.reservation_id;
+
+                      // GA4: add_payment_info on retry
+                      gtagTrack('add_payment_info', {
+                        currency: 'INR',
+                        value: prepaidPayable,
+                        payment_type: 'razorpay',
+                        items: activeItems.map(i => ({
+                          item_id: String(i.productId || i.id),
+                          item_name: i.name || i.title || '',
+                          quantity: i.quantity || 1,
+                          price: parseFloat(getPrice(i) || 0),
+                        })),
+                      });
 
                       const options = {
                         key: RAZORPAY_KEY,

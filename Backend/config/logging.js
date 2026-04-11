@@ -7,8 +7,7 @@ const path = require('path');
  * Structured Logger — production-grade logging.
  *
  * Features:
- * - JSON structured output in production
- * - Human-readable in development
+ * - Human-readable plain text output (console + files)
  * - File logging (logs/app.log, logs/error.log)
  * - Log levels: debug, info, warn, error
  * - Request context (requestId, userId, url)
@@ -21,7 +20,6 @@ if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
 const LEVELS = { debug: 0, info: 1, warn: 2, error: 3 };
 const ENV = process.env.NODE_ENV || 'development';
 const MIN_LEVEL = ENV === 'production' ? 'warn' : ENV === 'test' ? 'error' : 'debug';
-const IS_PROD = ENV === 'production';
 
 // File streams — append mode, auto-flush
 let appStream, errorStream;
@@ -36,52 +34,53 @@ function shouldLog(level) {
   return LEVELS[level] >= LEVELS[MIN_LEVEL];
 }
 
-function formatEntry(level, message, data) {
-  const entry = {
-    timestamp: new Date().toISOString(),
-    level: level.toUpperCase(),
-    message,
-    ...(data && typeof data === 'object' && !(data instanceof Error) ? data : {}),
-  };
-
+/**
+ * Format data into a readable key=value string.
+ * Objects become key=value pairs, Errors show message + stack in dev.
+ */
+function formatData(data) {
+  if (!data) return '';
   if (data instanceof Error) {
-    entry.error = data.message;
-    if (!IS_PROD) entry.stack = data.stack;
+    const stack = ENV !== 'production' && data.stack ? `\n${data.stack}` : '';
+    return data.message + stack;
   }
-
-  return entry;
+  if (typeof data === 'string') return data;
+  if (typeof data === 'object') {
+    const parts = [];
+    for (const [k, v] of Object.entries(data)) {
+      if (v === null || v === undefined) continue;
+      parts.push(`${k}=${typeof v === 'object' ? JSON.stringify(v) : v}`);
+    }
+    return parts.join(' ');
+  }
+  return String(data);
 }
 
-function writeToFile(stream, entry) {
+function formatLine(level, message, data) {
+  const ts = new Date().toISOString();
+  const dataStr = formatData(data);
+  return `${ts} ${level.toUpperCase().padEnd(5)} ${message}${dataStr ? ' ' + dataStr : ''}`;
+}
+
+function writeToFile(stream, line) {
   if (stream && !stream.destroyed) {
-    try { stream.write(JSON.stringify(entry) + '\n'); } catch (_) {}
+    try { stream.write(line + '\n'); } catch (_) {}
   }
 }
 
 function log(level, message, data) {
   if (!shouldLog(level)) return;
 
-  const entry = formatEntry(level, message, data);
+  const line = formatLine(level, message, data);
 
-  // Console output
-  if (IS_PROD) {
-    // JSON in production for log aggregators
-    const line = JSON.stringify(entry);
-    if (level === 'error') console.error(line);
-    else if (level === 'warn') console.warn(line);
-    else console.log(line);
-  } else {
-    // Human-readable in dev
-    const prefix = `[${entry.level}]`;
-    const dataStr = data instanceof Error ? data.message : (data ? JSON.stringify(data) : '');
-    if (level === 'error') console.error(prefix, message, dataStr);
-    else if (level === 'warn') console.warn(prefix, message, dataStr);
-    else console.log(prefix, message, dataStr);
-  }
+  // Console output — always plain text
+  if (level === 'error') console.error(line);
+  else if (level === 'warn') console.warn(line);
+  else console.log(line);
 
-  // File output
-  writeToFile(appStream, entry);
-  if (level === 'error' || level === 'warn') writeToFile(errorStream, entry);
+  // File output — plain text
+  writeToFile(appStream, line);
+  if (level === 'error' || level === 'warn') writeToFile(errorStream, line);
 }
 
 const logger = {
@@ -96,7 +95,7 @@ const logger = {
  * Adds req.requestId for tracing.
  */
 function requestLogger(req, res, next) {
-  if (IS_PROD && req.path === '/api/health') return next(); // skip health checks
+  if (ENV === 'production' && req.path === '/api/health') return next();
 
   req.requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const start = Date.now();
@@ -115,7 +114,7 @@ function requestLogger(req, res, next) {
 
     if (res.statusCode >= 500) logger.error('Request failed', entry);
     else if (res.statusCode >= 400) logger.warn('Request error', entry);
-    else if (!IS_PROD) logger.info('Request', entry);
+    else if (ENV !== 'production') logger.info('Request', entry);
   });
 
   next();

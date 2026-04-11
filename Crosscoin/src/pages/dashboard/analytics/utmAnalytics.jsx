@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Pagination } from '../../../components/ui';
+import { Pagination, DateRangePicker } from '../../../components/ui';
 
 const UTMAnalytics = () => {
   const [utmData, setUtmData] = useState([]);
@@ -150,16 +150,8 @@ const UTMAnalytics = () => {
     });
   };
 
-  const handleDateChange = (e) => {
-    setDateRange({
-      ...dateRange,
-      [e.target.name]: e.target.value
-    });
-    // Don't fetch data automatically - wait for Apply Filter button
-  };
-
-  // Remove the useEffect that resets page on date change
-  // User must click Apply Filter to load data
+  // Date changes are handled by DateRangePicker component
+  // User must click Apply to load data
 
   // Calculate pagination
   const totalPages = Math.ceil(utmData.length / itemsPerPage);
@@ -203,38 +195,14 @@ const UTMAnalytics = () => {
         </div>
 
         {/* Date Range Filter */}
-        <form 
-          className="date-filter"
-          onSubmit={(e) => {
-            e.preventDefault();
-            fetchUTMData();
-          }}
-        >
-          <div className="date-input-group">
-            <label>Start Date:</label>
-            <input
-              type="date"
-              name="startDate"
-              value={dateRange.startDate}
-              onChange={handleDateChange}
-            />
-          </div>
-          <div className="date-input-group">
-            <label>End Date:</label>
-            <input
-              type="date"
-              name="endDate"
-              value={dateRange.endDate}
-              onChange={handleDateChange}
-            />
-          </div>
-          <button 
-            className="apply-filter-btn"
-            type="submit"
-          >
-            Apply Filter
-          </button>
-        </form>
+        <DateRangePicker
+          label="Date Range"
+          startDate={dateRange.startDate}
+          endDate={dateRange.endDate}
+          onStartChange={(val) => setDateRange(prev => ({ ...prev, startDate: val }))}
+          onEndChange={(val) => setDateRange(prev => ({ ...prev, endDate: val }))}
+          onApply={fetchUTMData}
+        />
 
         {/* Error Message */}
         {error && (

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
+import { Button, Modal, Table, Pagination, Select, DateRangePicker } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { paymentService } from "../../../services";
 import { showSuccess, showError } from "../../../utils/toastNotification";
@@ -33,11 +33,16 @@ export default function Payments() {
   const [methodFilter, setMethodFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const [payments, setPayments] = useState([]);
+  const [statsStartDate, setStatsStartDate] = useState("");
+  const [statsEndDate, setStatsEndDate] = useState("");
 
   const fetchPayments = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await paymentService.getAllPayments();
+      const params = {};
+      if (statsStartDate) params.start_date = statsStartDate;
+      if (statsEndDate) params.end_date = statsEndDate;
+      const response = await paymentService.getAllPayments(params);
       if (response.success && response.payments) {
         const transformed = response.payments.map(p => {
           let customerName = 'Guest User';
@@ -58,7 +63,7 @@ export default function Payments() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [statsStartDate, statsEndDate]);
 
   useEffect(() => { fetchPayments(); }, [fetchPayments]);
   useEffect(() => { setCurrentPage(1); }, [search, statusFilter, methodFilter]);
@@ -92,7 +97,7 @@ export default function Payments() {
     { header: "Sr. No", accessor: "serial_number" },
     { header: "Order", accessor: "orderNumber", cell: ({ orderNumber }) => <span className="cat-name-cell">{orderNumber}</span> },
     { header: "Customer", accessor: "customerName" },
-    { header: "Amount", accessor: "amount_paid", cell: (row) => `₹${parseFloat(row.amount_paid || 0).toFixed(2)}` },
+    { header: "Amount", accessor: "amount_paid", cell: (row) => `₹${(parseFloat(row.amount_paid || 0) / 100).toFixed(2)}` },
     { header: "Method", accessor: "displayPaymentMethod", cell: (row) => getMethodLabel(row.displayPaymentMethod) },
     { header: "Status", accessor: "status", cell: (row) => <StatusBadge status={row.status} /> },
     { header: "Date", accessor: "createdAt", cell: (row) => new Date(row.createdAt).toLocaleDateString('en-IN') },
@@ -107,10 +112,10 @@ export default function Payments() {
     }
   ];
 
-  const totalAmount = filteredData.reduce((sum, p) => sum + parseFloat(p.amount_paid || 0), 0);
-  const successCount = payments.filter(p => p.status === 'successful').length;
-  const pendingCount = payments.filter(p => p.status === 'pending').length;
-  const refundedCount = payments.filter(p => p.status === 'refunded').length;
+  const totalAmount = filteredData.reduce((sum, p) => sum + parseFloat(p.amount_paid || 0), 0) / 100;
+  const successCount = filteredData.filter(p => p.status === 'successful').length;
+  const pendingCount = filteredData.filter(p => p.status === 'pending').length;
+  const refundedCount = filteredData.filter(p => p.status === 'refunded').length;
 
   return (
     <>
@@ -134,13 +139,24 @@ export default function Payments() {
 
         {/* Stat Cards */}
         <div className="sl-stat-cards">
+          <div className="sl-stat-card" style={{ gridColumn: '1 / -1', padding: '12px 16px' }}>
+            <DateRangePicker
+              label="Stats Date Range"
+              inline
+              startDate={statsStartDate}
+              endDate={statsEndDate}
+              onStartChange={setStatsStartDate}
+              onEndChange={setStatsEndDate}
+              onClear={() => { setStatsStartDate(''); setStatsEndDate(''); }}
+            />
+          </div>
           <div className="sl-stat-card">
             <div className="sl-stat-icon sl-stat-icon--blue">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
             </div>
             <div className="sl-stat-body">
               <span className="sl-stat-label">Total Payments</span>
-              <span className="sl-stat-value">{payments.length}</span>
+              <span className="sl-stat-value">{filteredData.length}</span>
             </div>
           </div>
           <div className="sl-stat-card">
@@ -239,7 +255,7 @@ export default function Payments() {
               <div className="con-detail-grid">
                 <div className="con-detail-item"><span className="con-detail-label">Order Number</span><span className="con-detail-value">{selectedPayment.orderNumber}</span></div>
                 <div className="con-detail-item"><span className="con-detail-label">Customer</span><span className="con-detail-value">{selectedPayment.customerName}</span></div>
-                <div className="con-detail-item"><span className="con-detail-label">Amount</span><span className="con-detail-value">₹{parseFloat(selectedPayment.amount_paid || 0).toFixed(2)}</span></div>
+                <div className="con-detail-item"><span className="con-detail-label">Amount</span><span className="con-detail-value">₹{(parseFloat(selectedPayment.amount_paid || 0) / 100).toFixed(2)}</span></div>
                 <div className="con-detail-item"><span className="con-detail-label">Method</span><span className="con-detail-value">{getMethodLabel(selectedPayment.displayPaymentMethod)}</span></div>
                 <div className="con-detail-item"><span className="con-detail-label">Status</span><span className="con-detail-value"><StatusBadge status={selectedPayment.status} /></span></div>
                 <div className="con-detail-item"><span className="con-detail-label">Date</span><span className="con-detail-value">{new Date(selectedPayment.createdAt).toLocaleString('en-IN')}</span></div>

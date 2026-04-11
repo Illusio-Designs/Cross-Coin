@@ -7,6 +7,7 @@ const {
     cancelOrdersInFShip, getOrderStats,
     getFShipTrackingForOrder, getFShipLabelForOrder, getFShipCouriers,
     syncOrdersWithFShip, handleFShipWebhook, syncSingleOrderWithFShip,
+    bulkRefreshFShipStatus,
     exportDeliveredOrders, updateAwbNumber, initiateReturn,
     markLabelDownloaded, downloadLabel, bulkDownloadLabels, getPendingLabels, getLabelDownloadStats
 } = require('../controller/orderController.js');
@@ -20,6 +21,7 @@ router.get('/',                          isAuthenticated, isOrderManager, getAll
 router.get('/stats',                     isAuthenticated, isOrderManager, getOrderStats);
 router.get('/export/delivered',          isAuthenticated, isOrderManager, exportDeliveredOrders);
 router.post('/fship/sync',              isAuthenticated, isOrderManager, syncOrdersWithFShip);
+router.post('/fship/refresh-status',    isAuthenticated, isOrderManager, bulkRefreshFShipStatus);
 router.post('/fship/cancel',            isAuthenticated, isOrderManager, cancelOrdersInFShip);
 router.get('/fship/couriers',           isAuthenticated, isOrderManager, getFShipCouriers);
 router.get('/labels/pending',           isAuthenticated, isOrderManager, getPendingLabels);
