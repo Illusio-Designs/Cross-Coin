@@ -10,7 +10,7 @@ Node.js + Express REST API for the CrossCoin e-commerce platform. Handles produc
 - **Queue:** Bull (Redis-backed job queue)
 - **Auth:** JWT + Passport (Google OAuth)
 - **Payments:** Razorpay
-- **Shipping:** FShip API
+- **Shipping:** FShip API + iThink Logistics (provider-agnostic via `shippingProviderFactory`)
 - **Media:** ImageKit CDN
 - **Entry point:** `index.js` → `worker.js` (spawned as child process)
 
@@ -111,29 +111,32 @@ All new orders start as `awaiting_confirmation`. Admin must confirm before FShip
 ### Order Creation — Authenticated (`POST /api/orders`)
 
 1. Validates shipping address ownership
-2. Batch-fetches products + variations (avoids N+1)
-3. Server-side coupon discount verification
-4. COD max value cap + RTO risk scoring
-5. Batch-inserts order items, decrements stock atomically
-6. Sets status to `awaiting_confirmation`, payment to `pending`
-7. Emits `order.created` event (SSE notification to admin)
-8. FShip sync does NOT happen — waits for admin confirmation
+2. **Comprehensive address validation** via `shippingValidationService` (name, address length, pincode format, phone format, junk detection, Indian state check)
+3. Pincode serviceability check against active shipping provider
+4. Batch-fetches products + variations (avoids N+1)
+5. Server-side coupon discount verification
+6. COD max value cap + RTO risk scoring
+7. Batch-inserts order items, decrements stock atomically
+8. Sets status to `awaiting_confirmation`, payment to `pending`
+9. Emits `order.created` event (SSE notification to admin)
+10. Shipping sync does NOT happen — waits for admin confirmation
 
 ### Order Creation — Unauthenticated (`POST /api/orders/checkout`)
 
 1. Validates `guest_info` (phone, email, name) via schema validator
 2. Finds existing `consumer` by phone → email → creates new one if not found
 3. Creates `ShippingAddress` under that user
-4. Delegates to `createOrder` internally
-5. Returns `X-Auth-Token` header — frontend stores it, user is auto-logged in
-6. **No `GuestUser` record is ever created.** All orders belong to a `consumer` user.
+4. **Validates address** via `shippingValidationService` — destroys address and rejects if invalid
+5. Delegates to `createOrder` internally
+6. Returns `X-Auth-Token` header — frontend stores it, user is auto-logged in
+7. **No `GuestUser` record is ever created.** All orders belong to a `consumer` user.
 
 ### Admin Confirmation (`PUT /api/orders/:id/confirm`)
 
 1. Validates state transition (`awaiting_confirmation` → `confirmed`)
 2. Creates status history entry
 3. Emits `order.confirmed` event → WhatsApp confirmation sent
-4. Triggers FShip sync via `orderService.syncOrderToFShip()` (uses circuit breaker)
+4. Triggers shipping sync via `orderService.syncOrderToFShip()` → routes to active provider (FShip or iThink) via `shippingProviderFactory`
 
 ### Cancellation
 
@@ -232,6 +235,66 @@ States: `CLOSED` (normal) → `OPEN` (failing, rejects calls) → `HALF_OPEN` (t
 
 ---
 
+## Shipping Providers
+
+Multi-provider shipping via `shippingProviderFactory.js`. Active provider is set per brand via `SHIPPING_PROVIDER` brand setting.
+
+### Supported Providers
+
+| Provider | Service File | Auth Method | Status |
+|---|---|---|---|
+| FShip | `fshipService.js` | `signature` header | Active (default) |
+| iThink Logistics | `iThinkService.js` | `access_token` + `secret_key` in body | Ready |
+
+### Provider Factory
+
+`shippingProviderFactory.getShippingProvider(brandId)` reads `SHIPPING_PROVIDER` from brand settings and returns the correct service instance. Both services expose the same interface:
+
+- `createForwardOrder(orderData)` / `createOrUpdateForwardOrder(orderData)`
+- `getTrackingHistory(waybill)` / `getShipmentStatus(waybill)`
+- `cancelOrder(waybill, reason)`
+- `calculateRates(rateData)`
+- `checkServiceability(sourcePincode, destinationPincode)`
+- `getShippingLabel(waybills)`
+- `registerPickup(waybills)`
+- `mapFShipStatusToCrossCoin(status)`
+- `testConnection()`
+
+### iThink — Manual Courier Selection
+
+Admin picks a courier before syncing:
+
+1. `GET /api/orders/:id/shipping/couriers` — returns available couriers with rates/ETAs (validates order first)
+2. Admin selects courier from dashboard
+3. `PUT /api/orders/:id/fship/sync` with `{ logistics: "delhivery", s_type: "surface" }` — syncs with selected courier
+
+Allowed `logistics` values: `delhivery`, `bluedart`, `xpressbees`, `ecom`, `ekart`, `fedex`, or empty (auto-select).
+
+### Brand Settings (Shipping)
+
+| Key | Category | Description |
+|---|---|---|
+| `SHIPPING_PROVIDER` | shipping | Active provider: `fship` or `ithink` |
+| `FSHIP_API_KEY` | shipping | FShip API key |
+| `FSHIP_ENVIRONMENT` | shipping | `staging` or `production` |
+| `FSHIP_DEFAULT_WAREHOUSE_ID` | shipping | FShip warehouse ID |
+| `FSHIP_WAREHOUSE_PINCODE` | shipping | Warehouse pincode for serviceability |
+| `ITHINK_ACCESS_TOKEN` | shipping | iThink API access token (encrypted) |
+| `ITHINK_SECRET_KEY` | shipping | iThink API secret key (encrypted) |
+| `ITHINK_ENVIRONMENT` | shipping | `staging` or `production` |
+| `ITHINK_PICKUP_ADDRESS_ID` | shipping | iThink warehouse ID |
+| `ITHINK_RETURN_ADDRESS_ID` | shipping | Return address ID |
+| `ITHINK_DEFAULT_LOGISTICS` | shipping | Default courier (empty = admin picks per order) |
+| `ITHINK_WAREHOUSE_PINCODE` | shipping | Warehouse pincode for serviceability |
+
+Seed script: `node scripts/seedShippingProviderSettings.js`
+
+### Detailed Integration Doc
+
+See `docs/ITHINK-LOGISTICS-INTEGRATION.md` for full API reference, payload mapping, status codes, and migration checklist.
+
+---
+
 ## Schema Validation
 
 `utils/validate.js` — lightweight request body validation (no external deps).
@@ -243,6 +306,31 @@ Pre-built schemas wired as middleware:
 - `schemas.register` — username, email, password (min 8 chars)
 
 Usage: `router.post('/checkout', validateBody(schemas.checkout), handler)`
+
+### Shipping Address Validation (`shippingValidationService`)
+
+Runs at address creation, address update, order creation, guest checkout, and prepaid checkout. Blocks the request if any errors are found.
+
+| Check | Type | Rule |
+|---|---|---|
+| Customer name | Error | Required, min 2 chars, not only numbers |
+| Street address | Error | Required, min 10 chars, no junk (test, asdf, na, xxx) |
+| Short address | Warning | < 20 chars — suggest adding landmark |
+| City | Error | Required, min 2 chars, not only numbers |
+| State | Error/Warning | Required, validated against Indian state list |
+| Pincode | Error | Must be 6-digit format, no placeholders (000000, 111111) |
+| Phone | Error | Valid 10-digit Indian mobile (starts 6-9), no repeated digits, no known placeholders |
+| Courier name | Error | Must be valid iThink logistics value (if provided) |
+| Service type | Error | Must match courier (e.g. air/surface for BlueDart) |
+
+Error response format:
+```json
+{
+  "message": "Address has issues that will cause delivery failure",
+  "errors": ["Pincode \"12345\" is not a valid 6-digit Indian pincode"],
+  "warnings": ["State \"Maharastra\" may not be valid — verify spelling"]
+}
+```
 
 ---
 
@@ -333,6 +421,7 @@ Max value size: 1MB. Oversized payloads are logged and skipped.
 | UTMTracking | `utm_tracking` | UTM capture |
 | LeadCapture | `lead_captures` | Phone popup leads |
 | FShipLabelDownload | `fship_label_downloads` | Label audit |
+| OrderShipment | `order_shipments` | **NEW** — Provider-agnostic shipment tracking (provider, waybill, AWB, courier, label, sync state). Supports `fship` and `ithink`. |
 | GuestUser | `guest_users` | **Legacy only** — not written to anymore |
 
 ---
@@ -377,11 +466,14 @@ No `/public`, `/guest`, or `/admin` prefixes in URLs — handled by middleware.
 | POST | `/guest-checkout` | Public | Auto-create user + order |
 | GET | `/my-orders` | Auth | User orders |
 | GET | `/:id` | Auth | Single order |
-| PUT | `/:id/confirm` | OrderManager | Confirm → FShip |
+| PUT | `/:id/confirm` | OrderManager | Confirm → shipping sync |
 | PUT | `/:id/cancel` | Auth | User cancel |
 | PUT | `/:id/admin-cancel` | OrderManager | Admin cancel |
 | PUT | `/:id/status` | OrderManager | State machine update |
 | POST | `/:id/return` | Auth | Initiate return |
+| GET | `/:id/shipping/validate` | OrderManager | Pre-shipping validation (errors + warnings) |
+| GET | `/:id/shipping/couriers` | OrderManager | Available couriers with rates (validates first) |
+| PUT | `/:id/fship/sync` | OrderManager | Sync single order to shipping provider |
 | GET | `/` | OrderManager | All orders |
 | GET | `/stats` | OrderManager | Statistics |
 | GET | `/track/awb` | Public | Track by AWB |
@@ -446,12 +538,14 @@ No `/public`, `/guest`, or `/admin` prefixes in URLs — handled by middleware.
 
 | Method | Route | Auth | Validation | Function |
 |---|---|---|---|---|
-| POST | `/` | Auth | — | Create order (awaiting_confirmation) |
-| POST | `/checkout` | Public | `schemas.checkout` | Auto-create user + order |
-| PUT | `/:id/confirm` | OrderManager | — | Confirm → FShip sync |
+| POST | `/` | Auth | `shippingValidationService` | Create order (awaiting_confirmation) |
+| POST | `/checkout` | Public | `schemas.checkout` + `shippingValidationService` | Auto-create user + order |
+| PUT | `/:id/confirm` | OrderManager | — | Confirm → shipping provider sync |
 | PUT | `/:id/cancel` | Auth | `schemas.cancelOrder` | User cancel (reason required) |
 | PUT | `/:id/admin/cancel` | OrderManager | `schemas.cancelOrder` | Admin cancel |
 | PUT | `/:id/status` | OrderManager | — | State machine update |
+| GET | `/:id/shipping/validate` | OrderManager | — | Pre-shipping validation check |
+| GET | `/:id/shipping/couriers` | OrderManager | `shippingValidationService` | Available couriers (validates first) |
 | GET | `/my-orders` | Auth | — | User orders + rto_risk_level |
 | GET | `/` | OrderManager | — | All orders + rto_risk_level |
 
@@ -490,11 +584,11 @@ No `/public`, `/guest`, or `/admin` prefixes in URLs — handled by middleware.
 | Method | Route | Auth | Function |
 |---|---|---|---|
 | GET | `/` | Auth | User addresses |
-| POST | `/` | Auth | Create address |
-| PUT | `/:id` | Auth | Update address |
+| POST | `/` | Auth | Create address (validated by `shippingValidationService`) |
+| PUT | `/:id` | Auth | Update address (validated by `shippingValidationService`) |
 | DELETE | `/:id` | Auth | Delete address |
 | PUT | `/:id/default` | Auth | Set as default |
-| POST | `/guest` | Public | Auto-create user + address |
+| POST | `/guest` | Public | Auto-create user + address (validated by `shippingValidationService`) |
 | GET | `/guest` | Auth | Get addresses by email (requires auth + ownership check) |
 
 ### All Other Routes
@@ -527,7 +621,7 @@ No `/public`, `/guest`, or `/admin` prefixes in URLs — handled by middleware.
 | `/api/checkout` | OTP verification | `POST /phone-otp/send`, `POST /phone-otp/verify` |
 | `/api/notifications` | SSE notifications | `GET /poll` |
 | `/api/order-status-history` | Order audit | `GET /order/:orderId`, `POST /order/:orderId` |
-| `/api/serviceability/:pincode` | Delivery check | Pincode serviceability + COD availability |
+| `/api/serviceability/:pincode` | Delivery check | Pincode serviceability + COD availability (routes to active shipping provider) |
 | `/api/admin/brands` | Brand management | CRUD, `PATCH /:id/toggle-status` |
 | `/api/admin/brand-settings` | Per-brand config | CRUD by key, filter by category |
 | `/api/admin/loyalty` | Admin loyalty | `POST /adjust`, `GET /transactions` |
@@ -549,9 +643,12 @@ No `/public`, `/guest`, or `/admin` prefixes in URLs — handled by middleware.
 |---|---|
 | `orderService` | Business logic: `confirmOrder`, `cancelOrder`, `syncOrderToFShip`, state machine, RTO risk |
 | `orderEvents` | EventEmitter: `order.created/confirmed/shipped/delivered/cancelled/analytics` |
+| `shippingProviderFactory` | **NEW** — Returns FShip or iThink service based on `SHIPPING_PROVIDER` brand setting. Cached per brand. |
+| `iThinkService` | **NEW** — iThink Logistics API wrapper: order creation (manual courier selection), tracking, cancellation, rate check, pincode serviceability, labels, NDR, warehouse management |
+| `shippingValidationService` | **NEW** — Comprehensive pre-shipping validation. Validates name, address, city, state, pincode, phone, items, courier selection. Blocks bad orders at creation time. |
+| `fshipService` | FShip API (protected by circuit breaker, singleton init guard, PII redaction in logs, throws on invalid phone) |
 | `redisService` | Redis connection + `get`/`set`/`del` proxy methods |
 | `cacheManager` | TTL-based cache with namespace isolation (`crosscoin:cache:` prefix), max value size, pattern-based clear |
-| `fshipService` | FShip API (protected by circuit breaker, singleton init guard, PII redaction in logs, throws on invalid phone) |
 | `razorpayService` | Razorpay order + signature verification + refund API |
 | `loyaltyService` | Credit/redeem/expire/refund points. Expiry runs in batches of 100 with separate transactions. |
 | `whatsappService` | WhatsApp templates (order, OTP, abandoned cart, review, win-back, upsell, refund). Rate limited (10/phone/hour). Input sanitized. Credentials cached 5min. |
@@ -560,8 +657,9 @@ No `/public`, `/guest`, or `/admin` prefixes in URLs — handled by middleware.
 | `imagekitService` | CDN upload/delete/optimize |
 | `instagramService` | Feed refresh + token management |
 | `badgeService` | Badge recalculation queue |
-| `addressQualityService` | Delivery address scoring |
-| `settingsHelper` | Per-brand settings with defaults |
+| `brandSettingsService` | CRUD for per-brand settings with in-memory cache (5min TTL) |
+| `addressQualityService` | Delivery address scoring (historical success rate) |
+| `settingsHelper` | Per-brand settings with defaults + env fallback |
 | `searchService` | Product search with relevance ranking, typo tolerance, caching |
 | `refundService` | Full/partial Razorpay refunds, auto-refund on cancel, WhatsApp notification |
 
@@ -588,7 +686,7 @@ Separate child process. Auto-restarts on crash.
 
 | Job | Schedule | Purpose |
 |---|---|---|
-| FShip Sync | Every 2h | Sync `confirmed` orders only (max 3 retries) |
+| FShip Sync | Every 2h | Sync `confirmed` orders via active shipping provider (max 3 retries) |
 | Loyalty Expiry | Daily 2 AM | Expire old points |
 | Instagram Refresh | Every 6h | Refresh feed cache |
 | Abandoned Cart | Every hour | WhatsApp to users with stale carts |
@@ -618,6 +716,7 @@ Failed Bull jobs are logged to DLQ after max attempts for manual review.
 - **CORS** — strict whitelist-based. Vercel preview deployments use suffix match (`.vercel.app`). HTTP origins only in non-production.
 - **Soft delete** — accounts anonymised, not hard-deleted. Soft-deleted users blocked from auth.
 - **Schema validation** — request bodies validated before processing
+- **Shipping address validation** — comprehensive checks (name, address quality, pincode format, phone format, junk detection, Indian state verification) block bad orders at creation time
 - **Circuit breaker** — external service failures don't cascade
 - **Idempotency** — DB-based duplicate order prevention
 - **Brand isolation** — write operations check user-brand access. Consumers scoped to their brand. Staff/admin bypass.
@@ -740,6 +839,16 @@ Covers all endpoints with request/response schemas, auth headers, error codes.
 | 007 | `order_audit_logs` table (who did what, when) |
 | 008 | `idempotency_key` column on orders (unique, prevents duplicates) |
 | 009 | FULLTEXT index on `products(name, description)` for search |
+| 010 | `order_shipments` table — provider-agnostic shipment tracking |
+
+### Scripts
+
+| Script | Purpose |
+|---|---|
+| `setupDatabase.js` | Auto-run migrations on schema version change |
+| `encryptExistingData.js` | Encrypt existing PII data |
+| `migrateShipmentData.js` | Copy FShip data from orders → order_shipments table |
+| `seedShippingProviderSettings.js` | **NEW** — Seed iThink + shipping provider brand settings |
 
 ---
 
@@ -804,6 +913,8 @@ Covers all endpoints with request/response schemas, auth headers, error codes.
 - `/api/orders/checkout` returns `X-Auth-Token` header → frontend stores in localStorage
 - `AuthContext` listens to `storage` events → auto-logs in user after checkout
 - Prepaid: payment first → order creation with 3 retries → webhook safety net
-- COD: OTP verification → order creation → admin confirms → FShip sync
+- COD: OTP verification → order creation → admin confirms → shipping provider sync
 - Admin dashboard shows RTO badges (🟢/🟡/🔴) and Confirm button for `awaiting_confirmation` orders
+- Admin can validate orders (`GET /:id/shipping/validate`) and pick couriers (`GET /:id/shipping/couriers`) before syncing
+- Address creation/update returns `errors[]` and `warnings[]` if validation fails — frontend should display these inline
 - Profile page: soft delete with reason, orders/addresses always under user (no guest)

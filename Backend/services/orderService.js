@@ -264,28 +264,25 @@ async function syncOrderToFShip(order) {
       }),
     ]);
 
-    // Validate required shipping data before calling FShip
-    const issues = [];
-    if (!addr) {
-      issues.push('Shipping address is missing');
-    } else {
-      if (!addr.full_name || !String(addr.full_name).trim()) issues.push('Shipping address: full name is missing');
-      if (!addr.address || !String(addr.address).trim()) issues.push('Shipping address: address is missing');
-      if (!addr.city || !String(addr.city).trim()) issues.push('Shipping address: city is missing');
-      if (!addr.state || !String(addr.state).trim()) issues.push('Shipping address: state is missing');
-      if (!addr.pincode || !String(addr.pincode).trim()) issues.push('Shipping address: pincode is missing');
-      if (!addr.phone) issues.push('Shipping address: phone is missing');
-    }
-    if (!items || items.length === 0) issues.push('Order has no items');
+    // ── Comprehensive shipping validation ──────────────────────────────
+    const { validateOrderForShipping } = require('./shippingValidationService');
+    const validation = await validateOrderForShipping(order.id);
 
-    if (issues.length > 0) {
-      const errorMsg = issues.join('; ');
-      logger.error(`[FShip] Validation failed for ${order.order_number}: ${errorMsg}`);
+    if (!validation.valid) {
+      const errorMsg = validation.errors.join('; ');
+      logger.error(`[Shipping] Validation failed for ${order.order_number}: ${errorMsg}`);
+      if (validation.warnings.length) {
+        logger.warn(`[Shipping] Warnings for ${order.order_number}: ${validation.warnings.join('; ')}`);
+      }
       await Order.update(
         { fship_sync_status: 'failed', fship_sync_error: errorMsg },
         { where: { id: order.id } }
       );
       return;
+    }
+
+    if (validation.warnings.length) {
+      logger.warn(`[Shipping] Warnings for ${order.order_number}: ${validation.warnings.join('; ')}`);
     }
 
     // Clear previous sync error on successful validation

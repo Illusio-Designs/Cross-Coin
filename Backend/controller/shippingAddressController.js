@@ -32,6 +32,26 @@ module.exports.createShippingAddress = async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
+    // ── Comprehensive address validation ──────────────────────────────────
+    const { validateShippingAddress } = require('../services/shippingValidationService');
+    const addrValidation = validateShippingAddress({
+      full_name: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.username,
+      address,
+      city,
+      state,
+      pincode: postal_code,
+      phone: phone_number,
+    });
+
+    if (!addrValidation.valid) {
+      await transaction.rollback();
+      return res.status(400).json({
+        message: 'Address has issues that will cause delivery failure',
+        errors: addrValidation.errors,
+        warnings: addrValidation.warnings,
+      });
+    }
+
     // If setting as default, unset any existing default address
     if (is_default) {
       await ShippingAddress.update(
@@ -220,6 +240,26 @@ module.exports.updateShippingAddress = async (req, res) => {
       return res.status(404).json({ message: "Shipping address not found" });
     }
 
+    // ── Validate the final address values ─────────────────────────────────
+    const { validateShippingAddress } = require('../services/shippingValidationService');
+    const addrValidation = validateShippingAddress({
+      full_name: shippingAddress.full_name,
+      address: address || shippingAddress.address,
+      city: city || shippingAddress.city,
+      state: state || shippingAddress.state,
+      pincode: postal_code || shippingAddress.pincode,
+      phone: phone_number || shippingAddress.phone,
+    });
+
+    if (!addrValidation.valid) {
+      await transaction.rollback();
+      return res.status(400).json({
+        message: 'Address has issues that will cause delivery failure',
+        errors: addrValidation.errors,
+        warnings: addrValidation.warnings,
+      });
+    }
+
     // If setting as default, unset any existing default address
     if (is_default) {
       await ShippingAddress.update(
@@ -392,6 +432,26 @@ module.exports.createGuestShippingAddress = async (req, res) => {
     if (!address || !city || !state || !postal_code || !phone_number || !email || !firstName) {
       await transaction.rollback();
       return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // ── Comprehensive address validation ──────────────────────────────────
+    const { validateShippingAddress } = require('../services/shippingValidationService');
+    const addrValidation = validateShippingAddress({
+      full_name: `${firstName} ${lastName || ''}`.trim(),
+      address,
+      city,
+      state,
+      pincode: postal_code,
+      phone: phone_number,
+    });
+
+    if (!addrValidation.valid) {
+      await transaction.rollback();
+      return res.status(400).json({
+        message: 'Address has issues that will cause delivery failure',
+        errors: addrValidation.errors,
+        warnings: addrValidation.warnings,
+      });
     }
 
     const bcrypt = require('bcrypt');

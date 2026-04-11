@@ -10,7 +10,8 @@ const {
     bulkRefreshFShipStatus,
     exportDeliveredOrders, updateAwbNumber, initiateReturn,
     markLabelDownloaded, downloadLabel, bulkDownloadLabels, getPendingLabels, getLabelDownloadStats,
-    adminCreateManualOrder
+    adminCreateManualOrder,
+    validateOrderForShipping, getAvailableCouriers,
 } = require('../controller/orderController.js');
 const { isAuthenticated, isOrderManager } = require('../middleware/authMiddleware.js');
 const { validateBody, schemas } = require('../utils/validate.js');
@@ -31,6 +32,8 @@ router.post('/labels/bulk-download',    isAuthenticated, isOrderManager, bulkDow
 router.post('/labels/:orderId/downloaded', isAuthenticated, isOrderManager, markLabelDownloaded);
 router.get('/labels/:orderId/download', isAuthenticated, isOrderManager, downloadLabel);
 router.put('/:id/fship/sync',          isAuthenticated, isOrderManager, syncSingleOrderWithFShip);
+router.get('/:id/shipping/validate',   isAuthenticated, isOrderManager, validateOrderForShipping);
+router.get('/:id/shipping/couriers',   isAuthenticated, isOrderManager, getAvailableCouriers);
 router.put('/:id/confirm',             isAuthenticated, isOrderManager, confirmOrder);
 router.put('/:id/admin-cancel',        isAuthenticated, isOrderManager, validateBody(schemas.cancelOrder), adminCancelOrder);
 router.put('/:id/awb',                 isAuthenticated, isOrderManager, updateAwbNumber);
