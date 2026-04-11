@@ -61,13 +61,62 @@ function generateIdempotencyKey() {
   return 'idem-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
 }
 
-// FIX 3 — full address field validation
+// FIX 3 — comprehensive address validation (mirrors backend shippingValidationService)
+function validateShippingAddress(addr) {
+  if (!addr) return { valid: false, errors: ['Address is empty'], warnings: [] };
+  const errors = [];
+  const warnings = [];
+
+  // Name
+  const name = String(addr.full_name || addr.fullName || '').trim();
+  if (!name) errors.push('Customer name is required');
+  else if (name.length < 2) errors.push('Name is too short');
+  else if (/^\d+$/.test(name)) errors.push('Name cannot be only numbers');
+
+  // Address line
+  const addrLine = String(addr.address || '').trim();
+  if (!addrLine) errors.push('Street address is required');
+  else if (addrLine.length < 10) errors.push('Address is too short (min 10 characters) — add house/flat number and area');
+  else if (addrLine.length < 20) warnings.push('Address is short — add a landmark for better delivery');
+  const junk = [/^test/i, /^asdf/i, /^xxx/i, /^abc$/i, /^na$/i, /^n\/a$/i, /^\.+$/, /^-+$/];
+  if (junk.some(p => p.test(addrLine))) errors.push('Address looks like a placeholder — please enter a real address');
+
+  // City
+  const city = String(addr.city || '').trim();
+  if (!city) errors.push('City is required');
+  else if (city.length < 2) errors.push('City name is too short');
+  else if (/^\d+$/.test(city)) errors.push('City cannot be only numbers');
+
+  // State
+  const state = String(addr.state || '').trim();
+  if (!state) errors.push('State is required');
+
+  // Pincode
+  const pin = String(addr.postal_code || addr.postalCode || addr.pincode || '').trim();
+  if (!pin) errors.push('PIN code is required');
+  else if (!/^\d{6}$/.test(pin)) errors.push('PIN code must be exactly 6 digits');
+  else if (['000000', '111111', '999999'].includes(pin)) errors.push('PIN code looks like a placeholder');
+
+  // Phone
+  const phone = String(addr.phone_number || addr.phoneNumber || addr.phone || '').replace(/\D/g, '');
+  if (!phone || phone.length < 10) {
+    errors.push('Valid 10-digit mobile number is required');
+  } else {
+    let ten = phone;
+    if (phone.length === 12 && phone.startsWith('91')) ten = phone.substring(2);
+    else if (phone.length === 11 && phone.startsWith('0')) ten = phone.substring(1);
+    else if (phone.length > 10) ten = phone.slice(-10);
+    if (!/^[6-9]\d{9}$/.test(ten)) errors.push('Phone must be a valid Indian mobile (starts with 6-9)');
+    else if (/^(\d)\1{9}$/.test(ten)) errors.push('Phone number is a repeated digit — please enter a real number');
+    else if (ten === '9876543210' || ten === '1234567890') errors.push('Phone number looks like a placeholder');
+  }
+
+  return { valid: errors.length === 0, errors, warnings };
+}
+
+// Keep backward-compat wrapper
 function isValidAddress(addr) {
-  if (!addr) return false;
-  const address = addr.address || '';
-  const city = addr.city || '';
-  const postalCode = addr.postal_code || addr.postalCode || '';
-  return address.trim().length > 0 && city.trim().length > 0 && postalCode.trim().length > 0;
+  return validateShippingAddress(addr).valid;
 }
 
 function isValidEmail(value) {
@@ -534,16 +583,26 @@ const CartDrawer = ({ isOpen, onClose }) => {
     const formData = isAuthenticated
       ? addressForm
       : { ...addressForm, fullName: `${guestInfo.firstName} ${guestInfo.lastName}`.trim() || addressForm.fullName, phoneNumber: guestInfo.phone || addressForm.phoneNumber };
-    if (isAuthenticated) {
-      if (addressPhoneError || !isValidIndianMobileDigits(formData.phoneNumber)) {
-        showValidationErrorToast('Please enter a valid 10-digit Indian mobile number for this address.');
-        return;
-      }
-    } else if (!isValidIndianMobileDigits(guestInfo.phone)) {
-      showValidationErrorToast('Please enter a valid mobile number in Contact Info first.');
-      scrollDrawerTo('cd-section-contact');
+
+    // ── Comprehensive address validation ──────────────────────────────────
+    const addrToValidate = {
+      full_name: formData.fullName,
+      address: formData.address,
+      city: formData.city,
+      state: formData.state,
+      postal_code: formData.postalCode,
+      phone_number: isAuthenticated ? formData.phoneNumber : guestInfo.phone,
+    };
+    const validation = validateShippingAddress(addrToValidate);
+    if (!validation.valid) {
+      showValidationErrorToast(validation.errors[0]);
       return;
     }
+    if (validation.warnings.length > 0) {
+      // Show first warning as a soft notice but don't block
+      console.warn('Address warnings:', validation.warnings);
+    }
+
     setAddressSaving(true);
     try {
       if (isAuthenticated) {
@@ -850,8 +909,10 @@ const CartDrawer = ({ isOpen, onClose }) => {
   };
 
   const handlePlaceOrder = async () => {
-    if (!selectedAddress || !isValidAddress(selectedAddress)) {
-      showValidationErrorToast('Please add a complete delivery address (address, city, PIN code).');
+    // ── Comprehensive address validation before placing order ──────────────
+    const addrValidation = validateShippingAddress(selectedAddress);
+    if (!addrValidation.valid) {
+      showValidationErrorToast(addrValidation.errors[0]);
       scrollDrawerTo('cd-section-address');
       return;
     }
