@@ -1094,7 +1094,7 @@
           },
           {
             model: Payment,
-            as: "Payments"
+            as: "Payment"
           }
         ],
         transaction
@@ -1142,7 +1142,7 @@
           updateData.payment_status = 'refunded';
           
           // Update payment record
-          const payment = order.Payments && order.Payments.length > 0 ? order.Payments[0] : null;
+          const payment = order.Payment || null;
           if (payment) {
             await payment.update({
               status: 'refunded',
@@ -3164,7 +3164,7 @@
           },
           {
             model: Payment,
-            as: "Payments"
+            as: "Payment"
           }
         ],
         transaction
@@ -3214,7 +3214,7 @@
         updateData.payment_status = 'refunded';
         
         // Update payment record
-        const payment = order.Payments && order.Payments.length > 0 ? order.Payments[0] : null;
+        const payment = order.Payment || null;
         if (payment) {
           await payment.update({
             status: 'refunded',
@@ -4649,7 +4649,7 @@
           { model: User, as: 'User', attributes: ['id', 'username', 'email'], required: false },
           { model: GuestUser, as: 'GuestUser', attributes: ['id', 'email', 'firstName', 'lastName', 'phone'], required: false },
           { model: ShippingAddress, as: 'ShippingAddress' },
-          { model: Payment, as: 'Payments' },
+          { model: Payment, as: 'Payment' },
         ],
         order: [['createdAt', 'ASC']],
         limit,
