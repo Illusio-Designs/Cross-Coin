@@ -228,8 +228,25 @@ exports.initiateCheckout = async (req, res) => {
     // Validate shipping address
     const shippingAddress = await ShippingAddress.findOne({ where: { id: shipping_address_id, user_id: userId } });
     if (!shippingAddress) return res.status(404).json({ success: false, message: 'Shipping address not found.' });
-    if (shippingAddress.phone && !PHONE_REGEX.test(String(shippingAddress.phone).replace(/\D/g, '').slice(-10))) {
-      return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit mobile number on your delivery address.' });
+
+    // ── Comprehensive shipping address validation ─────────────────────────
+    const { validateShippingAddress } = require('../services/shippingValidationService');
+    const addrValidation = validateShippingAddress({
+      full_name: shippingAddress.full_name,
+      address: shippingAddress.address,
+      city: shippingAddress.city,
+      state: shippingAddress.state,
+      pincode: shippingAddress.pincode,
+      phone: shippingAddress.phone,
+    });
+
+    if (!addrValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Shipping address has issues that will cause delivery failure',
+        errors: addrValidation.errors,
+        warnings: addrValidation.warnings,
+      });
     }
 
     // Validate pincode serviceability before proceeding

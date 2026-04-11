@@ -259,14 +259,24 @@
       }
       logger.debug("createOrder: Shipping address validated");
 
-      // ── Input validation (Task 4) ─────────────────────────────────────────
-      if (shippingAddress.phone && !PHONE_REGEX.test(String(shippingAddress.phone).replace(/\D/g, '').slice(-10))) {
+      // ── Comprehensive shipping address validation ─────────────────────────
+      const { validateShippingAddress } = require('../services/shippingValidationService');
+      const addrValidation = validateShippingAddress({
+        full_name: shippingAddress.full_name,
+        address: shippingAddress.address,
+        city: shippingAddress.city,
+        state: shippingAddress.state,
+        pincode: shippingAddress.pincode,
+        phone: shippingAddress.phone,
+      });
+
+      if (!addrValidation.valid) {
         await transaction.rollback();
-        return res.status(400).json({ message: "Please enter a valid 10-digit mobile number on your delivery address." });
-      }
-      if (shippingAddress.address && String(shippingAddress.address).trim().length < 15) {
-        await transaction.rollback();
-        return res.status(400).json({ message: "Address must be at least 15 characters." });
+        return res.status(400).json({
+          message: 'Shipping address has issues that will cause delivery failure',
+          errors: addrValidation.errors,
+          warnings: addrValidation.warnings,
+        });
       }
 
       // Validate pincode serviceability before proceeding
@@ -892,6 +902,28 @@
         country: shipping_address.country || 'India',
         is_default: false,
       });
+
+      // ── Validate the shipping address before proceeding ─────────────────
+      const { validateShippingAddress } = require('../services/shippingValidationService');
+      const addrValidation = validateShippingAddress({
+        full_name: shipping_address.fullName,
+        address: shipping_address.address,
+        city: shipping_address.city,
+        state: shipping_address.state,
+        pincode: shipping_address.pincode,
+        phone: shipping_address.phone || digits,
+      });
+
+      if (!addrValidation.valid) {
+        // Clean up the address we just created
+        await newAddress.destroy().catch(() => {});
+        return res.status(400).json({
+          success: false,
+          message: 'Shipping address has issues that will cause delivery failure',
+          errors: addrValidation.errors,
+          warnings: addrValidation.warnings,
+        });
+      }
 
       // Issue a short-lived token so the order can be placed as this user
       const token = jwt.sign(
@@ -5194,5 +5226,125 @@
     } catch (error) {
       logger.error("❌ BULK REFRESH FAILED:", error);
       return res.status(500).json({ success: false, message: 'Bulk status refresh failed', error: error.message });
+    }
+  };
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // Validate order for shipping — returns detailed errors & warnings
+  // GET /api/orders/:id/shipping/validate
+  // Optional query: ?logistics=delhivery&s_type=surface
+  // ══════════════════════════════════════════════════════════════════════════════
+  module.exports.validateOrderForShipping = async (req, res) => {
+    try {
+      const orderId = req.params.id;
+      const { logistics, s_type, order_type } = req.query;
+
+      const { validateOrderForShipping } = require('../services/shippingValidationService');
+      const result = await validateOrderForShipping(orderId, { logistics, s_type, orderType: order_type });
+
+      return res.json({
+        success: true,
+        valid: result.valid,
+        errors: result.errors,
+        warnings: result.warnings,
+        data: result.data,
+      });
+    } catch (error) {
+      logger.error('validateOrderForShipping error:', error.message);
+      return res.status(500).json({ success: false, message: 'Validation failed', error: error.message });
+    }
+  };
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // Get available couriers for an order (rate check)
+  // GET /api/orders/:id/shipping/couriers
+  // Returns list of couriers with rates and ETAs for admin to pick from
+  // ══════════════════════════════════════════════════════════════════════════════
+  module.exports.getAvailableCouriers = async (req, res) => {
+    try {
+      const orderId = req.params.id;
+
+      // 1. Validate order first
+      const { validateOrderForShipping } = require('../services/shippingValidationService');
+      const validation = await validateOrderForShipping(orderId);
+
+      if (!validation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: 'Order has validation errors — fix these before selecting a courier',
+          errors: validation.errors,
+          warnings: validation.warnings,
+        });
+      }
+
+      // 2. Load order + address for pincode
+      const order = await Order.findByPk(orderId, {
+        include: [
+          { model: ShippingAddress, as: 'ShippingAddress' },
+          { model: OrderItem, as: 'OrderItems' },
+        ],
+      });
+
+      if (!order || !order.ShippingAddress) {
+        return res.status(404).json({ success: false, message: 'Order or shipping address not found' });
+      }
+
+      // 3. Get provider and fetch couriers
+      const { getShippingProvider, getProviderName } = require('../services/shippingProviderFactory');
+      const providerName = await getProviderName(order.brand_id || 1);
+      const provider = await getShippingProvider(order.brand_id || 1);
+
+      const totalQty = order.OrderItems.reduce((s, i) => s + (i.quantity || 0), 0);
+      const warehousePincode = await settingsHelper.getSetting(
+        order.brand_id || 1,
+        providerName === 'ithink' ? 'ITHINK_WAREHOUSE_PINCODE' : 'FSHIP_WAREHOUSE_PINCODE',
+        '395006'
+      );
+
+      // For iThink — use getAvailableCouriers; for FShip — use calculateRates
+      let couriers = [];
+      if (providerName === 'ithink' && typeof provider.getAvailableCouriers === 'function') {
+        couriers = await provider.getAvailableCouriers({
+          sourcePincode: warehousePincode,
+          destinationPincode: order.ShippingAddress.pincode,
+          weight: totalQty * 0.07,
+          length: 14,
+          width: 3,
+          height: 10 * totalQty,
+          paymentMode: order.payment_type === 'cod' ? 'COD' : 'Prepaid',
+          productMrp: parseFloat(order.final_amount),
+        });
+      } else {
+        // FShip rate calculator
+        const rates = await provider.calculateRates({
+          source_Pincode: warehousePincode,
+          destination_Pincode: order.ShippingAddress.pincode,
+          payment_Mode: order.payment_type === 'cod' ? 'COD' : 'P',
+          amount: parseFloat(order.final_amount),
+          express_Type: 'surface',
+          shipment_Weight: totalQty * 0.07,
+          shipment_Length: 14,
+          shipment_Width: 3,
+          shipment_Height: 10 * totalQty,
+        });
+        couriers = Array.isArray(rates) ? rates : (rates?.data || []);
+      }
+
+      return res.json({
+        success: true,
+        provider: providerName,
+        order_number: order.order_number,
+        route: {
+          from: warehousePincode,
+          to: order.ShippingAddress.pincode,
+          city: order.ShippingAddress.city,
+          payment_type: order.payment_type,
+        },
+        warnings: validation.warnings,
+        couriers,
+      });
+    } catch (error) {
+      logger.error('getAvailableCouriers error:', error.message);
+      return res.status(500).json({ success: false, message: 'Failed to fetch couriers', error: error.message });
     }
   };

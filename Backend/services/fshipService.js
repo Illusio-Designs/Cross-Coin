@@ -390,8 +390,12 @@ class FShipService {
 
     /**
      * Validate order data before sending to FShip
+     * Comprehensive checks to prevent bad data reaching the courier API
      */
     validateOrderData(orderData) {
+        const errors = [];
+
+        // ── Required fields presence ──────────────────────────────────────
         const required = [
             'customer_Name', 'customer_Mobile', 'customer_Address', 
             'customer_PinCode', 'customer_City', 'orderId', 
@@ -402,12 +406,65 @@ class FShipService {
 
         for (const field of required) {
             if (!orderData[field]) {
-                throw new Error(`Missing required field: ${field}`);
+                errors.push(`Missing required field: ${field}`);
             }
         }
 
         if (!Array.isArray(orderData.products) || orderData.products.length === 0) {
-            throw new Error('Products array is required and cannot be empty');
+            errors.push('Products array is required and cannot be empty');
+        }
+
+        // ── Customer name ─────────────────────────────────────────────────
+        if (orderData.customer_Name) {
+            const name = String(orderData.customer_Name).trim();
+            if (name.length < 2) errors.push('Customer name is too short (min 2 characters)');
+            if (/^\d+$/.test(name)) errors.push('Customer name cannot be only numbers');
+        }
+
+        // ── Address quality ───────────────────────────────────────────────
+        if (orderData.customer_Address) {
+            const addr = String(orderData.customer_Address).trim();
+            if (addr.length < 10) errors.push(`Address is too short (${addr.length} chars, min 10) — courier will reject`);
+            const junk = [/^test/i, /^asdf/i, /^xxx/i, /^abc$/i, /^na$/i, /^n\/a$/i, /^\.+$/, /^-+$/];
+            if (junk.some(p => p.test(addr))) errors.push('Address appears to be a placeholder/test value');
+        }
+
+        // ── City ──────────────────────────────────────────────────────────
+        if (orderData.customer_City) {
+            const city = String(orderData.customer_City).trim();
+            if (city.length < 2) errors.push('City name is too short');
+            if (/^\d+$/.test(city)) errors.push('City cannot be only numbers');
+        }
+
+        // ── Pincode ───────────────────────────────────────────────────────
+        if (orderData.customer_PinCode) {
+            const pin = String(orderData.customer_PinCode).trim();
+            if (!/^\d{6}$/.test(pin)) errors.push(`Pincode "${pin}" is not a valid 6-digit Indian pincode`);
+            else if (['000000', '111111', '999999'].includes(pin)) errors.push(`Pincode "${pin}" is a placeholder`);
+        }
+
+        // ── Phone ─────────────────────────────────────────────────────────
+        if (orderData.customer_Mobile) {
+            const digits = String(orderData.customer_Mobile).replace(/\D/g, '');
+            let ten = digits;
+            if (digits.length === 12 && digits.startsWith('91')) ten = digits.substring(2);
+            else if (digits.length === 11 && digits.startsWith('0')) ten = digits.substring(1);
+            else if (digits.length > 10) ten = digits.slice(-10);
+
+            if (ten.length !== 10) {
+                errors.push(`Phone "${orderData.customer_Mobile}" could not be normalised to 10 digits`);
+            } else if (!/^[6-9]\d{9}$/.test(ten)) {
+                errors.push(`Phone "${ten}" is not a valid Indian mobile (must start with 6-9)`);
+            } else if (/^(\d)\1{9}$/.test(ten)) {
+                errors.push(`Phone "${ten}" is a repeated digit — likely fake`);
+            } else if (ten === '9876543210' || ten === '1234567890') {
+                errors.push(`Phone "${ten}" is a known placeholder`);
+            }
+        }
+
+        // ── Throw if any errors ───────────────────────────────────────────
+        if (errors.length > 0) {
+            throw new Error(`Order validation failed: ${errors.join('; ')}`);
         }
     }
 
