@@ -361,39 +361,63 @@
 /* ── Payment method cards ─────────────────────────────────────────────────── */
 .cd-delivery-list { display: flex; flex-direction: column; gap: 10px; }
 .cd-delivery-card {
-  display: flex; align-items: center; gap: 12px;
-  padding: 13px 14px; border: 1.5px solid #e8e8ec;
-  border-radius: 6px; cursor: pointer; background: #fff;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; border: 2px solid #e8e8ec;
+  border-radius: 8px; cursor: pointer; background: #fff;
+  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
 }
-.cd-delivery-card input[type="radio"] { display: none; }
-.cd-delivery-card:hover { border-color: #bbb; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-.cd-delivery-selected { border-color: #CE1E36 !important; box-shadow: 0 0 0 3px rgba(206,30,54,0.08) !important; }
-.cd-delivery-icon { display: flex; color: #999; flex-shrink: 0; }
-.cd-delivery-icon svg { width: 20px; height: 20px; }
-.cd-delivery-selected .cd-delivery-icon { color: #CE1E36; }
-.cd-delivery-info { flex: 1; }
-.cd-delivery-name { font-size: 14px; font-weight: 700; color: #1a1a1a; margin: 0 0 3px; }
-.cd-delivery-desc { font-size: 12px; color: #999; margin: 0; }
-.cd-delivery-fee { font-size: 14px; font-weight: 700; color: #1a1a1a; white-space: nowrap; }
-.cd-delivery-fee.free { color: #16a34a; }
+.cd-delivery-card input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+.cd-radio-hidden { position: absolute !important; opacity: 0 !important; width: 0 !important; height: 0 !important; }
+.cd-delivery-card:hover { border-color: #bbb; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.cd-delivery-selected { border-color: #16a34a !important; box-shadow: 0 0 0 3px rgba(22,163,74,0.10) !important; }
+.cd-delivery-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 48px; height: 48px; flex-shrink: 0;
+  background: #f0fdf4; border-radius: 8px;
+}
+.cd-delivery-icon svg { width: 24px; height: 24px; }
+.cd-delivery-info { flex: 1; min-width: 0; }
+.cd-delivery-name { font-size: 15px; font-weight: 700; color: #1a1a1a; margin: 0 0 2px; }
+.cd-delivery-subdesc { font-size: 12px; color: #888; margin: 0 0 4px; }
+.cd-delivery-desc { font-size: 12.5px; color: #888; margin: 0; display: flex; align-items: center; gap: 4px; }
+.cd-delivery-fee-wrap {
+  display: flex; flex-direction: column; align-items: center; flex-shrink: 0; gap: 2px;
+}
+.cd-delivery-fee {
+  font-size: 13px; font-weight: 800; letter-spacing: 0.02em;
+  white-space: nowrap; padding: 5px 14px; border-radius: 20px;
+}
+.cd-delivery-fee.free {
+  background: #16a34a; color: #fff;
+}
+.cd-delivery-sparkle {
+  font-size: 14px; line-height: 1; color: #16a34a;
+  animation: cd-sparkle 1.5s ease-in-out infinite;
+}
+@keyframes cd-sparkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.8) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.2) rotate(15deg); }
+}
 
 /* COD — warm amber */
 .cd-delivery-card.cd-delivery-cod { background: #fffbeb; border-color: #fde68a; }
-.cd-delivery-card.cd-delivery-cod .cd-delivery-icon { color: #d97706; }
-.cd-delivery-card.cd-delivery-cod .cd-delivery-fee { color: #16a34a; }
+.cd-delivery-card.cd-delivery-cod .cd-delivery-icon { background: #fef3c7; }
+.cd-delivery-card.cd-delivery-cod .cd-delivery-icon svg { color: #d97706; stroke: #d97706; }
+.cd-delivery-card.cd-delivery-cod .cd-delivery-fee.free { background: #16a34a; color: #fff; }
+.cd-delivery-card.cd-delivery-cod.cd-delivery-selected { border-color: #d97706 !important; box-shadow: 0 0 0 3px rgba(217,119,6,0.10) !important; }
 
 /* Prepaid — light green */
 .cd-delivery-card.cd-delivery-prepaid { background: #f0fdf4; border-color: #bbf7d0; }
-.cd-delivery-card.cd-delivery-prepaid .cd-delivery-icon { color: #16a34a; }
-.cd-delivery-card.cd-delivery-prepaid .cd-delivery-fee { color: #16a34a; }
+.cd-delivery-card.cd-delivery-prepaid .cd-delivery-icon { background: #dcfce7; }
+.cd-delivery-card.cd-delivery-prepaid .cd-delivery-icon svg { color: #16a34a; stroke: #16a34a; }
 .cd-delivery-card.cd-delivery-prepaid .cd-delivery-desc { color: #16a34a; font-weight: 600; }
+.cd-delivery-card.cd-delivery-prepaid.cd-delivery-selected { border-color: #16a34a !important; box-shadow: 0 0 0 3px rgba(22,163,74,0.10) !important; }
 
 .cd-delivery-popular {
-  display: inline-block; margin-left: 6px;
-  font-size: 10px; font-weight: 700;
+  display: inline-block; margin: 0 0 3px;
+  font-size: 11px; font-weight: 700;
   background: #fef3c7; color: #92400e;
-  border-radius: 6px; padding: 1px 5px; vertical-align: middle;
+  border-radius: 6px; padding: 2px 8px;
 }
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
