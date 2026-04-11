@@ -24,6 +24,21 @@ function initializeCronJobs() {
     }
   });
 
+  // FShip Status Refresh - Runs every hour (pulls status updates from FShip)
+  cron.schedule('0 * * * *', async () => {
+    console.log('\n⏰ [CRON] FShip status refresh started at:', new Date().toISOString());
+    try {
+      const mockReq = { user: { id: 'system', username: 'cron_job' }, query: { limit: 100 } };
+      const mockRes = {
+        json: (data) => { console.log('✅ [CRON] FShip status refresh completed:', { total: data.data?.total, updated: data.data?.updated, unchanged: data.data?.unchanged, errors: data.data?.errors }); },
+        status: (code) => ({ json: (data) => { console.error('❌ [CRON] FShip status refresh failed:', data); } })
+      };
+      await orderController.bulkRefreshFShipStatus(mockReq, mockRes);
+    } catch (error) {
+      console.error('❌ [CRON] FShip status refresh error:', error.message);
+    }
+  });
+
   // Loyalty points expiry - daily at 2 AM
   cron.schedule('0 2 * * *', async () => {
     console.log('\n⏰ [CRON] Loyalty expiry started at:', new Date().toISOString());
@@ -367,6 +382,7 @@ function initializeCronJobs() {
   console.log('✅ Cron jobs initialized successfully');
   console.log('📋 Active jobs:');
   console.log('   - FShip Order Sync: Every 2 hours');
+  console.log('   - FShip Status Refresh: Every hour');
   console.log('   - Loyalty Expiry: Daily at 2 AM');
   console.log('   - Instagram Feed Refresh: Every 6 hours');
   console.log('   - Abandoned Cart Recovery: Every hour');

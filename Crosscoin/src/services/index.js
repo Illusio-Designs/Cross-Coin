@@ -293,6 +293,20 @@ export const orderService = {
     }
   },
 
+  // Bulk refresh order statuses from FShip
+  bulkRefreshFShipStatus: async () => {
+    try {
+      const response = await adminApi.post(
+        "/api/orders/fship/refresh-status",
+        {},
+        { timeout: 60000 }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Sync single order with FShip
   syncSingleOrderWithFShip: async (orderId) => {
     try {
