@@ -310,7 +310,7 @@ const startServer = async () => {
         logger.info('✓ Database connection successful');
         
         // Create all tables — only runs when schema version changes
-        const SCHEMA_VERSION = 'v1.7-cod-address-confirmed';
+        const SCHEMA_VERSION = 'v1.8-order-shipments';
         let needsSetup = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS schema_version (version VARCHAR(50) PRIMARY KEY, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
