@@ -9,7 +9,8 @@ const {
     syncOrdersWithFShip, handleFShipWebhook, syncSingleOrderWithFShip,
     bulkRefreshFShipStatus,
     exportDeliveredOrders, updateAwbNumber, initiateReturn,
-    markLabelDownloaded, downloadLabel, bulkDownloadLabels, getPendingLabels, getLabelDownloadStats
+    markLabelDownloaded, downloadLabel, bulkDownloadLabels, getPendingLabels, getLabelDownloadStats,
+    adminCreateManualOrder
 } = require('../controller/orderController.js');
 const { isAuthenticated, isOrderManager } = require('../middleware/authMiddleware.js');
 const { validateBody, schemas } = require('../utils/validate.js');
@@ -34,6 +35,7 @@ router.put('/:id/confirm',             isAuthenticated, isOrderManager, confirmO
 router.put('/:id/admin-cancel',        isAuthenticated, isOrderManager, validateBody(schemas.cancelOrder), adminCancelOrder);
 router.put('/:id/awb',                 isAuthenticated, isOrderManager, updateAwbNumber);
 router.put('/:id/status',              isAuthenticated, isOrderManager, updateOrderStatus);
+router.post('/manual',                  isAuthenticated, isOrderManager, adminCreateManualOrder);
 
 // ── Public ────────────────────────────────────────────────────────────────
 router.post('/guest-checkout',          validateBody(schemas.checkout), createGuestOrder);

@@ -467,6 +467,25 @@ exports.initiateGuestCheckout = async (req, res) => {
 
     req.user = user;
     req.body = { ...checkoutData, guest_user_id: guestUser.id };
+
+    // For guest checkout, create/find shipping address linked to the new user
+    if (checkoutData.shipping_address && !checkoutData.shipping_address_id) {
+      const addr = checkoutData.shipping_address;
+      const shippingAddress = await ShippingAddress.create({
+        user_id: user.id,
+        guest_user_id: guestUser.id,
+        full_name: addr.fullName || `${firstName} ${lastName || ''}`.trim(),
+        phone: addr.phone || normalizedPhone,
+        address: addr.address,
+        city: addr.city,
+        state: addr.state,
+        pincode: addr.pincode,
+        country: addr.country || 'India',
+      });
+      req.body.shipping_address_id = shippingAddress.id;
+      logger.info(`Guest checkout: created shipping address ${shippingAddress.id} for user ${user.id}`);
+    }
+
     return exports.initiateCheckout(req, res);
   } catch (error) {
     logger.error('initiateGuestCheckout error:', error.message);
