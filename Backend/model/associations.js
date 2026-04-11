@@ -45,6 +45,7 @@ const { Reel } = require("./reelModel.js");
 const { ReelProduct } = require("./reelProductModel.js");
 const { InstagramPostProduct } = require("./instagramPostProductModel.js");
 const { WhatsappConversation, WhatsappMessage } = require("./whatsappConversationModel.js");
+const { OrderShipment } = require("./orderShipmentModel.js");
 
 // Export all models
 module.exports = {
@@ -95,6 +96,7 @@ module.exports = {
   InstagramPostProduct,
   WhatsappConversation,
   WhatsappMessage,
+  OrderShipment,
 };
 
 // User Associations
@@ -336,6 +338,18 @@ ProductVariation.hasMany(OrderItem, {
 // OrderStatusHistory -> User (removed due to guest orders - updated_by can be NULL)
 // OrderStatusHistory.belongsTo(User, { as: 'UpdatedBy', foreignKey: 'updated_by' });
 // User.hasMany(OrderStatusHistory, { foreignKey: 'updated_by' });
+
+// Order -> Shipment (shipping provider data)
+Order.hasOne(OrderShipment, {
+  foreignKey: "order_id",
+  as: "Shipment",
+  onDelete: "CASCADE",
+});
+OrderShipment.belongsTo(Order, {
+  foreignKey: "order_id",
+  as: "Order",
+  onDelete: "CASCADE",
+});
 
 // FShip Label Download Associations
 FShipLabelDownload.belongsTo(Order, {
