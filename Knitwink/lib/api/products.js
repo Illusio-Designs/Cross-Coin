@@ -40,18 +40,32 @@ function mapProduct(p) {
   // Extract colors from variation attributes, track variation id per color
   const colors = [];
   const seen = new Set();
-  // map variationId → color name
   const varIdToColor = {};
   variations.forEach((v) => {
     const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes || '{}') : v.attributes || {};
     const colorArr = Array.isArray(attrs.color) ? attrs.color : attrs.color ? [attrs.color] : [];
-    colorArr.forEach((c) => {
-      varIdToColor[v.id] = c;
-      if (!seen.has(c)) {
-        seen.add(c);
-        colors.push({ name: c, hex: getColorHex(c), imageIndex: 0 });
+    // For multi-color packs, store all colors together as a group
+    if (colorArr.length > 1) {
+      const key = colorArr.join(' + ')
+      varIdToColor[v.id] = key
+      if (!seen.has(key)) {
+        seen.add(key)
+        colors.push({
+          name: key,
+          hex: getColorHex(colorArr[0]),
+          imageIndex: 0,
+          packColors: colorArr.map((c) => ({ name: c, hex: getColorHex(c) })),
+        })
       }
-    });
+    } else {
+      colorArr.forEach((c) => {
+        varIdToColor[v.id] = c;
+        if (!seen.has(c)) {
+          seen.add(c);
+          colors.push({ name: c, hex: getColorHex(c), imageIndex: 0 });
+        }
+      });
+    }
   });
 
   // Group images by color name using variationId linkage
