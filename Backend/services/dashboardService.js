@@ -12,9 +12,19 @@ const DASHBOARD_CACHE_KEY = (userId, brandId) => `dashboard:brand:${brandId || '
  * Combines user stats, recent orders, badges, recommendations
  * Requirements: 1.4
  */
-const aggregateDashboardData = async (userId, brandId) => {
+const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
   try {
     const brandWhere = brandId ? { brand_id: brandId } : {};
+
+    // Build date filter for orders
+    const orderDateWhere = {};
+    if (dateFilter.startDate) orderDateWhere[Op.gte] = dateFilter.startDate;
+    if (dateFilter.endDate) orderDateWhere[Op.lte] = dateFilter.endDate;
+    const hasDateFilter = Object.keys(orderDateWhere).length > 0;
+    const orderWhere = {
+      ...brandWhere,
+      ...(hasDateFilter ? { createdAt: orderDateWhere } : {}),
+    };
 
     // Get total products count
     const totalProducts = await Product.count({ where: brandWhere });
@@ -25,29 +35,31 @@ const aggregateDashboardData = async (userId, brandId) => {
     });
 
     // Get total orders count
-    const totalOrders = await Order.count({ where: brandWhere });
+    const totalOrders = await Order.count({ where: orderWhere });
 
     // Get pending orders count
     const pendingOrders = await Order.count({
       where: {
-        status: { [Op.in]: ["pending", "processing"] },
-        ...brandWhere,
+        status: { [Op.in]: ["pending", "processing", "awaiting_confirmation"] },
+        ...orderWhere,
       },
     });
 
     // Get cancelled orders count
     const cancelledOrders = await Order.count({
-      where: { status: "cancelled", ...brandWhere },
+      where: { status: { [Op.in]: ['cancelled', 'order cancelled'] }, ...orderWhere },
     });
 
     // Get all orders for revenue calculation (optimized with aggregation)
     const allOrders = await Order.findAll({
       attributes: ['id', 'status', 'payment_type', 'payment_status', 'final_amount', 'total_amount', 'createdAt'],
-      where: brandWhere,
+      where: orderWhere,
       order: [['createdAt', 'DESC']]
     });
 
     // Calculate revenue breakdown
+    // totalRevenue = ALL orders (including cancelled, RTO) — full picture
+    // Each bucket shows where the money sits
     let totalRevenue = 0;
     let deliveredRevenue = 0;
     let cancelledRevenue = 0;
@@ -55,9 +67,9 @@ const aggregateDashboardData = async (userId, brandId) => {
     let pendingRevenue = 0;
     let processingRevenue = 0;
     let shippedRevenue = 0;
+    let undeliveredRevenue = 0;
     let completedOrdersCount = 0;
     let monthlyRevenue = 0;
-    let allOrdersRevenue = 0;
     
     const statusCounts = {};
     const paymentTypeCounts = {};
@@ -74,50 +86,61 @@ const aggregateDashboardData = async (userId, brandId) => {
       statusCounts[orderStatus] = (statusCounts[orderStatus] || 0) + 1;
       paymentTypeCounts[paymentType] = (paymentTypeCounts[paymentType] || 0) + 1;
       
-      allOrdersRevenue += orderTotal;
+      // Total revenue includes EVERYTHING
+      totalRevenue += orderTotal;
       
       switch (orderStatus) {
         case 'delivered':
         case 'completed':
           deliveredRevenue += orderTotal;
-          totalRevenue += orderTotal;
           completedOrdersCount++;
           break;
         case 'cancelled':
+        case 'order cancelled':
           cancelledRevenue += orderTotal;
           break;
         case 'rto':
         case 'rto delivered':
+        case 'return_initiated':
+        case 'returned_rto':
           rtoRevenue += orderTotal;
-          totalRevenue += orderTotal;
           break;
         case 'pending':
+        case 'awaiting_confirmation':
           pendingRevenue += orderTotal;
-          totalRevenue += orderTotal;
           break;
         case 'processing':
         case 'confirmed':
           processingRevenue += orderTotal;
-          totalRevenue += orderTotal;
           break;
         case 'shipped':
         case 'out for delivery':
         case 'in transit':
+        case 'booked':
+        case 'pickup initiated':
+        case 'manifested':
           shippedRevenue += orderTotal;
-          totalRevenue += orderTotal;
           break;
-        default:
-          totalRevenue += orderTotal;
+        case 'undelivered':
+        case 'exception':
+          undeliveredRevenue += orderTotal;
+          break;
       }
       
       const orderDate = new Date(order.createdAt);
-      if (orderDate >= firstDayOfMonth && orderDate <= lastDayOfMonth && orderStatus !== 'cancelled') {
+      if (orderDate >= firstDayOfMonth && orderDate <= lastDayOfMonth) {
         monthlyRevenue += orderTotal;
       }
     });
 
-    const nonCancelledOrdersCount = allOrders.filter(order => order.status?.toLowerCase() !== 'cancelled').length;
-    const avgOrderValue = nonCancelledOrdersCount > 0 ? totalRevenue / nonCancelledOrdersCount : 0;
+    // Earned revenue = only delivered orders (actual money collected)
+    const earnedRevenue = deliveredRevenue;
+    // Active revenue = orders still in pipeline (not cancelled/rto/delivered)
+    const activeRevenue = pendingRevenue + processingRevenue + shippedRevenue + undeliveredRevenue;
+    // Lost revenue = cancelled + RTO
+    const lostRevenue = cancelledRevenue + rtoRevenue;
+
+    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     // Get total customers
     const totalRegisteredCustomers = await User.count({
@@ -278,36 +301,59 @@ const aggregateDashboardData = async (userId, brandId) => {
       attributes: product.attributes
     }));
 
-    // Order status distribution
+    // Order status distribution — all statuses
     const orderStatusDistribution = {
+      awaiting_confirmation: statusCounts['awaiting_confirmation'] || 0,
       pending: statusCounts['pending'] || 0,
-      processing: statusCounts['processing'] || 0,
       confirmed: statusCounts['confirmed'] || 0,
+      processing: statusCounts['processing'] || 0,
+      booked: statusCounts['booked'] || 0,
+      'pickup initiated': statusCounts['pickup initiated'] || 0,
+      manifested: statusCounts['manifested'] || 0,
+      'in transit': statusCounts['in transit'] || 0,
       shipped: statusCounts['shipped'] || 0,
       'out for delivery': statusCounts['out for delivery'] || 0,
-      'in transit': statusCounts['in transit'] || 0,
       delivered: statusCounts['delivered'] || 0,
-      completed: statusCounts['completed'] || 0,
-      cancelled: statusCounts['cancelled'] || 0,
+      undelivered: statusCounts['undelivered'] || 0,
       rto: statusCounts['rto'] || 0,
-      undelivered: statusCounts['undelivered'] || 0
+      'rto delivered': statusCounts['rto delivered'] || 0,
+      return_initiated: statusCounts['return_initiated'] || 0,
+      returned_rto: statusCounts['returned_rto'] || 0,
+      cancelled: statusCounts['cancelled'] || 0,
+      'order cancelled': statusCounts['order cancelled'] || 0,
+      exception: statusCounts['exception'] || 0,
     };
 
     const orderStatusChart = [
       {
-        label: 'Pending',
-        value: (statusCounts['pending'] || 0),
-        color: '#8b5cf6'
+        label: 'Awaiting Confirmation',
+        value: (statusCounts['awaiting_confirmation'] || 0),
+        color: '#f97316'
       },
       {
-        label: 'Processing',
-        value: (statusCounts['processing'] || 0) + (statusCounts['confirmed'] || 0),
+        label: 'Pending',
+        value: (statusCounts['pending'] || 0),
         color: '#f59e0b'
       },
       {
-        label: 'Shipped',
-        value: (statusCounts['shipped'] || 0) + (statusCounts['out for delivery'] || 0) + (statusCounts['in transit'] || 0),
+        label: 'Confirmed / Processing',
+        value: (statusCounts['confirmed'] || 0) + (statusCounts['processing'] || 0),
         color: '#3b82f6'
+      },
+      {
+        label: 'Booked / Pickup',
+        value: (statusCounts['booked'] || 0) + (statusCounts['pickup initiated'] || 0) + (statusCounts['manifested'] || 0),
+        color: '#8b5cf6'
+      },
+      {
+        label: 'In Transit / Shipped',
+        value: (statusCounts['shipped'] || 0) + (statusCounts['in transit'] || 0),
+        color: '#0891b2'
+      },
+      {
+        label: 'Out for Delivery',
+        value: (statusCounts['out for delivery'] || 0),
+        color: '#65a30d'
       },
       {
         label: 'Delivered',
@@ -315,14 +361,24 @@ const aggregateDashboardData = async (userId, brandId) => {
         color: '#10b981'
       },
       {
-        label: 'Cancelled',
-        value: (statusCounts['cancelled'] || 0),
-        color: '#6b7280'
+        label: 'Undelivered',
+        value: (statusCounts['undelivered'] || 0),
+        color: '#dc2626'
       },
       {
-        label: 'RTO',
-        value: (statusCounts['rto'] || 0),
+        label: 'RTO / Returned',
+        value: (statusCounts['rto'] || 0) + (statusCounts['rto delivered'] || 0) + (statusCounts['return_initiated'] || 0) + (statusCounts['returned_rto'] || 0),
+        color: '#64748b'
+      },
+      {
+        label: 'Cancelled',
+        value: (statusCounts['cancelled'] || 0) + (statusCounts['order cancelled'] || 0),
         color: '#ef4444'
+      },
+      {
+        label: 'Exception',
+        value: (statusCounts['exception'] || 0),
+        color: '#7f1d1d'
       }
     ].filter(item => item.value > 0);
 
@@ -413,13 +469,14 @@ const aggregateDashboardData = async (userId, brandId) => {
     // RTO statistics
     const rtoOrders = allOrders.filter(o => {
       const status = o.status?.toLowerCase();
-      return status === 'rto' || status === 'rto delivered';
+      return status === 'rto' || status === 'rto delivered' || status === 'return_initiated' || status === 'returned_rto';
     });
+    const totalRtoCount = (statusCounts['rto'] || 0) + (statusCounts['rto delivered'] || 0) + (statusCounts['return_initiated'] || 0) + (statusCounts['returned_rto'] || 0);
     const rtoStats = {
-      totalRTO: statusCounts['rto'] + (statusCounts['rto delivered'] || 0),
+      totalRTO: totalRtoCount,
       rtoRevenue: parseFloat(rtoRevenue.toFixed(2)),
-      rtoRate: totalOrders > 0 ? parseFloat((((statusCounts['rto'] + (statusCounts['rto delivered'] || 0)) / totalOrders) * 100).toFixed(2)) : 0,
-      rtoPercentageOfRevenue: allOrdersRevenue > 0 ? parseFloat(((rtoRevenue / allOrdersRevenue) * 100).toFixed(2)) : 0,
+      rtoRate: totalOrders > 0 ? parseFloat(((totalRtoCount / totalOrders) * 100).toFixed(2)) : 0,
+      rtoPercentageOfRevenue: totalRevenue > 0 ? parseFloat(((rtoRevenue / totalRevenue) * 100).toFixed(2)) : 0,
       averageRTOValue: rtoOrders.length > 0 ? parseFloat((rtoRevenue / rtoOrders.length).toFixed(2)) : 0
     };
 
@@ -502,15 +559,19 @@ const aggregateDashboardData = async (userId, brandId) => {
         },
         revenue: {
           total: parseFloat(totalRevenue.toFixed(2)),
+          earned: parseFloat(earnedRevenue.toFixed(2)),
+          active: parseFloat(activeRevenue.toFixed(2)),
+          lost: parseFloat(lostRevenue.toFixed(2)),
           monthly: parseFloat(monthlyRevenue.toFixed(2)),
-          average: parseFloat((nonCancelledOrdersCount > 0 ? totalRevenue / nonCancelledOrdersCount : 0).toFixed(2)),
+          average: parseFloat(avgOrderValue.toFixed(2)),
           breakdown: {
             delivered: parseFloat(deliveredRevenue.toFixed(2)),
-            cancelled: parseFloat(cancelledRevenue.toFixed(2)),
-            rto: parseFloat(rtoRevenue.toFixed(2)),
-            pending: parseFloat(pendingRevenue.toFixed(2)),
-            processing: parseFloat(processingRevenue.toFixed(2)),
             shipped: parseFloat(shippedRevenue.toFixed(2)),
+            processing: parseFloat(processingRevenue.toFixed(2)),
+            pending: parseFloat(pendingRevenue.toFixed(2)),
+            undelivered: parseFloat(undeliveredRevenue.toFixed(2)),
+            rto: parseFloat(rtoRevenue.toFixed(2)),
+            cancelled: parseFloat(cancelledRevenue.toFixed(2)),
           },
           donutChart: [
             {
@@ -520,34 +581,40 @@ const aggregateDashboardData = async (userId, brandId) => {
               percentage: totalRevenue > 0 ? parseFloat(((deliveredRevenue / totalRevenue) * 100).toFixed(1)) : 0
             },
             {
-              label: 'Shipped',
+              label: 'Shipped / In Transit',
               value: parseFloat(shippedRevenue.toFixed(2)),
-              color: '#3b82f6',
+              color: '#0891b2',
               percentage: totalRevenue > 0 ? parseFloat(((shippedRevenue / totalRevenue) * 100).toFixed(1)) : 0
             },
             {
               label: 'Processing',
               value: parseFloat(processingRevenue.toFixed(2)),
-              color: '#f59e0b',
+              color: '#3b82f6',
               percentage: totalRevenue > 0 ? parseFloat(((processingRevenue / totalRevenue) * 100).toFixed(1)) : 0
             },
             {
               label: 'Pending',
               value: parseFloat(pendingRevenue.toFixed(2)),
-              color: '#8b5cf6',
+              color: '#f59e0b',
               percentage: totalRevenue > 0 ? parseFloat(((pendingRevenue / totalRevenue) * 100).toFixed(1)) : 0
             },
             {
-              label: 'RTO',
+              label: 'Undelivered',
+              value: parseFloat(undeliveredRevenue.toFixed(2)),
+              color: '#dc2626',
+              percentage: totalRevenue > 0 ? parseFloat(((undeliveredRevenue / totalRevenue) * 100).toFixed(1)) : 0
+            },
+            {
+              label: 'RTO / Returned',
               value: parseFloat(rtoRevenue.toFixed(2)),
-              color: '#ef4444',
+              color: '#64748b',
               percentage: totalRevenue > 0 ? parseFloat(((rtoRevenue / totalRevenue) * 100).toFixed(1)) : 0
             },
             {
               label: 'Cancelled',
               value: parseFloat(cancelledRevenue.toFixed(2)),
-              color: '#6b7280',
-              percentage: allOrdersRevenue > 0 ? parseFloat(((cancelledRevenue / allOrdersRevenue) * 100).toFixed(1)) : 0
+              color: '#ef4444',
+              percentage: totalRevenue > 0 ? parseFloat(((cancelledRevenue / totalRevenue) * 100).toFixed(1)) : 0
             }
           ].filter(item => item.value > 0)
         },

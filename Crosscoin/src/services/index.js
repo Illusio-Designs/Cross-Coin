@@ -293,6 +293,20 @@ export const orderService = {
     }
   },
 
+  // Bulk refresh order statuses from FShip
+  bulkRefreshFShipStatus: async () => {
+    try {
+      const response = await adminApi.post(
+        "/api/orders/fship/refresh-status",
+        {},
+        { timeout: 60000 }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Sync single order with FShip
   syncSingleOrderWithFShip: async (orderId) => {
     try {
@@ -522,9 +536,9 @@ export const orderService = {
 
 // Payment Services
 export const paymentService = {
-  getAllPayments: async () => {
+  getAllPayments: async (params = {}) => {
     try {
-      const response = await adminApi.get("/api/payments");
+      const response = await adminApi.get("/api/payments", { params });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1318,9 +1332,9 @@ export const policyService = {
 
 // Dashboard Services
 export const dashboardService = {
-  getDashboardStats: async () => {
+  getDashboardStats: async (params = {}) => {
     try {
-      const response = await adminApi.get("/api/dashboard/stats");
+      const response = await adminApi.get("/api/dashboard/stats", { params });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

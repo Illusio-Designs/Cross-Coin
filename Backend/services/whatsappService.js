@@ -119,9 +119,9 @@ async function seedDefaultTemplates(brandId = 1) {
     {
       name: 'order_confirmation', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: 'Order Confirmed' },
+        { type: 'HEADER', format: 'TEXT', text: '✅ Order Confirmed!' },
         { type: 'BODY',
-          text: `Hi! Your *${storeName}* order *#{{1}}* has been placed successfully.\n\nItems: {{2}}\nTotal: Rs. {{3}}\nEstimated delivery: {{4}}\n\nWe will notify you once it ships. Thank you for shopping with us!`,
+          text: `Hi there! Your order from *${storeName}* is confirmed.\n\n🧾 Order: *#{{1}}*\n📦 Items: {{2}}\n💰 Total: ₹{{3}}\n🚚 Estimated delivery: {{4}}\n\nWe're getting it ready for you. You'll receive a tracking update once it ships!`,
           example: { body_text: [['CC-20240101-0001', '2 items', '699', '3-5 working days']] } },
         { type: 'FOOTER', text: footer },
       ],
@@ -129,19 +129,19 @@ async function seedDefaultTemplates(brandId = 1) {
     {
       name: 'order_shipped', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: 'Your order is on the way' },
+        { type: 'HEADER', format: 'TEXT', text: '📦 Your Order Has Shipped!' },
         { type: 'BODY',
-          text: `Great news! Your *${storeName}* order *#{{1}}* has been shipped.\n\nAWB Number: {{2}}\nTrack your order: {{3}}\n\nExpect delivery in 2-5 business days.`,
-          example: { body_text: [['CC-20240101-0001', 'BD9812345678', `https://${storeUrl}/track/CC-20240101-0001`]] } },
+          text: `Your *${storeName}* order *#{{1}}* is on its way!\n\n🔖 AWB: {{2}}\n📍 Track live: {{3}}\n\nExpected delivery in 2-5 business days. We'll update you at every step.`,
+          example: { body_text: [['CC-20240101-0001', 'BD9812345678', `https://${storeUrl}/OrderTracking?order=CC-20240101-0001`]] } },
         { type: 'FOOTER', text: footer },
       ],
     },
     {
       name: 'order_out_for_delivery', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: 'Out for Delivery' },
+        { type: 'HEADER', format: 'TEXT', text: '🚛 Out for Delivery!' },
         { type: 'BODY',
-          text: `Your *${storeName}* order *#{{1}}* is out for delivery today!\n\nCourier: {{2}}\n\nPlease keep your phone handy.`,
+          text: `Great news! Your *${storeName}* order *#{{1}}* is out for delivery today.\n\n🚚 Courier: {{2}}\n\nPlease keep your phone handy and ensure someone is available to receive the package.`,
           example: { body_text: [['CC-20240101-0001', 'BlueDart']] } },
         { type: 'FOOTER', text: footer },
       ],
@@ -149,9 +149,9 @@ async function seedDefaultTemplates(brandId = 1) {
     {
       name: 'order_delivered', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: 'Order Delivered' },
+        { type: 'HEADER', format: 'TEXT', text: '🎉 Order Delivered!' },
         { type: 'BODY',
-          text: `Your *${storeName}* order *#{{1}}* has been delivered!\n\nWe hope you love your purchase. Have an issue? Just reply to this message.`,
+          text: `Your *${storeName}* order *#{{1}}* has been delivered successfully!\n\nWe hope you love your purchase. If anything isn't right, just reply to this message — we're here to help.\n\nEnjoy! 🧦`,
           example: { body_text: [['CC-20240101-0001']] } },
         { type: 'FOOTER', text: footer },
       ],
@@ -161,7 +161,7 @@ async function seedDefaultTemplates(brandId = 1) {
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Order Cancelled' },
         { type: 'BODY',
-          text: `Your *${storeName}* order *#{{1}}* has been cancelled.\n\nRefund info: {{2}}\n\nQuestions? Reply to this message or visit ${storeUrl}.`,
+          text: `Your *${storeName}* order *#{{1}}* has been cancelled.\n\n💳 Refund: {{2}}\n\nWe're sorry to see this order go. If you have any questions, reply here or visit ${storeUrl}.\n\nHope to see you again soon!`,
           example: { body_text: [['CC-20240101-0001', 'Refund in 5-7 business days']] } },
         { type: 'FOOTER', text: footer },
       ],
@@ -169,19 +169,19 @@ async function seedDefaultTemplates(brandId = 1) {
     {
       name: 'cod_order_confirmation', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: 'COD Order Received' },
+        { type: 'HEADER', format: 'TEXT', text: '🧾 COD Order — Please Confirm' },
         { type: 'BODY',
-          text: `Hi! We received your Cash on Delivery order *#{{1}}* for Rs. {{2}} from *${storeName}*.\n\nDelivery to: {{3}}\n\nPlease keep the amount ready at the time of delivery.`,
-          example: { body_text: [['CC-20240101-0001', '699', 'Surat, Gujarat 395006']] } },
+          text: `Hi! We received your Cash on Delivery order from *${storeName}*.\n\n🧾 Order: *#{{1}}*\n💰 Amount: ₹{{2}}\n📍 Delivery to: {{3}}\n\n👉 *Please reply YES to confirm your address is correct.*\n\nIf anything is wrong, reply with the correct address and we'll update it before shipping.`,
+          example: { body_text: [['CC-20240101-0001', '699', 'Rushikesh, 123 Main St, Surat, Gujarat 395006']] } },
         { type: 'FOOTER', text: footer },
       ],
     },
     {
       name: 'refund_processed', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: 'Refund Processed' },
+        { type: 'HEADER', format: 'TEXT', text: '💰 Refund Processed' },
         { type: 'BODY',
-          text: `Good news! Your refund for *${storeName}* order *#{{1}}* of Rs. {{2}} has been processed.\n\nRefund to: {{3}}\nExpected credit: 5-7 working days.\n\nThank you for your patience.`,
+          text: `Your refund for *${storeName}* order *#{{1}}* has been processed.\n\n💳 Amount: ₹{{2}}\n🏦 Refund to: {{3}}\n⏳ Expected credit: 5-7 working days\n\nThank you for your patience. We hope to serve you again!`,
           example: { body_text: [['CC-20240101-0001', '699', 'Original Payment Method']] } },
         { type: 'FOOTER', text: footer },
       ],
@@ -189,9 +189,9 @@ async function seedDefaultTemplates(brandId = 1) {
     {
       name: 'review_request', category: 'MARKETING', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: 'How was your order?' },
+        { type: 'HEADER', format: 'TEXT', text: '⭐ How was your order?' },
         { type: 'BODY',
-          text: `Hi {{1}}!\n\nWe hope you are loving your {{2}} from *${storeName}*.\n\nA quick review takes just 30 seconds and helps thousands of shoppers!\n\n{{3}}`,
+          text: `Hi {{1}}!\n\nWe hope you're loving your *{{2}}* from *${storeName}*.\n\nYour review helps other shoppers make great choices — it only takes 30 seconds!\n\n👉 {{3}}`,
           example: { body_text: [['Rushikesh', 'CrossCoin Ankle Socks', `https://${storeUrl}/review`]] } },
         { type: 'FOOTER', text: footer },
         { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Write a Review', url: `https://${storeUrl}/review` }] },
@@ -200,9 +200,9 @@ async function seedDefaultTemplates(brandId = 1) {
     {
       name: 'popup_coupon', category: 'MARKETING', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '🎉 Your Exclusive Coupon' },
+        { type: 'HEADER', format: 'TEXT', text: '🎁 Your Exclusive Coupon' },
         { type: 'BODY',
-          text: `Hi! Here's your exclusive 10% OFF coupon for *${storeName}*.\n\nUse code *{{1}}* at checkout.\n\n⚠️ Valid on *prepaid orders only*. Limited time offer!`,
+          text: `Here's a special 10% OFF coupon just for you at *${storeName}*!\n\n🏷️ Code: *{{1}}*\n✅ Valid on prepaid orders only\n⏰ Limited time offer\n\nDon't miss out — shop now!`,
           example: { body_text: [['PREPAID10']] } },
         { type: 'FOOTER', text: footer },
         { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Shop Now', url: `https://${storeUrl}` }] },
@@ -211,9 +211,9 @@ async function seedDefaultTemplates(brandId = 1) {
     {
       name: 'cart_abandoned', category: 'MARKETING', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: 'You left something behind' },
+        { type: 'HEADER', format: 'TEXT', text: '🛒 You Left Something Behind!' },
         { type: 'BODY',
-          text: `Hey {{1}}!\n\nYour {{2}} is still waiting in your *${storeName}* cart.\n\nUse code *{{3}}* for an extra 10% OFF — hurry, expires in 24 hours!`,
+          text: `Hey {{1}}!\n\nYour *{{2}}* is still waiting in your *${storeName}* cart.\n\n🏷️ Use code *{{3}}* for an extra 10% OFF — but hurry, it expires in 24 hours!\n\nComplete your purchase before it's gone.`,
           example: { body_text: [['Rushikesh', 'CrossCoin Ankle Socks Pack of 3', 'SAVE10']] } },
         { type: 'FOOTER', text: footer },
         { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Complete Purchase', url: `https://${storeUrl}/cart` }] },
@@ -352,7 +352,7 @@ async function sendCodConfirmation(phone, data, brandId = 1) {
   return sendTemplate(phone, 'cod_order_confirmation', [
     data.orderNumber,
     data.amount,
-    data.address || 'your address',
+    data.fullAddress || data.address || 'your address',
   ], brandId);
 }
 

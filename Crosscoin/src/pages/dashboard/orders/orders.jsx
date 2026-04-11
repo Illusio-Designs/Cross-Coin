@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { orderService, dashboardService } from '../../../services';
 import { debounce } from 'lodash';
-import { Table, Pagination, Modal, Button, Select } from "../../../components/ui";
+import { Table, Pagination, Modal, Button, Select, DateRangePicker } from "../../../components/ui";
 import SafeImage from "../../../components/common/SafeImage";
 import Loader from "../../../components/common/Loader";
 import BrandTags from "../../../components/Dashboard/BrandTags";
@@ -51,6 +51,9 @@ const Orders = () => {
     const [selectedOrders, setSelectedOrders] = useState(new Set());
     const [isDownloadingBulk, setIsDownloadingBulk] = useState(false);
     const [labelStats, setLabelStats] = useState({ totalLabels: 0, downloadedLabels: 0, pendingLabels: 0, downloadRate: 0 });
+    const [statsStartDate, setStatsStartDate] = useState('');
+    const [statsEndDate, setStatsEndDate] = useState('');
+    const [refreshingStatus, setRefreshingStatus] = useState(false);
 
     const fetchOrders = useCallback(async (page = currentPage) => {
         setLoading(true);
@@ -79,7 +82,10 @@ const Orders = () => {
 
     const fetchAllOrdersForStats = useCallback(async () => {
         try {
-            const response = await dashboardService.getDashboardStats();
+            const params = {};
+            if (statsStartDate) params.start_date = statsStartDate;
+            if (statsEndDate) params.end_date = statsEndDate;
+            const response = await dashboardService.getDashboardStats(params);
             if (response.success && response.stats) {
                 const dashStats = response.stats;
                 const stats = {
@@ -107,27 +113,49 @@ const Orders = () => {
         } catch (err) {
             setAllOrdersStats({ total: 0, prepaid: 0, cod: 0, paid: 0, pending: 0, totalRevenue: 0, averageOrderValue: 0, deliveredOrders: 0, cancelledOrders: 0, paymentStatusPending: 0, paymentStatusPaid: 0, paymentStatusFailed: 0, paymentStatusRefunded: 0, paymentStatusCancelled: 0, paymentStatusRefundPending: 0 });
         }
-    }, []);
+    }, [statsStartDate, statsEndDate]);
 
     const syncOrders = async () => {
         if (syncingAll || syncingOrders.size > 0) { showError('syncInProgress'); return; }
         setSyncingAll(true);
         try {
             const result = await orderService.syncOrdersWithFShip();
-            const { results } = result;
+            const data = result.data || result.results || {};
             let message = `FShip sync completed! `;
-            if (results.total_orders_processed > 0) message += `Processed ${results.total_orders_processed} orders. `;
-            if (results.new_orders_synced > 0) message += `${results.new_orders_synced} new orders synced. `;
-            if (results.existing_orders_updated > 0) message += `${results.existing_orders_updated} existing orders updated. `;
-            if (results.status_updates > 0) message += `${results.status_updates} status updates. `;
-            if (results.tracking_updates > 0) message += `${results.tracking_updates} tracking updates. `;
-            if (results.skipped_final_state > 0) message += `${results.skipped_final_state} orders skipped. `;
-            if (results.failed > 0) message += `${results.failed} orders failed. `;
+            if (data.total > 0) message += `Processed ${data.total} orders. `;
+            else if (data.total_orders_processed > 0) message += `Processed ${data.total_orders_processed} orders. `;
+            if (data.synced > 0) message += `${data.synced} new orders synced. `;
+            else if (data.new_orders_synced > 0) message += `${data.new_orders_synced} new orders synced. `;
+            if (data.updated > 0) message += `${data.updated} orders updated. `;
+            else if (data.existing_orders_updated > 0) message += `${data.existing_orders_updated} existing orders updated. `;
+            if (data.skipped > 0) message += `${data.skipped} orders skipped. `;
+            else if (data.skipped_final_state > 0) message += `${data.skipped_final_state} orders skipped. `;
+            if (data.errors > 0) message += `${data.errors} orders failed. `;
+            else if (data.failed > 0) message += `${data.failed} orders failed. `;
+            if ((data.total || data.total_orders_processed || 0) === 0) message += 'No orders pending sync.';
             showSuccess('orderSynced', message);
             fetchOrders(); fetchAllOrdersForStats();
         } catch (error) {
             showError('syncFailed', error.message || error.error || 'Failed to sync orders with FShip');
         } finally { setSyncingAll(false); }
+    };
+
+    const refreshOrderStatuses = async () => {
+        if (refreshingStatus) return;
+        setRefreshingStatus(true);
+        try {
+            const result = await orderService.bulkRefreshFShipStatus();
+            const data = result.data || {};
+            let message = 'Status refresh completed! ';
+            if (data.updated > 0) message += `${data.updated} orders updated. `;
+            if (data.unchanged > 0) message += `${data.unchanged} unchanged. `;
+            if (data.errors > 0) message += `${data.errors} errors. `;
+            if ((data.total || 0) === 0) message += 'No active orders to refresh.';
+            showSuccess('orderSynced', message);
+            fetchOrders(); fetchAllOrdersForStats();
+        } catch (error) {
+            showError('syncFailed', error.message || error.error || 'Failed to refresh order statuses');
+        } finally { setRefreshingStatus(false); }
     };
 
     const updateSingleOrder = async (orderId) => {
@@ -251,6 +279,8 @@ const Orders = () => {
     };
 
     useEffect(() => { fetchOrders(1); fetchAllOrdersForStats(); fetchLabelStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => { fetchAllOrdersForStats(); }, [statsStartDate, statsEndDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         setCurrentPage(1); fetchOrders(1); fetchAllOrdersForStats();
@@ -481,15 +511,31 @@ const Orders = () => {
                                 <input type="text" className="sl-search-input" placeholder="Search orders, customers, AWB..."
                                     value={filterValue} onChange={handleSearchChange} />
                             </div>
-                            <button className={`sl-add-btn${syncingAll || loading ? ' sl-add-btn--syncing' : ''}`}
+                            <button className={`order-sync-main-btn${syncingAll || loading ? ' syncing' : ''}`}
                                 onClick={syncOrders} disabled={loading || syncingAll || syncingOrders.size > 0}>
-                                <span className="sl-add-btn-icon">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                </span>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={syncingAll ? 'animate-spin' : ''}><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                                 {syncingAll ? 'Syncing...' : 'FShip Sync'}
+                            </button>
+                            <button className={`order-sync-main-btn${refreshingStatus ? ' syncing' : ''}`}
+                                onClick={refreshOrderStatuses} disabled={loading || refreshingStatus}
+                                style={{ borderColor: '#2563eb', color: '#2563eb' }}
+                                onMouseEnter={e => { if (!refreshingStatus) { e.currentTarget.style.background = '#2563eb'; e.currentTarget.style.color = '#fff'; } }}
+                                onMouseLeave={e => { if (!refreshingStatus) { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#2563eb'; } }}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={refreshingStatus ? 'animate-spin' : ''}><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
+                                {refreshingStatus ? 'Refreshing...' : 'Refresh Status'}
                             </button>
                         </div>
                     </div>
+
+                    {/* Stats Date Filter */}
+                    <DateRangePicker
+                        label="Stats Date Range"
+                        startDate={statsStartDate}
+                        endDate={statsEndDate}
+                        onStartChange={setStatsStartDate}
+                        onEndChange={setStatsEndDate}
+                        onClear={() => { setStatsStartDate(''); setStatsEndDate(''); }}
+                    />
 
                     {/* Analytics Charts */}
                     <div className="orders-analytics">
@@ -506,12 +552,15 @@ const Orders = () => {
                             </svg>
                             <span>Export Delivered Orders</span>
                         </div>
-                        <div className="orders-export-dates">
-                            <label>From:</label>
-                            <input type="date" value={exportStartDate} onChange={(e) => setExportStartDate(e.target.value)} className="orders-date-input" />
-                            <label>To:</label>
-                            <input type="date" value={exportEndDate} onChange={(e) => setExportEndDate(e.target.value)} className="orders-date-input" />
-                        </div>
+                        <DateRangePicker
+                            label=""
+                            showIcon={false}
+                            inline
+                            startDate={exportStartDate}
+                            endDate={exportEndDate}
+                            onStartChange={setExportStartDate}
+                            onEndChange={setExportEndDate}
+                        />
                         <button onClick={handleExportDeliveredOrders}
                             disabled={isExporting || !exportStartDate || !exportEndDate}
                             className={`sl-add-btn${isExporting || !exportStartDate || !exportEndDate ? ' sl-add-btn--disabled' : ''}`}>

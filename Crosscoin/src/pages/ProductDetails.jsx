@@ -263,6 +263,16 @@ export default function ProductDetails() {
       currency: 'INR',
       num_items: quantity,
     });
+    gtagTrack('begin_checkout', {
+      currency: 'INR',
+      value: productData.price * quantity,
+      items: [{
+        item_id: String(productData.id),
+        item_name: productData.title || '',
+        quantity,
+        price: parseFloat(productData.price || 0),
+      }],
+    });
 
     if (item) {
       setIsDrawerOpen(true);

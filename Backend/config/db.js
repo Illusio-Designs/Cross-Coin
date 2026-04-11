@@ -12,11 +12,11 @@ const sequelize = new Sequelize(
         logging: false, // never log SQL — saves memory and I/O
         dialectOptions: { charset: 'utf8mb4' },
         pool: {
-            max: 5,      // 2GB server — keep pool small, MySQL uses ~8MB per connection
-            min: 1,      // only 1 idle connection kept alive
-            acquire: 30000,
-            idle: 20000, // release idle connections after 20s
-            evict: 10000,
+            max: 15,     // increased — cron jobs + API requests need headroom
+            min: 2,      // keep 2 idle connections ready
+            acquire: 60000, // wait up to 60s for a connection before timeout
+            idle: 30000, // release idle connections after 30s
+            evict: 15000,
         },
         retry: { max: 2 },
     }
