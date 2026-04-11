@@ -51,6 +51,8 @@ const Orders = () => {
     const [selectedOrders, setSelectedOrders] = useState(new Set());
     const [isDownloadingBulk, setIsDownloadingBulk] = useState(false);
     const [labelStats, setLabelStats] = useState({ totalLabels: 0, downloadedLabels: 0, pendingLabels: 0, downloadRate: 0 });
+    const [statsStartDate, setStatsStartDate] = useState('');
+    const [statsEndDate, setStatsEndDate] = useState('');
 
     const fetchOrders = useCallback(async (page = currentPage) => {
         setLoading(true);
@@ -79,7 +81,10 @@ const Orders = () => {
 
     const fetchAllOrdersForStats = useCallback(async () => {
         try {
-            const response = await dashboardService.getDashboardStats();
+            const params = {};
+            if (statsStartDate) params.start_date = statsStartDate;
+            if (statsEndDate) params.end_date = statsEndDate;
+            const response = await dashboardService.getDashboardStats(params);
             if (response.success && response.stats) {
                 const dashStats = response.stats;
                 const stats = {
@@ -107,7 +112,7 @@ const Orders = () => {
         } catch (err) {
             setAllOrdersStats({ total: 0, prepaid: 0, cod: 0, paid: 0, pending: 0, totalRevenue: 0, averageOrderValue: 0, deliveredOrders: 0, cancelledOrders: 0, paymentStatusPending: 0, paymentStatusPaid: 0, paymentStatusFailed: 0, paymentStatusRefunded: 0, paymentStatusCancelled: 0, paymentStatusRefundPending: 0 });
         }
-    }, []);
+    }, [statsStartDate, statsEndDate]);
 
     const syncOrders = async () => {
         if (syncingAll || syncingOrders.size > 0) { showError('syncInProgress'); return; }
@@ -251,6 +256,8 @@ const Orders = () => {
     };
 
     useEffect(() => { fetchOrders(1); fetchAllOrdersForStats(); fetchLabelStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => { fetchAllOrdersForStats(); }, [statsStartDate, statsEndDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         setCurrentPage(1); fetchOrders(1); fetchAllOrdersForStats();
@@ -489,6 +496,27 @@ const Orders = () => {
                                 {syncingAll ? 'Syncing...' : 'FShip Sync'}
                             </button>
                         </div>
+                    </div>
+
+                    {/* Stats Date Filter */}
+                    <div className="orders-export-section" style={{ marginBottom: 0 }}>
+                        <div className="orders-export-left">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+                            </svg>
+                            <span>Stats Date Range</span>
+                        </div>
+                        <div className="orders-export-dates">
+                            <label>From:</label>
+                            <input type="date" value={statsStartDate} onChange={(e) => { setStatsStartDate(e.target.value); }} className="orders-date-input" />
+                            <label>To:</label>
+                            <input type="date" value={statsEndDate} onChange={(e) => { setStatsEndDate(e.target.value); }} className="orders-date-input" />
+                        </div>
+                        {(statsStartDate || statsEndDate) && (
+                            <button className="sl-add-btn" onClick={() => { setStatsStartDate(''); setStatsEndDate(''); }} style={{ background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db' }}>
+                                Clear
+                            </button>
+                        )}
                     </div>
 
                     {/* Analytics Charts */}
