@@ -53,6 +53,7 @@ const Orders = () => {
     const [labelStats, setLabelStats] = useState({ totalLabels: 0, downloadedLabels: 0, pendingLabels: 0, downloadRate: 0 });
     const [statsStartDate, setStatsStartDate] = useState('');
     const [statsEndDate, setStatsEndDate] = useState('');
+    const [refreshingStatus, setRefreshingStatus] = useState(false);
 
     const fetchOrders = useCallback(async (page = currentPage) => {
         setLoading(true);
@@ -137,6 +138,24 @@ const Orders = () => {
         } catch (error) {
             showError('syncFailed', error.message || error.error || 'Failed to sync orders with FShip');
         } finally { setSyncingAll(false); }
+    };
+
+    const refreshOrderStatuses = async () => {
+        if (refreshingStatus) return;
+        setRefreshingStatus(true);
+        try {
+            const result = await orderService.bulkRefreshFShipStatus();
+            const data = result.data || {};
+            let message = 'Status refresh completed! ';
+            if (data.updated > 0) message += `${data.updated} orders updated. `;
+            if (data.unchanged > 0) message += `${data.unchanged} unchanged. `;
+            if (data.errors > 0) message += `${data.errors} errors. `;
+            if ((data.total || 0) === 0) message += 'No active orders to refresh.';
+            showSuccess('orderSynced', message);
+            fetchOrders(); fetchAllOrdersForStats();
+        } catch (error) {
+            showError('syncFailed', error.message || error.error || 'Failed to refresh order statuses');
+        } finally { setRefreshingStatus(false); }
     };
 
     const updateSingleOrder = async (orderId) => {
@@ -496,6 +515,14 @@ const Orders = () => {
                                 onClick={syncOrders} disabled={loading || syncingAll || syncingOrders.size > 0}>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={syncingAll ? 'animate-spin' : ''}><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                                 {syncingAll ? 'Syncing...' : 'FShip Sync'}
+                            </button>
+                            <button className={`order-sync-main-btn${refreshingStatus ? ' syncing' : ''}`}
+                                onClick={refreshOrderStatuses} disabled={loading || refreshingStatus}
+                                style={{ borderColor: '#2563eb', color: '#2563eb' }}
+                                onMouseEnter={e => { if (!refreshingStatus) { e.currentTarget.style.background = '#2563eb'; e.currentTarget.style.color = '#fff'; } }}
+                                onMouseLeave={e => { if (!refreshingStatus) { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#2563eb'; } }}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={refreshingStatus ? 'animate-spin' : ''}><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
+                                {refreshingStatus ? 'Refreshing...' : 'Refresh Status'}
                             </button>
                         </div>
                     </div>
