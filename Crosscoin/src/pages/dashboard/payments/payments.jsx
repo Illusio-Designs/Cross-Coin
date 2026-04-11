@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
+import { Button, Modal, Table, Pagination, Select, DateRangePicker } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { paymentService } from "../../../services";
 import { showSuccess, showError } from "../../../utils/toastNotification";
@@ -140,15 +140,15 @@ export default function Payments() {
         {/* Stat Cards */}
         <div className="sl-stat-cards">
           <div className="sl-stat-card" style={{ gridColumn: '1 / -1', padding: '12px 16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>Stats Date Range:</span>
-              <input type="date" className="orders-date-input" value={statsStartDate} onChange={e => setStatsStartDate(e.target.value)} />
-              <span style={{ fontSize: 13, color: '#6b7280' }}>to</span>
-              <input type="date" className="orders-date-input" value={statsEndDate} onChange={e => setStatsEndDate(e.target.value)} />
-              {(statsStartDate || statsEndDate) && (
-                <button className="pay-clear-btn" onClick={() => { setStatsStartDate(''); setStatsEndDate(''); }}>Clear</button>
-              )}
-            </div>
+            <DateRangePicker
+              label="Stats Date Range"
+              inline
+              startDate={statsStartDate}
+              endDate={statsEndDate}
+              onStartChange={setStatsStartDate}
+              onEndChange={setStatsEndDate}
+              onClear={() => { setStatsStartDate(''); setStatsEndDate(''); }}
+            />
           </div>
           <div className="sl-stat-card">
             <div className="sl-stat-icon sl-stat-icon--blue">

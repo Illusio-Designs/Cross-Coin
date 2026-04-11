@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { orderService, dashboardService } from '../../../services';
 import { debounce } from 'lodash';
-import { Table, Pagination, Modal, Button, Select } from "../../../components/ui";
+import { Table, Pagination, Modal, Button, Select, DateRangePicker } from "../../../components/ui";
 import SafeImage from "../../../components/common/SafeImage";
 import Loader from "../../../components/common/Loader";
 import BrandTags from "../../../components/Dashboard/BrandTags";
@@ -528,25 +528,14 @@ const Orders = () => {
                     </div>
 
                     {/* Stats Date Filter */}
-                    <div className="orders-export-section" style={{ marginBottom: 0 }}>
-                        <div className="orders-export-left">
-                            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
-                            </svg>
-                            <span>Stats Date Range</span>
-                        </div>
-                        <div className="orders-export-dates">
-                            <label>From:</label>
-                            <input type="date" value={statsStartDate} onChange={(e) => { setStatsStartDate(e.target.value); }} className="orders-date-input" />
-                            <label>To:</label>
-                            <input type="date" value={statsEndDate} onChange={(e) => { setStatsEndDate(e.target.value); }} className="orders-date-input" />
-                        </div>
-                        {(statsStartDate || statsEndDate) && (
-                            <button className="sl-add-btn" onClick={() => { setStatsStartDate(''); setStatsEndDate(''); }} style={{ background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db' }}>
-                                Clear
-                            </button>
-                        )}
-                    </div>
+                    <DateRangePicker
+                        label="Stats Date Range"
+                        startDate={statsStartDate}
+                        endDate={statsEndDate}
+                        onStartChange={setStatsStartDate}
+                        onEndChange={setStatsEndDate}
+                        onClear={() => { setStatsStartDate(''); setStatsEndDate(''); }}
+                    />
 
                     {/* Analytics Charts */}
                     <div className="orders-analytics">
@@ -563,12 +552,15 @@ const Orders = () => {
                             </svg>
                             <span>Export Delivered Orders</span>
                         </div>
-                        <div className="orders-export-dates">
-                            <label>From:</label>
-                            <input type="date" value={exportStartDate} onChange={(e) => setExportStartDate(e.target.value)} className="orders-date-input" />
-                            <label>To:</label>
-                            <input type="date" value={exportEndDate} onChange={(e) => setExportEndDate(e.target.value)} className="orders-date-input" />
-                        </div>
+                        <DateRangePicker
+                            label=""
+                            showIcon={false}
+                            inline
+                            startDate={exportStartDate}
+                            endDate={exportEndDate}
+                            onStartChange={setExportStartDate}
+                            onEndChange={setExportEndDate}
+                        />
                         <button onClick={handleExportDeliveredOrders}
                             disabled={isExporting || !exportStartDate || !exportEndDate}
                             className={`sl-add-btn${isExporting || !exportStartDate || !exportEndDate ? ' sl-add-btn--disabled' : ''}`}>
