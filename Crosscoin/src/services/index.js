@@ -522,9 +522,9 @@ export const orderService = {
 
 // Payment Services
 export const paymentService = {
-  getAllPayments: async () => {
+  getAllPayments: async (params = {}) => {
     try {
-      const response = await adminApi.get("/api/payments");
+      const response = await adminApi.get("/api/payments", { params });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

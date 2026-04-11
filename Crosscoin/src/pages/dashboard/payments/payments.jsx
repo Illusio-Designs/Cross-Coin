@@ -33,11 +33,16 @@ export default function Payments() {
   const [methodFilter, setMethodFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const [payments, setPayments] = useState([]);
+  const [statsStartDate, setStatsStartDate] = useState("");
+  const [statsEndDate, setStatsEndDate] = useState("");
 
   const fetchPayments = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await paymentService.getAllPayments();
+      const params = {};
+      if (statsStartDate) params.start_date = statsStartDate;
+      if (statsEndDate) params.end_date = statsEndDate;
+      const response = await paymentService.getAllPayments(params);
       if (response.success && response.payments) {
         const transformed = response.payments.map(p => {
           let customerName = 'Guest User';
@@ -58,7 +63,7 @@ export default function Payments() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [statsStartDate, statsEndDate]);
 
   useEffect(() => { fetchPayments(); }, [fetchPayments]);
   useEffect(() => { setCurrentPage(1); }, [search, statusFilter, methodFilter]);
@@ -108,9 +113,9 @@ export default function Payments() {
   ];
 
   const totalAmount = filteredData.reduce((sum, p) => sum + parseFloat(p.amount_paid || 0), 0) / 100;
-  const successCount = payments.filter(p => p.status === 'successful').length;
-  const pendingCount = payments.filter(p => p.status === 'pending').length;
-  const refundedCount = payments.filter(p => p.status === 'refunded').length;
+  const successCount = filteredData.filter(p => p.status === 'successful').length;
+  const pendingCount = filteredData.filter(p => p.status === 'pending').length;
+  const refundedCount = filteredData.filter(p => p.status === 'refunded').length;
 
   return (
     <>
@@ -134,13 +139,24 @@ export default function Payments() {
 
         {/* Stat Cards */}
         <div className="sl-stat-cards">
+          <div className="sl-stat-card" style={{ gridColumn: '1 / -1', padding: '12px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>Stats Date Range:</span>
+              <input type="date" className="orders-date-input" value={statsStartDate} onChange={e => setStatsStartDate(e.target.value)} />
+              <span style={{ fontSize: 13, color: '#6b7280' }}>to</span>
+              <input type="date" className="orders-date-input" value={statsEndDate} onChange={e => setStatsEndDate(e.target.value)} />
+              {(statsStartDate || statsEndDate) && (
+                <button className="pay-clear-btn" onClick={() => { setStatsStartDate(''); setStatsEndDate(''); }}>Clear</button>
+              )}
+            </div>
+          </div>
           <div className="sl-stat-card">
             <div className="sl-stat-icon sl-stat-icon--blue">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
             </div>
             <div className="sl-stat-body">
               <span className="sl-stat-label">Total Payments</span>
-              <span className="sl-stat-value">{payments.length}</span>
+              <span className="sl-stat-value">{filteredData.length}</span>
             </div>
           </div>
           <div className="sl-stat-card">
