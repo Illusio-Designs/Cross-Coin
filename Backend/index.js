@@ -168,6 +168,11 @@ app.use('/uploads', (req, res, next) => {
     next();
 });
 
+// ── robots.txt — tell crawlers this is an API, not a website ─────────────────
+app.get('/robots.txt', (req, res) => {
+    res.type('text/plain').send('User-agent: *\nDisallow: /\n');
+});
+
 // ── Health check endpoints ────────────────────────────────────────────────────
 
 // Main health check

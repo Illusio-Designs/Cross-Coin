@@ -498,7 +498,7 @@ const Orders = () => {
                                 ✓
                             </button>
                         )}
-                        {(row.status === 'pending' || row.status === 'awaiting_confirmation' || row.status === 'confirmed' || row.status === 'processing') && (
+                        {row.payment_type?.toLowerCase() === 'cod' && (row.status === 'pending' || row.status === 'awaiting_confirmation') && (
                             <button className="sl-btn-delete" title="Cancel Order" onClick={() => cancelOrder(row.id, row.order_number)}>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
@@ -534,20 +534,13 @@ const Orders = () => {
             />
             <div className="dashboard-page">
                 <div className="orders-header-container">
-                    {/* Page Header */}
-                    <div className="sl-page-header">
-                        <div className="sl-header-left">
-                            <div className="sl-header-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 01-8 0" />
-                                </svg>
-                            </div>
-                            <div>
-                                <h1 className="sl-page-title">Orders</h1>
-                                <p className="sl-page-sub">{totalOrders} order{totalOrders !== 1 ? 's' : ''} total</p>
-                            </div>
+                    {/* ── Top Bar: Title + Search + Actions ── */}
+                    <div className="ord-topbar">
+                        <div className="ord-topbar-left">
+                            <h1 className="ord-title">Orders</h1>
+                            <span className="ord-subtitle">{totalOrders} order{totalOrders !== 1 ? 's' : ''} total</span>
                         </div>
-                        <div className="sl-header-right">
+                        <div className="ord-topbar-right">
                             <div className="sl-search-wrap">
                                 <span className="sl-search-icon">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
@@ -579,7 +572,43 @@ const Orders = () => {
                         </div>
                     </div>
 
-                    {/* Stats Date Filter */}
+                    {/* ── KPI Strip ── */}
+                    <div className="ord-kpi-strip">
+                        <div className="ord-kpi" style={{ borderLeftColor: '#180D3E' }}>
+                            <span className="ord-kpi-label">Total</span>
+                            <span className="ord-kpi-val">{allOrdersStats.total}</span>
+                        </div>
+                        <div className="ord-kpi" style={{ borderLeftColor: '#059669' }}>
+                            <span className="ord-kpi-label">Revenue</span>
+                            <span className="ord-kpi-val" style={{ color: '#059669' }}>₹{parseFloat(allOrdersStats.totalRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</span>
+                        </div>
+                        <div className="ord-kpi" style={{ borderLeftColor: '#10b981' }}>
+                            <span className="ord-kpi-label">Prepaid</span>
+                            <span className="ord-kpi-val">{allOrdersStats.prepaid}</span>
+                        </div>
+                        <div className="ord-kpi" style={{ borderLeftColor: '#f59e0b' }}>
+                            <span className="ord-kpi-label">COD</span>
+                            <span className="ord-kpi-val">{allOrdersStats.cod}</span>
+                        </div>
+                        <div className="ord-kpi" style={{ borderLeftColor: '#10b981' }}>
+                            <span className="ord-kpi-label">Delivered</span>
+                            <span className="ord-kpi-val">{allOrdersStats.deliveredOrders}</span>
+                        </div>
+                        <div className="ord-kpi" style={{ borderLeftColor: '#ef4444' }}>
+                            <span className="ord-kpi-label">Cancelled</span>
+                            <span className="ord-kpi-val">{allOrdersStats.cancelledOrders}</span>
+                        </div>
+                        <div className="ord-kpi" style={{ borderLeftColor: '#10b981' }}>
+                            <span className="ord-kpi-label">Paid</span>
+                            <span className="ord-kpi-val">{allOrdersStats.paymentStatusPaid}</span>
+                        </div>
+                        <div className="ord-kpi" style={{ borderLeftColor: '#7c3aed' }}>
+                            <span className="ord-kpi-label">Avg Order</span>
+                            <span className="ord-kpi-val">₹{parseFloat(allOrdersStats.averageOrderValue || 0).toFixed(0)}</span>
+                        </div>
+                    </div>
+
+                    {/* ── Stats Date Filter ── */}
                     <DateRangePicker
                         label="Stats Date Range"
                         startDate={statsStartDate}
@@ -587,46 +616,17 @@ const Orders = () => {
                         onStartChange={setStatsStartDate}
                         onEndChange={setStatsEndDate}
                         onClear={() => { setStatsStartDate(''); setStatsEndDate(''); }}
+                        inline
                     />
 
-                    {/* Analytics Charts */}
+                    {/* ── Analytics Charts (2-col on desktop) ── */}
                     <div className="orders-analytics">
                         <PaymentChart allOrdersStats={allOrdersStats} />
                         <PaymentStatusChart allOrdersStats={allOrdersStats} />
                         <ShippingChart orders={allOrdersData} allOrdersStats={allOrdersStats} />
                     </div>
 
-                    {/* Export Section */}
-                    <div className="orders-export-section">
-                        <div className="orders-export-left">
-                            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            <span>Export Delivered Orders</span>
-                        </div>
-                        <DateRangePicker
-                            label=""
-                            showIcon={false}
-                            inline
-                            startDate={exportStartDate}
-                            endDate={exportEndDate}
-                            onStartChange={setExportStartDate}
-                            onEndChange={setExportEndDate}
-                        />
-                        <button onClick={handleExportDeliveredOrders}
-                            disabled={isExporting || !exportStartDate || !exportEndDate}
-                            className={`sl-add-btn${isExporting || !exportStartDate || !exportEndDate ? ' sl-add-btn--disabled' : ''}`}>
-                            <span className="sl-add-btn-icon">
-                                {isExporting
-                                    ? <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="animate-spin"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                    : <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                }
-                            </span>
-                            {isExporting ? 'Exporting...' : 'Export Excel'}
-                        </button>
-                    </div>
-
-                    {/* Filters + Sort Section */}
+                    {/* ── Filters + Sort (compact bar) ── */}
                     <div className="orders-filters-section">
                         <div className="orders-filter-wrap">
                             <Select
@@ -727,6 +727,36 @@ const Orders = () => {
                                 {isDownloadingBulk ? 'Downloading...' : `Download ${selectedOrders.size} Labels`}
                             </button>
                         )}
+                    </div>
+
+                    {/* ── Export (compact) ── */}
+                    <div className="orders-export-section">
+                        <div className="orders-export-left">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span>Export Delivered</span>
+                        </div>
+                        <DateRangePicker
+                            label=""
+                            showIcon={false}
+                            inline
+                            startDate={exportStartDate}
+                            endDate={exportEndDate}
+                            onStartChange={setExportStartDate}
+                            onEndChange={setExportEndDate}
+                        />
+                        <button onClick={handleExportDeliveredOrders}
+                            disabled={isExporting || !exportStartDate || !exportEndDate}
+                            className={`sl-add-btn${isExporting || !exportStartDate || !exportEndDate ? ' sl-add-btn--disabled' : ''}`}>
+                            <span className="sl-add-btn-icon">
+                                {isExporting
+                                    ? <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="animate-spin"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                    : <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                }
+                            </span>
+                            {isExporting ? 'Exporting...' : 'Export'}
+                        </button>
                     </div>
 
                 </div>{/* end orders-header-container */}

@@ -3280,7 +3280,13 @@
           }
         });
       } else {
-        await transaction.rollback();
+        // Save the sync error to the order so it's visible in the orders table
+        await order.update({
+          fship_sync_status: 'failed',
+          fship_sync_error: syncResult.error || 'Sync failed — unknown error',
+        }, { transaction });
+        
+        await transaction.commit();
         
         return res.status(400).json({
           success: false,
