@@ -1820,11 +1820,12 @@
       const orderClause = [[sort, order.toUpperCase()]];
 
       // Build the main query
+      const hasSearch = searchConditions.length > 0;
       const queryOptions = {
         where: filter,
         distinct: true,
         col: "id",
-        subQuery: false,
+        ...(hasSearch ? { subQuery: false } : {}),
         include: [
           {
             model: Brand,
