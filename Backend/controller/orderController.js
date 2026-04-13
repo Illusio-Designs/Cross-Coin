@@ -3218,9 +3218,9 @@
         customer_Address: shippingAddress?.address || '',
         landMark: '',
         customer_Address_Type: 'Home',
-        customer_PinCode: shippingAddress?.pincode || '',
-        customer_City: shippingAddress?.city || '',
-        customer_State: shippingAddress?.state || '',
+        customer_PinCode: String(shippingAddress?.pincode || '').trim(),
+        customer_City: String(shippingAddress?.city || '').trim(),
+        customer_State: String(shippingAddress?.state || '').trim(),
         payment_Mode: order.payment_type === 'cod' ? 1 : 2, // 1=COD, 2=PREPAID
         express_Type: 'surface',
         is_Ndd: 0,
