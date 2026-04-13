@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { ShoppingBag, Zap, ChevronLeft, ChevronRight, Minus, Plus } from 'lucide-react'
 import { useCart } from '@/hooks/useCart'
 import { formatPrice, cn } from '@/lib/utils'
-import { SectionHeader } from '@/components/ui/SectionHeader'
 
 export function ExclusiveSection({ products = [] }) {
   const [active, setActive] = useState(0)
@@ -46,10 +45,13 @@ export function ExclusiveSection({ products = [] }) {
   const selectColor = (i) => { setActiveColor(i); setActiveThumb(0) }
 
   return (
-    <section className="bg-white px-4 py-12 md:px-8 lg:px-16">
-      <SectionHeader eyebrow="Hand-Picked for You" title="Styles You'll <strong>Love to Wear</strong>" center />
+    <section className="bg-white px-3 py-6">
+      {/* Simple title — same as TrustStrip */}
+      <p className="mb-5 text-center text-sm font-bold uppercase tracking-[0.25em] text-brand-black">
+        Hand-Picked for You
+      </p>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_auto_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_auto_1fr]">
 
         {/* LEFT — thumbnails + main image */}
         <div className="flex gap-3">

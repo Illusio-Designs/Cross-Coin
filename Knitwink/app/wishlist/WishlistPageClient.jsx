@@ -38,7 +38,7 @@ export function WishlistPageClient() {
 
   if (items.length === 0) {
     return (
-      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white">
+      <section className="bg-white">
         <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-6 text-center">
           <Heart size={48} className="text-gray-200" />
           <h1 className="font-display text-3xl font-normal text-brand-black">Your wishlist is empty</h1>
@@ -55,7 +55,7 @@ export function WishlistPageClient() {
   }
 
   return (
-    <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-6 py-16 md:px-10 lg:px-16">
+    <section className="bg-white px-6 py-16 md:px-10 lg:px-16">
       <div className="mx-auto max-w-site">
       <div className="mb-8 flex items-center justify-between">
         <h1 className="font-display text-3xl font-normal text-brand-black">

@@ -15,7 +15,7 @@ export function MaterialSection({ materials }) {
   const items = materials && materials.length > 0 ? materials.slice(0, 2) : FALLBACK_MATERIALS;
 
   return (
-    <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-6 py-10 md:px-10 md:py-14">
+    <section className="bg-white px-6 py-10 md:px-10 md:py-14">
       <h2 className="mb-12 text-center font-display text-3xl font-normal text-brand-black lg:text-4xl">
         What we&apos;re made of
       </h2>

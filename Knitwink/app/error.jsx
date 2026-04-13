@@ -10,7 +10,7 @@ export default function Error({
 
 }) {
   return (
-    <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white">
+    <section className="bg-white">
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-6 text-center">
         <h1 className="font-display text-3xl font-normal text-brand-black">Something went wrong</h1>
         <p className="text-base leading-relaxed text-gray-600">

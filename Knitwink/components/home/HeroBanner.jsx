@@ -34,7 +34,7 @@ export function HeroBanner({ slides = [] }) {
 
   if (slides.length === 0) {
     return (
-      <section className="overflow-hidden">
+      <section className="">
         <div className="min-h-[88vh] animate-pulse rounded-2xl bg-gray-200" />
       </section>
     )
@@ -45,7 +45,7 @@ export function HeroBanner({ slides = [] }) {
 
   return (
     <section
-      className="overflow-hidden"
+      className=""
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >

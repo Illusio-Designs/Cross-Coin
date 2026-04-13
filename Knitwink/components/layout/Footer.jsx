@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import { Mail, Phone, MapPin, Instagram, Facebook, Twitter } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 
@@ -12,16 +11,13 @@ const SHOP_LINKS = [
 
 const COMPANY_LINKS = [
   { label: 'About Knitwink', href: ROUTES.about },
-  { label: 'Sustainability',  href: ROUTES.sustainability },
   { label: 'Journal',         href: ROUTES.journal },
   { label: 'Contact Us',      href: ROUTES.contact },
 ]
 
 const HELP_LINKS = [
-  { label: 'Size Guide',          href: ROUTES.sizeGuide },
-  { label: 'Track Your Order',    href: ROUTES.orders },
-  { label: 'Returns & Exchanges', href: '/returns' },
-  { label: 'FAQ',                 href: '/faq' },
+  { label: 'Track Your Order', href: ROUTES.orders },
+  { label: 'Contact Us',       href: ROUTES.contact },
 ]
 
 export function Footer() {
@@ -36,14 +32,7 @@ export function Footer() {
 
           {/* Col 1 — Brand (left-aligned) */}
           <div className="col-span-2 flex flex-col items-start gap-5 md:col-span-1">
-            <Image
-              src="/logo.png"
-              alt="Knitwink"
-              width={130}
-              height={44}
-              className="h-16 w-auto object-contain brightness-0 invert"
-              priority
-            />
+            <img src="/knitwinklogo.webp" alt="Knitwink" className="h-16 w-auto object-contain brightness-0 invert" />
             <p className="text-sm leading-relaxed text-white/55 max-w-[220px]">
               Premium knitwear crafted with care. Comfort meets style in every stitch.
             </p>

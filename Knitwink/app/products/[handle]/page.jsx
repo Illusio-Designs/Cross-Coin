@@ -47,12 +47,12 @@ export default function ProductPage() {
 
   return (
     <>
-      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-5 py-10 lg:px-8">
+      <section className="bg-white px-5 py-10 lg:px-8">
         <ProductPageClient product={product} />
       </section>
 
       {product.description && (
-        <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-5 py-10 lg:px-8">
+        <section className="bg-white px-5 py-10 lg:px-8">
           <div className="mx-auto max-w-site">
             <h2 className="mb-4 text-xl font-semibold text-brand-black">Product Description</h2>
             <p className="text-base leading-relaxed text-gray-600">{product.description}</p>
@@ -60,15 +60,15 @@ export default function ProductPage() {
         </section>
       )}
 
-      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-off-white">
+      <section className="bg-off-white">
         <FeatureBreakdown features={product.features} />
       </section>
 
-      <section className="mx-2 mt-2">
+      <section className="">
         <ReviewsSection />
       </section>
 
-      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-off-white">
+      <section className="bg-off-white">
         <CrossSell currentHandle={product.handle} />
       </section>
     </>

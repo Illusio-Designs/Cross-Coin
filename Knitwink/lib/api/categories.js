@@ -21,15 +21,18 @@ function cleanImageUrl(url) {
 
 export async function getPublicCategories() {
   try {
-    const res = await fetch(`${API_URL}/api/categories/listing`, {
+    // Use brand header — backend filters by brand
+    // Add nocache to bypass Redis cache and get fresh data
+    const res = await fetch(`${API_URL}/api/categories/listing?nocache=1`, {
       headers: { 'X-Brand-Name': BRAND_NAME },
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    const cats = Array.isArray(data) ? data : data.categories ?? [];
-    // Clean any double-encoded image URLs
-    return cats.map((c) => ({ ...c, image: cleanImageUrl(c.image) }));
+    })
+    if (!res.ok) return []
+    const data = await res.json()
+    const cats = Array.isArray(data) ? data : data.categories ?? data.value ?? []
+    return cats
+      .filter((c) => c.status !== 'inactive')
+      .map((c) => ({ ...c, image: cleanImageUrl(c.image) }))
   } catch {
-    return [];
+    return []
   }
 }

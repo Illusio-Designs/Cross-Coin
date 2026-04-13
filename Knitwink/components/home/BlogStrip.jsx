@@ -5,32 +5,33 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { getPosts } from '@/lib/api/blog'
 import { BlogCard } from './BlogCard'
-import { SectionHeader } from '@/components/ui/SectionHeader'
 
 export function BlogStrip() {
   const [posts, setPosts] = useState([])
 
   useEffect(() => {
-    getPosts().then((all) => setPosts(all.slice(0, 3))).catch(() => {})
+    getPosts().then((all) => setPosts(all.slice(0, 4))).catch(() => {})
   }, [])
 
   return (
-    <section className="bg-gray-50 px-4 py-12 md:px-8 lg:px-16">
-      <div className="mb-8 flex items-end justify-between">
-        <SectionHeader eyebrow="Knitwink Journal" title="Tips, Trends &amp; <strong>Knitwear Tales</strong>" />
-        <Link href="/journal" className="hidden items-center gap-1 text-xs font-medium text-gray-500 hover:text-brand-black sm:flex">
-          View all <ArrowRight size={13} />
+    <div className="px-3 py-6">
+      {/* Title row — centered label + right-aligned view all */}
+      <div className="relative mb-5 flex items-center justify-center">
+        <p className="text-sm font-bold uppercase tracking-[0.25em] text-brand-black">The Journal</p>
+        <Link href="/journal" className="absolute right-0 hidden items-center gap-1 text-xs text-gray-400 hover:text-brand-black sm:flex">
+          View all <ArrowRight size={12} />
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* 4 cards — 2 cols mobile, 4 cols desktop */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {posts.length === 0
-          ? Array.from({ length: 3 }).map((_, i) => (
+          ? Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-                <div className="h-52 animate-pulse bg-gray-100" />
-                <div className="flex flex-col gap-3 p-4">
-                  <div className="h-4 w-3/4 animate-pulse rounded bg-gray-100" />
-                  <div className="h-9 w-full animate-pulse rounded-xl bg-gray-100" />
+                <div className="h-40 animate-pulse bg-gray-100" />
+                <div className="flex flex-col gap-2 p-3">
+                  <div className="h-3 w-3/4 animate-pulse rounded bg-gray-100" />
+                  <div className="h-3 w-full animate-pulse rounded bg-gray-100" />
                 </div>
               </div>
             ))
@@ -38,11 +39,11 @@ export function BlogStrip() {
         }
       </div>
 
-      <div className="mt-6 text-center sm:hidden">
+      <div className="mt-4 text-center sm:hidden">
         <Link href="/journal" className="inline-flex items-center gap-1 text-xs font-medium text-brand-black">
-          View all <ArrowRight size={13} />
+          View all <ArrowRight size={12} />
         </Link>
       </div>
-    </section>
+    </div>
   )
 }

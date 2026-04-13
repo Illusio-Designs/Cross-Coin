@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { HeroBanner } from '@/components/home/HeroBanner'
+import { CategoryCards } from '@/components/home/CategoryCards'
 import { TrustStrip } from '@/components/home/TrustStrip'
-import { CollectionGrid } from '@/components/home/CollectionGrid'
 import { ExclusiveSection } from '@/components/home/ExclusiveSection'
 import { BestsellerRow } from '@/components/home/BestsellerRow'
 import { ReviewBand } from '@/components/home/ReviewBand'
@@ -26,12 +26,12 @@ export default function HomePage() {
   return (
     <>
       <HeroBanner slides={slides} />
-      <TrustStrip />
-      <CollectionGrid categories={categories} />
+      <CategoryCards categories={categories} />
       <ExclusiveSection products={bestsellers} />
       <BestsellerRow products={bestsellers} />
       <ReviewBand />
       <BlogStrip />
+      <TrustStrip />
     </>
   )
 }

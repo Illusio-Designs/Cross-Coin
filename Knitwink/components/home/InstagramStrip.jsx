@@ -11,7 +11,7 @@ const UGC_IMAGES = [
 
 export function InstagramStrip() {
   return (
-    <section className="mx-2 mt-2 mb-2 overflow-hidden rounded-2xl bg-white py-10 md:py-14">
+    <section className="mb-2 bg-white py-10 md:py-14">
       <p className="mb-2 text-center text-xs font-medium uppercase tracking-widest text-gray-600">
         Follow us @allbirds
       </p>
