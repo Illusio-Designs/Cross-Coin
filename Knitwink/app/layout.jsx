@@ -53,7 +53,7 @@ export default function RootLayout({ children }) {
         <Navbar />
         <MobileMenu />
         <CartDrawer />
-        <main className="flex-1 pt-[10px]">
+        <main className="flex-1 pb-1">
           <Breadcrumb />
           {children}
         </main>

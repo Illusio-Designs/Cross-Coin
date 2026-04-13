@@ -28,7 +28,7 @@ const EXCLUSIVES = [
 
 export function ExclusivePair() {
   return (
-    <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-4 py-10 md:px-6 md:py-12">
+    <section className="bg-white px-4 py-10 md:px-6 md:py-12">
       {/* Heading */}
       <div className="mb-8 text-center">
         <p className="text-xs font-medium uppercase tracking-widest text-gray-600">Just dropped</p>

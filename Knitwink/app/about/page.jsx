@@ -1,165 +1,184 @@
+'use client'
 
-import Image from 'next/image';
-import { SITE_NAME } from '@/lib/constants';
-
-export const metadata = {
-  title: 'About Us',
-  description: 'The story behind Allbirds — natural materials, thoughtful design, a better footprint.',
-  openGraph: {
-    title: `About Us | ${SITE_NAME}`,
-    description: 'The story behind Allbirds.',
-    images: [{ url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200&q=80' }]
-  }
-};
+import Link from 'next/link'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 
 const STATS = [
-{ value: '2016', label: 'Founded' },
-{ value: '1M+', label: 'Pairs Sold' },
-{ value: '95%', label: 'Natural Materials' },
-{ value: '50+', label: 'Countries' }];
+  { value: '2020',   label: 'Est.' },
+  { value: '50K+',   label: 'Customers' },
+  { value: '4.8★',   label: 'Avg Rating' },
+  { value: '12+',    label: 'Colors' },
+]
 
+const PILLARS = [
+  {
+    number: '01',
+    title: 'Foot Health First',
+    body: 'We started Knitwink because we saw how many people suffer from toe misalignment, bunion pain, and foot fatigue — and how little attention everyday socks paid to these problems. Our toe separator design gently realigns your toes with every wear.',
+  },
+  {
+    number: '02',
+    title: 'Free Size, Real Fit',
+    body: 'One size that actually fits. Our socks are engineered with stretch-knit fabric that adapts to your foot shape — not the other way around. No more bunching, no more slipping, no more digging seams.',
+  },
+  {
+    number: '03',
+    title: 'Everyday Comfort',
+    body: 'Whether you are recovering at home, heading to yoga, or just going through a long day — Knitwink socks work quietly in the background, keeping your feet comfortable and your toes happy.',
+  },
+]
 
-const TEAM = [
-{ name: 'Tim Brown', title: 'Co-CEO & Co-Founder', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80' },
-{ name: 'Joey Zwillinger', title: 'Co-CEO & Co-Founder', image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&q=80' },
-{ name: 'Erin Lowenberg', title: 'Chief Marketing Officer', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=80' },
-{ name: 'Hian Oliveira', title: 'Chief Product Officer', image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&q=80' }];
-
-
-const VALUES = [
-{
-  icon: '🌿',
-  title: 'Natural First',
-  description: 'We start with nature. Every material is chosen because it performs better and treads lighter than synthetic alternatives.'
-},
-{
-  icon: '🔬',
-  title: 'Radical Transparency',
-  description: 'We publish the carbon footprint of every product. No greenwashing — just honest numbers and a commitment to improve them.'
-},
-{
-  icon: '♻️',
-  title: 'Circular by Design',
-  description: 'Our ReRun program gives worn Allbirds a second life. Because the most sustainable shoe is one that never ends up in a landfill.'
-}];
-
-
-const STORY_SECTIONS = [
-{
-  heading: 'It started with a sheep',
-  body: 'In 2014, Tim Brown — a New Zealand native and professional footballer — had a simple idea: make a better shoe using merino wool. After years of development and a record-breaking Kickstarter campaign, Allbirds launched in 2016 with one shoe and one mission.',
-  image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900&q=80',
-  imageAlt: 'Merino wool fibers close-up',
-  imageLeft: false
-},
-{
-  heading: 'Then came the trees',
-  body: 'We didn\'t stop at wool. We developed Tree, a silky-soft material made from TENCEL™ lyocell sourced from sustainably harvested eucalyptus trees. Then SweetFoam® — the world\'s first carbon-negative EVA foam, made from sugarcane.',
-  image: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=900&q=80',
-  imageAlt: 'Eucalyptus forest',
-  imageLeft: true
-}];
-
+const FEATURES = [
+  {
+    icon: (
+      <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+        <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+      </svg>
+    ),
+    title: 'Soft Breathable Fabric',
+    body: 'Made from premium cotton blend that keeps your feet cool, dry, and comfortable all day long.',
+  },
+  {
+    icon: (
+      <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+    ),
+    title: 'Toe Separator Design',
+    body: 'Five-toe structure gently separates and realigns toes — ideal for bunion correction, plantar fasciitis, and daily recovery.',
+  },
+  {
+    icon: (
+      <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+        <path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/>
+      </svg>
+    ),
+    title: 'Wash & Wear Durable',
+    body: 'Tested through 50+ wash cycles. Our socks hold their shape, colour, and elasticity — wash after wash.',
+  },
+  {
+    icon: (
+      <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+        <path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>
+      </svg>
+    ),
+    title: 'Pan India Delivery',
+    body: 'Fast, tracked shipping to every corner of India. Most orders arrive within 3–5 business days.',
+  },
+]
 
 export default function AboutPage() {
   return (
     <>
       {/* Hero */}
-      <section className="mx-2 mt-2 overflow-hidden rounded-2xl relative flex min-h-[70vh] items-center justify-center bg-off-white">
-        <Image
-          src="https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=1600&q=80"
-          alt="Allbirds shoes on natural terrain"
-          fill
-          className="object-cover object-center"
-          priority />
-        
-        <div className="absolute inset-0 bg-brand-black/30" />
-        <div className="relative z-10 px-6 text-center">
-          <h1 className="font-display text-6xl font-normal tracking-tight text-white lg:text-8xl">
-            Our Story
-          </h1>
-          <p className="mx-auto mt-6 max-w-lg text-base leading-relaxed text-white/90">
-            We believe in better. Better materials, better design, a better footprint on this planet.
-          </p>
+      <section className="relative min-h-screen flex items-end bg-brand-black overflow-hidden">
+        <img
+          src="https://ik.imagekit.io/wp2oatzmf/products/variation_0_image-1774363348670-268740372.jpg?tr=w-1600,h-1200,q-85,f-auto"
+          alt="Knitwink foot alignment socks"
+          className="absolute inset-0 h-full w-full object-cover object-center opacity-45"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-brand-black via-brand-black/30 to-transparent" />
+
+        <div className="relative z-10 w-full px-6 pb-20 md:px-10 lg:px-16 lg:pb-28">
+          <div className="max-w-2xl">
+            <span className="inline-block rounded-full border border-white/20 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-white/50">
+              About Knitwink
+            </span>
+            <h1 className="mt-5 font-display text-5xl font-normal leading-tight text-white md:text-6xl lg:text-7xl">
+              Socks That Actually<br /><strong>Care for Your Feet</strong>
+            </h1>
+            <p className="mt-6 text-base leading-relaxed text-white/60 max-w-lg">
+              We are a small team obsessed with one thing — making socks that genuinely improve how your feet feel. Not just look good, not just last long — but actually help.
+            </p>
+            <Link
+              href="/collections"
+              className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-brand-black transition-colors hover:bg-gray-100"
+            >
+              Explore Our Socks
+            </Link>
+          </div>
+
+          {/* Stats row */}
+          <div className="mt-16 grid grid-cols-2 gap-4 border-t border-white/10 pt-8 md:grid-cols-4">
+            {STATS.map((s) => (
+              <div key={s.label}>
+                <p className="font-display text-3xl font-semibold text-white">{s.value}</p>
+                <p className="mt-0.5 text-xs font-medium uppercase tracking-widest text-white/40">{s.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Story sections */}
-      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-6 py-16 md:px-10 md:py-24 lg:px-16 lg:py-32">
-        <div className="mx-auto max-w-site flex flex-col gap-24">
-          {STORY_SECTIONS.map((section) =>
-          <div key={section.heading} className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
-              <div className={`relative aspect-[4/3] overflow-hidden rounded-2xl bg-gray-100 ${section.imageLeft ? 'lg:order-1' : 'lg:order-2'}`}>
-                <Image src={section.image} alt={section.imageAlt} fill className="object-cover" />
-              </div>
-              <div className={section.imageLeft ? 'lg:order-2' : 'lg:order-1'}>
-                <h2 className="font-display text-3xl font-normal text-brand-black lg:text-4xl">
-                  {section.heading}
-                </h2>
-                <p className="mt-4 text-base leading-relaxed text-gray-600">{section.body}</p>
-              </div>
+      {/* Mission */}
+      <section className="bg-white px-6 py-16 md:px-10 lg:px-16 lg:py-24">
+        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gray-400">Our Belief</p>
+            <h2 className="mt-3 font-display text-3xl font-normal text-brand-black lg:text-4xl">
+              The smallest things<br /><strong>make the biggest difference</strong>
+            </h2>
+            <div className="mt-6 flex flex-col gap-4 text-base leading-relaxed text-gray-500">
+              <p>At Knitwink, we started with a frustration most people share but rarely talk about — socks that lose shape after two washes, seams that dig in, and fabrics that trap heat. We decided to fix that.</p>
+              <p>Our mission is to engineer everyday essentials that perform as hard as you do. Whether you are recovering from foot pain, going through a long day at work, or simply relaxing at home — your socks should never be the problem.</p>
+              <p>We work directly with manufacturers, control every step of the supply chain, and refuse to cut corners on materials. That is the Knitwink promise.</p>
             </div>
-          )}
-        </div>
-      </section>
-
-      {/* Stats band */}
-      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-off-white py-16 md:py-24">
-        <div className="mx-auto max-w-site px-6 md:px-10 lg:px-16">
-          <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
-            {STATS.map((stat) =>
-            <div key={stat.label} className="text-center">
-                <p className="font-display text-4xl font-normal text-brand-black lg:text-5xl">
-                  {stat.value}
-                </p>
-                <p className="mt-2 text-xs font-medium uppercase tracking-widest text-gray-600">
-                  {stat.label}
-                </p>
-              </div>
-            )}
+          </div>
+          <div className="overflow-hidden rounded-2xl bg-gray-100">
+            <img
+              src="https://ik.imagekit.io/wp2oatzmf/products/variation_1_image-1774363348678-875707193.jpg?tr=w-900,h-900,q-85,f-auto"
+              alt="Knitwink socks detail"
+              className="h-full w-full object-cover"
+              style={{ minHeight: 360 }}
+            />
           </div>
         </div>
       </section>
 
-      {/* Team */}
-      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-6 py-16 md:px-10 md:py-24 lg:px-16 lg:py-32">
-        <div className="mx-auto max-w-site">
-          <h2 className="mb-12 text-center font-display text-3xl font-normal text-brand-black lg:text-4xl">
-            The people behind the shoes
-          </h2>
-          <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
-            {TEAM.map((person) =>
-            <div key={person.name} className="flex flex-col gap-3">
-                <div className="relative aspect-square overflow-hidden rounded-2xl bg-gray-100">
-                  <Image src={person.image} alt={person.name} fill className="object-cover" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-brand-black">{person.name}</p>
-                  <p className="text-xs text-gray-600">{person.title}</p>
-                </div>
-              </div>
-            )}
-          </div>
+      {/* Three Pillars */}
+      <section className="bg-gray-50 px-6 py-16 md:px-10 lg:px-16 lg:py-20">
+        <SectionHeader eyebrow="How We Think" title="Three Things We <strong>Never Compromise On</strong>" />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {PILLARS.map((p) => (
+            <div key={p.number} className="rounded-2xl border border-gray-100 bg-white p-8">
+              <span className="font-display text-4xl font-normal text-gray-100">{p.number}</span>
+              <h3 className="mt-3 text-base font-semibold text-brand-black">{p.title}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-gray-500">{p.body}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* Values */}
-      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-off-white py-16 md:py-24 lg:py-32">
-        <div className="mx-auto max-w-site px-6 md:px-10 lg:px-16">
-          <h2 className="mb-12 text-center font-display text-3xl font-normal text-brand-black lg:text-4xl">
-            What we stand for
-          </h2>
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-            {VALUES.map((value) =>
-            <div key={value.title} className="flex flex-col gap-4 rounded-2xl bg-white p-8">
-                <span className="text-3xl" aria-hidden="true">{value.icon}</span>
-                <p className="text-sm font-medium text-brand-black">{value.title}</p>
-                <p className="text-sm leading-relaxed text-gray-600">{value.description}</p>
+      {/* Product Features */}
+      <section className="bg-white px-6 py-16 md:px-10 lg:px-16 lg:py-20">
+        <SectionHeader eyebrow="What Makes Us Different" title="Engineered for <strong>Real Feet</strong>" center />
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {FEATURES.map((f) => (
+            <div key={f.title} className="flex flex-col gap-4 rounded-2xl border border-gray-100 bg-gray-50 p-6">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-sm text-brand-black">
+                {f.icon}
               </div>
-            )}
-          </div>
+              <p className="text-sm font-semibold text-brand-black">{f.title}</p>
+              <p className="text-sm leading-relaxed text-gray-500">{f.body}</p>
+            </div>
+          ))}
         </div>
       </section>
-    </>);
 
+      {/* Quote */}
+      <section className="relative overflow-hidden bg-brand-black px-6 py-20 md:px-10 lg:px-16 lg:py-28">
+        <img
+          src="https://ik.imagekit.io/wp2oatzmf/products/variation_2_image-1774363348683-14851714.jpg?tr=w-1600,h-800,q-80,f-auto"
+          alt="Knitwink"
+          className="absolute inset-0 h-full w-full object-cover opacity-20"
+        />
+        <div className="relative z-10 mx-auto max-w-2xl text-center">
+          <p className="font-display text-3xl font-normal leading-snug text-white lg:text-4xl">
+            &ldquo;We believe every step you take should feel supported, comfortable, and pain-free. That is not a luxury — that is what socks should do.&rdquo;
+          </p>
+          <p className="mt-6 text-sm text-white/40">— The Knitwink Team</p>
+        </div>
+      </section>
+    </>
+  )
 }

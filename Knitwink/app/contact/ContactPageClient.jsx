@@ -101,7 +101,7 @@ export function ContactPageClient() {
   return (
     <>
       {/* Main contact section */}
-      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-6 py-16 md:px-10 lg:px-16">
+      <section className="bg-white px-6 py-16 md:px-10 lg:px-16">
         <div className="mx-auto max-w-site">
           {/* Heading */}
           <div className="mb-16 text-center">
@@ -199,7 +199,7 @@ export function ContactPageClient() {
       </section>
 
       {/* FAQ section */}
-      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-off-white px-6 py-16 md:px-10 lg:px-16">
+      <section className="bg-off-white px-6 py-16 md:px-10 lg:px-16">
         <div className="mx-auto max-w-site">
           <h2 className="mb-8 font-display text-3xl font-normal text-brand-black">
             Frequently asked questions

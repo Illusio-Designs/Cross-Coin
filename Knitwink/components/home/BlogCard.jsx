@@ -1,69 +1,47 @@
 'use client'
 
 import Link from 'next/link'
-import { Clock, User, Play } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
-function formatDate(str) {
-  try { return new Date(str).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) }
-  catch { return '' }
-}
+/**
+ * BlogCard — shared between BlogStrip (compact) and Journal listing (full)
+ * size="compact" → h-40 image, smaller text (default for strip)
+ * size="full"    → h-52 image, normal text (for journal listing page)
+ */
+export function BlogCard({ post, size = 'compact' }) {
+  const imgH = size === 'full' ? 'h-56' : 'h-48'
+  const titleCls = size === 'full' ? 'text-sm font-bold' : 'text-xs font-bold'
+  const excerptCls = size === 'full' ? 'text-xs' : 'text-[11px]'
 
-export function BlogCard({ post }) {
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+    <Link
+      href={`/journal/${post.slug}`}
+      className="group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md"
+    >
       {/* Image */}
-      <div className="relative overflow-hidden rounded-t-2xl">
+      <div className="relative overflow-hidden">
         {post.coverImage
-          ? <img src={post.coverImage} alt={post.title} className="h-52 w-full object-cover" />
-          : <div className="h-52 w-full bg-gray-100" />
+          ? <img src={post.coverImage} alt={post.title} className={`${imgH} w-full object-cover transition-transform duration-500 group-hover:scale-105`} />
+          : <div className={`${imgH} w-full bg-gray-100`} />
         }
-        <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-lg bg-white/90 px-3 py-1.5 text-xs font-semibold text-brand-black backdrop-blur-sm shadow-sm">
-          <span className="h-2 w-2 rounded-full bg-red-500" />
-          Blog
-        </span>
+        {post.category && (
+          <span className="absolute left-3 top-3 rounded-lg bg-white/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-brand-black backdrop-blur-sm">
+            {post.category}
+          </span>
+        )}
       </div>
 
       {/* Content */}
-      <div className="flex flex-1 flex-col gap-3 p-4">
-        <h3 className="text-sm font-bold leading-snug text-brand-black line-clamp-2">{post.title}</h3>
-        <p className="text-xs leading-relaxed text-gray-500 line-clamp-2">{post.excerpt}</p>
-
-        {/* Category + Author */}
-        <div className="flex flex-wrap gap-2">
-          {post.category && (
-            <span className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600">
-              <Clock size={11} className="text-gray-400" />
-              {post.category}
-            </span>
-          )}
+      <div className="flex flex-1 flex-col gap-2 p-3">
+        <h3 className={`${titleCls} leading-snug text-brand-black line-clamp-2`}>{post.title}</h3>
+        <p className={`${excerptCls} leading-relaxed text-gray-400 line-clamp-2 flex-1`}>{post.excerpt}</p>
+        <div className="flex items-center justify-between pt-1">
           {post.author?.name && (
-            <span className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-500">
-              <User size={11} />
-              {post.author.name}
-            </span>
+            <span className="text-[10px] text-gray-400">{post.author.name}</span>
           )}
+          <ArrowRight size={13} className="ml-auto text-gray-300 transition-colors group-hover:text-brand-black" />
         </div>
-
-        {/* Tags */}
-        {post.tags?.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {post.tags.slice(0, 4).map((tag) => (
-              <span key={tag} className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-medium text-gray-600">
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* CTA */}
-        <Link
-          href={`/journal/${post.slug}`}
-          className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-black py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-800"
-        >
-          <Play size={13} className="fill-white" />
-          Read Article
-        </Link>
       </div>
-    </div>
+    </Link>
   )
 }

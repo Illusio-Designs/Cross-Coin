@@ -31,7 +31,7 @@ export default function BlogPostPage() {
   }, [slug])
 
   if (loading) return (
-    <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-6 py-12">
+    <section className="bg-white px-6 py-12">
       <div className="space-y-4">
         <div className="h-3 w-20 animate-pulse rounded-full bg-gray-100" />
         <div className="h-8 w-4/5 animate-pulse rounded bg-gray-100" />
@@ -47,7 +47,7 @@ export default function BlogPostPage() {
   )
 
   if (!post) return (
-    <section className="mx-2 mt-2 rounded-2xl bg-white px-6 py-20 text-center">
+    <section className="bg-white px-6 py-20 text-center">
       <p className="text-gray-400">Post not found.</p>
       <Link href="/journal" className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-brand-black underline underline-offset-4">
         <ArrowLeft size={14} /> Back to Journal
@@ -59,13 +59,13 @@ export default function BlogPostPage() {
     <>
       {/* Hero cover — full width */}
       {post.coverImage && (
-        <section className="mx-2 mt-2 overflow-hidden rounded-2xl">
+        <section className="">
           <img src={post.coverImage} alt={post.title} className="h-auto w-full object-cover" />
         </section>
       )}
 
       {/* Article body — full width with padding only */}
-      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-6 py-10 md:px-10 lg:px-16">
+      <section className="bg-white px-6 py-10 md:px-10 lg:px-16">
 
         {/* Back */}
         <Link href="/journal" className="mb-6 inline-flex items-center gap-1.5 text-xs font-medium text-gray-400 transition-colors hover:text-brand-black">
@@ -125,7 +125,7 @@ export default function BlogPostPage() {
 
       {/* Related — full width with padding */}
       {related.length > 0 && (
-        <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-off-white px-6 py-10 md:px-10 lg:px-16">
+        <section className="bg-off-white px-6 py-10 md:px-10 lg:px-16">
           <h2 className="mb-6 font-display text-2xl font-normal text-brand-black">More from the Journal</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {related.map((p) => (

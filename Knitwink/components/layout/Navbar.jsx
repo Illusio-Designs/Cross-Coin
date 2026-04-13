@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Search, User, ShoppingBag } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useUiStore } from '@/store/uiStore'
@@ -48,8 +47,8 @@ export function Navbar() {
   return (
     <div
       className={cn(
-        'fixed left-4 right-4 z-50 transition-all duration-300',
-        scrolled ? 'top-2' : 'top-10'
+        'fixed left-5 right-5 z-50 transition-all duration-300',
+        scrolled ? 'top-2' : 'top-13'
       )}
       onMouseLeave={handleMouseLeave}
       onMouseEnter={handleNavMouseEnter}
@@ -58,8 +57,8 @@ export function Navbar() {
         className={cn(
           'relative grid grid-cols-[auto_1fr_auto] items-center rounded-2xl bg-white px-4 transition-all duration-300',
           scrolled
-            ? 'h-[60px] shadow-[0_4px_24px_rgba(0,0,0,0.14),0_0_0_0.5px_rgba(0,0,0,0.06)]'
-            : 'h-[68px] shadow-[0_2px_20px_rgba(0,0,0,0.10),0_0_0_0.5px_rgba(0,0,0,0.05)]'
+            ? 'h-[50px] shadow-[0_4px_24px_rgba(0,0,0,0.14),0_0_0_0.5px_rgba(0,0,0,0.06)]'
+            : 'h-[50px] shadow-[0_2px_20px_rgba(0,0,0,0.10),0_0_0_0.5px_rgba(0,0,0,0.05)]'
         )}
         aria-label="Main navigation"
       >
@@ -73,14 +72,14 @@ export function Navbar() {
             </svg>
           </button>
           <Link href={ROUTES.home} className="hidden lg:block focus-visible:outline-none" aria-label="Knitwink home">
-            <Image src="/logo.png" alt="Knitwink" width={120} height={40} priority className="h-13 w-auto object-contain" />
+            <img src="/logo.png" alt="Knitwink" className="h-8 w-auto object-contain" />
           </Link>
         </div>
 
         {/* Mobile centered logo */}
         <div className="absolute left-1/2 -translate-x-1/2 lg:hidden">
           <Link href={ROUTES.home} className="focus-visible:outline-none" aria-label="Knitwink home">
-            <Image src="/logo.png" alt="Knitwink" width={110} height={36} priority className="h-9 w-auto object-contain" />
+            <img src="/logo.png" alt="Knitwink" className="h-9 w-auto object-contain" />
           </Link>
         </div>
 
