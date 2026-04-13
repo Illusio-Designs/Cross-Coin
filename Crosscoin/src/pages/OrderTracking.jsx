@@ -145,7 +145,7 @@ export default function OrderTracking() {
                                 type="text"
                                 value={trackingInput}
                                 onChange={(e) => setTrackingInput(e.target.value)}
-                                placeholder={trackingMethod === 'order_number' ? 'e.g. ORD-20260208-6165' : 'Enter AWB number'}
+                                placeholder={trackingMethod === 'order_number' ? 'e.g. CC-M5KXQR8-A3F1B2' : 'Enter AWB number'}
                                 className="ot-input"
                             />
                             <button type="submit" className="ot-track-btn" disabled={loading}>
