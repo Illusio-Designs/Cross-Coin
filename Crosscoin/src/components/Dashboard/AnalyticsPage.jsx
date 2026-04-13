@@ -7,29 +7,21 @@ const ThreeGlobe = dynamic(() => import("./ThreeGlobe"), { ssr: false });
 
 const fmt = n => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 const fmtTime = s => `${Math.floor(s / 60)}m ${s % 60}s`;
+const fmtCurrency = n => n > 0 ? `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : '—';
 
-function StatCard({ label, value, delta, accent }) {
-  return (
-    <div className="an-stat-card">
-      <div className="an-stat-label">{label}</div>
-      <div className="an-stat-value" style={accent ? { color: accent } : {}}>{value ?? "—"}</div>
-      {delta && <div className="an-stat-delta" style={{ color: "#16a34a" }}>{delta}</div>}
-    </div>
-  );
-}
-
-function BarRow({ label, value, max, color = "#CE1E36" }) {
-  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
-  return (
-    <div className="an-bar-row">
-      <span className="an-bar-label">{label}</span>
-      <div className="an-bar-track">
-        <div className="an-bar-fill" style={{ width: `${pct}%`, background: color }} />
-      </div>
-      <span className="an-bar-val">{fmt(value)}</span>
-    </div>
-  );
-}
+/* ── Icons ── */
+const IC = {
+  chart: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+  users: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  globe: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+  page: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
+  source: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
+  pin: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
+  cart: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,
+  rupee: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12M6 8h12M6 13l8 8M6 13h3a4 4 0 0 0 0-8H6"/></svg>,
+  chevDown: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>,
+  chevUp: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>,
+};
 
 // City coords
 const CITY_COORDS = {
@@ -43,7 +35,6 @@ const CITY_COORDS = {
   Noida: [28.535, 77.391], Visakhapatnam: [17.686, 83.218], Agra: [27.176, 78.008],
   Varanasi: [25.317, 82.973], Meerut: [28.984, 77.706], Nashik: [19.997, 73.789],
   Aurangabad: [19.877, 75.343], Amritsar: [31.634, 74.872], Jodhpur: [26.292, 73.017],
-  // International (kept for globe only)
   London: [51.507, -0.128], "New York": [40.714, -74.006], "Los Angeles": [34.052, -118.244],
   Toronto: [43.651, -79.347], Sydney: [-33.868, 151.209], Dubai: [25.204, 55.27],
   Singapore: [1.352, 103.82], "Kuala Lumpur": [3.139, 101.687], Bangkok: [13.756, 100.502],
@@ -53,22 +44,73 @@ const CITY_COORDS = {
   "San Francisco": [37.774, -122.419], Seattle: [47.606, -122.332],
 };
 
+const COUNTRY_COORDS = {
+  India: [20.593, 78.962], "United States": [37.09, -95.712],
+  "United Kingdom": [55.378, -3.436], Canada: [56.13, -106.347],
+  Australia: [-25.274, 133.775], UAE: [23.424, 53.848],
+  Singapore: [1.352, 103.82], Malaysia: [4.21, 101.975],
+  Germany: [51.165, 10.451], France: [46.227, 2.213],
+  Japan: [36.204, 138.252], "Hong Kong": [22.319, 114.169],
+  "Saudi Arabia": [23.886, 45.079], Qatar: [25.354, 51.184],
+  Thailand: [15.87, 100.993], Netherlands: [52.132, 5.291],
+  "New Zealand": [-40.9, 174.886], "South Africa": [-30.559, 22.937],
+};
+
+/* ── Section Title (matches dashboard) ── */
+function SectionTitle({ icon, children }) {
+  return (
+    <div className="dc-section-title">
+      <span className="dc-section-icon">{icon}</span>
+      {children}
+    </div>
+  );
+}
+
+/* ── Collapsible Section ── */
+function CollapsibleSection({ icon, title, children, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="dashboard-section">
+      <button className="dc-collapse-trigger" onClick={() => setOpen(!open)} type="button">
+        <SectionTitle icon={icon}>{title}</SectionTitle>
+        <span className="dc-collapse-chevron">{open ? IC.chevUp : IC.chevDown}</span>
+      </button>
+      {open && <div className="dc-collapse-body">{children}</div>}
+    </div>
+  );
+}
+
+/* ── Bar Row for list panels ── */
+function BarRow({ label, value, max, color = "#CE1E36" }) {
+  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  return (
+    <div className="an-bar-row">
+      <span className="an-bar-label">{label}</span>
+      <div className="an-bar-track">
+        <div className="an-bar-fill" style={{ width: `${pct}%`, background: color }} />
+      </div>
+      <span className="an-bar-val">{fmt(value)}</span>
+    </div>
+  );
+}
+
 
 export default function AnalyticsPage() {
-  const markersRef    = useRef([]);
-  const [mounted, setMounted]               = useState(false);
-  const [stats, setStats]                   = useState(null);
-  const [realtimeUsers, setRealtimeUsers]   = useState(null);
-  const [pages, setPages]                   = useState([]);
-  const [sources, setSources]               = useState([]);
-  const [topLocations, setTopLocations]     = useState([]);
-  const [brandId, setBrandId]               = useState(1);
-  const [brands, setBrands]                 = useState([]);
+  const markersRef = useRef([]);
+  const [mounted, setMounted] = useState(false);
+  const [stats, setStats] = useState(null);
+  const [realtimeUsers, setRealtimeUsers] = useState(null);
+  const [pages, setPages] = useState([]);
+  const [sources, setSources] = useState([]);
+  const [topLocations, setTopLocations] = useState([]);
+  const [brandId, setBrandId] = useState(1);
+  const [brands, setBrands] = useState([]);
   const [settingsLoading, setSettingsLoading] = useState(true);
-  const [ga4Configured, setGa4Configured]   = useState(false);
-  const [propertyId, setPropertyId]         = useState("");
-  const [accessToken, setAccessToken]       = useState("");
-  const [lastUpdated, setLastUpdated]       = useState(null);
+  const [ga4Configured, setGa4Configured] = useState(false);
+  const [propertyId, setPropertyId] = useState("");
+  const [accessToken, setAccessToken] = useState("");
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [dateRange] = useState({ start: 'today', end: 'today' });
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -87,9 +129,9 @@ export default function AnalyticsPage() {
     brandSettingsService.getSettingsByCategory(brandId, "analytics")
       .then(r => {
         const list = r.data || r || [];
-        const pid  = list.find(s => s.key === "GA4_PROPERTY_ID");
+        const pid = list.find(s => s.key === "GA4_PROPERTY_ID");
         const email = list.find(s => s.key === "GA4_SA_EMAIL");
-        const pkey  = list.find(s => s.key === "GA4_SA_PRIVATE_KEY");
+        const pkey = list.find(s => s.key === "GA4_SA_PRIVATE_KEY");
         const configured = !!(pid?.value && email?.value && pkey?.value);
         setGa4Configured(configured);
         if (pid?.value) setPropertyId(pid.value);
@@ -104,18 +146,6 @@ export default function AnalyticsPage() {
       .catch(() => setGa4Configured(false))
       .finally(() => setSettingsLoading(false));
   }, [mounted, brandId]);
-
-  const COUNTRY_COORDS = {
-    India: [20.593, 78.962], "United States": [37.09, -95.712],
-    "United Kingdom": [55.378, -3.436], Canada: [56.13, -106.347],
-    Australia: [-25.274, 133.775], UAE: [23.424, 53.848],
-    Singapore: [1.352, 103.82], Malaysia: [4.21, 101.975],
-    Germany: [51.165, 10.451], France: [46.227, 2.213],
-    Japan: [36.204, 138.252], "Hong Kong": [22.319, 114.169],
-    "Saudi Arabia": [23.886, 45.079], Qatar: [25.354, 51.184],
-    Thailand: [15.87, 100.993], Netherlands: [52.132, 5.291],
-    "New Zealand": [-40.9, 174.886], "South Africa": [-30.559, 22.937],
-  };
 
   // Fetch realtime active users (every 30s)
   const fetchRealtime = useCallback(async () => {
@@ -142,21 +172,18 @@ export default function AnalyticsPage() {
       setRealtimeUsers(total);
 
       const newMarkers = [];
-
       rows.forEach(row => {
-        const city    = row.dimensionValues[0]?.value ?? "";
+        const city = row.dimensionValues[0]?.value ?? "";
         const country = row.dimensionValues[1]?.value ?? "";
-        const count   = parseInt(row.metricValues[0]?.value ?? "1", 10);
-        const coords  = CITY_COORDS[city] || COUNTRY_COORDS[country];
+        const count = parseInt(row.metricValues[0]?.value ?? "1", 10);
+        const coords = CITY_COORDS[city] || COUNTRY_COORDS[country];
         if (coords) {
           newMarkers.push({ location: [coords[0], coords[1]], city, count, size: 0.05 });
         } else {
           newMarkers.push({ city, count, size: 0.05 });
         }
       });
-
       markersRef.current = newMarkers;
-
     } catch {}
   }, [accessToken, propertyId]);
 
@@ -173,24 +200,24 @@ export default function AnalyticsPage() {
       const pageFilter = { andGroup: { expressions: [excludeDashboard, excludeAuth] } };
 
       const [mainData, yestData, pagesData, srcData, locData] = await Promise.all([
-        post({ dateRanges: [{ startDate: "today", endDate: "today" }], metrics: [{ name: "sessions" }, { name: "screenPageViews" }, { name: "activeUsers" }, { name: "bounceRate" }, { name: "averageSessionDuration" }, { name: "newUsers" }, { name: "purchaseRevenue" }, { name: "transactions" }] }),
+        post({ dateRanges: [{ startDate: dateRange.start, endDate: dateRange.end }], metrics: [{ name: "sessions" }, { name: "screenPageViews" }, { name: "activeUsers" }, { name: "bounceRate" }, { name: "averageSessionDuration" }, { name: "newUsers" }, { name: "purchaseRevenue" }, { name: "transactions" }] }),
         post({ dateRanges: [{ startDate: "yesterday", endDate: "yesterday" }], metrics: [{ name: "sessions" }] }),
-        post({ dateRanges: [{ startDate: "today", endDate: "today" }], dimensions: [{ name: "pagePath" }], metrics: [{ name: "screenPageViews" }], orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }], limit: 6, dimensionFilter: pageFilter }),
-        post({ dateRanges: [{ startDate: "today", endDate: "today" }], dimensions: [{ name: "sessionDefaultChannelGroup" }], metrics: [{ name: "sessions" }], orderBys: [{ metric: { metricName: "sessions" }, desc: true }], limit: 5 }),
-        post({ dateRanges: [{ startDate: "today", endDate: "today" }], dimensions: [{ name: "city" }, { name: "country" }], metrics: [{ name: "activeUsers" }], orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }], limit: 5 }),
+        post({ dateRanges: [{ startDate: dateRange.start, endDate: dateRange.end }], dimensions: [{ name: "pagePath" }], metrics: [{ name: "screenPageViews" }], orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }], limit: 6, dimensionFilter: pageFilter }),
+        post({ dateRanges: [{ startDate: dateRange.start, endDate: dateRange.end }], dimensions: [{ name: "sessionDefaultChannelGroup" }], metrics: [{ name: "sessions" }], orderBys: [{ metric: { metricName: "sessions" }, desc: true }], limit: 5 }),
+        post({ dateRanges: [{ startDate: dateRange.start, endDate: dateRange.end }], dimensions: [{ name: "city" }, { name: "country" }], metrics: [{ name: "activeUsers" }], orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }], limit: 5 }),
       ]);
 
       const mv = mainData.rows?.[0]?.metricValues || [];
-      const sessions   = parseInt(mv[0]?.value || "0", 10);
-      const pageviews  = parseInt(mv[1]?.value || "0", 10);
-      const active     = parseInt(mv[2]?.value || "0", 10);
+      const sessions = parseInt(mv[0]?.value || "0", 10);
+      const pageviews = parseInt(mv[1]?.value || "0", 10);
+      const active = parseInt(mv[2]?.value || "0", 10);
       const bounceRate = (parseFloat(mv[3]?.value || "0") * 100).toFixed(1);
       const avgSession = Math.round(parseFloat(mv[4]?.value || "0"));
-      const newUsers   = parseInt(mv[5]?.value || "0", 10);
-      const revenue    = parseFloat(mv[6]?.value || "0");
-      const orders     = parseInt(mv[7]?.value || "0", 10);
-      const returning  = Math.max(0, active - newUsers);
-      const yest       = parseInt(yestData.rows?.[0]?.metricValues?.[0]?.value || "1", 10);
+      const newUsers = parseInt(mv[5]?.value || "0", 10);
+      const revenue = parseFloat(mv[6]?.value || "0");
+      const orders = parseInt(mv[7]?.value || "0", 10);
+      const returning = Math.max(0, active - newUsers);
+      const yest = parseInt(yestData.rows?.[0]?.metricValues?.[0]?.value || "1", 10);
       const sessionsDelta = yest > 0 ? `${sessions >= yest ? "+" : ""}${(((sessions - yest) / yest) * 100).toFixed(1)}% vs yesterday` : "";
 
       setStats({ active, sessions, pageviews, bounceRate, avgSession, newUsers, returning, sessionsDelta, revenue, orders });
@@ -199,7 +226,7 @@ export default function AnalyticsPage() {
       setTopLocations((locData.rows || []).map(r => ({ name: `${r.dimensionValues[0]?.value} · ${r.dimensionValues[1]?.value}`, val: parseInt(r.metricValues[0]?.value || "0", 10) })));
       setLastUpdated(new Date());
     } catch (err) { console.error("[Analytics]", err); }
-  }, [accessToken, propertyId]);
+  }, [accessToken, propertyId, dateRange]);
 
   useEffect(() => {
     if (!accessToken || !propertyId) return;
@@ -212,272 +239,161 @@ export default function AnalyticsPage() {
 
   if (!mounted) return null;
 
-  // Show loader while GA4 is configured and connected but data hasn't loaded yet
   const dataLoading = ga4Configured && accessToken && !stats;
 
   return (
-    <>
-      <div className="dashboard-page">
-        {/* Header */}
-        <div className="sl-page-header">
-          <div className="sl-header-left">
-            <div className="sl-header-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
-              </svg>
-            </div>
-            <div>
-              <h1 className="sl-page-title">Analytics</h1>
-              <p className="sl-page-sub">{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : "Google Analytics · Today"}</p>
-            </div>
-          </div>
-          <div className="sl-header-right" style={{ flexWrap: "wrap" }}>
-            {brands.length > 1 && (
-              <Dropdown
-                value={brandId}
-                onChange={val => setBrandId(Number(val))}
-                options={brands.map(b => ({ value: b.id, label: b.display_name || b.name }))}
-                className="bset-brand-select"
-              />
-            )}
-            {accessToken && (
-              <div className="an-live-pill"><span className="an-live-dot" /> Live · GA4</div>
-            )}
-            {ga4Configured && accessToken && (
-              <span className="sl-add-btn" style={{ background: "#16a34a", cursor: "default" }}>✓ Connected</span>
-            )}
-            {!ga4Configured && !settingsLoading && (
-              <a href="/dashboard/brandSettings" className="sl-add-btn" style={{ textDecoration: "none" }}>Setup GA4</a>
-            )}
-          </div>
+    <div className="dashboard-sections">
+
+      {/* ═══ 1. TOP BAR — Title + Brand + Live Status ═══ */}
+      <div className="dc-topbar">
+        <div className="dc-greeting">
+          <span className="dc-greeting-text">Analytics</span>
+          <span className="dc-greeting-sub">
+            {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Google Analytics · Today'}
+          </span>
         </div>
-
-        {/* Not configured */}
-        {!settingsLoading && !ga4Configured && (
-          <div className="an-empty-state">
-            <div className="an-empty-icon">📊</div>
-            <div className="an-empty-title">Google Analytics not configured</div>
-            <div className="an-empty-sub">Add your GA4 credentials in Brand Settings to see real data.</div>
-            <div className="an-empty-keys">
-              Add these keys under <strong>Brand Settings → Analytics</strong>:
-              <ul>
-                <li><code>GA4_PROPERTY_ID</code></li>
-                <li><code>GA4_SA_EMAIL</code></li>
-                <li><code>GA4_SA_PRIVATE_KEY</code></li>
-              </ul>
-            </div>
-            <a href="/dashboard/brandSettings" className="an-btn an-btn--primary" style={{ textDecoration: "none" }}>Go to Brand Settings</a>
-          </div>
-        )}
-
-        {!settingsLoading && ga4Configured && !accessToken && (
-          <div className="an-data-loader">
-            <div className="an-spinner" />
-            <span>Connecting to Google Analytics…</span>
-          </div>
-        )}
-
-        {dataLoading && (
-          <div className="an-data-loader">
-            <div className="an-spinner" />
-            <span>Loading analytics data…</span>
-          </div>
-        )}
-
-        {/* Stat cards */}
-        {(stats || realtimeUsers !== null) && (
-          <div className="an-stats-row">
-            <StatCard label="Active Now"     value={realtimeUsers ?? "—"}                                                                                              accent="#CE1E36" />
-            <StatCard label="Sessions Today" value={stats ? fmt(stats.sessions) : "—"}                                                                                delta={stats?.sessionsDelta} />
-            <StatCard label="Orders Today"   value={stats ? stats.orders : "—"}                                                                                       accent="#180D3E" />
-            <StatCard label="Revenue Today"  value={stats && stats.revenue > 0 ? `₹${stats.revenue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : "—"}    accent="#16a34a" />
-            <StatCard label="Pageviews"      value={stats ? fmt(stats.pageviews) : "—"}  />
-            <StatCard label="New Users"      value={stats ? fmt(stats.newUsers) : "—"}   />
-            <StatCard label="Bounce Rate"    value={stats ? `${stats.bounceRate}%` : "—"} />
-            <StatCard label="Avg Session"    value={stats ? fmtTime(stats.avgSession) : "—"} />
-          </div>
-        )}
-
-        {/* Globe — full width, no clipping */}
-        <div className="an-globe-wrap">
-          <div className="an-globe-header">
-            <span>Live Visitor Map</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {realtimeUsers !== null && (
-                <span className="an-active-badge"><span className="an-live-dot" /> {realtimeUsers} active now</span>
-              )}
-            </div>
-          </div>
-          <div className="an-globe-canvas-wrap">
-            <ThreeGlobe markersRef={markersRef} />
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {brands.length > 1 && (
+            <Dropdown
+              value={brandId}
+              onChange={val => setBrandId(Number(val))}
+              options={brands.map(b => ({ value: b.id, label: b.display_name || b.name }))}
+              className="bset-brand-select"
+            />
+          )}
+          {accessToken && (
+            <div className="an-live-pill"><span className="an-live-dot" /> Live · GA4</div>
+          )}
+          {ga4Configured && accessToken && (
+            <span className="an-connected-badge">✓ Connected</span>
+          )}
+          {!ga4Configured && !settingsLoading && (
+            <a href="/dashboard/brandSettings" className="an-setup-btn" style={{ textDecoration: 'none' }}>Setup GA4</a>
+          )}
         </div>
-
-        {/* Bottom panels */}
-        {stats && (
-          <div className="an-bottom-grid">
-            <div className="an-list-panel">
-              <div className="an-panel-header">Top Pages</div>
-              <div className="an-list-rows">
-                {pages.length > 0
-                  ? pages.map((p, i) => <BarRow key={i} label={p.label} value={p.val} max={pages[0]?.val || 1} color="#180D3E" />)
-                  : <div className="an-no-data">No data</div>}
-              </div>
-            </div>
-            <div className="an-list-panel">
-              <div className="an-panel-header">Traffic Sources</div>
-              <div className="an-list-rows">
-                {sources.length > 0
-                  ? sources.map((s, i) => <BarRow key={i} label={s.label} value={s.val} max={sources[0]?.val || 1} color="#CE1E36" />)
-                  : <div className="an-no-data">No data</div>}
-              </div>
-            </div>
-            <div className="an-list-panel">
-              <div className="an-panel-header">Top Locations</div>
-              <div className="an-list-rows">
-                {topLocations.length > 0
-                  ? topLocations.map((l, i) => <BarRow key={i} label={l.name} value={l.val} max={topLocations[0]?.val || 1} color="#7c3aed" />)
-                  : <div className="an-no-data">No data</div>}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
-      <style>{`
-        .an-map-wrap { display: none; }
-        .an-map { display: none; }
+      {/* ═══ NOT CONFIGURED STATE ═══ */}
+      {!settingsLoading && !ga4Configured && (
+        <div className="dashboard-section" style={{ textAlign: 'center', padding: '48px 24px' }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>📊</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#180D3E', marginBottom: 8 }}>Google Analytics not configured</div>
+          <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>Add your GA4 credentials in Brand Settings to see real data.</div>
+          <div style={{ fontSize: 13, color: '#374151', display: 'inline-block', textAlign: 'left', marginBottom: 20 }}>
+            Add these keys under <strong>Brand Settings → Analytics</strong>:
+            <ul style={{ margin: '8px 0 0 16px' }}>
+              <li style={{ margin: '4px 0' }}><code style={{ background: '#f3f4f6', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>GA4_PROPERTY_ID</code></li>
+              <li style={{ margin: '4px 0' }}><code style={{ background: '#f3f4f6', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>GA4_SA_EMAIL</code></li>
+              <li style={{ margin: '4px 0' }}><code style={{ background: '#f3f4f6', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>GA4_SA_PRIVATE_KEY</code></li>
+            </ul>
+          </div>
+          <div><a href="/dashboard/brandSettings" className="an-setup-btn" style={{ textDecoration: 'none' }}>Go to Brand Settings</a></div>
+        </div>
+      )}
 
-        /* Globe — full width panel, no clipping */
-        .an-globe-wrap {
-          background: #ffffff;
-          border: 1px solid #e5e7eb;
-          border-radius: 12px;
-          margin-bottom: 14px;
-          overflow: hidden;
-        }
-        .an-globe-header {
-          padding: 12px 16px;
-          font-size: 12px;
-          font-weight: 700;
-          color: #374151;
-          text-transform: uppercase;
-          letter-spacing: .6px;
-          border-bottom: 1px solid #f3f4f6;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          background: #ffffff;
-        }
-        .an-active-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: rgba(206,30,54,0.15);
-          color: #ff6b7a;
-          font-size: 12px;
-          font-weight: 600;
-          padding: 3px 10px;
-          border-radius: 999px;
-          letter-spacing: 0;
-          text-transform: none;
-          border: 1px solid rgba(206,30,54,0.3);
-        }
-        .an-globe-canvas-wrap {
-          width: 100%;
-          height: 500px;
-        }
+      {/* ═══ CONNECTING / LOADING ═══ */}
+      {!settingsLoading && ga4Configured && !accessToken && (
+        <div className="dashboard-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '80px 24px', color: '#6b7280', fontSize: 14 }}>
+          <div className="an-spinner" />
+          <span>Connecting to Google Analytics…</span>
+        </div>
+      )}
 
-        /* Bottom grid: 3 cols */
-        .an-bottom-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
-          gap: 14px;
-        }
-        .an-panel-header {
-          padding: 12px 16px;
-          font-size: 12px;
-          font-weight: 700;
-          color: #374151;
-          text-transform: uppercase;
-          letter-spacing: .6px;
-          border-bottom: 1px solid #f0f0f5;
-        }
-        .an-no-data {
-          padding: 16px;
-          text-align: center;
-          color: #9ca3af;
-          font-size: 13px;
-        }
+      {dataLoading && (
+        <div className="dashboard-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '80px 24px', color: '#6b7280', fontSize: 14 }}>
+          <div className="an-spinner" />
+          <span>Loading analytics data…</span>
+        </div>
+      )}
 
-        /* Empty state */
-        .an-empty-state {
-          text-align: center;
-          padding: 48px 24px;
-          background: #f9fafb;
-          border-radius: 10px;
-          border: 1px dashed #e5e7eb;
-          margin-bottom: 16px;
-        }
-        .an-empty-icon  { font-size: 40px; margin-bottom: 12px; }
-        .an-empty-title { font-size: 18px; font-weight: 700; color: #180D3E; margin-bottom: 8px; }
-        .an-empty-sub   { font-size: 13px; color: #6b7280; margin-bottom: 16px; }
-        .an-empty-keys  { font-size: 13px; color: #374151; text-align: left; display: inline-block; margin-bottom: 20px; }
-        .an-empty-keys ul { margin: 8px 0 0 16px; }
-        .an-empty-keys li { margin: 4px 0; }
-        .an-empty-keys code { background: #f3f4f6; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
-        .an-data-loader {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 14px;
-          padding: 80px 24px;
-          color: #6b7280;
-          font-size: 14px;
-        }
-        .an-spinner {
-          width: 36px;
-          height: 36px;
-          border: 3px solid #e5e7eb;
-          border-top-color: #CE1E36;
-          border-radius: 50%;
-          animation: anSpin 0.8s linear infinite;
-        }
-        @keyframes anSpin {
-          to { transform: rotate(360deg); }
-        }
+      {/* ═══ 2. KPI STRIP ═══ */}
+      {(stats || realtimeUsers !== null) && (
+        <div className="dc-kpi-strip">
+          <div className="dc-kpi-tile" style={{ borderLeftColor: '#CE1E36' }}>
+            <span className="dc-kpi-label">Active Now</span>
+            <span className="dc-kpi-value" style={{ color: '#CE1E36' }}>{realtimeUsers ?? '—'}</span>
+          </div>
+          <div className="dc-kpi-tile" style={{ borderLeftColor: '#180D3E' }}>
+            <span className="dc-kpi-label">Sessions</span>
+            <span className="dc-kpi-value">{stats ? fmt(stats.sessions) : '—'}</span>
+            {stats?.sessionsDelta && <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 500 }}>{stats.sessionsDelta}</span>}
+          </div>
+          <div className="dc-kpi-tile" style={{ borderLeftColor: '#7c3aed' }}>
+            <span className="dc-kpi-label">Orders</span>
+            <span className="dc-kpi-value" style={{ color: '#180D3E' }}>{stats ? stats.orders : '—'}</span>
+          </div>
+          <div className="dc-kpi-tile" style={{ borderLeftColor: '#059669' }}>
+            <span className="dc-kpi-label">Revenue</span>
+            <span className="dc-kpi-value" style={{ color: '#059669' }}>{stats ? fmtCurrency(stats.revenue) : '—'}</span>
+          </div>
+          <div className="dc-kpi-tile" style={{ borderLeftColor: '#2563eb' }}>
+            <span className="dc-kpi-label">Pageviews</span>
+            <span className="dc-kpi-value">{stats ? fmt(stats.pageviews) : '—'}</span>
+          </div>
+          <div className="dc-kpi-tile" style={{ borderLeftColor: '#d97706' }}>
+            <span className="dc-kpi-label">New Users</span>
+            <span className="dc-kpi-value">{stats ? fmt(stats.newUsers) : '—'}</span>
+          </div>
+          <div className="dc-kpi-tile" style={{ borderLeftColor: '#dc2626' }}>
+            <span className="dc-kpi-label">Bounce Rate</span>
+            <span className="dc-kpi-value">{stats ? `${stats.bounceRate}%` : '—'}</span>
+          </div>
+          <div className="dc-kpi-tile" style={{ borderLeftColor: '#0891b2' }}>
+            <span className="dc-kpi-label">Avg Session</span>
+            <span className="dc-kpi-value">{stats ? fmtTime(stats.avgSession) : '—'}</span>
+          </div>
+          <div className="dc-kpi-tile" style={{ borderLeftColor: '#6b7280' }}>
+            <span className="dc-kpi-label">Returning</span>
+            <span className="dc-kpi-value">{stats ? fmt(stats.returning) : '—'}</span>
+          </div>
+          <div className="dc-kpi-tile" style={{ borderLeftColor: '#f59e0b' }}>
+            <span className="dc-kpi-label">Active Users</span>
+            <span className="dc-kpi-value">{stats ? fmt(stats.active) : '—'}</span>
+          </div>
+        </div>
+      )}
 
-        /* ── Mobile: 900px ── */
-        @media (max-width: 900px) {
-          .an-globe-canvas-wrap { height: 320px; }
-          .an-bottom-grid { grid-template-columns: 1fr; }
-        }
+      {/* ═══ 3. GLOBE — Live Visitor Map ═══ */}
+      <CollapsibleSection icon={IC.globe} title="Live Visitor Map" defaultOpen={true}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 8 }}>
+          {realtimeUsers !== null && (
+            <span className="an-active-badge"><span className="an-live-dot" /> {realtimeUsers} active now</span>
+          )}
+        </div>
+        <div className="an-globe-canvas-wrap">
+          <ThreeGlobe markersRef={markersRef} />
+        </div>
+      </CollapsibleSection>
 
-        /* ── Mobile: 600px ── */
-        @media (max-width: 600px) {
-          .an-globe-wrap { border-radius: 10px; margin-bottom: 10px; }
-          .an-globe-canvas-wrap { height: 260px; }
-          .an-globe-header { padding: 10px 12px; font-size: 11px; }
-          .an-active-badge { font-size: 11px; padding: 2px 8px; }
-          .an-bottom-grid { gap: 10px; }
-          .an-panel-header { padding: 10px 12px; font-size: 11px; }
-          .an-list-rows { padding: 8px 10px; }
-          .an-bar-row { grid-template-columns: 1fr 60px 36px; gap: 6px; }
-          .an-bar-label { font-size: 11.5px; }
-          .an-bar-val { font-size: 10px; }
-          .an-empty-state { padding: 32px 16px; }
-          .an-empty-title { font-size: 16px; }
-          .an-data-loader { padding: 48px 16px; }
-        }
-
-        /* ── Mobile: 400px ── */
-        @media (max-width: 400px) {
-          .an-globe-canvas-wrap { height: 220px; }
-          .an-bar-row { grid-template-columns: 1fr 50px 32px; }
-          .an-bar-label { font-size: 11px; }
-        }
-      `}</style>
-    </>
+      {/* ═══ 4. BOTTOM PANELS — 3 col grid ═══ */}
+      {stats && (
+        <div className="an-panels-grid">
+          <div className="dashboard-section">
+            <SectionTitle icon={IC.page}>Top Pages</SectionTitle>
+            <div className="an-list-rows">
+              {pages.length > 0
+                ? pages.map((p, i) => <BarRow key={i} label={p.label} value={p.val} max={pages[0]?.val || 1} color="#180D3E" />)
+                : <div className="an-no-data">No data</div>}
+            </div>
+          </div>
+          <div className="dashboard-section">
+            <SectionTitle icon={IC.source}>Traffic Sources</SectionTitle>
+            <div className="an-list-rows">
+              {sources.length > 0
+                ? sources.map((s, i) => <BarRow key={i} label={s.label} value={s.val} max={sources[0]?.val || 1} color="#CE1E36" />)
+                : <div className="an-no-data">No data</div>}
+            </div>
+          </div>
+          <div className="dashboard-section">
+            <SectionTitle icon={IC.pin}>Top Locations</SectionTitle>
+            <div className="an-list-rows">
+              {topLocations.length > 0
+                ? topLocations.map((l, i) => <BarRow key={i} label={l.name} value={l.val} max={topLocations[0]?.val || 1} color="#7c3aed" />)
+                : <div className="an-no-data">No data</div>}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
