@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { HeroBanner } from '@/components/home/HeroBanner'
+import { TrustStrip } from '@/components/home/TrustStrip'
 import { CollectionGrid } from '@/components/home/CollectionGrid'
-import { SustainabilityStrip } from '@/components/home/SustainabilityStrip'
-import { BestsellerRow } from '@/components/home/BestsellerRow'
 import { ExclusiveSection } from '@/components/home/ExclusiveSection'
-import { BlogStrip } from '@/components/home/BlogStrip'
+import { BestsellerRow } from '@/components/home/BestsellerRow'
 import { ReviewBand } from '@/components/home/ReviewBand'
+import { BlogStrip } from '@/components/home/BlogStrip'
 import { getBestsellers } from '@/lib/api/products'
 import { getPublicSliders } from '@/lib/api/sliders'
 import { getPublicCategories } from '@/lib/api/categories'
@@ -26,12 +26,12 @@ export default function HomePage() {
   return (
     <>
       <HeroBanner slides={slides} />
+      <TrustStrip />
       <CollectionGrid categories={categories} />
-      <SustainabilityStrip />
-      <BestsellerRow products={bestsellers} />
       <ExclusiveSection products={bestsellers} />
-      <BlogStrip />
+      <BestsellerRow products={bestsellers} />
       <ReviewBand />
+      <BlogStrip />
     </>
   )
 }

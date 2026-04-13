@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 import { getPosts } from '@/lib/api/blog'
 import { BlogCard } from './BlogCard'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 
 export function BlogStrip() {
   const [posts, setPosts] = useState([])
@@ -13,14 +15,11 @@ export function BlogStrip() {
   }, [])
 
   return (
-    <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white px-4 py-10 md:px-6 md:py-12">
-      <div className="mb-7 flex items-center justify-between">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400">The Journal</p>
-          <h2 className="mt-1 font-display text-2xl font-normal text-brand-black lg:text-3xl">Stories worth reading</h2>
-        </div>
-        <Link href="/journal" className="hidden text-xs font-medium text-gray-500 underline underline-offset-4 hover:text-brand-black sm:block">
-          View all
+    <section className="bg-gray-50 px-4 py-12 md:px-8 lg:px-16">
+      <div className="mb-8 flex items-end justify-between">
+        <SectionHeader eyebrow="Knitwink Journal" title="Tips, Trends &amp; <strong>Knitwear Tales</strong>" />
+        <Link href="/journal" className="hidden items-center gap-1 text-xs font-medium text-gray-500 hover:text-brand-black sm:flex">
+          View all <ArrowRight size={13} />
         </Link>
       </div>
 
@@ -31,7 +30,6 @@ export function BlogStrip() {
                 <div className="h-52 animate-pulse bg-gray-100" />
                 <div className="flex flex-col gap-3 p-4">
                   <div className="h-4 w-3/4 animate-pulse rounded bg-gray-100" />
-                  <div className="h-3 w-full animate-pulse rounded bg-gray-100" />
                   <div className="h-9 w-full animate-pulse rounded-xl bg-gray-100" />
                 </div>
               </div>
@@ -41,8 +39,8 @@ export function BlogStrip() {
       </div>
 
       <div className="mt-6 text-center sm:hidden">
-        <Link href="/journal" className="text-xs font-medium text-brand-black underline underline-offset-4">
-          View all articles
+        <Link href="/journal" className="inline-flex items-center gap-1 text-xs font-medium text-brand-black">
+          View all <ArrowRight size={13} />
         </Link>
       </div>
     </section>
