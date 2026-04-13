@@ -352,7 +352,7 @@ const Orders = () => {
         if (!paymentType) return 'N/A';
         const type = paymentType.toLowerCase();
         if (type === 'cod') return 'COD';
-        if (['credit_card','debit_card','upi','wallet'].includes(type)) return 'Pre-paid';
+        if (['credit_card','debit_card','upi','wallet','razorpay'].includes(type)) return 'Pre-paid';
         return paymentType.toUpperCase();
     };
 
