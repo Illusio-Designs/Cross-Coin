@@ -64,7 +64,7 @@ export default function ProductPage() {
         <FeatureBreakdown features={product.features} />
       </section>
 
-      <section className="mx-2 mt-2 overflow-hidden rounded-2xl bg-white">
+      <section className="mx-2 mt-2">
         <ReviewsSection />
       </section>
 
