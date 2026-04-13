@@ -57,16 +57,17 @@ const Orders = () => {
     const [refreshingStatus, setRefreshingStatus] = useState(false);
     const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
 
-    const fetchOrders = useCallback(async (page = currentPage) => {
+    const fetchOrders = useCallback(async (page = currentPage, searchOverride) => {
         setLoading(true);
         setError(null);
         try {
+            const searchTerm = searchOverride !== undefined ? searchOverride : filterValue;
             const params = {
                 page, limit: itemsPerPage,
                 status: statusFilter !== 'all' ? statusFilter : undefined,
                 payment_type: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
                 payment_status: paymentStatusFilter !== 'all' ? paymentStatusFilter : undefined,
-                search: filterValue || undefined,
+                search: searchTerm || undefined,
                 sort: sortBy, order: sortOrder
             };
             Object.keys(params).forEach(key => { if (params[key] === undefined) delete params[key]; });
@@ -322,7 +323,14 @@ const Orders = () => {
     const handleSearchChange = (e) => {
         const val = e.target.value;
         setFilterValue(val);
-        debouncedSearch(val);
+        if (!val.trim()) {
+            // Cleared — fetch all orders immediately, cancel any pending debounce
+            debouncedSearch.cancel();
+            setCurrentPage(1);
+            fetchOrders(1, '');
+        } else {
+            debouncedSearch(val);
+        }
     };
 
     const formatDate = (dateString) => {

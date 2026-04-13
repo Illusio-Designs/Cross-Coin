@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Loader from '../common/Loader';
 import DonutChart from '../common/DonutChart';
 import { useDashboardStats } from '../../hooks/queries/useDashboard';
+import { DateRangePicker } from '../ui';
 
 const IC = {
   rupee: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12M6 8h12M6 13l8 8M6 13h3a4 4 0 0 0 0-8H6"/></svg>,
@@ -95,15 +96,14 @@ function CardGrid() {
     <div className="dashboard-sections">
 
       {/* ── Date Filter ── */}
-      <div className="dc-date-filter" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 4px', marginBottom: 16, flexWrap: 'wrap' }}>
-        <label style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>Filter by date:</label>
-        <input type="date" value={dateFilter.start_date || ''} onChange={e => handleDateChange('start_date', e.target.value)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }} />
-        <span style={{ color: '#9ca3af' }}>to</span>
-        <input type="date" value={dateFilter.end_date || ''} onChange={e => handleDateChange('end_date', e.target.value)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }} />
-        {hasDateFilter && (
-          <button onClick={clearDateFilter} style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #d1d5db', background: '#f3f4f6', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>Clear</button>
-        )}
-      </div>
+      <DateRangePicker
+        label="Filter by date"
+        startDate={dateFilter.start_date || ''}
+        endDate={dateFilter.end_date || ''}
+        onStartChange={val => handleDateChange('start_date', val)}
+        onEndChange={val => handleDateChange('end_date', val)}
+        onClear={clearDateFilter}
+      />
 
       {/* ── Hero Revenue Card ── */}
       <div className="dc-hero-card">
