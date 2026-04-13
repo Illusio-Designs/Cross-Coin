@@ -5,4 +5,4 @@ export const sendMessage = (data) =>
 
 
 
-apiClient.post('/contact', data);
+apiClient.post('/api/leads', data);
