@@ -532,6 +532,16 @@ export const orderService = {
     }
   },
 
+  // Admin manual order creation
+  createManualOrder: async (orderData) => {
+    try {
+      const response = await adminApi.post('/api/orders/manual', orderData, { timeout: 30000 });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
 };
 
 // Payment Services

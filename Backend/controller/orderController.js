@@ -134,28 +134,28 @@
     });
   }
 
-  // Generate unique order number with collision retry (Requirement 5.3)
+  // Generate unique order number with collision retry
   const generateOrderNumber = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const random = Math.floor(Math.random() * 10000)
-      .toString()
-      .padStart(4, "0");
-    return `ORD-${year}${month}${day}-${random}`;
+    const crypto = require('crypto');
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = crypto.randomBytes(3).toString('hex').toUpperCase();
+    return `CC-${timestamp}-${random}`;
   };
 
   // Generate a unique order number, retrying up to 3 times on collision
   const generateUniqueOrderNumber = async (transaction) => {
-    const { UniqueConstraintError } = require("sequelize");
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 5; attempt++) {
       const orderNumber = generateOrderNumber();
-      const existing = await Order.findOne({ where: { order_number: orderNumber }, transaction });
+      const existing = await Order.findOne({ 
+        where: { order_number: orderNumber }, 
+        ...(transaction ? { transaction } : {})
+      });
       if (!existing) return orderNumber;
     }
-    // Fallback: append timestamp for guaranteed uniqueness
-    return `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    // Fallback: still use CC- prefix with timestamp for guaranteed uniqueness
+    const ts = Date.now();
+    const rand = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `CC-${ts}-${rand}`;
   };
 
   // Calculate shipping fee based on payment type
@@ -259,14 +259,24 @@
       }
       logger.debug("createOrder: Shipping address validated");
 
-      // ── Input validation (Task 4) ─────────────────────────────────────────
-      if (shippingAddress.phone && !PHONE_REGEX.test(String(shippingAddress.phone).replace(/\D/g, '').slice(-10))) {
+      // ── Comprehensive shipping address validation ─────────────────────────
+      const { validateShippingAddress } = require('../services/shippingValidationService');
+      const addrValidation = validateShippingAddress({
+        full_name: shippingAddress.full_name,
+        address: shippingAddress.address,
+        city: shippingAddress.city,
+        state: shippingAddress.state,
+        pincode: shippingAddress.pincode,
+        phone: shippingAddress.phone,
+      });
+
+      if (!addrValidation.valid) {
         await transaction.rollback();
-        return res.status(400).json({ message: "Please enter a valid 10-digit mobile number on your delivery address." });
-      }
-      if (shippingAddress.address && String(shippingAddress.address).trim().length < 15) {
-        await transaction.rollback();
-        return res.status(400).json({ message: "Address must be at least 15 characters." });
+        return res.status(400).json({
+          message: 'Shipping address has issues that will cause delivery failure',
+          errors: addrValidation.errors,
+          warnings: addrValidation.warnings,
+        });
       }
 
       // Validate pincode serviceability before proceeding
@@ -893,6 +903,28 @@
         is_default: false,
       });
 
+      // ── Validate the shipping address before proceeding ─────────────────
+      const { validateShippingAddress } = require('../services/shippingValidationService');
+      const addrValidation = validateShippingAddress({
+        full_name: shipping_address.fullName,
+        address: shipping_address.address,
+        city: shipping_address.city,
+        state: shipping_address.state,
+        pincode: shipping_address.pincode,
+        phone: shipping_address.phone || digits,
+      });
+
+      if (!addrValidation.valid) {
+        // Clean up the address we just created
+        await newAddress.destroy().catch(() => {});
+        return res.status(400).json({
+          success: false,
+          message: 'Shipping address has issues that will cause delivery failure',
+          errors: addrValidation.errors,
+          warnings: addrValidation.warnings,
+        });
+      }
+
       // Issue a short-lived token so the order can be placed as this user
       const token = jwt.sign(
         { id: user.id, email: user.email, role: user.role },
@@ -922,6 +954,327 @@
     } catch (error) {
       logger.error("createGuestOrder error:", error.message);
       res.status(500).json({ success: false, message: "Failed to create order", error: error.message });
+    }
+  };
+
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Admin Manual Order Creation
+  // Creates an order from the admin dashboard with full tracking (FB, GA, WA, FShip)
+  // ══════════════════════════════════════════════════════════════════════════
+  module.exports.adminCreateManualOrder = async (req, res) => {
+    let transaction = null;
+    try {
+      transaction = await sequelize.transaction({
+        isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED,
+      });
+
+      const {
+        customer_phone,
+        customer_email,
+        customer_name,
+        shipping_address, // { full_name, address, city, state, pincode, phone, country }
+        items,            // [{ product_id, variation_id?, quantity }]
+        payment_type,     // 'cod' | 'razorpay' | 'upi' etc.
+        payment_status,   // 'paid' | 'pending'
+        notes,
+        discount_amount,
+        coupon_id,
+      } = req.body;
+
+      const adminId = req.user.id;
+      const brandId = req.brand?.id || 1;
+
+      // ── Validation ──────────────────────────────────────────────────────
+      if (!customer_phone || !shipping_address || !items?.length || !payment_type) {
+        await transaction.rollback();
+        return res.status(400).json({ success: false, message: 'Customer phone, shipping address, items, and payment type are required.' });
+      }
+
+      const digits = String(customer_phone).replace(/\D/g, '').slice(-10);
+      if (!/^[6-9]\d{9}$/.test(digits)) {
+        await transaction.rollback();
+        return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit mobile number.' });
+      }
+
+      // ── Find or create customer ─────────────────────────────────────────
+      const bcrypt = require('bcrypt');
+      let user = await User.findOne({ where: { phone: digits } });
+      if (!user && customer_email) {
+        user = await User.findOne({ where: { email: customer_email.toLowerCase() } });
+      }
+      if (!user) {
+        const tempPassword = await bcrypt.hash(Math.random().toString(36).slice(-10), 10);
+        user = await User.create({
+          username: customer_name || `Customer ${digits.slice(-4)}`,
+          email: customer_email?.toLowerCase() || `${digits}@manual.order`,
+          phone: digits,
+          password: tempPassword,
+          role: 'consumer',
+        }, { transaction });
+        logger.info(`[AdminManualOrder] Created new consumer user ${user.id}`);
+      }
+
+      // ── Create shipping address ─────────────────────────────────────────
+      const addr = await ShippingAddress.create({
+        user_id: user.id,
+        full_name: shipping_address.full_name || customer_name || user.username,
+        address: shipping_address.address,
+        city: shipping_address.city,
+        state: shipping_address.state,
+        pincode: shipping_address.pincode,
+        phone: shipping_address.phone || digits,
+        country: shipping_address.country || 'India',
+        is_default: false,
+      }, { transaction });
+
+      // ── Validate items & calculate totals ───────────────────────────────
+      const productIds = items.map(i => i.product_id);
+      const variationIds = items.filter(i => i.variation_id).map(i => i.variation_id);
+      const [productMap, variationMap, variationsByProductMap] = await Promise.all([
+        batchFetchProducts(productIds),
+        batchFetchVariations(variationIds),
+        batchFetchVariationsByProductIds(productIds),
+      ]);
+
+      let totalAmount = 0;
+      const validatedItems = [];
+
+      for (const item of items) {
+        const { product_id, quantity } = item;
+        let { variation_id } = item;
+
+        if (!product_id || !quantity || quantity < 1) {
+          await transaction.rollback();
+          return res.status(400).json({ success: false, message: 'Product ID and quantity (≥1) are required for each item.' });
+        }
+
+        const product = productMap.get(product_id);
+        if (!product) {
+          await transaction.rollback();
+          return res.status(404).json({ success: false, message: `Product ${product_id} not found.` });
+        }
+
+        let variation;
+        if (variation_id) {
+          variation = variationMap.get(variation_id);
+          if (!variation || variation.productId !== product_id) {
+            await transaction.rollback();
+            return res.status(404).json({ success: false, message: `Invalid variation for product ${product_id}.` });
+          }
+        } else {
+          const variations = variationsByProductMap.get(product_id) || [];
+          if (!variations.length) {
+            await transaction.rollback();
+            return res.status(400).json({ success: false, message: `Product ${product_id} has no variations.` });
+          }
+          variation = variations[0];
+          variation_id = variation.id;
+        }
+
+        // Stock check (admin can override but we still warn)
+        if (variation.stock < quantity) {
+          logger.warn(`[AdminManualOrder] Low stock for variation ${variation_id}: ${variation.stock} < ${quantity}`);
+        }
+
+        const price = parseFloat(variation.price);
+        const subtotal = price * quantity;
+        totalAmount += subtotal;
+
+        validatedItems.push({
+          product_id,
+          variation_id,
+          quantity,
+          price,
+          discount: 0,
+          subtotal,
+          _variation: variation,
+        });
+      }
+
+      const subTotal = Number(totalAmount);
+      const appliedDiscount = discount_amount ? Number(discount_amount) : 0;
+      const shippingFee = Number(await calculateShippingFee(payment_type));
+      const finalAmount = Math.max(0, subTotal - appliedDiscount + shippingFee);
+
+      // ── RTO risk scoring ────────────────────────────────────────────────
+      let rtoRiskScore = 0;
+      const rtoCount = await getRtoCount(digits, user.id);
+      if (rtoCount >= 1) rtoRiskScore += 20;
+      if (String(shipping_address.address || '').trim().length < 30) rtoRiskScore += 10;
+
+      // ── Create order ────────────────────────────────────────────────────
+      const orderStatus = (payment_status === 'paid' && payment_type !== 'cod') ? 'confirmed' : 'awaiting_confirmation';
+      const order = await Order.create({
+        order_number: await generateUniqueOrderNumber(transaction),
+        user_id: user.id,
+        shipping_address_id: addr.id,
+        total_amount: subTotal,
+        discount_amount: appliedDiscount,
+        coupon_id: coupon_id || null,
+        shipping_fee: shippingFee,
+        final_amount: finalAmount,
+        payment_type,
+        payment_status: payment_status || 'pending',
+        status: orderStatus,
+        notes: `[Manual Order by Admin #${adminId}] ${notes || ''}`.trim(),
+        brand_id: brandId,
+        rto_risk_score: rtoRiskScore,
+      }, { transaction });
+
+      // ── Create order items ──────────────────────────────────────────────
+      const orderItemsData = validatedItems.map(item => ({
+        order_id: order.id,
+        product_id: item.product_id,
+        variation_id: item.variation_id,
+        quantity: item.quantity,
+        price: item.price,
+        discount: item.discount,
+        subtotal: item.subtotal,
+      }));
+      await batchInsert(OrderItem, orderItemsData, { transaction });
+
+      // ── Decrement stock ─────────────────────────────────────────────────
+      for (const item of validatedItems) {
+        if (item._variation) {
+          item._variation.stock -= item.quantity;
+          await item._variation.save({ transaction });
+        }
+      }
+
+      // ── Payment record ──────────────────────────────────────────────────
+      const { toSmallestUnit } = require('../utils/amountConverter');
+      await Payment.create({
+        order_id: order.id,
+        user_id: user.id,
+        payment_type,
+        amount_paid: payment_type === 'cod' ? finalAmount : toSmallestUnit(finalAmount, 'INR'),
+        status: payment_status === 'paid' ? 'successful' : 'pending',
+        payment_gateway: payment_type === 'cod' ? null : 'Manual',
+        brand_id: brandId,
+        notes: `Manual order created by admin #${adminId}`,
+      }, { transaction });
+
+      // ── Status history ──────────────────────────────────────────────────
+      await OrderStatusHistory.create({
+        order_id: order.id,
+        status: orderStatus,
+        updated_by: adminId,
+        notes: `Manual order created by admin`,
+      }, { transaction });
+
+      // ── Coupon usage ────────────────────────────────────────────────────
+      if (coupon_id && appliedDiscount > 0) {
+        const { Coupon, CouponUsage } = require('../model/associations.js');
+        const coupon = await Coupon.findByPk(coupon_id, { transaction });
+        if (coupon) {
+          await CouponUsage.create({
+            couponId: coupon_id, userId: user.id, orderId: order.id, discountAmount: appliedDiscount,
+          }, { transaction });
+          await coupon.increment('usageCount', { by: 1, transaction });
+        }
+      }
+
+      await transaction.commit();
+      logger.info(`[AdminManualOrder] Order ${order.order_number} created by admin #${adminId}`);
+
+      // ── Fetch full order ────────────────────────────────────────────────
+      const createdOrder = await Order.findByPk(order.id, {
+        include: [
+          { model: OrderItem, as: 'OrderItems', include: [{ model: Product, as: 'Product' }, { model: ProductVariation, as: 'ProductVariation' }] },
+          { model: User, attributes: ['id', 'username', 'email'] },
+          { model: ShippingAddress, as: 'ShippingAddress' },
+        ],
+      });
+
+      // ── Post-creation side effects (non-blocking) ──────────────────────
+
+      // SSE notification
+      const orderEmitter = require('../services/orderEvents.js');
+      setImmediate(() => {
+        createdOrder._itemCount = validatedItems.length;
+        orderEmitter.emit('order.created', createdOrder);
+        if (orderStatus === 'confirmed') {
+          orderEmitter.emit('order.confirmed', createdOrder);
+        }
+      });
+
+      // WhatsApp notification
+      setImmediate(async () => {
+        try {
+          const whatsappService = require('../services/whatsappService.js');
+          if (addr.phone) {
+            if (payment_type === 'cod') {
+              const fullAddress = [addr.full_name, addr.address, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
+              await whatsappService.sendCodConfirmation(addr.phone, {
+                orderNumber: createdOrder.order_number,
+                amount: parseFloat(createdOrder.final_amount).toFixed(2),
+                fullAddress,
+              }, brandId);
+              await Order.update({ cod_address_confirmed: false }, { where: { id: order.id } });
+            } else {
+              await whatsappService.sendOrderConfirmation(addr.phone, {
+                orderNumber: createdOrder.order_number,
+                itemCount: validatedItems.length,
+                total: parseFloat(createdOrder.final_amount).toFixed(2),
+                estimatedDelivery: '3-5 working days',
+              }, brandId);
+            }
+          }
+        } catch (e) { logger.warn('[AdminManualOrder] WhatsApp failed:', e.message); }
+      });
+
+      // Analytics: FB Pixel + GA4
+      setImmediate(async () => {
+        try {
+          const eventPayload = {
+            brand_id: brandId,
+            order_number: createdOrder.order_number,
+            total_amount: parseFloat(createdOrder.final_amount),
+            final_amount: parseFloat(createdOrder.final_amount),
+            currency: 'INR',
+            email: user.email,
+            phone: addr.phone || digits,
+            first_name: (user.username || '').split(/\s+/)[0] || null,
+            last_name: (user.username || '').split(/\s+/).slice(1).join(' ') || null,
+            zip_code: addr.pincode || null,
+            city: addr.city || null,
+            state: addr.state || null,
+            country: 'in',
+            items: createdOrder.OrderItems.map(i => ({
+              product_id: i.product_id,
+              quantity: i.quantity,
+              price: parseFloat(i.price || 0),
+              name: i.Product?.name || '',
+            })),
+          };
+          await sendFacebookEvent('Purchase', eventPayload);
+          await sendGAEvent('purchase', eventPayload);
+          await sendFacebookEvent('AddShippingInfo', eventPayload);
+          await sendGAEvent('add_shipping_info', eventPayload);
+        } catch (e) { logger.error('[AdminManualOrder] Analytics error:', e.message); }
+      });
+
+      // Badge recalculation
+      setImmediate(async () => {
+        try {
+          const BadgeService = require('../services/badgeService');
+          await BadgeService.enqueueBadgeRecalculation(user.id);
+        } catch (e) { logger.warn('[AdminManualOrder] Badge recalc failed:', e.message); }
+      });
+
+      res.status(201).json({
+        success: true,
+        message: `Manual order ${createdOrder.order_number} created successfully`,
+        order: createdOrder,
+      });
+
+    } catch (error) {
+      if (transaction && !transaction.finished) {
+        try { await transaction.rollback(); } catch (e) { /* ignore */ }
+      }
+      logger.error('[AdminManualOrder] Error:', error.message);
+      res.status(500).json({ success: false, message: 'Failed to create manual order', error: error.message });
     }
   };
 
@@ -1368,7 +1721,7 @@
         order = "DESC"
       } = req.query;
 
-      const cappedLimit = Math.min(parseInt(limit) || 20, 100);
+      const safeLimit = Math.min(parseInt(limit) || 20, 100);
 
       logger.debug("=== GET ALL ORDERS DEBUG ===");
       logger.debug("Query parameters:", {
@@ -1421,48 +1774,58 @@
       if (search && search.trim()) {
         const searchTerm = search.trim();
         
-        // Search in order number
-        searchConditions.push({
-          order_number: {
-            [Op.like]: `%${searchTerm}%`
-          }
-        });
+        // Search in order fields
+        searchConditions.push(
+          { order_number: { [Op.like]: `%${searchTerm}%` } },
+          { tracking_number: { [Op.like]: `%${searchTerm}%` } },
+          { courier_name: { [Op.like]: `%${searchTerm}%` } },
+          { fship_waybill: { [Op.like]: `%${searchTerm}%` } }
+        );
         
         // Search in final amount
         if (!isNaN(searchTerm)) {
           searchConditions.push({
-            final_amount: {
-              [Op.like]: `%${searchTerm}%`
-            }
+            final_amount: { [Op.like]: `%${searchTerm}%` }
           });
         }
-        
-        // Search in tracking number
-        searchConditions.push({
-          tracking_number: {
-            [Op.like]: `%${searchTerm}%`
-          }
-        });
-        
-        // Search in courier name
-        searchConditions.push({
-          courier_name: {
-            [Op.like]: `%${searchTerm}%`
-          }
-        });
+
+        // Search in associated User
+        searchConditions.push(
+          { '$User.username$': { [Op.like]: `%${searchTerm}%` } },
+          { '$User.email$': { [Op.like]: `%${searchTerm}%` } }
+        );
+
+        // Search in associated GuestUser
+        searchConditions.push(
+          { '$GuestUser.email$': { [Op.like]: `%${searchTerm}%` } },
+          { '$GuestUser.firstName$': { [Op.like]: `%${searchTerm}%` } },
+          { '$GuestUser.lastName$': { [Op.like]: `%${searchTerm}%` } },
+          { '$GuestUser.phone$': { [Op.like]: `%${searchTerm}%` } }
+        );
+
+        // Search in associated ShippingAddress
+        searchConditions.push(
+          { '$ShippingAddress.full_name$': { [Op.like]: `%${searchTerm}%` } },
+          { '$ShippingAddress.phone$': { [Op.like]: `%${searchTerm}%` } },
+          { '$ShippingAddress.address$': { [Op.like]: `%${searchTerm}%` } },
+          { '$ShippingAddress.city$': { [Op.like]: `%${searchTerm}%` } },
+          { '$ShippingAddress.pincode$': { [Op.like]: `%${searchTerm}%` } }
+        );
       }
 
       // Pagination
-      const offset = (page - 1) * limit;
+      const offset = (page - 1) * safeLimit;
 
       // Build order clause
       const orderClause = [[sort, order.toUpperCase()]];
 
       // Build the main query
+      const hasSearch = searchConditions.length > 0;
       const queryOptions = {
         where: filter,
         distinct: true,
         col: "id",
+        ...(hasSearch ? { subQuery: false } : {}),
         include: [
           {
             model: Brand,
@@ -1475,54 +1838,12 @@
             as: "User",
             attributes: ["id", "username", "email"],
             required: false,
-            ...(search && search.trim() ? {
-              where: {
-                [Op.or]: [
-                  {
-                    username: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  },
-                  {
-                    email: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  }
-                ]
-              }
-            } : {})
           },
           {
             model: GuestUser,
             as: "GuestUser",
             attributes: ["id", "email", "firstName", "lastName", "phone"],
             required: false,
-            ...(search && search.trim() ? {
-              where: {
-                [Op.or]: [
-                  {
-                    email: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  },
-                  {
-                    firstName: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  },
-                  {
-                    lastName: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  },
-                  {
-                    phone: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  }
-                ]
-              }
-            } : {})
           },
           {
             model: ShippingAddress,
@@ -1538,37 +1859,6 @@
               "country",
             ],
             required: false,
-            ...(search && search.trim() ? {
-              where: {
-                [Op.or]: [
-                  {
-                    full_name: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  },
-                  {
-                    phone: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  },
-                  {
-                    address: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  },
-                  {
-                    city: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  },
-                  {
-                    pincode: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  }
-                ]
-              }
-            } : {})
           },
           {
             model: OrderItem,
@@ -1603,7 +1893,7 @@
           },
         ],
         order: orderClause,
-        limit: parseInt(limit),
+        limit: safeLimit,
         offset: parseInt(offset),
       };
 
@@ -1627,12 +1917,12 @@
 
       const orders = await Order.findAndCountAll(queryOptions);
 
-      const totalPages = Math.ceil(orders.count / limit);
+      const totalPages = Math.ceil(orders.count / safeLimit);
 
       logger.debug("Query results:", {
         totalCount: orders.count,
         returnedRows: orders.rows.length,
-        limit: parseInt(limit),
+        limit: safeLimit,
         page: parseInt(page),
         totalPages,
         searchTerm: search || 'none',
@@ -1655,7 +1945,7 @@
         pagination: {
           total: orders.count,
           page: parseInt(page),
-          limit: parseInt(limit),
+          limit: safeLimit,
           totalPages,
         },
         filters: {
@@ -2869,9 +3159,9 @@
         customer_Address: shippingAddress?.address || '',
         landMark: '',
         customer_Address_Type: 'Home',
-        customer_PinCode: shippingAddress?.pincode || '',
-        customer_City: shippingAddress?.city || '',
-        customer_State: shippingAddress?.state || '',
+        customer_PinCode: String(shippingAddress?.pincode || '').trim(),
+        customer_City: String(shippingAddress?.city || '').trim(),
+        customer_State: String(shippingAddress?.state || '').trim(),
         payment_Mode: order.payment_type === 'cod' ? 1 : 2, // 1=COD, 2=PREPAID
         express_Type: 'surface',
         is_Ndd: 0,
@@ -4873,5 +5163,125 @@
     } catch (error) {
       logger.error("❌ BULK REFRESH FAILED:", error);
       return res.status(500).json({ success: false, message: 'Bulk status refresh failed', error: error.message });
+    }
+  };
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // Validate order for shipping — returns detailed errors & warnings
+  // GET /api/orders/:id/shipping/validate
+  // Optional query: ?logistics=delhivery&s_type=surface
+  // ══════════════════════════════════════════════════════════════════════════════
+  module.exports.validateOrderForShipping = async (req, res) => {
+    try {
+      const orderId = req.params.id;
+      const { logistics, s_type, order_type } = req.query;
+
+      const { validateOrderForShipping } = require('../services/shippingValidationService');
+      const result = await validateOrderForShipping(orderId, { logistics, s_type, orderType: order_type });
+
+      return res.json({
+        success: true,
+        valid: result.valid,
+        errors: result.errors,
+        warnings: result.warnings,
+        data: result.data,
+      });
+    } catch (error) {
+      logger.error('validateOrderForShipping error:', error.message);
+      return res.status(500).json({ success: false, message: 'Validation failed', error: error.message });
+    }
+  };
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // Get available couriers for an order (rate check)
+  // GET /api/orders/:id/shipping/couriers
+  // Returns list of couriers with rates and ETAs for admin to pick from
+  // ══════════════════════════════════════════════════════════════════════════════
+  module.exports.getAvailableCouriers = async (req, res) => {
+    try {
+      const orderId = req.params.id;
+
+      // 1. Validate order first
+      const { validateOrderForShipping } = require('../services/shippingValidationService');
+      const validation = await validateOrderForShipping(orderId);
+
+      if (!validation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: 'Order has validation errors — fix these before selecting a courier',
+          errors: validation.errors,
+          warnings: validation.warnings,
+        });
+      }
+
+      // 2. Load order + address for pincode
+      const order = await Order.findByPk(orderId, {
+        include: [
+          { model: ShippingAddress, as: 'ShippingAddress' },
+          { model: OrderItem, as: 'OrderItems' },
+        ],
+      });
+
+      if (!order || !order.ShippingAddress) {
+        return res.status(404).json({ success: false, message: 'Order or shipping address not found' });
+      }
+
+      // 3. Get provider and fetch couriers
+      const { getShippingProvider, getProviderName } = require('../services/shippingProviderFactory');
+      const providerName = await getProviderName(order.brand_id || 1);
+      const provider = await getShippingProvider(order.brand_id || 1);
+
+      const totalQty = order.OrderItems.reduce((s, i) => s + (i.quantity || 0), 0);
+      const warehousePincode = await settingsHelper.getSetting(
+        order.brand_id || 1,
+        providerName === 'ithink' ? 'ITHINK_WAREHOUSE_PINCODE' : 'FSHIP_WAREHOUSE_PINCODE',
+        '395006'
+      );
+
+      // For iThink — use getAvailableCouriers; for FShip — use calculateRates
+      let couriers = [];
+      if (providerName === 'ithink' && typeof provider.getAvailableCouriers === 'function') {
+        couriers = await provider.getAvailableCouriers({
+          sourcePincode: warehousePincode,
+          destinationPincode: order.ShippingAddress.pincode,
+          weight: totalQty * 0.07,
+          length: 14,
+          width: 3,
+          height: 10 * totalQty,
+          paymentMode: order.payment_type === 'cod' ? 'COD' : 'Prepaid',
+          productMrp: parseFloat(order.final_amount),
+        });
+      } else {
+        // FShip rate calculator
+        const rates = await provider.calculateRates({
+          source_Pincode: warehousePincode,
+          destination_Pincode: order.ShippingAddress.pincode,
+          payment_Mode: order.payment_type === 'cod' ? 'COD' : 'P',
+          amount: parseFloat(order.final_amount),
+          express_Type: 'surface',
+          shipment_Weight: totalQty * 0.07,
+          shipment_Length: 14,
+          shipment_Width: 3,
+          shipment_Height: 10 * totalQty,
+        });
+        couriers = Array.isArray(rates) ? rates : (rates?.data || []);
+      }
+
+      return res.json({
+        success: true,
+        provider: providerName,
+        order_number: order.order_number,
+        route: {
+          from: warehousePincode,
+          to: order.ShippingAddress.pincode,
+          city: order.ShippingAddress.city,
+          payment_type: order.payment_type,
+        },
+        warnings: validation.warnings,
+        couriers,
+      });
+    } catch (error) {
+      logger.error('getAvailableCouriers error:', error.message);
+      return res.status(500).json({ success: false, message: 'Failed to fetch couriers', error: error.message });
     }
   };
