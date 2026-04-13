@@ -286,15 +286,44 @@ const Orders = () => {
 
     useEffect(() => {
         setCurrentPage(1); fetchOrders(1); fetchAllOrdersForStats();
-    }, [filterValue, paymentTypeFilter, paymentStatusFilter, statusFilter, sortBy, sortOrder, itemsPerPage]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [paymentTypeFilter, paymentStatusFilter, statusFilter, sortBy, sortOrder, itemsPerPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => { if (currentPage > 1) fetchOrders(currentPage); }, [currentPage, fetchOrders]);
 
-    useEffect(() => { setCurrentPage(1); }, [filterValue, paymentTypeFilter, paymentStatusFilter, statusFilter]);
+    useEffect(() => { setCurrentPage(1); }, [paymentTypeFilter, paymentStatusFilter, statusFilter]);
 
-    const debouncedFetchOrders = useCallback(debounce(() => { setCurrentPage(1); fetchOrders(1); }, 500), [fetchOrders]);
+    // Debounced search — waits 500ms after user stops typing, then fetches
+    const debouncedSearch = useCallback(
+        debounce((searchVal) => {
+            setCurrentPage(1);
+            const params = {
+                page: 1, limit: itemsPerPage,
+                status: statusFilter !== 'all' ? statusFilter : undefined,
+                payment_type: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
+                payment_status: paymentStatusFilter !== 'all' ? paymentStatusFilter : undefined,
+                search: searchVal || undefined,
+                sort: sortBy, order: sortOrder
+            };
+            Object.keys(params).forEach(key => { if (params[key] === undefined) delete params[key]; });
+            setLoading(true);
+            orderService.getAllOrders(params)
+                .then(data => {
+                    setOrders(data.orders || data.data || []);
+                    const totalOrdersCount = data.total || 0;
+                    setTotalPages(Math.ceil(totalOrdersCount / itemsPerPage));
+                    setTotalOrders(totalOrdersCount);
+                })
+                .catch(err => setError(err.message || 'Failed to fetch orders'))
+                .finally(() => setLoading(false));
+        }, 500),
+        [itemsPerPage, statusFilter, paymentTypeFilter, paymentStatusFilter, sortBy, sortOrder] // eslint-disable-line react-hooks/exhaustive-deps
+    );
 
-    const handleSearchChange = (e) => { setFilterValue(e.target.value); debouncedFetchOrders(); };
+    const handleSearchChange = (e) => {
+        const val = e.target.value;
+        setFilterValue(val);
+        debouncedSearch(val);
+    };
 
     const formatDate = (dateString) => {
         const d = new Date(dateString);
