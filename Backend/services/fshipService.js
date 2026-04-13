@@ -185,15 +185,34 @@ class FShipService {
             const fshipOrderData = this.formatOrderDataForFShip(orderData);
 
             const response = await this.axiosInstance.post('/api/createforwardorder', fshipOrderData);
-            console.log('Order created successfully:', JSON.stringify(response.data, null, 2));
+            console.log('FShip Create Order Response:', JSON.stringify(response.data, null, 2));
             
+            // Validate that FShip actually returned meaningful data
+            const orderId = response.data.apiorderid || response.data.order_id || response.data.orderId || 0;
+            const waybill = response.data.waybill || response.data.awb_number || response.data.awb || '';
+            
+            if (!orderId && !waybill) {
+                // Log the full response for debugging
+                console.error('⚠️ FShip returned empty orderId and waybill. Full response:', JSON.stringify(response.data, null, 2));
+                
+                // Check if FShip returned an error message in the response body
+                const fshipMsg = response.data.message || response.data.error || response.data.response || response.data.status || '';
+                
+                return {
+                    success: false,
+                    message: fshipMsg 
+                        ? `FShip error: ${fshipMsg}` 
+                        : 'FShip accepted the request but did not return an order ID or AWB. Check courier assignment settings in FShip dashboard.'
+                };
+            }
+
             return {
                 success: true,
-                orderId: response.data.apiorderid,
-                waybill: response.data.waybill,
-                routeCode: response.data.route_code,
-                status: response.data.order_status,
-                labelUrl: response.data.labelurl,
+                orderId: orderId,
+                waybill: waybill,
+                routeCode: response.data.route_code || response.data.routeCode || null,
+                status: response.data.order_status || response.data.status || null,
+                labelUrl: response.data.labelurl || response.data.label_url || null,
                 courierName: response.data.courier_name || response.data.courierName || response.data.courier || response.data.Courier || null,
                 courierId: response.data.courier_id || response.data.courierId || null,
                 response: response.data.response
