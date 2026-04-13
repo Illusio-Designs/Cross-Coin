@@ -228,8 +228,25 @@ exports.initiateCheckout = async (req, res) => {
     // Validate shipping address
     const shippingAddress = await ShippingAddress.findOne({ where: { id: shipping_address_id, user_id: userId } });
     if (!shippingAddress) return res.status(404).json({ success: false, message: 'Shipping address not found.' });
-    if (shippingAddress.phone && !PHONE_REGEX.test(String(shippingAddress.phone).replace(/\D/g, '').slice(-10))) {
-      return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit mobile number on your delivery address.' });
+
+    // ── Comprehensive shipping address validation ─────────────────────────
+    const { validateShippingAddress } = require('../services/shippingValidationService');
+    const addrValidation = validateShippingAddress({
+      full_name: shippingAddress.full_name,
+      address: shippingAddress.address,
+      city: shippingAddress.city,
+      state: shippingAddress.state,
+      pincode: shippingAddress.pincode,
+      phone: shippingAddress.phone,
+    });
+
+    if (!addrValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Shipping address has issues that will cause delivery failure',
+        errors: addrValidation.errors,
+        warnings: addrValidation.warnings,
+      });
     }
 
     // Validate pincode serviceability before proceeding
@@ -467,6 +484,25 @@ exports.initiateGuestCheckout = async (req, res) => {
 
     req.user = user;
     req.body = { ...checkoutData, guest_user_id: guestUser.id };
+
+    // For guest checkout, create/find shipping address linked to the new user
+    if (checkoutData.shipping_address && !checkoutData.shipping_address_id) {
+      const addr = checkoutData.shipping_address;
+      const shippingAddress = await ShippingAddress.create({
+        user_id: user.id,
+        guest_user_id: guestUser.id,
+        full_name: addr.fullName || `${firstName} ${lastName || ''}`.trim(),
+        phone: addr.phone || normalizedPhone,
+        address: addr.address,
+        city: addr.city,
+        state: addr.state,
+        pincode: addr.pincode,
+        country: addr.country || 'India',
+      });
+      req.body.shipping_address_id = shippingAddress.id;
+      logger.info(`Guest checkout: created shipping address ${shippingAddress.id} for user ${user.id}`);
+    }
+
     return exports.initiateCheckout(req, res);
   } catch (error) {
     logger.error('initiateGuestCheckout error:', error.message);

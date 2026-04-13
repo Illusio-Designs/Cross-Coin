@@ -13,6 +13,7 @@ import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusU
 import PaymentChart from '../../../components/Dashboard/PaymentChart';
 import ShippingChart from '../../../components/Dashboard/ShippingChart';
 import PaymentStatusChart from '../../../components/Dashboard/PaymentStatusChart';
+import ManualOrderModal from '../../../components/Dashboard/ManualOrderModal';
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -54,17 +55,19 @@ const Orders = () => {
     const [statsStartDate, setStatsStartDate] = useState('');
     const [statsEndDate, setStatsEndDate] = useState('');
     const [refreshingStatus, setRefreshingStatus] = useState(false);
+    const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
 
-    const fetchOrders = useCallback(async (page = currentPage) => {
+    const fetchOrders = useCallback(async (page = currentPage, searchOverride) => {
         setLoading(true);
         setError(null);
         try {
+            const searchTerm = searchOverride !== undefined ? searchOverride : filterValue;
             const params = {
                 page, limit: itemsPerPage,
                 status: statusFilter !== 'all' ? statusFilter : undefined,
                 payment_type: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
                 payment_status: paymentStatusFilter !== 'all' ? paymentStatusFilter : undefined,
-                search: filterValue || undefined,
+                search: searchTerm || undefined,
                 sort: sortBy, order: sortOrder
             };
             Object.keys(params).forEach(key => { if (params[key] === undefined) delete params[key]; });
@@ -284,15 +287,51 @@ const Orders = () => {
 
     useEffect(() => {
         setCurrentPage(1); fetchOrders(1); fetchAllOrdersForStats();
-    }, [filterValue, paymentTypeFilter, paymentStatusFilter, statusFilter, sortBy, sortOrder, itemsPerPage]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [paymentTypeFilter, paymentStatusFilter, statusFilter, sortBy, sortOrder, itemsPerPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => { if (currentPage > 1) fetchOrders(currentPage); }, [currentPage, fetchOrders]);
 
-    useEffect(() => { setCurrentPage(1); }, [filterValue, paymentTypeFilter, paymentStatusFilter, statusFilter]);
+    useEffect(() => { setCurrentPage(1); }, [paymentTypeFilter, paymentStatusFilter, statusFilter]);
 
-    const debouncedFetchOrders = useCallback(debounce(() => { setCurrentPage(1); fetchOrders(1); }, 500), [fetchOrders]);
+    // Debounced search — waits 500ms after user stops typing, then fetches
+    const debouncedSearch = useCallback(
+        debounce((searchVal) => {
+            setCurrentPage(1);
+            const params = {
+                page: 1, limit: itemsPerPage,
+                status: statusFilter !== 'all' ? statusFilter : undefined,
+                payment_type: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
+                payment_status: paymentStatusFilter !== 'all' ? paymentStatusFilter : undefined,
+                search: searchVal || undefined,
+                sort: sortBy, order: sortOrder
+            };
+            Object.keys(params).forEach(key => { if (params[key] === undefined) delete params[key]; });
+            setLoading(true);
+            orderService.getAllOrders(params)
+                .then(data => {
+                    setOrders(data.orders || data.data || []);
+                    const totalOrdersCount = data.total || 0;
+                    setTotalPages(Math.ceil(totalOrdersCount / itemsPerPage));
+                    setTotalOrders(totalOrdersCount);
+                })
+                .catch(err => setError(err.message || 'Failed to fetch orders'))
+                .finally(() => setLoading(false));
+        }, 500),
+        [itemsPerPage, statusFilter, paymentTypeFilter, paymentStatusFilter, sortBy, sortOrder] // eslint-disable-line react-hooks/exhaustive-deps
+    );
 
-    const handleSearchChange = (e) => { setFilterValue(e.target.value); debouncedFetchOrders(); };
+    const handleSearchChange = (e) => {
+        const val = e.target.value;
+        setFilterValue(val);
+        if (!val.trim()) {
+            // Cleared — fetch all orders immediately, cancel any pending debounce
+            debouncedSearch.cancel();
+            setCurrentPage(1);
+            fetchOrders(1, '');
+        } else {
+            debouncedSearch(val);
+        }
+    };
 
     const formatDate = (dateString) => {
         const d = new Date(dateString);
@@ -477,6 +516,11 @@ const Orders = () => {
 
     return (
         <>
+            <ManualOrderModal
+                isOpen={isManualOrderOpen}
+                onClose={() => setIsManualOrderOpen(false)}
+                onOrderCreated={() => { fetchOrders(1); fetchAllOrdersForStats(); }}
+            />
             <PromptModal
                 message={cancelPrompt ? `Enter cancellation reason for order ${cancelPrompt.orderNumber}:` : null}
                 placeholder="Cancellation reason..."
@@ -523,6 +567,14 @@ const Orders = () => {
                                 onMouseLeave={e => { if (!refreshingStatus) { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#2563eb'; } }}>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={refreshingStatus ? 'animate-spin' : ''}><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
                                 {refreshingStatus ? 'Refreshing...' : 'Refresh Status'}
+                            </button>
+                            <button className="order-sync-main-btn"
+                                onClick={() => setIsManualOrderOpen(true)}
+                                style={{ borderColor: '#16a34a', color: '#16a34a' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = '#fff'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#16a34a'; }}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                Manual Order
                             </button>
                         </div>
                     </div>
