@@ -144,14 +144,18 @@
 
   // Generate a unique order number, retrying up to 3 times on collision
   const generateUniqueOrderNumber = async (transaction) => {
-    const { UniqueConstraintError } = require("sequelize");
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 5; attempt++) {
       const orderNumber = generateOrderNumber();
-      const existing = await Order.findOne({ where: { order_number: orderNumber }, transaction });
+      const existing = await Order.findOne({ 
+        where: { order_number: orderNumber }, 
+        ...(transaction ? { transaction } : {})
+      });
       if (!existing) return orderNumber;
     }
-    // Fallback: append timestamp for guaranteed uniqueness
-    return `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    // Fallback: still use CC- prefix with timestamp for guaranteed uniqueness
+    const ts = Date.now();
+    const rand = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `CC-${ts}-${rand}`;
   };
 
   // Calculate shipping fee based on payment type
