@@ -1717,7 +1717,7 @@
         order = "DESC"
       } = req.query;
 
-      const cappedLimit = Math.min(parseInt(limit) || 20, 100);
+      const safeLimit = Math.min(parseInt(limit) || 20, 100);
 
       logger.debug("=== GET ALL ORDERS DEBUG ===");
       logger.debug("Query parameters:", {
@@ -1770,39 +1770,47 @@
       if (search && search.trim()) {
         const searchTerm = search.trim();
         
-        // Search in order number
-        searchConditions.push({
-          order_number: {
-            [Op.like]: `%${searchTerm}%`
-          }
-        });
+        // Search in order fields
+        searchConditions.push(
+          { order_number: { [Op.like]: `%${searchTerm}%` } },
+          { tracking_number: { [Op.like]: `%${searchTerm}%` } },
+          { courier_name: { [Op.like]: `%${searchTerm}%` } },
+          { fship_waybill: { [Op.like]: `%${searchTerm}%` } }
+        );
         
         // Search in final amount
         if (!isNaN(searchTerm)) {
           searchConditions.push({
-            final_amount: {
-              [Op.like]: `%${searchTerm}%`
-            }
+            final_amount: { [Op.like]: `%${searchTerm}%` }
           });
         }
-        
-        // Search in tracking number
-        searchConditions.push({
-          tracking_number: {
-            [Op.like]: `%${searchTerm}%`
-          }
-        });
-        
-        // Search in courier name
-        searchConditions.push({
-          courier_name: {
-            [Op.like]: `%${searchTerm}%`
-          }
-        });
+
+        // Search in associated User
+        searchConditions.push(
+          { '$User.username$': { [Op.like]: `%${searchTerm}%` } },
+          { '$User.email$': { [Op.like]: `%${searchTerm}%` } }
+        );
+
+        // Search in associated GuestUser
+        searchConditions.push(
+          { '$GuestUser.email$': { [Op.like]: `%${searchTerm}%` } },
+          { '$GuestUser.firstName$': { [Op.like]: `%${searchTerm}%` } },
+          { '$GuestUser.lastName$': { [Op.like]: `%${searchTerm}%` } },
+          { '$GuestUser.phone$': { [Op.like]: `%${searchTerm}%` } }
+        );
+
+        // Search in associated ShippingAddress
+        searchConditions.push(
+          { '$ShippingAddress.full_name$': { [Op.like]: `%${searchTerm}%` } },
+          { '$ShippingAddress.phone$': { [Op.like]: `%${searchTerm}%` } },
+          { '$ShippingAddress.address$': { [Op.like]: `%${searchTerm}%` } },
+          { '$ShippingAddress.city$': { [Op.like]: `%${searchTerm}%` } },
+          { '$ShippingAddress.pincode$': { [Op.like]: `%${searchTerm}%` } }
+        );
       }
 
       // Pagination
-      const offset = (page - 1) * limit;
+      const offset = (page - 1) * safeLimit;
 
       // Build order clause
       const orderClause = [[sort, order.toUpperCase()]];
@@ -1812,6 +1820,7 @@
         where: filter,
         distinct: true,
         col: "id",
+        subQuery: false,
         include: [
           {
             model: Brand,
@@ -1824,54 +1833,12 @@
             as: "User",
             attributes: ["id", "username", "email"],
             required: false,
-            ...(search && search.trim() ? {
-              where: {
-                [Op.or]: [
-                  {
-                    username: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  },
-                  {
-                    email: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  }
-                ]
-              }
-            } : {})
           },
           {
             model: GuestUser,
             as: "GuestUser",
             attributes: ["id", "email", "firstName", "lastName", "phone"],
             required: false,
-            ...(search && search.trim() ? {
-              where: {
-                [Op.or]: [
-                  {
-                    email: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  },
-                  {
-                    firstName: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  },
-                  {
-                    lastName: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  },
-                  {
-                    phone: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  }
-                ]
-              }
-            } : {})
           },
           {
             model: ShippingAddress,
@@ -1887,37 +1854,6 @@
               "country",
             ],
             required: false,
-            ...(search && search.trim() ? {
-              where: {
-                [Op.or]: [
-                  {
-                    full_name: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  },
-                  {
-                    phone: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  },
-                  {
-                    address: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  },
-                  {
-                    city: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  },
-                  {
-                    pincode: {
-                      [Op.like]: `%${search.trim()}%`
-                    }
-                  }
-                ]
-              }
-            } : {})
           },
           {
             model: OrderItem,
@@ -1952,7 +1888,7 @@
           },
         ],
         order: orderClause,
-        limit: parseInt(limit),
+        limit: safeLimit,
         offset: parseInt(offset),
       };
 
@@ -1976,12 +1912,12 @@
 
       const orders = await Order.findAndCountAll(queryOptions);
 
-      const totalPages = Math.ceil(orders.count / limit);
+      const totalPages = Math.ceil(orders.count / safeLimit);
 
       logger.debug("Query results:", {
         totalCount: orders.count,
         returnedRows: orders.rows.length,
-        limit: parseInt(limit),
+        limit: safeLimit,
         page: parseInt(page),
         totalPages,
         searchTerm: search || 'none',
@@ -2004,7 +1940,7 @@
         pagination: {
           total: orders.count,
           page: parseInt(page),
-          limit: parseInt(limit),
+          limit: safeLimit,
           totalPages,
         },
         filters: {
