@@ -1,5 +1,47 @@
 /* ===== ORDERS DASHBOARD STYLES ===== */
 
+/* ── Orders Top Bar ── */
+.ord-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.ord-topbar-left { display: flex; align-items: baseline; gap: 12px; }
+.ord-title { font-size: 20px; font-weight: 700; color: #180D3E; margin: 0; }
+.ord-subtitle { font-size: 13px; color: #9ca3af; font-weight: 500; }
+.ord-topbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* ── Orders KPI Strip ── */
+.ord-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.ord-kpi {
+  background: #fff;
+  border: 1px solid #ebebf0;
+  border-left: 3px solid #180D3E;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: box-shadow 0.18s ease;
+}
+.ord-kpi:hover { box-shadow: 0 4px 16px rgba(24,13,62,0.07); }
+.ord-kpi-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: #9ca3af; }
+.ord-kpi-val { font-size: 16px; font-weight: 800; color: #180D3E; word-break: break-word; }
+
+@media (max-width: 1200px) { .ord-kpi-strip { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 900px) {
+  .ord-topbar { flex-direction: column; align-items: flex-start; }
+  .ord-topbar-right { width: 100%; }
+  .ord-kpi-strip { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+}
+@media (max-width: 480px) { .ord-kpi-strip { grid-template-columns: 1fr 1fr; gap: 6px; } .ord-kpi-val { font-size: 14px; } }
+
 /* Header Container */
 .seo-header-container {
   display: flex;
