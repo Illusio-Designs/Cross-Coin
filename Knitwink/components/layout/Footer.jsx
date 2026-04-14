@@ -20,14 +20,17 @@ const SHOP_LINKS = [
 ]
 
 const COMPANY_LINKS = [
-  { label: 'About Knitwink', href: ROUTES.about },
+  { label: 'About', href: ROUTES.about },
   { label: 'Journal',         href: ROUTES.journal },
   { label: 'Contact Us',      href: ROUTES.contact },
+  { label: 'Track Your Order', href: ROUTES.orders },
 ]
 
-const HELP_LINKS = [
-  { label: 'Track Your Order', href: ROUTES.orders },
-  { label: 'Contact Us',       href: ROUTES.contact },
+const POLICY_LINKS = [
+  { label: 'Privacy Policy',       href: '/policies/privacy-policy' },
+  { label: 'Terms & Conditions',   href: '/policies/terms-and-conditions' },
+  { label: 'Shipping Policy',      href: '/policies/shipping-policy' },
+  { label: 'Cancellation & Refund', href: '/policies/cancellation-and-refund' },
 ]
 
 export function Footer() {
@@ -90,11 +93,11 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Col 4 — Help */}
+          {/* Col 4 — Policies */}
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40 mb-5">Help</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40 mb-5">Policies</p>
             <ul className="flex flex-col gap-3">
-              {HELP_LINKS.map((l) => (
+              {POLICY_LINKS.map((l) => (
                 <li key={l.href}>
                   <Link href={l.href} className="text-sm text-white/55 transition-colors hover:text-white">{l.label}</Link>
                 </li>
@@ -127,10 +130,6 @@ export function Footer() {
         <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
           <span className="text-xs text-white/35">© {year} Knitwink. All rights reserved.</span>
           <div className="flex flex-wrap items-center justify-center gap-1.5 text-xs text-white/35">
-            <Link href="/policies/privacy" className="transition-colors hover:text-white/60">Privacy Policy</Link>
-            <span>·</span>
-            <Link href="/policies/terms" className="transition-colors hover:text-white/60">Terms of Use</Link>
-            <span>·</span>
             <span>Crafted with</span>
             <span className="text-red-400">❤</span>
             <span>by</span>

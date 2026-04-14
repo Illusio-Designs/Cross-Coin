@@ -32,7 +32,13 @@ export function Breadcrumb() {
 
   if (pathname === '/') return null
 
-  const segments = pathname.split('/').filter(Boolean)
+  let segments = pathname.split('/').filter(Boolean)
+
+  // For policy pages, skip the "policies" segment — just show the policy name
+  if (segments[0] === 'policies' && segments.length > 1) {
+    segments = segments.slice(1)
+  }
+
   const crumbs = segments.map((seg, i) => ({
     label: formatSegment(seg),
     href: '/' + segments.slice(0, i + 1).join('/'),

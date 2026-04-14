@@ -25,6 +25,7 @@ import "../styles/common/DonutChart.css";
 import "../styles/common/FomoElements.css";
 // Components
 import "../styles/components/InfiniteReviewsSlider.css";
+import "../styles/components/ReviewForm.css";
 // Pages
 import "../styles/pages/Home.css";
 import "../styles/pages/Login.css";

@@ -4,6 +4,7 @@ import { getPublicProductBySlug, getPublicCoupons, getPublicProductReviews, chec
 import { useCart } from '../context/CartContext';
 import Loader from '../components/common/Loader';
 import InfiniteReviewsSlider from '../components/common/InfiniteReviewsSlider';
+import ReviewForm from '../components/common/ReviewForm';
 import colorMap from '../components/products/colorMap';
 import SizeChartModal from '../components/products/SizeChartModal';
 import { useBreadcrumb } from '../components/common/Breadcrumb';
@@ -697,12 +698,18 @@ export default function ProductDetails() {
         </div>
 
         {/* Reviews */}
-        {allReviews.length > 0 && (
-          <div className="pdt-reviews">
-            <h2 className="pdt-section-title">Customer Reviews</h2>
-            <InfiniteReviewsSlider reviews={allReviews} />
+        {/* Reviews */}
+        <div className="pdt-reviews">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h2 className="pdt-section-title" style={{ margin: 0 }}>Customer Reviews</h2>
+            {rawProduct?.id && <ReviewForm productId={rawProduct.id} productName={productData?.title} />}
           </div>
-        )}
+          {allReviews.length > 0 ? (
+            <InfiniteReviewsSlider reviews={allReviews} />
+          ) : (
+            <p style={{ color: '#999', fontSize: 14, textAlign: 'center', padding: '20px 0' }}>No reviews yet — be the first!</p>
+          )}
+        </div>
       </div>
 
       {/* â”€â”€ Sticky Bar â”€â”€ */}
