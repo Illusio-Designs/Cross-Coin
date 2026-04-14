@@ -155,6 +155,7 @@ module.exports.createReview = async (req, res) => {
             // order_id: userOrderId, // Assuming order_id is not a direct field in Review model anymore
             rating: parsedRating,
             review: sanitizedReview || null,
+            brandId: req.brandId || null,
             status: 'pending',
             verified_purchase: verifiedPurchase,
             is_featured: false
@@ -291,6 +292,7 @@ module.exports.createPublicReview = async (req, res) => {
             review: sanitizedComment,
             guestName: name,
             guestEmail: email,
+            brandId: req.brandId || null,
             status: 'pending' // All public reviews start as pending
         }, { transaction });
 
@@ -382,6 +384,7 @@ module.exports.getPublicProductReviews = async (req, res) => {
             productId: pId,
             status: 'approved' // Hardcoded to approved for public view
         };
+        if (req.brandId) filter.brandId = req.brandId;
         
         let order = [['createdAt', 'DESC']]; 
         if (validSort === 'highest') order = [['rating', 'DESC'], ['createdAt', 'DESC']];
@@ -708,18 +711,12 @@ module.exports.getAllReviews = async (req, res) => {
 
         const whereClause = {};
         if (status && status !== 'all') whereClause.status = status;
+        if (req.brandId) whereClause.brandId = req.brandId;
 
         const productInclude = {
             model: Product,
             as: 'Product',
             attributes: ['id', 'name'],
-            required: !!(req.brandId), // INNER JOIN only when filtering by brand
-            include: [{
-                model: Brand,
-                as: 'Brands',
-                through: { attributes: ['status'] },
-                ...(req.brandId ? { where: { id: req.brandId }, required: true } : {})
-            }]
         };
         
         const reviews = await Review.findAndCountAll({
@@ -727,7 +724,8 @@ module.exports.getAllReviews = async (req, res) => {
             include: [
                 { model: User, as: 'User', attributes: ['id', 'username'] },
                 productInclude,
-                { model: ReviewImage, as: 'ReviewImages' }
+                { model: ReviewImage, as: 'ReviewImages' },
+                { model: Brand, as: 'Brand', attributes: ['id', 'name', 'display_name', 'slug'] }
             ],
             order,
             limit: cappedLimit,
@@ -736,11 +734,15 @@ module.exports.getAllReviews = async (req, res) => {
         });
         
         res.json({
-            reviews: reviews.rows.map(r => ({
-                ...r.toJSON(),
-                productName: r.Product ? r.Product.name : 'N/A',
-                customerName: r.User ? r.User.username : r.guestName || 'Guest'
-            })),
+            reviews: reviews.rows.map(r => {
+                const json = r.toJSON();
+                return {
+                    ...json,
+                    productName: r.Product ? r.Product.name : 'N/A',
+                    customerName: r.User ? r.User.username : r.guestName || 'Guest',
+                    brandName: r.Brand ? (r.Brand.display_name || r.Brand.name) : null,
+                };
+            }),
             pagination: {
                 total: reviews.count,
                 page: parseInt(page),
@@ -1037,30 +1039,17 @@ module.exports.getAllPublicReviews = async (req, res) => {
 
         const offset = (parseInt(page) - 1) * parseInt(limit);
 
-        // Build include options with brand filtering
-        const includeOptions = [
-            { model: User, as: 'User', attributes: ['id', 'username', 'profileImage'] },
-            { 
-                model: Product, 
-                as: 'Product', 
-                attributes: ['id', 'name'],
-                include: [
-                    {
-                        model: Brand,
-                        as: 'Brands',
-                        attributes: ['id', 'name'],
-                        through: { attributes: [] },
-                        ...(req.brand && req.brand.id && { where: { id: req.brand.id } })
-                    }
-                ],
-                ...(req.brand && req.brand.id && { required: true })
-            },
-            { model: ReviewImage, as: 'ReviewImages' }
-        ];
+        const whereClause = { status: 'approved' };
+        // Filter by brand stored on the review itself
+        if (req.brandId) whereClause.brandId = req.brandId;
 
         const reviewsData = await Review.findAndCountAll({
-            where: { status: 'approved' },
-            include: includeOptions,
+            where: whereClause,
+            include: [
+                { model: User, as: 'User', attributes: ['id', 'username', 'profileImage'] },
+                { model: Product, as: 'Product', attributes: ['id', 'name'] },
+                { model: ReviewImage, as: 'ReviewImages' }
+            ],
             order,
             limit: parseInt(limit),
             offset: offset,
