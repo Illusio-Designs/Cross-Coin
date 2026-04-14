@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
-import BrandTags from "../../../components/Dashboard/BrandTags";
-import { reviewService } from "../../../services";
+import { reviewService, brandService } from "../../../services";
 
 const IC = {
   search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
@@ -34,54 +33,80 @@ export default function Reviews() {
   const [totalPages, setTotalPages] = useState(0);
   const [statusCounts, setStatusCounts] = useState({ approved: 0, pending: 0, rejected: 0 });
   const [formData, setFormData] = useState({ status: "pending", is_featured: false, admin_notes: "" });
-
   const [statusFilter, setStatusFilter] = useState("");
+  const [brands, setBrands] = useState([]);
+  const [brandFilter, setBrandFilter] = useState("");
+
+  useEffect(() => {
+    brandService.getAllBrands().then(res => {
+      setBrands(res?.data || res?.brands || (Array.isArray(res) ? res : []));
+    }).catch(() => {});
+  }, []);
 
   const fetchReviews = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await reviewService.getAllReviews('all', { page: currentPage, limit: itemsPerPage, status: 'all' });
+      const selectedBrand = (Array.isArray(brands) ? brands : []).find(b => String(b.id) === brandFilter);
+      const response = await reviewService.getAllReviews('all', {
+        page: currentPage, limit: itemsPerPage, status: 'all',
+        brandId: brandFilter || undefined,
+        brandSlug: selectedBrand?.slug || undefined,
+      });
       const list = response?.reviews || response || [];
-      const mapped = list.map(r => ({ id: r.id, customerName: r.customerName || 'Guest', productName: r.productName || 'N/A', Product: r.Product, rating: r.rating, review: r.review, status: r.status, is_featured: r.is_featured, admin_notes: r.admin_notes }));
-      setReviews(mapped);
-      setTotalReviews(response?.pagination?.total || mapped.length);
-      setTotalPages(response?.pagination?.totalPages || Math.ceil(mapped.length / itemsPerPage));
+      setReviews(list.map(r => ({
+        id: r.id,
+        customerName: r.customerName || 'Guest',
+        productName: r.productName || 'N/A',
+        brandName: r.brandName || r.Brand?.display_name || r.Brand?.name || null,
+        Product: r.Product,
+        rating: r.rating,
+        review: r.review,
+        status: r.status,
+        is_featured: r.is_featured,
+        admin_notes: r.admin_notes,
+      })));
+      setTotalReviews(response?.pagination?.total || list.length);
+      setTotalPages(response?.pagination?.totalPages || Math.ceil(list.length / itemsPerPage));
     } catch (err) {
       setError(err.message || "Failed to fetch reviews");
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage]);
+  }, [currentPage, itemsPerPage, brandFilter]);
 
-  // Fetch total counts per status independently (not affected by pagination)
   const fetchStatusCounts = useCallback(async () => {
     try {
-      const [approvedRes, pendingRes, rejectedRes] = await Promise.all([
-        reviewService.getAllReviews('approved', { page: 1, limit: 1 }),
-        reviewService.getAllReviews('pending', { page: 1, limit: 1 }),
-        reviewService.getAllReviews('rejected', { page: 1, limit: 1 }),
+      const opts = { page: 1, limit: 1, brandId: brandFilter || undefined };
+      const [a, p, r] = await Promise.all([
+        reviewService.getAllReviews('approved', opts),
+        reviewService.getAllReviews('pending', opts),
+        reviewService.getAllReviews('rejected', opts),
       ]);
       setStatusCounts({
-        approved: approvedRes?.pagination?.total || 0,
-        pending: pendingRes?.pagination?.total || 0,
-        rejected: rejectedRes?.pagination?.total || 0,
+        approved: a?.pagination?.total || 0,
+        pending:  p?.pagination?.total  || 0,
+        rejected: r?.pagination?.total  || 0,
       });
     } catch {}
-  }, []);
+  }, [brandFilter]);
 
   useEffect(() => { fetchReviews(); }, [fetchReviews]);
   useEffect(() => { fetchStatusCounts(); }, [fetchStatusCounts]);
-  useEffect(() => { setCurrentPage(1); }, [search]);
+  useEffect(() => { setCurrentPage(1); }, [search, brandFilter]);
 
   const filteredData = reviews.filter(item => {
     if (statusFilter && item.status !== statusFilter) return false;
     if (!search) return true;
     const s = search.toLowerCase();
-    return item.customerName?.toLowerCase().includes(s) || item.productName?.toLowerCase().includes(s) || item.review?.toLowerCase().includes(s);
+    return item.customerName?.toLowerCase().includes(s) ||
+           item.productName?.toLowerCase().includes(s) ||
+           item.review?.toLowerCase().includes(s);
   });
 
-  const currentItemsWithSN = filteredData.map((item, idx) => ({ ...item, serial_number: (currentPage - 1) * itemsPerPage + idx + 1 }));
+  const currentItemsWithSN = filteredData.map((item, idx) => ({
+    ...item, serial_number: (currentPage - 1) * itemsPerPage + idx + 1,
+  }));
 
   const handleModerate = async (id) => {
     try {
@@ -105,7 +130,10 @@ export default function Reviews() {
     }});
   };
 
-  const handleModalClose = () => { setIsModalOpen(false); setFormData({ status: "pending", is_featured: false, admin_notes: "" }); };
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setFormData({ status: "pending", is_featured: false, admin_notes: "" });
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -117,19 +145,36 @@ export default function Reviews() {
     if (!formData.id) return;
     try {
       setLoading(true);
-      await reviewService.moderateReview(formData.id, { status: formData.status, is_featured: formData.is_featured, admin_notes: formData.admin_notes });
-      setReviews(prev => prev.map(r => r.id === formData.id ? { ...r, status: formData.status, is_featured: formData.is_featured, admin_notes: formData.admin_notes } : r));
+      await reviewService.moderateReview(formData.id, {
+        status: formData.status, is_featured: formData.is_featured, admin_notes: formData.admin_notes,
+      });
+      setReviews(prev => prev.map(r =>
+        r.id === formData.id ? { ...r, ...formData } : r
+      ));
       fetchStatusCounts();
       handleModalClose();
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
   };
 
+  const brandOptions = [
+    { value: '', label: 'All Brands' },
+    ...(Array.isArray(brands) ? brands : []).map(b => ({ value: String(b.id), label: b.display_name || b.name })),
+  ];
+
+  const selectedBrandName = brandFilter
+    ? ((Array.isArray(brands) ? brands : []).find(b => String(b.id) === brandFilter)?.display_name || (Array.isArray(brands) ? brands : []).find(b => String(b.id) === brandFilter)?.name || '')
+    : '';
+
+  const avgRating = reviews.length > 0
+    ? (reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length).toFixed(1)
+    : '0.0';
+
   const columns = [
     { header: "Sr. No", accessor: "serial_number" },
     { header: "Customer", accessor: "customerName", cell: ({ customerName }) => <span className="cat-name-cell">{customerName}</span> },
     { header: "Product", accessor: "productName", cell: ({ productName }) => <span className="cat-desc-cell">{productName}</span> },
-    { header: "Brands", accessor: row => { const brands = row.Product?.Brands || row.Product?.brands || []; return <BrandTags brands={brands} />; } },
+    { header: "Brand", accessor: "brandName", cell: ({ brandName }) => brandName ? <span className="sl-status-badge sl-status-approved">{brandName}</span> : <span style={{ color: '#a3a3a3' }}>—</span> },
     { header: "Rating", accessor: "rating", cell: ({ rating }) => <StarRating rating={rating} /> },
     { header: "Review", accessor: "review", cell: ({ review }) => <span className="cat-desc-cell">{review}</span> },
     { header: "Status", accessor: "status", cell: ({ status }) => <span className={`sl-status-badge sl-status-${status}`}>{status}</span> },
@@ -144,11 +189,6 @@ export default function Reviews() {
     }
   ];
 
-  const approvedCount = statusCounts.approved;
-  const pendingCount = statusCounts.pending;
-  const rejectedCount = statusCounts.rejected;
-  const avgRating = reviews.length > 0 ? (reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length).toFixed(1) : '0.0';
-
   return (
     <>
       <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
@@ -157,15 +197,12 @@ export default function Reviews() {
           <div className="sl-header-left">
             <div className="sl-header-icon">{IC.reviews}</div>
             <div>
-              <h1 className="sl-page-title">Reviews</h1>
-              <p className="sl-page-sub">{totalReviews} review{totalReviews !== 1 ? 's' : ''} total</p>
+              <h1 className="sl-page-title">Reviews{selectedBrandName ? ` — ${selectedBrandName}` : ''}</h1>
+              <p className="sl-page-sub">{totalReviews} review{totalReviews !== 1 ? 's' : ''}{brandFilter ? ' for this brand' : ' total'}</p>
             </div>
           </div>
-          <div className="sl-header-right">
-            <div className="sl-search-wrap">
-              <span className="sl-search-icon">{IC.search}</span>
-              <input type="text" className="sl-search-input" placeholder="Search reviews..." value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
+          <div className="sl-header-right" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <Select options={brandOptions} value={brandFilter} onChange={setBrandFilter} placeholder="All Brands" />
             <Select
               options={[
                 { value: '', label: 'All Status' },
@@ -177,46 +214,37 @@ export default function Reviews() {
               onChange={setStatusFilter}
               placeholder="All Status"
             />
+            <div className="sl-search-wrap">
+              <span className="sl-search-icon">{IC.search}</span>
+              <input type="text" className="sl-search-input" placeholder="Search reviews..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
           </div>
         </div>
 
-        {/* Stat Cards */}
         <div className="sl-stat-cards">
           <div className="sl-stat-card">
             <div className="sl-stat-icon sl-stat-icon--blue">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
             </div>
-            <div className="sl-stat-body">
-              <span className="sl-stat-label">Total Reviews</span>
-              <span className="sl-stat-value">{totalReviews}</span>
-            </div>
+            <div className="sl-stat-body"><span className="sl-stat-label">Total</span><span className="sl-stat-value">{totalReviews}</span></div>
           </div>
           <div className="sl-stat-card">
             <div className="sl-stat-icon sl-stat-icon--green">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             </div>
-            <div className="sl-stat-body">
-              <span className="sl-stat-label">Approved</span>
-              <span className="sl-stat-value">{approvedCount}</span>
-            </div>
+            <div className="sl-stat-body"><span className="sl-stat-label">Approved</span><span className="sl-stat-value">{statusCounts.approved}</span></div>
           </div>
           <div className="sl-stat-card">
             <div className="sl-stat-icon sl-stat-icon--yellow">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             </div>
-            <div className="sl-stat-body">
-              <span className="sl-stat-label">Pending</span>
-              <span className="sl-stat-value">{pendingCount}</span>
-            </div>
+            <div className="sl-stat-body"><span className="sl-stat-label">Pending</span><span className="sl-stat-value">{statusCounts.pending}</span></div>
           </div>
           <div className="sl-stat-card">
             <div className="sl-stat-icon sl-stat-icon--purple">
               <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             </div>
-            <div className="sl-stat-body">
-              <span className="sl-stat-label">Avg. Rating</span>
-              <span className="sl-stat-value">{avgRating} / 5</span>
-            </div>
+            <div className="sl-stat-body"><span className="sl-stat-label">Avg. Rating</span><span className="sl-stat-value">{avgRating} / 5</span></div>
           </div>
         </div>
 
@@ -228,7 +256,7 @@ export default function Reviews() {
           ) : filteredData.length === 0 ? (
             <div className="sl-empty">
               <div className="sl-empty-icon">{IC.reviews}</div>
-              <p>{search ? "No reviews match your search" : "No reviews yet"}</p>
+              <p>{search ? "No reviews match your search" : brandFilter ? "No reviews for this brand" : "No reviews yet"}</p>
             </div>
           ) : (
             <>

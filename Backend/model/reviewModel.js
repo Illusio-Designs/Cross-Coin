@@ -58,6 +58,11 @@ const Review = sequelize.define('Review', {
     admin_notes: {
         type: DataTypes.TEXT,
         allowNull: true
+    },
+    brandId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'brandId'
     }
 }, {
     tableName: 'reviews',
@@ -83,6 +88,14 @@ Review.hasMany(ReviewImage, {
     foreignKey: 'reviewId',
     as: 'ReviewImages',
     onDelete: 'CASCADE'
+});
+
+const Brand = require('./brandModel.js');
+Review.belongsTo(Brand, {
+    foreignKey: 'brandId',
+    as: 'Brand',
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE'
 });
 
 module.exports = { Review }; 

@@ -65,7 +65,7 @@ export default function ProductPage() {
       </section>
 
       <section className="">
-        <ReviewsSection />
+        <ReviewsSection productId={product.id} productName={product.name} />
       </section>
 
       <section className="bg-off-white">

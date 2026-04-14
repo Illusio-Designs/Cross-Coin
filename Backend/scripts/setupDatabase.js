@@ -2058,6 +2058,40 @@ const addCodAddressConfirmedColumns = async () => {
   } catch (error) {
     console.log('⚠️ Error adding COD address confirmed columns:', error.message);
   }
+
+  // Ensure reviews.brandId column exists (tracks which brand the review was submitted from)
+  console.log("Ensuring reviews.brandId column...");
+  try {
+    const [brandIdCol] = await sequelize.query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reviews' AND COLUMN_NAME = 'brandId'
+    `);
+    if (!brandIdCol.length) {
+      await sequelize.query(`ALTER TABLE reviews ADD COLUMN brandId INT NULL`);
+      await sequelize.query(`ALTER TABLE reviews ADD CONSTRAINT fk_reviews_brand FOREIGN KEY (brandId) REFERENCES brands(id) ON DELETE SET NULL ON UPDATE CASCADE`);
+      console.log("✓ reviews.brandId column added");
+    } else {
+      console.log("✓ reviews.brandId already exists");
+    }
+    // Backfill: set all reviews with NULL brandId to the first brand (Crosscoin)
+    const [nullCount] = await sequelize.query(`SELECT COUNT(*) as cnt FROM reviews WHERE brandId IS NULL`);
+    if (nullCount[0].cnt > 0) {
+      const [firstBrand] = await sequelize.query(`SELECT id FROM brands WHERE slug = 'crosscoin' OR name LIKE '%crosscoin%' ORDER BY id ASC LIMIT 1`);
+      if (firstBrand.length) {
+        await sequelize.query(`UPDATE reviews SET brandId = ${firstBrand[0].id} WHERE brandId IS NULL`);
+        console.log(`✓ Backfilled ${nullCount[0].cnt} reviews with Crosscoin brand (ID: ${firstBrand[0].id})`);
+      } else {
+        // Fallback: use the first brand in the table
+        const [anyBrand] = await sequelize.query(`SELECT id FROM brands ORDER BY id ASC LIMIT 1`);
+        if (anyBrand.length) {
+          await sequelize.query(`UPDATE reviews SET brandId = ${anyBrand[0].id} WHERE brandId IS NULL`);
+          console.log(`✓ Backfilled ${nullCount[0].cnt} reviews with brand ID: ${anyBrand[0].id}`);
+        }
+      }
+    }
+  } catch (e) {
+    console.log("⚠️ reviews.brandId fix skipped:", e.message);
+  }
 };
 
 module.exports = { setupDatabase, findAvailablePort, createPerformanceIndexes };
