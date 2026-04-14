@@ -93,18 +93,18 @@ main section section {
 
 /* ── Review column scroll animations ────────────────────────────────────── */
 @keyframes scroll-up {
-  from { transform: translateY(0); }
-  to   { transform: translateY(-50%); }
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-33.333%); }
 }
 @keyframes scroll-down {
-  from { transform: translateY(0); }
-  to   { transform: translateY(50%); }
+  0%   { transform: translateY(-33.333%); }
+  100% { transform: translateY(0); }
 }
 .animate-scroll-up {
-  animation: scroll-up 20s linear infinite;
+  animation: scroll-up 25s linear infinite;
 }
 .animate-scroll-down {
-  animation: scroll-down 20s linear infinite;
+  animation: scroll-down 25s linear infinite;
 }
 .animate-scroll-up:hover,
 .animate-scroll-down:hover {

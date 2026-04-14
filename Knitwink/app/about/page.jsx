@@ -79,7 +79,7 @@ export default function AboutPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-brand-black via-brand-black/30 to-transparent" />
 
-        <div className="relative z-10 w-full px-6 pb-20 md:px-10 lg:px-16 lg:pb-28">
+        <div className="relative z-10 w-full px-6 pb-20 md:px-10 lg:px-16 lg:pb-10">
           <div className="max-w-2xl">
             <span className="inline-block rounded-full border border-white/20 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-white/50">
               About Knitwink
@@ -141,7 +141,7 @@ export default function AboutPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {PILLARS.map((p) => (
             <div key={p.number} className="rounded-2xl border border-gray-100 bg-white p-8">
-              <span className="font-display text-4xl font-normal text-gray-100">{p.number}</span>
+              <span className="font-display text-4xl font-normal">{p.number}</span>
               <h3 className="mt-3 text-base font-semibold text-brand-black">{p.title}</h3>
               <p className="mt-3 text-sm leading-relaxed text-gray-500">{p.body}</p>
             </div>

@@ -16,7 +16,6 @@ export default function JournalPage() {
     <>
       {/* Header */}
       <section className="bg-brand-black px-6 py-14 md:px-10 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-white/40">Knitwink</p>
         <h1 className="mt-2 font-display text-4xl font-normal text-white lg:text-5xl">The Journal</h1>
         <p className="mt-3 text-sm text-white/50">Stories, ideas and updates from the world of knitwear.</p>
       </section>
