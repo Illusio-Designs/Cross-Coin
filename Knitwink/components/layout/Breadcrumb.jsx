@@ -1,10 +1,9 @@
-'use client';
+'use client'
 
-import { usePathname } from 'next/navigation';
-import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
+import { usePathname } from 'next/navigation'
+import Link from 'next/link'
+import { ChevronRight } from 'lucide-react'
 
-// Human-readable labels for known path segments
 const SEGMENT_LABELS = {
   collections: 'Collections',
   products: 'Products',
@@ -16,75 +15,56 @@ const SEGMENT_LABELS = {
   login: 'Login',
   register: 'Register',
   about: 'About',
-  sustainability: 'Sustainability',
   journal: 'Journal',
   contact: 'Contact',
   search: 'Search',
   'size-guide': 'Size Guide',
   wishlist: 'Wishlist',
-  quiz: 'Style Quiz'
-};
+}
 
-function formatSegment(segment) {
-  if (SEGMENT_LABELS[segment]) return SEGMENT_LABELS[segment];
-  // Handle dynamic slugs/handles — decode URI + title-case
-  return decodeURIComponent(segment).
-  replace(/-/g, ' ').
-  replace(/\b\w/g, (c) => c.toUpperCase());
+function formatSegment(seg) {
+  if (SEGMENT_LABELS[seg]) return SEGMENT_LABELS[seg]
+  return decodeURIComponent(seg).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 export function Breadcrumb() {
-  const pathname = usePathname();
+  const pathname = usePathname()
 
-  // Hide on homepage
-  if (pathname === '/') return null;
+  if (pathname === '/') return null
 
-  const segments = pathname.split('/').filter(Boolean);
-
+  const segments = pathname.split('/').filter(Boolean)
   const crumbs = segments.map((seg, i) => ({
     label: formatSegment(seg),
-    href: '/' + segments.slice(0, i + 1).join('/')
-  }));
+    href: '/' + segments.slice(0, i + 1).join('/'),
+  }))
 
   return (
     <nav
       aria-label="Breadcrumb"
-      className="w-full bg-white border-b border-gray-200">
-      
-      <div className="mx-auto max-w-[1440px] px-6 md:px-10 lg:px-16">
-        <ol className="flex items-center gap-1 py-2.5 text-xs text-gray-600 flex-wrap">
-          {/* Home */}
+      className="absolute left-0 right-0 z-40"
+      style={{ top: 102 }}
+    >
+      <div className="px-5 md:px-8">
+        <ol className="flex flex-wrap items-center gap-2 py-2.5 text-sm text-gray-500">
           <li>
-            <Link
-              href="/"
-              className="transition-colors duration-150 hover:text-brand-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage rounded">
-              
+            <Link href="/" className="hover:text-gray-100 hover:underline underline-offset-2 transition-colors">
               Home
             </Link>
           </li>
-
           {crumbs.map((crumb, i) => {
-            const isLast = i === crumbs.length - 1;
+            const isLast = i === crumbs.length - 1
             return (
-              <li key={crumb.href} className="flex items-center gap-1">
-                <ChevronRight size={12} className="text-gray-400 flex-shrink-0" />
-                {isLast ?
-                <span className="text-brand-black font-medium" aria-current="page">
-                    {crumb.label}
-                  </span> :
-
-                <Link
-                  href={crumb.href}
-                  className="transition-colors duration-150 hover:text-brand-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage rounded">
-                  
-                    {crumb.label}
-                  </Link>
+              <li key={crumb.href} className="flex items-center gap-2">
+                <span className="text-gray-100">/</span>
+                {isLast
+                  ? <span className="text-gray-100 font-medium" aria-current="page">{crumb.label}</span>
+                  : <Link href={crumb.href} className="hover:text-brand-white hover:underline underline-offset-2 transition-colors">{crumb.label}</Link>
                 }
-              </li>);
-
+              </li>
+            )
           })}
         </ol>
       </div>
-    </nav>);
-
+    </nav>
+  )
 }

@@ -51,10 +51,10 @@ export default function RootLayout({ children }) {
       <body suppressHydrationWarning className="flex min-h-full w-full flex-col bg-off-white font-sans text-brand-black">
         <AnnouncementBar />
         <Navbar />
+        <Breadcrumb />
         <MobileMenu />
         <CartDrawer />
         <main className="flex-1 pb-1">
-          <Breadcrumb />
           {children}
         </main>
         <Footer />

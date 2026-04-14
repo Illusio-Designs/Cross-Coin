@@ -1,216 +1,201 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Phone, Clock, ChevronDown, CheckCircle } from 'lucide-react';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
-import { sendMessage } from '@/lib/api/contact';
+import { useState } from 'react'
+import { Mail, Phone, MapPin, Instagram, Facebook, ChevronDown, CheckCircle } from 'lucide-react'
 
-const schema = z.object({
-  name: z.string().min(1, 'Required'),
-  email: z.string().email('Enter a valid email'),
-  subject: z.string().min(1, 'Select a subject'),
-  message: z.string().min(10, 'Message must be at least 10 characters')
-});
-
-
-
-const SUBJECT_OPTIONS = [
-{ value: '', label: 'Select a subject' },
-{ value: 'order', label: 'Order enquiry' },
-{ value: 'returns', label: 'Returns & exchanges' },
-{ value: 'product', label: 'Product question' },
-{ value: 'sustainability', label: 'Sustainability' },
-{ value: 'other', label: 'Other' }];
-
-
-const CONTACT_INFO = [
-{ icon: Mail, label: 'Email', value: 'hello@allbirds.com' },
-{ icon: Phone, label: 'Phone', value: '+1 (800) 555-0100' },
-{ icon: Clock, label: 'Hours', value: 'Mon–Fri, 9am–6pm PST' }];
-
+function WhatsAppIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+      <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.845L.057 23.571a.75.75 0 0 0 .92.92l5.726-1.471A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.693 9.693 0 0 1-4.953-1.358l-.355-.211-3.676.944.962-3.578-.231-.368A9.693 9.693 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/>
+    </svg>
+  )
+}
 
 const FAQS = [
-{ q: 'How do I return or exchange my order?', a: 'We offer free returns within 30 days of purchase. Visit your order history to initiate a return.' },
-{ q: 'How long does shipping take?', a: 'Standard shipping takes 3–5 business days. Express options are available at checkout.' },
-{ q: 'Are Allbirds shoes machine washable?', a: 'Yes — most styles can be washed on a gentle cold cycle. Remove the insoles and laces first.' },
-{ q: 'What is your carbon footprint commitment?', a: 'We publish the carbon footprint of every product and are committed to cutting it in half by 2025.' },
-{ q: 'Do you offer a size guarantee?', a: 'Yes. If your size doesn\'t fit, we\'ll exchange it for free — no questions asked.' }];
-
+  { q: 'How do I track my order?',             a: 'Once your order ships, you will receive a tracking link via WhatsApp and email. You can also check order status from your account page.' },
+  { q: 'What is your return policy?',           a: 'We accept returns within 7 days of delivery for unused products in original packaging. Reach out via WhatsApp or email to initiate a return.' },
+  { q: 'How long does delivery take?',          a: 'We deliver pan India within 4–7 business days. Express delivery may be available at checkout depending on your location.' },
+  { q: 'Are Knitwink socks machine washable?',  a: 'Yes! All our socks are machine washable. Use a gentle cold cycle and air dry for best results.' },
+  { q: 'Do you offer bulk or gifting orders?',  a: 'Absolutely. We offer custom bulk orders and gift packaging. Drop us an email and we will get back to you within 24 hours.' },
+]
 
 function FaqItem({ q, a }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false)
   return (
-    <div className="border-b border-gray-200">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-4 py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2"
-        aria-expanded={open}>
-        
+    <div className="border-b border-gray-100 last:border-0">
+      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between gap-4 py-4 text-left" aria-expanded={open}>
         <span className="text-sm font-medium text-brand-black">{q}</span>
-        <ChevronDown
-          size={16}
-          className={`shrink-0 text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-          aria-hidden="true" />
-        
+        <ChevronDown size={14} className={`shrink-0 text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
-      <AnimatePresence initial={false}>
-        {open &&
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: 'auto', opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.2, ease: 'easeOut' }}
-          className="overflow-hidden">
-          
-            <p className="pb-5 text-sm leading-relaxed text-gray-600">{a}</p>
-          </motion.div>
-        }
-      </AnimatePresence>
-    </div>);
-
+      {open && <p className="pb-4 text-sm leading-relaxed text-gray-500">{a}</p>}
+    </div>
+  )
 }
 
 export function ContactPageClient() {
-  const [sent, setSent] = useState(false);
-  const [serverError, setServerError] = useState(null);
+  const [form, setForm] = useState({ name: '', email: '', message: '' })
+  const [sent, setSent] = useState(false)
+  const [sending, setSending] = useState(false)
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting }
-  } = useForm({ resolver: zodResolver(schema) });
-
-  const onSubmit = async (data) => {
-    setServerError(null);
-    try {
-      await sendMessage(data);
-      setSent(true);
-      reset();
-    } catch {
-      setServerError('Something went wrong. Please try again.');
-    }
-  };
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSending(true)
+    await new Promise((r) => setTimeout(r, 1000))
+    setSent(true)
+    setSending(false)
+  }
 
   return (
     <>
-      {/* Main contact section */}
-      <section className="bg-white px-6 py-16 md:px-10 lg:px-16">
-        <div className="mx-auto max-w-site">
-          {/* Heading */}
-          <div className="mb-16 text-center">
-            <h1 className="font-display text-4xl font-normal text-brand-black lg:text-5xl">
-              Get in touch
-            </h1>
-            <p className="mx-auto mt-4 max-w-md text-base text-gray-600">
-              We&apos;re here to help. Reach out and we&apos;ll get back to you within 24 hours.
-            </p>
-          </div>
+      {/* Hero */}
+      <section className="bg-brand-black px-6 py-14 text-center md:px-10">
+        <h1 className="mt-2 text-4xl font-bold text-white lg:text-5xl">Get in Touch</h1>
+        <p className="mt-3 text-sm text-white/50">We're here to help — usually reply within 24 hours.</p>
+      </section>
 
-          {/* Two-column layout */}
-          <div className="grid grid-cols-1 gap-16 lg:grid-cols-2">
-            {/* Left — contact info */}
-            <div className="flex flex-col gap-8">
-              <div className="flex flex-col gap-4">
-                {CONTACT_INFO.map(({ icon: Icon, label, value }) =>
-                <div key={label} className="flex items-center gap-4 rounded-2xl border border-gray-200 p-5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sage/10">
-                      <Icon size={18} className="text-sage" aria-hidden="true" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-widest text-gray-600">{label}</p>
-                      <p className="mt-0.5 text-sm text-brand-black">{value}</p>
-                    </div>
-                  </div>
-                )}
+      {/* Info + Form */}
+      <section className="bg-white px-4 py-10 md:px-6 md:py-14">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 lg:grid-cols-2">
+
+          {/* LEFT */}
+          <div className="flex flex-col gap-6">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.25em] text-brand-black">Contact Details</p>
+              <p className="mt-2 text-sm leading-relaxed text-gray-500">
+                Questions about your order, our products, or anything else? We'd love to hear from you.
+              </p>
+            </div>
+
+            {/* Contact cards */}
+            <div className="flex flex-col gap-3">
+              <a
+                href="mailto:support@knitwink.com"
+                className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-gray-50 px-5 py-4 transition-colors hover:border-brand-black"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-black">
+                  <Mail size={15} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Email</p>
+                  <p className="mt-0.5 text-sm font-medium text-brand-black">support@knitwink.com</p>
+                </div>
+              </a>
+
+              <a
+                href="tel:+919999999999"
+                className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-gray-50 px-5 py-4 transition-colors hover:border-brand-black"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-black">
+                  <Phone size={15} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Phone</p>
+                  <p className="mt-0.5 text-sm font-medium text-brand-black">+91 99999 99999</p>
+                </div>
+              </a>
+
+              <div className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-gray-50 px-5 py-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-black">
+                  <MapPin size={15} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Address</p>
+                  <p className="mt-0.5 text-sm font-medium text-brand-black">Mumbai, Maharashtra, India</p>
+                </div>
               </div>
             </div>
 
-            {/* Right — form */}
+            {/* Social icons only */}
             <div>
-              {sent ?
-              <div className="flex flex-col items-center gap-4 rounded-2xl border border-gray-200 p-10 text-center">
-                  <CheckCircle size={40} className="text-sage" />
-                  <p className="text-base font-medium text-brand-black">Message sent</p>
-                  <p className="text-sm text-gray-600">Thanks! We&apos;ll be in touch within 24 hours.</p>
-                  <button
-                  onClick={() => setSent(false)}
-                  className="mt-2 text-sm text-brand-black underline underline-offset-4 hover:text-sage transition-colors duration-150">
-                  
-                    Send another message
-                  </button>
-                </div> :
-
-              <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5" noValidate>
-                  <Input
-                  label="Name"
-                  autoComplete="name"
-                  {...register('name')}
-                  error={errors.name?.message} />
-                
-                  <Input
-                  label="Email"
-                  type="email"
-                  autoComplete="email"
-                  {...register('email')}
-                  error={errors.email?.message} />
-                
-                  <Select
-                  label="Subject"
-                  options={SUBJECT_OPTIONS}
-                  {...register('subject')}
-                  error={errors.subject?.message} />
-                
-                  <div className="flex flex-col gap-1.5">
-                    <label
-                    htmlFor="message"
-                    className="text-xs font-medium uppercase tracking-widest text-gray-800">
-                    
-                      Message
-                    </label>
-                    <textarea
-                    id="message"
-                    rows={5}
-                    placeholder="How can we help?"
-                    {...register('message')}
-                    className={`w-full resize-none rounded-lg border px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 transition-colors duration-150 focus:border-brand-black focus:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2 ${errors.message ? 'border-error' : 'border-gray-200'}`} />
-                  
-                    {errors.message &&
-                  <p className="text-xs text-error" role="alert">{errors.message.message}</p>
-                  }
-                  </div>
-                  {serverError &&
-                <p className="text-sm text-error" role="alert">{serverError}</p>
-                }
-                  <Button type="submit" fullWidth disabled={isSubmitting}>
-                    {isSubmitting ? 'Sending…' : 'Send Message'}
-                  </Button>
-                </form>
-              }
+              <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400">Follow Us</p>
+              <div className="flex items-center gap-3">
+                <a href="https://instagram.com/knitwink" target="_blank" rel="noopener noreferrer" aria-label="Instagram"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-brand-black transition-all hover:bg-brand-black hover:text-white hover:border-brand-black">
+                  <Instagram size={16} />
+                </a>
+                <a href="https://facebook.com/knitwink" target="_blank" rel="noopener noreferrer" aria-label="Facebook"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-brand-black transition-all hover:bg-brand-black hover:text-white hover:border-brand-black">
+                  <Facebook size={16} />
+                </a>
+                <a href="https://wa.me/919999999999" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-brand-black transition-all hover:bg-brand-black hover:text-white hover:border-brand-black">
+                  <WhatsAppIcon size={16} />
+                </a>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* FAQ section */}
-      <section className="bg-off-white px-6 py-16 md:px-10 lg:px-16">
-        <div className="mx-auto max-w-site">
-          <h2 className="mb-8 font-display text-3xl font-normal text-brand-black">
-            Frequently asked questions
-          </h2>
-          <div className="max-w-2xl">
-            {FAQS.map((faq) =>
-            <FaqItem key={faq.q} q={faq.q} a={faq.a} />
+          {/* RIGHT — form */}
+          <div className="rounded-2xl border border-gray-100 bg-gray-50 p-6 md:p-8">
+            {sent ? (
+              <div className="flex h-full flex-col items-center justify-center gap-4 py-10 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-black">
+                  <CheckCircle size={26} className="text-white" />
+                </div>
+                <p className="text-base font-semibold text-brand-black">Message sent!</p>
+                <p className="text-sm text-gray-500">We'll get back to you within 24 hours.</p>
+                <button onClick={() => setSent(false)} className="mt-2 text-xs font-medium text-brand-black underline underline-offset-4">
+                  Send another message
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <p className="text-sm font-bold uppercase tracking-[0.25em] text-brand-black">Send a Message</p>
+
+                {[
+                  { label: 'Your Name',      key: 'name',    type: 'text',  placeholder: 'Priya Sharma' },
+                  { label: 'Email Address',  key: 'email',   type: 'email', placeholder: 'priya@email.com' },
+                ].map(({ label, key, type, placeholder }) => (
+                  <div key={key} className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-gray-500">{label}</label>
+                    <input
+                      required
+                      type={type}
+                      value={form[key]}
+                      onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                      placeholder={placeholder}
+                      className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-brand-black placeholder:text-gray-300 focus:border-brand-black focus:outline-none"
+                    />
+                  </div>
+                ))}
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-gray-500">Message</label>
+                  <textarea
+                    required
+                    rows={5}
+                    value={form.message}
+                    onChange={(e) => setForm({ ...form, message: e.target.value })}
+                    placeholder="How can we help you?"
+                    className="resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-brand-black placeholder:text-gray-300 focus:border-brand-black focus:outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={sending}
+                  className="mt-1 rounded-full bg-brand-black py-3.5 text-sm font-semibold uppercase tracking-wider text-white transition-opacity hover:opacity-80 disabled:opacity-50"
+                >
+                  {sending ? 'Sending…' : 'Send Message'}
+                </button>
+              </form>
             )}
           </div>
         </div>
       </section>
-    </>);
 
+      {/* FAQ */}
+      <section className="bg-gray-50 px-4 py-10 md:px-6 md:py-14">
+        <div className="mx-auto max-w-2xl">
+          <p className="mb-6 text-center text-sm font-bold uppercase tracking-[0.25em] text-brand-black">
+            Frequently Asked
+          </p>
+          <div className="rounded-2xl border border-gray-100 bg-white px-6 py-2">
+            {FAQS.map((faq) => <FaqItem key={faq.q} q={faq.q} a={faq.a} />)}
+          </div>
+        </div>
+      </section>
+    </>
+  )
 }
