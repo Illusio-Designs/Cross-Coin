@@ -119,6 +119,7 @@ main section section {
   line-height: 1.85;
   color: #525252;
   word-break: break-word;
+  text-align: justify;
 }
 .policy-content h1,
 .policy-content h2,
@@ -137,6 +138,7 @@ main section section {
 .policy-content h3 { font-size: 1.125rem; }
 .policy-content p {
   margin-bottom: 1rem;
+  text-align: justify;
 }
 .policy-content ul,
 .policy-content ol {
