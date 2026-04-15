@@ -205,3 +205,60 @@ main section section {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* ── Blog detail content styling ────────────────────────────────────────── */
+.blog-content h2 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #0a0a0a;
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+.blog-content h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #0a0a0a;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.blog-content p {
+  font-size: 0.9375rem;
+  line-height: 1.9;
+  color: #525252;
+  margin-bottom: 1.25rem;
+  text-align: justify;
+}
+.blog-content ul,
+.blog-content ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+.blog-content li {
+  font-size: 0.9375rem;
+  line-height: 1.8;
+  color: #525252;
+  margin-bottom: 0.4rem;
+}
+.blog-content strong,
+.blog-content b {
+  color: #0a0a0a;
+  font-weight: 600;
+}
+.blog-content a {
+  color: #0a0a0a;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.blog-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+  margin: 1.5rem 0;
+}
+.blog-content blockquote {
+  border-left: 3px solid #e5e5e5;
+  padding-left: 1rem;
+  margin: 1.5rem 0;
+  color: #737373;
+  font-style: italic;
+}
