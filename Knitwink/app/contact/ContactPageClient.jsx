@@ -49,9 +49,16 @@ export function ContactPageClient() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-brand-black px-6 py-14 text-center md:px-10">
-        <h1 className="mt-2 text-4xl font-bold text-white lg:text-5xl">Get in Touch</h1>
-        <p className="mt-3 text-sm text-white/50">We're here to help — usually reply within 24 hours.</p>
+      <section className="relative overflow-hidden bg-brand-black px-6 py-20 text-center md:px-10 md:py-28">
+        <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/[0.03]" />
+        <div className="absolute -bottom-16 -right-16 h-48 w-48 rounded-full bg-white/[0.03]" />
+        <div className="absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.05]" />
+        <div className="relative">
+          <h1 className="mt-3 text-4xl font-bold text-white lg:text-5xl">Get in Touch</h1>
+          <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-white/45">
+            Have a question, feedback, or just want to say hello? We're always happy to hear from you.
+          </p>
+        </div>
       </section>
 
       {/* Info + Form */}

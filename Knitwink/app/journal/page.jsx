@@ -15,9 +15,16 @@ export default function JournalPage() {
   return (
     <>
       {/* Header */}
-      <section className="bg-brand-black px-6 py-14 md:px-10 text-center">
-        <h1 className="mt-2 font-display text-4xl font-normal text-white lg:text-5xl">The Journal</h1>
-        <p className="mt-3 text-sm text-white/50">Stories, ideas and updates from the world of knitwear.</p>
+      <section className="relative overflow-hidden bg-brand-black px-6 py-20 text-center md:px-10 md:py-28">
+        <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/[0.03]" />
+        <div className="absolute -bottom-16 -right-16 h-48 w-48 rounded-full bg-white/[0.03]" />
+        <div className="absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.05]" />
+        <div className="relative">
+          <h1 className="mt-3 font-display text-4xl font-normal text-white lg:text-5xl">The Journal</h1>
+          <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-white/45">
+            Stories, ideas and updates from the world of knitwear.
+          </p>
+        </div>
       </section>
 
       {/* Grid */}

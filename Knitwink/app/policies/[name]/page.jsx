@@ -26,12 +26,19 @@ export default function PolicyPage() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-brand-black px-6 py-14 text-center md:px-10">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/40">Legal</p>
-        <h1 className="mt-2 text-3xl font-bold text-white lg:text-4xl">
-          {loading ? 'Loading…' : policy?.title || formatTitle(name)}
-        </h1>
-        <p className="mt-3 text-sm text-white/50">Please read this policy carefully before using our services.</p>
+      <section className="relative overflow-hidden bg-brand-black px-6 py-20 text-center md:px-10 md:py-28">
+        <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/[0.03]" />
+        <div className="absolute -bottom-16 -right-16 h-48 w-48 rounded-full bg-white/[0.03]" />
+        <div className="absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.05]" />
+        <div className="relative">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/30">Legal</p>
+          <h1 className="mt-3 text-3xl font-bold text-white lg:text-4xl">
+            {loading ? 'Loading…' : policy?.title || formatTitle(name)}
+          </h1>
+          <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-white/45">
+            Please read this policy carefully before using our services.
+          </p>
+        </div>
       </section>
 
       {/* Content */}
