@@ -1,71 +1,47 @@
-import Link from 'next/link';
-import Image from 'next/image';
-import { formatPrice } from '@/lib/utils';
+'use client'
 
+import { useEffect, useState } from 'react'
+import useEmblaCarousel from 'embla-carousel-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { getBestsellers } from '@/lib/api/products'
+import { ProductCard } from '@/components/collection/ProductCard'
 
-const FALLBACK = [
-{
-  id: 'cs1', handle: 'wool-runner', name: 'Wool Runner', collectionName: "Men's",
-  price: 13500, images: [{ url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80', alt: 'Wool Runner' }],
-  variants: [], colors: [{ name: 'Natural Grey', hex: '#bebab0', imageIndex: 0 }],
-  features: [], description: '', carbonFootprint: 9.9, materials: []
-},
-{
-  id: 'cs2', handle: 'tree-runner', name: 'Tree Runner', collectionName: "Women's",
-  price: 13500, images: [{ url: 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=400&q=80', alt: 'Tree Runner' }],
-  variants: [], colors: [{ name: 'Blizzard', hex: '#f7f5f0', imageIndex: 0 }],
-  features: [], description: '', carbonFootprint: 7.6, materials: []
-},
-{
-  id: 'cs3', handle: 'wool-dasher', name: 'Wool Dasher', collectionName: "Men's",
-  price: 15500, images: [{ url: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=400&q=80', alt: 'Wool Dasher' }],
-  variants: [], colors: [{ name: 'Sage', hex: '#7b9e87', imageIndex: 0 }],
-  features: [], description: '', carbonFootprint: 10.2, materials: []
-},
-{
-  id: 'cs4', handle: 'tree-flyer', name: 'Tree Flyer', collectionName: "Women's",
-  price: 17500, images: [{ url: 'https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=400&q=80', alt: 'Tree Flyer' }],
-  variants: [], colors: [{ name: 'Earth', hex: '#c4956a', imageIndex: 0 }],
-  features: [], description: '', carbonFootprint: 8.4, materials: []
-}];
+export function CrossSell({ currentHandle }) {
+  const [products, setProducts] = useState([])
+  const [emblaRef, emblaApi] = useEmblaCarousel({ align: 'start', dragFree: true })
 
+  useEffect(() => {
+    getBestsellers()
+      .then(all => setProducts(all.filter(p => p.handle !== currentHandle)))
+      .catch(() => {})
+  }, [currentHandle])
 
-
-
-
-
-
-export function CrossSell({ products, currentHandle }) {
-  const items = (products && products.length > 0 ? products : FALLBACK).
-  filter((p) => p.handle !== currentHandle).
-  slice(0, 4);
+  if (!products.length) return null
 
   return (
-    <section className="border-t border-gray-200 pt-12 mt-12">
-      <h2 className="mb-8 font-display text-2xl font-normal text-brand-black lg:text-3xl">
-        Pair it with
-      </h2>
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-        {items.map((product) =>
-        <Link
-          key={product.id}
-          href={`/products/${product.handle}`}
-          className="group flex flex-col gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2">
-          
-            <div className="relative aspect-square overflow-hidden rounded-xl bg-gray-100">
-              <Image
-              src={product.images[0]?.url ?? ''}
-              alt={product.images[0]?.alt ?? product.name}
-              fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-              sizes="(max-width: 768px) 50vw, 25vw" />
-            
-            </div>
-            <p className="text-sm text-gray-800">{product.name}</p>
-            <p className="text-sm font-medium text-brand-black">{formatPrice(product.price)}</p>
-          </Link>
-        )}
+    <div className="py-6">
+      <div className="mb-5 flex items-center px-3">
+        <div className="flex-1" />
+        <p className="text-sm font-bold uppercase tracking-[0.25em] text-brand-black">You May Also Like</p>
+        <div className="flex flex-1 justify-end gap-1.5">
+          <button onClick={() => emblaApi?.scrollPrev()} className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors hover:border-brand-black hover:text-brand-black" aria-label="Previous">
+            <ChevronLeft size={15} />
+          </button>
+          <button onClick={() => emblaApi?.scrollNext()} className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors hover:border-brand-black hover:text-brand-black" aria-label="Next">
+            <ChevronRight size={15} />
+          </button>
+        </div>
       </div>
-    </section>);
 
+      <div ref={emblaRef} className="overflow-hidden">
+        <div className="flex gap-3 px-3">
+          {products.map((product) => (
+            <div key={product.id} className="w-[220px] shrink-0 md:w-[260px]">
+              <ProductCard product={product} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 }

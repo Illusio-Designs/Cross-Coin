@@ -72,11 +72,13 @@
 
 /* ── Global section box design ──────────────────────────────────────────── */
 main section {
-  margin-left: 0.75rem;   /* 12px sides — slightly more breathing room */
+  margin-left: 0.75rem;
   margin-right: 0.75rem;
-  margin-top: 0.625rem;   /* 10px gap between sections */
-  border-radius: 1.25rem; /* 20px — slightly larger radius */
-  overflow: hidden;
+  margin-top: 0.625rem;
+  border-radius: 1.25rem;
+  overflow: clip;          /* clips content but does NOT create stacking context */
+  position: relative;
+  z-index: 0;             /* ensure sections stay below fixed elements */
 }
 
 /* Last section gets bottom margin so it doesn't touch the footer */
@@ -191,4 +193,13 @@ main section section {
   border: none;
   border-top: 1px solid #e5e5e5;
   margin: 2rem 0;
+}
+
+/* ── Hide scrollbar utility ─────────────────────────────────────────────── */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
