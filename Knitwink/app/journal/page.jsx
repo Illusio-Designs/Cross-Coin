@@ -27,14 +27,15 @@ export default function JournalPage() {
         </div>
       </section>
 
-      {/* Grid */}
+      {/* Grid — 4 columns */}
       <section className="bg-off-white px-4 py-10 md:px-6 md:py-12">
         {loading ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-                <div className="h-52 animate-pulse bg-gray-100" />
-                <div className="flex flex-col gap-2 p-3">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="overflow-hidden rounded-2xl bg-white shadow-sm">
+                <div className="aspect-[3/4] animate-pulse bg-gray-100" />
+                <div className="flex flex-col gap-2 p-4">
+                  <div className="h-3 w-1/2 animate-pulse rounded bg-gray-100" />
                   <div className="h-4 w-3/4 animate-pulse rounded bg-gray-100" />
                   <div className="h-3 w-full animate-pulse rounded bg-gray-100" />
                 </div>
@@ -44,8 +45,8 @@ export default function JournalPage() {
         ) : posts.length === 0 ? (
           <p className="py-20 text-center text-sm text-gray-400">No posts yet. Check back soon.</p>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {posts.map((post) => <BlogCard key={post.id} post={post} size="full" />)}
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {posts.map((post) => <BlogCard key={post.id} post={post} />)}
           </div>
         )}
       </section>
