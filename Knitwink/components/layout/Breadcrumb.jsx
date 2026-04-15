@@ -27,7 +27,7 @@ function formatSegment(seg) {
 }
 
 // Pages with dark hero backgrounds — breadcrumb text should be white
-const DARK_PAGES = ['/contact', '/journal', '/about', '/policies']
+const DARK_PAGES = ['/contact', '/journal', '/about', '/policies', '/products', '/collections']
 
 export function Breadcrumb() {
   const pathname = usePathname()

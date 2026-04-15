@@ -17,7 +17,7 @@ export function CategoryCards({ categories = [] }) {
     <div className="flex gap-3 px-3 py-3">
       {categories.slice(0, 4).map((c) => {
         const img = cleanImg(c.image)
-        const href = `/collections?category=${encodeURIComponent(c.name.trim())}`
+        const href = `/products?category=${encodeURIComponent(c.name.trim())}`
         return (
           <Link
             key={c.id}
