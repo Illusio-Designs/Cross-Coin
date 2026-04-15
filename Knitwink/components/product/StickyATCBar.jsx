@@ -1,68 +1,41 @@
-'use client';
+'use client'
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { formatPrice } from '@/lib/utils';
-import { cn } from '@/lib/utils';
+import { createPortal } from 'react-dom'
+import { useEffect, useState } from 'react'
+import { ShoppingBag } from 'lucide-react'
+import { formatPrice } from '@/lib/utils'
 
+export function StickyATCBar({ visible, productName, color, price, imageUrl, onAddToCart }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
+  if (!visible || !mounted) return null
 
-
-
-
-
-
-
-
-
-export function StickyATCBar({
-  visible,
-  productName,
-  color,
-  price,
-  selectedSize,
-  onAddToCart,
-  disabled
-}) {
-  return (
-    <AnimatePresence>
-      {visible &&
-      <motion.div
-        className="fixed bottom-0 left-0 right-0 z-50 h-16 border-t border-gray-200 bg-white"
-        initial={{ y: 64 }}
-        animate={{ y: 0 }}
-        exit={{ y: 64 }}
-        transition={{ duration: 0.2, ease: 'easeOut' }}>
-        
-          <div className="mx-auto flex h-full max-w-site items-center justify-between gap-4 px-5 lg:px-8">
-            {/* Product info */}
-            <div className="hidden flex-col sm:flex">
-              <p className="text-sm font-medium text-brand-black">{productName}</p>
-              <p className="text-xs text-gray-600">{color} · {formatPrice(price)}</p>
-            </div>
-
-            <div className="flex flex-1 items-center justify-end gap-3 sm:flex-none">
-              {/* Size pill */}
-              <div className="rounded-full border border-gray-200 px-4 py-2 text-xs text-gray-600">
-                {selectedSize ? `Size ${selectedSize}` : 'Select size'}
-              </div>
-
-              {/* ATC button */}
-              <button
-              onClick={onAddToCart}
-              disabled={disabled || !selectedSize}
-              className={cn(
-                'rounded-full px-6 py-2.5 text-sm font-medium uppercase tracking-wider text-white transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-sage',
-                disabled || !selectedSize ?
-                'cursor-not-allowed bg-gray-400' :
-                'bg-sage hover:bg-sage-dark'
-              )}>
-              
-                Add to Cart
-              </button>
-            </div>
+  return createPortal(
+    <div
+      style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 2147483647 }}
+      className="border-t border-gray-200 bg-white/95 backdrop-blur-md shadow-[0_-2px_16px_rgba(0,0,0,0.06)]"
+    >
+      <div className="mx-auto flex items-center justify-between gap-4 px-4 md:px-6 lg:px-8" style={{ height: 100 }}>
+        <div className="flex items-center gap-4 min-w-0">
+          {imageUrl && (
+            <img src={imageUrl} alt={productName} className="h-16 w-16 shrink-0 rounded-xl object-contain bg-gray-50" />
+          )}
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-brand-black">{productName}</p>
+            <p className="mt-0.5 text-xs text-gray-500">{color} · {formatPrice(price)}</p>
           </div>
-        </motion.div>
-      }
-    </AnimatePresence>);
+        </div>
 
+        <button
+          onClick={onAddToCart}
+          className="flex shrink-0 items-center gap-2 rounded-full bg-brand-black px-7 py-3 text-xs font-semibold uppercase tracking-wider text-white transition-opacity hover:opacity-80"
+        >
+          <ShoppingBag size={14} />
+          Add to Bag
+        </button>
+      </div>
+    </div>,
+    document.body
+  )
 }

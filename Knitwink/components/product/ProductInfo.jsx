@@ -1,38 +1,38 @@
-'use client';
+'use client'
 
-import { useState, useMemo } from 'react';
-import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
-import { useCart } from '@/hooks/useCart';
-import { StickyATCBar } from './StickyATCBar';
-import { formatPrice, cn } from '@/lib/utils';
-import { Minus, Plus, ShoppingBag, Zap, Eye, TrendingUp } from 'lucide-react';
+import { useState, useMemo } from 'react'
+import { useIntersectionObserver } from '@/hooks/useIntersectionObserver'
+import { useCart } from '@/hooks/useCart'
+import { StickyATCBar } from './StickyATCBar'
+import { formatPrice, cn } from '@/lib/utils'
+import { Minus, Plus, ShoppingBag, Zap, Eye, TrendingUp, Star } from 'lucide-react'
 
 function seedNum(id, min, max) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
-  return min + Math.abs(h) % (max - min + 1);
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0
+  return min + Math.abs(h) % (max - min + 1)
 }
 
 export function ProductInfo({ product, onColorChange }) {
   const [activeColor, setActiveColor] = useState(
     product.colors[0] ?? { name: 'Default', hex: '#f2f0eb', imageIndex: 0 }
-  );
-  const [qty, setQty] = useState(1);
-  const [addedFeedback, setAddedFeedback] = useState(false);
-  const { addItem } = useCart();
-  const { ref: atcRef, isVisible: atcVisible } = useIntersectionObserver({ threshold: 0.5 });
+  )
+  const [qty, setQty] = useState(1)
+  const [addedFeedback, setAddedFeedback] = useState(false)
+  const { addItem } = useCart()
+  const { ref: atcRef, isVisible: atcVisible } = useIntersectionObserver({ threshold: 0.5 })
 
-  const stockLeft = useMemo(() => seedNum(product.id, 2, 6), [product.id]);
-  const viewing   = useMemo(() => seedNum(product.id + 'v', 80, 220), [product.id]);
-  const sold      = useMemo(() => seedNum(product.id + 's', 800, 3200), [product.id]);
+  const stockLeft = useMemo(() => seedNum(product.id, 2, 6), [product.id])
+  const viewing = useMemo(() => seedNum(product.id + 'v', 80, 220), [product.id])
+  const sold = useMemo(() => seedNum(product.id + 's', 800, 3200), [product.id])
 
   const handleColorSelect = (color) => {
-    setActiveColor(color);
-    onColorChange?.(color);
-  };
+    setActiveColor(color)
+    onColorChange?.(color)
+  }
 
   const handleAddToCart = () => {
-    const variant = product.variants[0];
+    const variant = product.variants[0]
     addItem({
       id: variant?.id ?? product.id,
       productId: product.id,
@@ -44,77 +44,104 @@ export function ProductInfo({ product, onColorChange }) {
       quantity: qty,
       imageUrl: product.images[0]?.url ?? '',
       handle: product.handle,
-    });
-    setAddedFeedback(true);
-    setTimeout(() => setAddedFeedback(false), 2000);
-  };
+    })
+    setAddedFeedback(true)
+    setTimeout(() => setAddedFeedback(false), 2000)
+  }
 
   const handleBuyNow = () => {
-    handleAddToCart();
-    setTimeout(() => { window.location.href = '/checkout'; }, 300);
-  };
+    handleAddToCart()
+    setTimeout(() => { window.location.href = '/checkout' }, 300)
+  }
+
+  const discount = product.compareAtPrice
+    ? Math.round((1 - product.price / product.compareAtPrice) * 100)
+    : 0
 
   return (
     <>
-      <div className="flex flex-col gap-5">
+      {/* White card wrapper */}
+      <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm lg:p-7">
 
-        {/* Title + SKU */}
-        <div>
-          <p className="text-xs font-medium uppercase tracking-widest text-gray-400">{product.collectionName}</p>
-          <h1 className="mt-1 text-2xl font-semibold leading-snug text-brand-black lg:text-3xl">{product.name}</h1>
-          {product.sku && <p className="mt-1 text-xs text-gray-400">SKU: {product.sku}</p>}
+        {/* Collection badge */}
+        {product.collectionName && (
+          <span className="inline-block rounded-full bg-gray-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+            {product.collectionName}
+          </span>
+        )}
+
+        {/* Title */}
+        <h1 className="mt-3 text-xl font-bold leading-snug text-brand-black lg:text-2xl">{product.name}</h1>
+
+        {/* Rating + SKU row */}
+        <div className="mt-2 flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            {[1,2,3,4,5].map(i => (
+              <Star key={i} size={12} className="fill-amber-400 text-amber-400" />
+            ))}
+            <span className="ml-1 text-xs text-gray-400">(4.8)</span>
+          </div>
+          {product.sku && (
+            <>
+              <span className="text-gray-200">|</span>
+              <span className="text-[10px] text-gray-400">SKU: {product.sku}</span>
+            </>
+          )}
         </div>
+
+        {/* Divider */}
+        <hr className="my-4 border-gray-100" />
 
         {/* Price */}
         <div className="flex items-baseline gap-3">
           <span className="text-2xl font-bold text-brand-black">{formatPrice(product.price)}</span>
           {product.compareAtPrice && (
             <>
-              <span className="text-base text-gray-400 line-through">{formatPrice(product.compareAtPrice)}</span>
-              <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-500">
-                {Math.round((1 - product.price / product.compareAtPrice) * 100)}% OFF
+              <span className="text-sm text-gray-400 line-through">{formatPrice(product.compareAtPrice)}</span>
+              <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-[10px] font-bold text-red-500">
+                {discount}% OFF
               </span>
             </>
           )}
         </div>
+        <p className="mt-1 text-[10px] text-gray-500">MRP incl. of all taxes</p>
 
-        {/* Social proof */}
-        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-gray-50 px-4 py-3 text-xs text-gray-600">
-          <span className="flex items-center gap-1.5 font-medium text-red-500">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+        {/* Social proof strip */}
+        <div className="mt-4 flex items-center gap-2 text-[11px] text-gray-500">
+          <span className="flex items-center gap-1 font-medium text-red-500">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
             Only {stockLeft} left
           </span>
-          <span className="text-gray-300">|</span>
-          <span className="flex items-center gap-1"><Eye size={12} /> {viewing} viewing</span>
-          <span className="text-gray-300">|</span>
+          <span className="text-gray-200">·</span>
+          <span className="flex items-center gap-1"><Eye size={11} /> {viewing} viewing</span>
+          <span className="text-gray-200">·</span>
           <span className="flex items-center gap-1">
-            <TrendingUp size={12} />
+            <TrendingUp size={11} />
             {sold >= 1000 ? `${(sold / 1000).toFixed(1)}k` : sold} sold
           </span>
         </div>
 
-        {/* Color selector — pack-aware */}
+        {/* Divider */}
+        <hr className="my-4 border-gray-100" />
+
+        {/* Color selector */}
         {product.colors.length > 0 && product.colors[0].name && (
           <div>
-            <p className="mb-2 text-xs font-medium uppercase tracking-widest text-gray-500">
-              Color — <span className="normal-case font-normal text-brand-black">{activeColor.name}</span>
+            <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-brand-black">
+              Color <span className="normal-case font-normal text-gray-600">— {activeColor.name}</span>
             </p>
             <div role="radiogroup" aria-label="Select color" className="flex flex-wrap gap-2">
               {product.colors.map((color) =>
                 color.packColors ? (
-                  // Pack: multiple dots + "Pack of N" label
                   <button
                     key={color.name}
                     role="radio"
-                    aria-label={color.name}
                     aria-checked={activeColor.name === color.name}
                     onClick={() => handleColorSelect(color)}
                     title={color.name}
                     className={cn(
-                      'flex flex-col items-center gap-1 rounded-xl border-2 px-2 py-1.5 transition-all duration-150 focus-visible:outline-none',
-                      activeColor.name === color.name
-                        ? 'border-brand-black bg-gray-50'
-                        : 'border-gray-200 hover:border-gray-400'
+                      'flex flex-col items-center gap-1 rounded-xl border-2 px-2.5 py-2 transition-all',
+                      activeColor.name === color.name ? 'border-brand-black bg-gray-50' : 'border-gray-200 hover:border-gray-400'
                     )}
                   >
                     <div className="flex gap-1">
@@ -125,19 +152,15 @@ export function ProductInfo({ product, onColorChange }) {
                     <span className="text-[9px] font-semibold text-gray-500">Pack of {color.packColors.length}</span>
                   </button>
                 ) : (
-                  // Single color dot
                   <button
                     key={color.name}
                     role="radio"
-                    aria-label={color.name}
                     aria-checked={activeColor.name === color.name}
                     onClick={() => handleColorSelect(color)}
                     title={color.name}
                     className={cn(
-                      'h-7 w-7 rounded-full border-2 transition-all duration-150 focus-visible:outline-none',
-                      activeColor.name === color.name
-                        ? 'border-brand-black ring-2 ring-brand-black ring-offset-2'
-                        : 'border-gray-200 hover:border-gray-400'
+                      'h-8 w-8 rounded-full border-2 transition-all',
+                      activeColor.name === color.name ? 'border-brand-black ring-2 ring-brand-black ring-offset-2' : 'border-gray-200 hover:border-gray-400'
                     )}
                     style={{ backgroundColor: color.hex }}
                   />
@@ -147,44 +170,45 @@ export function ProductInfo({ product, onColorChange }) {
           </div>
         )}
 
-        {/* Size — Free Size */}
-        <div>
-          <p className="mb-2 text-xs font-medium uppercase tracking-widest text-gray-500">Size</p>
-          <button disabled className="cursor-default rounded-full border-2 border-brand-black bg-brand-black px-6 py-2 text-sm font-medium text-white">
+        {/* Size */}
+        <div className="mt-5">
+          <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-brand-black">Size</p>
+          <button disabled className="cursor-default rounded-full border-2 border-brand-black bg-brand-black px-6 py-2 text-xs font-semibold uppercase tracking-wider text-white">
             Free Size
           </button>
         </div>
 
-        {/* Quantity + CTAs in one row */}
-        <div className="flex items-center gap-3" ref={atcRef}>
-          <div className="flex items-center gap-2 rounded-full border border-gray-200 px-3 py-2">
-            <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease" className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-gray-100">
-              <Minus size={13} />
+        {/* Divider */}
+        <hr className="my-5 border-gray-100" />
+
+        {/* Qty + Add to Bag + Buy Now — single row */}
+        <div className="flex items-center gap-2.5" ref={atcRef}>
+          <div className="flex shrink-0 items-center gap-1 rounded-full border border-gray-200 px-2.5 py-2.5">
+            <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease" className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-gray-100">
+              <Minus size={12} />
             </button>
-            <span className="w-5 text-center text-sm font-medium">{qty}</span>
-            <button onClick={() => setQty((q) => q + 1)} aria-label="Increase" className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-gray-100">
-              <Plus size={13} />
+            <span className="w-5 text-center text-sm font-semibold">{qty}</span>
+            <button onClick={() => setQty((q) => q + 1)} aria-label="Increase" className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-gray-100">
+              <Plus size={12} />
             </button>
           </div>
 
           <button
             onClick={handleAddToCart}
             className={cn(
-              'flex flex-1 items-center justify-center gap-2 rounded-full py-3 text-sm font-semibold uppercase tracking-wider transition-colors duration-150',
-              addedFeedback
-                ? 'bg-green-600 text-white'
-                : 'border-2 border-brand-black bg-white text-brand-black hover:bg-brand-black hover:text-white'
+              'flex flex-1 items-center justify-center gap-2 rounded-full py-3 text-xs font-semibold uppercase tracking-wider transition-colors',
+              addedFeedback ? 'bg-green-600 text-white' : 'bg-brand-black text-white hover:bg-gray-800'
             )}
           >
-            <ShoppingBag size={15} />
+            <ShoppingBag size={14} />
             {addedFeedback ? 'Added!' : 'Add to Bag'}
           </button>
 
           <button
             onClick={handleBuyNow}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-brand-black py-3 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:bg-gray-800"
+            className="flex flex-1 items-center justify-center gap-2 rounded-full border-2 border-brand-black py-[10px] text-xs font-semibold uppercase tracking-wider text-brand-black transition-colors hover:bg-brand-black hover:text-white"
           >
-            <Zap size={15} />
+            <Zap size={14} />
             Buy Now
           </button>
         </div>
@@ -195,9 +219,13 @@ export function ProductInfo({ product, onColorChange }) {
         productName={product.name}
         color={activeColor.name}
         price={product.price}
-        selectedSize="Free Size"
+        imageUrl={
+          (product.colorImages?.[activeColor.name]?.[0]?.url) ||
+          (product.images?.[0]?.url) ||
+          ''
+        }
         onAddToCart={handleAddToCart}
       />
     </>
-  );
+  )
 }
