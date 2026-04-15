@@ -95,6 +95,17 @@ function mapProduct(p) {
     low_stock: 'Sale'
   };
 
+  // Extract gender and materials from variation attributes
+  const genders = new Set()
+  const materials = new Set()
+  variations.forEach((v) => {
+    const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes || '{}') : v.attributes || {}
+    const gArr = Array.isArray(attrs.gender) ? attrs.gender : attrs.gender ? [attrs.gender] : []
+    gArr.forEach(g => genders.add(g))
+    const mArr = Array.isArray(attrs.material) ? attrs.material : attrs.material ? [attrs.material] : []
+    mArr.forEach(m => materials.add(m))
+  })
+
   return {
     id: String(p.id),
     handle: p.slug || String(p.id),
@@ -113,35 +124,54 @@ function mapProduct(p) {
       sku: v.sku || ''
     })),
     colors: colors.length > 0 ? colors : [{ name: '', hex: '#d1d5db', imageIndex: 0 }],
+    genders: Array.from(genders),
+    materials: Array.from(materials),
     features: [],
     description: p.description || '',
     carbonFootprint: 0,
     badge: badgeMap[p.badge],
-    materials: []
   };
 }
 
-export async function getPublicProducts(limit = 20) {
+export async function getPublicProducts(params = {}) {
   try {
-    const data = await brandFetch(
-      `/api/products/catalog?limit=${limit}`,
-      60
-    );
-    const products = data?.data?.products || data?.data || data?.products || [];
-    return Array.isArray(products) ? products.map(mapProduct) : [];
+    const qp = new URLSearchParams()
+    if (params.category) qp.append('category', params.category)
+    if (params.search) qp.append('search', params.search)
+    if (params.sort) qp.append('sort', params.sort)
+    if (params.page) qp.append('page', params.page)
+    if (params.limit) qp.append('limit', params.limit)
+    else qp.append('limit', '100')
+    if (params.minPrice != null) qp.append('minPrice', params.minPrice)
+    if (params.maxPrice != null) qp.append('maxPrice', params.maxPrice)
+    if (params.attributes) qp.append('attributes', JSON.stringify(params.attributes))
+    const data = await brandFetch(`/api/products/catalog?${qp.toString()}`)
+    const products = data?.data?.products || data?.data || data?.products || []
+    const total = data?.data?.total || products.length
+    const totalPages = data?.data?.totalPages || 1
+    return {
+      products: Array.isArray(products) ? products.map(mapProduct) : [],
+      total,
+      totalPages,
+      page: Number(params.page) || 1,
+    }
   } catch {
-    return [];
+    return { products: [], total: 0, totalPages: 1, page: 1 }
   }
 }
 
 export async function getBestsellers() {
   try {
-    const data = await brandFetch(`/api/products/best-sellers?limit=10`, 60);
-    const products = data?.data?.products || data?.data || data?.products || [];
-    if (!Array.isArray(products) || products.length === 0) return getPublicProducts(10);
-    return products.map(mapProduct);
+    const data = await brandFetch(`/api/products/best-sellers?limit=10`)
+    const products = data?.data?.products || data?.data || data?.products || []
+    if (!Array.isArray(products) || products.length === 0) {
+      const result = await getPublicProducts({ limit: 10 })
+      return result.products
+    }
+    return products.map(mapProduct)
   } catch {
-    return getPublicProducts(10);
+    const result = await getPublicProducts({ limit: 10 })
+    return result.products
   }
 }
 
@@ -154,7 +184,10 @@ export const getProduct = async (handle) => {
   return mapProduct(data?.data || data);
 };
 
-export const getProducts = async () => getPublicProducts();
+export const getProducts = async () => {
+  const result = await getPublicProducts({ limit: 100 })
+  return result.products
+}
 
 export const getCollection = async (_handle) => ({});
 

@@ -20,9 +20,9 @@ const SHOP_LINKS = [
 ]
 
 const COMPANY_LINKS = [
-  { label: 'About', href: ROUTES.about },
-  { label: 'Journal',         href: ROUTES.journal },
-  { label: 'Contact Us',      href: ROUTES.contact },
+  { label: 'Collections',      href: '/collections' },
+  { label: 'All Products',     href: '/products' },
+  { label: 'Contact Us',       href: ROUTES.contact },
   { label: 'Track Your Order', href: ROUTES.orders },
 ]
 
