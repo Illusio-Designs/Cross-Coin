@@ -58,6 +58,18 @@ export default function ProductPage() {
             <div className="flex flex-col justify-center px-8 py-12 lg:px-4 lg:py-24">
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-500">Why We Love This</p>
               <p className="mt-5 text-sm leading-[1.85] text-gray-800">{product.description}</p>
+
+              {/* Best For */}
+              <div className="mt-6">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Best For</p>
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  {['Everyday Wear', 'Walking', 'Office', 'Travel'].map(tag => (
+                    <span key={tag} className="rounded-full border border-gray-300 px-4 py-1.5 text-[11px] font-medium text-gray-800">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
             {/* Center image — larger with double circles */}
             {product.images?.[1]?.url && (
