@@ -1478,11 +1478,27 @@
         }
       }
 
-      // Date range filter
-      if (start_date && end_date) {
-        filter.createdAt = {
-          [Op.between]: [new Date(start_date), new Date(end_date)],
-        };
+      // Date range filter — supports partial ranges (start only, end only, or both).
+      // end_date is normalised to 23:59:59.999 of the chosen day so orders placed
+      // later that day are included (otherwise Op.between to YYYY-MM-DD 00:00:00
+      // would cut off everything after midnight on the end date).
+      if (start_date || end_date) {
+        const range = {};
+        if (start_date) {
+          const s = new Date(start_date);
+          if (!isNaN(s.getTime())) {
+            s.setHours(0, 0, 0, 0);
+            range[Op.gte] = s;
+          }
+        }
+        if (end_date) {
+          const e = new Date(end_date);
+          if (!isNaN(e.getTime())) {
+            e.setHours(23, 59, 59, 999);
+            range[Op.lte] = e;
+          }
+        }
+        if (Object.keys(range).length) filter.createdAt = range;
       }
 
       // Search functionality

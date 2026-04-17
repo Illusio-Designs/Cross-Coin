@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { orderService, dashboardService } from '../../../services';
-import { debounce } from 'lodash';
 import { Table, Pagination, Modal, Button, Select, DateRangePicker } from "../../../components/ui";
 import SafeImage from "../../../components/common/SafeImage";
 import Loader from "../../../components/common/Loader";
@@ -57,31 +56,46 @@ const Orders = () => {
     const [refreshingStatus, setRefreshingStatus] = useState(false);
     const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
 
-    const fetchOrders = useCallback(async (page = currentPage, searchOverride) => {
+    // Debounced search value — auto-cancels previous timer on every keystroke
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(filterValue.trim()), 400);
+        return () => clearTimeout(t);
+    }, [filterValue]);
+
+    // Drop stale responses when user types fast / changes filters quickly
+    const requestIdRef = useRef(0);
+
+    const fetchOrders = useCallback(async (page = currentPage) => {
+        const reqId = ++requestIdRef.current;
         setLoading(true);
         setError(null);
         try {
-            const searchTerm = searchOverride !== undefined ? searchOverride : filterValue;
             const params = {
                 page, limit: itemsPerPage,
                 status: statusFilter !== 'all' ? statusFilter : undefined,
                 payment_type: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
                 payment_status: paymentStatusFilter !== 'all' ? paymentStatusFilter : undefined,
-                search: searchTerm || undefined,
+                search: debouncedSearch || undefined,
+                start_date: statsStartDate || undefined,
+                end_date: statsEndDate || undefined,
                 sort: sortBy, order: sortOrder
             };
             Object.keys(params).forEach(key => { if (params[key] === undefined) delete params[key]; });
             const data = await orderService.getAllOrders(params);
+            // Ignore if a newer request has been issued
+            if (reqId !== requestIdRef.current) return;
             setOrders(data.orders || data.data || []);
             const totalOrdersCount = data.total || 0;
             setTotalPages(Math.ceil(totalOrdersCount / itemsPerPage));
             setTotalOrders(totalOrdersCount);
         } catch (err) {
+            if (reqId !== requestIdRef.current) return;
             setError(err.message || 'Failed to fetch orders');
         } finally {
-            setLoading(false);
+            if (reqId === requestIdRef.current) setLoading(false);
         }
-    }, [currentPage, itemsPerPage, statusFilter, paymentTypeFilter, paymentStatusFilter, filterValue, sortBy, sortOrder]);
+    }, [currentPage, itemsPerPage, statusFilter, paymentTypeFilter, paymentStatusFilter, debouncedSearch, statsStartDate, statsEndDate, sortBy, sortOrder]);
 
     const fetchAllOrdersForStats = useCallback(async () => {
         try {
@@ -281,57 +295,23 @@ const Orders = () => {
         } finally { setIsDownloadingBulk(false); }
     };
 
-    useEffect(() => { fetchOrders(1); fetchAllOrdersForStats(); fetchLabelStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // ── One-shot init: stats panel + label stats (orders fetched by effects below) ──
+    useEffect(() => { fetchAllOrdersForStats(); fetchLabelStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Stats panel re-fetches when its date range changes
     useEffect(() => { fetchAllOrdersForStats(); }, [statsStartDate, statsEndDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Reset to page 1 whenever any filter (other than the page itself) changes,
+    // so users don't get stuck on an out-of-range page after narrowing results.
     useEffect(() => {
-        setCurrentPage(1); fetchOrders(1); fetchAllOrdersForStats();
-    }, [paymentTypeFilter, paymentStatusFilter, statusFilter, sortBy, sortOrder, itemsPerPage]); // eslint-disable-line react-hooks/exhaustive-deps
+        setCurrentPage(1);
+    }, [statusFilter, paymentTypeFilter, paymentStatusFilter, sortBy, sortOrder, itemsPerPage, debouncedSearch, statsStartDate, statsEndDate]);
 
-    useEffect(() => { if (currentPage > 1) fetchOrders(currentPage); }, [currentPage, fetchOrders]);
+    // Single source of truth for fetching the orders list.
+    // fetchOrders depends on every filter, so this effect re-runs whenever any of them change.
+    useEffect(() => { fetchOrders(currentPage); }, [fetchOrders, currentPage]);
 
-    useEffect(() => { setCurrentPage(1); }, [paymentTypeFilter, paymentStatusFilter, statusFilter]);
-
-    // Debounced search — waits 500ms after user stops typing, then fetches
-    const debouncedSearch = useCallback(
-        debounce((searchVal) => {
-            setCurrentPage(1);
-            const params = {
-                page: 1, limit: itemsPerPage,
-                status: statusFilter !== 'all' ? statusFilter : undefined,
-                payment_type: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
-                payment_status: paymentStatusFilter !== 'all' ? paymentStatusFilter : undefined,
-                search: searchVal || undefined,
-                sort: sortBy, order: sortOrder
-            };
-            Object.keys(params).forEach(key => { if (params[key] === undefined) delete params[key]; });
-            setLoading(true);
-            orderService.getAllOrders(params)
-                .then(data => {
-                    setOrders(data.orders || data.data || []);
-                    const totalOrdersCount = data.total || 0;
-                    setTotalPages(Math.ceil(totalOrdersCount / itemsPerPage));
-                    setTotalOrders(totalOrdersCount);
-                })
-                .catch(err => setError(err.message || 'Failed to fetch orders'))
-                .finally(() => setLoading(false));
-        }, 500),
-        [itemsPerPage, statusFilter, paymentTypeFilter, paymentStatusFilter, sortBy, sortOrder] // eslint-disable-line react-hooks/exhaustive-deps
-    );
-
-    const handleSearchChange = (e) => {
-        const val = e.target.value;
-        setFilterValue(val);
-        if (!val.trim()) {
-            // Cleared — fetch all orders immediately, cancel any pending debounce
-            debouncedSearch.cancel();
-            setCurrentPage(1);
-            fetchOrders(1, '');
-        } else {
-            debouncedSearch(val);
-        }
-    };
+    const handleSearchChange = (e) => setFilterValue(e.target.value);
 
     const formatDate = (dateString) => {
         const d = new Date(dateString);
@@ -608,9 +588,9 @@ const Orders = () => {
                         </div>
                     </div>
 
-                    {/* ── Stats Date Filter ── */}
+                    {/* ── Date Filter (filters both KPI stats AND the orders list below) ── */}
                     <DateRangePicker
-                        label="Stats Date Range"
+                        label="Date Range"
                         startDate={statsStartDate}
                         endDate={statsEndDate}
                         onStartChange={setStatsStartDate}
