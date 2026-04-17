@@ -72,12 +72,15 @@ export default function LoginPage() {
   const handleVerify = async () => {
     const code = otp.join('')
     if (code.length < 4) { setError('Enter the full OTP'); return }
+    if (typeof window.verifyOtp !== 'function') { setError('OTP service not ready. Please refresh.'); return }
     setLoading(true)
     setError('')
 
-    // Verify via MSG91 widget
-    if (typeof window.verifyOtp === 'function') {
-      window.verifyOtp(identifier, code, async (accessToken) => {
+    window.verifyOtp(
+      code,
+      async (data) => {
+        // MSG91 verified — data is the access token
+        const accessToken = typeof data === 'string' ? data : (data?.message || data?.token || JSON.stringify(data))
         try {
           await loginWithOtp({ phone: digits, access_token: accessToken })
           await checkAuth()
@@ -86,14 +89,12 @@ export default function LoginPage() {
           setError(err.message || 'Login failed')
           setLoading(false)
         }
-      }, () => {
+      },
+      (err) => {
         setError('Invalid OTP. Try again.')
         setLoading(false)
-      })
-    } else {
-      setError('OTP service not ready.')
-      setLoading(false)
-    }
+      }
+    )
   }
 
   return (
