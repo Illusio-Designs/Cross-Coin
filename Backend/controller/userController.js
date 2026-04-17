@@ -39,7 +39,7 @@ const addImageUrlToResponse = (userResponse) => {
 // **User Registration**
 module.exports.register = async (req, res) => {
     try {
-        const { username, email, password } = req.body;
+        const { username, email, password, phone } = req.body;
         // Ignore any role from the frontend, always set to 'consumer'
         const role = 'consumer';
 
@@ -61,7 +61,9 @@ module.exports.register = async (req, res) => {
             username,
             email,
             password: hashedPassword,
-            role
+            phone: phone ? String(phone).replace(/\D/g, '').slice(-10) : null,
+            role,
+            source_brand_id: req.brandId || null
         });
 
         // Guest-to-member conversion: link guest orders by email and phone
@@ -73,12 +75,12 @@ module.exports.register = async (req, res) => {
         const guestIds = guestsByEmail.map(g => g.id);
 
         // Also find guests by phone if provided in request
-        const phone = req.body.phone ? String(req.body.phone).replace(/\D/g, '').slice(-10) : null;
-        if (phone) {
+        const regPhone = req.body.phone ? String(req.body.phone).replace(/\D/g, '').slice(-10) : null;
+        if (regPhone) {
             const guestsByPhone = await GuestUser.findAll({ where: { status: 'active' } });
             for (const g of guestsByPhone) {
                 const gPhone = String(g.phone || '').replace(/\D/g, '').slice(-10);
-                if (gPhone === phone && !guestIds.includes(g.id)) guestIds.push(g.id);
+                if (gPhone === regPhone && !guestIds.includes(g.id)) guestIds.push(g.id);
             }
         }
 
@@ -195,6 +197,7 @@ module.exports.login = async (req, res) => {
                 email: digits + '@phone.crosscoin.in',
                 phone: digits,
                 role: 'consumer',
+                source_brand_id: req.brandId || null,
             });
         }
 
@@ -553,8 +556,10 @@ module.exports.getAllUsers = async (req, res) => {
         const cappedLimit = Math.min(parseInt(limit) || 20, 1000);
         const offset = (parseInt(page) - 1) * cappedLimit;
 
+        const Brand = require('../model/brandModel.js');
         const { count, rows } = await User.findAndCountAll({
             attributes: { exclude: ['password', 'resetToken', 'resetTokenExpiry', 'refreshToken', 'refreshTokenExpiry'] },
+            include: [{ model: Brand, as: 'SourceBrand', attributes: ['id', 'name', 'display_name', 'slug'] }],
             limit: cappedLimit,
             offset,
             order: [['createdAt', 'DESC']]

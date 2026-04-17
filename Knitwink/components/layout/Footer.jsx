@@ -23,7 +23,7 @@ const COMPANY_LINKS = [
   { label: 'Collections',      href: '/collections' },
   { label: 'All Products',     href: '/products' },
   { label: 'Contact Us',       href: ROUTES.contact },
-  { label: 'Track Your Order', href: ROUTES.orders },
+  { label: 'Track Your Order', href: '/track-order' },
 ]
 
 const POLICY_LINKS = [
