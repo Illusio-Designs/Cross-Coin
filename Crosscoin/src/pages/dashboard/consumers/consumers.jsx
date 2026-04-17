@@ -60,7 +60,12 @@ export default function Consumers() {
     { header: "Sr. No", accessor: "serial_number" },
     { header: "Name", accessor: "username", cell: ({ username }) => <span className="cat-name-cell">{username}</span> },
     { header: "Email", accessor: "email" },
-    { header: "Role", accessor: "role", cell: ({ role }) => <span className="sl-cat-badge">{role}</span> },
+    { header: "Phone", accessor: "phone", cell: ({ phone }) => <span>{phone || '—'}</span> },
+    { header: "Source", accessor: "SourceBrand", cell: (row) => {
+      const brand = row.SourceBrand;
+      return brand ? <span className="sl-status-badge sl-status-approved">{brand.display_name || brand.name}</span> : <span style={{ color: '#a3a3a3' }}>—</span>;
+    }},
+    { header: "Joined", accessor: "createdAt", cell: ({ createdAt }) => <span>{createdAt ? new Date(createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</span> },
     {
       header: "Actions", accessor: "actions",
       cell: (row) => (

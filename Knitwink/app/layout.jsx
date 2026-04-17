@@ -8,6 +8,7 @@ import { MobileMenu } from '@/components/layout/MobileMenu';
 import { CartDrawer } from '@/components/cart/CartDrawer';
 import { BackToTop } from '@/components/ui/BackToTop';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
+import { AuthProvider } from '@/context/AuthContext';
 import { SITE_NAME } from '@/lib/constants';
 
 const inter = Inter({
@@ -48,7 +49,34 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} ${dancingScript.variable} h-full antialiased`}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var configuration = {
+                  widgetId: "366342706343383735393039",
+                  tokenAuth: "426738T7QwVqDd1uX69c7fc1dP1",
+                  exposeMethods: true,
+                  identifier: "",
+                  captchaType: "invisible",
+                  success: function(data) { window.__msg91OtpSuccess = data; },
+                  failure: function(error) { window.__msg91OtpFailure = error; }
+                };
+                var s = document.createElement('script');
+                s.type = 'text/javascript';
+                s.src = 'https://verify.msg91.com/otp-provider.js';
+                s.onload = function() {
+                  if (typeof initSendOTP === 'function') initSendOTP(configuration);
+                };
+                document.head.appendChild(s);
+              })();
+            `,
+          }}
+        />
+      </head>
       <body suppressHydrationWarning className="flex min-h-full w-full flex-col bg-off-white font-sans text-brand-black">
+        <AuthProvider>
         <AnnouncementBar />
         <Navbar />
         <Breadcrumb />
@@ -59,6 +87,7 @@ export default function RootLayout({ children }) {
         </main>
         <Footer />
         <BackToTop />
+        </AuthProvider>
       </body>
     </html>);
 

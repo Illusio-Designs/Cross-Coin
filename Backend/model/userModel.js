@@ -53,6 +53,12 @@ const User = sequelize.define('User', {
         type: DataTypes.DATE,
         allowNull: true,
         defaultValue: null
+    },
+    source_brand_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'source_brand_id',
+        comment: 'Brand from which the user first registered'
     }
 }, {
     timestamps: true,
@@ -67,6 +73,14 @@ const User = sequelize.define('User', {
             fields: ['username']
         }
     ]
+});
+
+const Brand = require('./brandModel.js');
+User.belongsTo(Brand, {
+    foreignKey: 'source_brand_id',
+    as: 'SourceBrand',
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE'
 });
 
 module.exports = { User };

@@ -2117,6 +2117,39 @@ const addCodAddressConfirmedColumns = async () => {
   } catch (e) {
     console.log("⚠️ reviews.brandId fix skipped:", e.message);
   }
+
+  // Ensure users.source_brand_id column exists (tracks which brand the user registered from)
+  console.log("Ensuring users.source_brand_id column...");
+  try {
+    const [srcBrandCol] = await sequelize.query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'source_brand_id'
+    `);
+    if (!srcBrandCol.length) {
+      await sequelize.query(`ALTER TABLE users ADD COLUMN source_brand_id INT NULL`);
+      await sequelize.query(`ALTER TABLE users ADD CONSTRAINT fk_users_source_brand FOREIGN KEY (source_brand_id) REFERENCES brands(id) ON DELETE SET NULL ON UPDATE CASCADE`);
+      console.log("✓ users.source_brand_id column added");
+    } else {
+      console.log("✓ users.source_brand_id already exists");
+    }
+    // Backfill: set all users with NULL source_brand_id to Crosscoin
+    const [nullUserCount] = await sequelize.query(`SELECT COUNT(*) as cnt FROM users WHERE source_brand_id IS NULL`);
+    if (nullUserCount[0].cnt > 0) {
+      const [ccBrand] = await sequelize.query(`SELECT id FROM brands WHERE slug = 'crosscoin' OR name LIKE '%crosscoin%' ORDER BY id ASC LIMIT 1`);
+      if (ccBrand.length) {
+        await sequelize.query(`UPDATE users SET source_brand_id = ${ccBrand[0].id} WHERE source_brand_id IS NULL`);
+        console.log(`✓ Backfilled ${nullUserCount[0].cnt} users with Crosscoin brand (ID: ${ccBrand[0].id})`);
+      } else {
+        const [anyBrand] = await sequelize.query(`SELECT id FROM brands ORDER BY id ASC LIMIT 1`);
+        if (anyBrand.length) {
+          await sequelize.query(`UPDATE users SET source_brand_id = ${anyBrand[0].id} WHERE source_brand_id IS NULL`);
+          console.log(`✓ Backfilled ${nullUserCount[0].cnt} users with brand ID: ${anyBrand[0].id}`);
+        }
+      }
+    }
+  } catch (e) {
+    console.log("⚠️ users.source_brand_id fix skipped:", e.message);
+  }
 };
 
 module.exports = { setupDatabase, findAvailablePort, createPerformanceIndexes };

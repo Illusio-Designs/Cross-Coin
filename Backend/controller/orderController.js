@@ -860,6 +860,7 @@
           phone: digits,
           password: tempPassword,
           role: 'consumer',
+          source_brand_id: req.brandId || null,
         });
         logger.debug(`createGuestOrder: Created new consumer user ${user.id} for ${email}`);
       } else {
