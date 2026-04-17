@@ -8,47 +8,45 @@ const StarRating = ({ rating }) => (
   </div>
 );
 
-// Generate a deterministic but varied dummy date based on review id/index
-const getDummyDate = (review, index) => {
-  const seed = (review.id || index + 1) * 7 + index * 13;
-  const daysAgo = (seed % 180) + 30; // between 30 and 210 days ago
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-};
-
-const ReviewCard = ({ review, index = 0 }) => {
+const ReviewCard = ({ review }) => {
   const name = review.reviewerName || review.User?.username || review.guestName || 'Anonymous';
   const text = review.review || '';
-  const date = getDummyDate(review, index);
+  const date = review.createdAt
+    ? new Date(review.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '';
 
   return (
     <div className="irs-card">
       <div className="irs-card-name">{name}</div>
       <StarRating rating={review.rating || 0} />
       <p className="irs-card-text">{text}</p>
-      <div className="irs-card-date">{date}</div>
+      {date && <div className="irs-card-date">{date}</div>}
     </div>
   );
 };
 
 const InfiniteReviewsSlider = ({ reviews }) => {
-  if (!reviews || reviews.length === 0) {
-    return (
-      <div className="irs-empty">No reviews yet.</div>
-    );
+  // Filter out any reviews without actual review text
+  const realReviews = (reviews || []).filter(r => r.review && r.review.trim().length > 0);
+
+  if (realReviews.length === 0) {
+    return <div className="irs-empty">No reviews yet.</div>;
   }
 
-  // Need at least enough cards to fill the viewport — duplicate until we have plenty
-  const ensureEnough = (arr) => {
+  // Duplicate just enough to fill the scroll seamlessly
+  const duplicate = (arr) => {
     let result = [...arr];
-    while (result.length < 10) result = [...result, ...arr];
+    while (result.length < 8) result = [...result, ...arr];
     return result;
   };
 
-  const mid = Math.ceil(reviews.length / 2);
-  const topReviews  = ensureEnough(reviews.slice(0, mid));
-  const botReviews  = ensureEnough(reviews.slice(mid) || reviews);
+  // Split reviews evenly between 2 rows — each row gets unique reviews
+  const mid = Math.ceil(realReviews.length / 2);
+  const row1Source = realReviews.slice(0, mid);
+  const row2Source = realReviews.slice(mid).length > 0 ? realReviews.slice(mid) : realReviews.slice(0, mid);
+
+  const topReviews = duplicate(row1Source);
+  const botReviews = duplicate(row2Source);
 
   return (
     <div className="irs-wrapper">
@@ -56,7 +54,7 @@ const InfiniteReviewsSlider = ({ reviews }) => {
       <div className="irs-track-outer">
         <div className="irs-track irs-track--left">
           {[...topReviews, ...topReviews].map((r, i) => (
-            <ReviewCard key={`top-${i}`} review={r} index={i} />
+            <ReviewCard key={`top-${i}`} review={r} />
           ))}
         </div>
       </div>
@@ -65,7 +63,7 @@ const InfiniteReviewsSlider = ({ reviews }) => {
       <div className="irs-track-outer">
         <div className="irs-track irs-track--right">
           {[...botReviews, ...botReviews].map((r, i) => (
-            <ReviewCard key={`bot-${i}`} review={r} index={i + 50} />
+            <ReviewCard key={`bot-${i}`} review={r} />
           ))}
         </div>
       </div>
