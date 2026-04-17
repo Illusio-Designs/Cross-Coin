@@ -125,3 +125,7 @@ export async function verifyOtp({ phone, access_token }) {
   if (data.token) localStorage.setItem('token', data.token)
   return data
 }
+
+// Aliases for backward compatibility with old imports
+export const login = loginWithOtp
+export const updatePassword = changePassword
