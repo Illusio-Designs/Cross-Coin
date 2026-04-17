@@ -155,3 +155,14 @@ export async function createAddress(data) {
   })
   return res.json()
 }
+
+// Aliases for backward compatibility
+export const getOrders = getUserOrders
+export const getOrder = async (id) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+  const res = await fetch(`${API_URL}/api/orders/${id}`, {
+    headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+  })
+  if (!res.ok) throw new Error('Order not found')
+  return res.json()
+}
