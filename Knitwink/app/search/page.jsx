@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { Search } from 'lucide-react';
 import { searchProducts, getFeaturedCollections } from '@/lib/api/products';
-import { ProductGrid } from '@/components/collection/ProductGrid';
+import { ProductCard } from '@/components/collection/ProductCard';
 import { SearchInput } from './SearchInput';
 import { SITE_NAME } from '@/lib/constants';
 
@@ -54,7 +54,9 @@ export default async function SearchPage({ searchParams }) {
           </p>
 
           {products.length > 0 ?
-          <ProductGrid products={products} /> :
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+            {products.map(p => <ProductCard key={p.id} product={p} />)}
+          </div> :
 
           <EmptyState query={query} suggestedCollections={suggestedCollections} />
           }
