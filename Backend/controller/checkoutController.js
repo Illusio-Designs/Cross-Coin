@@ -80,8 +80,8 @@ exports.verifyPhoneOtp = async (req, res) => {
       logger.warn('[Checkout OTP] MSG91_AUTH_KEY not set — skipping API verification');
     }
 
-    // ── Attempt 2: Decode the JWT as fallback ───────────────────────────
-    if (!tokenValid) {
+    // ── Attempt 2: Decode the JWT as fallback (only when MSG91 is configured) ─
+    if (!tokenValid && MSG91_AUTH_KEY) {
       try {
         // MSG91 widget returns a JWT — decode it (without signature verification
         // since we don't have MSG91's signing secret, but the JWT structure itself
@@ -143,25 +143,24 @@ async function computeCouponDiscount(couponId, subTotal) {
   if (!couponId) return 0;
   const coupon = await Coupon.findByPk(couponId);
   if (!coupon || coupon.status !== 'active') return 0;
-  if (coupon.minOrderAmount && subTotal < parseFloat(coupon.minOrderAmount)) return 0;
-  if (coupon.maxUsage && coupon.usageCount >= coupon.maxUsage) return 0;
+  if (coupon.minPurchase && subTotal < parseFloat(coupon.minPurchase)) return 0;
+  if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) return 0;
 
   let discount = 0;
-  if (coupon.discountType === 'percentage') {
-    discount = subTotal * (parseFloat(coupon.discountValue) / 100);
-    if (coupon.maxDiscountAmount) discount = Math.min(discount, parseFloat(coupon.maxDiscountAmount));
+  if (coupon.type === 'percentage') {
+    discount = subTotal * (parseFloat(coupon.value) / 100);
+    if (coupon.maxDiscount) discount = Math.min(discount, parseFloat(coupon.maxDiscount));
   } else {
-    discount = parseFloat(coupon.discountValue);
+    discount = parseFloat(coupon.value);
   }
   return Math.min(discount, subTotal);
 }
 
 async function calcShippingFee(paymentType, brandId = 1) {
   const { ShippingFee } = require('../model/shippingFeeModel.js');
-  const fee = await ShippingFee.findOne({ where: { brand_id: brandId } });
-  if (!fee) return 0;
-  if (paymentType === 'cod') return parseFloat(fee.cod_fee || 0);
-  return parseFloat(fee.prepaid_fee || 0);
+  const orderType = paymentType === 'cod' ? 'cod' : 'prepaid';
+  const fee = await ShippingFee.findOne({ where: { orderType, brand_id: brandId } });
+  return fee ? parseFloat(fee.fee) : 0;
 }
 
 async function batchFetchProducts(productIds) {

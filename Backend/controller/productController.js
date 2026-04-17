@@ -24,6 +24,7 @@ const BadgeService = require("../services/badgeService.js");
 const ProductService = require("../services/productService.js");
 const cacheManager = require("../services/cacheManager.js");
 const imagekitService = require("../services/imagekitService.js");
+const { logger } = require('../config/logging.js');
 
 // In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(
@@ -33,13 +34,13 @@ const imageHandler = new ImageHandler(
 // Helper: upload a multer file to ImageKit and return the filePath
 const uploadFileToImageKit = async (file) => {
   try {
-    const buffer = fsSync.readFileSync(file.path);
+    const buffer = await fs.readFile(file.path);
     const result = await imagekitService.uploadImage(buffer, file.filename, '/products');
     // Clean up local temp file
     fsSync.unlink(file.path, () => {});
     return result.filePath; // e.g. /products/filename.jpg
   } catch (err) {
-    console.error('ImageKit upload failed for', file.filename, err.message);
+    logger.error('ImageKit upload failed for', file.filename, err.message);
     // Fallback to local path so product save doesn't break
     return `/uploads/products/${file.filename}`;
   }
@@ -55,7 +56,7 @@ const formatProductResponse = (product) => {
       try {
         productData.dimensions = JSON.parse(productData.dimensions);
       } catch (e) {
-        console.error('Error parsing dimensions JSON:', e);
+        logger.error('Error parsing dimensions JSON:', e);
         productData.dimensions = { length: '', width: '', height: '' };
       }
     }
@@ -523,8 +524,8 @@ module.exports.createProduct = async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    console.error("\n=== ERROR IN PRODUCT CREATION ===");
-    console.error("Error details:", error);
+    logger.error("\n=== ERROR IN PRODUCT CREATION ===");
+    logger.error("Error details:", error);
     const isValidationError =
       error.message &&
       (error.message.includes("Invalid price") ||
@@ -614,7 +615,7 @@ module.exports.getAllProducts = async (req, res) => {
       totalPages: Math.ceil(count / parseInt(limit, 10)),
     });
   } catch (error) {
-    console.error("Error getting products:", error);
+    logger.error("Error getting products:", error);
     res
       .status(500)
       .json({ message: "Failed to get products", error: error.message });
@@ -664,7 +665,7 @@ module.exports.getProduct = async (req, res) => {
 
     res.json(formattedProduct);
   } catch (error) {
-    console.error("Error getting product:", error);
+    logger.error("Error getting product:", error);
     res
       .status(500)
       .json({ message: "Failed to get product", error: error.message });
@@ -1170,7 +1171,7 @@ module.exports.deleteProduct = async (req, res) => {
         try {
           await fs.unlink(imagePath);
         } catch (error) {
-          console.error("Error deleting image file:", error);
+          logger.error("Error deleting image file:", error);
         }
       }
       await ProductImage.destroy({
@@ -1204,7 +1205,7 @@ module.exports.deleteProduct = async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    console.error("Error deleting product:", error);
+    logger.error("Error deleting product:", error);
     res.status(500).json({
       success: false,
       message: "Failed to delete product",
@@ -1243,7 +1244,7 @@ module.exports.getBestSellers = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Error fetching best sellers:", error);
+    logger.error("Error fetching best sellers:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch best sellers",
@@ -1282,7 +1283,7 @@ module.exports.getFeaturedProducts = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Error fetching featured products:", error);
+    logger.error("Error fetching featured products:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch featured products",
@@ -1320,7 +1321,7 @@ module.exports.getNewArrivals = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Error fetching new arrivals:", error);
+    logger.error("Error fetching new arrivals:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch new arrivals",
@@ -1378,7 +1379,7 @@ module.exports.getProductsByCategory = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Error fetching products by category:", error);
+    logger.error("Error fetching products by category:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch products by category",
@@ -1552,7 +1553,7 @@ module.exports.getPublicProductBySlug = async (req, res) => {
       data: formattedProduct,
     });
   } catch (error) {
-    console.error("Error getting public product:", error);
+    logger.error("Error getting public product:", error);
     res.status(500).json({
       success: false,
       message: "Failed to get product",
@@ -1613,7 +1614,7 @@ module.exports.getAllPublicProducts = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error getting public products:", error);
+    logger.error("Error getting public products:", error);
     res.status(500).json({
       success: false,
       message: "Failed to get products",
@@ -1737,7 +1738,7 @@ module.exports.getExistingImages = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error getting existing images:', error);
+    logger.error('Error getting existing images:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get existing images',
@@ -1764,7 +1765,7 @@ module.exports.uploadImages = async (req, res) => {
     for (const file of req.files) {
       try {
         // Read the locally saved file buffer
-        const fileBuffer = fs.readFileSync(file.path);
+        const fileBuffer = await fs.promises.readFile(file.path);
 
         // Upload to ImageKit
         const ikResult = await imagekitService.uploadImage(fileBuffer, file.filename, '/products');
@@ -1781,7 +1782,7 @@ module.exports.uploadImages = async (req, res) => {
           mimetype: file.mimetype
         });
 
-        console.log(`Uploaded to ImageKit: ${ikResult.filePath}`);
+        logger.info(`Uploaded to ImageKit: ${ikResult.filePath}`);
       } catch (error) {
         const { logger: _logger } = require('../config/logging.js');
         _logger.error(`Failed to upload ${file.originalname} to ImageKit:`, error.message);
@@ -1802,7 +1803,7 @@ module.exports.uploadImages = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error uploading images:', error);
+    logger.error('Error uploading images:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to upload images',
@@ -1940,7 +1941,7 @@ module.exports.deleteImages = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error deleting images:', error);
+    logger.error('Error deleting images:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to delete images',

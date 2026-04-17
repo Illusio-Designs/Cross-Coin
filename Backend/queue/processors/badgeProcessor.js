@@ -5,6 +5,7 @@ const { sequelize } = require("../../config/db.js");
 const redisService = require("../../services/redisService.js");
 const { invalidateDashboardCache } = require("../../services/dashboardService.js");
 const { batchInsert } = require("../../utils/batchInsert.js");
+const { logger } = require("../../config/logging.js");
 
 /**
  * Process badge recalculation job
@@ -40,7 +41,7 @@ const processBadgeRecalculation = async (job) => {
       }
     }
 
-    try { await invalidateDashboardCache(user_id); } catch (_) {}
+    try { await invalidateDashboardCache(user_id); } catch (e) { logger.warn('[Badge] dashboard cache invalidation failed:', e.message); }
 
     return { success: true, user_id, orders_processed: orders.length, products_updated: updatedCount };
   } catch (error) {

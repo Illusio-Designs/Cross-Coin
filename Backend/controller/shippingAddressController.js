@@ -2,6 +2,7 @@ const { ShippingAddress } = require("../model/shippingAddressModel.js");
 const { GuestUser } = require("../model/guestUserModel.js");
 const { Op } = require("sequelize");
 const { sequelize } = require("../config/db.js");
+const { logger } = require('../config/logging.js');
 
 // Create a new shipping address
 module.exports.createShippingAddress = async (req, res) => {
@@ -121,7 +122,7 @@ module.exports.createShippingAddress = async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    console.error("Error creating shipping address:", error);
+    logger.error("Error creating shipping address:", error);
     res.status(500).json({
       message: "Failed to create shipping address",
       error: error.message,
@@ -174,7 +175,7 @@ module.exports.getUserShippingAddresses = async (req, res) => {
 
     res.json({ shippingAddresses: transformedAddresses });
   } catch (error) {
-    console.error("Error getting shipping addresses:", error);
+    logger.error("Error getting shipping addresses:", error);
     res.status(500).json({
       message: "Failed to get shipping addresses",
       error: error.message,
@@ -201,7 +202,7 @@ module.exports.getShippingAddressById = async (req, res) => {
 
     res.json({ shippingAddress });
   } catch (error) {
-    console.error("Error getting shipping address:", error);
+    logger.error("Error getting shipping address:", error);
     res.status(500).json({
       message: "Failed to get shipping address",
       error: error.message,
@@ -305,7 +306,7 @@ module.exports.updateShippingAddress = async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    console.error("Error updating shipping address:", error);
+    logger.error("Error updating shipping address:", error);
     res.status(500).json({
       message: "Failed to update shipping address",
       error: error.message,
@@ -360,7 +361,7 @@ module.exports.deleteShippingAddress = async (req, res) => {
     res.json({ message: "Shipping address deleted successfully" });
   } catch (error) {
     await transaction.rollback();
-    console.error("Error deleting shipping address:", error);
+    logger.error("Error deleting shipping address:", error);
     res.status(500).json({
       message: "Failed to delete shipping address",
       error: error.message,
@@ -414,7 +415,7 @@ module.exports.setDefaultShippingAddress = async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    console.error("Error setting default shipping address:", error);
+    logger.error("Error setting default shipping address:", error);
     res.status(500).json({
       message: "Failed to set default shipping address",
       error: error.message,

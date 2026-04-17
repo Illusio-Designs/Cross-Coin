@@ -1,4 +1,5 @@
 const { getDashboardDataWithCache } = require("../services/dashboardService.js");
+const { logger } = require('../config/logging.js');
 
 /**
  * Get dashboard statistics with caching
@@ -30,7 +31,7 @@ const getDashboardStats = async (req, res) => {
     const dashboardData = await getDashboardDataWithCache(userId, brandId);
     res.status(200).json(dashboardData);
   } catch (error) {
-    console.error("Error fetching dashboard stats:", error);
+    logger.error("Error fetching dashboard stats:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch dashboard statistics",

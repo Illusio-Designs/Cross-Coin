@@ -8,6 +8,7 @@ const { sequelize } = require('../config/db.js');
 const { Op } = require('sequelize');
 const fs = require('fs/promises');
 const imagekitService = require('../services/imagekitService.js');
+const { logger } = require('../config/logging.js');
 
 // Format a single ProductImage row → card-ready object
 const fmtImg = (img) => ({
@@ -137,7 +138,7 @@ const createCategory = async (req, res) => {
     const category = await BlogCategory.create({ name, slug, description, status });
     return res.status(201).json({ success: true, data: category });
   } catch (error) {
-    console.error('createCategory error:', error);
+    logger.error('createCategory error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
 };
@@ -147,7 +148,7 @@ const getAllCategories = async (req, res) => {
     const categories = await BlogCategory.findAll({ order: [['name', 'ASC']] });
     return res.status(200).json({ success: true, data: categories });
   } catch (error) {
-    console.error('getAllCategories error:', error);
+    logger.error('getAllCategories error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
 };
@@ -169,7 +170,7 @@ const updateCategory = async (req, res) => {
     await category.update(updates);
     return res.status(200).json({ success: true, data: category });
   } catch (error) {
-    console.error('updateCategory error:', error);
+    logger.error('updateCategory error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
 };
@@ -184,7 +185,7 @@ const deleteCategory = async (req, res) => {
     await category.destroy();
     return res.status(200).json({ success: true, message: 'Blog category deleted successfully' });
   } catch (error) {
-    console.error('deleteCategory error:', error);
+    logger.error('deleteCategory error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
 };
@@ -293,7 +294,7 @@ const createPost = async (req, res) => {
     return res.status(201).json({ success: true, data: await formatPostImage(fullPost) });
   } catch (error) {
     await t.rollback();
-    console.error('createPost error:', error);
+    logger.error('createPost error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
 };
@@ -336,7 +337,7 @@ const getAllPostsAdmin = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('getAllPostsAdmin error:', error);
+    logger.error('getAllPostsAdmin error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
 };
@@ -350,7 +351,7 @@ const getPostByIdAdmin = async (req, res) => {
     }
     return res.status(200).json({ success: true, data: await formatPostImage(post) });
   } catch (error) {
-    console.error('getPostByIdAdmin error:', error);
+    logger.error('getPostByIdAdmin error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
 };
@@ -482,7 +483,7 @@ const updatePost = async (req, res) => {
     return res.status(200).json({ success: true, data: await formatPostImage(fullPost) });
   } catch (error) {
     await t.rollback();
-    console.error('updatePost error:', error);
+    logger.error('updatePost error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
 };
@@ -501,7 +502,7 @@ const deletePost = async (req, res) => {
     return res.status(200).json({ success: true, message: 'Blog post deleted successfully' });
   } catch (error) {
     await t.rollback();
-    console.error('deletePost error:', error);
+    logger.error('deletePost error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
 };
@@ -569,7 +570,7 @@ const getPublicPosts = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('getPublicPosts error:', error);
+    logger.error('getPublicPosts error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
 };
@@ -607,7 +608,7 @@ const getPublicPostBySlug = async (req, res) => {
 
     return res.status(200).json({ success: true, data: await formatPostImage(post) });
   } catch (error) {
-    console.error('getPublicPostBySlug error:', error);
+    logger.error('getPublicPostBySlug error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
 };
@@ -632,7 +633,7 @@ const getAllTags = async (req, res) => {
 
     return res.status(200).json({ success: true, data: tags });
   } catch (error) {
-    console.error('getAllTags error:', error);
+    logger.error('getAllTags error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
 };
@@ -683,7 +684,7 @@ const uploadHeroImage = async (req, res) => {
     const updatedPost = await BlogPost.findByPk(id, { include: fullPostInclude() });
     return res.status(200).json({ success: true, data: await formatPostImage(updatedPost) });
   } catch (error) {
-    console.error('uploadHeroImage error:', error);
+    logger.error('uploadHeroImage error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
 };
