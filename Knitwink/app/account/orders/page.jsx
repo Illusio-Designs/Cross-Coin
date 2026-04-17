@@ -6,6 +6,7 @@ import { getOrders } from '@/lib/api/orders';
 import { OrderCard } from '@/components/account/OrderCard';
 
 export const metadata = { title: 'My Orders' };
+export const dynamic = 'force-dynamic';
 
 export default async function OrdersPage() {
   let orders = [];

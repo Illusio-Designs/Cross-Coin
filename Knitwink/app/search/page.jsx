@@ -10,6 +10,8 @@ import { SITE_NAME } from '@/lib/constants';
 
 
 
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata({ searchParams }) {
   const { q } = await searchParams;
   return {

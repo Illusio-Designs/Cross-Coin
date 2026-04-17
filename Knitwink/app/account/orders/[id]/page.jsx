@@ -10,6 +10,7 @@ import { ROUTES } from '@/lib/constants';
 
 
 export const metadata = { title: 'Order Detail' };
+export const dynamic = 'force-dynamic';
 
 const TIMELINE = [
 { status: 'confirmed', label: 'Confirmed' },
