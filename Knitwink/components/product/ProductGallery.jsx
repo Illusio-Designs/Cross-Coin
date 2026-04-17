@@ -92,7 +92,7 @@ function Lightbox({ images, startIndex, productName, onClose }) {
                 key={i}
                 ref={(el) => { imgRefs.current[i] = el }}
                 data-index={i}
-                className="w-full max-w-4xl"
+                className="w-full max-w-2xl"
               >
                 <img
                   src={img.url}
