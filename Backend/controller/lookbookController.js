@@ -11,6 +11,7 @@ const {
   ProductVariation,
 } = require('../model/associations.js');
 const imagekitService = require('../services/imagekitService.js');
+const { logger } = require('../config/logging.js');
 
 const resolveBrandId = (req, explicitBrandId = null) =>
   explicitBrandId || req.brandId || (req.brand && req.brand.id) || 1;
@@ -118,7 +119,7 @@ module.exports.deleteLookbook = async (req, res) => {
     for (const image of lookbook.Images || []) {
       try {
         await imagekitService.deleteImage(image.image_url);
-      } catch (_) {}
+      } catch (e) { logger.warn('[Lookbook] ImageKit delete failed:', e.message); }
     }
 
     await lookbook.destroy({ transaction });
@@ -145,7 +146,7 @@ module.exports.uploadLookbookImage = async (req, res) => {
     }
 
     const { display_order = 0, alt_text } = req.body;
-    const buffer = fs.readFileSync(req.file.path);
+    const buffer = await fs.promises.readFile(req.file.path);
     const uploadResult = await imagekitService.uploadImage(buffer, path.basename(req.file.path), '/lookbooks');
 
     const image = await LookbookImage.create(
@@ -178,7 +179,7 @@ module.exports.deleteLookbookImage = async (req, res) => {
 
     try {
       await imagekitService.deleteImage(image.image_url);
-    } catch (_) {}
+    } catch (e) { logger.warn('[Lookbook] ImageKit delete failed:', e.message); }
 
     await image.destroy({ transaction });
     await transaction.commit();

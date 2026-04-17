@@ -9,6 +9,7 @@ const fsSync = require('fs');
 const ImageHandler = require('../utils/imageHandler.js');
 const multer = require('multer');
 const imagekitService = require('../services/imagekitService.js');
+const { logger } = require('../config/logging.js');
 
 // In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/slider'));
@@ -63,7 +64,7 @@ const createSlider = async (req, res) => {
             }
 
             const image = uploadResult.filePath; // Store ImageKit file path
-            console.log('Created slider image path:', image);
+            logger.info('Created slider image path:', image);
             
             // Delete temporary file
             await fs.unlink(req.file.path);
@@ -84,7 +85,7 @@ const createSlider = async (req, res) => {
                 data: slider 
             });
         } catch (imageError) {
-            console.error('Error processing image:', imageError);
+            logger.error('Error processing image:', imageError);
             return res.status(500).json({ 
                 success: false,
                 message: 'Error processing image', 
@@ -92,7 +93,7 @@ const createSlider = async (req, res) => {
             });
         }
     } catch (error) {
-        console.error('Error creating slider:', error);
+        logger.error('Error creating slider:', error);
         res.status(500).json({ 
             success: false,
             message: 'Failed to create slider', 
@@ -149,11 +150,11 @@ const getAllSliders = async (req, res) => {
             })) : [];
             return sliderData;
         });
-        console.log('All sliders image paths:', slidersResponse.map(s => s.image));
+        logger.info('All sliders image paths:', slidersResponse.map(s => s.image));
 
         res.status(200).json({ sliders: slidersResponse });
     } catch (error) {
-        console.error('Get all sliders error:', error);
+        logger.error('Get all sliders error:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -187,7 +188,7 @@ const getSliderById = async (req, res) => {
 
         res.status(200).json(sliderResponse);
     } catch (error) {
-        console.error('Get slider error:', error);
+        logger.error('Get slider error:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -233,12 +234,12 @@ const updateSlider = async (req, res) => {
                 }
 
                 image = uploadResult.filePath; // Store ImageKit file path
-                console.log('Updated slider image path:', image);
+                logger.info('Updated slider image path:', image);
                 
                 // Delete temporary file
                 await fs.unlink(req.file.path);
             } catch (error) {
-                console.error('Error handling image update:', error);
+                logger.error('Error handling image update:', error);
                 return res.status(500).json({ 
                     success: false,
                     message: 'Failed to update image',
@@ -271,7 +272,7 @@ const updateSlider = async (req, res) => {
             data: slider
         });
     } catch (error) {
-        console.error('Update slider error:', error);
+        logger.error('Update slider error:', error);
         res.status(500).json({ 
             success: false,
             message: 'Failed to update slider',
@@ -356,7 +357,7 @@ const getPublicSliders = async (req, res) => {
         res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
         res.status(200).json({ sliders: slidersResponse });
     } catch (error) {
-        console.error('Get public sliders error:', error);
+        logger.error('Get public sliders error:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -383,7 +384,7 @@ const deleteSlider = async (req, res) => {
             message: 'Slider deleted successfully' 
         });
     } catch (error) {
-        console.error('Error deleting slider:', error);
+        logger.error('Error deleting slider:', error);
         res.status(500).json({ 
             success: false,
             message: 'Failed to delete slider', 
@@ -464,7 +465,7 @@ async function assignSliderToBrands(req, res) {
             }
         });
     } catch (error) {
-        console.error('Assign slider to brands error:', error);
+        logger.error('Assign slider to brands error:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to assign slider to brands',
@@ -499,7 +500,7 @@ async function removeSliderFromBrand(req, res) {
             message: 'Slider removed from brand successfully'
         });
     } catch (error) {
-        console.error('Remove slider from brand error:', error);
+        logger.error('Remove slider from brand error:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to remove slider from brand',

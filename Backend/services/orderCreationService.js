@@ -35,17 +35,18 @@ function generateOrderNumber() {
 }
 
 async function generateUniqueOrderNumber(transaction) {
-  let orderNumber;
-  let exists = true;
-  while (exists) {
-    orderNumber = generateOrderNumber();
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const orderNumber = generateOrderNumber();
     const existing = await Order.findOne({
       where: { order_number: orderNumber },
-      transaction,
+      ...(transaction ? { transaction } : {}),
     });
-    exists = !!existing;
+    if (!existing) return orderNumber;
   }
-  return orderNumber;
+  // Fallback: timestamp-based to guarantee uniqueness
+  const ts = Date.now();
+  const rand = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  return `CC-${ts}-${rand}`;
 }
 
 /**
@@ -285,8 +286,8 @@ async function handlePaymentSuccess({
   // 4. Emit events + FShip sync (non-blocking)
   if (created) {
     setImmediate(() => {
-      orderEmitter.emit('order.confirmed', order);
-      syncOrderToFShip(order);
+      try { orderEmitter.emit('order.confirmed', order); } catch (e) { logger.warn('[OrderCreation] order.confirmed emit failed:', e.message); }
+      syncOrderToFShip(order).catch(e => logger.warn('[OrderCreation] FShip sync failed:', e.message));
     });
 
     // 5. Badge recalculation
@@ -363,4 +364,6 @@ async function handlePaymentSuccess({
 module.exports = {
   createOrderFromSession,
   handlePaymentSuccess,
+  generateOrderNumber,
+  generateUniqueOrderNumber,
 };

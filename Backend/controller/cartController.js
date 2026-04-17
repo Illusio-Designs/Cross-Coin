@@ -1,6 +1,7 @@
 const { Cart, CartItem, Product, ProductImage, ProductVariation } = require('../model/associations.js');
 const { sequelize } = require('../config/db.js');
 const imagekitService = require('../services/imagekitService.js');
+const { logger } = require('../config/logging.js');
 
 // Get user's cart
 module.exports.getCart = async (req, res) => {
@@ -52,14 +53,6 @@ module.exports.getCart = async (req, res) => {
         const total = Math.max(0, subtotal - discount + shipping);
 
         const formattedCart = cart.CartItems.map(item => {
-            console.log('Processing cart item:', { 
-                itemId: item.id, 
-                productId: item.productId, 
-                variationId: item.variationId,
-                quantity: item.quantity,
-                selected_size: item.selected_size,
-            });
-            
             const product = item.Product;
             let variation = item.ProductVariation;
             
@@ -146,7 +139,7 @@ module.exports.getCart = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching cart:', error);
+        logger.error('Error fetching cart:', error);
         res.status(500).json({ message: 'Failed to fetch cart', error: error.message });
     }
 };
@@ -179,9 +172,9 @@ module.exports.addToCart = async (req, res) => {
 
       // Check if item already exists (by product and variation)
       let where = { cartId: cart.id, productId: productId, variationId: variationId || null, selected_size: size || null };
-      console.log('[Cart] addToCart where:', where);
+      logger.info('[Cart] addToCart where:', where);
       let item = await CartItem.findOne({ where, transaction });
-      console.log('[Cart] addToCart found item:', item);
+      logger.info('[Cart] addToCart found item:', item);
 
       // Task 11.1: Use SELECT ... FOR UPDATE to lock the variation row during stock check
       let stockAvailable = 0;
@@ -201,7 +194,7 @@ module.exports.addToCart = async (req, res) => {
       if (item) {
         item.quantity += quantity;
         await item.save({ transaction });
-        console.log('[Cart] Updated existing CartItem:', item.id, 'quantity:', item.quantity);
+        logger.info('[Cart] Updated existing CartItem:', item.id, 'quantity:', item.quantity);
       } else {
         // Get price from the already-fetched variation
         let price = variation ? variation.price : 0;
@@ -213,7 +206,7 @@ module.exports.addToCart = async (req, res) => {
           price,
           selected_size: size || null
         }, { transaction });
-        console.log('[Cart] Created new CartItem:', {
+        logger.info('[Cart] Created new CartItem:', {
           id: item.id,
           productId: productId,
           variationId: variationId || null,
@@ -230,7 +223,7 @@ module.exports.addToCart = async (req, res) => {
       throw innerError;
     }
   } catch (error) {
-    console.error('[Cart] Error in addToCart:', error);
+    logger.error('[Cart] Error in addToCart:', error);
     res.status(500).json({ message: 'Failed to add to cart', error: error.message });
   }
 };
@@ -295,7 +288,7 @@ module.exports.updateCartItem = async (req, res) => {
 
         res.json({ success: true, message: 'Cart item updated.', item: cartItem });
     } catch (error) {
-        console.error('Error updating cart item:', error);
+        logger.error('Error updating cart item:', error);
         res.status(500).json({ success: false, message: 'Failed to update cart item.', error: error.message });
     }
 };
@@ -308,7 +301,7 @@ module.exports.removeFromCart = async (req, res) => {
     let cart = await Cart.findOne({ where: { user_id: userId } });
     if (!cart) return res.status(404).json({ message: 'Cart not found' });
     
-    console.log('Remove from cart params:', { productId, variationId });
+    logger.info('Remove from cart params:', { productId, variationId });
     
     const whereClause = { cartId: cart.id, productId: productId };
     
@@ -319,7 +312,7 @@ module.exports.removeFromCart = async (req, res) => {
       whereClause.variationId = null;
     }
     
-    console.log('Remove from cart whereClause:', whereClause);
+    logger.info('Remove from cart whereClause:', whereClause);
     
     // Find the exact item — no fallback to avoid deleting wrong variation
     const cartItem = await CartItem.findOne({ where: whereClause });
@@ -328,11 +321,11 @@ module.exports.removeFromCart = async (req, res) => {
     }
     
     await cartItem.destroy();
-    console.log('Deleted cart item:', cartItem.id);
+    logger.info('Deleted cart item:', cartItem.id);
     
     res.json({ success: true, deleted: 1 });
   } catch (error) {
-    console.error('Error removing from cart:', error);
+    logger.error('Error removing from cart:', error);
     res.status(500).json({ message: 'Failed to remove cart item', error: error.message });
   }
 };

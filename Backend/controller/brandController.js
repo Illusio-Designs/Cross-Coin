@@ -1,4 +1,5 @@
 const brandService = require('../services/brandService');
+const { logger } = require('../config/logging.js');
 
 /**
  * Get all brands
@@ -15,7 +16,7 @@ async function getAllBrands(req, res) {
             data: brands
         });
     } catch (error) {
-        console.error('Error fetching brands:', error);
+        logger.error('Error fetching brands:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch brands',
@@ -46,7 +47,7 @@ async function getBrandById(req, res) {
             data: brand
         });
     } catch (error) {
-        console.error('Error fetching brand:', error);
+        logger.error('Error fetching brand:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch brand',
@@ -81,7 +82,7 @@ async function createBrand(req, res) {
             data: brand
         });
     } catch (error) {
-        console.error('Error creating brand:', error);
+        logger.error('Error creating brand:', error);
         
         if (error.name === 'SequelizeUniqueConstraintError') {
             return res.status(409).json({
@@ -124,7 +125,7 @@ async function updateBrand(req, res) {
             data: brand
         });
     } catch (error) {
-        console.error('Error updating brand:', error);
+        logger.error('Error updating brand:', error);
         
         if (error.name === 'SequelizeUniqueConstraintError') {
             return res.status(409).json({
@@ -165,7 +166,7 @@ async function deleteBrand(req, res) {
             message: 'Brand deleted successfully'
         });
     } catch (error) {
-        console.error('Error deleting brand:', error);
+        logger.error('Error deleting brand:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to delete brand',
@@ -197,7 +198,7 @@ async function toggleBrandStatus(req, res) {
             data: brand
         });
     } catch (error) {
-        console.error('Error toggling brand status:', error);
+        logger.error('Error toggling brand status:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to toggle brand status',
@@ -228,7 +229,7 @@ async function searchBrands(req, res) {
             data: brands
         });
     } catch (error) {
-        console.error('Error searching brands:', error);
+        logger.error('Error searching brands:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to search brands',

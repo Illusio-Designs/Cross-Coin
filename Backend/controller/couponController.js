@@ -1,5 +1,6 @@
 const { Coupon, CouponUsage, Cart, CartItem, Product, Category, ProductVariation } = require('../model/associations.js');
 const { Op } = require('sequelize');
+const { logger } = require('../config/logging.js');
 
 // Create a new coupon
 module.exports.createCoupon = async (req, res) => {
@@ -132,7 +133,7 @@ module.exports.createCoupon = async (req, res) => {
             coupon: newCoupon
         });
     } catch (error) {
-        console.error('Error creating coupon:', error);
+        logger.error('Error creating coupon:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to create coupon',
@@ -167,7 +168,7 @@ module.exports.getAllCoupons = async (req, res) => {
             coupons
         });
     } catch (error) {
-        console.error('Error fetching coupons:', error);
+        logger.error('Error fetching coupons:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch coupons',
@@ -207,7 +208,7 @@ module.exports.getCouponById = async (req, res) => {
             ...coupon.toJSON()
         });
     } catch (error) {
-        console.error('Error fetching coupon:', error);
+        logger.error('Error fetching coupon:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch coupon',
@@ -506,7 +507,7 @@ module.exports.validateCoupon = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error validating coupon:', error);
+        logger.error('Error validating coupon:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to validate coupon',
@@ -690,7 +691,7 @@ module.exports.applyCoupon = async (req, res) => {
         });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error applying coupon:', error);
+        logger.error('Error applying coupon:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to apply coupon',
@@ -719,7 +720,7 @@ module.exports.getUserCouponHistory = async (req, res) => {
             history: usageHistory
         });
     } catch (error) {
-        console.error('Error fetching coupon history:', error);
+        logger.error('Error fetching coupon history:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch coupon history',
@@ -849,7 +850,7 @@ module.exports.updateCoupon = async (req, res) => {
             coupon
         });
     } catch (error) {
-        console.error('Error updating coupon:', error);
+        logger.error('Error updating coupon:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to update coupon',
@@ -878,7 +879,7 @@ module.exports.deleteCoupon = async (req, res) => {
             message: 'Coupon deleted successfully'
         });
     } catch (error) {
-        console.error('Error deleting coupon:', error);
+        logger.error('Error deleting coupon:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to delete coupon',
@@ -887,10 +888,6 @@ module.exports.deleteCoupon = async (req, res) => {
     }
 };
 
-// Get Coupon by ID (alias for getCouponById)
-module.exports.getCoupon = async (req, res) => {
-    return module.exports.getCouponById(req, res);
-};
 
 // Get all active public coupons
 module.exports.getPublicCoupons = async (req, res) => {
@@ -917,7 +914,7 @@ module.exports.getPublicCoupons = async (req, res) => {
             coupons
         });
     } catch (error) {
-        console.error('Error fetching public coupons:', error);
+        logger.error('Error fetching public coupons:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch coupons',

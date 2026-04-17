@@ -78,6 +78,10 @@ exports.receiveWebhook = async (req, res) => {
             msgType = 'reaction';
             msgBody = msg.reaction?.emoji || '👍';
             displayText = msg.reaction?.emoji || '👍';
+          } else if (msg.type === 'button') {
+            // Quick Reply button tap from a template message
+            msgBody    = msg.button?.payload || msg.button?.text || '';
+            displayText = msg.button?.text   || 'Button tap';
           } else {
             msgBody = `[${msg.type}]`;
             displayText = `[${msg.type}]`;
@@ -122,20 +126,22 @@ exports.receiveWebhook = async (req, res) => {
 
           logger.info(`WhatsApp inbound [${phone}] [${msgType}]: ${displayText}`);
 
-          // ── COD Address Confirmation — auto-detect "YES" replies ──
+          // ── COD Address Confirmation — auto-detect "YES" / "NO" replies ──
           if (msgType === 'text' && msgBody) {
             const normalised = msgBody.trim().toLowerCase();
-            const confirmKeywords = ['yes', 'confirm', 'confirmed', 'haan', 'ha', 'ok', 'correct', 'sahi hai', 'theek hai', 'right'];
+            const confirmKeywords  = ['yes', 'confirm', 'confirmed', 'haan', 'ha', 'ok', 'correct', 'sahi hai', 'theek hai', 'right'];
+            const rejectionKeywords = ['no', 'nahi', 'nope', 'wrong', 'incorrect', 'galat', 'change', 'update', 'different'];
             const isConfirmation = confirmKeywords.includes(normalised);
+            const isRejection    = !isConfirmation && rejectionKeywords.some(k => normalised.includes(k));
 
-            if (isConfirmation) {
+            if (isConfirmation || isRejection) {
               try {
                 const { Order } = require('../model/orderModel.js');
+                const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
                 const { ShippingAddress } = require('../model/shippingAddressModel.js');
-                const { Op } = require('sequelize');
+                const { sequelize: sq } = require('../config/db.js');
+                const { Op: OpCod } = require('sequelize');
 
-                // Find the customer's latest COD order that's awaiting address confirmation
-                // Match by phone number (last 10 digits)
                 const phoneDigits = phone.replace(/\D/g, '').slice(-10);
                 const pendingOrder = await Order.findOne({
                   where: {
@@ -146,38 +152,144 @@ exports.receiveWebhook = async (req, res) => {
                   include: [{
                     model: ShippingAddress,
                     as: 'ShippingAddress',
-                    where: {
-                      phone: { [Op.like]: `%${phoneDigits}` },
-                    },
+                    where: { phone: { [OpCod.like]: `%${phoneDigits}` } },
                     required: true,
                   }],
                   order: [['created_at', 'DESC']],
                 });
 
                 if (pendingOrder) {
-                  await pendingOrder.update({
-                    cod_address_confirmed: true,
-                    cod_address_confirmed_at: new Date(),
-                  });
+                  const whatsappSvc = require('../services/whatsappService.js');
 
-                  // Send confirmation reply to customer
-                  const whatsappService = require('../services/whatsappService.js');
-                  await whatsappService.sendTextMessage(
-                    phone,
-                    `✅ Thank you! Your address for order *#${pendingOrder.order_number}* has been confirmed.\n\nWe'll process and ship it shortly. You'll receive a tracking update once it's on the way!`,
-                    brandId
-                  );
+                  if (isConfirmation) {
+                    // ── YES: confirm address, advance order to confirmed, trigger FShip sync ──
+                    const t = await sq.transaction();
+                    try {
+                      await pendingOrder.update({
+                        cod_address_confirmed: true,
+                        cod_address_confirmed_at: new Date(),
+                        status: 'confirmed',
+                      }, { transaction: t });
+                      await OrderStatusHistory.create({
+                        order_id: pendingOrder.id,
+                        status: 'confirmed',
+                        notes: 'Auto-confirmed: customer replied YES via WhatsApp',
+                        updated_by: null,
+                      }, { transaction: t });
+                      await t.commit();
+                    } catch (txErr) {
+                      await t.rollback();
+                      throw txErr;
+                    }
 
-                  // Notify admin via SSE
-                  notificationService.emitNewOrder({
-                    ...pendingOrder.toJSON(),
-                    _event: 'cod_address_confirmed',
-                  });
+                    // Trigger FShip sync via event (fire-and-forget)
+                    const orderEmitter = require('../services/orderEvents.js');
+                    setImmediate(() => {
+                      try { orderEmitter.emit('order.confirmed', pendingOrder); }
+                      catch (e) { logger.warn('[WhatsApp] order.confirmed emit failed:', e.message); }
+                    });
 
-                  logger.info(`[WhatsApp] COD address confirmed for order ${pendingOrder.order_number} by ${phone}`);
+                    await whatsappSvc.sendTextMessage(
+                      phone,
+                      `✅ Thank you! Your address for order *#${pendingOrder.order_number}* has been confirmed.\n\nWe'll process and ship it shortly. You'll receive a tracking update once it's on the way!`,
+                      brandId
+                    );
+                    notificationService.emitNewOrder({ ...pendingOrder.toJSON(), _event: 'cod_address_confirmed' });
+                    logger.info(`[WhatsApp] COD address confirmed + order advanced to confirmed: ${pendingOrder.order_number}`);
+
+                  } else {
+                    // ── NO: flag order for manual review, notify admin, guide customer ──
+                    // Keep cod_address_confirmed: false so the order stays discoverable if customer
+                    // later replies YES or admin resends the confirmation message.
+
+                    await whatsappSvc.sendTextMessage(
+                      phone,
+                      `We're sorry to hear that! Please reply with your correct delivery address and we'll update it before shipping.\n\nOr contact our support team and mention your order *#${pendingOrder.order_number}*.`,
+                      brandId
+                    );
+                    notificationService.emitNewOrder({ ...pendingOrder.toJSON(), _event: 'cod_address_rejected' });
+                    logger.warn(`[WhatsApp] COD address rejected for order ${pendingOrder.order_number} by ${phone}`);
+                  }
                 }
               } catch (confirmErr) {
                 logger.error('[WhatsApp] COD address confirmation error:', confirmErr.message);
+              }
+            }
+          }
+
+          // ── COD Address Confirmation — Quick Reply button taps ────────────
+          // Payload format: "confirm_cod_<orderNumber>" or "reject_cod_<orderNumber>"
+          if (msgType === 'button' && msgBody) {
+            const isConfirmBtn = msgBody.startsWith('confirm_cod_');
+            const isRejectBtn  = msgBody.startsWith('reject_cod_');
+
+            if (isConfirmBtn || isRejectBtn) {
+              try {
+                const orderNumber = msgBody.replace(/^(confirm|reject)_cod_/, '');
+                const { Order } = require('../model/orderModel.js');
+                const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
+                const { sequelize: sq } = require('../config/db.js');
+
+                const pendingOrder = await Order.findOne({
+                  where: {
+                    order_number: orderNumber,
+                    status: 'awaiting_confirmation',
+                    payment_type: 'cod',
+                    cod_address_confirmed: false,
+                  },
+                });
+
+                if (pendingOrder) {
+                  const whatsappSvc = require('../services/whatsappService.js');
+
+                  if (isConfirmBtn) {
+                    // ── Button: Confirm Address ──
+                    const t = await sq.transaction();
+                    try {
+                      await pendingOrder.update({
+                        cod_address_confirmed: true,
+                        cod_address_confirmed_at: new Date(),
+                        status: 'confirmed',
+                      }, { transaction: t });
+                      await OrderStatusHistory.create({
+                        order_id: pendingOrder.id,
+                        status: 'confirmed',
+                        notes: 'Auto-confirmed: customer tapped Confirm Address button via WhatsApp',
+                        updated_by: null,
+                      }, { transaction: t });
+                      await t.commit();
+                    } catch (txErr) {
+                      await t.rollback();
+                      throw txErr;
+                    }
+
+                    const orderEmitter = require('../services/orderEvents.js');
+                    setImmediate(() => {
+                      try { orderEmitter.emit('order.confirmed', pendingOrder); }
+                      catch (e) { logger.warn('[WhatsApp] order.confirmed emit failed:', e.message); }
+                    });
+
+                    await whatsappSvc.sendTextMessage(
+                      phone,
+                      `✅ Thank you! Your address for order *#${pendingOrder.order_number}* has been confirmed.\n\nWe'll process and ship it shortly. You'll receive a tracking update once it's on the way!`,
+                      brandId
+                    );
+                    notificationService.emitNewOrder({ ...pendingOrder.toJSON(), _event: 'cod_address_confirmed' });
+                    logger.info(`[WhatsApp] COD button confirmed: ${pendingOrder.order_number}`);
+
+                  } else {
+                    // ── Button: Wrong Address ──
+                    await whatsappSvc.sendTextMessage(
+                      phone,
+                      `No problem! Please reply with your correct delivery address and we'll update it before shipping.\n\nOr contact our support team and mention order *#${pendingOrder.order_number}*.`,
+                      brandId
+                    );
+                    notificationService.emitNewOrder({ ...pendingOrder.toJSON(), _event: 'cod_address_rejected' });
+                    logger.warn(`[WhatsApp] COD button rejected: ${pendingOrder.order_number}`);
+                  }
+                }
+              } catch (btnErr) {
+                logger.error('[WhatsApp] COD button reply error:', btnErr.message);
               }
             }
           }
@@ -417,6 +529,33 @@ exports.seedTemplates = async (req, res) => {
     const skipped  = results.filter(r => r.status === 'already_exists').length;
     const failed   = results.filter(r => r.status === 'error').length;
     res.json({ success: true, summary: { created, skipped, failed }, results });
+  } catch (err) {
+    res.status(500).json({ success: false, message: errMsg(err) });
+  }
+};
+
+// PUT /templates/sync-all — delete + recreate every default template
+// Use this to push content updates to Meta for re-approval.
+exports.syncAllTemplates = async (req, res) => {
+  try {
+    const brandId = parseInt(req.body.brandId) || 1;
+    const results = await whatsappService.updateAllTemplates(brandId);
+    const updated = results.filter(r => r.status === 'updated').length;
+    const failed  = results.filter(r => r.status === 'error').length;
+    res.json({ success: true, summary: { updated, failed, total: results.length }, results });
+  } catch (err) {
+    res.status(500).json({ success: false, message: errMsg(err) });
+  }
+};
+
+// PUT /templates/:name — delete + recreate a single named template
+exports.updateTemplate = async (req, res) => {
+  try {
+    const brandId = parseInt(req.body.brandId || req.query.brandId) || 1;
+    const { name } = req.params;
+    if (!name) return res.status(400).json({ success: false, message: 'Template name is required' });
+    const result = await whatsappService.updateTemplate(name, brandId);
+    res.json({ success: true, result });
   } catch (err) {
     res.status(500).json({ success: false, message: errMsg(err) });
   }

@@ -4,6 +4,7 @@ const fs = require('fs');
 const ImageHandler = require('../utils/imageHandler.js');
 const slugify = require('slugify');
 const { Op } = require('sequelize');
+const { logger } = require('../config/logging.js');
 
 // In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/seo'));
@@ -61,13 +62,13 @@ module.exports.initializeSEOData = async () => {
                     where: { page_name: page.page_name, brand_id: brand.id },
                     defaults: { ...page, slug, canonical_url: canonicalUrl, brand_id: brand.id }
                 });
-                if (created) console.log(`Created SEO data for ${page.page_name} (brand: ${brand.name})`);
+                if (created) logger.info(`Created SEO data for ${page.page_name} (brand: ${brand.name})`);
             }
         }
 
-        console.log('SEO data initialization completed');
+        logger.info('SEO data initialization completed');
     } catch (error) {
-        console.error('Error initializing SEO data:', error);
+        logger.error('Error initializing SEO data:', error);
     }
 };
 
@@ -103,7 +104,7 @@ module.exports.uploadImage = async (req, res) => {
             url: imageUrl
         });
     } catch (error) {
-        console.error('Error uploading image:', error);
+        logger.error('Error uploading image:', error);
         res.status(500).json({ 
             success: false,
             message: 'Failed to upload image', 
@@ -116,7 +117,7 @@ module.exports.uploadImage = async (req, res) => {
 module.exports.getSEOData = async (req, res) => {
     try {
         const { page_name } = req.query;
-        console.log('[SEO] Incoming page_name:', page_name);
+        logger.info('[SEO] Incoming page_name:', page_name);
         if (!page_name) {
             return res.status(400).json({ message: 'Missing page_name parameter' });
         }
@@ -124,7 +125,7 @@ module.exports.getSEOData = async (req, res) => {
         // Handle product-details:ID format
         if (page_name && page_name.startsWith('product-details:')) {
             const productId = page_name.split(':')[1];
-            console.log('[SEO] Looking for product with ID:', productId);
+            logger.info('[SEO] Looking for product with ID:', productId);
             
             const product = await Product.findByPk(productId, {
                 include: [
@@ -136,12 +137,12 @@ module.exports.getSEOData = async (req, res) => {
             });
             
             if (product && product.ProductSEO) {
-                console.log('[SEO] Returning ProductSEO for product ID:', productId);
+                logger.info('[SEO] Returning ProductSEO for product ID:', productId);
                 return res.json({ success: true, data: product.ProductSEO });
             }
             
             // Return default SEO for product details page
-            console.log('[SEO] No ProductSEO found, returning default for product:', product?.name);
+            logger.info('[SEO] No ProductSEO found, returning default for product:', product?.name);
             return res.json({
                 success: true,
                 data: {
@@ -161,10 +162,10 @@ module.exports.getSEOData = async (req, res) => {
         if (!seoData) {
             seoData = await SeoMetadata.findOne({ where: { page_name } });
         }
-        console.log('[SEO] SeoMetadata lookup result:', seoData);
+        logger.info('[SEO] SeoMetadata lookup result:', seoData);
         if (!seoData) {
             // Try to find a product by name or slug, including ProductSEO
-            console.log('[SEO] Trying to find product by slug:', page_name);
+            logger.info('[SEO] Trying to find product by slug:', page_name);
             const product = await Product.findOne({
                 where: {
                     [Op.or]: [
@@ -179,19 +180,19 @@ module.exports.getSEOData = async (req, res) => {
                     }
                 ]
             });
-            console.log('[SEO] Product lookup result:', product);
+            logger.info('[SEO] Product lookup result:', product);
             if (product && product.ProductSEO) {
-                console.log('[SEO] Returning ProductSEO for slug:', page_name);
+                logger.info('[SEO] Returning ProductSEO for slug:', page_name);
                 return res.json({ success: true, data: product.ProductSEO });
             }
             // fallback: if product.seo exists (legacy)
             if (product && product.seo) {
-                console.log('[SEO] Returning legacy product.seo:', product.seo);
+                logger.info('[SEO] Returning legacy product.seo:', product.seo);
                 return res.json({ success: true, data: product.seo });
             }
             // Return default SEO for product if found but no SEO data
             if (product) {
-                console.log('[SEO] Product found but no SEO data, returning default');
+                logger.info('[SEO] Product found but no SEO data, returning default');
                 return res.json({
                     success: true,
                     data: {
@@ -214,10 +215,10 @@ module.exports.getSEOData = async (req, res) => {
                 }
             });
         }
-        console.log('[SEO] Returning SeoMetadata:', seoData);
+        logger.info('[SEO] Returning SeoMetadata:', seoData);
         res.json({ success: true, data: seoData });
     } catch (error) {
-        console.error('[SEO] Error in getSEOData:', error);
+        logger.error('[SEO] Error in getSEOData:', error);
         res.status(500).json({ message: 'Failed to fetch SEO data', error: error.message });
     }
 };
@@ -235,7 +236,7 @@ module.exports.getAllSEOData = async (req, res) => {
 
         res.json(allSEOData);
     } catch (error) {
-        console.error('Error getting all SEO data:', error);
+        logger.error('Error getting all SEO data:', error);
         res.status(500).json({ message: 'Failed to get all SEO data', error: error.message });
     }
 };
@@ -296,7 +297,7 @@ module.exports.updateSEOData = async (req, res) => {
                         }
                     );
                 } catch (error) {
-                    console.error('Error updating image:', error);
+                    logger.error('Error updating image:', error);
                     return res.status(500).json({ 
                         success: false,
                         message: 'Failed to update image' 
@@ -326,7 +327,7 @@ module.exports.updateSEOData = async (req, res) => {
             data: updatedData
         });
     } catch (error) {
-        console.error('Error updating SEO data:', error);
+        logger.error('Error updating SEO data:', error);
         res.status(500).json({ 
             success: false,
             message: 'Failed to update SEO data',
@@ -338,8 +339,8 @@ module.exports.updateSEOData = async (req, res) => {
 // Create new SEO entry for a page
 module.exports.createSEOData = async (req, res) => {
     try {
-        console.log('Received create request body:', req.body);
-        console.log('Received create request file:', req.file);
+        logger.info('Received create request body:', req.body);
+        logger.info('Received create request file:', req.file);
 
         const { 
             page_name, 
@@ -349,7 +350,7 @@ module.exports.createSEOData = async (req, res) => {
         } = req.body;
 
         if (!page_name) {
-            console.log('Page name missing in request');
+            logger.info('Page name missing in request');
             return res.status(400).json({ 
                 success: false,
                 message: 'Page name is required' 
@@ -362,7 +363,7 @@ module.exports.createSEOData = async (req, res) => {
         });
 
         if (existingPage) {
-            console.log('Page already exists:', page_name);
+            logger.info('Page already exists:', page_name);
             return res.status(400).json({
                 success: false,
                 message: 'Page already exists'
@@ -384,7 +385,7 @@ module.exports.createSEOData = async (req, res) => {
             brand_id: req.brandId || null
         });
 
-        console.log('Created SEO data:', seoData.toJSON());
+        logger.info('Created SEO data:', seoData.toJSON());
 
         res.status(201).json({
             success: true,
@@ -392,7 +393,7 @@ module.exports.createSEOData = async (req, res) => {
             data: seoData
         });
     } catch (error) {
-        console.error('Error creating SEO data:', error);
+        logger.error('Error creating SEO data:', error);
         res.status(500).json({
             success: false,
             message: 'Error creating SEO data',
@@ -431,7 +432,7 @@ module.exports.deleteSEOData = async (req, res) => {
             message: 'SEO data deleted successfully'
         });
     } catch (error) {
-        console.error('Error in deleteSEOData:', error);
+        logger.error('Error in deleteSEOData:', error);
         res.status(500).json({
             success: false,
             message: 'Error deleting SEO data',

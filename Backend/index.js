@@ -18,6 +18,17 @@ const path = require('path');
 // Initialize dotenv
 dotenv.config();
 
+// ── Startup env validation ────────────────────────────────────────────────────
+// Fail fast only for secrets that MUST come from env (not DB-backed per-brand settings).
+// Razorpay / WhatsApp / MSG91 / FShip creds are loaded per-brand from brand_settings
+// via settingsHelper — they are NOT env vars and should not be validated here.
+const REQUIRED_ENV = ['JWT_SECRET'];
+const missingRequired = REQUIRED_ENV.filter(k => !process.env[k]);
+if (missingRequired.length) {
+    console.error(`[Startup] FATAL — missing required environment variables: ${missingRequired.join(', ')}`);
+    process.exit(1);
+}
+
 // Debug environment variables on startup (only in development)
 if (process.env.NODE_ENV !== 'production') {
     console.log('Environment variables loaded:', {
@@ -315,7 +326,7 @@ const startServer = async () => {
         logger.info('✓ Database connection successful');
         
         // Create all tables — only runs when schema version changes
-        const SCHEMA_VERSION = 'v1.8-order-shipments';
+        const SCHEMA_VERSION = 'v1.9-performance-indexes';
         let needsSetup = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS schema_version (version VARCHAR(50) PRIMARY KEY, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
