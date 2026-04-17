@@ -25,7 +25,7 @@ export default function Consumers() {
       setError(null);
       try {
         const data = await userService.getAllUsers();
-        setConsumers(data);
+        setConsumers(Array.isArray(data) ? data : data?.users || data?.data || []);
       } catch (err) {
         setError(err.message || "Failed to fetch consumers");
       } finally {
@@ -37,8 +37,10 @@ export default function Consumers() {
 
   useEffect(() => { setCurrentPage(1); }, [search]);
 
-  const filteredData = consumers
-    .filter(item => item.role === 'consumer' || item.role === 'customer')
+  const STAFF_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager'];
+
+  const filteredData = (Array.isArray(consumers) ? consumers : [])
+    .filter(item => !STAFF_ROLES.includes(item.role))
     .filter(item => {
       if (!search) return true;
       const s = search.toLowerCase();

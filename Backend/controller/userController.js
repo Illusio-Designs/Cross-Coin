@@ -550,7 +550,7 @@ module.exports.deleteUser = async (req, res) => {
 module.exports.getAllUsers = async (req, res) => {
     try {
         const { page = 1, limit = 20 } = req.query;
-        const cappedLimit = Math.min(parseInt(limit) || 20, 100);
+        const cappedLimit = Math.min(parseInt(limit) || 20, 1000);
         const offset = (parseInt(page) - 1) * cappedLimit;
 
         const { count, rows } = await User.findAndCountAll({

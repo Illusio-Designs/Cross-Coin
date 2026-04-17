@@ -722,7 +722,7 @@ export const userService = {
 
   getAllUsers: async () => {
     try {
-      const response = await adminApi.get("/api/users/all");
+      const response = await adminApi.get("/api/users/all?limit=1000");
       return response.data;
     } catch (error) {
       throw handleApiError(error);

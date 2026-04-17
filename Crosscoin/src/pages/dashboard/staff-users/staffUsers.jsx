@@ -57,7 +57,7 @@ export default function StaffUsers() {
     setError(null);
     try {
       const data = await userService.getAllUsers();
-      setUsers(Array.isArray(data) ? data : []);
+      setUsers(Array.isArray(data) ? data : data?.users || data?.data || []);
     } catch (err) {
       setError(err.message || 'Failed to fetch users');
     } finally {
