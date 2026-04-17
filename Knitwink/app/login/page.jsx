@@ -79,12 +79,12 @@ export default function LoginPage() {
     window.verifyOtp(
       code,
       async (data) => {
-        // MSG91 verified — data is the access token
         const accessToken = typeof data === 'string' ? data : (data?.message || data?.token || JSON.stringify(data))
         try {
           await loginWithOtp({ phone: digits, access_token: accessToken })
-          await checkAuth()
-          router.push('/account')
+          // Token is saved in localStorage by loginWithOtp
+          // Force redirect immediately
+          window.location.href = '/account'
         } catch (err) {
           setError(err.message || 'Login failed')
           setLoading(false)
