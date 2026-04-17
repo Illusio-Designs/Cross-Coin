@@ -1,6 +1,7 @@
 const { Attribute, AttributeValue } = require('../model/associations.js');
 const { sequelize } = require('../config/db.js');
 const cacheManager = require('../services/cacheManager.js');
+const { logger } = require('../config/logging.js');
 
 // Get all attributes with their values
 module.exports.getAllAttributes = async (req, res) => {
@@ -23,7 +24,7 @@ module.exports.getAllAttributes = async (req, res) => {
 
         res.json(attributes);
     } catch (error) {
-        console.error('Error fetching attributes:', error);
+        logger.error('Error fetching attributes:', error);
         res.status(500).json({ message: 'Failed to fetch attributes', error: error.message });
     }
 };
@@ -71,7 +72,7 @@ module.exports.createAttribute = async (req, res) => {
         });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error creating attribute:', error);
+        logger.error('Error creating attribute:', error);
         res.status(500).json({ message: 'Failed to create attribute', error: error.message });
     }
 };
@@ -135,7 +136,7 @@ module.exports.updateAttribute = async (req, res) => {
         });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error updating attribute:', error);
+        logger.error('Error updating attribute:', error);
         res.status(500).json({ message: 'Failed to update attribute', error: error.message });
     }
 };
@@ -169,7 +170,7 @@ module.exports.deleteAttribute = async (req, res) => {
         res.json({ message: 'Attribute deleted successfully' });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error deleting attribute:', error);
+        logger.error('Error deleting attribute:', error);
         res.status(500).json({ message: 'Failed to delete attribute', error: error.message });
     }
 };
@@ -222,7 +223,7 @@ module.exports.addAttributeValues = async (req, res) => {
         });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error adding attribute values:', error);
+        logger.error('Error adding attribute values:', error);
         res.status(500).json({ message: 'Failed to add attribute values', error: error.message });
     }
 };
@@ -267,7 +268,7 @@ module.exports.removeAttributeValues = async (req, res) => {
         });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error removing attribute values:', error);
+        logger.error('Error removing attribute values:', error);
         res.status(500).json({ message: 'Failed to remove attribute values', error: error.message });
     }
 };
@@ -294,7 +295,7 @@ module.exports.getAttributeById = async (req, res) => {
 
         res.json(attribute);
     } catch (error) {
-        console.error('Error fetching attribute:', error);
+        logger.error('Error fetching attribute:', error);
         res.status(500).json({ message: 'Failed to fetch attribute', error: error.message });
     }
 }; 
@@ -379,7 +380,7 @@ module.exports.getMegaMenu = async (req, res) => {
         res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
         res.json({ success: true, data: result });
     } catch (error) {
-        console.error('Error fetching mega menu:', error);
+        logger.error('Error fetching mega menu:', error);
         res.status(500).json({ success: false, message: 'Failed to fetch mega menu', error: error.message });
     }
 };

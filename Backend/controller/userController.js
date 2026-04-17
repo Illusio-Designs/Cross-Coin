@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { logger } = require('../config/logging.js');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
@@ -95,7 +96,7 @@ module.exports.register = async (req, res) => {
                 try {
                     const loyaltyTxn = await loyaltyService.creditPoints(user.id, guestOrder.id, guestOrder.final_amount, guestOrder.brand_id || 1);
                     if (loyaltyTxn?.type === 'earned') pointsCredited += Math.max(loyaltyTxn.points || 0, 0);
-                } catch (_) {}
+                } catch (e) { logger.warn('[Login] Failed to credit loyalty points:', e.message); }
             }
         }
 
@@ -109,7 +110,7 @@ module.exports.register = async (req, res) => {
             pointsCredited
         });
     } catch (error) {
-        console.error('Registration error:', error);
+        logger.error('Registration error:', error);
         res.status(500).json({ message: 'Registration failed', error: error.message });
     }
 };
@@ -128,7 +129,7 @@ module.exports.login = async (req, res) => {
         const axios = require('axios');
         const MSG91_AUTH_KEY = process.env.MSG91_AUTH_KEY;
 
-        console.log(`[Login] Verifying MSG91 token for ${digits}, token length: ${access_token?.length}, token preview: ${String(access_token).substring(0, 30)}...`);
+        logger.info(`[Login] Verifying MSG91 token for ${digits}, token length: ${access_token?.length}, token preview: ${String(access_token).substring(0, 30)}...`);
 
         let tokenValid = false;
 
@@ -140,7 +141,7 @@ module.exports.login = async (req, res) => {
                     { authkey: MSG91_AUTH_KEY, 'access-token': access_token },
                     { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
                 );
-                console.log('[Login] MSG91 verifyAccessToken response:', JSON.stringify(verifyResponse.data));
+                logger.info('[Login] MSG91 verifyAccessToken response:', JSON.stringify(verifyResponse.data));
 
                 if (verifyResponse.data?.type === 'success') {
                     tokenValid = true;
@@ -152,7 +153,7 @@ module.exports.login = async (req, res) => {
                 }
             } catch (verifyErr) {
                 const errData = verifyErr.response?.data;
-                console.error(`[Login] MSG91 API verify failed: status=${verifyErr.response?.status}, data=${JSON.stringify(errData)}`);
+                logger.error(`[Login] MSG91 API verify failed: status=${verifyErr.response?.status}, data=${JSON.stringify(errData)}`);
 
                 const errMsg = String(errData?.message || '').toLowerCase();
                 const errCode = errData?.code;
@@ -161,22 +162,22 @@ module.exports.login = async (req, res) => {
                 }
             }
         } else {
-            console.warn('[Login] MSG91_AUTH_KEY not set — skipping API verification');
+            logger.warn('[Login] MSG91_AUTH_KEY not set — skipping API verification');
         }
 
-        // Attempt 2: Decode the JWT as fallback
-        if (!tokenValid) {
+        // Attempt 2: Decode the JWT as fallback (only when MSG91 is configured)
+        if (!tokenValid && MSG91_AUTH_KEY) {
             try {
                 const jwtLib = require('jsonwebtoken');
                 const decoded = jwtLib.decode(access_token);
-                console.log('[Login] JWT decode fallback:', JSON.stringify(decoded));
+                logger.info('[Login] JWT decode fallback:', JSON.stringify(decoded));
 
                 if (decoded && (decoded.requestId || decoded.reqId || decoded.companyId)) {
                     tokenValid = true;
-                    console.log('[Login] JWT fallback accepted — valid MSG91 token structure');
+                    logger.info('[Login] JWT fallback accepted — valid MSG91 token structure');
                 }
             } catch (decodeErr) {
-                console.error('[Login] JWT decode failed:', decodeErr.message);
+                logger.error('[Login] JWT decode failed:', decodeErr.message);
             }
         }
 
@@ -213,7 +214,7 @@ module.exports.login = async (req, res) => {
             await ShippingAddress.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: matchedIds, user_id: null } });
             const delivered = await Order.findAll({ where: { user_id: user.id, status: 'delivered' } });
             for (const o of delivered) {
-                try { await loyaltyService.creditPoints(user.id, o.id, o.final_amount, o.brand_id || 1); } catch (_) {}
+                try { await loyaltyService.creditPoints(user.id, o.id, o.final_amount, o.brand_id || 1); } catch (e) { logger.warn('[Login] Failed to credit loyalty points:', e.message); }
             }
         }
 
@@ -232,7 +233,7 @@ module.exports.login = async (req, res) => {
 
         res.json({ message: 'Login successful', token, refreshToken, user: userResponse });
     } catch (error) {
-        console.error('Mobile login error:', error);
+        logger.error('Mobile login error:', error);
         res.status(500).json({ message: 'Login failed', error: error.message });
     }
 };
@@ -270,7 +271,7 @@ module.exports.adminLogin = async (req, res) => {
 
         res.json({ message: 'Admin login successful', token, user: userResponse });
     } catch (error) {
-        console.error('Admin login error:', error);
+        logger.error('Admin login error:', error);
         res.status(500).json({ message: 'Admin login failed', error: error.message });
     }
 };
@@ -294,7 +295,7 @@ module.exports.forgotPassword = async (req, res) => {
 
         // Check if email credentials are properly set
         if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
-            console.error('Email credentials not properly configured in .env file');
+            logger.error('Email credentials not properly configured in .env file');
             return res.json({ 
                 message: 'Reset token generated. Email not sent due to configuration.'
             });
@@ -333,14 +334,14 @@ module.exports.forgotPassword = async (req, res) => {
                 message: 'Reset link sent to your email'
             });
         } catch (emailError) {
-            console.error('Email sending error:', emailError);
+            logger.error('Email sending error:', emailError);
             res.json({ 
                 message: 'Reset token generated. Email delivery failed.',
                 error: emailError.message
             });
         }
     } catch (error) {
-        console.error('Forgot password error:', error);
+        logger.error('Forgot password error:', error);
         res.status(500).json({ message: 'Failed to process request', error: error.message });
     }
 };
@@ -376,7 +377,7 @@ module.exports.resetPassword = async (req, res) => {
 
         res.json({ message: 'Password reset successfully' });
     } catch (error) {
-        console.error('Reset password error:', error);
+        logger.error('Reset password error:', error);
         res.status(500).json({ message: 'Failed to reset password', error: error.message });
     }
 };
@@ -397,7 +398,7 @@ module.exports.getCurrentUser = async (req, res) => {
         
         res.json(userResponse);
     } catch (error) {
-        console.error('Get user error:', error);
+        logger.error('Get user error:', error);
         res.status(500).json({ message: 'Failed to get user', error: error.message });
     }
 };
@@ -427,14 +428,14 @@ module.exports.updateUser = async (req, res) => {
         if (req.file) {
             try {
                 const oldProfileImage = user.profileImage;
-                const buffer = fs.readFileSync(req.file.path);
+                const buffer = await fs.promises.readFile(req.file.path);
                 const filename = path.basename(req.file.path);
                 const uploadResult = await imagekitService.uploadImage(buffer, filename, '/profiles');
 
                 // Delete old ImageKit image if it was already on ImageKit
                 if (oldProfileImage && oldProfileImage.startsWith('/profiles/')) {
                     await imagekitService.deleteImage(oldProfileImage).catch(err =>
-                        console.error('Failed to delete old profile image from ImageKit:', err.message)
+                        logger.error('Failed to delete old profile image from ImageKit:', err.message)
                     );
                 }
 
@@ -443,10 +444,10 @@ module.exports.updateUser = async (req, res) => {
 
                 // Clean up local temp file
                 fs.unlink(req.file.path, err => {
-                    if (err) console.error('Failed to delete temp file:', err.message);
+                    if (err) logger.error('Failed to delete temp file:', err.message);
                 });
             } catch (imageError) {
-                console.error('Error handling profile image:', imageError);
+                logger.error('Error handling profile image:', imageError);
                 return res.status(500).json({ 
                     message: 'Error processing profile picture', 
                     error: imageError.message 
@@ -470,7 +471,7 @@ module.exports.updateUser = async (req, res) => {
             user: responseWithImage 
         });
     } catch (error) {
-        console.error('Update user error:', error);
+        logger.error('Update user error:', error);
         res.status(500).json({ message: 'Error updating user', error: error.message });
     }
 };
@@ -509,7 +510,7 @@ module.exports.updatePassword = async (req, res) => {
         
         res.json({ message: 'Password updated successfully' });
     } catch (error) {
-        console.error('Update password error:', error);
+        logger.error('Update password error:', error);
         res.status(500).json({ message: 'Failed to update password', error: error.message });
     }
 };
@@ -540,7 +541,7 @@ module.exports.deleteUser = async (req, res) => {
 
         res.json({ success: true, message: 'Account deleted successfully' });
     } catch (error) {
-        console.error('Error deleting user:', error);
+        logger.error('Error deleting user:', error);
         res.status(500).json({ success: false, message: 'Failed to delete account', error: error.message });
     }
 };
@@ -569,7 +570,7 @@ module.exports.getAllUsers = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Get all users error:', error);
+        logger.error('Get all users error:', error);
         res.status(500).json({ message: 'Error getting users' });
     }
 };
@@ -588,7 +589,7 @@ module.exports.getProfile = async (req, res) => {
         const userResponse = addImageUrlToResponse(user.toJSON());
         res.json(userResponse);
     } catch (error) {
-        console.error('Get profile error:', error);
+        logger.error('Get profile error:', error);
         res.status(500).json({ message: 'Error getting profile' });
     }
 };
@@ -617,14 +618,14 @@ module.exports.updateProfile = async (req, res) => {
         if (req.file) {
             try {
                 const oldProfileImage = user.profileImage;
-                const buffer = fs.readFileSync(req.file.path);
+                const buffer = await fs.promises.readFile(req.file.path);
                 const filename = path.basename(req.file.path);
                 const uploadResult = await imagekitService.uploadImage(buffer, filename, '/profiles');
 
                 // Delete old ImageKit image if it was already on ImageKit
                 if (oldProfileImage && oldProfileImage.startsWith('/profiles/')) {
                     await imagekitService.deleteImage(oldProfileImage).catch(err =>
-                        console.error('Failed to delete old profile image from ImageKit:', err.message)
+                        logger.error('Failed to delete old profile image from ImageKit:', err.message)
                     );
                 }
 
@@ -632,10 +633,10 @@ module.exports.updateProfile = async (req, res) => {
 
                 // Clean up local temp file
                 fs.unlink(req.file.path, err => {
-                    if (err) console.error('Failed to delete temp file:', err.message);
+                    if (err) logger.error('Failed to delete temp file:', err.message);
                 });
             } catch (error) {
-                console.error('Error handling profile image update:', error);
+                logger.error('Error handling profile image update:', error);
                 return res.status(500).json({ 
                     success: false,
                     message: 'Failed to process image',
@@ -652,7 +653,7 @@ module.exports.updateProfile = async (req, res) => {
             data: user 
         });
     } catch (error) {
-        console.error('Error updating profile:', error);
+        logger.error('Error updating profile:', error);
         res.status(500).json({ 
             success: false,
             message: 'Failed to update profile', 
@@ -677,11 +678,11 @@ module.exports.logout = async (req, res) => {
 
         res.clearCookie('token');
         if (req.logout) {
-            req.logout((err) => { if (err) console.error('Passport logout error:', err); });
+            req.logout((err) => { if (err) logger.error('Passport logout error:', err); });
         }
         res.json({ message: 'Logged out successfully' });
     } catch (error) {
-        console.error('Logout error:', error);
+        logger.error('Logout error:', error);
         res.status(500).json({ message: 'Logout failed', error: error.message });
     }
 };
@@ -702,7 +703,7 @@ module.exports.verifyEmail = async (req, res) => {
 
         res.json({ message: 'Email verified successfully' });
     } catch (error) {
-        console.error('Email verification error:', error);
+        logger.error('Email verification error:', error);
         res.status(500).json({ message: 'Failed to verify email', error: error.message });
     }
 };
@@ -733,7 +734,7 @@ module.exports.changePassword = async (req, res) => {
 
         res.json({ message: 'Password changed successfully' });
     } catch (error) {
-        console.error('Change password error:', error);
+        logger.error('Change password error:', error);
         res.status(500).json({ message: 'Failed to change password', error: error.message });
     }
 };
@@ -777,7 +778,7 @@ module.exports.refreshToken = async (req, res) => {
 
         res.json({ success: true, token: accessToken, refreshToken: newRefreshToken });
     } catch (error) {
-        console.error('Refresh token error:', error);
+        logger.error('Refresh token error:', error);
         res.status(500).json({ success: false, message: 'Failed to refresh token', error: error.message });
     }
 };
@@ -810,7 +811,7 @@ module.exports.updateUserRole = async (req, res) => {
         delete userResponse.password;
         res.json({ message: 'User updated successfully', user: userResponse });
     } catch (error) {
-        console.error('Update user role error:', error);
+        logger.error('Update user role error:', error);
         res.status(500).json({ message: 'Failed to update user', error: error.message });
     }
 };
@@ -842,7 +843,7 @@ module.exports.createStaffUser = async (req, res) => {
         delete userResponse.password;
         res.status(201).json({ message: 'Staff user created successfully', user: userResponse });
     } catch (error) {
-        console.error('Create staff user error:', error);
+        logger.error('Create staff user error:', error);
         res.status(500).json({ message: 'Failed to create staff user', error: error.message });
     }
 };

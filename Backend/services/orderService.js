@@ -125,8 +125,8 @@ async function confirmOrder(orderId, adminId) {
 
     // Emit events AFTER commit
     setImmediate(() => {
-      orderEmitter.emit('order.confirmed', order);
-      syncOrderToFShip(order);
+      try { orderEmitter.emit('order.confirmed', order); } catch (e) { logger.warn('[orderService] order.confirmed emit failed:', e.message); }
+      syncOrderToFShip(order).catch(e => logger.warn('[orderService] FShip sync failed:', e.message));
     });
 
     return order;
@@ -217,7 +217,7 @@ async function cancelOrder(orderId, { reason, cancelledBy, isAdmin = false }) {
     }
 
     order._cancelReason = reason;
-    setImmediate(() => orderEmitter.emit('order.cancelled', order));
+    setImmediate(() => { try { orderEmitter.emit('order.cancelled', order); } catch (e) { logger.warn('[orderService] order.cancelled emit failed:', e.message); } });
 
     return order;
   });

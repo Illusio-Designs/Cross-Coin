@@ -11,13 +11,15 @@ const { Op } = require('sequelize');
 const { sequelize } = require('../config/db.js');
 const imagekitService = require('../services/imagekitService.js');
 const cacheManager = require('../services/cacheManager.js');
+const redisService = require('../services/redisService.js');
+const { logger } = require('../config/logging.js');
 
 // Helper to update product review statistics
 const updateProductReviewStats = async (productIdToUpdate, transaction) => {
     try {
         const pId = parseInt(productIdToUpdate);
         if (isNaN(pId)) {
-            console.error('Invalid productId for stats update:', productIdToUpdate);
+            logger.error('Invalid productId for stats update:', productIdToUpdate);
             return;
         }
 
@@ -65,7 +67,7 @@ const updateProductReviewStats = async (productIdToUpdate, transaction) => {
         });
 
     } catch (error) {
-        console.error('Error updating product review stats:', error);
+        logger.error('Error updating product review stats:', error);
         // Do not re-throw error if called from multiple places, let the original caller handle it
     }
 };
@@ -179,7 +181,7 @@ module.exports.createReview = async (req, res) => {
             const reviewImages = [];
             for (const file of files) {
                 try {
-                    const buffer = fs.readFileSync(file.path);
+                    const buffer = await fs.promises.readFile(file.path);
                     const uploadResult = await imagekitService.uploadImage(buffer, file.filename, '/reviews');
                     reviewImages.push({
                         reviewId: newReview.id,
@@ -187,10 +189,10 @@ module.exports.createReview = async (req, res) => {
                         fileType: file.mimetype.startsWith('video/') ? 'video' : 'image'
                     });
                     fs.unlink(file.path, err => {
-                        if (err) console.error('Failed to delete temp file:', err.message);
+                        if (err) logger.error('Failed to delete temp file:', err.message);
                     });
                 } catch (uploadErr) {
-                    console.error('Failed to upload review image to ImageKit:', uploadErr.message);
+                    logger.error('Failed to upload review image to ImageKit:', uploadErr.message);
                     reviewImages.push({
                         reviewId: newReview.id,
                         fileName: file.filename,
@@ -223,7 +225,7 @@ module.exports.createReview = async (req, res) => {
         });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error creating review:', error);
+        logger.error('Error creating review:', error);
         res.status(500).json({ message: 'Failed to create review', error: error.message });
     }
 };
@@ -232,19 +234,20 @@ module.exports.createReview = async (req, res) => {
 module.exports.createPublicReview = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
-        // Simple rate limiting for public reviews
+        // Rate limiting for public reviews via Redis (15 min window, max 5 submissions)
         const ip = req.ip || req.connection.remoteAddress;
-        if (!global._reviewRateLimiter) global._reviewRateLimiter = {};
-        const now = Date.now();
-        const windowMs = 15 * 60 * 1000; // 15 minutes
+        const rateLimitKey = `ratelimit:review:${ip}`;
+        const windowSec = 15 * 60; // 900 seconds
         const maxReviews = 5;
-        if (!global._reviewRateLimiter[ip]) global._reviewRateLimiter[ip] = [];
-        global._reviewRateLimiter[ip] = global._reviewRateLimiter[ip].filter(t => now - t < windowMs);
-        if (global._reviewRateLimiter[ip].length >= maxReviews) {
+        const count = await redisService.incr(rateLimitKey);
+        if (count === 1) {
+            // First request in this window — set expiry so key auto-cleans
+            await redisService.expire(rateLimitKey, windowSec);
+        }
+        if (count !== null && count > maxReviews) {
             await transaction.rollback();
             return res.status(429).json({ success: false, message: 'Too many reviews. Please try again later.' });
         }
-        global._reviewRateLimiter[ip].push(now);
 
         const { productId: productIdBody, rating: ratingBody, comment, name, email } = req.body;
         const files = req.files;
@@ -315,7 +318,7 @@ module.exports.createPublicReview = async (req, res) => {
             const reviewImages = [];
             for (const file of files) {
                 try {
-                    const buffer = fs.readFileSync(file.path);
+                    const buffer = await fs.promises.readFile(file.path);
                     const uploadResult = await imagekitService.uploadImage(buffer, file.filename, '/reviews');
                     reviewImages.push({
                         reviewId: newReview.id,
@@ -323,10 +326,10 @@ module.exports.createPublicReview = async (req, res) => {
                         fileType: file.mimetype.startsWith('video/') ? 'video' : 'image'
                     });
                     fs.unlink(file.path, err => {
-                        if (err) console.error('Failed to delete temp file:', err.message);
+                        if (err) logger.error('Failed to delete temp file:', err.message);
                     });
                 } catch (uploadErr) {
-                    console.error('Failed to upload review image to ImageKit:', uploadErr.message);
+                    logger.error('Failed to upload review image to ImageKit:', uploadErr.message);
                     reviewImages.push({
                         reviewId: newReview.id,
                         fileName: file.filename,
@@ -349,7 +352,7 @@ module.exports.createPublicReview = async (req, res) => {
         });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error creating public review:', error);
+        logger.error('Error creating public review:', error);
         res.status(500).json({ 
             success: false, 
             message: 'Failed to create review', 
@@ -459,7 +462,7 @@ module.exports.getPublicProductReviews = async (req, res) => {
         await cacheManager.set(cacheKey, responseData, 600).catch(() => {});
         res.json(responseData);
     } catch (error) {
-        console.error('Error getting public product reviews:', error);
+        logger.error('Error getting public product reviews:', error);
         res.status(500).json({ 
             success: false,
             message: 'Failed to get reviews', 
@@ -556,7 +559,7 @@ module.exports.getProductReviews = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error getting product reviews:', error);
+        logger.error('Error getting product reviews:', error);
         res.status(500).json({ message: 'Failed to get reviews', error: error.message });
     }
 };
@@ -622,7 +625,7 @@ module.exports.moderateReview = async (req, res) => {
         });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error moderating review:', error);
+        logger.error('Error moderating review:', error);
         res.status(500).json({ message: 'Failed to moderate review', error: error.message });
     }
 };
@@ -664,12 +667,12 @@ module.exports.deleteReview = async (req, res) => {
                 // Delete from ImageKit if it's an ImageKit path
                 if (image.fileName && (image.fileName.startsWith('/reviews/') || image.fileName.includes('ik.imagekit.io'))) {
                     return imagekitService.deleteImage(image.fileName).catch(err =>
-                        console.error('Failed to delete review image from ImageKit:', err.message)
+                        logger.error('Failed to delete review image from ImageKit:', err.message)
                     );
                 }
                 // Otherwise delete from local storage
                 const imagePath = path.join(__dirname, '../uploads/reviews', image.fileName);
-                return fs.promises.unlink(imagePath).catch(err => console.error("Failed to delete image file:", err));
+                return fs.promises.unlink(imagePath).catch(err => logger.error("Failed to delete image file:", err));
             });
             await Promise.all(deleteFilePromises);
             // DB records for ReviewImages will be cascade deleted due to Review.hasMany association with onDelete: 'CASCADE'
@@ -692,7 +695,7 @@ module.exports.deleteReview = async (req, res) => {
         res.json({ message: 'Review deleted successfully' });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error deleting review:', error);
+        logger.error('Error deleting review:', error);
         res.status(500).json({ message: 'Failed to delete review', error: error.message });
     }
 };
@@ -751,7 +754,7 @@ module.exports.getAllReviews = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching all reviews:', error);
+        logger.error('Error fetching all reviews:', error);
         res.status(500).json({ message: 'Failed to fetch reviews', error: error.message });
     }
 };
@@ -786,7 +789,7 @@ module.exports.getReview = async (req, res) => {
 
         res.json(reviewData);
     } catch (error) {
-        console.error('Error fetching review:', error);
+        logger.error('Error fetching review:', error);
         res.status(500).json({ message: 'Failed to fetch review', error: error.message });
     }
 };
@@ -877,7 +880,7 @@ module.exports.updateReview = async (req, res) => {
         });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error updating review:', error);
+        logger.error('Error updating review:', error);
         res.status(500).json({ message: 'Failed to update review', error: error.message });
     }
 };
@@ -921,7 +924,7 @@ module.exports.deleteReviewImage = async (req, res) => {
                 await fs.promises.unlink(imagePath);
             }
         } catch (fileError) {
-            console.error("Error deleting image file from disk:", fileError); 
+            logger.error("Error deleting image file from disk:", fileError);
             // Potentially log this but don't fail the DB operation if file is already gone
         }
 
@@ -951,7 +954,7 @@ module.exports.deleteReviewImage = async (req, res) => {
         res.json({ message: 'Image deleted successfully' });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error deleting review image:', error);
+        logger.error('Error deleting review image:', error);
         res.status(500).json({ message: 'Failed to delete review image', error: error.message });
     }
 };
@@ -1024,7 +1027,7 @@ module.exports.getUserReviews = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error getting user reviews:', error);
+        logger.error('Error getting user reviews:', error);
         res.status(500).json({ success: false, message: 'Failed to get user reviews', error: error.message });
     }
 };
@@ -1071,7 +1074,7 @@ module.exports.getAllPublicReviews = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching all public reviews:', error);
+        logger.error('Error fetching all public reviews:', error);
         res.status(500).json({ success: false, message: 'Failed to fetch reviews', error: error.message });
     }
 };

@@ -15,10 +15,13 @@ router.get('/stats', isAuthenticated, isWhatsappManager, ctrl.getStats);
 router.get('/stats/sla', isAuthenticated, isWhatsappManager, ctrl.getSLAStats);
 
 // ── Templates ─────────────────────────────────────────────────────────────────
-router.get('/templates',          isAuthenticated, isWhatsappManager, ctrl.listTemplates);
-router.post('/templates',         isAuthenticated, isWhatsappManager, ctrl.createTemplate);
-router.delete('/templates/:name', isAuthenticated, isWhatsappManager, ctrl.deleteTemplate);
-router.post('/templates/seed',    isAuthenticated, isAdmin, ctrl.seedTemplates);
+router.get('/templates',              isAuthenticated, isWhatsappManager, ctrl.listTemplates);
+router.post('/templates',             isAuthenticated, isWhatsappManager, ctrl.createTemplate);
+router.post('/templates/seed',        isAuthenticated, isAdmin, ctrl.seedTemplates);
+// sync-all MUST come before /:name so Express does not treat "sync-all" as a template name param
+router.put('/templates/sync-all',     isAuthenticated, isAdmin, ctrl.syncAllTemplates);
+router.put('/templates/:name',        isAuthenticated, isAdmin, ctrl.updateTemplate);
+router.delete('/templates/:name',     isAuthenticated, isWhatsappManager, ctrl.deleteTemplate);
 
 // ── Test connection ───────────────────────────────────────────────────────────
 router.post('/test', isAuthenticated, isAdmin, ctrl.testConnection);

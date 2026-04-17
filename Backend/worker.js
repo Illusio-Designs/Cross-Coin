@@ -164,7 +164,7 @@ async function jobAbandonedCart() {
     try {
       await whatsappService.sendAbandonedCart(user.phone, { customerName: user.username, productName, couponCode: 'SAVE10' }, 1);
       sent++;
-    } catch (_) {}
+    } catch (e) { logger.warn(`[Worker] AbandonedCart send failed for user ${user.id}: ${e.message}`); }
   }
   return { sent };
 }
@@ -206,7 +206,7 @@ async function jobReviewRequest() {
     try {
       await whatsappService.sendReviewRequest(phone, { customerName: order.User?.username, productName: product.name, productSlug: product.slug }, order.brand_id || 1);
       sent++;
-    } catch (_) {}
+    } catch (e) { logger.warn(`[Worker] ReviewRequest send failed for order ${order.id}: ${e.message}`); }
   }
   return { sent };
 }
@@ -239,7 +239,7 @@ async function jobWinBack() {
     try {
       await whatsappService.sendWinBack(user.phone, { customerName: user.username, couponCode: 'COMEBACK10' }, 1);
       sent++;
-    } catch (_) {}
+    } catch (e) { logger.warn(`[Worker] WinBack send failed for user ${user.id}: ${e.message}`); }
   }
   return { sent };
 }
@@ -277,7 +277,7 @@ async function jobUpsell() {
     try {
       await whatsappService.sendPostPurchaseUpsell(phone, { customerName: order.User?.username, purchasedProduct: purchased.name, suggestedProduct: suggested.name, suggestedSlug: suggested.slug }, order.brand_id || 1);
       sent++;
-    } catch (_) {}
+    } catch (e) { logger.warn(`[Worker] Upsell send failed for order ${order.id}: ${e.message}`); }
   }
   return { sent };
 }

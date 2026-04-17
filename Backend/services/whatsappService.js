@@ -109,90 +109,114 @@ async function deleteTemplate(name, brandId = 1) {
   return res.data;
 }
 
-// ─── Seed all 9 default Cross Coin templates ──────────────────────────────────
-async function seedDefaultTemplates(brandId = 1) {
-  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
-  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
-  const footer    = `${storeName} - ${storeUrl}`;
+// ─── Build the canonical template list ────────────────────────────────────────
+// Used by both seedDefaultTemplates and updateTemplate / updateAllTemplates
+function buildTemplates(storeName, storeUrl) {
+  const footer = `${storeName} — ${storeUrl}`;
 
-  const templates = [
+  return [
+    // ── Transactional / Utility ────────────────────────────────────────────────
     {
       name: 'order_confirmation', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '✅ Order Confirmed!' },
-        { type: 'BODY',
-          text: `Hi there! Your order from *${storeName}* is confirmed.\n\n🧾 Order: *#{{1}}*\n📦 Items: {{2}}\n💰 Total: ₹{{3}}\n🚚 Estimated delivery: {{4}}\n\nWe're getting it ready for you. You'll receive a tracking update once it ships!`,
-          example: { body_text: [['CC-20240101-0001', '2 items', '699', '3-5 working days']] } },
+        { type: 'HEADER', format: 'TEXT', text: '✅ Order Confirmed' },
+        {
+          type: 'BODY',
+          text: `Thank you for shopping with *${storeName}*!\n\nYour order has been confirmed and is being prepared for dispatch.\n\n🧾 *Order ID:* #{{1}}\n📦 *Items:* {{2}}\n💰 *Order Total:* ₹{{3}}\n🚚 *Estimated Delivery:* {{4}}\n\nYou will receive a shipping notification with live tracking as soon as your order is dispatched. We appreciate your trust in us!`,
+          example: { body_text: [['CC-20240101-0001', '2 items', '699', '3–5 working days']] },
+        },
         { type: 'FOOTER', text: footer },
       ],
     },
     {
       name: 'order_shipped', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '📦 Your Order Has Shipped!' },
-        { type: 'BODY',
-          text: `Your *${storeName}* order *#{{1}}* is on its way!\n\n🔖 AWB: {{2}}\n📍 Track live: {{3}}\n\nExpected delivery in 2-5 business days. We'll update you at every step.`,
-          example: { body_text: [['CC-20240101-0001', 'BD9812345678', `https://${storeUrl}/OrderTracking?order=CC-20240101-0001`]] } },
+        { type: 'HEADER', format: 'TEXT', text: '📦 Your Order Is On Its Way!' },
+        {
+          type: 'BODY',
+          text: `Great news! Your *${storeName}* order has been dispatched and is heading your way.\n\n🧾 *Order ID:* #{{1}}\n🔖 *Tracking No (AWB):* {{2}}\n📍 *Track your shipment:* {{3}}\n\nExpected delivery within 2–5 business days. We'll keep you posted at every milestone. Thank you for your patience!`,
+          example: { body_text: [['CC-20240101-0001', 'BD9812345678', `https://${storeUrl}/OrderTracking?order=CC-20240101-0001`]] },
+        },
         { type: 'FOOTER', text: footer },
       ],
     },
     {
       name: 'order_out_for_delivery', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '🚛 Out for Delivery!' },
-        { type: 'BODY',
-          text: `Great news! Your *${storeName}* order *#{{1}}* is out for delivery today.\n\n🚚 Courier: {{2}}\n\nPlease keep your phone handy and ensure someone is available to receive the package.`,
-          example: { body_text: [['CC-20240101-0001', 'BlueDart']] } },
+        { type: 'HEADER', format: 'TEXT', text: '🚛 Out for Delivery Today!' },
+        {
+          type: 'BODY',
+          text: `Your *${storeName}* order is out for delivery and will arrive today!\n\n🧾 *Order ID:* #{{1}}\n🚚 *Courier Partner:* {{2}}\n\nPlease ensure someone is available at the delivery address to receive the package. If you miss the delivery, the courier will attempt again the next working day.`,
+          example: { body_text: [['CC-20240101-0001', 'BlueDart Express']] },
+        },
         { type: 'FOOTER', text: footer },
       ],
     },
     {
       name: 'order_delivered', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '🎉 Order Delivered!' },
-        { type: 'BODY',
-          text: `Your *${storeName}* order *#{{1}}* has been delivered successfully!\n\nWe hope you love your purchase. If anything isn't right, just reply to this message — we're here to help.\n\nEnjoy! 🧦`,
-          example: { body_text: [['CC-20240101-0001']] } },
+        { type: 'HEADER', format: 'TEXT', text: '🎉 Order Delivered Successfully!' },
+        {
+          type: 'BODY',
+          text: `We're delighted to inform you that your *${storeName}* order has been delivered!\n\n🧾 *Order ID:* #{{1}}\n\nWe hope you love your purchase. If you have any concerns or if the package arrived damaged, please reply to this message within 48 hours and our team will assist you promptly.\n\nThank you for choosing *${storeName}*. We look forward to serving you again! 😊`,
+          example: { body_text: [['CC-20240101-0001']] },
+        },
         { type: 'FOOTER', text: footer },
       ],
     },
     {
       name: 'order_cancelled', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: 'Order Cancelled' },
-        { type: 'BODY',
-          text: `Your *${storeName}* order *#{{1}}* has been cancelled.\n\n💳 Refund: {{2}}\n\nWe're sorry to see this order go. If you have any questions, reply here or visit ${storeUrl}.\n\nHope to see you again soon!`,
-          example: { body_text: [['CC-20240101-0001', 'Refund in 5-7 business days']] } },
+        { type: 'HEADER', format: 'TEXT', text: '❌ Order Cancelled' },
+        {
+          type: 'BODY',
+          text: `We regret to inform you that your *${storeName}* order has been cancelled.\n\n🧾 *Order ID:* #{{1}}\n💳 *Refund Status:* {{2}}\n\nIf this was unexpected or if you have any questions regarding your refund, please reply to this message or reach out to our support team. We apologise for any inconvenience caused and hope to serve you better next time.`,
+          example: { body_text: [['CC-20240101-0001', 'Refund will be credited within 5–7 working days']] },
+        },
         { type: 'FOOTER', text: footer },
       ],
     },
     {
       name: 'cod_order_confirmation', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '🧾 COD Order — Please Confirm' },
-        { type: 'BODY',
-          text: `Hi! We received your Cash on Delivery order from *${storeName}*.\n\n🧾 Order: *#{{1}}*\n💰 Amount: ₹{{2}}\n📍 Delivery to: {{3}}\n\n👉 *Please reply YES to confirm your address is correct.*\n\nIf anything is wrong, reply with the correct address and we'll update it before shipping.`,
-          example: { body_text: [['CC-20240101-0001', '699', 'Rushikesh, 123 Main St, Surat, Gujarat 395006']] } },
+        { type: 'HEADER', format: 'TEXT', text: '🧾 Action Required — COD Order' },
+        {
+          type: 'BODY',
+          text: `Thank you for placing a Cash on Delivery order with *${storeName}*!\n\nBefore we process your order, we need to verify your delivery address.\n\n🧾 *Order ID:* #{{1}}\n💰 *Amount Payable:* ₹{{2}} (Cash on Delivery)\n📍 *Delivery Address:* {{3}}\n\nPlease confirm your address using the buttons below. This helps us ensure a smooth and hassle-free delivery.`,
+          example: { body_text: [['CC-20240101-0001', '699', 'Rushikesh, 123 Main St, Surat, Gujarat 395006']] },
+        },
         { type: 'FOOTER', text: footer },
+        {
+          type: 'BUTTONS',
+          buttons: [
+            { type: 'QUICK_REPLY', text: '✅ Confirm Address' },
+            { type: 'QUICK_REPLY', text: '✏️ Wrong Address' },
+          ],
+        },
       ],
     },
     {
       name: 'refund_processed', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '💰 Refund Processed' },
-        { type: 'BODY',
-          text: `Your refund for *${storeName}* order *#{{1}}* has been processed.\n\n💳 Amount: ₹{{2}}\n🏦 Refund to: {{3}}\n⏳ Expected credit: 5-7 working days\n\nThank you for your patience. We hope to serve you again!`,
-          example: { body_text: [['CC-20240101-0001', '699', 'Original Payment Method']] } },
+        { type: 'HEADER', format: 'TEXT', text: '💳 Refund Initiated' },
+        {
+          type: 'BODY',
+          text: `Your refund for the *${storeName}* order has been successfully initiated.\n\n🧾 *Order ID:* #{{1}}\n💰 *Refund Amount:* ₹{{2}}\n🏦 *Refund Mode:* {{3}}\n⏳ *Expected Credit:* 5–7 working days\n\nPlease note that the credit timeline may vary slightly depending on your bank. If you do not receive your refund within 7 working days, please reply to this message and we will investigate immediately.`,
+          example: { body_text: [['CC-20240101-0001', '699', 'Original payment method']] },
+        },
         { type: 'FOOTER', text: footer },
       ],
     },
+    // ── Marketing ──────────────────────────────────────────────────────────────
     {
       name: 'review_request', category: 'MARKETING', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '⭐ How was your order?' },
-        { type: 'BODY',
-          text: `Hi {{1}}!\n\nWe hope you're loving your *{{2}}* from *${storeName}*.\n\nYour review helps other shoppers make great choices — it only takes 30 seconds!\n\n👉 {{3}}`,
-          example: { body_text: [['Rushikesh', 'CrossCoin Ankle Socks', `https://${storeUrl}/review`]] } },
+        { type: 'HEADER', format: 'TEXT', text: '⭐ Share Your Experience!' },
+        {
+          type: 'BODY',
+          text: `Hi {{1}}!\n\nWe hope you are enjoying your *{{2}}* from *${storeName}*. Your feedback means the world to us and helps fellow shoppers make informed decisions.\n\nSharing your experience takes less than a minute — and we genuinely appreciate every review!\n\n👉 Review your purchase: {{3}}`,
+          example: { body_text: [['Rushikesh', 'CrossCoin Ankle Socks', `https://${storeUrl}/review`]] },
+        },
         { type: 'FOOTER', text: footer },
         { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Write a Review', url: `https://${storeUrl}/review` }] },
       ],
@@ -200,10 +224,12 @@ async function seedDefaultTemplates(brandId = 1) {
     {
       name: 'popup_coupon', category: 'MARKETING', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '🎁 Your Exclusive Coupon' },
-        { type: 'BODY',
-          text: `Here's a special 10% OFF coupon just for you at *${storeName}*!\n\n🏷️ Code: *{{1}}*\n✅ Valid on prepaid orders only\n⏰ Limited time offer\n\nDon't miss out — shop now!`,
-          example: { body_text: [['PREPAID10']] } },
+        { type: 'HEADER', format: 'TEXT', text: '🎁 Exclusive Offer Just for You!' },
+        {
+          type: 'BODY',
+          text: `Here's a special discount crafted exclusively for you at *${storeName}*!\n\n🏷️ *Coupon Code:* {{1}}\n✅ *Valid on:* Prepaid orders only\n⏰ *Offer expires:* Limited time — don't wait!\n\nApply the code at checkout to avail your discount. Happy shopping!`,
+          example: { body_text: [['PREPAID10']] },
+        },
         { type: 'FOOTER', text: footer },
         { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Shop Now', url: `https://${storeUrl}` }] },
       ],
@@ -211,15 +237,24 @@ async function seedDefaultTemplates(brandId = 1) {
     {
       name: 'cart_abandoned', category: 'MARKETING', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '🛒 You Left Something Behind!' },
-        { type: 'BODY',
-          text: `Hey {{1}}!\n\nYour *{{2}}* is still waiting in your *${storeName}* cart.\n\n🏷️ Use code *{{3}}* for an extra 10% OFF — but hurry, it expires in 24 hours!\n\nComplete your purchase before it's gone.`,
-          example: { body_text: [['Rushikesh', 'CrossCoin Ankle Socks Pack of 3', 'SAVE10']] } },
+        { type: 'HEADER', format: 'TEXT', text: '🛒 Your Cart Is Waiting!' },
+        {
+          type: 'BODY',
+          text: `Hi {{1}}!\n\nIt looks like you left something behind — your *{{2}}* is still waiting in your *${storeName}* cart.\n\nTo make it easier for you to complete your purchase, we are offering you an *additional 10% OFF* with code *{{3}}*. This offer is valid for the next 24 hours only!\n\nDon't let your favourites sell out — complete your order before it's too late.`,
+          example: { body_text: [['Rushikesh', 'CrossCoin Ankle Socks – Pack of 3', 'SAVE10']] },
+        },
         { type: 'FOOTER', text: footer },
-        { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Complete Purchase', url: `https://${storeUrl}/cart` }] },
+        { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Complete My Order', url: `https://${storeUrl}/cart` }] },
       ],
     },
   ];
+}
+
+// ─── Seed all default templates (skip if already exist) ───────────────────────
+async function seedDefaultTemplates(brandId = 1) {
+  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
+  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
+  const templates = buildTemplates(storeName, storeUrl);
 
   const results = await Promise.allSettled(
     templates.map(tpl => createTemplate(tpl, brandId)
@@ -235,6 +270,60 @@ async function seedDefaultTemplates(brandId = 1) {
     )
   );
   return results.map(r => r.value);
+}
+
+// ─── Update a single template (delete + recreate) ─────────────────────────────
+// Meta has no PATCH for templates — the only way to update content is delete + recreate.
+// The template re-enters PENDING review after recreation.
+async function updateTemplate(name, brandId = 1) {
+  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
+  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
+  const templates = buildTemplates(storeName, storeUrl);
+  const tpl = templates.find(t => t.name === name);
+  if (!tpl) throw new Error(`Template "${name}" is not defined in the default template list`);
+
+  // Step 1 — delete the existing template (ignore 404 — may not exist yet)
+  try {
+    await deleteTemplate(name, brandId);
+    logger.info(`[WhatsApp] Deleted template "${name}" for brand ${brandId}`);
+  } catch (delErr) {
+    const msg = metaError(delErr);
+    if (!msg.toLowerCase().includes('not found') && !msg.toLowerCase().includes('does not exist')) {
+      throw new Error(`Failed to delete template "${name}": ${msg}`);
+    }
+    logger.info(`[WhatsApp] Template "${name}" did not exist — proceeding to create`);
+  }
+
+  // Step 2 — wait for Meta propagation before recreating
+  await new Promise(r => setTimeout(r, 3000));
+
+  // Step 3 — recreate with latest content from buildTemplates
+  const result = await createTemplate(tpl, brandId);
+  logger.info(`[WhatsApp] Recreated template "${name}" for brand ${brandId} — id: ${result.id}`);
+  return { name, status: 'updated', id: result.id };
+}
+
+// ─── Update all default templates ─────────────────────────────────────────────
+// Sequentially deletes + recreates every template.  Sequential (not parallel) to
+// avoid hitting Meta's template-management rate limit.
+async function updateAllTemplates(brandId = 1) {
+  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
+  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
+  const templates = buildTemplates(storeName, storeUrl);
+
+  const results = [];
+  for (const tpl of templates) {
+    try {
+      const result = await updateTemplate(tpl.name, brandId);
+      results.push(result);
+    } catch (err) {
+      logger.error(`[WhatsApp] updateAllTemplates failed for "${tpl.name}": ${err.message}`);
+      results.push({ name: tpl.name, status: 'error', error: err.message });
+    }
+    // Brief pause between templates to avoid Meta rate limits
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  return results;
 }
 
 // ─── Rate limiting helper ──────────────────────────────────────────────────────
@@ -349,11 +438,54 @@ async function sendOrderCancelled(phone, data, brandId = 1) {
 }
 
 async function sendCodConfirmation(phone, data, brandId = 1) {
-  return sendTemplate(phone, 'cod_order_confirmation', [
-    data.orderNumber,
-    data.amount,
-    data.fullAddress || data.address || 'your address',
-  ], brandId);
+  const { token, phoneNumberId } = await getCredentials(brandId);
+  const to = formatE164(phone);
+  if (!to) throw new Error('Invalid phone number: ' + phone);
+
+  const rateLimited = await checkRateLimit(to);
+  if (rateLimited) return rateLimited;
+
+  const orderNumber = String(data.orderNumber);
+
+  // Build template with body params + Quick Reply button payloads keyed to the order number.
+  // When customer taps "Confirm Address" → webhook receives payload "confirm_cod_<orderNumber>"
+  // When customer taps "Wrong Address"   → webhook receives payload "reject_cod_<orderNumber>"
+  const res = await axios.post(
+    `${GRAPH_API_URL}/${phoneNumberId}/messages`,
+    {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'template',
+      template: {
+        name: 'cod_order_confirmation',
+        language: { code: 'en' },
+        components: [
+          {
+            type: 'body',
+            parameters: [
+              { type: 'text', text: orderNumber },
+              { type: 'text', text: String(data.amount) },
+              { type: 'text', text: String(data.fullAddress || data.address || 'your address') },
+            ],
+          },
+          {
+            type: 'button',
+            sub_type: 'quick_reply',
+            index: '0',
+            parameters: [{ type: 'payload', payload: `confirm_cod_${orderNumber}` }],
+          },
+          {
+            type: 'button',
+            sub_type: 'quick_reply',
+            index: '1',
+            parameters: [{ type: 'payload', payload: `reject_cod_${orderNumber}` }],
+          },
+        ],
+      },
+    },
+    { headers: authHeader(token) }
+  );
+  return res.data;
 }
 
 async function sendRefundProcessed(phone, data, brandId = 1) {
@@ -519,6 +651,8 @@ module.exports = {
   createTemplate,
   deleteTemplate,
   seedDefaultTemplates,
+  updateTemplate,
+  updateAllTemplates,
   // Messaging
   sendTextMessage,
   sendTemplate,

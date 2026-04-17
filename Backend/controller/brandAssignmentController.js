@@ -1,4 +1,5 @@
 const { Product, Category, Brand, ProductBrand, CategoryBrand } = require('../model/associations.js');
+const { logger } = require('../config/logging.js');
 
 /**
  * Assign/Update brands for a product
@@ -45,7 +46,7 @@ module.exports.assignBrandsToProduct = async (req, res) => {
             assignments
         });
     } catch (error) {
-        console.error('Error assigning brands to product:', error);
+        logger.error('Error assigning brands to product:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to assign brands',
@@ -99,7 +100,7 @@ module.exports.assignBrandsToCategory = async (req, res) => {
             assignments
         });
     } catch (error) {
-        console.error('Error assigning brands to category:', error);
+        logger.error('Error assigning brands to category:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to assign brands',
@@ -155,7 +156,7 @@ module.exports.getAllProductsWithBrands = async (req, res) => {
             totalPages: Math.ceil(count / parseInt(limit))
         });
     } catch (error) {
-        console.error('Error getting products with brands:', error);
+        logger.error('Error getting products with brands:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to get products',
@@ -197,7 +198,7 @@ module.exports.getAllCategoriesWithBrands = async (req, res) => {
             categories: formattedCategories
         });
     } catch (error) {
-        console.error('Error getting categories with brands:', error);
+        logger.error('Error getting categories with brands:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to get categories',

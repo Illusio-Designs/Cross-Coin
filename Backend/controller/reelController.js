@@ -54,7 +54,7 @@ module.exports.createReel = async (req, res) => {
       return res.status(400).json({ success: false, message: 'video file is required' });
     }
 
-    const videoBuffer = fs.readFileSync(videoFile.path);
+    const videoBuffer = await fs.promises.readFile(videoFile.path);
     const videoUpload = await imagekitService.uploadImage(
       videoBuffer,
       path.basename(videoFile.path),
@@ -63,7 +63,7 @@ module.exports.createReel = async (req, res) => {
 
     let thumbnailPath = null;
     if (thumbnailFile) {
-      const thumbnailBuffer = fs.readFileSync(thumbnailFile.path);
+      const thumbnailBuffer = await fs.promises.readFile(thumbnailFile.path);
       const thumbnailUpload = await imagekitService.uploadImage(
         thumbnailBuffer,
         path.basename(thumbnailFile.path),
@@ -112,7 +112,7 @@ module.exports.updateReel = async (req, res) => {
     const thumbnailFile = req.files?.thumbnail?.[0];
 
     if (videoFile) {
-      const videoBuffer = fs.readFileSync(videoFile.path);
+      const videoBuffer = await fs.promises.readFile(videoFile.path);
       const videoUpload = await imagekitService.uploadImage(
         videoBuffer,
         path.basename(videoFile.path),
@@ -125,7 +125,7 @@ module.exports.updateReel = async (req, res) => {
     }
 
     if (thumbnailFile) {
-      const thumbnailBuffer = fs.readFileSync(thumbnailFile.path);
+      const thumbnailBuffer = await fs.promises.readFile(thumbnailFile.path);
       const thumbnailUpload = await imagekitService.uploadImage(
         thumbnailBuffer,
         path.basename(thumbnailFile.path),

@@ -2,6 +2,7 @@ const UTMTracking = require('../model/utmModel');
 const { v4: uuidv4 } = require('uuid');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/db');
+const { logger } = require('../config/logging.js');
 
 // Track UTM parameters
 exports.trackUTM = async (req, res) => {
@@ -18,12 +19,12 @@ exports.trackUTM = async (req, res) => {
 
     // Get session ID from cookie or create new one
     let sessionId = req.cookies?.session_id;
-    console.log('🍪 UTM Tracking - Cookies received:', req.cookies);
-    console.log('🔑 UTM Tracking - Session ID from cookie:', sessionId);
+    logger.info('🍪 UTM Tracking - Cookies received:', req.cookies);
+    logger.info('🔑 UTM Tracking - Session ID from cookie:', sessionId);
     
     if (!sessionId) {
       sessionId = uuidv4();
-      console.log('🆕 UTM Tracking - Creating new session ID:', sessionId);
+      logger.info('🆕 UTM Tracking - Creating new session ID:', sessionId);
       
       // Set cookie with proper domain for cross-subdomain sharing
       const cookieOptions = {
@@ -35,9 +36,9 @@ exports.trackUTM = async (req, res) => {
       };
       
       res.cookie('session_id', sessionId, cookieOptions);
-      console.log('🍪 UTM Tracking - Cookie set with options:', cookieOptions);
+      logger.info('🍪 UTM Tracking - Cookie set with options:', cookieOptions);
     } else {
-      console.log('✅ UTM Tracking - Using existing session ID:', sessionId);
+      logger.info('✅ UTM Tracking - Using existing session ID:', sessionId);
     }
 
     // Get user info
@@ -69,7 +70,7 @@ exports.trackUTM = async (req, res) => {
       data: utmRecord
     });
   } catch (error) {
-    console.error('Error tracking UTM:', error);
+    logger.error('Error tracking UTM:', error);
     res.status(500).json({
       success: false,
       message: 'Error tracking UTM data',
@@ -100,7 +101,7 @@ exports.getUTMBySession = async (req, res) => {
       data: utmData
     });
   } catch (error) {
-    console.error('Error fetching UTM data:', error);
+    logger.error('Error fetching UTM data:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching UTM data',
@@ -138,7 +139,7 @@ exports.getUTMAnalytics = async (req, res) => {
       data: analytics
     });
   } catch (error) {
-    console.error('Error fetching analytics:', error);
+    logger.error('Error fetching analytics:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching analytics',
@@ -169,7 +170,7 @@ exports.getAllUTMData = async (req, res) => {
       };
     }
 
-    console.log('getAllUTMData whereClause:', whereClause);
+    logger.info('getAllUTMData whereClause:', whereClause);
 
     const utmData = await UTMTracking.findAll({
       where: whereClause,
@@ -184,14 +185,14 @@ exports.getAllUTMData = async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
-    console.log('getAllUTMData result count:', utmData.length);
+    logger.info('getAllUTMData result count:', utmData.length);
 
     res.status(200).json({
       success: true,
       data: utmData
     });
   } catch (error) {
-    console.error('Error fetching all UTM data:', error);
+    logger.error('Error fetching all UTM data:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching UTM data',

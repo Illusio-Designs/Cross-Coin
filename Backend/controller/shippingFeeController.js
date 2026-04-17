@@ -1,5 +1,6 @@
 const { ShippingFee } = require('../model/shippingFeeModel.js');
 const { sequelize } = require('../config/db.js');
+const { logger } = require('../config/logging.js');
 
 // Get all shipping fees
 module.exports.getAllShippingFees = async (req, res) => {
@@ -9,7 +10,7 @@ module.exports.getAllShippingFees = async (req, res) => {
         const shippingFees = await ShippingFee.findAll({ where });
         res.json({ shippingFees });
     } catch (error) {
-        console.error('Error getting shipping fees:', error);
+        logger.error('Error getting shipping fees:', error);
         res.status(500).json({ message: 'Failed to get shipping fees', error: error.message });
     }
 };
@@ -52,7 +53,7 @@ module.exports.createShippingFee = async (req, res) => {
         });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error creating shipping fee:', error);
+        logger.error('Error creating shipping fee:', error);
         res.status(500).json({ message: 'Failed to create shipping fee', error: error.message });
     }
 };
@@ -98,7 +99,7 @@ module.exports.updateShippingFee = async (req, res) => {
         });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error updating shipping fee:', error);
+        logger.error('Error updating shipping fee:', error);
         res.status(500).json({ message: 'Failed to update shipping fee', error: error.message });
     }
 };
@@ -118,7 +119,7 @@ module.exports.getShippingFeeByType = async (req, res) => {
         
         res.json({ shippingFee });
     } catch (error) {
-        console.error('Error getting shipping fee:', error);
+        logger.error('Error getting shipping fee:', error);
         res.status(500).json({ message: 'Failed to get shipping fee', error: error.message });
     }
 };
@@ -142,7 +143,7 @@ module.exports.deleteShippingFee = async (req, res) => {
         res.json({ message: 'Shipping fee deleted successfully' });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error deleting shipping fee:', error);
+        logger.error('Error deleting shipping fee:', error);
         res.status(500).json({ message: 'Failed to delete shipping fee', error: error.message });
     }
 }; 
