@@ -1,6 +1,6 @@
 const express = require('express');
 const {
-    createCoupon, getAllCoupons, getCoupon, updateCoupon, deleteCoupon,
+    createCoupon, getAllCoupons, getCouponById, updateCoupon, deleteCoupon,
     validateCoupon, getPublicCoupons, applyCoupon
 } = require('../controller/couponController.js');
 const { isAuthenticated, authenticate, isOrderManager } = require('../middleware/authMiddleware.js');
@@ -17,7 +17,7 @@ router.post('/apply',     authenticate, applyCoupon);
 // Admin
 router.post('/',          isAuthenticated, isOrderManager, createCoupon);
 router.get('/',           isAuthenticated, isOrderManager, getAllCoupons);
-router.get('/:id',        isAuthenticated, isOrderManager, getCoupon);
+router.get('/:id',        isAuthenticated, isOrderManager, getCouponById);
 router.put('/:id',        isAuthenticated, isOrderManager, updateCoupon);
 router.delete('/:id',    isAuthenticated, isOrderManager, deleteCoupon);
 

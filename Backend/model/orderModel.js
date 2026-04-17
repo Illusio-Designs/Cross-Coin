@@ -230,10 +230,13 @@ const Order = sequelize.define('Order', {
     collate: 'utf8mb4_general_ci',
     underscored: true,
     indexes: [
-        { name: 'idx_user_id', fields: ['user_id'] },
-        { name: 'idx_status', fields: ['status'] },
-        { name: 'idx_payment_status', fields: ['payment_status'] },
-        { name: 'idx_fship_sync_status', fields: ['fship_sync_status'] }
+        { name: 'idx_user_id',            fields: ['user_id'] },
+        { name: 'idx_status',             fields: ['status'] },
+        { name: 'idx_payment_status',     fields: ['payment_status'] },
+        { name: 'idx_fship_sync_status',  fields: ['fship_sync_status'] },
+        { name: 'idx_orders_brand_id',    fields: ['brand_id'] },
+        { name: 'idx_orders_fship_waybill', fields: ['fship_waybill'] },
+        { name: 'idx_orders_created_at',  fields: ['created_at'] }
     ]
 });
 

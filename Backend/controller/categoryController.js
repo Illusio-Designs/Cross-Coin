@@ -11,6 +11,7 @@ const slugify = require('slugify');
 const CategoryService = require('../services/categoryService.js');
 const cacheManager = require('../services/cacheManager.js');
 const imagekitService = require('../services/imagekitService.js');
+const { logger } = require('../config/logging.js');
 
 // In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/categories'));
@@ -33,8 +34,8 @@ const formatCategoryResponse = (category) => {
 const createCategory = async (req, res) => {
     try {
         const { sanitize } = require('../utils/sanitize.js');
-        console.log('Request body:', req.body);
-        console.log('Request file:', req.file);
+        logger.info('Request body:', req.body);
+        logger.info('Request file:', req.file);
 
         const { 
             name, 
@@ -101,12 +102,12 @@ const createCategory = async (req, res) => {
                 }
 
                 image = uploadResult.filePath; // Store ImageKit file path
-                console.log('Created category image path:', image);
+                logger.info('Created category image path:', image);
                 
                 // Delete temporary file
                 await fs.unlink(req.file.path);
             } catch (imageError) {
-                console.error('Error processing image:', imageError);
+                logger.error('Error processing image:', imageError);
                 return res.status(500).json({ 
                     message: 'Error processing image', 
                     error: imageError.message 
@@ -157,7 +158,7 @@ const createCategory = async (req, res) => {
             category: categoryResponse 
         });
     } catch (error) {
-        console.error('Create category error:', error);
+        logger.error('Create category error:', error);
         res.status(500).json({ 
             message: 'Failed to create category',
             error: error.message 
@@ -225,10 +226,10 @@ const getAllCategories = async (req, res) => {
             return categoryData;
         });
 
-        console.log('All categories image paths:', formattedCategories.map(c => c.image));
+        logger.info('All categories image paths:', formattedCategories.map(c => c.image));
         res.status(200).json(formattedCategories);
     } catch (error) {
-        console.error('Get all categories error:', error);
+        logger.error('Get all categories error:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -258,7 +259,7 @@ const deleteCategory = async (req, res) => {
             message: 'Category deleted successfully' 
         });
     } catch (error) {
-        console.error('Error deleting category:', error);
+        logger.error('Error deleting category:', error);
         res.status(500).json({ 
             success: false,
             message: 'Failed to delete category', 
@@ -305,7 +306,7 @@ const getCategoryById = async (req, res) => {
 
         res.status(200).json(categoryResponse);
     } catch (error) {
-        console.error('Get category error:', error);
+        logger.error('Get category error:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -339,12 +340,12 @@ const updateCategory = async (req, res) => {
                 }
 
                 updateData.image = uploadResult.filePath; // Store ImageKit file path
-                console.log('Updated category image path:', updateData.image);
+                logger.info('Updated category image path:', updateData.image);
                 
                 // Delete temporary file
                 await fs.unlink(req.file.path);
             } catch (error) {
-                console.error('Error handling category image update:', error);
+                logger.error('Error handling category image update:', error);
                 return res.status(500).json({ 
                     success: false,
                     message: 'Failed to process image',
@@ -367,7 +368,7 @@ const updateCategory = async (req, res) => {
                     await CategoryBrand.create({ category_id: id, brand_id: brandId, status: 'active' });
                 }
             } catch (e) {
-                console.error('Error updating category brands:', e.message);
+                logger.error('Error updating category brands:', e.message);
             }
         }
         
@@ -380,7 +381,7 @@ const updateCategory = async (req, res) => {
             data: category 
         });
     } catch (error) {
-        console.error('Error updating category:', error);
+        logger.error('Error updating category:', error);
         res.status(500).json({ 
             success: false,
             message: 'Failed to update category', 
@@ -401,7 +402,7 @@ const getPublicCategories = async (req, res) => {
         res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
         res.status(200).json(categories);
     } catch (error) {
-        console.error('Get public categories error:', error);
+        logger.error('Get public categories error:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -413,8 +414,8 @@ const getPublicCategoryByName = async (req, res) => {
         
         // Decode URL-encoded category name
         const decodedName = decodeURIComponent(name);
-        console.log('Original name:', name);
-        console.log('Decoded name:', decodedName);
+        logger.info('Original name:', name);
+        logger.info('Decoded name:', decodedName);
         
         const category = await Category.findOne({
             where: {
@@ -540,7 +541,7 @@ const getPublicCategoryByName = async (req, res) => {
 
         res.status(200).json(categoryResponse);
     } catch (error) {
-        console.error('Get public category by name error:', error);
+        logger.error('Get public category by name error:', error);
         res.status(500).json({ message: error.message });
     }
 };

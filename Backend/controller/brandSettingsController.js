@@ -1,4 +1,5 @@
 const brandSettingsService = require('../services/brandSettingsService');
+const { logger } = require('../config/logging.js');
 
 /**
  * Get all settings for a brand
@@ -27,7 +28,7 @@ async function getAllSettings(req, res) {
             data: settings
         });
     } catch (error) {
-        console.error('Error fetching brand settings:', error);
+        logger.error('Error fetching brand settings:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch brand settings',
@@ -59,7 +60,7 @@ async function getSettingsByCategory(req, res) {
             data: settings
         });
     } catch (error) {
-        console.error('Error fetching settings by category:', error);
+        logger.error('Error fetching settings by category:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch settings',
@@ -98,7 +99,7 @@ async function getSingleSetting(req, res) {
             data: setting
         });
     } catch (error) {
-        console.error('Error fetching setting:', error);
+        logger.error('Error fetching setting:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch setting',
@@ -138,7 +139,7 @@ async function createSetting(req, res) {
             data: setting
         });
     } catch (error) {
-        console.error('Error creating setting:', error);
+        logger.error('Error creating setting:', error);
         
         if (error.name === 'SequelizeUniqueConstraintError') {
             return res.status(409).json({
@@ -198,7 +199,7 @@ async function updateSetting(req, res) {
             data: updated
         });
     } catch (error) {
-        console.error('Error updating setting:', error);
+        logger.error('Error updating setting:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to update setting',
@@ -237,7 +238,7 @@ async function deleteSetting(req, res) {
             message: 'Setting deleted successfully'
         });
     } catch (error) {
-        console.error('Error deleting setting:', error);
+        logger.error('Error deleting setting:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to delete setting',

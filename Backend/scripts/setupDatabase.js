@@ -1090,6 +1090,31 @@ const setupDatabase = async () => {
         console.log("⚠️ Migration 010 skipped:", e.message);
       }
 
+      // Migration 011: Performance indexes on orders table
+      console.log("Running migration 011: Performance indexes on orders...");
+      try {
+        const indexChecks = [
+          { name: 'idx_orders_brand_id',     sql: 'ALTER TABLE orders ADD INDEX idx_orders_brand_id (brand_id)' },
+          { name: 'idx_orders_fship_waybill', sql: 'ALTER TABLE orders ADD INDEX idx_orders_fship_waybill (fship_waybill)' },
+          { name: 'idx_orders_created_at',    sql: 'ALTER TABLE orders ADD INDEX idx_orders_created_at (created_at)' },
+        ];
+        for (const { name, sql } of indexChecks) {
+          const [rows] = await sequelize.query(`
+            SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.STATISTICS
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' AND INDEX_NAME = '${name}'
+          `);
+          if (rows[0].count === 0) {
+            await sequelize.query(sql);
+            console.log(`  ✓ Added ${name}`);
+          } else {
+            console.log(`  ✓ ${name} already exists`);
+          }
+        }
+        console.log("✓ Migration 011 completed");
+      } catch (e) {
+        console.log("⚠️ Migration 011 skipped:", e.message);
+      }
+
       console.log("✓ All migrations completed successfully");
     } catch (migrationError) {
       console.log("⚠️ Magic Checkout migration warning:", migrationError.message);

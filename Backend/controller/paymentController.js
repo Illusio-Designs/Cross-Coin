@@ -8,6 +8,7 @@ const { PaymentService } = require('../services/paymentService.js');
 const razorpayService = require('../services/razorpayService');
 const crypto = require('crypto');
 const settingsHelper = require('../services/settingsHelper');
+const { logger } = require('../config/logging.js');
 const { toSmallestUnit, fromSmallestUnit } = require('../utils/amountConverter');
 const { sendFacebookEvent } = require('../integration/facebookPixel.js');
 const { sendGAEvent } = require('../integration/googleAnalytics.js');
@@ -158,7 +159,7 @@ module.exports.processPayment = async (req, res) => {
         });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error processing payment:', error);
+        logger.error('Error processing payment:', error);
         res.status(500).json({ message: 'Failed to process payment', error: error.message });
     }
 };
@@ -194,7 +195,7 @@ module.exports.getPaymentStatus = async (req, res) => {
 
         res.json({ payment, orderStatus: order.status, paymentStatus: order.payment_status });
     } catch (error) {
-        console.error('Error getting payment status:', error);
+        logger.error('Error getting payment status:', error);
         res.status(500).json({ message: 'Failed to get payment status', error: error.message });
     }
 };
@@ -279,7 +280,7 @@ module.exports.processRefund = async (req, res) => {
         });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error processing refund:', error);
+        logger.error('Error processing refund:', error);
         res.status(500).json({ message: 'Failed to process refund', error: error.message });
     }
 };
@@ -341,7 +342,7 @@ module.exports.getAllPayments = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error getting payments:', error);
+        logger.error('Error getting payments:', error);
         res.status(500).json({ success: false, message: 'Failed to get payments', error: error.message });
     }
 };
@@ -363,7 +364,7 @@ module.exports.confirmPayment = async (req, res) => {
             paymentIntent
         });
     } catch (error) {
-        console.error('Error confirming payment:', error);
+        logger.error('Error confirming payment:', error);
         res.status(500).json({ message: 'Failed to confirm payment', error: error.message });
     }
 };
@@ -385,7 +386,7 @@ module.exports.createPaymentIntent = async (req, res) => {
             paymentIntent
         });
     } catch (error) {
-        console.error('Error creating payment intent:', error);
+        logger.error('Error creating payment intent:', error);
         res.status(500).json({ message: 'Failed to create payment intent', error: error.message });
     }
 };
@@ -434,7 +435,7 @@ module.exports.getUserPayments = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching user payments:', error);
+        logger.error('Error fetching user payments:', error);
         res.status(500).json({ 
             success: false,
             message: 'Failed to fetch user payments', 
@@ -477,7 +478,7 @@ module.exports.refundPayment = async (req, res) => {
 module.exports.createRazorpayOrder = async (req, res) => {
     try {
         const { amount, currency = 'INR', receipt, brand_id, items, orderId } = req.body;
-        console.log('Backend: Received amount to create Razorpay order:', amount);
+        logger.info('Backend: Received amount to create Razorpay order:', amount);
         if (!amount) {
             return res.status(400).json({ message: 'Amount is required' });
         }
@@ -492,7 +493,7 @@ module.exports.createRazorpayOrder = async (req, res) => {
             brandId
         });
 
-        console.log('Backend: Razorpay order created:', { order_id: order.id, amount: order.amount });
+        logger.info('Backend: Razorpay order created:', { order_id: order.id, amount: order.amount });
 
         // Store a pending payment record immediately so failed payments are tracked
         if (orderId) {
@@ -512,12 +513,12 @@ module.exports.createRazorpayOrder = async (req, res) => {
                             payment_gateway: 'Razorpay',
                             brand_id: dbOrder.brand_id || brandId,
                         });
-                        console.log('Stored pending payment record for Razorpay order:', order.id);
+                        logger.info('Stored pending payment record for Razorpay order:', order.id);
                     }
                 }
             } catch (paymentErr) {
                 // Non-fatal — log but don't block the response
-                console.error('Warning: Could not store pending payment record:', paymentErr.message);
+                logger.error('Warning: Could not store pending payment record:', paymentErr.message);
             }
         }
 
@@ -561,11 +562,11 @@ module.exports.createRazorpayOrder = async (req, res) => {
                 await sendFacebookEvent('AddPaymentInfo', eventPayload);
                 await sendGAEvent('add_payment_info', eventPayload);
             } catch (err) {
-                console.error('Analytics InitiateCheckout/AddPaymentInfo error:', err.message);
+                logger.error('Analytics InitiateCheckout/AddPaymentInfo error:', err.message);
             }
         });
     } catch (error) {
-        console.error('Error creating Razorpay order:', error);
+        logger.error('Error creating Razorpay order:', error);
         res.status(500).json({ message: 'Failed to create Razorpay order', error: error.message });
     }
 };
@@ -578,7 +579,7 @@ module.exports.updateOrderPayment = async (req, res) => {
   try {
     const { orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature, reservation_id } = req.body;
     
-    console.log('Updating order payment:', { orderId, razorpayPaymentId, razorpayOrderId, reservation_id });
+    logger.info('Updating order payment:', { orderId, razorpayPaymentId, razorpayOrderId, reservation_id });
 
     if (!razorpayPaymentId || !razorpayOrderId || !razorpaySignature) {
       return res.status(400).json({ message: 'razorpayPaymentId, razorpayOrderId, and razorpaySignature are required' });
@@ -618,7 +619,7 @@ module.exports.updateOrderPayment = async (req, res) => {
     const session = await stockReservation.getReservationByRazorpayOrder(razorpayOrderId);
 
     if (session) {
-      console.log('Payment-first flow: creating order from session', session.reservation_id);
+      logger.info('Payment-first flow: creating order from session', session.reservation_id);
 
       const { order, created } = await orderCreationService.handlePaymentSuccess({
         session,
@@ -644,12 +645,12 @@ module.exports.updateOrderPayment = async (req, res) => {
       const paymentRecord = await Payment.findOne({ where: { razorpay_order_id: razorpayOrderId } });
       if (paymentRecord && paymentRecord.order_id) {
         resolvedOrderId = paymentRecord.order_id;
-        console.log(`Resolved orderId ${resolvedOrderId} from payment record for rzp_order ${razorpayOrderId}`);
+        logger.info(`Resolved orderId ${resolvedOrderId} from payment record for rzp_order ${razorpayOrderId}`);
       }
     }
 
     if (!resolvedOrderId) {
-      console.error(`No order found for razorpay_order_id: ${razorpayOrderId}, no session, no orderId`);
+      logger.error(`No order found for razorpay_order_id: ${razorpayOrderId}, no session, no orderId`);
       return res.status(400).json({ message: 'orderId is required (no checkout session found for this payment)' });
     }
 
@@ -742,8 +743,8 @@ module.exports.updateOrderPayment = async (req, res) => {
     const orderEmitter = require('../services/orderEvents.js');
     const orderService = require('../services/orderService.js');
     setImmediate(() => {
-      orderEmitter.emit('order.confirmed', order);
-      orderService.syncOrderToFShip(order);
+      try { orderEmitter.emit('order.confirmed', order); } catch (e) { logger.warn('[updateOrderPayment] order.confirmed emit failed:', e.message); }
+      orderService.syncOrderToFShip(order).catch(e => logger.warn('[updateOrderPayment] FShip sync failed:', e.message));
     });
 
     res.json({
@@ -787,11 +788,11 @@ module.exports.updateOrderPayment = async (req, res) => {
         };
         await sendFacebookEvent('Purchase', eventPayload);
         await sendGAEvent('purchase', eventPayload);
-      } catch (err) { console.error('Analytics Purchase event error:', err.message); }
+      } catch (err) { logger.error('Analytics Purchase event error:', err.message); }
     });
 
   } catch (error) {
-    console.error('Error updating order payment:', error);
+    logger.error('Error updating order payment:', error);
     res.status(500).json({ message: 'Failed to update order payment', error: error.message });
   }
 };
@@ -848,7 +849,10 @@ module.exports.razorpayCallback = async (req, res) => {
     await OrderStatusHistory.create({ order_id: order.id, status: 'confirmed', updated_by: null, notes: 'Auto-confirmed: prepaid callback verified' });
     const orderEmitter = require('../services/orderEvents.js');
     const orderService = require('../services/orderService.js');
-    setImmediate(() => { orderEmitter.emit('order.confirmed', order); orderService.syncOrderToFShip(order); });
+    setImmediate(() => {
+      try { orderEmitter.emit('order.confirmed', order); } catch (e) { logger.warn('[razorpayCallback] order.confirmed emit failed:', e.message); }
+      orderService.syncOrderToFShip(order).catch(e => logger.warn('[razorpayCallback] FShip sync failed:', e.message));
+    });
 
     // Upsert payment record with full details
     const existingPayment = await Payment.findOne({
@@ -916,7 +920,7 @@ module.exports.razorpayCallback = async (req, res) => {
     return res.redirect('/UnifiedCheckout?payment=failed');
   }
   } catch (error) {
-    console.error('razorpayCallback error:', error.message);
+    logger.error('razorpayCallback error:', error.message);
     return res.redirect('/UnifiedCheckout?payment=failed');
   }
 };
@@ -978,10 +982,10 @@ module.exports.handlePaymentFailure = async (req, res) => {
       });
     }
 
-    console.log(`Payment failure recorded for order ${orderId}, razorpay_order_id: ${razorpayOrderId}`);
+    logger.info(`Payment failure recorded for order ${orderId}, razorpay_order_id: ${razorpayOrderId}`);
     res.json({ success: true, message: 'Payment failure recorded' });
   } catch (error) {
-    console.error('Error recording payment failure:', error);
+    logger.error('Error recording payment failure:', error);
     res.status(500).json({ message: 'Failed to record payment failure', error: error.message });
   }
 };
@@ -993,7 +997,7 @@ module.exports.razorpayWebhook = async (req, res) => {
   try {
     const webhookSecret = await settingsHelper.getSetting(1, 'RAZORPAY_WEBHOOK_SECRET');
     if (!webhookSecret) {
-      console.error('RAZORPAY_WEBHOOK_SECRET not configured — rejecting webhook');
+      logger.error('RAZORPAY_WEBHOOK_SECRET not configured — rejecting webhook');
       return res.status(400).json({ message: 'Webhook not configured' });
     }
 
@@ -1008,7 +1012,7 @@ module.exports.razorpayWebhook = async (req, res) => {
     const expectedSig = crypto.createHmac('sha256', webhookSecret).update(bodyStr).digest('hex');
 
     if (expectedSig !== receivedSig) {
-      console.warn('Razorpay webhook: invalid signature');
+      logger.warn('Razorpay webhook: invalid signature');
       return res.status(400).json({ message: 'Invalid signature' });
     }
 
@@ -1026,7 +1030,7 @@ module.exports.razorpayWebhook = async (req, res) => {
           { replacements: [eventId] }
         );
         if (existing && existing.length > 0) {
-          console.log(`Razorpay webhook: duplicate event ${eventId}, skipping`);
+          logger.info(`Razorpay webhook: duplicate event ${eventId}, skipping`);
           return res.status(200).json({ status: 'duplicate' });
         }
         // Mark as processed
@@ -1036,7 +1040,7 @@ module.exports.razorpayWebhook = async (req, res) => {
         );
       } catch (dbErr) {
         // webhooks_log table may not exist yet — non-fatal, continue processing
-        console.warn('webhooks_log insert skipped:', dbErr.message);
+        logger.warn('webhooks_log insert skipped:', dbErr.message);
       }
     }
 
@@ -1060,9 +1064,9 @@ module.exports.razorpayWebhook = async (req, res) => {
               razorpayOrderId: rzpOrderId,
               source: 'webhook',
             });
-            console.log(`Webhook: order created from session via payment.captured (reservation: ${session.reservation_id})`);
+            logger.info(`Webhook: order created from session via payment.captured (reservation: ${session.reservation_id})`);
           } catch (e) {
-            console.error(`Webhook: failed to create order from session: ${e.message}`);
+            logger.error(`Webhook: failed to create order from session: ${e.message}`);
           }
         } else {
           // ── OLD FLOW: Find order via payment record ─────────────────────
@@ -1120,7 +1124,7 @@ module.exports.razorpayWebhook = async (req, res) => {
                     payment_gateway: 'Razorpay',
                     brand_id: candidateOrder.brand_id || 1,
                   });
-                  console.log(`Webhook: created missing payment record for order ${candidateOrder.order_number} via fallback match`);
+                  logger.info(`Webhook: created missing payment record for order ${candidateOrder.order_number} via fallback match`);
                 }
               }
             }
@@ -1137,11 +1141,11 @@ module.exports.razorpayWebhook = async (req, res) => {
               setImmediate(() => {
                 const orderEmitter = require('../services/orderEvents.js');
                 const orderService = require('../services/orderService.js');
-                orderEmitter.emit('order.confirmed', order);
-                orderService.syncOrderToFShip(order);
+                try { orderEmitter.emit('order.confirmed', order); } catch (e) { logger.warn('[razorpayWebhook] order.confirmed emit failed:', e.message); }
+                orderService.syncOrderToFShip(order).catch(e => logger.warn('[razorpayWebhook] FShip sync failed:', e.message));
               });
               await paymentRecord.update({ status: 'successful', transaction_id: rzpPaymentId });
-              console.log(`Webhook: order ${order.order_number} marked paid via payment.captured (legacy)`);
+              logger.info(`Webhook: order ${order.order_number} marked paid via payment.captured (legacy)`);
             }
           }
         }
@@ -1166,7 +1170,7 @@ module.exports.razorpayWebhook = async (req, res) => {
 
     res.status(200).json({ status: 'ok' });
   } catch (error) {
-    console.error('Razorpay webhook error:', error.message);
+    logger.error('Razorpay webhook error:', error.message);
     res.status(500).json({ message: 'Webhook processing failed' });
   }
 };

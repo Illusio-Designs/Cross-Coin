@@ -4,15 +4,25 @@ const {
     createOrder, createGuestOrder,
     trackOrderByAWB, trackOrderByOrderNumber,
     cancelOrder, adminCancelOrder, confirmOrder,
-    cancelOrdersInFShip, getOrderStats,
+    getOrderStats, updateAwbNumber, initiateReturn,
+    adminCreateManualOrder,
+} = require('../controller/orderController.js');
+const {
+    cancelOrdersInFShip,
     getFShipTrackingForOrder, getFShipLabelForOrder, getFShipCouriers,
     syncOrdersWithFShip, handleFShipWebhook, syncSingleOrderWithFShip,
     bulkRefreshFShipStatus,
-    exportDeliveredOrders, updateAwbNumber, initiateReturn,
-    markLabelDownloaded, downloadLabel, bulkDownloadLabels, getPendingLabels, getLabelDownloadStats,
-    adminCreateManualOrder,
     validateOrderForShipping, getAvailableCouriers,
-} = require('../controller/orderController.js');
+} = require('../controller/orderFshipController.js');
+const {
+    exportDeliveredOrders,
+    markLabelDownloaded, downloadLabel, bulkDownloadLabels,
+    getPendingLabels, getLabelDownloadStats,
+} = require('../controller/orderLabelController.js');
+const {
+    markOrderAsRTO, getRTOOrders, getRTOStats,
+    bulkMarkOrdersAsRTO, getStockRestorationHistory,
+} = require('../controller/orderRTOController.js');
 const { isAuthenticated, isOrderManager } = require('../middleware/authMiddleware.js');
 const { validateBody, schemas } = require('../utils/validate.js');
 
@@ -39,6 +49,13 @@ router.put('/:id/admin-cancel',        isAuthenticated, isOrderManager, validate
 router.put('/:id/awb',                 isAuthenticated, isOrderManager, updateAwbNumber);
 router.put('/:id/status',              isAuthenticated, isOrderManager, updateOrderStatus);
 router.post('/manual',                  isAuthenticated, isOrderManager, adminCreateManualOrder);
+
+// ── RTO ───────────────────────────────────────────────────────────────────
+router.get('/rto',                       isAuthenticated, isOrderManager, getRTOOrders);
+router.get('/rto/stats',                 isAuthenticated, isOrderManager, getRTOStats);
+router.get('/rto/stock-restoration',     isAuthenticated, isOrderManager, getStockRestorationHistory);
+router.post('/rto/bulk',                 isAuthenticated, isOrderManager, bulkMarkOrdersAsRTO);
+router.put('/:id/rto',                   isAuthenticated, isOrderManager, markOrderAsRTO);
 
 // ── Public ────────────────────────────────────────────────────────────────
 router.post('/guest-checkout',          validateBody(schemas.checkout), createGuestOrder);

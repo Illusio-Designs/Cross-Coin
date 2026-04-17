@@ -3,6 +3,7 @@ const { Order } = require('../model/orderModel.js');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/db.js');
 const { User } = require('../model/userModel.js');
+const { logger } = require('../config/logging.js');
 
 // Get all status history records (admin)
 module.exports.getAllOrderStatusHistory = async (req, res) => {
@@ -39,7 +40,7 @@ module.exports.getAllOrderStatusHistory = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error getting all order status history:', error);
+        logger.error('Error getting all order status history:', error);
         res.status(500).json({ message: 'Failed to get order status history', error: error.message });
     }
 };
@@ -68,7 +69,7 @@ module.exports.getOrderStatusHistory = async (req, res) => {
         
         res.json({ statusHistory });
     } catch (error) {
-        console.error('Error getting order status history:', error);
+        logger.error('Error getting order status history:', error);
         res.status(500).json({ message: 'Failed to get order status history', error: error.message });
     }
 };
@@ -120,7 +121,7 @@ module.exports.addOrderStatusEntry = async (req, res) => {
         });
     } catch (error) {
         await transaction.rollback();
-        console.error('Error adding status entry:', error);
+        logger.error('Error adding status entry:', error);
         res.status(500).json({ message: 'Failed to add status entry', error: error.message });
     }
 }; 

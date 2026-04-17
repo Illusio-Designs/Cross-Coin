@@ -88,7 +88,7 @@ async function creditPoints(userId, orderId, orderAmount, brandId = 1, options =
             balance: balanceAfter,
           }, brandId);
         }
-      } catch (_) {}
+      } catch (e) { logger.warn('WhatsApp loyalty notification failed:', e.message); }
     });
 
     return transaction;
