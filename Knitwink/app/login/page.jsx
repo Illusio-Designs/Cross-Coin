@@ -3,9 +3,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Phone, ArrowRight } from 'lucide-react'
-import { loginWithOtp } from '@/lib/api/auth'
+import { ArrowRight } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in'
 
 export default function LoginPage() {
   const [phone, setPhone] = useState('')
@@ -16,7 +17,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [otpSending, setOtpSending] = useState(false)
   const router = useRouter()
-  const { isAuthenticated, checkAuth } = useAuth()
+  const { isAuthenticated } = useAuth()
 
   useEffect(() => {
     if (isAuthenticated) router.replace('/account')
@@ -25,6 +26,7 @@ export default function LoginPage() {
   const digits = phone.replace(/\D/g, '').slice(0, 10)
   const identifier = digits.length === 10 ? '91' + digits : digits
 
+  // Send OTP
   const handleSendOtp = () => {
     setError('')
     if (digits.length !== 10) { setError('Enter a valid 10-digit number'); return }
@@ -36,61 +38,73 @@ export default function LoginPage() {
         window.sendOtp(identifier, () => {
           setOtpSending(false)
           setStep('otp')
-        }, (err) => {
+          setTimeout(() => otpRefs[0].current?.focus(), 100)
+        }, () => {
           setOtpSending(false)
-          const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-          setError(isLocalhost
-            ? 'OTP does not work on localhost. Deploy to a real domain to test.'
-            : 'Failed to send OTP. Try again.')
+          setError('Failed to send OTP. Try again.')
         })
-      } else if (attempts < 20) {
+      } else if (attempts < 15) {
         attempts++
-        setTimeout(trySend, 300)
+        setTimeout(trySend, 400)
       } else {
         setOtpSending(false)
-        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        setError(isLocalhost
-          ? 'OTP does not work on localhost. Deploy to a real domain to test.'
-          : 'OTP service not ready. Please refresh.')
+        setError('OTP service not ready. Please refresh the page.')
       }
     }
     trySend()
   }
 
+  // OTP input handlers
   const handleOtpChange = (i, val) => {
     if (val.length > 1) val = val.slice(-1)
     const next = [...otp]
     next[i] = val
     setOtp(next)
     if (val && i < 3) otpRefs[i + 1].current?.focus()
+    // Auto-verify when all 4 digits entered
+    if (val && i === 3 && next.every(d => d)) {
+      setTimeout(() => handleVerify(next.join('')), 100)
+    }
   }
 
   const handleOtpKeyDown = (i, e) => {
     if (e.key === 'Backspace' && !otp[i] && i > 0) otpRefs[i - 1].current?.focus()
   }
 
-  const handleVerify = async () => {
-    const code = otp.join('')
-    if (code.length < 4) { setError('Enter the full OTP'); return }
-    if (typeof window.verifyOtp !== 'function') { setError('OTP service not ready. Please refresh.'); return }
+  // Verify OTP and login
+  const handleVerify = async (code) => {
+    const otpCode = code || otp.join('')
+    if (otpCode.length < 4) { setError('Enter the full OTP'); return }
+    if (typeof window.verifyOtp !== 'function') { setError('OTP service not ready.'); return }
     setLoading(true)
     setError('')
 
     window.verifyOtp(
-      code,
+      otpCode,
       async (data) => {
         const accessToken = typeof data === 'string' ? data : (data?.message || data?.token || JSON.stringify(data))
         try {
-          await loginWithOtp({ phone: digits, access_token: accessToken })
-          // Token is saved in localStorage by loginWithOtp
-          // Force redirect immediately
-          window.location.href = '/account'
+          const res = await fetch(`${API_URL}/api/users/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Brand-Name': 'knitwink' },
+            body: JSON.stringify({ phone: digits, access_token: accessToken }),
+          })
+          const result = await res.json()
+          if (!res.ok) throw new Error(result.message || 'Login failed')
+          if (result.token) {
+            localStorage.setItem('token', result.token)
+            // Full page reload to re-init auth context with new token
+            window.location.href = '/account'
+          } else {
+            setError('No token received. Try again.')
+            setLoading(false)
+          }
         } catch (err) {
           setError(err.message || 'Login failed')
           setLoading(false)
         }
       },
-      (err) => {
+      () => {
         setError('Invalid OTP. Try again.')
         setLoading(false)
       }
@@ -123,6 +137,7 @@ export default function LoginPage() {
                     placeholder="Enter 10-digit number"
                     className="flex-1 text-sm text-brand-black outline-none placeholder:text-gray-300"
                     maxLength={10}
+                    onKeyDown={e => { if (e.key === 'Enter' && digits.length === 10) handleSendOtp() }}
                   />
                 </div>
               </div>
@@ -168,7 +183,7 @@ export default function LoginPage() {
               {error && <p className="text-center text-xs text-red-500">{error}</p>}
 
               <button
-                onClick={handleVerify}
+                onClick={() => handleVerify()}
                 disabled={loading}
                 className="rounded-full bg-brand-black py-3.5 text-sm font-semibold uppercase tracking-wider text-white transition-opacity hover:opacity-80 disabled:opacity-50"
               >

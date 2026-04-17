@@ -33,6 +33,7 @@ export default function RegisterPage() {
         phone: form.phone.replace(/\D/g, '').slice(0, 10),
         password: form.password,
       })
+      // After register, redirect to login
       router.push('/login')
     } catch (err) {
       setError(err.message || 'Registration failed')
