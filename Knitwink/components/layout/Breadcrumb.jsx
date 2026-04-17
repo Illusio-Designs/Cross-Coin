@@ -27,7 +27,7 @@ function formatSegment(seg) {
 }
 
 // Pages with dark hero backgrounds — breadcrumb text should be white
-const DARK_PAGES = ['/contact', '/journal', '/about', '/policies', '/products', '/collections']
+const DARK_PAGES = ['/contact', '/journal', '/about', '/policies', '/collections']
 
 export function Breadcrumb() {
   const pathname = usePathname()
@@ -44,7 +44,9 @@ export function Breadcrumb() {
     href: '/' + segments.slice(0, i + 1).join('/'),
   }))
 
+  // Dark pages + /products exact (listing page has dark hero), but NOT /products/handle (detail page)
   const isDark = DARK_PAGES.some(p => pathname === p || pathname.startsWith(p + '/'))
+    || pathname === '/products'
 
   const textCls = isDark ? 'text-white/50' : 'text-gray-500'
   const activeCls = isDark ? 'text-white/80 font-medium' : 'text-brand-black font-medium'
