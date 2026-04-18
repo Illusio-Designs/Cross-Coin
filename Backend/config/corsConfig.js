@@ -78,6 +78,12 @@ const staticAllowedOrigins = [
     'https://api.crosscoin.in',
     'http://api.crosscoin.in',
     
+    // Knitwink domains
+    'https://knitwink.com',
+    'https://www.knitwink.com',
+    'http://knitwink.com',
+    'http://www.knitwink.com',
+    
     // Environment variables
     process.env.API_URL,
     process.env.BACKEND_URL,

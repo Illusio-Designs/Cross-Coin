@@ -12,20 +12,31 @@ export function AuthProvider({ children }) {
   const checkedRef = useRef(false)
 
   const fetchUser = useCallback(async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-    if (!token) { setUser(null); setLoading(false); return }
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      if (!token) { setUser(null); setLoading(false); return }
+
       const res = await fetch(`${API_URL}/api/users/me`, {
-        headers: { 'Authorization': `Bearer ${token}`, 'X-Brand-Name': 'knitwink' },
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'X-Brand-Name': 'knitwink',
+        },
+        credentials: 'include',
       })
+
       if (res.ok) {
         const data = await res.json()
         setUser(data)
       } else {
+        // Token expired or invalid
         localStorage.removeItem('token')
         setUser(null)
       }
-    } catch {
+    } catch (err) {
+      // Network/CORS error — don't remove token, might be temporary
+      console.error('[Auth] fetchUser error:', err)
       setUser(null)
     } finally {
       setLoading(false)
@@ -39,11 +50,10 @@ export function AuthProvider({ children }) {
     }
   }, [fetchUser])
 
-  // Listen for token changes (guest checkout, login from another tab)
   useEffect(() => {
     const onStorage = () => {
       const token = localStorage.getItem('token')
-      if (token && !user) fetchUser()
+      if (token && !user) { checkedRef.current = false; fetchUser() }
       if (!token && user) { setUser(null); setLoading(false) }
     }
     window.addEventListener('storage', onStorage)
@@ -53,7 +63,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     const token = localStorage.getItem('token')
     if (token) {
-      await fetch(`${API_URL}/api/users/logout`, {
+      fetch(`${API_URL}/api/users/logout`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'X-Brand-Name': 'knitwink' },
       }).catch(() => {})

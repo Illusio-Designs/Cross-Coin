@@ -7,6 +7,7 @@ import { useCartStore } from '@/store/cartStore'
 import { useUiStore } from '@/store/uiStore'
 import { MegaMenu } from './MegaMenu'
 import { ROUTES } from '@/lib/constants'
+import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
 export function Navbar() {
   const [activeMenu, setActiveMenu] = useState(null)
   const [scrolled, setScrolled] = useState(false)
+  const { isAuthenticated } = useAuth()
   const closeTimer = useRef(null)
   const itemCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0))
   const openDrawer = useCartStore((s) => s.openDrawer)
@@ -110,7 +112,7 @@ export function Navbar() {
           <Link href={ROUTES.search} className={iconBtn} aria-label="Search">
             <Search size={18} strokeWidth={1.5} />
           </Link>
-          <Link href={ROUTES.account} className={cn(iconBtn, 'hidden lg:flex')} aria-label="Account">
+          <Link href={isAuthenticated ? ROUTES.account : ROUTES.login} className={cn(iconBtn, 'hidden lg:flex')} aria-label="Account">
             <User size={17} strokeWidth={1.6} />
           </Link>
           <button onClick={openDrawer} className={cn(iconBtn, 'relative')} aria-label={`Cart, ${itemCount} items`}>
