@@ -193,17 +193,13 @@ module.exports.login = async (req, res) => {
             return res.status(401).json({ message: 'OTP verification failed. Please try again.' });
         }
 
-        // Find or create user by phone
+        // Find user by phone — do NOT auto-create (register first)
         let user = await User.findOne({ where: { phone: digits } });
 
         if (!user) {
-            // Auto-register new user with phone
-            user = await User.create({
-                username: 'user_' + digits.slice(-6) + '_' + Date.now().toString().slice(-4),
-                email: digits + '@phone.crosscoin.in',
-                phone: digits,
-                role: 'consumer',
-                source_brand_id: req.brandId || null,
+            return res.status(404).json({ 
+                message: 'No account found with this phone number. Please register first.',
+                code: 'USER_NOT_FOUND'
             });
         }
 
