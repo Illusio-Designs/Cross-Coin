@@ -89,7 +89,12 @@ export default function LoginPage() {
         body: JSON.stringify({ phone: digits, access_token: accessToken }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.message || 'Login failed')
+      if (!res.ok) {
+        if (data.code === 'USER_NOT_FOUND') {
+          throw new Error('No account found. Please register first.')
+        }
+        throw new Error(data.message || 'Login failed')
+      }
       if (!data.token) throw new Error('No token received')
 
       localStorage.setItem('token', data.token)
