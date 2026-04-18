@@ -20,7 +20,7 @@ export default function LoginPage() {
   const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
 
   // Step 1: Send OTP
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
     setError('')
     if (digits.length !== 10) { setError('Enter a valid 10-digit number'); return }
 
@@ -28,6 +28,25 @@ export default function LoginPage() {
       setStep('otp')
       return
     }
+
+    // Check if phone is registered before sending OTP
+    setLoading(true)
+    try {
+      const check = await fetch(`${API_URL}/api/users/check-phone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Brand-Name': 'knitwink' },
+        body: JSON.stringify({ phone: digits }),
+      })
+      const checkData = await check.json()
+      if (!check.ok || !checkData.exists) {
+        setError('No account found with this number. Please register first.')
+        setLoading(false)
+        return
+      }
+    } catch {
+      // If check endpoint doesn't exist, proceed anyway
+    }
+    setLoading(false)
 
     const identifier = '91' + digits
     let attempts = 0
@@ -132,7 +151,14 @@ export default function LoginPage() {
                   />
                 </div>
               </div>
-              {error && <p className="text-xs text-red-500">{error}</p>}
+              {error && (
+                <p className="text-xs text-red-500">
+                  {error}
+                  {error.includes('register') && (
+                    <> <a href="/register" className="font-semibold underline">Register here</a></>
+                  )}
+                </p>
+              )}
               <button onClick={handleSendOtp} disabled={digits.length !== 10}
                 className="flex items-center justify-center gap-2 rounded-full bg-brand-black py-3.5 text-sm font-semibold uppercase tracking-wider text-white disabled:opacity-50">
                 Send OTP <ArrowRight size={15} />
