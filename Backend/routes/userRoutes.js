@@ -14,6 +14,16 @@ const router = express.Router();
 // Public
 router.post('/register', validateBody(schemas.register), register);
 router.post('/login', login);
+router.post('/check-phone', async (req, res) => {
+    try {
+        const { phone } = req.body;
+        if (!phone) return res.status(400).json({ exists: false });
+        const digits = String(phone).replace(/\D/g, '').slice(-10);
+        const { User } = require('../model/userModel.js');
+        const user = await User.findOne({ where: { phone: digits } });
+        res.json({ exists: !!user });
+    } catch { res.json({ exists: false }); }
+});
 router.post('/admin-login', adminLogin);
 router.post('/admin/login', adminLogin);  // backward compat
 router.post('/logout', logout);
