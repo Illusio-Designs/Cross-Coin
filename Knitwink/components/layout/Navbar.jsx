@@ -48,8 +48,8 @@ export function Navbar() {
   return (
     <div
       className={cn(
-        'fixed left-5 right-5 z-50 transition-all duration-300',
-        scrolled ? 'top-2' : 'top-13'
+        'fixed left-5 right-5 z-50 transition-all duration-300 md:right-5',
+        scrolled ? 'top-2' : 'top-12 md:top-13'
       )}
       onMouseLeave={handleMouseLeave}
       onMouseEnter={handleNavMouseEnter}
@@ -77,15 +77,11 @@ export function Navbar() {
           </Link>
         </div>
 
-        {/* Mobile centered logo */}
-        <div className="absolute left-1/2 -translate-x-1/2 lg:hidden">
-          <Link href={ROUTES.home} className="focus-visible:outline-none" aria-label="Knitwink home">
+        {/* Center — mobile logo + desktop nav links */}
+        <div className="flex items-center justify-center gap-1">
+          <Link href={ROUTES.home} className="lg:hidden focus-visible:outline-none" aria-label="Knitwink home">
             <img src="/logo.png" alt="Knitwink" className="h-9 w-auto object-contain" />
           </Link>
-        </div>
-
-        {/* Center — desktop nav links */}
-        <div className="flex items-center justify-center gap-1">
           {NAV_ITEMS.map(({ label, key }) => (
             <button
               key={key}

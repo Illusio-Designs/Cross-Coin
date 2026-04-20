@@ -49,7 +49,7 @@ export function HeroBanner({ slides = [] }) {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="relative flex min-h-[88vh] items-end justify-start bg-gray-900">
+      <div className="relative flex min-h-[70vh] items-end justify-start bg-gray-900 sm:min-h-[80vh] md:min-h-[88vh]">
         <AnimatePresence mode="wait">
           <motion.div
             key={current}
@@ -66,7 +66,7 @@ export function HeroBanner({ slides = [] }) {
 
         <div className="absolute inset-0 bg-gradient-to-t from-brand-black/60 via-brand-black/10 to-transparent" />
 
-        <div className="relative z-10 p-8 md:p-14 lg:p-20">
+        <div className="relative z-10 p-5 sm:p-8 md:p-14 lg:p-20">
           <AnimatePresence mode="wait">
             <motion.div
               key={current}
@@ -79,11 +79,11 @@ export function HeroBanner({ slides = [] }) {
                 <p className="mb-3 text-xs font-medium uppercase tracking-widest text-white/70">{slide.title}</p>
               )}
               {slide.description && (
-                <h1 className="whitespace-pre-line font-display text-5xl font-normal tracking-tight text-white md:text-6xl lg:text-7xl">
+                <h1 className="whitespace-pre-line font-display text-3xl font-normal tracking-tight text-white sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">
                   {slide.description}
                 </h1>
               )}
-              <div className="mt-8">
+              <div style={{ marginTop: 'calc(var(--spacing) * 5)', marginBottom: 'calc(var(--spacing) * 10)' }}>
                 <Link
                   href={buttonHref}
                   className="inline-flex items-center justify-center rounded-full bg-white px-7 py-3 text-sm font-medium uppercase tracking-wider text-brand-black transition-colors hover:bg-off-white"

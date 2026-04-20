@@ -128,8 +128,7 @@ export default function AboutPage() {
             <img
               src="https://ik.imagekit.io/wp2oatzmf/products/variation_1_image-1774363348678-875707193.jpg?tr=w-900,h-900,q-85,f-auto"
               alt="Knitwink socks detail"
-              className="h-full w-full object-cover"
-              style={{ minHeight: 360 }}
+              className="h-full w-full object-cover min-h-[220px] sm:min-h-[280px] md:min-h-[360px]"
             />
           </div>
         </div>

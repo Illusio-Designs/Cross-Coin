@@ -57,12 +57,12 @@ export function ExclusiveSection({ products = [] }) {
         {/* LEFT — thumbnails + main image */}
         <div className="flex gap-3">
           {colorImages.length > 1 && (
-            <div className="flex max-h-[420px] flex-col gap-2 overflow-y-auto">
+            <div className="flex max-h-[280px] flex-col gap-2 overflow-y-auto sm:max-h-[360px] md:max-h-[420px]">
               {colorImages.map((img, i) => (
                 <button
                   key={i}
                   onClick={() => setActiveThumb(i)}
-                  className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${i === activeThumb ? 'border-brand-black' : 'border-gray-200 opacity-60 hover:opacity-100'}`}
+                  className={`h-12 w-12 shrink-0 overflow-hidden rounded-xl border-2 transition-all sm:h-14 sm:w-14 md:h-16 md:w-16 ${i === activeThumb ? 'border-brand-black' : 'border-gray-200 opacity-60 hover:opacity-100'}`}
                 >
                   <img src={img.url} alt="" className="h-full w-full object-cover" />
                 </button>
@@ -70,7 +70,7 @@ export function ExclusiveSection({ products = [] }) {
             </div>
           )}
           <div className="relative flex-1 overflow-hidden rounded-2xl bg-gray-50">
-            <img src={displayImage} alt={product.name} className="h-full w-full object-contain" style={{ minHeight: 300 }} />
+            <img src={displayImage} alt={product.name} className="h-full w-full min-h-[220px] sm:min-h-[260px] md:min-h-[300px]" />
             {product.badge && (
               <span className="absolute left-3 top-3 rounded-full bg-brand-black px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white">
                 {product.badge}

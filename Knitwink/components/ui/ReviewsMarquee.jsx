@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { Star, PenLine } from 'lucide-react'
 import { ReviewModal } from './ReviewModal'
 
-// No fallback — show empty state if no real reviews yet
 const EMPTY = []
 
 function Stars({ rating }) {
@@ -22,7 +21,7 @@ function ReviewCard({ review }) {
   const body = review.review || review.comment || review.body || ''
   const title = review.title || ''
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm flex flex-col gap-2" style={{ height: 140 }}>
+    <div className="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm flex flex-col gap-2" style={{ minHeight: 130 }}>
       <Stars rating={review.rating} />
       {title && <p className="text-xs font-semibold text-brand-black line-clamp-1">{title}</p>}
       <p className="text-[11px] leading-relaxed text-gray-500 line-clamp-2 flex-1">{body}</p>
@@ -37,11 +36,9 @@ function ReviewCard({ review }) {
 }
 
 function buildCols(reviews) {
-  // Ensure enough cards for seamless loop — triple each column
   const a = reviews.filter((_, i) => i % 3 === 0)
   const b = reviews.filter((_, i) => i % 3 === 1)
   const c = reviews.filter((_, i) => i % 3 === 2)
-  // Pad short columns so all have same count
   const max = Math.max(a.length, b.length, c.length)
   const pad = (arr) => { while (arr.length < max) arr = [...arr, ...reviews]; return arr.slice(0, max) }
   const pa = pad(a), pb = pad(b), pc = pad(c)
@@ -52,11 +49,6 @@ function buildCols(reviews) {
   }
 }
 
-/**
- * ReviewsSection — shared between home page (ReviewBand) and product detail page.
- * productId: if provided, fetches reviews for that product only.
- * fetchFn: async function that returns { reviews, stats } — injected so home/product can use different endpoints.
- */
 export function ReviewsSection({ productId = null, productName = null, fetchFn = null }) {
   const [reviews, setReviews] = useState([])
   const [stats, setStats] = useState({ average: 4.8, total: 50000 })
@@ -80,17 +72,20 @@ export function ReviewsSection({ productId = null, productName = null, fetchFn =
   const avg = stats?.average ?? 0
   const total = stats?.total ?? displayReviews.length
 
+  // For mobile marquee — duplicate for seamless loop
+  const mobileRow = [...displayReviews, ...displayReviews]
+
   return (
     <section className="bg-white">
-      <div className="grid grid-cols-1 gap-8 px-6 py-10 lg:grid-cols-[1.8fr_2fr] lg:px-8 lg:py-12">
+      <div className="grid grid-cols-1 gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.8fr_2fr] lg:px-8 lg:py-12">
 
         {/* LEFT */}
-        <div className="flex flex-col justify-center gap-6">
+        <div className="flex flex-col justify-center gap-5 lg:gap-6">
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-brand-black">What They Say</p>
 
           {/* Big rating block */}
-          <div className="flex items-center gap-4 rounded-2xl bg-gray-50 px-6 py-5">
-            <span className="text-6xl font-bold leading-none text-brand-black">{avg.toFixed(1)}</span>
+          <div className="flex items-center gap-4 rounded-2xl bg-gray-50 px-5 py-4 sm:px-6 sm:py-5">
+            <span className="text-5xl font-bold leading-none text-brand-black sm:text-6xl">{avg.toFixed(1)}</span>
             <div className="flex flex-col gap-1.5">
               <Stars rating={Math.round(avg)} />
               <p className="text-xs text-gray-400">Based on {total >= 1000 ? `${(total / 1000).toFixed(0)}K+` : `${total}+`} reviews</p>
@@ -98,26 +93,25 @@ export function ReviewsSection({ productId = null, productName = null, fetchFn =
             </div>
           </div>
 
-          <p className="text-2xl font-semibold leading-snug text-brand-black lg:text-3xl">
+          <p className="text-xl font-semibold leading-snug text-brand-black sm:text-2xl lg:text-3xl">
             "Thousands of happy<br />feet can't be wrong."
           </p>
 
           {/* Stats grid */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             {[
               { value: '50K+', label: 'Customers' },
               { value: '98%',  label: 'Recommend' },
               { value: avg.toFixed(1), label: 'Avg Rating' },
               { value: '5★',   label: 'Top Reviews' },
             ].map((s) => (
-              <div key={s.label} className="rounded-xl border border-gray-300 px-4 py-3">
-                <p className="text-lg font-bold text-brand-black">{s.value}</p>
+              <div key={s.label} className="rounded-xl border border-gray-300 px-3 py-2.5 sm:px-4 sm:py-3">
+                <p className="text-base font-bold text-brand-black sm:text-lg">{s.value}</p>
                 <p className="text-[10px] text-gray-500">{s.label}</p>
               </div>
             ))}
           </div>
 
-          {/* Add Review button — only on product detail, not home */}
           {productId && (
             <button
               onClick={() => setModalOpen(true)}
@@ -129,19 +123,19 @@ export function ReviewsSection({ productId = null, productName = null, fetchFn =
           )}
         </div>
 
-        {/* RIGHT — 3 infinite scrolling columns (desktop) */}
+        {/* RIGHT — 3 infinite scrolling columns (desktop only) */}
         {hasReviews ? (
           <div className="relative hidden overflow-hidden lg:grid lg:grid-cols-3 lg:gap-2" style={{ height: 440 }}>
             <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-16 bg-gradient-to-b from-white to-transparent" />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-16 bg-gradient-to-t from-white to-transparent" />
             <div className="flex flex-col gap-2 animate-scroll-up">
-              {col1.map((r, i) => <ReviewCard key={`c1-${i}`} review={r} brandName="Knitwink" />)}
+              {col1.map((r, i) => <ReviewCard key={`c1-${i}`} review={r} />)}
             </div>
             <div className="flex flex-col gap-2 animate-scroll-down">
-              {col2.map((r, i) => <ReviewCard key={`c2-${i}`} review={r} brandName="Knitwink" />)}
+              {col2.map((r, i) => <ReviewCard key={`c2-${i}`} review={r} />)}
             </div>
             <div className="flex flex-col gap-2 animate-scroll-up">
-              {col3.map((r, i) => <ReviewCard key={`c3-${i}`} review={r} brandName="Knitwink" />)}
+              {col3.map((r, i) => <ReviewCard key={`c3-${i}`} review={r} />)}
             </div>
           </div>
         ) : (
@@ -150,14 +144,18 @@ export function ReviewsSection({ productId = null, productName = null, fetchFn =
           </div>
         )}
 
-        {/* Mobile — horizontal scroll */}
+        {/* Mobile / tablet — infinite horizontal marquee */}
         {hasReviews && (
-          <div className="flex gap-3 overflow-x-auto pb-2 lg:hidden">
-            {displayReviews.map((r, i) => (
-              <div key={i} className="w-64 shrink-0">
-                <ReviewCard review={r} />
-              </div>
-            ))}
+          <div className="relative overflow-hidden lg:hidden">
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-white to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-white to-transparent" />
+            <div className="animate-scroll-left gap-3 py-1">
+              {mobileRow.map((r, i) => (
+                <div key={i} className="w-[270px] shrink-0 sm:w-[300px]">
+                  <ReviewCard review={r} />
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

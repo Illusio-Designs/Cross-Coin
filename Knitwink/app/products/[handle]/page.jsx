@@ -74,7 +74,7 @@ export default function ProductPage() {
             {/* Center image — larger with double circles */}
             {product.images?.[1]?.url && (
               <div className="hidden items-center justify-center px-8 lg:flex">
-                <div className="relative flex items-center justify-center" style={{ width: 350, height: 350 }}>
+                <div className="relative flex items-center justify-center w-[280px] h-[280px] lg:w-[350px] lg:h-[350px]">
                   <div className="absolute inset-0 rounded-full border border-gray-300" />
                   <div className="absolute inset-3 rounded-full border border-gray-200" />
                   <img src={product.images[1].url} alt={product.name} className="relative h-[300px] w-[300px] rounded-full object-cover" />
