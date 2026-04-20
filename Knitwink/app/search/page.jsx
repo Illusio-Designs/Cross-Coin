@@ -1,124 +1,95 @@
+import { PackageSearch } from 'lucide-react'
+import { searchProducts, getPublicProducts } from '@/lib/api/products'
+import { ProductCard } from '@/components/collection/ProductCard'
+import { SearchInput } from './SearchInput'
+import { SITE_NAME } from '@/lib/constants'
 
-import Link from 'next/link';
-import { Search } from 'lucide-react';
-import { searchProducts, getFeaturedCollections } from '@/lib/api/products';
-import { ProductCard } from '@/components/collection/ProductCard';
-import { SearchInput } from './SearchInput';
-import { SITE_NAME } from '@/lib/constants';
-
-
-
-
-
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({ searchParams }) {
-  const { q } = await searchParams;
+  const { q } = await searchParams
   return {
-    title: q ? `Search results for "${q}"` : 'Search',
-    description: q ?
-    `Browse results for "${q}" on ${SITE_NAME}.` :
-    `Search for shoes and more on ${SITE_NAME}.`
-  };
+    title: q ? `"${q}" — Search` : `Search — ${SITE_NAME}`,
+    description: q ? `Browse results for "${q}" on ${SITE_NAME}.` : `Search products on ${SITE_NAME}.`,
+  }
 }
 
-const SUGGESTED = [
-{ label: 'Mens', href: '/collections/mens' },
-{ label: 'Womens', href: '/collections/womens' },
-{ label: 'New Arrivals', href: '/collections/new' },
-{ label: 'Sale', href: '/collections/sale' }];
-
+async function getOnePerCollection() {
+  try {
+    const { products } = await getPublicProducts({ limit: 100 })
+    const seen = new Map()
+    for (const p of products) {
+      const col = p.collectionName || 'Other'
+      if (!seen.has(col)) seen.set(col, p)
+    }
+    return Array.from(seen.values())
+  } catch {
+    return []
+  }
+}
 
 export default async function SearchPage({ searchParams }) {
-  const { q } = await searchParams;
-  const query = q?.trim() ?? '';
+  const { q } = await searchParams
+  const query = q?.trim() ?? ''
 
-  const [products, collections] = await Promise.all([
-  query ? searchProducts(query).catch(() => []) : Promise.resolve([]),
-  getFeaturedCollections().catch(() => [])]
-  );
-
-  const suggestedCollections = collections.length > 0 ? collections.slice(0, 4) : null;
+  const [products, collectionProducts] = await Promise.all([
+    query ? searchProducts(query).catch(() => []) : Promise.resolve([]),
+    !query ? getOnePerCollection() : Promise.resolve([]),
+  ])
 
   return (
-    <section className="bg-white px-6 py-16 md:px-10 lg:px-16">
-      <div className="mx-auto max-w-site">
-      {/* Search bar */}
-      <div className="mx-auto max-w-2xl">
-        <SearchInput initialQuery={query} />
-      </div>
+    <div className="min-h-screen bg-[#f5f5f5]">
 
-      {/* Results */}
-      {query ?
-        <div className="mt-12">
-          <p className="mb-8 text-sm text-gray-600">
-            {products.length} result{products.length !== 1 ? 's' : ''} for &ldquo;{query}&rdquo;
+      {/* Hero — same as contact/other pages */}
+      <section className="relative overflow-hidden bg-brand-black px-6 py-16 text-center md:px-10 md:py-20">
+        <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/[0.03]" />
+        <div className="absolute -bottom-16 -right-16 h-48 w-48 rounded-full bg-white/[0.03]" />
+        <div className="absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.05]" />
+        <div className="relative">
+          <h1 className="mt-2 text-3xl font-bold text-white lg:text-4xl">
+            {query ? `Results for "${query}"` : 'Search'}
+          </h1>
+          <p className="mx-auto mt-3 max-w-md text-sm text-white/40">
+            {query
+              ? `${products.length} product${products.length !== 1 ? 's' : ''} found`
+              : 'Find exactly what you are looking for'}
           </p>
-
-          {products.length > 0 ?
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-            {products.map(p => <ProductCard key={p.id} product={p} />)}
-          </div> :
-
-          <EmptyState query={query} suggestedCollections={suggestedCollections} />
-          }
-        </div> : (
-
-        /* No query yet — show suggested collections */
-        <div className="mt-16">
-          <p className="mb-6 text-xs font-medium uppercase tracking-widest text-gray-600">
-            Popular categories
-          </p>
-          <div className="flex flex-wrap gap-3">
-            {SUGGESTED.map((s) =>
-            <Link
-              key={s.href}
-              href={s.href}
-              className="rounded-full border border-gray-200 px-5 py-2.5 text-sm text-gray-800 transition-colors duration-150 hover:border-brand-black hover:text-brand-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2">
-              
-                {s.label}
-              </Link>
-            )}
+          <div className="mx-auto mt-6 max-w-xl">
+            <SearchInput initialQuery={query} />
           </div>
-        </div>)
-        }
-    </div>
-    </section>);
+        </div>
+      </section>
 
-}
+      {/* Content */}
+      <div className="px-6 py-8 md:px-10">
 
-// ── empty state ───────────────────────────────────────────────────────────────
-
-function EmptyState({
-  query,
-  suggestedCollections
-
-
-
-}) {
-  return (
-    <div className="flex flex-col items-center gap-8 py-20 text-center">
-      <Search size={40} className="text-gray-200" aria-hidden="true" />
-      <div>
-        <p className="text-base font-medium text-brand-black">No results for &ldquo;{query}&rdquo;</p>
-        <p className="mt-2 text-sm text-gray-600">
-          Try a different search term or browse a collection below.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap justify-center gap-3">
-        {(suggestedCollections ?? SUGGESTED.map((s) => ({ name: s.label, handle: s.href.replace('/collections/', '') }))).map(
-          (c) =>
-          <Link
-            key={c.handle}
-            href={`/collections/${c.handle}`}
-            className="rounded-full border border-gray-200 px-5 py-2.5 text-sm text-gray-800 transition-colors duration-150 hover:border-brand-black hover:text-brand-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2">
-            
-              {c.name}
-            </Link>
-
+        {/* ── WITH QUERY ─────────────────────────────────────────────────── */}
+        {query && (
+          products.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {products.map(p => <ProductCard key={p.id} product={p} />)}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-6 rounded-2xl bg-white py-20 text-center shadow-sm">
+              <PackageSearch size={48} className="text-gray-200" />
+              <div>
+                <p className="text-base font-semibold text-brand-black">No results for &ldquo;{query}&rdquo;</p>
+                <p className="mt-1 text-sm text-gray-400">Try a different keyword or browse all products below.</p>
+              </div>
+            </div>
+          )
         )}
-      </div>
-    </div>);
 
+        {/* ── NO QUERY: 1 product per collection ─────────────────────────── */}
+        {!query && collectionProducts.length > 0 && (
+          <>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {collectionProducts.map(p => <ProductCard key={p.id} product={p} />)}
+            </div>
+          </>
+        )}
+
+      </div>
+    </div>
+  )
 }

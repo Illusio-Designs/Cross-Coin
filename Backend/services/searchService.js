@@ -3,6 +3,13 @@
 const { sequelize } = require('../config/db.js');
 const { logger } = require('../config/logging.js');
 const cacheManager = require('./cacheManager.js');
+const imagekitService = require('./imagekitService.js');
+
+function transformImageUrl(url) {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  try { return imagekitService.getOptimizedUrl(url, 'medium'); } catch { return url; }
+}
 
 /**
  * Search Service — production-grade product search.
@@ -67,7 +74,7 @@ async function searchProducts(query, options = {}) {
   }
 
   // Search terms — split into words for multi-word matching
-  const words = trimmed.split(/\s+/).filter(w => w.length >= 2);
+  const words = trimmed.split(/\s+/).filter(w => w.length >= 1);
   const searchTerm = trimmed.toLowerCase();
   replacements.searchTerm = searchTerm;
   replacements.likeTerm = `%${searchTerm}%`;
@@ -163,7 +170,7 @@ async function searchProducts(query, options = {}) {
 
     imageMap = images.reduce((acc, img) => {
       if (!acc[img.product_id]) acc[img.product_id] = [];
-      acc[img.product_id].push(img);
+      acc[img.product_id].push({ ...img, image_url: transformImageUrl(img.image_url) });
       return acc;
     }, {});
   }
