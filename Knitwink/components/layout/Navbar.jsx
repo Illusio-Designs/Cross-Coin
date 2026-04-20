@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { Search, User, ShoppingBag } from 'lucide-react'
-import { useCartStore } from '@/store/cartStore'
+import { useCart } from '@/hooks/useCart'
 import { useUiStore } from '@/store/uiStore'
 import { MegaMenu } from './MegaMenu'
 import { ROUTES } from '@/lib/constants'
@@ -21,8 +21,7 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const { isAuthenticated } = useAuth()
   const closeTimer = useRef(null)
-  const itemCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0))
-  const openDrawer = useCartStore((s) => s.openDrawer)
+  const { itemCount, openDrawer } = useCart()
   const openMobileMenu = useUiStore((s) => s.openMobileMenu)
 
   useEffect(() => {

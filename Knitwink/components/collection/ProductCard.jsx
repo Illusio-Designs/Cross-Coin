@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatPrice } from '@/lib/utils';
+import { useCart } from '@/hooks/useCart';
+import { toastAddedToCart } from '@/lib/toast';
 
 
 const MAX_DOTS = 5;
@@ -17,6 +19,32 @@ const MAX_DOTS = 5;
 export function ProductCard({ product }) {
   const [hovered, setHovered] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [addedFeedback, setAddedFeedback] = useState(false);
+  const { addItem } = useCart();
+
+  const handleAddToCart = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const firstColor = product.colors[0]?.name ?? ''
+    const variant = product.variants?.find(v => v.color === firstColor) || product.variants?.[0]
+    const colorImages = (firstColor && product.colorImages?.[firstColor]) || []
+    const imageUrl = colorImages[0]?.url || product.images[0]?.url || ''
+    addItem({
+      id: variant?.id ?? product.id,
+      productId: product.id,
+      variantId: variant?.id ?? 'free-size',
+      name: product.name,
+      color: firstColor || 'Default',
+      size: 'Free Size',
+      price: product.price,
+      quantity: 1,
+      imageUrl,
+      handle: product.handle,
+    });
+    toastAddedToCart(product.name);
+    setAddedFeedback(true);
+    setTimeout(() => setAddedFeedback(false), 2000);
+  };
 
   const primaryImage = product.images[0];
   const hoverImage = product.images[1] ?? primaryImage;
@@ -105,11 +133,14 @@ export function ProductCard({ product }) {
         {/* Add to Bag */}
         <button
           aria-label="Add to bag"
-          onClick={(e) => e.preventDefault()}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 py-2 text-xs font-medium text-brand-black transition-colors duration-150 hover:border-brand-black hover:bg-brand-black hover:text-white">
-          
+          onClick={handleAddToCart}
+          className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl border py-2 text-xs font-medium transition-colors duration-150 ${
+            addedFeedback
+              ? 'border-green-600 bg-green-600 text-white'
+              : 'border-gray-200 text-brand-black hover:border-brand-black hover:bg-brand-black hover:text-white'
+          }`}>
           <ShoppingBag size={13} />
-          Add to Bag
+          {addedFeedback ? 'Added!' : 'Add to Bag'}
         </button>
       </div>
     </Link>);

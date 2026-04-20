@@ -25,10 +25,11 @@ export function ExclusiveSection({ products = [] }) {
   const displayImage = colorImages[activeThumb]?.url || colorImages[0]?.url || ''
 
   const handleAdd = () => {
+    const variant = product.variants?.find(v => v.color === colorName) || product.variants?.[0]
     addItem({
-      id: product.variants?.[0]?.id ?? product.id,
+      id: variant?.id ?? product.id,
       productId: product.id,
-      variantId: product.variants?.[0]?.id ?? 'free-size',
+      variantId: variant?.id ?? 'free-size',
       name: product.name,
       color: colorName || '',
       size: 'Free Size',
