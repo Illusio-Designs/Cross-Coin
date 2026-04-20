@@ -1391,9 +1391,10 @@ module.exports.getProductsByCategory = async (req, res) => {
 // Search products — uses searchService with relevance ranking + typo tolerance
 module.exports.searchProducts = async (req, res) => {
   try {
-    const { query, page = 1, limit = 20, category, minPrice, maxPrice, sort } = req.query;
+    const { q, query: queryParam, page = 1, limit = 20, category, minPrice, maxPrice, sort } = req.query;
+    const query = (q || queryParam || '').trim();
 
-    if (!query || query.trim() === "") {
+    if (!query) {
       return res.status(400).json({ success: false, message: "Search query is required" });
     }
 

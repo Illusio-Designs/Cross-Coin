@@ -195,7 +195,7 @@ export const getMaterials = async () => [];
 export const searchProducts = async (query) => {
   try {
     const data = await brandFetch(`/api/products/search?q=${encodeURIComponent(query)}&limit=20`, 0);
-    const products = data?.data || data?.products || [];
+    const products = data?.data?.products || data?.products || [];
     return Array.isArray(products) ? products.map(mapProduct) : [];
   } catch {
     return [];
